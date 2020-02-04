@@ -947,7 +947,7 @@ def install_config(path=None, **kwargs):
         del op['overwrite']
 
     db_mode = op.pop('mode', 'exclusive')
-    if write_diff and db_mode == 'dynamic:':
+    if write_diff and db_mode == 'dynamic':
         ret['message'] = 'Write diff is not supported with dynamic configuration mode'
         ret['out'] = False
         return ret
@@ -1377,16 +1377,16 @@ def load(path=None, **kwargs):
     else:
         op.update(kwargs)
 
-    template_vars = {}
+    kwargs = {}
     if "template_vars" in op:
-        template_vars = op["template_vars"]
+        kwargs = op["template_vars"]
 
     try:
         template_cached_path = salt.utils.files.mkstemp()
         __salt__['cp.get_template'](
             path,
             template_cached_path,
-            template_vars=template_vars)
+            **kwargs)
     except Exception as ex:
         ret['message'] = 'Salt failed to render the template, please check file path and syntax.' \
                          '\nError: {0}'.format(str(ex))

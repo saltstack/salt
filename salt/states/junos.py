@@ -40,8 +40,7 @@ def rpc(name, **kwargs):
     .. code-block:: yaml
 
         get-interface-information:
-            junos:
-              - rpc
+            junos.rpc:
               - dest: /home/user/rpc.log
               - interface_name: lo0
 
@@ -60,7 +59,7 @@ def rpc(name, **kwargs):
           The format in which the rpc reply must be stored in file specified in the dest
           (used only when dest is specified) (default = xml)
         * kwargs: keyworded arguments taken by rpc call like-
-            * timeout:
+            * timeout: 30
               Set NETCONF RPC timeout. Can be used for commands which
               take a while to execute. (default= 30 seconds)
             * filter:
@@ -83,8 +82,7 @@ def set_hostname(name, **kwargs):
     .. code-block:: yaml
 
             device_name:
-              junos:
-                - set_hostname
+              junos.set_hostname:
                 - comment: "Host-name set via saltstack."
 
 
@@ -117,8 +115,7 @@ def commit(name, **kwargs):
     .. code-block:: yaml
 
             commit the changes:
-              junos:
-                - commit
+              junos.commit:
                 - confirm: 10
 
 
@@ -161,8 +158,7 @@ def rollback(name, **kwargs):
     .. code-block:: yaml
 
             rollback the changes:
-              junos:
-                - rollback
+              junos.rollback:
                 - id: 5
 
     Parameters:
@@ -196,8 +192,7 @@ def diff(name, **kwargs):
     .. code-block:: yaml
 
             get the diff:
-              junos:
-                - diff
+              junos.diff:
                 - id: 10
 
     Parameters:
@@ -218,8 +213,7 @@ def cli(name, **kwargs):
     .. code-block:: yaml
 
             show version:
-              junos:
-                - cli
+              junos.cli:
                 - format: xml
 
     Parameters:
@@ -251,8 +245,7 @@ def shutdown(name, **kwargs):
     .. code-block:: yaml
 
             shut the device:
-              junos:
-                - shutdown
+              junos.shutdown:
                 - in_min: 10
 
     Parameters:
@@ -278,8 +271,7 @@ def install_config(name, **kwargs):
     .. code-block:: yaml
 
             Install the mentioned config:
-              junos:
-                - install_config
+              junos.install_config:
                 - path: salt//configs/interface.set
                 - timeout: 100
                 - diffs_file: 'var/log/diff'
@@ -288,8 +280,7 @@ def install_config(name, **kwargs):
     .. code-block:: yaml
 
             Install the mentioned config:
-              junos:
-                - install_config
+              junos.install_config:
                 - template_path: salt//configs/interface.set
                 - timeout: 100
                 - template_vars:
@@ -368,8 +359,7 @@ def install_os(name, **kwargs):
     .. code-block:: yaml
 
             salt://images/junos_image.tgz:
-              junos:
-                - install_os
+              junos.install_os:
                 - timeout: 100
                 - reboot: True
 
@@ -403,8 +393,7 @@ def file_copy(name, dest=None, **kwargs):
     .. code-block:: yaml
 
             /home/m2/info.txt:
-              junos:
-                - file_copy
+              junos.file_copy:
                 - dest: info_copy.txt
 
     Parameters:
@@ -464,20 +453,24 @@ def load(name, **kwargs):
 
     .. code-block:: yaml
 
-            Install the mentioned config:
-              junos:
-                - load
-                - path: salt//configs/interface.set
+        Install the mentioned config:
+          junos.load:
+            - path: salt//configs/interface.set
 
     .. code-block:: yaml
 
-            Install the mentioned config:
-              junos:
-                - load
-                - template_path: salt//configs/interface.set
-                - template_vars:
-                    interface_name: lo0
-                    description: Creating interface via SaltStack.
+        Install the mentioned config:
+          junos.load:
+            - template_path: salt//configs/interface.set
+            - template_vars:
+                interface_name: lo0
+                description: Creating interface via SaltStack.
+
+    Sample template:
+
+    .. code-block:: set
+
+        set interfaces {{ interface_name }} unit 0
 
 
     name
@@ -541,6 +534,13 @@ def get_table(name, table, table_file, **kwargs):
     '''
     Retrieve data from a Junos device using Tables/Views
 
+    .. code-block:: yaml
+
+        get route details:
+          junos.get_table:
+            - table: RouteTable
+            - file: routes.yml
+
     name (required)
         task definition
 
@@ -569,12 +569,6 @@ def get_table(name, table, table_file, **kwargs):
     template_args:
         key/value pair which should render Jinja template command
 
-    .. code-block:: yaml
-
-        get route details:
-          junos.get_table:
-            - table: RouteTable
-            - file: routes.yml
     '''
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
     ret['changes'] = __salt__['junos.get_table'](table, table_file, **kwargs)
