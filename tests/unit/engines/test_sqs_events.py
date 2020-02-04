@@ -9,8 +9,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     MagicMock,
     patch)
 
@@ -19,7 +17,6 @@ import salt.engines.sqs_events as sqs_events
 
 
 @skipIf(sqs_events.HAS_BOTO is False, 'The boto library is not installed')
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class EngineSqsEventTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.engine.sqs_events

@@ -128,7 +128,7 @@ def store(bank, key, data):
     try:
         value = __context__['serial'].dumps(data)
         client.write(etcd_key, base64.b64encode(value))
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         raise SaltCacheError(
             'There was an error writing the key, {0}: {1}'.format(etcd_key, exc)
         )
@@ -145,7 +145,7 @@ def fetch(bank, key):
         return __context__['serial'].loads(base64.b64decode(value))
     except etcd.EtcdKeyNotFound:
         return {}
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         raise SaltCacheError(
             'There was an error reading the key, {0}: {1}'.format(
                 etcd_key, exc
@@ -168,7 +168,7 @@ def flush(bank, key=None):
         return  # nothing to flush
     try:
         client.delete(etcd_key, recursive=True)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         raise SaltCacheError(
             'There was an error removing the key, {0}: {1}'.format(
                 etcd_key, exc
@@ -199,7 +199,7 @@ def ls(bank):
     path = '{0}/{1}'.format(path_prefix, bank)
     try:
         return _walk(client.read(path))
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         raise SaltCacheError(
             'There was an error getting the key "{0}": {1}'.format(
                 bank, exc
@@ -219,7 +219,7 @@ def contains(bank, key):
         return r.dir is False
     except etcd.EtcdKeyNotFound:
         return False
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         raise SaltCacheError(
             'There was an error getting the key, {0}: {1}'.format(
                 etcd_key, exc

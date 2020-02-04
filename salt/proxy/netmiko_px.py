@@ -193,10 +193,7 @@ except ImportError:
     HAS_NETMIKO = False
 
 # Import salt modules
-try:
-    from salt.utils.args import clean_kwargs
-except ImportError:
-    from salt.utils import clean_kwargs
+from salt.utils.args import clean_kwargs
 
 # -----------------------------------------------------------------------------
 # proxy properties

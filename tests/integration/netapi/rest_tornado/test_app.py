@@ -2,6 +2,7 @@
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
+import os
 import time
 import threading
 
@@ -36,6 +37,11 @@ class _SaltnadoIntegrationTestCase(SaltnadoTestCase):  # pylint: disable=abstrac
 @skipIf(HAS_ZMQ_IOLOOP is False, 'PyZMQ version must be >= 14.0.1 to run these tests.')
 @skipIf(StrictVersion(zmq.__version__) < StrictVersion('14.0.1'), 'PyZMQ must be >= 14.0.1 to run these tests.')
 class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
+
+    def setUp(self):
+        super(TestSaltAPIHandler, self).setUp()
+        os.environ['ASYNC_TEST_TIMEOUT'] = '300'
+
     def get_app(self):
         urls = [('/', saltnado.SaltAPIHandler)]
 
@@ -100,6 +106,11 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                               )
         response_obj = salt.utils.json.loads(response.body)
         self.assertEqual(len(response_obj['return']), 1)
+        # If --proxy is set, it will cause an extra minion_id to be in the
+        # response. Since there's not a great way to know if the test
+        # runner's proxy minion is running, and we're not testing proxy
+        # minions here anyway, just remove it from the response.
+        response_obj['return'][0].pop('proxytest', None)
         self.assertEqual(response_obj['return'][0], {'minion': True, 'sub_minion': True})
 
     def test_simple_local_post_no_tgt(self):
@@ -142,6 +153,11 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                               )
         response_obj = salt.utils.json.loads(response.body)
         self.assertEqual(len(response_obj['return']), 1)
+        # If --proxy is set, it will cause an extra minion_id to be in the
+        # response. Since there's not a great way to know if the test
+        # runner's proxy minion is running, and we're not testing proxy
+        # minions here anyway, just remove it from the response.
+        response_obj['return'][0].pop('proxytest', None)
         self.assertEqual(response_obj['return'][0], {'minion': True, 'sub_minion': True})
 
     def test_simple_local_post_invalid_request(self):
@@ -175,6 +191,14 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         response_obj = salt.utils.json.loads(response.body)
         ret = response_obj['return']
         ret[0]['minions'] = sorted(ret[0]['minions'])
+        try:
+            # If --proxy is set, it will cause an extra minion_id to be in the
+            # response. Since there's not a great way to know if the test
+            # runner's proxy minion is running, and we're not testing proxy
+            # minions here anyway, just remove it from the response.
+            ret[0]['minions'].remove('proxytest')
+        except ValueError:
+            pass
 
         # TODO: verify pub function? Maybe look at how we test the publisher
         self.assertEqual(len(ret), 1)
@@ -201,6 +225,15 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         ret = response_obj['return']
         ret[0]['minions'] = sorted(ret[0]['minions'])
         ret[1]['minions'] = sorted(ret[1]['minions'])
+        try:
+            # If --proxy is set, it will cause an extra minion_id to be in the
+            # response. Since there's not a great way to know if the test
+            # runner's proxy minion is running, and we're not testing proxy
+            # minions here anyway, just remove it from the response.
+            ret[0]['minions'].remove('proxytest')
+            ret[1]['minions'].remove('proxytest')
+        except ValueError:
+            pass
 
         self.assertEqual(len(ret), 2)
         self.assertIn('jid', ret[0])
@@ -235,6 +268,15 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         ret = response_obj['return']
         ret[0]['minions'] = sorted(ret[0]['minions'])
         ret[1]['minions'] = sorted(ret[1]['minions'])
+        try:
+            # If --proxy is set, it will cause an extra minion_id to be in the
+            # response. Since there's not a great way to know if the test
+            # runner's proxy minion is running, and we're not testing proxy
+            # minions here anyway, just remove it from the response.
+            ret[0]['minions'].remove('proxytest')
+            ret[1]['minions'].remove('proxytest')
+        except ValueError:
+            pass
 
         self.assertEqual(len(ret), 3)  # make sure we got 3 responses
         self.assertIn('jid', ret[0])  # the first 2 are regular returns
@@ -279,6 +321,13 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                               request_timeout=30,
                               )
         response_obj = salt.utils.json.loads(response.body)
+        self.application.opts['order_masters'] = []
+        self.application.opts['syndic_wait'] = 5
+        # If --proxy is set, it will cause an extra minion_id to be in the
+        # response. Since there's not a great way to know if the test runner's
+        # proxy minion is running, and we're not testing proxy minions here
+        # anyway, just remove it from the response.
+        response_obj[0]['return'].pop('proxytest', None)
         self.assertEqual(response_obj['return'], [{'minion': True, 'sub_minion': True}])
 
     # runner tests
@@ -292,10 +341,18 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
                               connect_timeout=30,
-                              request_timeout=30,
+                              request_timeout=300,
                               )
         response_obj = salt.utils.json.loads(response.body)
         self.assertEqual(len(response_obj['return']), 1)
+        try:
+            # If --proxy is set, it will cause an extra minion_id to be in the
+            # response. Since there's not a great way to know if the test
+            # runner's proxy minion is running, and we're not testing proxy
+            # minions here anyway, just remove it from the response.
+            response_obj['return'][0].remove('proxytest')
+        except ValueError:
+            pass
         self.assertEqual(sorted(response_obj['return'][0]), sorted(['minion', 'sub_minion']))
 
     # runner_async tests
@@ -586,7 +643,7 @@ class TestWebhookSaltAPIHandler(_SaltnadoIntegrationTestCase):
             self._future_resolved.wait(resolve_future_timeout)
             try:
                 event = future.result()
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 self.fail('Failed to resolve future under {} secs: {}'.format(resolve_future_timeout, exc))
             self.assertEqual(event['tag'], 'salt/netapi/hook')
             self.assertIn('headers', event['data'])

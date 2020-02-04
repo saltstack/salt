@@ -20,7 +20,7 @@ Azure (ARM) Network Execution Module
 :platform: linux
 
 :configuration: This module requires Azure Resource Manager credentials to be passed as keyword arguments
-to every function in order to work properly.
+    to every function in order to work properly.
 
     Required provider parameters:
 
@@ -37,7 +37,7 @@ to every function in order to work properly.
 
     Optional provider parameters:
 
-    **cloud_environment**: Used to point the cloud driver to different API endpoints, such as Azure GovCloud.
+**cloud_environment**: Used to point the cloud driver to different API endpoints, such as Azure GovCloud.
     Possible values:
       * ``AZURE_PUBLIC_CLOUD`` (default)
       * ``AZURE_CHINA_CLOUD``
@@ -52,10 +52,7 @@ import logging
 
 # Salt libs
 from salt.exceptions import SaltInvocationError  # pylint: disable=unused-import
-try:
-    from salt.ext.six.moves import range as six_range
-except ImportError:
-    six_range = range
+from salt.ext.six.moves import range
 
 # Azure libs
 HAS_LIBS = False
@@ -1185,7 +1182,7 @@ def load_balancer_create_or_update(name, resource_group, **kwargs):
     netconn = __utils__['azurearm.get_client']('network', **kwargs)
 
     if isinstance(kwargs.get('frontend_ip_configurations'), list):
-        for idx in six_range(0, len(kwargs['frontend_ip_configurations'])):
+        for idx in range(0, len(kwargs['frontend_ip_configurations'])):
             # Use Public IP Address name to link to the ID of an existing Public IP
             if 'public_ip_address' in kwargs['frontend_ip_configurations'][idx]:
                 pub_ip = public_ip_address_get(
@@ -1217,7 +1214,7 @@ def load_balancer_create_or_update(name, resource_group, **kwargs):
     id_url = '/subscriptions/{0}/resourceGroups/{1}/providers/Microsoft.Network/loadBalancers/{2}/{3}/{4}'
 
     if isinstance(kwargs.get('load_balancing_rules'), list):
-        for idx in six_range(0, len(kwargs['load_balancing_rules'])):
+        for idx in range(0, len(kwargs['load_balancing_rules'])):
             # Link to sub-objects which might be created at the same time as the load balancer
             if 'frontend_ip_configuration' in kwargs['load_balancing_rules'][idx]:
                 kwargs['load_balancing_rules'][idx]['frontend_ip_configuration'] = {
@@ -1251,7 +1248,7 @@ def load_balancer_create_or_update(name, resource_group, **kwargs):
                 }
 
     if isinstance(kwargs.get('inbound_nat_rules'), list):
-        for idx in six_range(0, len(kwargs['inbound_nat_rules'])):
+        for idx in range(0, len(kwargs['inbound_nat_rules'])):
             # Link to sub-objects which might be created at the same time as the load balancer
             if 'frontend_ip_configuration' in kwargs['inbound_nat_rules'][idx]:
                 kwargs['inbound_nat_rules'][idx]['frontend_ip_configuration'] = {
@@ -1265,7 +1262,7 @@ def load_balancer_create_or_update(name, resource_group, **kwargs):
                 }
 
     if isinstance(kwargs.get('inbound_nat_pools'), list):
-        for idx in six_range(0, len(kwargs['inbound_nat_pools'])):
+        for idx in range(0, len(kwargs['inbound_nat_pools'])):
             # Link to sub-objects which might be created at the same time as the load balancer
             if 'frontend_ip_configuration' in kwargs['inbound_nat_pools'][idx]:
                 kwargs['inbound_nat_pools'][idx]['frontend_ip_configuration'] = {
@@ -1279,7 +1276,7 @@ def load_balancer_create_or_update(name, resource_group, **kwargs):
                 }
 
     if isinstance(kwargs.get('outbound_nat_rules'), list):
-        for idx in six_range(0, len(kwargs['outbound_nat_rules'])):
+        for idx in range(0, len(kwargs['outbound_nat_rules'])):
             # Link to sub-objects which might be created at the same time as the load balancer
             if 'frontend_ip_configuration' in kwargs['outbound_nat_rules'][idx]:
                 kwargs['outbound_nat_rules'][idx]['frontend_ip_configuration'] = {

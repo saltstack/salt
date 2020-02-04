@@ -10,7 +10,6 @@ import collections
 # Import third party libs
 import copy
 import os
-import copy
 import logging
 from salt.ext import six
 
@@ -263,7 +262,7 @@ def items(*args, **kwargs):
                 translate_newlines=True,
                 opts=__opts__,
                 valid_rend=__opts__['decrypt_pillar_renderers'])
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             raise CommandExecutionError(
                 'Failed to decrypt pillar override: {0}'.format(exc)
             )
@@ -345,7 +344,7 @@ def ls(*args):
         salt '*' pillar.ls
     '''
 
-    return list(items(*args).keys())
+    return list(items(*args))
 
 
 def item(*args, **kwargs):
@@ -544,7 +543,7 @@ def keys(key, delimiter=DEFAULT_TARGET_DELIM):
     if not isinstance(ret, dict):
         raise ValueError("Pillar value in key {0} is not a dict".format(key))
 
-    return ret.keys()
+    return list(ret)
 
 
 def file_exists(path, saltenv=None):
@@ -615,7 +614,7 @@ def filter_by(lookup_dict,
         on that particular OS.
 
         The dictionary key can be a globbing pattern. The function will return
-        the corresponding ``lookup_dict`` value where the pilalr value matches
+        the corresponding ``lookup_dict`` value where the pillar value matches
         the  pattern. For example:
 
         .. code-block:: bash

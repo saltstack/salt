@@ -12,8 +12,8 @@ import os
 
 # Import Salt Testing Libs
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
-import tests.integration as integration
+from tests.support.mock import MagicMock, patch
+from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt Libs
 import salt.config
@@ -29,27 +29,31 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-ROOT_DIR = os.path.join(integration.TMP, 'schedule-unit-tests')
-SOCK_DIR = os.path.join(ROOT_DIR, 'test-socks')
-
-DEFAULT_CONFIG = salt.config.minion_config(None)
-DEFAULT_CONFIG['conf_dir'] = ROOT_DIR
-DEFAULT_CONFIG['root_dir'] = ROOT_DIR
-DEFAULT_CONFIG['sock_dir'] = SOCK_DIR
-DEFAULT_CONFIG['pki_dir'] = os.path.join(ROOT_DIR, 'pki')
-DEFAULT_CONFIG['cachedir'] = os.path.join(ROOT_DIR, 'cache')
-
 
 # pylint: disable=too-many-public-methods,invalid-name
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class ScheduleTestCase(TestCase):
     '''
     Unit tests for salt.utils.schedule module
     '''
 
+    @classmethod
+    def setUpClass(cls):
+        root_dir = os.path.join(RUNTIME_VARS.TMP, 'schedule-unit-tests')
+        default_config = salt.config.minion_config(None)
+        default_config['conf_dir'] = default_config['root_dir'] = root_dir
+        default_config['sock_dir'] = os.path.join(root_dir, 'test-socks')
+        default_config['pki_dir'] = os.path.join(root_dir, 'pki')
+        default_config['cachedir'] = os.path.join(root_dir, 'cache')
+        cls.default_config = default_config
+
+    @classmethod
+    def tearDownClass(cls):
+        delattr(cls, 'default_config')
+
     def setUp(self):
         with patch('salt.utils.schedule.clean_proc_dir', MagicMock(return_value=None)):
-            self.schedule = Schedule(copy.deepcopy(DEFAULT_CONFIG), {}, returners={})
+            self.schedule = Schedule(copy.deepcopy(self.default_config), {}, returners={})
+        self.addCleanup(delattr, self, 'schedule')
 
     # delete_job tests
 

@@ -4,14 +4,12 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase, skipIf
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON
+from tests.support.unit import TestCase
 
 # Import Salt Libs
 import salt.pillar.sqlite3 as sqlite3
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class SQLite3PillarTestCase(TestCase):
     maxDiff = None
 

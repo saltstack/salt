@@ -739,7 +739,7 @@ def set_lcm_config(config_mode=None,
         cmd += '            RefreshFrequencyMins = {0};'.format(refresh_freq)
     if reboot_if_needed is not None:
         if not isinstance(reboot_if_needed, bool):
-            SaltInvocationError('reboot_if_needed must be a boolean value')
+            raise SaltInvocationError('reboot_if_needed must be a boolean value')
         if reboot_if_needed:
             reboot_if_needed = '$true'
         else:

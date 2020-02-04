@@ -77,6 +77,7 @@ To use the EC2 cloud module, set up the cloud configuration at
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+from functools import cmp_to_key
 import os
 import sys
 import stat
@@ -91,7 +92,6 @@ import hashlib
 import binascii
 import datetime
 import base64
-import msgpack
 import re
 import decimal
 
@@ -101,6 +101,7 @@ import salt.utils.compat
 import salt.utils.files
 import salt.utils.hashutils
 import salt.utils.json
+import salt.utils.msgpack
 import salt.utils.stringutils
 import salt.utils.yaml
 from salt._compat import ElementTree as ET
@@ -1226,7 +1227,7 @@ def get_imageid(vm_):
     _t = lambda x: datetime.datetime.strptime(x['creationDate'], '%Y-%m-%dT%H:%M:%S.%fZ')
     image_id = sorted(aws.query(params, location=get_location(),
                                  provider=get_provider(), opts=__opts__, sigver='4'),
-                      lambda i, j: salt.utils.compat.cmp(_t(i), _t(j))
+                      key=cmp_to_key(lambda i, j: salt.utils.compat.cmp(_t(i), _t(j)))
                       )[-1]['imageId']
     get_imageid.images[image] = image_id
     return image_id
@@ -1822,7 +1823,7 @@ def request_instance(vm_=None, call=None):
             params[spot_prefix + 'UserData'] = base64.b64encode(
                 salt.utils.stringutils.to_bytes(userdata)
             )
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.exception('Failed to encode userdata: %s', exc)
 
     vm_size = config.get_cloud_config_value(
@@ -1931,6 +1932,18 @@ def request_instance(vm_=None, call=None):
         'del_root_vol_on_destroy', vm_, __opts__, search_global=False
     )
 
+    set_termination_protection = config.get_cloud_config_value(
+        'termination_protection', vm_, __opts__, search_global=False
+    )
+
+    if set_termination_protection is not None:
+        if not isinstance(set_termination_protection, bool):
+            raise SaltCloudConfigError(
+                '\'termination_protection\' should be a boolean value.'
+            )
+        params.update(_param_from_config(spot_prefix + 'DisableApiTermination',
+                                         set_termination_protection))
+
     if set_del_root_vol_on_destroy and not isinstance(set_del_root_vol_on_destroy, bool):
         raise SaltCloudConfigError(
             '\'del_root_vol_on_destroy\' should be a boolean value.'
@@ -1959,7 +1972,7 @@ def request_instance(vm_=None, call=None):
             if 'error' in rd_data:
                 return rd_data['error']
             log.debug('EC2 Response: \'%s\'', rd_data)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.error(
                 'Error getting root device name for image id %s for '
                 'VM %s: \n%s', image_id, vm_['name'], exc,
@@ -2054,7 +2067,7 @@ def request_instance(vm_=None, call=None):
                          sigver='4')
         if 'error' in data:
             return data['error']
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error(
             'Error creating %s on EC2 when trying to run the initial '
             'deployment: \n%s', vm_['name'], exc,
@@ -2644,7 +2657,7 @@ def create(vm_=None, call=None):
             vm_['instance_id_list'].append(instance['instanceId'])
 
         vm_['instance_id'] = vm_['instance_id_list'].pop()
-        if len(vm_['instance_id_list']) > 0:
+        if vm_['instance_id_list']:
             # Multiple instances were spun up, get one now, and queue the rest
             queue_instances(vm_['instance_id_list'])
 
@@ -4887,6 +4900,8 @@ def get_password_data(
         ret[next(six.iterkeys(item))] = next(six.itervalues(item))
 
     if not HAS_M2 and not HAS_PYCRYPTO:
+        if 'key' in kwargs or 'key_file' in kwargs:
+            log.warn("No crypto library is installed, can not decrypt password")
         return ret
 
     if 'key' not in kwargs:
@@ -4997,7 +5012,7 @@ def _parse_pricing(url, name):
         __opts__['cachedir'], 'ec2-pricing-{0}.p'.format(name)
     )
     with salt.utils.files.fopen(outfile, 'w') as fho:
-        msgpack.dump(regions, fho)
+        salt.utils.msgpack.dump(regions, fho)
 
     return True
 
@@ -5065,7 +5080,8 @@ def show_pricing(kwargs=None, call=None):
         update_pricing({'type': name}, 'function')
 
     with salt.utils.files.fopen(pricefile, 'r') as fhi:
-        ec2_price = salt.utils.stringutils.to_unicode(msgpack.load(fhi))
+        ec2_price = salt.utils.stringutils.to_unicode(
+            salt.utils.msgpack.load(fhi))
 
     region = get_location(profile)
     size = profile.get('size', None)

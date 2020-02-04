@@ -6,18 +6,20 @@
 # Import pytohn libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import time
+
 # Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import patch, call, NO_MOCK, NO_MOCK_REASON, MagicMock
+from tests.support.mock import patch, call, MagicMock
 
 # Import Salt libraries
 import salt.master
 from tests.support.case import ModuleCase
 from salt import auth
+from salt.exceptions import SaltDeserializationError
 import salt.utils.platform
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class LoadAuthTestCase(TestCase):
 
     def setUp(self):  # pylint: disable=W0221
@@ -36,6 +38,72 @@ class LoadAuthTestCase(TestCase):
             patcher.start()
             self.addCleanup(patcher.stop)
         self.lauth = auth.LoadAuth({})  # Load with empty opts
+
+    def test_get_tok_with_broken_file_will_remove_bad_token(self):
+        fake_get_token = MagicMock(side_effect=SaltDeserializationError('hi'))
+        patch_opts = patch.dict(self.lauth.opts, {'eauth_tokens': 'testfs'})
+        patch_get_token = patch.dict(
+            self.lauth.tokens,
+            {
+                'testfs.get_token': fake_get_token
+            },
+        )
+        mock_rm_token = MagicMock()
+        patch_rm_token = patch.object(self.lauth, 'rm_token', mock_rm_token)
+        with patch_opts, patch_get_token, patch_rm_token:
+            expected_token = 'fnord'
+            self.lauth.get_tok(expected_token)
+            mock_rm_token.assert_called_with(expected_token)
+
+    def test_get_tok_with_no_expiration_should_remove_bad_token(self):
+        fake_get_token = MagicMock(return_value={'no_expire_here': 'Nope'})
+        patch_opts = patch.dict(self.lauth.opts, {'eauth_tokens': 'testfs'})
+        patch_get_token = patch.dict(
+            self.lauth.tokens,
+            {
+                'testfs.get_token': fake_get_token
+            },
+        )
+        mock_rm_token = MagicMock()
+        patch_rm_token = patch.object(self.lauth, 'rm_token', mock_rm_token)
+        with patch_opts, patch_get_token, patch_rm_token:
+            expected_token = 'fnord'
+            self.lauth.get_tok(expected_token)
+            mock_rm_token.assert_called_with(expected_token)
+
+    def test_get_tok_with_expire_before_current_time_should_remove_token(self):
+        fake_get_token = MagicMock(return_value={'expire': time.time()-1})
+        patch_opts = patch.dict(self.lauth.opts, {'eauth_tokens': 'testfs'})
+        patch_get_token = patch.dict(
+            self.lauth.tokens,
+            {
+                'testfs.get_token': fake_get_token
+            },
+        )
+        mock_rm_token = MagicMock()
+        patch_rm_token = patch.object(self.lauth, 'rm_token', mock_rm_token)
+        with patch_opts, patch_get_token, patch_rm_token:
+            expected_token = 'fnord'
+            self.lauth.get_tok(expected_token)
+            mock_rm_token.assert_called_with(expected_token)
+
+    def test_get_tok_with_valid_expiration_should_return_token(self):
+        expected_token = {'expire': time.time()+1}
+        fake_get_token = MagicMock(return_value=expected_token)
+        patch_opts = patch.dict(self.lauth.opts, {'eauth_tokens': 'testfs'})
+        patch_get_token = patch.dict(
+            self.lauth.tokens,
+            {
+                'testfs.get_token': fake_get_token
+            },
+        )
+        mock_rm_token = MagicMock()
+        patch_rm_token = patch.object(self.lauth, 'rm_token', mock_rm_token)
+        with patch_opts, patch_get_token, patch_rm_token:
+            token_name = 'fnord'
+            actual_token = self.lauth.get_tok(token_name)
+            mock_rm_token.assert_not_called()
+            assert expected_token is actual_token, 'Token was not returned'
 
     def test_load_name(self):
         valid_eauth_load = {'username': 'test_user',
@@ -258,7 +326,6 @@ class MasterACLTestCase(ModuleCase):
                 'test.*'
         '''
         # Unimplemented
-        pass
 
     @skipIf(salt.utils.platform.is_windows(), 'PAM eauth not available on Windows')
     def test_args_empty_spec(self):

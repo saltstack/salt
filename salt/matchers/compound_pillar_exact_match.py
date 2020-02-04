@@ -14,10 +14,13 @@ import salt.utils.minions  # pylint: disable=3rd-party-module-not-gated
 log = logging.getLogger(__name__)
 
 
-def mmatch(expr, delimiter, greedy):
+def mmatch(expr, delimiter, greedy, opts=None):
     '''
     Return the minions found by looking via pillar
     '''
-    ckminions = salt.utils.minions.CkMinions(__opts__)
+    if not opts:
+        opts = __opts__
+
+    ckminions = salt.utils.minions.CkMinions(opts)
     return ckminions._check_compound_minions(expr, delimiter, greedy,
                                              pillar_exact=True)

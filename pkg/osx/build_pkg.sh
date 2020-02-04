@@ -158,13 +158,20 @@ echo -n -e "\033]0;Build_Pkg: Add Version to .xml\007"
 if [ "$PYVER" == "2" ]; then
     TITLE="Salt $VERSION"
     DESC="Salt $VERSION with Python 2"
+    SEDSTR="s/@PY2@/_py2/g"
 else
     TITLE="Salt $VERSION (Python 3)"
     DESC="Salt $VERSION with Python 3"
+    SEDSTR="s/@PY2@//g"
 fi
 
 cd $PKGRESOURCES
 cp distribution.xml.dist distribution.xml
+
+# Select the appropriate welcome text
+# This is only necessary until Sodium, then this can be removed
+sed -E -i '' "$SEDSTR" distribution.xml
+
 SEDSTR="s/@TITLE@/$TITLE/g"
 sed -E -i '' "$SEDSTR" distribution.xml
 

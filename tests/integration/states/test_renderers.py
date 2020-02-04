@@ -9,6 +9,13 @@ from __future__ import absolute_import, unicode_literals, print_function
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import flaky
+from tests.support.unit import skipIf
+
+# Import Salt libs
+import salt.utils.platform
+
+# Import 3rd-party libs
+from salt.ext import six
 
 
 class TestJinjaRenderer(ModuleCase):
@@ -24,6 +31,7 @@ class TestJinjaRenderer(ModuleCase):
             self.assertTrue(state_ret['result'])
 
     @flaky
+    @skipIf(salt.utils.platform.is_darwin() and six.PY2, 'This test hangs on OS X on Py2')
     def test_salt_contains_function(self):
         '''
         Test if we are able to check if a function exists inside the "salt"

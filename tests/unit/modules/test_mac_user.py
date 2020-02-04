@@ -13,7 +13,7 @@ except ImportError:
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
+from tests.support.mock import MagicMock, patch
 
 # Import Salt Libs
 import salt.modules.mac_user as mac_user
@@ -21,7 +21,6 @@ from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 
 @skipIf(not HAS_PWD, "Missing required library 'pwd'")
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class MacUserTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for the salt.modules.mac_user modules

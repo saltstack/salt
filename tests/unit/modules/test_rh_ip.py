@@ -8,10 +8,8 @@ import os
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
+from tests.support.unit import TestCase
 from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     MagicMock,
     patch)
 
@@ -24,13 +22,24 @@ import jinja2.exceptions
 from salt.ext import six
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class RhipTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.rh_ip
     '''
     def setup_loader_modules(self):
         return {rh_ip: {}}
+
+    def test_error_message_iface_should_process_non_str_expected(self):
+        values = [1, True, False, 'no-kaboom']
+        iface = 'ethtest'
+        option = 'test'
+        msg = rh_ip._error_msg_iface(iface, option, values)
+        self.assertTrue(msg.endswith('[1|True|False|no-kaboom]'), msg)
+
+    def test_error_message_network_should_process_non_str_expected(self):
+        values = [1, True, False, 'no-kaboom']
+        msg = rh_ip._error_msg_network('fnord', values)
+        self.assertTrue(msg.endswith('[1|True|False|no-kaboom]'), msg)
 
     def test_build_bond(self):
         '''

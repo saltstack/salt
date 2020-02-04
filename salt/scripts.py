@@ -20,6 +20,7 @@ from random import randint
 # Import salt libs
 from salt.exceptions import SaltSystemExit, SaltClientError, SaltReqTimeoutError
 import salt.defaults.exitcodes  # pylint: disable=unused-import
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -93,6 +94,16 @@ def salt_master():
     Start the salt master.
     '''
     import salt.cli.daemons
+# REMOVEME after Python 2.7 support is dropped (also the six import)
+    if six.PY2:
+        from salt.utils.versions import warn_until
+        # Message borrowed from pip's deprecation warning
+        warn_until('Sodium',
+                   'Python 2.7 will reach the end of its life on January 1st,'
+                   ' 2020. Please upgrade your Python as Python 2.7 won\'t be'
+                   ' maintained after that date.  Salt will drop support for'
+                   ' Python 2.7 in the Sodium release or later.')
+# END REMOVEME
     master = salt.cli.daemons.Master()
     master.start()
 
@@ -179,6 +190,16 @@ def salt_minion():
         minion = salt.cli.daemons.Minion()
         minion.start()
         return
+# REMOVEME after Python 2.7 support is dropped (also the six import)
+    elif six.PY2:
+        from salt.utils.versions import warn_until
+        # Message borrowed from pip's deprecation warning
+        warn_until('Sodium',
+                   'Python 2.7 will reach the end of its life on January 1st,'
+                   ' 2020. Please upgrade your Python as Python 2.7 won\'t be'
+                   ' maintained after that date.  Salt will drop support for'
+                   ' Python 2.7 in the Sodium release or later.')
+# END REMOVEME
 
     if '--disable-keepalive' in sys.argv:
         sys.argv.remove('--disable-keepalive')
@@ -275,7 +296,7 @@ def proxy_minion_process(queue):
         status = salt.defaults.exitcodes.EX_OK
         proxyminion = salt.cli.daemons.ProxyMinion()
         proxyminion.start()
-    except (Exception, SaltClientError, SaltReqTimeoutError, SaltSystemExit) as exc:
+    except (Exception, SaltClientError, SaltReqTimeoutError, SaltSystemExit) as exc:  # pylint: disable=broad-except
         log.error('Proxy Minion failed to start: ', exc_info=True)
         restart = True
         # status is superfluous since the process will be restarted
@@ -326,7 +347,7 @@ def salt_proxy():
     while True:
         try:
             queue = multiprocessing.Queue()
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             # This breaks in containers
             proxyminion = salt.cli.daemons.ProxyMinion()
             proxyminion.start()
@@ -337,7 +358,7 @@ def salt_proxy():
             process.join()
             try:
                 restart_delay = queue.get(block=False)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 if process.exitcode == 0:
                     # Minion process ended naturally, Ctrl+C or --version
                     break
@@ -382,7 +403,7 @@ def salt_key():
         client = salt.cli.key.SaltKey()
         _install_signal_handlers(client)
         client.run()
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         sys.stderr.write("Error: {0}\n".format(err))
 
 

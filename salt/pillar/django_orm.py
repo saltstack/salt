@@ -191,7 +191,7 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
                 log.debug('Adding %s = %s to Django environment', key, value.rstrip('\n'))
 
     try:
-        from django.db.models.loading import get_model
+        from django.db.models.loading import get_model  # pylint: disable=no-name-in-module
 
         django_pillar = {}
 
@@ -237,7 +237,7 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
     except ImportError as e:
         log.error('Failed to import library: %s', e)
         return {}
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         log.error('Failed on Error: %s', e)
         log.debug('django_orm traceback', exc_info=True)
         return {}

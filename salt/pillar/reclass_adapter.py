@@ -71,7 +71,7 @@ __virtualname__ = 'reclass'
 
 def __virtual__(retry=False):
     try:
-        import reclass
+        import reclass  # pylint: disable=unused-import
         return __virtualname__
 
     except ImportError as e:
@@ -97,10 +97,10 @@ def ext_pillar(minion_id, pillar, **kwargs):
 
     # If reclass is installed, __virtual__ put it onto the search path, so we
     # don't need to protect against ImportError:
-    # pylint: disable=3rd-party-module-not-gated
+    # pylint: disable=3rd-party-module-not-gated,no-name-in-module
     from reclass.adapters.salt import ext_pillar as reclass_ext_pillar
     from reclass.errors import ReclassException
-    # pylint: enable=3rd-party-module-not-gated
+    # pylint: enable=3rd-party-module-not-gated,no-name-in-module
 
     try:
         # the source path we used above isn't something reclass needs to care

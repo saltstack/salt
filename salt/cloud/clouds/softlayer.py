@@ -411,7 +411,7 @@ def create(vm_):
 
     try:
         response = conn.createObject(kwargs)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error(
             'Error creating %s on SoftLayer\n\n'
             'The following exception was thrown when trying to '
@@ -487,7 +487,7 @@ def create(vm_):
         for node in node_info:
             if node['id'] == response['id'] and \
                             'passwords' in node['operatingSystem'] and \
-                            len(node['operatingSystem']['passwords']) > 0:
+                            node['operatingSystem']['passwords']:
                 return node['operatingSystem']['passwords'][0]['username'], node['operatingSystem']['passwords'][0]['password']
         time.sleep(5)
         return False

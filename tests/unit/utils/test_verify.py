@@ -20,21 +20,20 @@ else:
     import resource
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf, TestCase
-from tests.support.paths import TMP
 from tests.support.helpers import (
     requires_network,
-    TestsLoggingHandler
+    TstSuiteLoggingHandler
 )
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import salt libs
 import salt.utils.files
+import salt.utils.platform
 from salt.utils.verify import (
     check_user,
     verify_env,
@@ -44,6 +43,8 @@ from salt.utils.verify import (
     valid_id,
     log,
     verify_log,
+    verify_logs_filter,
+    verify_log_files,
 )
 
 # Import 3rd-party libs
@@ -108,9 +109,9 @@ class TestVerify(TestCase):
             # If there's a different error catch, write it to sys.stderr
             sys.stderr.write(writer.output)
 
-    @skipIf(sys.platform.startswith('win'), 'No verify_env Windows')
+    @skipIf(salt.utils.platform.is_windows(), 'No verify_env Windows')
     def test_verify_env(self):
-        root_dir = tempfile.mkdtemp(dir=TMP)
+        root_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         var_dir = os.path.join(root_dir, 'var', 'log', 'salt')
         key_dir = os.path.join(root_dir, 'key_dir')
         verify_env([var_dir], getpass.getuser(), root_dir=root_dir)
@@ -139,7 +140,7 @@ class TestVerify(TestCase):
                 pass
 
     def test_max_open_files(self):
-        with TestsLoggingHandler() as handler:
+        with TstSuiteLoggingHandler() as handler:
             logmsg_dbg = (
                 'DEBUG:This salt-master instance has accepted {0} minion keys.'
             )
@@ -258,7 +259,6 @@ class TestVerify(TestCase):
                     resource.setrlimit(resource.RLIMIT_NOFILE, (mof_s, mof_h))
                 shutil.rmtree(tempdir)
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_verify_log(self):
         '''
         Test that verify_log works as expected
@@ -284,3 +284,39 @@ class TestVerify(TestCase):
         with patch.object(log, 'warning', mock_info):
             verify_log({'log_level': 'info'})
             self.assertTrue(mock_info.call_count == 0)
+
+
+class TestVerifyLog(TestCase):
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir)
+
+    def test_verify_logs_filter(self):
+        filtered = verify_logs_filter(
+            ['udp://foo', 'tcp://bar', '/tmp/foo', 'file://tmp/bar']
+        )
+        assert filtered == ['/tmp/foo'], filtered
+
+    @skipIf(salt.utils.platform.is_windows(), 'Not applicable on Windows')
+    def test_verify_log_files_udp_scheme(self):
+        verify_log_files(['udp://foo'], getpass.getuser())
+        self.assertFalse(os.path.isdir(os.path.join(os.getcwd(), 'udp:')))
+
+    @skipIf(salt.utils.platform.is_windows(), 'Not applicable on Windows')
+    def test_verify_log_files_tcp_scheme(self):
+        verify_log_files(['udp://foo'], getpass.getuser())
+        self.assertFalse(os.path.isdir(os.path.join(os.getcwd(), 'tcp:')))
+
+    @skipIf(salt.utils.platform.is_windows(), 'Not applicable on Windows')
+    def test_verify_log_files_file_scheme(self):
+        verify_log_files(['file://{}'], getpass.getuser())
+        self.assertFalse(os.path.isdir(os.path.join(os.getcwd(), 'file:')))
+
+    @skipIf(salt.utils.platform.is_windows(), 'Not applicable on Windows')
+    def test_verify_log_files(self):
+        path = os.path.join(self.tmpdir, 'foo', 'bar.log')
+        self.assertFalse(os.path.exists(path))
+        verify_log_files([path], getpass.getuser())
+        self.assertTrue(os.path.exists(path))

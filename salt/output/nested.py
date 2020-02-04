@@ -34,6 +34,11 @@ import salt.utils.odict
 import salt.utils.stringutils
 from salt.ext import six
 
+try:
+    from collections.abc import Mapping
+except ImportError:
+    from collections import Mapping
+
 
 class NestDisplay(object):
     '''
@@ -125,9 +130,19 @@ class NestDisplay(object):
         elif isinstance(ret, six.string_types):
             first_line = True
             for line in ret.splitlines():
+                line_prefix = ' ' * len(prefix) if not first_line else prefix
+                if isinstance(line, bytes):
+                    out.append(
+                        self.ustring(
+                            indent,
+                            self.YELLOW,
+                            'Not string data',
+                            prefix=line_prefix
+                        )
+                    )
+                    break
                 if self.strip_colors:
                     line = salt.output.strip_esc_sequence(line)
-                line_prefix = ' ' * len(prefix) if not first_line else prefix
                 out.append(
                     self.ustring(
                         indent,
@@ -142,7 +157,7 @@ class NestDisplay(object):
             if self.retcode != 0:
                 color = self.RED
             for ind in ret:
-                if isinstance(ind, (list, tuple, dict)):
+                if isinstance(ind, (list, tuple, Mapping)):
                     out.append(
                         self.ustring(
                             indent,
@@ -150,11 +165,11 @@ class NestDisplay(object):
                             '|_'
                         )
                     )
-                    prefix = '' if isinstance(ind, dict) else '- '
+                    prefix = '' if isinstance(ind, Mapping) else '- '
                     self.display(ind, indent + 2, prefix, out)
                 else:
                     self.display(ind, indent, '- ', out)
-        elif isinstance(ret, dict):
+        elif isinstance(ret, Mapping):
             if indent:
                 color = self.CYAN
                 if self.retcode != 0:

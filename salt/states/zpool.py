@@ -9,8 +9,8 @@ States for managing zpools
 
 .. versionadded:: 2016.3.0
 .. versionchanged:: 2018.3.1
-  Big refactor to remove duplicate code, better type converions and improved
-  consistancy in output.
+  Big refactor to remove duplicate code, better type conversions and improved
+  consistency in output.
 
 .. code-block:: yaml
 
@@ -88,10 +88,9 @@ def __virtual__():
     '''
     Provides zpool state
     '''
-    if __grains__['zfs_support']:
-        return __virtualname__
-    else:
+    if not __grains__.get('zfs_support'):
         return False, 'The zpool state cannot be loaded: zfs not supported'
+    return __virtualname__
 
 
 def _layout_to_vdev(layout, device_dir=None):
@@ -388,7 +387,7 @@ def absent(name, export=False, force=False):
     name : string
         name of storage pool
     export : boolean
-        export instread of destroy the zpool if present
+        export instead of destroy the zpool if present
     force : boolean
         force destroy or export
 

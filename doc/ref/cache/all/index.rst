@@ -1,7 +1,7 @@
 .. _all-salt.cache:
 
 =============
-Cache Modules
+cache modules
 =============
 
 .. currentmodule:: salt.cache

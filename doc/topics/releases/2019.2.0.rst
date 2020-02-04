@@ -4,6 +4,14 @@
 Salt 2019.2.0 Release Notes - Codename Fluorine
 ===============================================
 
+Python 2.7 Deprecation
+======================
+
+In light of Python 2.7 reaching its End of Life (EOL) on Jan 1st 2020,
+Python 2 will be deprecated from SaltStack no earlier than the Sodium
+release, that is either the Sodium release or a later release.
+This decision is pending further community discussion.
+
 Non-Backward-Compatible Change to YAML Renderer
 ===============================================
 
@@ -40,6 +48,24 @@ Jinja filter`_:
         - template: jinja
         - context:
             data: {{ data|tojson }}
+
+Another example where the new filter needs to be used is the following state example:
+
+.. code-block:: jinja
+
+    grafana_packages:
+      pkg.installed:
+      - names: {{ server.pkgs }}
+
+This will fail when pkgs is a list or dictionary. You will need to update the state:
+
+.. code-block:: jinja
+
+    grafana_packages:
+      pkg.installed:
+      - names: {{ server.pkgs|tojson }}
+
+This test case has also been tested with the ``yaml`` and ``json`` filters successfully.
 
 .. note::
     This filter was added in Jinja 2.9. However, fear not! The 2018.3.3 release
@@ -263,7 +289,7 @@ a BGP policy referenced in many places, you can do so by running:
 
 .. code-block:: bash
 
-    salt '*' net.replae_pattern OLD-POLICY-CONFIG new-policy-config
+    salt '*' net.replace_pattern OLD-POLICY-CONFIG new-policy-config
 
 Similarly, you can also replace entire configuration blocks using the
 :mod:`net.blockreplace <salt.modules.napalm_network.blockreplace>` function.
@@ -478,6 +504,18 @@ module.
     proxy:
       proxytype: docker
       name: keen_proskuriakova
+
+
+Terraform Salt-SSH Roster
+=========================
+
+You can now dynamically generate a Salt-SSH roster from the terraform resources
+defined with `terraform-provider-salt <https://github.com/dmacvicar/terraform-provider-salt>`_.
+
+This allows you to combine both terraform and Salt-SSH to provision and
+configure your hosts. See the :py:mod:`terraform roster<salt.roster.terraform>` for
+an example on how to setup and use.
+
 
 Grains Dictionary Passed into Custom Grains
 ===========================================
@@ -891,11 +929,12 @@ you can now configure which type numbers indicate a login and logout.
 See the :py:mod:`wtmp beacon documentation <salt.beacons.wtmp>` for more
 information.
 
-Deprecations
-============
 
-API Deprecations
-----------------
+Deprecated and Removed Options
+==============================
+
+API Removed Arguments
+---------------------
 
 Support for :ref:`LocalClient <local-client>`'s ``expr_form`` argument has
 been removed. Please use ``tgt_type`` instead. This change was made due to
@@ -914,14 +953,14 @@ their code to use ``tgt_type``.
     >>> local.cmd('*', 'cmd.run', ['whoami'], tgt_type='glob')
     {'jerry': 'root'}
 
-Minion Configuration Deprecations
----------------------------------
+Minion Configuration Deprecated Option
+--------------------------------------
 
 The :conf_minion:`master_shuffle` configuration option is deprecated as of the
 ``2019.2.0`` release. Please use the :conf_minion:`random_master` option instead.
 
-Module Deprecations
--------------------
+Module Removed Options
+----------------------
 
 - The :py:mod:`napalm_network <salt.modules.napalm_network>` module has been
   changed as follows:
@@ -973,8 +1012,8 @@ Module Deprecations
       functions have been removed. Please use :py:func:`win_wua.list
       <salt.modules.win_wua.list_>` instead.
 
-Pillar Deprecations
--------------------
+Pillar Removed Option
+---------------------
 
 - The :py:mod:`vault <salt.pillar.vault>` external pillar has been changed as
   follows:
@@ -982,8 +1021,8 @@ Pillar Deprecations
     - Support for the ``profile`` argument was removed. Any options passed up
       until and following the first ``path=`` are discarded.
 
-Roster Deprecations
--------------------
+Roster Removed Option
+---------------------
 
 - The :py:mod:`cache <salt.roster.cache>` roster has been changed as follows:
 
@@ -994,8 +1033,8 @@ Roster Deprecations
       ``private``, ``public``, ``global`` or ``local`` settings. The syntax for
       these settings has changed to ``ipv4-*`` or ``ipv6-*``, respectively.
 
-State Deprecations
-------------------
+State Removed Modules and Options
+---------------------------------
 
 - The ``docker`` state module has been removed
 
@@ -1088,8 +1127,8 @@ State Deprecations
 - Support for virtual packages has been removed from the
   py:mod:`pkg state <salt.states.pkg>`.
 
-Utils Deprecations
-------------------
+Utils Removed Options
+---------------------
 
 The ``cloud`` utils module had the following changes:
 
@@ -1113,7 +1152,7 @@ been deprecated in favor of ``pypsexec``.
 Salt-Cloud has deprecated the use ``impacket`` in favor of ``smbprotocol``.
 This changes was made because ``impacket`` is not compatible with Python 3.
 
-SaltSSH major updates
+SaltSSH Major Updates
 =====================
 
 SaltSSH now works across different major Python versions. Python 2.7 ~ Python 3.x
@@ -1327,6 +1366,7 @@ Execution Modules
 - :mod:`salt.modules.netmiko <salt.modules.netmiko_mod>`
 - :mod:`salt.modules.nxos_api <salt.modules.nxos_api>`
 - :mod:`salt.modules.peeringdb <salt.modules.peeringdb>`
+- :mod:`salt.modules.purefb <salt.modules.purefb>`
 - :mod:`salt.modules.pyeapi <salt.modules.arista_pyeapi>`
 
 Pillar Modules

@@ -9,12 +9,10 @@ import os
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -22,7 +20,6 @@ import salt.modules.win_path as win_path
 import salt.utils.stringutils
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class WinPathTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Test cases for salt.modules.win_path
@@ -113,6 +110,13 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
         # Test adding with a custom index
         ret, env, mock_set = _run('c:\\salt', index=1, retval=True)
         new_path = ('C:\\Foo', 'c:\\salt', 'C:\\Bar')
+        self.assertTrue(ret)
+        self.assert_call_matches(mock_set, new_path)
+        self.assert_path_matches(env, new_path)
+
+        # Test adding with a custom index of 0
+        ret, env, mock_set = _run('c:\\salt', index=0, retval=True)
+        new_path = ('c:\\salt', 'C:\\Foo', 'C:\\Bar')
         self.assertTrue(ret)
         self.assert_call_matches(mock_set, new_path)
         self.assert_path_matches(env, new_path)

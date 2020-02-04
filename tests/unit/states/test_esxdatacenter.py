@@ -14,16 +14,13 @@ from salt.exceptions import CommandExecutionError
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class DatacenterConfiguredTestCase(TestCase, LoaderModuleMockMixin):
     '''Tests for salt.modules.esxdatacenter.datacenter_configured'''
 
@@ -64,7 +61,6 @@ class DatacenterConfiguredTestCase(TestCase, LoaderModuleMockMixin):
             res = esxdatacenter.datacenter_configured('fake_dc')
         self.assertDictEqual(res, {'name': 'fake_dc',
                                    'changes': {},
-                                   'pchanges': {},
                                    'result': True,
                                    'comment': 'Datacenter \'fake_dc\' already '
                                    'exists. Nothing to be done.'})
@@ -78,7 +74,6 @@ class DatacenterConfiguredTestCase(TestCase, LoaderModuleMockMixin):
             res = esxdatacenter.datacenter_configured('fake_dc')
         self.assertDictEqual(res, {'name': 'fake_dc',
                                    'changes': {},
-                                   'pchanges': {},
                                    'result': True,
                                    'comment': 'Datacenter \'proxy_dc\' '
                                    'already exists. Nothing to be done.'})
@@ -112,7 +107,6 @@ class DatacenterConfiguredTestCase(TestCase, LoaderModuleMockMixin):
         self.assertDictEqual(res,
                              {'name': 'fake_dc',
                               'changes': {'new': {'name': 'fake_dc'}},
-                              'pchanges': {},
                               'result': True,
                               'comment': 'Created datacenter \'fake_dc\'.'})
 
@@ -124,8 +118,7 @@ class DatacenterConfiguredTestCase(TestCase, LoaderModuleMockMixin):
                 res = esxdatacenter.datacenter_configured('fake_dc')
         self.assertDictEqual(res,
                              {'name': 'fake_dc',
-                              'changes': {},
-                              'pchanges': {'new': {'name': 'fake_dc'}},
+                              'changes': {'new': {'name': 'fake_dc'}},
                               'result': None,
                               'comment': 'State will create '
                               'datacenter \'fake_dc\'.'})
@@ -138,7 +131,6 @@ class DatacenterConfiguredTestCase(TestCase, LoaderModuleMockMixin):
                 res = esxdatacenter.datacenter_configured('fake_dc')
         self.assertDictEqual(res, {'name': 'fake_dc',
                                    'changes': {},
-                                   'pchanges': {},
                                    'result': True,
                                    'comment': 'Datacenter \'fake_dc\' already '
                                    'exists. Nothing to be done.'})
@@ -154,7 +146,6 @@ class DatacenterConfiguredTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(mock_disconnect.call_count, 0)
         self.assertDictEqual(res, {'name': 'fake_dc',
                                    'changes': {},
-                                   'pchanges': {},
                                    'result': False,
                                    'comment': 'Error'})
 
@@ -169,7 +160,6 @@ class DatacenterConfiguredTestCase(TestCase, LoaderModuleMockMixin):
         mock_disconnect.assert_called_once_with(self.mock_si)
         self.assertDictEqual(res, {'name': 'fake_dc',
                                    'changes': {},
-                                   'pchanges': {},
                                    'result': False,
                                    'comment': 'Error'})
 
@@ -182,6 +172,5 @@ class DatacenterConfiguredTestCase(TestCase, LoaderModuleMockMixin):
                 res = esxdatacenter.datacenter_configured('fake_dc')
         self.assertDictEqual(res, {'name': 'fake_dc',
                                    'changes': {},
-                                   'pchanges': {},
                                    'result': None,
                                    'comment': 'Error'})

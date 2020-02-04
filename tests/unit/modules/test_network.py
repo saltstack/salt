@@ -16,8 +16,6 @@ from tests.support.mock import (
     mock_open,
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -30,7 +28,6 @@ from salt._compat import ipaddress
 log = logging.getLogger(__name__)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class NetworkTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.network
@@ -113,14 +110,15 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test for Performs a traceroute to a 3rd party host
         '''
-        with patch.object(salt.utils.path, 'which', side_effect=[False, True]):
-            self.assertListEqual(network.traceroute('host'), [])
+        with patch('salt.utils.path.which', MagicMock(return_value='traceroute')):
+            with patch.dict(network.__salt__, {'cmd.run': MagicMock(return_value='')}):
+                self.assertListEqual(network.traceroute('gentoo.org'), [])
 
             with patch.object(salt.utils.network, 'sanitize_host',
-                              return_value='A'):
+                              return_value='gentoo.org'):
                 with patch.dict(network.__salt__, {'cmd.run':
-                                                   MagicMock(return_value="")}):
-                    self.assertListEqual(network.traceroute('host'), [])
+                                                   MagicMock(return_value='')}):
+                    self.assertListEqual(network.traceroute('gentoo.org'), [])
 
     def test_dig(self):
         '''

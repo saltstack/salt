@@ -1,9 +1,0 @@
-mysql-python
-timelib
-yappi>=0.8.2
---allow-unverified python-novaclient>2.17.0
---allow-unverified python-neutronclient>2.3.6
-python-gnupg
-cherrypy>=3.2.2,<18.0.0; python_version < '3.5'
-cherrypy>=3.2.2; python_version >= '3.5'
-libnacl

@@ -72,6 +72,8 @@ def present(name, auth=None, **kwargs):
            'result': True,
            'comment': ''}
 
+    kwargs = __utils__['args.clean_kwargs'](**kwargs)
+
     __salt__['neutronng.setup_clouds'](auth)
 
     kwargs['name'] = name
@@ -81,7 +83,6 @@ def present(name, auth=None, **kwargs):
         if __opts__['test'] is True:
             ret['result'] = None
             ret['changes'] = kwargs
-            ret['pchanges'] = ret['changes']
             ret['comment'] = 'Network will be created.'
             return ret
 
@@ -115,7 +116,6 @@ def present(name, auth=None, **kwargs):
         if __opts__['test'] is True:
             ret['result'] = None
             ret['changes'] = changes
-            ret['pchanges'] = ret['changes']
             ret['comment'] = 'Project will be updated.'
             return ret
 
@@ -140,6 +140,8 @@ def absent(name, auth=None, **kwargs):
            'result': True,
            'comment': ''}
 
+    kwargs = __utils__['args.clean_kwargs'](**kwargs)
+
     __salt__['neutronng.setup_clouds'](auth)
 
     kwargs['name'] = name
@@ -149,7 +151,6 @@ def absent(name, auth=None, **kwargs):
         if __opts__['test'] is True:
             ret['result'] = None
             ret['changes'] = {'id': network.id}
-            ret['pchanges'] = ret['changes']
             ret['comment'] = 'Network will be deleted.'
             return ret
 

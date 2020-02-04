@@ -42,11 +42,12 @@ import salt.utils.http
 # Import third party libs
 HAS_LIBS = False
 try:
+    # pylint: disable=no-name-in-module
     import github
     import github.PaginatedList
     import github.NamedUser
     from github.GithubException import UnknownObjectException
-
+    # pylint: enable=no-name-in-module
     HAS_LIBS = True
 except ImportError:
     pass
@@ -1256,9 +1257,9 @@ def edit_team(name,
         parameters = {}
         if name is not None:
             parameters['name'] = name
-        if 'description' is not None:
+        if description is not None:
             parameters['description'] = description
-        if 'privacy' is not None:
+        if privacy is not None:
             parameters['privacy'] = privacy
         if permission is not None:
             parameters['permission'] = permission

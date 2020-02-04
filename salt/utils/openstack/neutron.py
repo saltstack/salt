@@ -31,6 +31,7 @@ except ImportError:
 
 # Import salt libs
 from salt import exceptions
+import salt.utils.versions
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -81,8 +82,8 @@ class SaltNeutron(NeutronShell):
         '''
         Set up neutron credentials
         '''
-        __utils__['versions.warn_until'](
-            'Neon',
+        salt.utils.versions.warn_until(
+            'Aluminium',
             (
                 'The neutron module has been deprecated and will be removed in {version}.  '
                 'Please update to using the neutronng module'

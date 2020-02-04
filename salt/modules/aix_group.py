@@ -179,7 +179,7 @@ def deluser(name, username, root=None):
             return not ret['retcode']
         else:
             return True
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return True
 
 

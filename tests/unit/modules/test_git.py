@@ -12,13 +12,11 @@ import subprocess
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     Mock,
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -68,11 +66,10 @@ def _git_version():
     if not git_version:
         log.error('Git not installed')
         return False
-    log.debug('Detected git version ' + git_version)
+    log.debug('Detected git version %s', git_version)
     return LooseVersion(git_version.split()[-1])
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class GitTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.git

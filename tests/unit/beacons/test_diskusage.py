@@ -5,8 +5,8 @@ from __future__ import absolute_import
 from collections import namedtuple
 
 # Salt testing libs
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, Mock
+from tests.support.unit import TestCase
+from tests.support.mock import patch, MagicMock, Mock
 from tests.support.mixins import LoaderModuleMockMixin
 
 # Salt libs
@@ -48,7 +48,6 @@ WINDOWS_STUB_DISK_USAGE = namedtuple('usage',
                                                                 50)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class DiskUsageBeaconTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test case for salt.beacons.adb
@@ -120,7 +119,10 @@ class DiskUsageBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret = diskusage.beacon(config)
             self.assertEqual(ret, [{'diskusage': 50, 'mount': '/'}])
 
-    def test_diskusage_windows(self):
+    def test_diskusage_windows_single_slash(self):
+        r'''
+        This tests new behavior (C:\)
+        '''
         disk_usage_mock = Mock(return_value=WINDOWS_STUB_DISK_USAGE)
         with patch('salt.utils.platform.is_windows',
                    MagicMock(return_value=True)):
@@ -128,6 +130,44 @@ class DiskUsageBeaconTestCase(TestCase, LoaderModuleMockMixin):
                        MagicMock(return_value=WINDOWS_STUB_DISK_PARTITION)), \
                     patch('psutil.disk_usage', disk_usage_mock):
                 config = [{'C:\\': '50%'}]
+
+                ret = diskusage.validate(config)
+
+                self.assertEqual(ret, (True, 'Valid beacon configuration'))
+
+                ret = diskusage.beacon(config)
+                self.assertEqual(ret, [{'diskusage': 50, 'mount': 'C:\\'}])
+
+    def test_diskusage_windows_double_slash(self):
+        '''
+        This tests original behavior (C:\\)
+        '''
+        disk_usage_mock = Mock(return_value=WINDOWS_STUB_DISK_USAGE)
+        with patch('salt.utils.platform.is_windows',
+                   MagicMock(return_value=True)):
+            with patch('psutil.disk_partitions',
+                       MagicMock(return_value=WINDOWS_STUB_DISK_PARTITION)), \
+                    patch('psutil.disk_usage', disk_usage_mock):
+                config = [{'C:\\\\': '50%'}]
+
+                ret = diskusage.validate(config)
+
+                self.assertEqual(ret, (True, 'Valid beacon configuration'))
+
+                ret = diskusage.beacon(config)
+                self.assertEqual(ret, [{'diskusage': 50, 'mount': 'C:\\'}])
+
+    def test_diskusage_windows_lowercase(self):
+        r'''
+        This tests lowercase drive letter (c:\)
+        '''
+        disk_usage_mock = Mock(return_value=WINDOWS_STUB_DISK_USAGE)
+        with patch('salt.utils.platform.is_windows',
+                   MagicMock(return_value=True)):
+            with patch('psutil.disk_partitions',
+                       MagicMock(return_value=WINDOWS_STUB_DISK_PARTITION)), \
+                 patch('psutil.disk_usage', disk_usage_mock):
+                config = [{'c:\\': '50%'}]
 
                 ret = diskusage.validate(config)
 

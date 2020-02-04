@@ -13,11 +13,10 @@ import ssl
 import sys
 
 # Import Salt testing libraries
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     patch,
     MagicMock,
     PropertyMock,
@@ -39,7 +38,7 @@ import salt.utils.vmware
 # Import Third Party Libs
 from salt.ext import six
 try:
-    from pyVmomi import vim, vmodl
+    from pyVmomi import vim, vmodl  # pylint: disable=no-name-in-module
     HAS_PYVMOMI = True
 except ImportError:
     HAS_PYVMOMI = False
@@ -64,7 +63,6 @@ else:
 log = logging.getLogger(__name__)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetClusterTestCase(TestCase):
     '''
@@ -253,7 +251,6 @@ class CreateClusterTestCase(TestCase):
         self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class UpdateClusterTestCase(TestCase):
     '''
@@ -329,7 +326,6 @@ class UpdateClusterTestCase(TestCase):
             self.mock_task, 'fake_cluster', 'ClusterUpdateTask')
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class WaitForTaskTestCase(TestCase):
     '''
@@ -572,7 +568,6 @@ class WaitForTaskTestCase(TestCase):
                          'InvalidArgumentFault msg (LocalFault msg)')
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetMorsWithPropertiesTestCase(TestCase):
     '''
@@ -782,7 +777,6 @@ class GetMorsWithPropertiesTestCase(TestCase):
                                       'object': inner_obj_mock})
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetPropertiesOfManagedObjectTestCase(TestCase):
     '''
@@ -854,7 +848,6 @@ class GetPropertiesOfManagedObjectTestCase(TestCase):
                          'retrieved', excinfo.exception.strerror)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetManagedObjectName(TestCase):
     '''
@@ -891,7 +884,6 @@ class GetManagedObjectName(TestCase):
         self.assertEqual(ret, 'fake_name')
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetContentTestCase(TestCase):
     '''
@@ -1173,7 +1165,6 @@ class GetContentTestCase(TestCase):
             obj=container_ref_mock, skip=False, selectSet=None)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetRootFolderTestCase(TestCase):
     '''
@@ -1217,7 +1208,6 @@ class GetRootFolderTestCase(TestCase):
         self.assertEqual(ret, self.mock_root_folder)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetServiceInfoTestCase(TestCase):
     '''
@@ -1267,7 +1257,6 @@ class GetServiceInfoTestCase(TestCase):
         self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 @skipIf(not HAS_GSSAPI, 'The \'gssapi\' library is missing')
 class GssapiTokenTest(TestCase):
@@ -1345,7 +1334,6 @@ class GssapiTokenTest(TestCase):
                           excinfo.exception.strerror)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class PrivateGetServiceInstanceTestCase(TestCase):
     '''
@@ -1795,7 +1783,6 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                     self.assertIn('VimFault', excinfo.Exception.message)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetServiceInstanceTestCase(TestCase):
     '''
@@ -1970,7 +1957,6 @@ class GetServiceInstanceTestCase(TestCase):
         self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class DisconnectTestCase(TestCase):
     '''
@@ -2018,7 +2004,6 @@ class DisconnectTestCase(TestCase):
         self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class IsConnectionToAVCenterTestCase(TestCase):
     '''
@@ -2078,7 +2063,6 @@ class IsConnectionToAVCenterTestCase(TestCase):
                       excinfo.exception.strerror)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetNewServiceInstanceStub(TestCase, LoaderModuleMockMixin):
     '''
@@ -2170,7 +2154,6 @@ class GetNewServiceInstanceStub(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret, self.mock_new_stub)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetServiceInstanceFromManagedObjectTestCase(TestCase):
     '''
@@ -2226,7 +2209,6 @@ class GetServiceInstanceFromManagedObjectTestCase(TestCase):
         self.assertEqual(ret._stub, self.mock_stub)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetDatacentersTestCase(TestCase):
     '''
@@ -2294,7 +2276,6 @@ class GetDatacentersTestCase(TestCase):
         self.assertEqual(res, [self.mock_dc1, self.mock_dc2])
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetDatacenterTestCase(TestCase):
     '''
@@ -2335,7 +2316,6 @@ class GetDatacenterTestCase(TestCase):
         self.assertEqual(res, self.mock_dc)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class CreateDatacenterTestCase(TestCase):
     '''
@@ -2414,7 +2394,6 @@ class FakeTaskClass(object):
     pass
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetDvssTestCase(TestCase):
     def setUp(self):
@@ -2489,7 +2468,6 @@ class GetDvssTestCase(TestCase):
                                self.mock_items[2]['object']])
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetNetworkFolderTestCase(TestCase):
     def setUp(self):
@@ -2556,7 +2534,6 @@ class GetNetworkFolderTestCase(TestCase):
         self.assertEqual(ret, self.mock_entries[0]['object'])
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class CreateDvsTestCase(TestCase):
     def setUp(self):
@@ -2655,10 +2632,11 @@ class CreateDvsTestCase(TestCase):
                                      dvs_create_spec=self.mock_dvs_create_spec)
         self.mock_wait_for_task.assert_called_once_with(
             self.mock_task, 'fake_dvs',
-            '<class \'unit.utils.test_vmware.FakeTaskClass\'>')
+            '<class \'{}unit.utils.test_vmware.FakeTaskClass\'>'.format(
+                'tests.' if RUNTIME_VARS.PYTEST_SESSION else '')
+        )
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class UpdateDvsTestCase(TestCase):
     def setUp(self):
@@ -2724,10 +2702,11 @@ class UpdateDvsTestCase(TestCase):
         salt.utils.vmware.update_dvs(self.mock_dvs_ref, self.mock_dvs_spec)
         self.mock_wait_for_task.assert_called_once_with(
             self.mock_task, 'fake_dvs',
-            '<class \'unit.utils.test_vmware.FakeTaskClass\'>')
+            '<class \'{}unit.utils.test_vmware.FakeTaskClass\'>'.format(
+                'tests.' if RUNTIME_VARS.PYTEST_SESSION else '')
+        )
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class SetDvsNetworkResourceManagementEnabledTestCase(TestCase):
     def setUp(self):
@@ -2793,7 +2772,6 @@ class SetDvsNetworkResourceManagementEnabledTestCase(TestCase):
         self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetDvportgroupsTestCase(TestCase):
     def setUp(self):
@@ -2887,7 +2865,6 @@ class GetDvportgroupsTestCase(TestCase):
                                self.mock_items[2]['object']])
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetUplinkDvportgroupTestCase(TestCase):
     def setUp(self):
@@ -2956,7 +2933,6 @@ class GetUplinkDvportgroupTestCase(TestCase):
         self.assertEqual(ret, self.mock_items[1]['object'])
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class CreateDvportgroupTestCase(TestCase):
     def setUp(self):
@@ -3023,10 +2999,11 @@ class CreateDvportgroupTestCase(TestCase):
         salt.utils.vmware.create_dvportgroup(self.mock_dvs_ref, self.mock_pg_spec)
         self.mock_wait_for_task.assert_called_once_with(
             self.mock_task, 'fake_dvs',
-            '<class \'unit.utils.test_vmware.FakeTaskClass\'>')
+            '<class \'{}unit.utils.test_vmware.FakeTaskClass\'>'.format(
+                'tests.' if RUNTIME_VARS.PYTEST_SESSION else '')
+        )
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class UpdateDvportgroupTestCase(TestCase):
     def setUp(self):
@@ -3096,10 +3073,11 @@ class UpdateDvportgroupTestCase(TestCase):
         salt.utils.vmware.update_dvportgroup(self.mock_pg_ref, self.mock_pg_spec)
         self.mock_wait_for_task.assert_called_once_with(
             self.mock_task, 'fake_pg',
-            '<class \'unit.utils.test_vmware.FakeTaskClass\'>')
+            '<class \'{}unit.utils.test_vmware.FakeTaskClass\'>'.format(
+                'tests.' if RUNTIME_VARS.PYTEST_SESSION else '')
+        )
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class RemoveDvportgroupTestCase(TestCase):
     def setUp(self):
@@ -3163,10 +3141,11 @@ class RemoveDvportgroupTestCase(TestCase):
         salt.utils.vmware.remove_dvportgroup(self.mock_pg_ref)
         self.mock_wait_for_task.assert_called_once_with(
             self.mock_task, 'fake_pg',
-            '<class \'unit.utils.test_vmware.FakeTaskClass\'>')
+            '<class \'{}unit.utils.test_vmware.FakeTaskClass\'>'.format(
+                'tests.' if RUNTIME_VARS.PYTEST_SESSION else '')
+        )
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetHostsTestCase(TestCase):
     '''
@@ -3301,7 +3280,6 @@ class GetHostsTestCase(TestCase):
         self.assertEqual(res, [self.mock_host1])
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetLicenseManagerTestCase(TestCase):
     '''
@@ -3352,7 +3330,6 @@ class GetLicenseManagerTestCase(TestCase):
         self.assertEqual(ret, self.mock_lic_mgr)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetLicenseAssignmentManagerTestCase(TestCase):
     '''
@@ -3411,7 +3388,6 @@ class GetLicenseAssignmentManagerTestCase(TestCase):
         self.assertEqual(ret, self.mock_lic_assign_mgr)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetLicensesTestCase(TestCase):
     '''
@@ -3486,7 +3462,6 @@ class GetLicensesTestCase(TestCase):
         self.assertEqual(ret, self.mock_licenses)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class AddLicenseTestCase(TestCase):
     '''
@@ -3587,7 +3562,6 @@ class AddLicenseTestCase(TestCase):
         self.assertEqual(ret, self.mock_license)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetAssignedLicensesTestCase(TestCase):
     '''
@@ -3644,7 +3618,7 @@ class GetAssignedLicensesTestCase(TestCase):
 
     def test_entity_name(self):
         mock_trace = MagicMock()
-        with patch('salt.log.setup.SaltLoggingClass.trace', mock_trace):
+        with patch('salt._logging.impl.SaltLoggingClass.trace', mock_trace):
             salt.utils.vmware.get_assigned_licenses(self.mock_si,
                                                     self.mock_entity_ref,
                                                     'fake_entity_name')
@@ -3766,7 +3740,6 @@ class GetAssignedLicensesTestCase(TestCase):
         self.assertEqual(ret, self.mock_assignments)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class AssignLicenseTestCase(TestCase):
     '''
@@ -3820,7 +3793,7 @@ class AssignLicenseTestCase(TestCase):
 
     def test_entity_name(self):
         mock_trace = MagicMock()
-        with patch('salt.log.setup.SaltLoggingClass.trace', mock_trace):
+        with patch('salt._logging.impl.SaltLoggingClass.trace', mock_trace):
             salt.utils.vmware.assign_license(self.mock_si,
                                              self.mock_lic_key,
                                              'fake_license_name',
@@ -3945,7 +3918,6 @@ class AssignLicenseTestCase(TestCase):
         self.assertEqual(ret, self.mock_license)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetStorageSystemTestCase(TestCase):
     '''
@@ -4030,7 +4002,6 @@ class GetStorageSystemTestCase(TestCase):
         self.assertEqual(res, self.mock_obj)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetDatastoresTestCase(TestCase):
     '''
@@ -4255,7 +4226,6 @@ class GetDatastoresTestCase(TestCase):
                                self.mock_entries[2]['object']])
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class RenameDatastoreTestCase(TestCase):
     '''
@@ -4319,7 +4289,6 @@ class RenameDatastoreTestCase(TestCase):
             'fake_new_name')
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class ConvertToKbTestCase(TestCase):
     '''
     Tests for converting units
@@ -4341,7 +4310,6 @@ class ConvertToKbTestCase(TestCase):
         self.assertRaises(ArgumentValueError, salt.utils.vmware.convert_to_kb, 'test', 10)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 @patch('salt.utils.vmware.get_managed_object_name', MagicMock())
 @patch('salt.utils.vmware.wait_for_task', MagicMock())
@@ -4413,7 +4381,6 @@ class CreateVirtualMachineTestCase(TestCase):
             self.mock_task, self.vm_name, 'CreateVM Task', 10, 'info')
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 @patch('salt.utils.vmware.get_managed_object_name', MagicMock())
 @patch('salt.utils.vmware.wait_for_task', MagicMock())
@@ -4485,7 +4452,6 @@ class RegisterVirtualMachineTestCase(TestCase):
             self.mock_task, self.vm_name, 'RegisterVM Task')
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 @patch('salt.utils.vmware.get_managed_object_name', MagicMock())
 @patch('salt.utils.vmware.wait_for_task', MagicMock())
@@ -4530,7 +4496,6 @@ class UpdateVirtualMachineTestCase(TestCase):
             self.mock_task, 'my_vm', 'ReconfigureVM Task')
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 @patch('salt.utils.vmware.get_managed_object_name', MagicMock())
 @patch('salt.utils.vmware.wait_for_task', MagicMock())
@@ -4574,7 +4539,6 @@ class DeleteVirtualMachineTestCase(TestCase):
             self.mock_task, 'my_vm', 'Destroy Task')
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 @patch('salt.utils.vmware.get_managed_object_name', MagicMock())
 class UnregisterVirtualMachineTestCase(TestCase):

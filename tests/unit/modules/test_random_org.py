@@ -9,7 +9,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Salt Testing Libs
 from tests.support.helpers import flaky
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase
+from tests.support.unit import skipIf, TestCase
 
 # Import Salt Libs
 import salt.modules.random_org as random_org
@@ -28,6 +28,7 @@ def check_status():
         return False
 
 
+@skipIf(True, 'WAR ROOM 7/31/2019, test needs to allow for quotas of random website')
 class RandomOrgTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.random_org

@@ -42,6 +42,27 @@ version currently listed in PyPi, run the following:
 The 5.5.0.2014.1.1 is a known stable version that this original vSphere Execution
 Module was developed against.
 
+vSphere Automation SDK
+----------------------
+
+vSphere Automation SDK can be installed via pip:
+
+.. code-block:: bash
+
+    pip install --upgrade pip setuptools
+    pip install --upgrade git+https://github.com/vmware/vsphere-automation-sdk-python.git
+
+.. note::
+
+    The SDK also requires OpenSSL 1.0.1+ if you want to connect to vSphere 6.5+ in order to support
+    TLS1.1 & 1.2.
+
+    In order to use the tagging functions in this module, vSphere Automation SDK is necessary to
+    install.
+
+The module is currently in version 1.0.3
+(as of 8/26/2019)
+
 ESXCLI
 ------
 
@@ -194,7 +215,6 @@ from salt.config.schemas.esxi import DiskGroupsDiskIdSchema, \
 from salt.config.schemas.esxvm import ESXVirtualMachineDeleteSchema, \
         ESXVirtualMachineUnregisterSchema
 
-
 log = logging.getLogger(__name__)
 
 # Import Third Party Libs
@@ -205,7 +225,7 @@ except ImportError:
     HAS_JSONSCHEMA = False
 
 try:
-    from pyVmomi import vim, vmodl, pbm, VmomiSupport
+    from pyVmomi import vim, vmodl, pbm, VmomiSupport  # pylint: disable=no-name-in-module
 
     # We check the supported vim versions to infer the pyVmomi version
     if 'vim25/6.0' in VmomiSupport.versionMap and \
@@ -218,6 +238,27 @@ try:
 except ImportError:
     HAS_PYVMOMI = False
 
+# vSphere SDK Automation
+# pylint: disable=unused-import
+try:
+    from com.vmware.cis.tagging_client import Category, CategoryModel
+    from com.vmware.cis.tagging_client import Tag, TagModel, TagAssociation
+    from com.vmware.vcenter_client import Cluster
+    from com.vmware.vapi.std_client import DynamicID
+
+    # Error Handling
+    from com.vmware.vapi.std.errors_client import (
+        AlreadyExists, InvalidArgument,
+        NotFound, Unauthenticated, Unauthorized
+    )
+    vsphere_errors = (AlreadyExists, InvalidArgument,
+                      NotFound, Unauthenticated, Unauthorized,)
+    HAS_VSPHERE_SDK = True
+except ImportError:
+    HAS_VSPHERE_SDK = False
+# pylint: enable=unused-import
+
+# ESXI
 esx_cli = salt.utils.path.which('esxcli')
 if esx_cli:
     HAS_ESX_CLI = True
@@ -357,6 +398,9 @@ def gets_service_instance_via_proxy(fn):
                         local_service_instance = \
                                 salt.utils.vmware.get_service_instance(
                                     *connection_details)
+                        # Tuples are immutable, so if we want to change what
+                        # was passed in, we need to first convert to a list.
+                        args = list(args)
                         args[idx] = local_service_instance
                 else:
                     # case 2: Not enough positional parameters so
@@ -380,7 +424,7 @@ def gets_service_instance_via_proxy(fn):
             if local_service_instance:
                 salt.utils.vmware.disconnect(local_service_instance)
             return ret
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             # Disconnect if connected in the decorator
             if local_service_instance:
                 salt.utils.vmware.disconnect(local_service_instance)
@@ -1345,7 +1389,7 @@ def upload_ssh_key(host, username, password, ssh_key=None, ssh_key_file=None,
         else:
             ret['status'] = False
             ret['Error'] = result['error']
-    except Exception as msg:
+    except Exception as msg:  # pylint: disable=broad-except
         ret['status'] = False
         ret['Error'] = msg
 
@@ -1402,7 +1446,7 @@ def get_ssh_key(host,
         else:
             ret['status'] = False
             ret['Error'] = result['error']
-    except Exception as msg:
+    except Exception as msg:  # pylint: disable=broad-except
         ret['status'] = False
         ret['Error'] = msg
 
@@ -3436,7 +3480,7 @@ def vsan_add_disks(host, username, password, protocol=None, port=None, host_name
                     log.debug(err.msg)
                     ret.update({host_name: {'Error': err.msg}})
                     continue
-                except Exception as err:
+                except Exception as err:  # pylint: disable=broad-except
                     msg = '\'vsphere.vsan_add_disks\' failed for host {0}: {1}'.format(host_name, err)
                     log.debug(msg)
                     ret.update({host_name: {'Error': msg}})
@@ -3537,7 +3581,7 @@ def vsan_disable(host, username, password, protocol=None, port=None, host_names=
                 log.debug(err.msg)
                 ret.update({host_name: {'Error': err.msg}})
                 continue
-            except Exception as err:
+            except Exception as err:  # pylint: disable=broad-except
                 msg = '\'vsphere.vsan_disable\' failed for host {0}: {1}'.format(host_name, err)
                 log.debug(msg)
                 ret.update({host_name: {'Error': msg}})
@@ -4164,7 +4208,7 @@ def _get_dvportgroup_teaming(pg_name, pg_default_port_config):
 
 def _get_dvportgroup_dict(pg_ref):
     '''
-    Returns a dictionary with a distributed virutal portgroup data
+    Returns a dictionary with a distributed virtual portgroup data
 
 
     pg_ref
@@ -6933,45 +6977,47 @@ def add_host_to_dvs(host, username, password, vmknic_name, vmnic_name,
     to sniff the SOAP stream from Powershell to our vSphere server and got
     this snippet out:
 
-    <UpdateNetworkConfig xmlns="urn:vim25">
-      <_this type="HostNetworkSystem">networkSystem-187</_this>
-      <config>
-        <vswitch>
-          <changeOperation>edit</changeOperation>
-          <name>vSwitch0</name>
-          <spec>
-            <numPorts>7812</numPorts>
-          </spec>
-        </vswitch>
-        <proxySwitch>
-            <changeOperation>edit</changeOperation>
-            <uuid>73 a4 05 50 b0 d2 7e b9-38 80 5d 24 65 8f da 70</uuid>
-            <spec>
-            <backing xsi:type="DistributedVirtualSwitchHostMemberPnicBacking">
-                <pnicSpec><pnicDevice>vmnic0</pnicDevice></pnicSpec>
-            </backing>
-            </spec>
-        </proxySwitch>
-        <portgroup>
-          <changeOperation>remove</changeOperation>
-          <spec>
-            <name>Management Network</name><vlanId>-1</vlanId><vswitchName /><policy />
-          </spec>
-        </portgroup>
-        <vnic>
-          <changeOperation>edit</changeOperation>
-          <device>vmk0</device>
-          <portgroup />
-          <spec>
-            <distributedVirtualPort>
-              <switchUuid>73 a4 05 50 b0 d2 7e b9-38 80 5d 24 65 8f da 70</switchUuid>
-              <portgroupKey>dvportgroup-191</portgroupKey>
-            </distributedVirtualPort>
-          </spec>
-        </vnic>
-      </config>
-      <changeMode>modify</changeMode>
-    </UpdateNetworkConfig>
+    .. code-block:: xml
+
+        <UpdateNetworkConfig xmlns="urn:vim25">
+          <_this type="HostNetworkSystem">networkSystem-187</_this>
+          <config>
+            <vswitch>
+              <changeOperation>edit</changeOperation>
+              <name>vSwitch0</name>
+              <spec>
+                <numPorts>7812</numPorts>
+              </spec>
+            </vswitch>
+            <proxySwitch>
+                <changeOperation>edit</changeOperation>
+                <uuid>73 a4 05 50 b0 d2 7e b9-38 80 5d 24 65 8f da 70</uuid>
+                <spec>
+                <backing xsi:type="DistributedVirtualSwitchHostMemberPnicBacking">
+                    <pnicSpec><pnicDevice>vmnic0</pnicDevice></pnicSpec>
+                </backing>
+                </spec>
+            </proxySwitch>
+            <portgroup>
+              <changeOperation>remove</changeOperation>
+              <spec>
+                <name>Management Network</name><vlanId>-1</vlanId><vswitchName /><policy />
+              </spec>
+            </portgroup>
+            <vnic>
+              <changeOperation>edit</changeOperation>
+              <device>vmk0</device>
+              <portgroup />
+              <spec>
+                <distributedVirtualPort>
+                  <switchUuid>73 a4 05 50 b0 d2 7e b9-38 80 5d 24 65 8f da 70</switchUuid>
+                  <portgroupKey>dvportgroup-191</portgroupKey>
+                </distributedVirtualPort>
+              </spec>
+            </vnic>
+          </config>
+          <changeMode>modify</changeMode>
+        </UpdateNetworkConfig>
 
     The SOAP API maps closely to PyVmomi, so from there it was (relatively)
     easy to figure out what Python to write.
@@ -7072,7 +7118,7 @@ def add_host_to_dvs(host, username, password, vmknic_name, vmnic_name,
             salt.utils.vmware.wait_for_task(task, host_name,
                                             'Adding host to the DVS',
                                             sleep_seconds=3)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             if hasattr(e, 'message') and hasattr(e.message, 'msg'):
                 if not (host_name in e.message.msg and 'already exists' in e.message.msg):
                     ret['success'] = False
@@ -7129,7 +7175,7 @@ def add_host_to_dvs(host, username, password, vmknic_name, vmnic_name,
             network_system.UpdateNetworkConfig(changeMode='modify',
                                                config=host_network_config)
             ret[host_name].update({'status': True})
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             if hasattr(e, 'msg'):
                 ret[host_name].update({'message': 'Failed to migrate adapters ({0})'.format(e.msg)})
                 continue
@@ -9043,6 +9089,443 @@ def _delete_device(device):
     device_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.remove
     device_spec.device = device
     return device_spec
+
+
+def _get_client(server, username, password):
+    '''
+    Establish client through proxy or with user provided credentials.
+
+    :param basestring server:
+        Target DNS or IP of vCenter center.
+    :param basestring username:
+        Username associated with the vCenter center.
+    :param basestring password:
+        Password associated with the vCenter center.
+    :returns:
+        vSphere Client instance.
+    :rtype:
+        vSphere.Client
+    '''
+    # Get salted vSphere Client
+    if not (server and username and password):
+        # User didn't provide CLI args so use proxy information
+        details = __salt__['vcenter.get_details']()
+        server = details['vcenter']
+        username = details['username']
+        password = details['password']
+
+    # Establish connection with client
+    client = salt.utils.vmware.get_vsphere_client(server=server,
+                                                  username=username,
+                                                  password=password)
+    # Will return None if utility function causes Unauthenticated error
+    return client
+
+
+@depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
+@supports_proxies('vcenter')
+@gets_service_instance_via_proxy
+def list_tag_categories(server=None, username=None, password=None,
+                        service_instance=None):
+    '''
+    List existing categories a user has access to.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+            salt vm_minion vsphere.list_tag_categories
+
+    :param basestring server:
+        Target DNS or IP of vCenter center.
+    :param basestring username:
+        Username associated with the vCenter center.
+    :param basestring password:
+        Password associated with the vCenter center.
+    :returns:
+        Value(s) of category_id.
+    :rtype:
+        list of str
+    '''
+    categories = None
+    client = _get_client(server, username, password)
+
+    if client:
+        categories = client.tagging.Category.list()
+    return {'Categories': categories}
+
+
+@depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
+@supports_proxies('vcenter')
+@gets_service_instance_via_proxy
+def list_tags(server=None, username=None, password=None,
+              service_instance=None):
+    '''
+    List existing tags a user has access to.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+            salt vm_minion vsphere.list_tags
+
+    :param basestring server:
+        Target DNS or IP of vCenter center.
+    :param basestring username:
+        Username associated with the vCenter center.
+    :param basestring password:
+        Password associated with the vCenter center.
+    :return:
+        Value(s) of tag_id.
+    :rtype:
+        list of str
+    '''
+    tags = None
+    client = _get_client(server, username, password)
+
+    if client:
+        tags = client.tagging.Tag.list()
+    return {'Tags': tags}
+
+
+@depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
+@supports_proxies('vcenter')
+@gets_service_instance_via_proxy
+def attach_tag(object_id, tag_id,
+               managed_obj='ClusterComputeResource',
+               server=None, username=None, password=None,
+               service_instance=None):
+    '''
+    Attach an existing tag to an input object.
+
+    The tag needs to meet the cardinality (`CategoryModel.cardinality`) and
+    associability (`CategoryModel.associable_types`) criteria in order to be
+    eligible for attachment. If the tag is already attached to the object,
+    then this method is a no-op and an error will not be thrown. To invoke
+    this method, you need the attach tag privilege on the tag and the read
+    privilege on the object.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+            salt vm_minion vsphere.attach_tag domain-c2283 \
+                urn:vmomi:InventoryServiceTag:b55ecc77-f4a5-49f8-ab52-38865467cfbe:GLOBAL
+
+    :param str object_id:
+        The identifier of the input object.
+    :param str tag_id:
+        The identifier of the tag object.
+    :param str managed_obj:
+        Classes that contain methods for creating and deleting resources
+        typically contain a class attribute specifying the resource type
+        for the resources being created and deleted.
+    :param basestring server:
+        Target DNS or IP of vCenter center.
+    :param basestring username:
+        Username associated with the vCenter center.
+    :param basestring password:
+        Password associated with the vCenter center.
+    :return:
+        The list of all tag identifiers that correspond to the
+        tags attached to the given object.
+    :rtype:
+        list of tags
+    :raise: Unauthorized
+        if you do not have the privilege to read the object.
+    :raise: Unauthenticated
+        if the user can not be authenticated.
+    '''
+    tag_attached = None
+    client = _get_client(server, username, password)
+
+    if client:
+        # Create dynamic id object associated with a type and an id.
+        # Note, here the default is ClusterComputeResource, which
+        # infers a lazy loaded vim.ClusterComputerResource.
+
+        # The ClusterComputeResource data object aggregates the compute
+        # resources of associated HostSystem objects into a single compute
+        # resource for use by virtual machines.
+        dynamic_id = DynamicID(type=managed_obj, id=object_id)
+        try:
+            tag_attached = client.tagging.TagAssociation.attach(
+                tag_id=tag_id, object_id=dynamic_id)
+        except vsphere_errors:
+            log.warning('Unable to attach tag. Check user privileges and'
+                        ' object_id (must be a string).')
+    return {'Tag attached': tag_attached}
+
+
+@depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
+@supports_proxies('vcenter')
+@gets_service_instance_via_proxy
+def list_attached_tags(object_id,
+                       managed_obj='ClusterComputeResource',
+                       server=None, username=None, password=None,
+                       service_instance=None):
+    '''
+    List existing tags a user has access to.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+            salt vm_minion vsphere.list_attached_tags domain-c2283
+
+    :param str object_id:
+        The identifier of the input object.
+    :param str managed_obj:
+        Classes that contain methods for creating and deleting resources
+        typically contain a class attribute specifying the resource type
+        for the resources being created and deleted.
+    :param basestring server:
+        Target DNS or IP of vCenter center.
+    :param basestring username:
+        Username associated with the vCenter center.
+    :param basestring password:
+        Password associated with the vCenter center.
+    :return:
+        The list of all tag identifiers that correspond to the
+        tags attached to the given object.
+    :rtype:
+        list of tags
+    :raise: Unauthorized
+        if you do not have the privilege to read the object.
+    :raise: Unauthenticated
+        if the user can not be authenticated.
+    '''
+    attached_tags = None
+    client = _get_client(server, username, password)
+
+    if client:
+        # Create dynamic id object associated with a type and an id.
+        # Note, here the default is ClusterComputeResource, which
+        # infers a lazy loaded vim.ClusterComputerResource.
+
+        # The ClusterComputeResource data object aggregates the compute
+        # resources of associated HostSystem objects into a single compute
+        # resource for use by virtual machines.
+        dynamic_id = DynamicID(type=managed_obj, id=object_id)
+        try:
+            attached_tags = client.tagging.TagAssociation.list_attached_tags(
+                dynamic_id)
+        except vsphere_errors:
+            log.warning('Unable to list attached tags. Check user privileges'
+                        ' and object_id (must be a string).')
+    return {'Attached tags': attached_tags}
+
+
+@depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
+@supports_proxies('vcenter')
+@gets_service_instance_via_proxy
+def create_tag_category(name, description, cardinality,
+                        server=None, username=None, password=None,
+                        service_instance=None):
+    '''
+    Create a category with given cardinality.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+            salt vm_minion vsphere.create_tag_category
+
+    :param str name:
+        Name of tag category to create (ex. Machine, OS, Availability, etc.)
+    :param str description:
+        Given description of tag category.
+    :param str cardinality:
+        The associated cardinality (SINGLE, MULTIPLE) of the category.
+    :param basestring server:
+        Target DNS or IP of vCenter center.
+    :param basestring username:
+        Username associated with the vCenter center.
+    :param basestring password:
+        Password associated with the vCenter center.
+    :return:
+        Identifier of the created category.
+    :rtype:
+        str
+    :raise: AlreadyExists
+        if the name` provided in the create_spec is the name of an already
+        existing category.
+    :raise: InvalidArgument
+        if any of the information in the create_spec is invalid.
+    :raise: Unauthorized
+        if you do not have the privilege to create a category.
+    '''
+    category_created = None
+    client = _get_client(server, username, password)
+
+    if client:
+        if cardinality == 'SINGLE':
+            cardinality = CategoryModel.Cardinality.SINGLE
+        elif cardinality == 'MULTIPLE':
+            cardinality = CategoryModel.Cardinality.MULTIPLE
+        else:
+            # Cardinality must be supplied correctly
+            cardinality = None
+
+        create_spec = client.tagging.Category.CreateSpec()
+        create_spec.name = name
+        create_spec.description = description
+        create_spec.cardinality = cardinality
+        associable_types = set()
+        create_spec.associable_types = associable_types
+        try:
+            category_created = client.tagging.Category.create(create_spec)
+        except vsphere_errors:
+            log.warning('Unable to create tag category. Check user privilege'
+                        ' and see if category exists.')
+    return {'Category created': category_created}
+
+
+@depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
+@supports_proxies('vcenter')
+@gets_service_instance_via_proxy
+def delete_tag_category(category_id,
+                        server=None, username=None, password=None,
+                        service_instance=None):
+    '''
+    Delete a category.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+            salt vm_minion vsphere.delete_tag_category
+
+    :param str category_id:
+        The identifier of category to be deleted.
+        The parameter must be an identifier for the resource type:
+        ``com.vmware.cis.tagging.Category``.
+    :param basestring server:
+        Target DNS or IP of vCenter center.
+    :param basestring username:
+        Username associated with the vCenter center.
+    :param basestring password:
+        Password associated with the vCenter center.
+    :raise: NotFound
+        if the tag for the given tag_id does not exist in the system.
+    :raise: Unauthorized
+        if you do not have the privilege to delete the tag.
+    :raise: Unauthenticated
+        if the user can not be authenticated.
+    '''
+    category_deleted = None
+    client = _get_client(server, username, password)
+
+    if client:
+        try:
+            category_deleted = client.tagging.Category.delete(category_id)
+        except vsphere_errors:
+            log.warning('Unable to delete tag category. Check user privilege'
+                        ' and see if category exists.')
+    return {'Category deleted': category_deleted}
+
+
+@depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
+@supports_proxies('vcenter')
+@gets_service_instance_via_proxy
+def create_tag(name, description, category_id,
+               server=None, username=None, password=None,
+               service_instance=None):
+    '''
+    Create a tag under a category with given description.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+            salt vm_minion vsphere.create_tag
+
+    :param basestring server:
+        Target DNS or IP of vCenter client.
+    :param basestring username:
+         Username associated with the vCenter client.
+    :param basestring password:
+        Password associated with the vCenter client.
+    :param str name:
+        Name of tag category to create (ex. Machine, OS, Availability, etc.)
+    :param str description:
+        Given description of tag category.
+    :param str category_id:
+        Value of category_id representative of the category created previously.
+    :return:
+        The identifier of the created tag.
+    :rtype:
+        str
+    :raise: AlreadyExists
+        if the name provided in the create_spec is the name of an already
+        existing tag in the input category.
+    :raise: InvalidArgument
+        if any of the input information in the create_spec is invalid.
+    :raise: NotFound
+        if the category for in the given create_spec does not exist in
+        the system.
+    :raise: Unauthorized
+        if you do not have the privilege to create tag.
+    '''
+    tag_created = None
+    client = _get_client(server, username, password)
+
+    if client:
+        create_spec = client.tagging.Tag.CreateSpec()
+        create_spec.name = name
+        create_spec.description = description
+        create_spec.category_id = category_id
+        try:
+            tag_created = client.tagging.Tag.create(create_spec)
+        except vsphere_errors:
+            log.warning('Unable to create tag. Check user privilege and see'
+                        ' if category exists.')
+    return {'Tag created': tag_created}
+
+
+@depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
+@supports_proxies('vcenter')
+@gets_service_instance_via_proxy
+def delete_tag(tag_id,
+               server=None, username=None, password=None,
+               service_instance=None):
+    '''
+    Delete a tag.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+            salt vm_minion vsphere.delete_tag
+
+    :param str tag_id:
+        The identifier of tag to be deleted.
+        The parameter must be an identifier for the resource type:
+        ``com.vmware.cis.tagging.Tag``.
+    :param basestring server:
+        Target DNS or IP of vCenter center.
+    :param basestring username:
+        Username associated with the vCenter center.
+    :param basestring password:
+        Password associated with the vCenter center.
+    :raise: AlreadyExists
+        if the name provided in the create_spec is the name of an already
+        existing category.
+    :raise: InvalidArgument
+        if any of the information in the create_spec is invalid.
+    :raise: Unauthorized
+        if you do not have the privilege to create a category.
+    '''
+    tag_deleted = None
+    client = _get_client(server, username, password)
+
+    if client:
+        try:
+            tag_deleted = client.tagging.Tag.delete(tag_id)
+        except vsphere_errors:
+            log.warning('Unable to delete category. Check user privileges'
+                        ' and that category exists.')
+    return {'Tag deleted': tag_deleted}
 
 
 @depends(HAS_PYVMOMI)

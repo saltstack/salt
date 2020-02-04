@@ -252,11 +252,11 @@ def _wget(cmd, opts=None, url='http://localhost:8080/manager', timeout=180):
     try:
         # Trying tomcat >= 7 url
         ret['msg'] = _urlopen(url, timeout=timeout).read().splitlines()
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         try:
             # Trying tomcat6 url
             ret['msg'] = _urlopen(url6, timeout=timeout).read().splitlines()
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             ret['msg'] = 'Failed to create HTTP request'
 
     if not ret['msg'][0].startswith('OK'):
@@ -276,7 +276,7 @@ def _simple_cmd(cmd, app, url='http://localhost:8080/manager', timeout=180):
             'version': ls(url)[app]['version']
         }
         return '\n'.join(_wget(cmd, opts, url, timeout=timeout)['msg'])
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return 'FAIL - No context exists for path {0}'.format(app)
 
 

@@ -120,7 +120,7 @@ def beacon(config):
                 continue
             try:
                 d[tag] = re.compile(r'{0}'.format(_config['tags'][tag]['regex']))
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-except
                 event = SKEL.copy()
                 event['tag'] = tag
                 event['error'] = 'bad regex'
@@ -136,7 +136,7 @@ def beacon(config):
                         event['raw'] = line
                         event['match'] = 'yes'
                         ret.append(event)
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     event = SKEL.copy()
                     event['tag'] = tag
                     event['error'] = 'bad match'

@@ -8,31 +8,32 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt Testing Libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.paths import TMP
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
 import salt.modules.schedule as schedule
 from salt.utils.event import SaltEvent
 
-SOCK_DIR = os.path.join(TMP, 'test-socks')
 
 JOB1 = {'function': 'test.ping', 'maxrunning': 1, 'name': 'job1',
         'jid_include': True, 'enabled': True}
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class ScheduleTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.schedule
     '''
+
+    @classmethod
+    def setUpClass(cls):
+        cls.sock_dir = os.path.join(RUNTIME_VARS.TMP, 'test-socks')
+
     def setup_loader_modules(self):
         return {schedule: {}}
 
@@ -42,7 +43,7 @@ class ScheduleTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it purge all the jobs currently scheduled on the minion.
         '''
-        with patch.dict(schedule.__opts__, {'schedule': {}, 'sock_dir': SOCK_DIR}):
+        with patch.dict(schedule.__opts__, {'schedule': {}, 'sock_dir': self.sock_dir}):
             mock = MagicMock(return_value=True)
             with patch.dict(schedule.__salt__, {'event.fire': mock}):
                 _ret_value = {'complete': True, 'schedule': {}}
@@ -56,7 +57,7 @@ class ScheduleTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it delete a job from the minion's schedule.
         '''
-        with patch.dict(schedule.__opts__, {'schedule': {}, 'sock_dir': SOCK_DIR}):
+        with patch.dict(schedule.__opts__, {'schedule': {}, 'sock_dir': self.sock_dir}):
             mock = MagicMock(return_value=True)
             with patch.dict(schedule.__salt__, {'event.fire': mock}):
                 _ret_value = {'complete': True, 'schedule': {}}
@@ -119,7 +120,7 @@ class ScheduleTestCase(TestCase, LoaderModuleMockMixin):
                 'or "days" with "when" or "cron" options.'
         comm3 = 'Unable to use "when" and "cron" options together.  Ignoring.'
         comm4 = 'Job: job2 would be added to schedule.'
-        with patch.dict(schedule.__opts__, {'schedule': {'job1': 'salt'}, 'sock_dir': SOCK_DIR}):
+        with patch.dict(schedule.__opts__, {'schedule': {'job1': 'salt'}, 'sock_dir': self.sock_dir}):
             mock = MagicMock(return_value=True)
             with patch.dict(schedule.__salt__, {'event.fire': mock}):
                 _ret_value = {'complete': True, 'schedule': {'job1': {'salt': 'salt'}}}
@@ -150,14 +151,14 @@ class ScheduleTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it run a scheduled job on the minion immediately.
         '''
-        with patch.dict(schedule.__opts__, {'schedule': {}, 'sock_dir': SOCK_DIR}):
+        with patch.dict(schedule.__opts__, {'schedule': {'job1': JOB1}, 'sock_dir': self.sock_dir}):
             mock = MagicMock(return_value=True)
             with patch.dict(schedule.__salt__, {'event.fire': mock}):
-                _ret_value = {'complete': True, 'schedule': {}}
+                _ret_value = {'complete': True, 'schedule': {'job1': JOB1}}
                 with patch.object(SaltEvent, 'get_event', return_value=_ret_value):
                     self.assertDictEqual(schedule.run_job('job1'),
-                                         {'comment': 'Job job1 does not exist.',
-                                          'result': False})
+                                         {'comment': 'Scheduling Job job1 on minion.',
+                                          'result': True})
 
     # 'enable_job' function tests: 1
 
@@ -165,7 +166,7 @@ class ScheduleTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it enable a job in the minion's schedule.
         '''
-        with patch.dict(schedule.__opts__, {'schedule': {}, 'sock_dir': SOCK_DIR}):
+        with patch.dict(schedule.__opts__, {'schedule': {}, 'sock_dir': self.sock_dir}):
             mock = MagicMock(return_value=True)
             with patch.dict(schedule.__salt__, {'event.fire': mock}):
                 _ret_value = {'complete': True, 'schedule': {}}
@@ -180,7 +181,7 @@ class ScheduleTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it disable a job in the minion's schedule.
         '''
-        with patch.dict(schedule.__opts__, {'schedule': {}, 'sock_dir': SOCK_DIR}):
+        with patch.dict(schedule.__opts__, {'schedule': {}, 'sock_dir': self.sock_dir}):
             mock = MagicMock(return_value=True)
             with patch.dict(schedule.__salt__, {'event.fire': mock}):
                 _ret_value = {'complete': True, 'schedule': {}}
@@ -196,9 +197,9 @@ class ScheduleTestCase(TestCase, LoaderModuleMockMixin):
         Test if it save all scheduled jobs on the minion.
         '''
         comm1 = 'Schedule (non-pillar items) saved.'
-        with patch.dict(schedule.__opts__, {'config_dir': '', 'schedule': {},
+        with patch.dict(schedule.__opts__, {'schedule': {},
                                             'default_include': '/tmp',
-                                            'sock_dir': SOCK_DIR}):
+                                            'sock_dir': self.sock_dir}):
 
             mock = MagicMock(return_value=True)
             with patch.dict(schedule.__salt__, {'event.fire': mock}):
@@ -236,7 +237,7 @@ class ScheduleTestCase(TestCase, LoaderModuleMockMixin):
         comm1 = 'no servers answered the published schedule.add command'
         comm2 = 'the following minions return False'
         comm3 = 'Moved Job job1 from schedule.'
-        with patch.dict(schedule.__opts__, {'schedule': {'job1': JOB1}, 'sock_dir': SOCK_DIR}):
+        with patch.dict(schedule.__opts__, {'schedule': {'job1': JOB1}, 'sock_dir': self.sock_dir}):
             mock = MagicMock(return_value=True)
             with patch.dict(schedule.__salt__, {'event.fire': mock}):
                 _ret_value = {'complete': True, 'schedule': {'job1': JOB1}}
@@ -266,7 +267,7 @@ class ScheduleTestCase(TestCase, LoaderModuleMockMixin):
                                           'result': False})
 
         mock = MagicMock(side_effect=[{}, {'job1': {}}])
-        with patch.dict(schedule.__opts__, {'schedule': mock, 'sock_dir': SOCK_DIR}):
+        with patch.dict(schedule.__opts__, {'schedule': mock, 'sock_dir': self.sock_dir}):
             mock = MagicMock(return_value=True)
             with patch.dict(schedule.__salt__, {'event.fire': mock}):
                 _ret_value = {'complete': True, 'schedule': {'job1': JOB1}}
@@ -303,7 +304,7 @@ class ScheduleTestCase(TestCase, LoaderModuleMockMixin):
         comm1 = 'no servers answered the published schedule.add command'
         comm2 = 'the following minions return False'
         comm3 = 'Copied Job job1 from schedule to minion(s).'
-        with patch.dict(schedule.__opts__, {'schedule': {'job1': JOB1}, 'sock_dir': SOCK_DIR}):
+        with patch.dict(schedule.__opts__, {'schedule': {'job1': JOB1}, 'sock_dir': self.sock_dir}):
             mock = MagicMock(return_value=True)
             with patch.dict(schedule.__salt__, {'event.fire': mock}):
                 _ret_value = {'complete': True, 'schedule': {'job1': {'job1': JOB1}}}
@@ -333,7 +334,7 @@ class ScheduleTestCase(TestCase, LoaderModuleMockMixin):
                                           'result': False})
 
         mock = MagicMock(side_effect=[{}, {'job1': {}}])
-        with patch.dict(schedule.__opts__, {'schedule': mock, 'sock_dir': SOCK_DIR}):
+        with patch.dict(schedule.__opts__, {'schedule': mock, 'sock_dir': self.sock_dir}):
             with patch.dict(schedule.__pillar__, {'schedule': {'job1': JOB1}}):
                 mock = MagicMock(return_value=True)
                 with patch.dict(schedule.__salt__, {'event.fire': mock}):
@@ -360,3 +361,79 @@ class ScheduleTestCase(TestCase, LoaderModuleMockMixin):
                                                      {'comment': comm3,
                                                       'minions': ['minion1'],
                                                       'result': True})
+
+    # 'modify' function tests: 1
+
+    def test_modify(self):
+        '''
+        Test if modifying job to the schedule.
+        '''
+        job1 = {'function': 'salt', 'seconds': 3600}
+
+        comm1 = 'Modified job: job1 in schedule.'
+        diff1 = ('--- \n+++ \n@@ -1,3 +1,6 @@\n '
+                 'enabled:True\n function:salt\n'
+                 '-seconds:3600\n+jid_include:True\n'
+                 '+maxrunning:1\n+name:job1\n'
+                 '+seconds:60\n')
+
+        diff4 = ('--- \n+++ \n@@ -1,3 +1,5 @@\n '
+                 'enabled:True\n-function:salt\n'
+                 '-seconds:3600\n+function:test.version\n'
+                 '+jid_include:True\n+maxrunning:1\n'
+                 '+name:job1\n')
+
+        expected1 = {'comment': comm1,
+                     'changes': {'diff': diff1},
+                     'result': True}
+
+        comm2 = 'Error: Unable to use "seconds", "minutes", "hours", ' \
+                'or "days" with "when" option.'
+        expected2 = {'comment': comm2,
+                     'changes': {},
+                     'result': False}
+
+        comm3 = 'Unable to use "when" and "cron" options together.  Ignoring.'
+        expected3 = {'comment': comm3,
+                     'changes': {},
+                     'result': False}
+
+        comm4 = 'Job: job1 would be modified in schedule.'
+        expected4 = {'comment': comm4,
+                     'changes': {'diff': diff4},
+                     'result': True}
+
+        comm5 = 'Job job2 does not exist in schedule.'
+        expected5 = {'comment': comm5,
+                     'changes': {},
+                     'result': False}
+
+        with patch.dict(schedule.__opts__, {'schedule': {'job1': job1}, 'sock_dir': self.sock_dir}):
+            mock = MagicMock(return_value=True)
+            with patch.dict(schedule.__salt__, {'event.fire': mock}):
+                _ret_value = {'complete': True, 'schedule': {'job1': job1}}
+                with patch.object(SaltEvent, 'get_event', return_value=_ret_value):
+                    ret = schedule.modify('job1', seconds='60')
+                    self.assertDictEqual(ret, expected1)
+
+                _ret_value = {'complete': True, 'schedule': {'job1': job1}}
+                with patch.object(SaltEvent, 'get_event', return_value=_ret_value):
+                    ret = schedule.modify('job1', function='test.ping',
+                                          seconds=3600, when='2400')
+                    self.assertDictEqual(ret, expected2)
+
+                _ret_value = {'complete': True, 'schedule': {'job1': job1}}
+                with patch.object(SaltEvent, 'get_event', return_value=_ret_value):
+                    ret = schedule.modify('job1', function='test.ping',
+                                          when='2400', cron='2')
+                    self.assertDictEqual(ret, expected3)
+
+                _ret_value = {'complete': True, 'schedule': {'job1': job1}}
+                with patch.object(SaltEvent, 'get_event', return_value=_ret_value):
+                    ret = schedule.modify('job1', function='test.version', test=True)
+                    self.assertDictEqual(ret, expected4)
+
+                _ret_value = {'complete': True, 'schedule': {}}
+                with patch.object(SaltEvent, 'get_event', return_value=_ret_value):
+                    ret = schedule.modify('job2', function='test.version', test=True)
+                    self.assertDictEqual(ret, expected5)

@@ -23,9 +23,10 @@ Module to provide MS SQL Server compatibility to salt.
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-from json import JSONEncoder, loads
 
+# Import Salt libs
 import salt.ext.six as six
+import salt.utils.json
 
 
 try:
@@ -64,7 +65,7 @@ def _get_connection(**kwargs):
     return pymssql.connect(**connection_args)
 
 
-class _MssqlEncoder(JSONEncoder):
+class _MssqlEncoder(salt.utils.json.JSONEncoder):
     # E0202: 68:_MssqlEncoder.default: An attribute inherited from JSONEncoder hide this method
     def default(self, o):  # pylint: disable=E0202
         return six.text_type(o)
@@ -84,8 +85,8 @@ def tsql_query(query, **kwargs):
         cur = _get_connection(**kwargs).cursor()
         cur.execute(query)
         # Making sure the result is JSON serializable
-        return loads(_MssqlEncoder().encode({'resultset': cur.fetchall()}))['resultset']
-    except Exception as err:
+        return salt.utils.json.loads(_MssqlEncoder().encode({'resultset': cur.fetchall()}))['resultset']
+    except Exception as err:  # pylint: disable=broad-except
         # Trying to look like the output of cur.fetchall()
         return (('Could not run the query', ), (six.text_type(err), ))
 
@@ -154,7 +155,7 @@ def db_create(database, containment='NONE', new_database_options=None, **kwargs)
         # cur = conn.cursor()
         # cur.execute(sql)
         conn.cursor().execute(sql)
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         return 'Could not create the login: {0}'.format(e)
     finally:
         if conn:
@@ -186,7 +187,7 @@ def db_remove(database_name, **kwargs):
             return True
         else:
             return False
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         return 'Could not find the database: {0}'.format(e)
 
 
@@ -247,7 +248,7 @@ def role_create(role, owner=None, grants=None, **kwargs):
         conn.cursor().execute(sql)
         for grant in grants:
             conn.cursor().execute('GRANT {0} TO [{1}]'.format(grant, role))
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         return 'Could not create the role: {0}'.format(e)
     finally:
         if conn:
@@ -274,7 +275,7 @@ def role_remove(role, **kwargs):
         conn.autocommit(True)
         conn.close()
         return True
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         return 'Could not create the role: {0}'.format(e)
 
 
@@ -295,7 +296,7 @@ def login_exists(login, domain='', **kwargs):
         # We should get one, and only one row
         return len(tsql_query(query="SELECT name FROM sys.syslogins WHERE name='{0}'".format(login), **kwargs)) == 1
 
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         return 'Could not find the login: {0}'.format(e)
 
 
@@ -349,7 +350,7 @@ def login_create(login, new_login_password=None, new_login_domain='', new_login_
         conn.cursor().execute(sql)
         for role in new_login_roles:
             conn.cursor().execute('ALTER SERVER ROLE [{0}] ADD MEMBER [{1}]'.format(role, login))
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         return 'Could not create the login: {0}'.format(e)
     finally:
         if conn:
@@ -376,7 +377,7 @@ def login_remove(login, **kwargs):
         conn.autocommit(False)
         conn.close()
         return True
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         return 'Could not remove the login: {0}'.format(e)
 
 
@@ -457,7 +458,7 @@ def user_create(username, login=None, domain='', database=None, roles=None, opti
         conn.cursor().execute(sql)
         for role in roles:
             conn.cursor().execute('ALTER ROLE [{0}] ADD MEMBER [{1}]'.format(role, username))
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         return 'Could not create the user: {0}'.format(e)
     finally:
         if conn:
@@ -487,5 +488,5 @@ def user_remove(username, **kwargs):
         conn.autocommit(False)
         conn.close()
         return True
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         return 'Could not create the user: {0}'.format(e)

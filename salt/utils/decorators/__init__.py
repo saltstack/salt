@@ -17,6 +17,7 @@ from collections import defaultdict
 # Import salt libs
 import salt.utils.args
 import salt.utils.data
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltConfigurationError
 from salt.log import LOG_LEVELS
 
@@ -105,7 +106,7 @@ class Depends(object):
             fun_name = function.__name__
             for dep in self.dependencies:
                 self.dependency_dict[kind][dep][(mod_name, fun_name)] = (frame, self.params)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.exception(
                 'Exception encountered when attempting to inspect frame in '
                 'dependency decorator'
@@ -132,7 +133,7 @@ class Depends(object):
         return retcode
 
     @classmethod
-    def enforce_dependencies(cls, functions, kind):
+    def enforce_dependencies(cls, functions, kind, tgt_mod):
         '''
         This is a class global method to enforce the dependencies that you
         currently know about.
@@ -141,6 +142,12 @@ class Depends(object):
         '''
         for dependency, dependent_dict in six.iteritems(cls.dependency_dict[kind]):
             for (mod_name, func_name), (frame, params) in six.iteritems(dependent_dict):
+                if mod_name != tgt_mod:
+                    continue
+                # Imports from local context take presedence over those from the global context.
+                dep_found = frame.f_locals.get(dependency) or frame.f_globals.get(dependency)
+                # Default to version ``None`` if not found, which will be less than anything.
+                dep_version = getattr(dep_found, '__version__', None)
                 if 'retcode' in params or 'nonzero_retcode' in params:
                     try:
                         retcode = cls.run_command(dependency, mod_name, func_name)
@@ -177,17 +184,31 @@ class Depends(object):
                     continue
 
                 # check if you have the dependency
-                elif dependency in frame.f_globals \
-                        or dependency in frame.f_locals:
-                    log.trace(
-                        'Dependency (%s) already loaded inside %s, skipping',
-                        dependency, mod_name
-                    )
-                    continue
+                elif dep_found:
+                    if 'version' in params:
+                        if salt.utils.versions.version_cmp(
+                                    dep_version,
+                                    params['version']
+                                ) >= 0:
+                            log.trace(
+                                'Dependency (%s) already loaded inside %s with '
+                                'version (%s), required (%s), skipping',
+                                dependency, mod_name, dep_version, params['version']
+                            )
+                            continue
+                    else:
+                        log.trace(
+                            'Dependency (%s) already loaded inside %s, skipping',
+                            dependency, mod_name
+                        )
+                        continue
 
                 log.trace(
-                    'Unloading %s.%s because dependency (%s) is not met',
-                    mod_name, func_name, dependency
+                    'Unloading %s.%s because dependency (%s%s) is not met',
+                    mod_name,
+                    func_name,
+                    dependency,
+                    ' version {}'.format(params['version']) if 'version' in params else '',
                 )
                 # if not, unload the function
                 if frame:
@@ -324,12 +345,12 @@ class _DeprecationDecorator(object):
                     self._orig_f_name, error
                 )
                 return self._function.__doc__
-            except Exception as error:
+            except Exception as error:  # pylint: disable=broad-except
                 log.error(
                     'Unhandled exception occurred in function "%s: %s',
                     self._function.__name__, error
                 )
-                raise error
+                six.reraise(*sys.exc_info())
         else:
             raise CommandExecutionError("Function is deprecated, but the successor function was not found.")
 
@@ -413,6 +434,7 @@ class _IsDeprecated(_DeprecationDecorator):
         '''
         _DeprecationDecorator.__call__(self, function)
 
+        @wraps(function)
         def _decorate(*args, **kwargs):
             '''
             Decorator function.
@@ -587,6 +609,7 @@ class _WithDeprecated(_DeprecationDecorator):
         '''
         _DeprecationDecorator.__call__(self, function)
 
+        @wraps(function)
         def _decorate(*args, **kwargs):
             '''
             Decorator function.
@@ -627,6 +650,7 @@ class _WithDeprecated(_DeprecationDecorator):
             return self._call_function(kwargs)
 
         _decorate.__doc__ = self._function.__doc__
+        _decorate.__wrapped__ = self._function
         return _decorate
 
 
@@ -641,6 +665,7 @@ def ignores_kwargs(*kwarg_names):
         List of argument names to ignore
     '''
     def _ignores_kwargs(fn):
+        @wraps(fn)
         def __ignores_kwargs(*args, **kwargs):
             kwargs_filtered = kwargs.copy()
             for name in kwarg_names:

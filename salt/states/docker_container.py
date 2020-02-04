@@ -200,7 +200,7 @@ def _resolve_image(ret, image, client_timeout):
                     image,
                     client_timeout=client_timeout,
                 )
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 raise CommandExecutionError(
                     'Failed to pull {0}: {1}'.format(image, exc)
                 )
@@ -1237,8 +1237,6 @@ def running(name,
           ``--net=none``). Not to be confused with Python's ``None``.
         - ``container:<name_or_id>`` - Reuses another container's network stack
         - ``host`` - Use the host's network stack inside the container
-        - Any name that identifies an existing network that might be created
-          with ``docker.network_present``.
 
           .. warning::
 
@@ -1692,6 +1690,8 @@ def running(name,
         # value here.
         configured_networks = networks
         networks = _parse_networks(networks)
+        if networks:
+            kwargs['networks'] = networks
         image_id = _resolve_image(ret, image, client_timeout)
     except CommandExecutionError as exc:
         ret['result'] = False
@@ -1764,7 +1764,7 @@ def running(name,
             .format(exc)
         )
         return _format_comments(ret, comments)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         ret['result'] = False
         msg = exc.__str__()
         if isinstance(exc, CommandExecutionError) \
@@ -2035,7 +2035,7 @@ def running(name,
         else:
             try:
                 post_state = __salt__['docker.start'](name)['state']['new']
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 ret['result'] = False
                 comments.append(
                     'Failed to start container \'{0}\': \'{1}\''.format(name, exc)
@@ -2060,7 +2060,8 @@ def running(name,
                 __context__[contextkey] = new_container_info.get(
                     'NetworkSettings', {}).get('Networks', {})
             return __context__[contextkey]
-        autoip_keys = __opts__['docker.compare_container_networks'].get('automatic', [])
+        autoip_keys = __salt__['config.option'](
+            'docker.compare_container_networks').get('automatic', [])
         for net_name, net_changes in six.iteritems(
                 ret['changes'].get('container', {}).get('Networks', {})):
             if 'IPConfiguration' in net_changes \
@@ -2296,7 +2297,7 @@ def run(name,
             replace=replace,
             force=force,
             **kwargs)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.exception('Encountered error running container')
         ret['result'] = False
         ret['comment'] = 'Encountered error running container: {0}'.format(exc)
@@ -2530,7 +2531,7 @@ def absent(name, force=False):
 
     try:
         ret['changes']['removed'] = __salt__['docker.rm'](name, force=force)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         ret['comment'] = ('Failed to remove container \'{0}\': {1}'
                           .format(name, exc))
         return ret

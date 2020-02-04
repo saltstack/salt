@@ -527,56 +527,6 @@ class UtilStateMergeSubreturnTestcase(TestCase):
             'alarms': secondary_changes,
         })
 
-    def test_merge_pchanges(self):
-        primary_pchanges = {'old': None, 'new': 'my_resource'}
-        secondary_pchanges = {'old': None, 'new': ['alarm-1', 'alarm-2']}
-
-        # Neither main nor sub pchanges case
-        m = copy.deepcopy(self.main_ret)
-        s = copy.deepcopy(self.sub_ret)
-        res = salt.utils.state.merge_subreturn(m, s)
-        self.assertNotIn('pchanges', res)
-
-        # No main pchanges, sub pchanges
-        m = copy.deepcopy(self.main_ret)
-        s = copy.deepcopy(self.sub_ret)
-        s['pchanges'] = copy.deepcopy(secondary_pchanges)
-        res = salt.utils.state.merge_subreturn(m, s)
-        self.assertDictEqual(res['pchanges'], {
-            'secondary': secondary_pchanges
-        })
-
-        # Main pchanges, no sub pchanges
-        m = copy.deepcopy(self.main_ret)
-        m['pchanges'] = copy.deepcopy(primary_pchanges)
-        s = copy.deepcopy(self.sub_ret)
-        res = salt.utils.state.merge_subreturn(m, s)
-        self.assertDictEqual(res['pchanges'], primary_pchanges)
-
-        # Both main and sub pchanges, new pchanges don't affect existing ones
-        m = copy.deepcopy(self.main_ret)
-        m['pchanges'] = copy.deepcopy(primary_pchanges)
-        s = copy.deepcopy(self.sub_ret)
-        s['pchanges'] = copy.deepcopy(secondary_pchanges)
-        res = salt.utils.state.merge_subreturn(m, s)
-        self.assertDictEqual(res['pchanges'], {
-            'old': None,
-            'new': 'my_resource',
-            'secondary': secondary_pchanges,
-        })
-
-        # The subkey parameter is respected
-        m = copy.deepcopy(self.main_ret)
-        m['pchanges'] = copy.deepcopy(primary_pchanges)
-        s = copy.deepcopy(self.sub_ret)
-        s['pchanges'] = copy.deepcopy(secondary_pchanges)
-        res = salt.utils.state.merge_subreturn(m, s, subkey='alarms')
-        self.assertDictEqual(res['pchanges'], {
-            'old': None,
-            'new': 'my_resource',
-            'alarms': secondary_pchanges,
-        })
-
     def test_merge_comments(self):
         main_comment_1 = 'First primary comment.'
         main_comment_2 = 'Second primary comment.'

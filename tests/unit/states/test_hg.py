@@ -11,16 +11,13 @@ import salt.states.hg as hg
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
+from tests.support.unit import TestCase
 from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     MagicMock,
     patch
 )
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class HgTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the svn state

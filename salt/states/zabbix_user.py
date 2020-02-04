@@ -9,10 +9,10 @@ Management of Zabbix users.
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
-from json import loads, dumps
 from copy import deepcopy
 
 # Import Salt libs
+import salt.utils.json
 from salt.ext import six
 from salt.exceptions import SaltException
 
@@ -196,7 +196,7 @@ def present(alias, passwd, usrgrps, medias=None, password_reset=False, **kwargs)
         '''
         if not medias_data:
             return list()
-        medias_json = loads(dumps(medias_data))
+        medias_json = salt.utils.json.loads(salt.utils.json.dumps(medias_data))
         medias_attr = ('active', 'mediatype', 'period', 'severity', 'sendto')
         media_type = {'mail': 1, 'jabber': 2, 'sms': 3}
         media_severities = ('D', 'H', 'A', 'W', 'I', 'N')

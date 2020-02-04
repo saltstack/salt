@@ -9,12 +9,10 @@ import textwrap
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -24,7 +22,6 @@ RET = ['hostname', 'mountall', 'network-interface', 'network-manager',
        'salt-api', 'salt-master', 'salt-minion']
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class RhServiceTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.rh_service

@@ -7,12 +7,10 @@ import collections
 # Import Salt Testing Libs
 from tests.support.mock import (
     mock_open,
-    NO_MOCK,
-    NO_MOCK_REASON,
     patch
 )
 from tests.support import mixins
-from tests.support.unit import skipIf, TestCase
+from tests.support.unit import TestCase
 
 # Import Salt Libs
 import salt.roster.sshconfig as sshconfig
@@ -67,7 +65,6 @@ _ABC_GLOB = {
 }
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class SSHConfigRosterTestCase(TestCase, mixins.LoaderModuleMockMixin):
 
     def setUp(self):

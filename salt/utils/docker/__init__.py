@@ -248,7 +248,7 @@ def translate_input(translator,
         except AttributeError:
             pass
 
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         error_message = exc.__str__()
         log.error(
             'Error translating input: \'%s\'', error_message, exc_info=True)

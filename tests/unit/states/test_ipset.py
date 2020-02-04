@@ -7,10 +7,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
+from tests.support.unit import TestCase
 from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     MagicMock,
     call,
     patch)
@@ -19,7 +17,6 @@ from tests.support.mock import (
 import salt.states.ipset as ipset
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class IpsetSetPresentTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.ipset.present
@@ -82,7 +79,6 @@ class IpsetSetPresentTestCase(TestCase, LoaderModuleMockMixin):
         self._runner(ret, new_set='')
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class IpsetSetAbsentTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.ipset.present
@@ -144,7 +140,6 @@ class IpsetSetAbsentTestCase(TestCase, LoaderModuleMockMixin):
         self._runner(ret, delete_set=True, flush_assertion=True, delete_set_assertion=True)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class IpsetPresentTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.ipset.present
@@ -221,7 +216,6 @@ class IpsetPresentTestCase(TestCase, LoaderModuleMockMixin):
             self.assertDictEqual(ipset.present(self.fake_name), ret)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class IpsetAbsentTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.ipset.present
@@ -296,7 +290,6 @@ class IpsetAbsentTestCase(TestCase, LoaderModuleMockMixin):
             self.assertDictEqual(ipset.absent(self.fake_name), ret)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class IpsetFlushTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.ipset.present

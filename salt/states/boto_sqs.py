@@ -136,7 +136,7 @@ def present(
             ret['comment'].append(
                 'SQS queue {0} is set to be created.'.format(name),
             )
-            ret['pchanges'] = {'old': None, 'new': name}
+            ret['changes'] = {'old': None, 'new': name}
             return ret
 
         r = __salt__['boto_sqs.create'](
@@ -225,7 +225,7 @@ def present(
                 attributes_diff,
             )
         )
-        ret['pchanges'] = {'attributes': {'diff': attributes_diff}}
+        ret['changes'] = {'attributes': {'diff': attributes_diff}}
         return ret
 
     r = __salt__['boto_sqs.set_attributes'](
@@ -300,7 +300,7 @@ def absent(
     if __opts__['test']:
         ret['result'] = None
         ret['comment'] = 'SQS queue {0} is set to be removed.'.format(name)
-        ret['pchanges'] = {'old': name, 'new': None}
+        ret['changes'] = {'old': name, 'new': None}
         return ret
 
     r = __salt__['boto_sqs.delete'](

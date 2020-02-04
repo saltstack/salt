@@ -704,6 +704,15 @@ def latest(name,
     if https_pass is not None and not isinstance(https_pass, six.string_types):
         https_pass = six.text_type(https_pass)
 
+    # Check for lfs filter settings, and setup lfs_opts accordingly. These opts
+    # will be passed where appropriate to ensure that these commands are
+    # authenticated and that the git LFS plugin can download files.
+    use_lfs = bool(
+        __salt__['git.config_get_regexp'](
+            r'filter\.lfs\.',
+            **{'global': True}))
+    lfs_opts = {'identity': identity} if use_lfs else {}
+
     if os.path.isfile(target):
         return _fail(
             ret,
@@ -768,6 +777,12 @@ def latest(name,
             ret,
             'Failed to check remote refs: {0}'.format(_strip_exc(exc))
         )
+    except NameError as exc:
+        if 'global name' in exc.message:
+            raise CommandExecutionError(
+                'Failed to check remote refs: You may need to install '
+                'GitPython or PyGit2')
+        raise
 
     if 'HEAD' in all_remote_refs:
         head_rev = all_remote_refs['HEAD']
@@ -1577,7 +1592,8 @@ def latest(name,
                         opts=['--hard', remote_rev],
                         user=user,
                         password=password,
-                        output_encoding=output_encoding)
+                        output_encoding=output_encoding,
+                        **lfs_opts)
                     ret['changes']['forced update'] = True
                     if local_changes:
                         comments.append('Uncommitted changes were discarded')
@@ -1641,7 +1657,8 @@ def latest(name,
                                 opts=merge_opts,
                                 user=user,
                                 password=password,
-                                output_encoding=output_encoding)
+                                output_encoding=output_encoding,
+                                **lfs_opts)
                             comments.append(
                                 'Repository was fast-forwarded to {0}'
                                 .format(remote_loc)
@@ -1661,7 +1678,8 @@ def latest(name,
                                   remote_rev if rev == 'HEAD' else rev],
                             user=user,
                             password=password,
-                            output_encoding=output_encoding)
+                            output_encoding=output_encoding,
+                            **lfs_opts)
                         comments.append(
                             'Repository was reset to {0} (fast-forward)'
                             .format(rev)
@@ -1724,7 +1742,7 @@ def latest(name,
             except CommandExecutionError:
                 new_rev = None
 
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.error(
                 'Unexpected exception in git.latest state',
                 exc_info=True
@@ -2023,7 +2041,7 @@ def latest(name,
             except CommandExecutionError:
                 new_rev = None
 
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.error(
                 'Unexpected exception in git.latest state',
                 exc_info=True
@@ -2576,7 +2594,7 @@ def detached(name,
                                   output_encoding=output_encoding)
             comments.append('{0} cloned to {1}'.format(name, target))
 
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.error(
                 'Unexpected exception in git.detached state',
                 exc_info=True
@@ -2832,7 +2850,7 @@ def cloned(name,
                                    user=user,
                                    password=password,
                                    output_encoding=output_encoding)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             ret['comment'] = six.text_type(exc)
             return ret
         else:
@@ -3449,7 +3467,7 @@ def mod_run_check(cmd_kwargs, onlyif, unless):
                 if __salt__['cmd.retcode'](command, **cmd_kwargs) == 0:
                     # Command exited with a zero retcode
                     continue
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.exception(
                     'The following onlyif command raised an error: %s',
                     command
@@ -3476,7 +3494,7 @@ def mod_run_check(cmd_kwargs, onlyif, unless):
                 if __salt__['cmd.retcode'](command, **cmd_kwargs) != 0:
                     # Command exited with a non-zero retcode
                     break
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.exception(
                     'The following unless command raised an error: %s',
                     command

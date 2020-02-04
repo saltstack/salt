@@ -5,7 +5,7 @@ Network Config
 
 Manage the configuration on a network device given a specific static config or template.
 
-:codeauthor: Mircea Ulinic <mircea@cloudflare.com> & Jerome Fleury <jf@cloudflare.com>
+:codeauthor: Mircea Ulinic <ping@mirceaulinic.net> & Jerome Fleury <jf@cloudflare.com>
 :maturity:   new
 :depends:    napalm
 :platform:   unix
@@ -303,7 +303,7 @@ def saved(name,
     attrs
         The attributes to have on this file, e.g. ``a``, ``i``. The attributes
         can be any or a combination of the following characters:
-        ``acdijstuADST``.
+        ``aAcCdDeijPsStTu``.
 
         .. note::
             This option is **not** supported on Windows.

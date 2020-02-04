@@ -11,7 +11,7 @@ from tests.support.unit import skipIf
 import salt.utils.path
 import salt.utils.platform
 
-URL = 'repo.saltstack.com'
+URL = 'google-public-dns-a.google.com'
 
 
 class NetworkTest(ModuleCase):
@@ -23,7 +23,7 @@ class NetworkTest(ModuleCase):
         network.ping
         '''
         ret = self.run_function('network.ping', [URL])
-        exp_out = ['ping', URL, 'ttl', 'time']
+        exp_out = ['ping', URL, 'ms', 'time']
         for out in exp_out:
             self.assertIn(out, ret.lower())
 

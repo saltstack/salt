@@ -8,6 +8,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import tornado.ioloop
 from salt.exceptions import SaltSystemExit
+from salt._compat import ipaddress
 
 log = logging.getLogger(__name__)
 
@@ -27,7 +28,7 @@ try:
         LIBZMQ_VERSION_INFO = tuple([int(v_el) for v_el in zmq.zmq_version().split('.')])
         if ZMQ_VERSION_INFO[0] > 16:  # 17.0.x+ deprecates zmq's ioloops
             ZMQDefaultLoop = tornado.ioloop.IOLoop
-except Exception:
+except Exception:  # pylint: disable=broad-except
     log.exception('Error while getting LibZMQ/PyZMQ library version')
 
 if ZMQDefaultLoop is None:
@@ -79,9 +80,11 @@ def check_ipc_path_max_len(uri):
 
 def ip_bracket(addr):
     '''
-    Convert IP address representation to ZMQ (URL) format. ZMQ expects
-    brackets around IPv6 literals, since they are used in URLs.
+    Ensure IP addresses are URI-compatible - specifically, add brackets
+    around IPv6 literals if they are not already present.
     '''
-    if addr and ':' in addr and not addr.startswith('['):
-        return '[{0}]'.format(addr)
-    return addr
+    addr = str(addr)
+    addr = addr.lstrip('[')
+    addr = addr.rstrip(']')
+    addr = ipaddress.ip_address(addr)
+    return ('[{}]' if addr.version == 6 else '{}').format(addr)
