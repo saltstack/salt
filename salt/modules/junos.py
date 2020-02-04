@@ -947,7 +947,7 @@ def install_config(path=None, **kwargs):
         del op['overwrite']
 
     db_mode = op.pop('mode', 'exclusive')
-    if write_diff and db_mode == 'dynamic:':
+    if write_diff and db_mode == 'dynamic':
         ret['message'] = 'Write diff is not supported with dynamic configuration mode'
         ret['out'] = False
         return ret
