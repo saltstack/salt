@@ -1,5 +1,14 @@
 exclude: ^(doc/_static/.*|doc/_themes/.*)$
 repos:
+
+  - repo: https://github.com/s0undt3ch/salt-rewrite
+    rev: 0.6.0
+    hooks:
+      - id: salt-rewrite
+        args:
+          - --exclude-fix=fix_asserts
+        exclude: ^templates/.*$
+
   - repo: https://github.com/saltstack/pip-tools-compile-impersonate
     rev: master
     hooks:
