@@ -11,16 +11,17 @@ import logging
 import os
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import ModuleCase
 
 # Import Salt libs
 from tests.support.helpers import with_tempdir
 import salt.utils.files
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
 
-
-class i18nTestCase(TestCase):
+@skipIf(not salt.utils.platform.is_windows(), 'Windows test only')
+class i18nTestClass(ModuleCase):
     @with_tempdir()
     def test_i18n_characters_with_file_line(self, tempdir):
         tempfile = os.path.join(tempdir, 'temp_file')
