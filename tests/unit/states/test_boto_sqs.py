@@ -8,8 +8,8 @@ import textwrap
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.unit import TestCase
+from tests.support.mock import MagicMock, patch
 
 # Import Salt Libs
 import salt.config
@@ -17,7 +17,6 @@ import salt.loader
 import salt.states.boto_sqs as boto_sqs
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.boto_sqs
@@ -35,7 +34,7 @@ class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
 
     @classmethod
     def setUpClass(cls):
-        cls.opts = salt.config.DEFAULT_MINION_OPTS
+        cls.opts = salt.config.DEFAULT_MINION_OPTS.copy()
 
     @classmethod
     def tearDownClass(cls):
@@ -74,7 +73,7 @@ class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update({
                     'result': None,
                     'comment': comt,
-                    'pchanges': {'old': None, 'new': 'mysqs'},
+                    'changes': {'old': None, 'new': 'mysqs'},
                 })
                 self.assertDictEqual(boto_sqs.present(name), ret)
                 diff = textwrap.dedent('''\
@@ -101,7 +100,7 @@ class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
                 ]
                 ret.update({
                     'comment': comt,
-                    'pchanges': {'attributes': {'diff': diff}},
+                    'changes': {'attributes': {'diff': diff}},
                 })
                 self.assertDictEqual(boto_sqs.present(name, attributes), ret)
 
@@ -133,6 +132,6 @@ class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update({
                     'result': None,
                     'comment': comt,
-                    'pchanges': {'old': name, 'new': None},
+                    'changes': {'old': name, 'new': None},
                 })
                 self.assertDictEqual(boto_sqs.absent(name), ret)

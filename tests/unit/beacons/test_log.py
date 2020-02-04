@@ -4,8 +4,8 @@
 from __future__ import absolute_import
 
 # Salt testing libs
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, mock_open
+from tests.support.unit import TestCase
+from tests.support.mock import patch, mock_open
 from tests.support.mixins import LoaderModuleMockMixin
 
 # Salt libs
@@ -20,7 +20,6 @@ _STUB_LOG_ENTRY = 'Jun 29 12:58:51 hostname sshd[6536]: ' \
                   'for user username by (uid=0)\n'
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class LogBeaconTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test case for salt.beacons.log

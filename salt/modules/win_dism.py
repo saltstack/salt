@@ -8,8 +8,9 @@ Windows 10.
 from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
-import re
 import logging
+import os
+import re
 
 # Import Salt libs
 import salt.utils.platform
@@ -20,6 +21,27 @@ from salt.ext import six
 
 log = logging.getLogger(__name__)
 __virtualname__ = "dism"
+
+# We always want to use the version of dism that matches the architecture of the
+# host machine. On 32bit boxes that will always be System32. On 64bit boxes that
+# are running 64bit salt that will always be System32. On 64bit boxes that are
+# running 32bit salt the 64bit dism will be found in SysNative
+# Sysnative is a virtual folder, a special alias, that can be used to access the
+# 64-bit System32 folder from a 32-bit application
+try:
+    # This does not apply to Non-Windows platforms
+    if not salt.utils.platform.is_windows():
+        raise OSError
+
+    if os.path.exists(os.path.join(os.environ.get('SystemRoot'), 'SysNative')):
+        bin_path = os.path.join(os.environ.get('SystemRoot'), 'SysNative')
+    else:
+        bin_path = os.path.join(os.environ.get('SystemRoot'), 'System32')
+    bin_dism = os.path.join(bin_path, 'dism.exe')
+
+except OSError:
+    log.trace('win_dism: Non-Windows system')
+    bin_dism = 'dism.exe'
 
 
 def __virtual__():
@@ -33,7 +55,7 @@ def __virtual__():
 
 
 def _get_components(type_regex, plural_type, install_value, image=None):
-    cmd = ['DISM',
+    cmd = [bin_dism,
            '/English',
            '/Image:{0}'.format(image) if image else '/Online',
            '/Get-{0}'.format(plural_type)]
@@ -82,7 +104,7 @@ def add_capability(capability,
             '`install_capability` is not available on this version of Windows: '
             '{0}'.format(__grains__['osversion']))
 
-    cmd = ['DISM',
+    cmd = [bin_dism,
            '/Quiet',
            '/Image:{0}'.format(image) if image else '/Online',
            '/Add-Capability',
@@ -127,7 +149,7 @@ def remove_capability(capability, image=None, restart=False):
             '`uninstall_capability` is not available on this version of '
             'Windows: {0}'.format(__grains__['osversion']))
 
-    cmd = ['DISM',
+    cmd = [bin_dism,
            '/Quiet',
            '/Image:{0}'.format(image) if image else '/Online',
            '/Remove-Capability',
@@ -166,7 +188,7 @@ def get_capabilities(image=None):
             '`installed_capabilities` is not available on this version of '
             'Windows: {0}'.format(__grains__['osversion']))
 
-    cmd = ['DISM',
+    cmd = [bin_dism,
            '/English',
            '/Image:{0}'.format(image) if image else '/Online',
            '/Get-Capabilities']
@@ -272,7 +294,7 @@ def add_feature(feature,
 
         salt '*' dism.add_feature NetFx3
     '''
-    cmd = ['DISM',
+    cmd = [bin_dism,
            '/Quiet',
            '/Image:{0}'.format(image) if image else '/Online',
            '/Enable-Feature',
@@ -313,7 +335,7 @@ def remove_feature(feature, remove_payload=False, image=None, restart=False):
 
         salt '*' dism.remove_feature NetFx3
     '''
-    cmd = ['DISM',
+    cmd = [bin_dism,
            '/Quiet',
            '/Image:{0}'.format(image) if image else '/Online',
            '/Disable-Feature',
@@ -359,7 +381,7 @@ def get_features(package=None, image=None):
             # Return all features in the calc package
             salt '*' dism.get_features Microsoft.Windows.Calc.Demo~6595b6144ccf1df~x86~en~1.0.0.0
     '''
-    cmd = ['DISM',
+    cmd = [bin_dism,
            '/English',
            '/Image:{0}'.format(image) if image else '/Online',
            '/Get-Features']
@@ -461,7 +483,7 @@ def add_package(package,
 
         salt '*' dism.add_package C:\\Packages\\package.cab
     '''
-    cmd = ['DISM',
+    cmd = [bin_dism,
            '/Quiet',
            '/Image:{0}'.format(image) if image else '/Online',
            '/Add-Package',
@@ -504,7 +526,7 @@ def remove_package(package, image=None, restart=False):
         # Remove the package.cab (does not remove C:\\packages\\package.cab)
         salt '*' dism.remove_package C:\\packages\\package.cab
     '''
-    cmd = ['DISM',
+    cmd = [bin_dism,
            '/Quiet',
            '/Image:{0}'.format(image) if image else '/Online',
            '/Remove-Package']
@@ -563,7 +585,7 @@ def package_info(package, image=None):
 
         salt '*' dism. package_info C:\\packages\\package.cab
     '''
-    cmd = ['DISM',
+    cmd = [bin_dism,
            '/English',
            '/Image:{0}'.format(image) if image else '/Online',
            '/Get-PackageInfo']

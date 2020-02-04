@@ -21,7 +21,7 @@ illustrate:
 .. code-block:: yaml
 
     /etc/salt/master: # maps to "name", unless a "name" argument is specified below
-      file.managed: # maps to <filename>.<function> - e.g. "managed" in https://github.com/saltstack/salt/tree/develop/salt/states/file.py
+      file.managed: # maps to <filename>.<function> - e.g. "managed" in https://github.com/saltstack/salt/tree/|repo_primary_branch|/salt/states/file.py
         - user: root # one of many options passed to the manage function
         - group: root
         - mode: 644
@@ -59,7 +59,7 @@ A well-written state function will follow these steps:
     This is an extremely simplified example. Feel free to browse the `source
     code`_ for Salt's state modules to see other examples.
 
-    .. _`source code`: https://github.com/saltstack/salt/tree/develop/salt/states
+    .. _`source code`: https://github.com/saltstack/salt/tree/|repo_primary_branch|/salt/states
 
 1. Set up the return dictionary and perform any necessary input validation
    (type checking, looking for use of mutually-exclusive arguments, etc.).
@@ -259,10 +259,6 @@ A State Module must return a dict containing the following keys/values:
   Prefer to keep line lengths short (use multiple lines as needed),
   and end with punctuation (e.g. a period) to delimit multiple comments.
 
-The return data can also, include the **pchanges** key, this stands for
-`predictive changes`. The **pchanges** key informs the State system what
-changes are predicted to occur.
-
 .. note::
 
     States should not return data which cannot be serialized such as frozensets.
@@ -448,7 +444,6 @@ Example state module
             'changes': {},
             'result': False,
             'comment': '',
-            'pchanges': {},
             }
 
         # Start with basic error-checking. Do all the passed parameters make sense
@@ -469,7 +464,7 @@ Example state module
         # in ``test=true`` mode.
         if __opts__['test'] == True:
             ret['comment'] = 'The state of "{0}" will be changed.'.format(name)
-            ret['pchanges'] = {
+            ret['changes'] = {
                 'old': current_state,
                 'new': 'Description, diff, whatever of the new state',
             }

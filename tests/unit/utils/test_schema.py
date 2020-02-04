@@ -506,7 +506,10 @@ class ConfigTestCase(TestCase):
                 {'personal_access_token': 'foo'},
                 Requirements.serialize()
             )
-        self.assertIn('is not valid under any of the given schemas', excinfo.exception.message)
+        if JSONSCHEMA_VERSION >= _LooseVersion('3.0.0'):
+            self.assertIn('\'ssh_key_file\' is a required property', excinfo.exception.message)
+        else:
+            self.assertIn('is not valid under any of the given schemas', excinfo.exception.message)
 
     def test_boolean_config(self):
         item = schema.BooleanItem(title='Hungry', description='Are you hungry?')
@@ -1730,7 +1733,12 @@ class ConfigTestCase(TestCase):
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': {'sides': '4', 'color': 'blue'}}, TestConf.serialize())
-        self.assertIn('is not valid under any of the given schemas', excinfo.exception.message)
+        if JSONSCHEMA_VERSION >= _LooseVersion('3.0.0'):
+            self.assertIn("'4'", excinfo.exception.message)
+            self.assertIn("is not of type", excinfo.exception.message)
+            self.assertIn("'boolean'", excinfo.exception.message)
+        else:
+            self.assertIn('is not valid under any of the given schemas', excinfo.exception.message)
 
         class TestConf(schema.Schema):
             item = schema.DictItem(
@@ -1833,7 +1841,12 @@ class ConfigTestCase(TestCase):
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': ['maybe']}, TestConf.serialize())
-        self.assertIn('is not valid under any of the given schemas', excinfo.exception.message)
+        if JSONSCHEMA_VERSION >= _LooseVersion('3.0.0'):
+            self.assertIn("'maybe'", excinfo.exception.message)
+            self.assertIn("is not one of", excinfo.exception.message)
+            self.assertIn("'yes'", excinfo.exception.message)
+        else:
+            self.assertIn('is not valid under any of the given schemas', excinfo.exception.message)
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': 2}, TestConf.serialize())
@@ -1885,7 +1898,12 @@ class ConfigTestCase(TestCase):
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': ['maybe']}, TestConf.serialize())
-        self.assertIn('is not valid under any of the given schemas', excinfo.exception.message)
+        if JSONSCHEMA_VERSION >= _LooseVersion('3.0.0'):
+            self.assertIn("'maybe'", excinfo.exception.message)
+            self.assertIn("is not one of", excinfo.exception.message)
+            self.assertIn("'yes'", excinfo.exception.message)
+        else:
+            self.assertIn('is not valid under any of the given schemas', excinfo.exception.message)
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': 2}, TestConf.serialize())

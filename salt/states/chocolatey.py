@@ -336,7 +336,6 @@ def upgraded(name,
     ret = {'name': name,
            'result': True,
            'changes': {},
-           'pchanges': {},
            'comment': ''}
 
     # Get list of currently installed packages
@@ -346,12 +345,10 @@ def upgraded(name,
     # Package not installed
     if name.lower() not in [package.lower() for package in pre_install.keys()]:
         if version:
-            ret['pchanges'] = {
-                name: 'Version {0} will be installed'.format(version)
-            }
+            ret['changes'][name] = 'Version {0} will be installed'.format(version)
             ret['comment'] = 'Install version {0}'.format(version)
         else:
-            ret['pchanges'] = {name: 'Latest version will be installed'}
+            ret['changes'][name] = 'Latest version will be installed'
             ret['comment'] = 'Install latest version'
 
     # Package installed
@@ -378,8 +375,7 @@ def upgraded(name,
                     oper="==",
                     ver2=version):
                 if force:
-                    ret['pchanges'] = {
-                        name: 'Version {0} will be reinstalled'.format(version)}
+                    ret['changes'][name] = 'Version {0} will be reinstalled'.format(version)
                     ret['comment'] = 'Reinstall {0} {1}'.format(full_name, version)
                 else:
                     ret['comment'] = '{0} {1} is already installed'.format(
@@ -389,11 +385,9 @@ def upgraded(name,
                 # If installed version is older than new version
                 if salt.utils.versions.compare(
                         ver1=installed_version, oper="<", ver2=version):
-                    ret['pchanges'] = {
-                        name: 'Version {0} will be upgraded to Version {1}'.format(
-                            installed_version, version
-                        )
-                    }
+                    ret['changes'][name] = 'Version {0} will be upgraded to Version {1}'.format(
+                        installed_version, version
+                    )
                     ret['comment'] = 'Upgrade {0} {1} to {2}'.format(
                         full_name, installed_version, version
                     )
@@ -409,13 +403,13 @@ def upgraded(name,
         else:
             ret['comment'] = 'No version found to install'
 
-    # Return if `test=True`
-    if __opts__['test']:
-        ret['result'] = None
+    # Return if there are no changes to be made
+    if not ret['changes']:
         return ret
 
-    # Return if there are no changes to be made
-    if not ret['pchanges']:
+    # Return if running in test mode
+    if __opts__['test']:
+        ret['result'] = None
         return ret
 
     # Install the package
@@ -439,6 +433,9 @@ def upgraded(name,
     # Get list of installed packages after 'chocolatey.install'
     post_install = __salt__['chocolatey.list'](local_only=True)
 
+    # Prior to this, ret['changes'] would have contained expected changes,
+    # replace them with the actual changes now that we have completed the
+    # installation.
     ret['changes'] = salt.utils.data.compare_dicts(pre_install, post_install)
 
     return ret

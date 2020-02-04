@@ -227,7 +227,7 @@ def avail_sizes(conn=None, call=None):
 
             try:
                 attr_value = getattr(size, attr)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 pass
 
             if isinstance(attr_value, six.string_types) and not six.PY3:

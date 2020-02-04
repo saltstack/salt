@@ -69,7 +69,7 @@ test files for Salt execution modules.
         in the ``test_module_name_source_match`` function. This unit test
         ensures that we maintain the naming convention for test files.
 
-    .. __: https://github.com/saltstack/salt/blob/develop/tests/filename_map.yml
+    .. __: https://github.com/saltstack/salt/blob/|repo_primary_branch|/tests/filename_map.yml
 
 
 Integration Tests
@@ -416,13 +416,13 @@ Tests for New Features
 
 If you are adding new functionality to Salt, please write the tests for this new
 feature in the same pull request as the new feature. New features should always be
-submitted to the ``develop`` branch.
+submitted to the ``|repo_primary_branch|`` branch.
 
 If you have already submitted the new feature, but did not write tests in the original
 pull request that has already been merged, please feel free to submit a new pull
-request containing tests. If the feature was recently added to Salt's ``develop``
+request containing tests. If the feature was recently added to Salt's ``|repo_primary_branch|``
 branch, then the tests should be added there as well. However, if the feature was
-added to ``develop`` some time ago and is already present in one or more release
+added to ``|repo_primary_branch|`` some time ago and is already present in one or more release
 branches, please refer to the `Tests for Entire Files or Functions`_ section below
 for more details about where to submit tests for functions or files that do not
 already have tests.
@@ -448,7 +448,7 @@ earliest supported release branch that contains the file or function you're test
 Once your tests are submitted in a pull request and is merged into the branch in
 question, the tests you wrote will be merged-forward by SaltStack core engineers and
 the new tests will propagate to the newer release branches. That way the tests you
-wrote will apply to all current and relevant release branches, and not just the ``develop``
+wrote will apply to all current and relevant release branches, and not just the ``|repo_primary_branch|``
 branch, for example. This methodology will help protect against regressions on older
 files in Salt's codebase.
 

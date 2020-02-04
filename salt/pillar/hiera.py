@@ -38,7 +38,7 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
             cmd += ' {0}=\'{1}\''.format(key, val)
     try:
         data = salt.utils.yaml.safe_load(__salt__['cmd.run'](cmd))
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         log.critical('Hiera YAML data failed to parse from conf %s', conf)
         return {}
     return data

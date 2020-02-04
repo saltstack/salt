@@ -16,7 +16,8 @@ from yaml.constructor import ConstructorError
 
 # Import salt libs
 import salt.utils.url
-from salt.utils.yamlloader import SaltYamlSafeLoader, load
+import salt.utils.yamlloader as yamlloader_new
+import salt.utils.yamlloader_old as yamlloader_old
 from salt.utils.odict import OrderedDict
 from salt.exceptions import SaltRenderError
 from salt.ext import six
@@ -35,7 +36,11 @@ def get_yaml_loader(argline):
     Return the ordered dict yaml loader
     '''
     def yaml_loader(*args):
-        return SaltYamlSafeLoader(*args, dictclass=OrderedDict)
+        if __opts__.get('use_yamlloader_old'):
+            yamlloader = yamlloader_old
+        else:
+            yamlloader = yamlloader_new
+        return yamlloader.SaltYamlSafeLoader(*args, dictclass=OrderedDict)
     return yaml_loader
 
 
@@ -46,11 +51,18 @@ def render(yaml_data, saltenv='base', sls='', argline='', **kws):
 
     :rtype: A Python data structure
     '''
+    if __opts__.get('use_yamlloader_old'):
+        log.warning('Using the old YAML Loader for rendering, '
+                    'consider disabling this and using the tojson'
+                    ' filter.')
+        yamlloader = yamlloader_old
+    else:
+        yamlloader = yamlloader_new
     if not isinstance(yaml_data, string_types):
         yaml_data = yaml_data.read()
     with warnings.catch_warnings(record=True) as warn_list:
         try:
-            data = load(yaml_data, Loader=get_yaml_loader(argline))
+            data = yamlloader.load(yaml_data, Loader=get_yaml_loader(argline))
         except ScannerError as exc:
             err_type = _ERROR_MAP.get(exc.problem, exc.problem)
             line_num = exc.problem_mark.line + 1

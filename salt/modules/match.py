@@ -11,7 +11,6 @@ import sys
 import copy
 
 # Import salt libs
-import salt.minion
 import salt.loader
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.ext import six
@@ -48,7 +47,7 @@ def compound(tgt, minion_id=None):
     matchers = salt.loader.matchers(opts)
     try:
         return matchers['compound_match.match'](tgt)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.exception(exc)
         return False
 
@@ -75,8 +74,8 @@ def ipcidr(tgt):
     '''
     matchers = salt.loader.matchers(__opts__)
     try:
-        return matchers['ipcidr_match.match'](tgt)
-    except Exception as exc:
+        return matchers['ipcidr_match.match'](tgt, opts=__opts__)
+    except Exception as exc:  # pylint: disable=broad-except
         log.exception(exc)
         return False
 
@@ -106,8 +105,8 @@ def pillar_pcre(tgt, delimiter=DEFAULT_TARGET_DELIM):
     '''
     matchers = salt.loader.matchers(__opts__)
     try:
-        return matchers['pillar_pcre_match.match'](tgt, delimiter=delimiter)
-    except Exception as exc:
+        return matchers['pillar_pcre_match.match'](tgt, delimiter=delimiter, opts=__opts__)
+    except Exception as exc:  # pylint: disable=broad-except
         log.exception(exc)
         return False
 
@@ -137,8 +136,8 @@ def pillar(tgt, delimiter=DEFAULT_TARGET_DELIM):
     '''
     matchers = salt.loader.matchers(__opts__)
     try:
-        return matchers['pillar_match.match'](tgt, delimiter=delimiter)
-    except Exception as exc:
+        return matchers['pillar_match.match'](tgt, delimiter=delimiter, opts=__opts__)
+    except Exception as exc:  # pylint: disable=broad-except
         log.exception(exc)
         return False
 
@@ -155,8 +154,8 @@ def data(tgt):
     '''
     matchers = salt.loader.matchers(__opts__)
     try:
-        return matchers['data_match.match'](tgt)
-    except Exception as exc:
+        return matchers['data_match.match'](tgt, opts=__opts__)
+    except Exception as exc:  # pylint: disable=broad-except
         log.exception(exc)
         return False
 
@@ -186,8 +185,8 @@ def grain_pcre(tgt, delimiter=DEFAULT_TARGET_DELIM):
     '''
     matchers = salt.loader.matchers(__opts__)
     try:
-        return matchers['grain_pcre_match.match'](tgt, delimiter=delimiter)
-    except Exception as exc:
+        return matchers['grain_pcre_match.match'](tgt, delimiter=delimiter, opts=__opts__)
+    except Exception as exc:  # pylint: disable=broad-except
         log.exception(exc)
         return False
 
@@ -217,8 +216,8 @@ def grain(tgt, delimiter=DEFAULT_TARGET_DELIM):
     '''
     matchers = salt.loader.matchers(__opts__)
     try:
-        return matchers['grain_match.match'](tgt, delimiter=delimiter)
-    except Exception as exc:
+        return matchers['grain_match.match'](tgt, delimiter=delimiter, opts=__opts__)
+    except Exception as exc:  # pylint: disable=broad-except
         log.exception(exc)
         return False
 
@@ -247,8 +246,8 @@ def list_(tgt, minion_id=None):
         opts = __opts__
     matchers = salt.loader.matchers(opts)
     try:
-        return matchers['list_match.match'](tgt)
-    except Exception as exc:
+        return matchers['list_match.match'](tgt, opts=__opts__)
+    except Exception as exc:  # pylint: disable=broad-except
         log.exception(exc)
         return False
 
@@ -277,8 +276,8 @@ def pcre(tgt, minion_id=None):
         opts = __opts__
     matchers = salt.loader.matchers(opts)
     try:
-        return matchers['pcre_match.match'](tgt)
-    except Exception as exc:
+        return matchers['pcre_match.match'](tgt, opts=__opts__)
+    except Exception as exc:  # pylint: disable=broad-except
         log.exception(exc)
         return False
 
@@ -308,8 +307,8 @@ def glob(tgt, minion_id=None):
     matchers = salt.loader.matchers(opts)
 
     try:
-        return matchers['glob_match.match'](tgt)
-    except Exception as exc:
+        return matchers['glob_match.match'](tgt, opts=__opts__)
+    except Exception as exc:  # pylint: disable=broad-except
         log.exception(exc)
         return False
 

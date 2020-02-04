@@ -12,8 +12,6 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     patch,
     MagicMock,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 import salt.modules.libcloud_dns as libcloud_dns
 
@@ -27,7 +25,7 @@ def get_mock_driver():
     return MockDNSDriver()
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not libcloud_dns.HAS_LIBCLOUD, 'No libcloud installed')
 class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):

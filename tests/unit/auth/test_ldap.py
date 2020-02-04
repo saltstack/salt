@@ -7,7 +7,7 @@ from __future__ import absolute_import
 import salt.auth.ldap
 
 # Import Salt Testing Libs
-from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
+from tests.support.mock import patch
 from tests.support.unit import skipIf, TestCase
 
 salt.auth.ldap.__opts__ = {}
@@ -28,7 +28,6 @@ class Bind(object):
         ]
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not salt.auth.ldap.HAS_LDAP, 'Install python-ldap for this test')
 class LDAPAuthTestCase(TestCase):
     '''
@@ -67,7 +66,7 @@ class LDAPAuthTestCase(TestCase):
         '''
         self.opts['auth.ldap.freeipa'] = True
         with patch.dict(salt.auth.ldap.__opts__, self.opts):
-            with patch('salt.auth.ldap.auth', return_value=Bind):
+            with patch('salt.auth.ldap._bind', return_value=Bind):
                 self.assertIn('saltusers', salt.auth.ldap.groups('saltuser', password='password'))
 
     def test_groups(self):
@@ -75,7 +74,7 @@ class LDAPAuthTestCase(TestCase):
         test groups in ldap
         '''
         with patch.dict(salt.auth.ldap.__opts__, self.opts):
-            with patch('salt.auth.ldap.auth', return_value=Bind):
+            with patch('salt.auth.ldap._bind', return_value=Bind):
                 self.assertIn('saltusers', salt.auth.ldap.groups('saltuser', password='password'))
 
     def test_groups_activedirectory(self):
@@ -84,7 +83,7 @@ class LDAPAuthTestCase(TestCase):
         '''
         self.opts['auth.ldap.activedirectory'] = True
         with patch.dict(salt.auth.ldap.__opts__, self.opts):
-            with patch('salt.auth.ldap.auth', return_value=Bind):
+            with patch('salt.auth.ldap._bind', return_value=Bind):
                 self.assertIn('saltusers', salt.auth.ldap.groups('saltuser', password='password'))
 
     def test_auth_nopass(self):

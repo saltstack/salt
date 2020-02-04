@@ -9,7 +9,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
+from tests.support.mock import MagicMock, patch
 
 # Import salt libs
 import salt.modules.dig as dig
@@ -50,7 +50,6 @@ def _spf_side_effect(key, python_shell=False):
                                            'stdout': ''})
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(dig.__virtual__() is False, 'Dig must be installed')
 class DigTestCase(TestCase, LoaderModuleMockMixin):
 

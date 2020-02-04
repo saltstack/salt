@@ -735,7 +735,7 @@ class SchemaItem(six.with_metaclass(BaseSchemaItemMeta, object)):
         # Let's see if there's a private function to get the value
         argvalue = getattr(self, '__get_{0}__'.format(argname), None)
         if argvalue is not None and callable(argvalue):
-            argvalue = argvalue()
+            argvalue = argvalue()  # pylint: disable=not-callable
         if argvalue is None:
             # Let's see if the value is defined as a public class variable
             argvalue = getattr(self, argname, None)
@@ -1443,7 +1443,7 @@ class NotItem(SchemaItem):
         if not isinstance(self.item, (Schema, SchemaItem)):
             raise RuntimeError(
                 'The passed item be of type Schema, SchemaItem or '
-                'BaseSchemaItem, not \'{1}\''.format(type(self.item))
+                'BaseSchemaItem, not \'{0}\''.format(type(self.item))
             )
 
     def serialize(self):

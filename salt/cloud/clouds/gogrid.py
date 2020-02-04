@@ -111,9 +111,9 @@ def create(vm_):
         host_ip = vm_['assign_public_ip']
     else:
         public_ips = list_public_ips()
-        if len(public_ips.keys()) < 1:
+        if not public_ips:
             raise SaltCloudException('No more IPs available')
-        host_ip = list(public_ips)[0]
+        host_ip = next(iter(public_ips))
 
     create_kwargs = {
         'name': vm_['name'],
@@ -135,7 +135,7 @@ def create(vm_):
 
     try:
         data = _query('grid', 'server/add', args=create_kwargs)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         log.error(
             'Error creating %s on GOGRID\n\n'
             'The following exception was thrown when trying to '

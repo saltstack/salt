@@ -95,16 +95,20 @@ def _get_systemd_only(func, kwargs):
     warnings = []
     valid_args = _argspec(func).args
     for systemd_arg in SYSTEMD_ONLY:
-        arg_val = kwargs.get(systemd_arg, False)
-        if arg_val:
+        if systemd_arg in kwargs:
             if systemd_arg in valid_args:
-                ret[systemd_arg] = arg_val
+                ret[systemd_arg] = kwargs[systemd_arg]
             else:
                 warnings.append(
                     'The \'{0}\' argument is not supported by this '
                     'platform/action'.format(systemd_arg)
                 )
     return ret, warnings
+
+
+def _add_warnings(ret, warnings):
+    current_warnings = ret.setdefault('warnings', [])
+    current_warnings.extend([x for x in warnings if x not in current_warnings])
 
 
 def _enabled_used_error(ret):
@@ -336,9 +340,6 @@ def running(name,
             enable=None,
             sig=None,
             init_delay=None,
-            no_block=False,
-            unmask=False,
-            unmask_runtime=False,
             **kwargs):
     '''
     Ensure that the service is running
@@ -383,6 +384,13 @@ def running(name,
             In previous releases, Salt would simply unmask a service before
             making any changes. This behavior is no longer the default.
 
+    wait : 3
+        **For systemd minions only.** Passed through when using
+        :py:func:`service.status <salt.modules.systemd_service.status>` to
+        determine whether the service is running or not.
+
+        .. versionadded:: 2019.2.3
+
     .. note::
         ``watch`` can be used with service.running to restart a service when
          another state changes ( example: a file.managed state that creates the
@@ -414,17 +422,21 @@ def running(name,
         ret['comment'] = exc.strerror
         return ret
 
+    status_kwargs, warnings = _get_systemd_only(__salt__['service.status'], kwargs)
+    if warnings:
+        _add_warnings(ret, warnings)
+
     # lot of custom init script won't or mis implement the status
     # command, so it is just an indicator but can not be fully trusted
-    before_toggle_status = __salt__['service.status'](name, sig)
+    before_toggle_status = __salt__['service.status'](name, sig, **status_kwargs)
     if 'service.enabled' in __salt__:
         before_toggle_enable_status = __salt__['service.enabled'](name)
     else:
         before_toggle_enable_status = True
 
     unmask_ret = {'comment': ''}
-    if unmask:
-        unmask_ret = unmasked(name, unmask_runtime)
+    if kwargs.get('unmask', False):
+        unmask_ret = unmasked(name, kwargs.get('unmask_runtime', False))
 
     # See if the service is already running
     if before_toggle_status:
@@ -448,9 +460,9 @@ def running(name,
 
     # Conditionally add systemd-specific args to call to service.start
     start_kwargs, warnings = \
-        _get_systemd_only(__salt__['service.start'], locals())
+        _get_systemd_only(__salt__['service.start'], kwargs)
     if warnings:
-        ret.setdefault('warnings', []).extend(warnings)
+        _add_warnings(ret, warnings)
 
     if salt.utils.platform.is_windows() and kwargs.get('timeout', False):
         start_kwargs.update({'timeout': kwargs.get('timeout')})
@@ -475,7 +487,7 @@ def running(name,
         time.sleep(init_delay)
 
     # only force a change state if we have explicitly detected them
-    after_toggle_status = __salt__['service.status'](name, sig)
+    after_toggle_status = __salt__['service.status'](name, sig, **kwargs)
     if 'service.enabled' in __salt__:
         after_toggle_enable_status = __salt__['service.enabled'](name)
     else:
@@ -503,7 +515,7 @@ def running(name,
             .format(ret['comment'], init_delay)
         )
 
-    if unmask:
+    if kwargs.get('unmask', False):
         ret['comment'] = '\n'.join([ret['comment'], unmask_ret['comment']])
 
     return ret
@@ -568,9 +580,13 @@ def dead(name,
         ret['comment'] = exc.strerror
         return ret
 
+    status_kwargs, warnings = _get_systemd_only(__salt__['service.status'], kwargs)
+    if warnings:
+        _add_warnings(ret, warnings)
+
     # lot of custom init script won't or mis implement the status
     # command, so it is just an indicator but can not be fully trusted
-    before_toggle_status = __salt__['service.status'](name, sig)
+    before_toggle_status = __salt__['service.status'](name, sig, **status_kwargs)
     if 'service.enabled' in __salt__:
         if salt.utils.platform.is_windows():
             # service.enabled in Windows returns True for services that are set
@@ -599,7 +615,7 @@ def dead(name,
     # Conditionally add systemd-specific args to call to service.start
     stop_kwargs, warnings = _get_systemd_only(__salt__['service.stop'], kwargs)
     if warnings:
-        ret.setdefault('warnings', []).extend(warnings)
+        _add_warnings(ret, warnings)
 
     if salt.utils.platform.is_windows() and kwargs.get('timeout', False):
         stop_kwargs.update({'timeout': kwargs.get('timeout')})
@@ -618,7 +634,7 @@ def dead(name,
         time.sleep(init_delay)
 
     # only force a change state if we have explicitly detected them
-    after_toggle_status = __salt__['service.status'](name)
+    after_toggle_status = __salt__['service.status'](name, **status_kwargs)
     if 'service.enabled' in __salt__:
         after_toggle_enable_status = __salt__['service.enabled'](name)
     else:
@@ -884,17 +900,21 @@ def mod_watch(name,
            'comment': ''}
     past_participle = None
 
+    status_kwargs, warnings = _get_systemd_only(__salt__['service.status'], kwargs)
+    if warnings:
+        _add_warnings(ret, warnings)
+
     if sfun == 'dead':
         verb = 'stop'
         past_participle = verb + 'ped'
-        if __salt__['service.status'](name, sig):
+        if __salt__['service.status'](name, sig, **status_kwargs):
             func = __salt__['service.stop']
         else:
             ret['result'] = True
             ret['comment'] = 'Service is already {0}'.format(past_participle)
             return ret
     elif sfun == 'running':
-        if __salt__['service.status'](name, sig):
+        if __salt__['service.status'](name, sig, **status_kwargs):
             if 'service.reload' in __salt__ and reload:
                 if 'service.force_reload' in __salt__ and force:
                     func = __salt__['service.force_reload']
@@ -929,7 +949,7 @@ def mod_watch(name,
 
     func_kwargs, warnings = _get_systemd_only(func, kwargs)
     if warnings:
-        ret.setdefault('warnings', []).extend(warnings)
+        _add_warnings(ret, warnings)
 
     try:
         result = func(name, **func_kwargs)

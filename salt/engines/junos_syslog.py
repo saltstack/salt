@@ -168,10 +168,10 @@ class _Parser(object):
     def parse(self, line):
         try:
             parsed = self.__pattern.parseString(line)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             try:
                 parsed = self.__pattern_without_daemon.parseString(line)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 return
         if len(parsed) == 6:
             payload = {}
@@ -299,7 +299,7 @@ class _SyslogServerFactory(DatagramProtocol):
                  if the event is to be sent on the bus.
 
         '''
-        data = self.obj.parse(data)
+        data = self.obj.parse(data.decode())
         data['hostip'] = host
         log.debug(
             'Junos Syslog - received %s from %s, sent from port %s',

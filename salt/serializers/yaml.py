@@ -58,7 +58,7 @@ def deserialize(stream_or_string, **options):
     except ConstructorError as error:
         log.exception('Error encountered while deserializing')
         raise DeserializationError(error)
-    except Exception as error:
+    except Exception as error:  # pylint: disable=broad-except
         log.exception('Error encountered while deserializing')
         raise DeserializationError(error)
 
@@ -72,6 +72,7 @@ def serialize(obj, **options):
     '''
 
     options.setdefault('Dumper', Dumper)
+    options.setdefault('default_flow_style', None)
     try:
         response = yaml.dump(obj, **options)
         if response.endswith('\n...\n'):
@@ -79,7 +80,7 @@ def serialize(obj, **options):
         if response.endswith('\n'):
             return response[:-1]
         return response
-    except Exception as error:
+    except Exception as error:  # pylint: disable=broad-except
         log.exception('Error encountered while serializing')
         raise SerializationError(error)
 
@@ -99,7 +100,6 @@ class EncryptedString(str):
 
 class Loader(BaseLoader):  # pylint: disable=W0232
     '''Overwrites Loader as not for pollute legacy Loader'''
-    pass
 
 
 Loader.add_multi_constructor(EncryptedString.yaml_tag, EncryptedString.yaml_constructor)
@@ -119,7 +119,6 @@ Loader.add_multi_constructor('tag:yaml.org,2002:map', Loader.construct_yaml_map)
 
 class Dumper(BaseDumper):  # pylint: disable=W0232
     '''Overwrites Dumper as not for pollute legacy Dumper'''
-    pass
 
 
 Dumper.add_multi_representer(EncryptedString, EncryptedString.yaml_dumper)

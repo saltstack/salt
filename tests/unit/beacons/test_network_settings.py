@@ -5,7 +5,6 @@ from __future__ import absolute_import
 
 # Salt testing libs
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 from tests.support.mixins import LoaderModuleMockMixin
 try:
     from pyroute2 import IPDB
@@ -20,7 +19,6 @@ import logging
 log = logging.getLogger(__name__)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class NetworkSettingsBeaconTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test case for salt.beacons.network_settings

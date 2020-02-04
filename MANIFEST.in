@@ -1,11 +1,15 @@
 include AUTHORS
+include CODE_OF_CONDUCT.md
+include CONTRIBUTING.rst
 include HACKING.rst
 include LICENSE
+include NOTICE
 include README.rst
 include requirements/base.txt
 include requirements/raet.txt
 include requirements/cloud.txt
 include requirements/zeromq.txt
+include SUPPORT.rst
 include tests/*.py
 recursive-include tests *
 include tests/integration/modules/files/*
@@ -13,9 +17,10 @@ include tests/integration/files/*
 include tests/unit/templates/files/*
 recursive-include doc *
 recursive-include scripts *
-include conf/*
+recursive-include conf *
 recursive-include pkg *
 recursive-include salt *.jinja
 recursive-include salt *.flo
+recursive-include templates *
 include salt/templates/git/*
 include salt/templates/lxc/*

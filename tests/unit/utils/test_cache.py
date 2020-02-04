@@ -14,8 +14,7 @@ import tempfile
 import shutil
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase, skipIf
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON
+from tests.support.unit import TestCase
 
 # Import salt libs
 import salt.config
@@ -68,7 +67,7 @@ class CacheContextTestCase(TestCase):
         if os.path.exists(os.path.join(tempfile.gettempdir(), 'context')):
             self.skipTest('Context dir already exists')
         else:
-            opts = salt.config.DEFAULT_MINION_OPTS
+            opts = salt.config.DEFAULT_MINION_OPTS.copy()
             opts['cachedir'] = tempfile.gettempdir()
             context_cache = cache.ContextCache(opts, 'cache_test')
 
@@ -84,7 +83,7 @@ class CacheContextTestCase(TestCase):
         with a context cache can store and retrieve its contextual
         data
         '''
-        opts = salt.config.DEFAULT_MINION_OPTS
+        opts = salt.config.DEFAULT_MINION_OPTS.copy()
         opts['cachedir'] = tempfile.gettempdir()
 
         ll_ = salt.loader.LazyLoader(
@@ -103,7 +102,6 @@ __context__ = {'a': 'b'}
 __opts__ = {'cachedir': '/tmp'}
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class ContextCacheTest(TestCase):
     '''
     Test case for salt.utils.cache.ContextCache
@@ -126,7 +124,6 @@ class ContextCacheTest(TestCase):
             This will inherit globals from the test module itself.
             Normally these are injected by the salt loader [salt.loader]
             '''
-            pass
 
         _test_set_cache()
 

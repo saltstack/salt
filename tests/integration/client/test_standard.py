@@ -9,12 +9,15 @@ from tests.support.case import ModuleCase
 
 # Import salt libs
 import salt.utils.files
+import salt.utils.platform
 
 
 class StdTest(ModuleCase):
     '''
     Test standard client calls
     '''
+    def setUp(self):
+        self.TIMEOUT = 600 if salt.utils.platform.is_windows() else 10
 
     def test_cli(self):
         '''
@@ -159,7 +162,8 @@ class StdTest(ModuleCase):
         ret = self.client.cmd(
                 'minion,ghostminion',
                 'test.ping',
-                tgt_type='list'
+                tgt_type='list',
+                timeout=self.TIMEOUT
                 )
         self.assertIn('minion', ret)
         self.assertIn('ghostminion', ret)

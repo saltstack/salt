@@ -30,7 +30,7 @@ from functools import partial
 from collections import namedtuple
 
 import tests.support.paths
-from tests.support import helpers
+from tests.support import processes
 from tests.support.unit import TestLoader, TextTestRunner
 from tests.support.xmlunit import HAS_XMLRUNNER, XMLTestRunner
 
@@ -57,28 +57,51 @@ log = logging.getLogger(__name__)
 WEIRD_SIGNAL_NUM = -45654
 
 
-# Let's setup a global exception hook handler which will log all exceptions
-# Store a reference to the original handler
-__GLOBAL_EXCEPTION_HANDLER = sys.excepthook
-
-
-def __global_logging_exception_handler(exc_type, exc_value, exc_traceback):
+def __global_logging_exception_handler(exc_type, exc_value, exc_traceback,
+                                       _logger=logging.getLogger(__name__),
+                                       _stderr=sys.__stderr__,
+                                       _format_exception=traceback.format_exception):
     '''
     This function will log all python exceptions.
     '''
+    if exc_type.__name__ == "KeyboardInterrupt":
+        # Call the original sys.excepthook
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+
     # Log the exception
-    logging.getLogger(__name__).error(
-        'An un-handled exception was caught by salt-testing\'s global '
-        'exception handler:\n{0}: {1}\n{2}'.format(
-            exc_type.__name__,
-            exc_value,
-            ''.join(traceback.format_exception(
-                exc_type, exc_value, exc_traceback
-            )).strip()
+    try:
+        msg = (
+            'An un-handled exception was caught by salt\'s testing global exception handler:\n{}: {}\n{}'.format(
+                exc_type.__name__,
+                exc_value,
+                ''.join(_format_exception(exc_type, exc_value, exc_traceback)).strip()
+            )
         )
-    )
+    except Exception:  # pylint: disable=broad-except
+        msg = (
+            'An un-handled exception was caught by salt-testing\'s global exception handler:\n{}: {}\n'
+            '(UNABLE TO FORMAT TRACEBACK)'.format(
+                exc_type.__name__,
+                exc_value,
+            )
+        )
+    try:
+        _logger(__name__).error(msg)
+    except Exception:  # pylint: disable=broad-except
+        # Python is shutting down and logging has been set to None already
+        try:
+            _stderr.write(msg + '\n')
+        except Exception:  # pylint: disable=broad-except
+            # We have also lost reference to sys.__stderr__ ?!
+            print(msg)
+
     # Call the original sys.excepthook
-    __GLOBAL_EXCEPTION_HANDLER(exc_type, exc_value, exc_traceback)
+    try:
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+    except Exception:  # pylint: disable=broad-except
+        # Python is shutting down and sys has been set to None already
+        pass
 
 
 # Set our own exception handler as the one to use
@@ -379,7 +402,7 @@ class SaltTestingParser(optparse.OptionParser):
         try:
             return self.__test_mods
         except AttributeError:
-            self.__test_mods = set(tests.support.paths.test_mods())
+            self.__test_mods = set(tests.support.paths.list_test_mods())
             return self.__test_mods
 
     def _map_files(self, files):
@@ -393,7 +416,7 @@ class SaltTestingParser(optparse.OptionParser):
             try:
                 with salt.utils.files.fopen(self.options.filename_map) as fp_:
                     filename_map = salt.utils.yaml.safe_load(fp_)
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 raise RuntimeError(
                     'Failed to load filename map: {0}'.format(exc)
                 )
@@ -408,13 +431,14 @@ class SaltTestingParser(optparse.OptionParser):
             ret.update(
                 x for x in
                 ['.'.join(('unit', mod_relname)),
-                 '.'.join(('integration', mod_relname))]
+                 '.'.join(('integration', mod_relname)),
+                 '.'.join(('multimaster', mod_relname))]
                 if x in self._test_mods
             )
 
         # First, try a path match
         for path in files:
-            match = re.match(r'^(salt/|tests/(integration|unit)/)(.+\.py)$', path)
+            match = re.match(r'^(salt/|tests/(unit|integration|multimaster)/)(.+\.py)$', path)
             if match:
                 comps = match.group(3).split('/')
 
@@ -574,12 +598,12 @@ class SaltTestingParser(optparse.OptionParser):
 
         self.validate_options()
 
-        if self.support_destructive_tests_selection:
+        if self.support_destructive_tests_selection and not os.environ.get('DESTRUCTIVE_TESTS', None):
             # Set the required environment variable in order to know if
             # destructive tests should be executed or not.
             os.environ['DESTRUCTIVE_TESTS'] = str(self.options.run_destructive)
 
-        if self.support_expensive_tests_selection:
+        if self.support_expensive_tests_selection and not os.environ.get('EXPENSIVE_TESTS', None):
             # Set the required environment variable in order to know if
             # expensive tests should be executed or not.
             os.environ['EXPENSIVE_TESTS'] = str(self.options.run_expensive)
@@ -610,6 +634,9 @@ class SaltTestingParser(optparse.OptionParser):
         # Default logging level: ERROR
         logging.root.setLevel(logging.NOTSET)
 
+        log_levels_to_evaluate = [
+            logging.ERROR,  # Default log level
+        ]
         if self.options.tests_logfile:
             filehandler = logging.FileHandler(
                 mode='w',           # Not preserved between re-runs
@@ -620,6 +647,7 @@ class SaltTestingParser(optparse.OptionParser):
             filehandler.setLevel(logging.DEBUG)
             filehandler.setFormatter(formatter)
             logging.root.addHandler(filehandler)
+            log_levels_to_evaluate.append(logging.DEBUG)
 
             print(' * Logging tests on {0}'.format(self.options.tests_logfile))
 
@@ -633,16 +661,17 @@ class SaltTestingParser(optparse.OptionParser):
                 logging_level = logging.TRACE
             elif self.options.verbosity == 4:   # -vvv
                 logging_level = logging.DEBUG
-                print('DEBUG')
             elif self.options.verbosity == 3:   # -vv
-                print('INFO')
                 logging_level = logging.INFO
             else:
                 logging_level = logging.ERROR
+            log_levels_to_evaluate.append(logging_level)
             os.environ['TESTS_LOG_LEVEL'] = str(self.options.verbosity)  # future lint: disable=blacklisted-function
             consolehandler.setLevel(logging_level)
             logging.root.addHandler(consolehandler)
             log.info('Runtests logging has been setup')
+
+        os.environ['TESTS_MIN_LOG_LEVEL_NAME'] = logging.getLevelName(min(log_levels_to_evaluate))
 
     def pre_execution_cleanup(self):
         '''
@@ -831,24 +860,21 @@ class SaltTestingParser(optparse.OptionParser):
         Run the finalization procedures. Show report, clean-up file-system, etc
         '''
         # Collect any child processes still laying around
-        children = helpers.collect_child_processes(os.getpid())
+        children = processes.collect_child_processes(os.getpid())
         if self.options.no_report is False:
             self.print_overall_testsuite_report()
         self.post_execution_cleanup()
         # Brute force approach to terminate this process and its children
         if children:
             log.info('Terminating test suite child processes: %s', children)
-            helpers.terminate_process(children=children, kill_children=True)
-            children = helpers.collect_child_processes(os.getpid())
+            processes.terminate_process(children=children, kill_children=True)
+            children = processes.collect_child_processes(os.getpid())
             if children:
                 log.info('Second run at terminating test suite child processes: %s', children)
-                helpers.terminate_process(children=children, kill_children=True)
-        log.info(
-            'Test suite execution finalized with exit code: {0}'.format(
-                exit_code
-            )
-        )
-        self.exit(exit_code)
+                processes.terminate_process(children=children, kill_children=True)
+        exit_msg = 'Test suite execution finalized with exit code: {}'.format(exit_code)
+        log.info(exit_msg)
+        self.exit(status=exit_code, msg=exit_msg + '\n')
 
     def run_suite_in_docker(self):
         '''

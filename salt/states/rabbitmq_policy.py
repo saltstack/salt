@@ -22,6 +22,7 @@ from __future__ import absolute_import, unicode_literals, print_function
 # Import python libs
 import logging
 import salt.utils.path
+import json
 
 log = logging.getLogger(__name__)
 
@@ -69,7 +70,10 @@ def present(name,
     if policy:
         if policy.get('pattern') != pattern:
             updates.append('Pattern')
-        if policy.get('definition') != definition:
+        current_definition = policy.get('definition')
+        current_definition = json.loads(current_definition) if current_definition else ''
+        new_definition = json.loads(definition) if definition else ''
+        if current_definition != new_definition:
             updates.append('Definition')
         if apply_to and (policy.get('apply-to') != apply_to):
             updates.append('Applyto')

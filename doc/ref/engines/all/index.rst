@@ -11,7 +11,7 @@ engine modules
     :template: autosummary.rst.tmpl
 
     docker_events
-    hipchat
+    fluent
     http_logstash
     ircbot
     junos_syslog

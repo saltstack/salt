@@ -412,7 +412,7 @@ def create_snapshot(config='root', snapshot_type='single', pre_number=None,
                                                 cleanup_algorithm, userdata)
         else:
             raise CommandExecutionError(
-                "Invalid snapshot type '{0}'", format(snapshot_type))
+                "Invalid snapshot type '{0}'".format(snapshot_type))
     except dbus.DBusException as exc:
         raise CommandExecutionError(
             'Error encountered while listing changed files: {0}'
@@ -629,12 +629,12 @@ def status(config='root', num_pre=None, num_post=None):
         snapper.CreateComparison(config, int(pre), int(post))
         files = snapper.GetFiles(config, int(pre), int(post))
         status_ret = {}
-        SUBVOLUME = list_configs()[config]['SUBVOLUME']
+        subvolume = list_configs()[config]['SUBVOLUME']
         for file in files:
             # In case of SUBVOLUME is included in filepath we remove it
             # to prevent from filepath starting with double '/'
-            _filepath = file[0][len(SUBVOLUME):] if file[0].startswith(SUBVOLUME) else file[0]
-            status_ret[os.path.normpath(SUBVOLUME + _filepath)] = {'status': status_to_string(file[1])}
+            _filepath = file[0][len(subvolume):] if file[0].startswith(subvolume) else file[0]
+            status_ret[os.path.normpath(subvolume + _filepath)] = {'status': status_to_string(file[1])}
         return status_ret
     except dbus.DBusException as exc:
         raise CommandExecutionError(
@@ -782,16 +782,16 @@ def diff(config='root', filename=None, num_pre=None, num_post=None):
         if filename:
             files = [filename] if filename in files else []
 
-        SUBVOLUME = list_configs()[config]['SUBVOLUME']
-        pre_mount = snapper.MountSnapshot(config, pre, False) if pre else SUBVOLUME
-        post_mount = snapper.MountSnapshot(config, post, False) if post else SUBVOLUME
+        subvolume = list_configs()[config]['SUBVOLUME']
+        pre_mount = snapper.MountSnapshot(config, pre, False) if pre else subvolume
+        post_mount = snapper.MountSnapshot(config, post, False) if post else subvolume
 
         files_diff = dict()
         for filepath in [filepath for filepath in files if not os.path.isdir(filepath)]:
 
             _filepath = filepath
-            if filepath.startswith(SUBVOLUME):
-                _filepath = filepath[len(SUBVOLUME):]
+            if filepath.startswith(subvolume):
+                _filepath = filepath[len(subvolume):]
 
             # Just in case, removing possible double '/' from the final file paths
             pre_file = os.path.normpath(pre_mount + "/" + _filepath).replace("//", "/")

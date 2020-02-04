@@ -10,7 +10,7 @@ from sphinx import addnodes
 from sphinx.directives import ObjectDescription
 from sphinx.domains import Domain, ObjType
 from sphinx.domains.python import PyObject
-from sphinx.locale import l_, _
+from sphinx.locale import _
 from sphinx.roles import XRefRole
 from sphinx.util.nodes import make_refnode
 from sphinx.util.nodes import nested_parse_with_titles
@@ -240,8 +240,8 @@ class SLSXRefRole(XRefRole):
 
 class SaltModuleIndex(python_domain.PythonModuleIndex):
     name = 'modindex'
-    localname = l_('Salt Module Index')
-    shortname = l_('all salt modules')
+    localname = _('Salt Module Index')
+    shortname = _('all salt modules')
 
 
 class SaltDomain(python_domain.PythonDomain):
@@ -251,7 +251,7 @@ class SaltDomain(python_domain.PythonDomain):
 
     object_types = python_domain.PythonDomain.object_types
     object_types.update({
-        'state': ObjType(l_('state'), 'state'),
+        'state': ObjType(_('state'), 'state'),
     })
 
     directives = python_domain.PythonDomain.directives
@@ -290,7 +290,7 @@ class SaltDomain(python_domain.PythonDomain):
                     type, target, node, contnode)
 
 # Monkey-patch the Python domain remove the python module index
-python_domain.PythonDomain.indices = []
+python_domain.PythonDomain.indices = [SaltModuleIndex]
 
 
 def setup(app):

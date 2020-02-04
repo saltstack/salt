@@ -14,7 +14,7 @@ import os.path
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.mock import MagicMock, patch
 
 # Import salt libs
 import salt.modules.archive as archive
@@ -37,7 +37,6 @@ class ZipFileMock(MagicMock):
         return self._files
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):

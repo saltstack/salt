@@ -226,7 +226,7 @@ from all environments. This behavior can be overridden using a ``pillarenv``.
 Setting a :conf_minion:`pillarenv` in the minion config file will make that
 minion tell the master to ignore any pillar data from environments which don't
 match that pillarenv. A pillarenv can also be specified for a given minion or
-set of minions when :mod:`running states <salt.modules.state>`, by using he
+set of minions when :mod:`running states <salt.modules.state>`, by using the
 ``pillarenv`` argument. The CLI pillarenv will override one set in the minion
 config file. So, assuming that a pillarenv of ``base`` was set for a minion, it
 would not get any of the pillar variables configured in the ``qux`` remote,
@@ -349,6 +349,21 @@ When ``__env__`` is specified as the branch name, ``all_saltenvs`` per-remote co
           - mountpoint: web/server/
         - __env__ https://mydomain.tld/pillar-appdata.git:
           - mountpoint: web/server/
+
+.. _git_pillar_update_interval:
+
+git_pillar_update_interval
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: neon
+
+This option defines the default update interval (in seconds) for git_pillar
+remotes. The update is handled within the global loop, hence
+``git_pillar_update_interval`` should be a multiple of ``loop_interval``.
+
+.. code-block:: yaml
+
+    git_pillar_update_interval: 120
 
 '''
 from __future__ import absolute_import, print_function, unicode_literals

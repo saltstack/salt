@@ -96,16 +96,17 @@ def present(name, auth=None, **kwargs):
            'result': True,
            'comment': ''}
 
+    kwargs = __utils__['args.clean_kwargs'](**kwargs)
+
     __salt__['neutronng.setup_clouds'](auth)
 
     kwargs['subnet_name'] = name
     subnet = __salt__['neutronng.subnet_get'](name=name)
 
     if subnet is None:
-        if __opts__['test'] is True:
+        if __opts__['test']:
             ret['result'] = None
             ret['changes'] = kwargs
-            ret['pchanges'] = ret['changes']
             ret['comment'] = 'Subnet will be created.'
             return ret
 
@@ -119,7 +120,6 @@ def present(name, auth=None, **kwargs):
         if __opts__['test'] is True:
             ret['result'] = None
             ret['changes'] = changes
-            ret['pchanges'] = ret['changes']
             ret['comment'] = 'Project will be updated.'
             return ret
 
@@ -160,7 +160,6 @@ def absent(name, auth=None):
         if __opts__['test'] is True:
             ret['result'] = None
             ret['changes'] = {'id': subnet.id}
-            ret['pchanges'] = ret['changes']
             ret['comment'] = 'Project will be deleted.'
             return ret
 

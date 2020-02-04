@@ -25,6 +25,12 @@ class ReqChannel(object):
         sync = SyncWrapper(AsyncReqChannel.factory, (opts,), kwargs)
         return sync
 
+    def close(self):
+        '''
+        Close the channel
+        '''
+        raise NotImplementedError()
+
     def send(self, load, tries=3, timeout=60, raw=False):
         '''
         Send "load" to the master.
@@ -37,6 +43,12 @@ class ReqChannel(object):
         the minion and the master (not other minions etc.)
         '''
         raise NotImplementedError()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
 
 
 class PushChannel(object):
@@ -112,15 +124,15 @@ class AsyncReqChannel(AsyncChannel):
                 AsyncChannel._config_resolver()
             import salt.transport.tcp
             return salt.transport.tcp.AsyncTCPReqChannel(opts, **kwargs)
-        elif ttype == 'raet':
-            import salt.transport.raet
-            return salt.transport.raet.RAETReqChannel(opts, **kwargs)
         elif ttype == 'local':
-            import salt.transport.local
-            return salt.transport.local.AsyncLocalChannel(opts, **kwargs)
+            raise Exception(
+                'There\'s no AsyncLocalChannel implementation yet'
+            )
+            # import salt.transport.local
+            # return salt.transport.local.AsyncLocalChannel(opts, **kwargs)
         else:
             raise Exception(
-                'Channels are only defined for tcp, zeromq, raet, and local'
+                'Channels are only defined for tcp, zeromq, and local'
             )
             # return NewKindOfChannel(opts, **kwargs)
 
@@ -136,6 +148,18 @@ class AsyncReqChannel(AsyncChannel):
         the minion and the master (not other minions etc.)
         '''
         raise NotImplementedError()
+
+    def close(self):
+        '''
+        Close the channel
+        '''
+        raise NotImplementedError()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
 
 
 class AsyncPubChannel(AsyncChannel):
@@ -166,15 +190,15 @@ class AsyncPubChannel(AsyncChannel):
                 AsyncChannel._config_resolver()
             import salt.transport.tcp
             return salt.transport.tcp.AsyncTCPPubChannel(opts, **kwargs)
-        elif ttype == 'raet':  # TODO:
-            import salt.transport.raet
-            return salt.transport.raet.AsyncRAETPubChannel(opts, **kwargs)
         elif ttype == 'local':  # TODO:
-            import salt.transport.local
-            return salt.transport.local.AsyncLocalPubChannel(opts, **kwargs)
+            raise Exception(
+                'There\'s no AsyncLocalPubChannel implementation yet'
+            )
+            # import salt.transport.local
+            # return salt.transport.local.AsyncLocalPubChannel(opts, **kwargs)
         else:
             raise Exception(
-                'Channels are only defined for tcp, zeromq, raet, and local'
+                'Channels are only defined for tcp, zeromq, and local'
             )
             # return NewKindOfChannel(opts, **kwargs)
 
@@ -184,11 +208,23 @@ class AsyncPubChannel(AsyncChannel):
         '''
         raise NotImplementedError()
 
+    def close(self):
+        '''
+        Close the channel
+        '''
+        raise NotImplementedError()
+
     def on_recv(self, callback):
         '''
         When jobs are received pass them (decoded) to callback
         '''
         raise NotImplementedError()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
 
 
 class AsyncPushChannel(object):

@@ -89,6 +89,8 @@ def _to_unicode(vdata):
     # None does not convert to Unicode
     if vdata is None:
         return None
+    if isinstance(vdata, int):
+        vdata = str(vdata)
     return salt.utils.stringutils.to_unicode(vdata, 'utf-8')
 
 
@@ -347,7 +349,7 @@ def list_keys(hive, key=None, use_32bit_registry=False):
             else:
                 subkeys.append(subkey)
 
-    except Exception:  # pylint: disable=E0602
+    except Exception:  # pylint: disable=broad-except
         log.debug(r'Cannot find key: %s\%s', hive, key, exc_info=True)
         return False, r'Cannot find key: {0}\{1}'.format(hive, key)
     finally:
@@ -427,7 +429,7 @@ def list_values(hive, key=None, use_32bit_registry=False, include_default=True):
             else:
                 value['vdata'] = vdata
             values.append(value)
-    except Exception as exc:  # pylint: disable=E0602
+    except Exception as exc:  # pylint: disable=broad-except
         log.debug(r'Cannot find key: %s\%s', hive, key, exc_info=True)
         return False, r'Cannot find key: {0}\{1}'.format(hive, key)
     finally:
@@ -522,7 +524,7 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
         try:
             # RegQueryValueEx returns and accepts unicode data
             vdata, vtype = win32api.RegQueryValueEx(handle, local_vname)
-            if vdata or vdata in [0, '']:
+            if vdata or vdata in [0, '', []]:
                 # Only convert text types to unicode
                 ret['vtype'] = registry.vtype_reverse[vtype]
                 if vtype == win32con.REG_MULTI_SZ:
@@ -533,7 +535,7 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
                     ret['vdata'] = vdata
             else:
                 ret['comment'] = 'Empty Value'
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             if exc.winerror == 2 and vname is None:
                 ret['vdata'] = ('(value not set)')
                 ret['vtype'] = 'REG_SZ'
@@ -544,7 +546,7 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
                 log.trace(msg)
                 ret['comment'] = msg
                 ret['success'] = False
-    except Exception as exc:  # pylint: disable=E0602
+    except Exception as exc:  # pylint: disable=broad-except
         msg = 'Cannot find key: {0}\\{1}'.format(local_hive, local_key)
         log.trace(exc)
         log.trace(msg)
@@ -769,7 +771,7 @@ def cast_vdata(vdata=None, vtype='REG_SZ'):
         return [_to_unicode(i) for i in vdata]
     # Make sure REG_QWORD is a 64 bit integer
     elif vtype_value == win32con.REG_QWORD:
-        return vdata if six.PY3 else long(vdata)  # pylint: disable=W1699
+        return vdata if six.PY3 else long(vdata)  # pylint: disable=undefined-variable,incompatible-py3-code
     # Everything else is int
     else:
         return int(vdata)
@@ -847,7 +849,7 @@ def delete_key_recursive(hive, key, use_32bit_registry=False):
                 subkey = win32api.RegEnumKey(_key, i)
                 yield _to_mbcs(subkey)
                 i += 1
-            except Exception:  # pylint: disable=E0602
+            except Exception:  # pylint: disable=broad-except
                 break
 
     def _traverse_registry_tree(_hkey, _keypath, _ret, _access_mask):
@@ -938,7 +940,7 @@ def delete_value(hive, key, vname=None, use_32bit_registry=False):
         win32api.RegDeleteValue(handle, local_vname)
         broadcast_change()
         return True
-    except Exception as exc:  # pylint: disable=E0602
+    except Exception as exc:  # pylint: disable=broad-except
         if exc.winerror == 2:
             return None
         else:

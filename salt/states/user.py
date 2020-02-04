@@ -161,13 +161,13 @@ def _changes(name,
     if fullname is not None and lusr['fullname'] != fullname:
         change['fullname'] = fullname
     if win_homedrive and lusr['homedrive'] != win_homedrive:
-        change['homedrive'] = win_homedrive
+        change['win_homedrive'] = win_homedrive
     if win_profile and lusr['profile'] != win_profile:
-        change['profile'] = win_profile
+        change['win_profile'] = win_profile
     if win_logonscript and lusr['logonscript'] != win_logonscript:
-        change['logonscript'] = win_logonscript
+        change['win_logonscript'] = win_logonscript
     if win_description and lusr['description'] != win_description:
-        change['description'] = win_description
+        change['win_description'] = win_description
 
     # MacOS doesn't have full GECOS support, so check for the "ch" functions
     # and ignore these parameters if these functions do not exist.
@@ -270,7 +270,7 @@ def present(name,
     gid
         The id of the default group to assign to the user. Either a group name
         or gid can be used. If not specified, and the user does not exist, then
-        he next available gid will be assigned.
+        the next available gid will be assigned.
 
     gid_from_name : False
         If ``True``, the default group id will be set to the id of the group

@@ -39,6 +39,12 @@ Example output:
                █▄▄██████   █▄▄██████
                  █▄▄▄▄█       █▄▄▄▄█
 
+
+CLI Example:
+
+.. code-block:: bash
+
+    salt '*' foo.bar --out=pony
 '''
 
 # Import Python libs

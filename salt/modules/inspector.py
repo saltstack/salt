@@ -56,7 +56,7 @@ def _(module):
         # importlib is in Python 2.7+ and 3+
         import importlib
         mod = importlib.import_module("salt.modules.inspectlib.{0}".format(module))
-    except ImportError as err:
+    except ImportError:
         # No importlib around (2.6)
         mod = getattr(__import__("salt.modules.inspectlib", globals(), locals(), fromlist=[six.text_type(module)]), module)
     # pylint: enable=E0598
@@ -98,7 +98,7 @@ def inspect(mode='all', priority=19, **kwargs):
             .request_snapshot(mode, priority=priority, **kwargs)
     except InspectorSnapshotException as ex:
         raise CommandExecutionError(ex)
-    except Exception as ex:
+    except Exception as ex:  # pylint: disable=broad-except
         log.error(_get_error_message(ex))
         raise Exception(ex)
 
@@ -163,7 +163,7 @@ def query(*args, **kwargs):
         return query.Query(kwargs.get('scope'), cachedir=__opts__['cachedir'])(*args, **kwargs)
     except InspectorQueryException as ex:
         raise CommandExecutionError(ex)
-    except Exception as ex:
+    except Exception as ex:  # pylint: disable=broad-except
         log.error(_get_error_message(ex))
         raise Exception(ex)
 
@@ -193,7 +193,7 @@ def build(format='qcow2', path='/tmp/'):
                                  pidfilename='').reuse_snapshot().build(format=format, path=path)
     except InspectorKiwiProcessorException as ex:
         raise CommandExecutionError(ex)
-    except Exception as ex:
+    except Exception as ex:  # pylint: disable=broad-except
         log.error(_get_error_message(ex))
         raise Exception(ex)
 
@@ -222,7 +222,7 @@ def export(local=False, path="/tmp", format='qcow2'):
         return _("collector").Inspector().reuse_snapshot().export(description, local=local, path=path, format=format)
     except InspectorKiwiProcessorException as ex:
         raise CommandExecutionError(ex)
-    except Exception as ex:
+    except Exception as ex:  # pylint: disable=broad-except
         log.error(_get_error_message(ex))
         raise Exception(ex)
 
@@ -242,7 +242,7 @@ def snapshots():
                                         piddir=os.path.dirname(__opts__['pidfile'])).db.list()
     except InspectorSnapshotException as err:
         raise CommandExecutionError(err)
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         log.error(_get_error_message(err))
         raise Exception(err)
 
@@ -272,6 +272,6 @@ def delete(all=False, *databases):
         return ret
     except InspectorSnapshotException as err:
         raise CommandExecutionError(err)
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         log.error(_get_error_message(err))
         raise Exception(err)

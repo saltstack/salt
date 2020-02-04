@@ -32,10 +32,7 @@ try:
     import wmi  # pylint: disable=W0611
 except ImportError:
     HAS_DEPENDENCIES = False
-if six.PY3:
-    import ipaddress
-else:
-    import salt.ext.ipaddress as ipaddress
+from salt._compat import ipaddress
 
 # Define the module's virtual name
 __virtualname__ = 'network'
@@ -509,7 +506,7 @@ def connect(host, port=None, **kwargs):
         else:
             skt.connect(_address)
             skt.shutdown(2)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         ret['result'] = False
         ret['comment'] = 'Unable to connect to {0} ({1}) on {2} port {3}'\
             .format(host, _address[0], proto, port)

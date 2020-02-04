@@ -7,11 +7,9 @@ from __future__ import absolute_import, print_function, unicode_literals
 from salt.utils.validate import net
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase, skipIf
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON
+from tests.support.unit import TestCase
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class ValidateNetTestCase(TestCase):
     '''
     TestCase for salt.utils.validate.net module
@@ -50,6 +48,7 @@ class ValidateNetTestCase(TestCase):
         Test IPv6 address validation
         '''
         true_addrs = [
+            '::',
             '::1',
             '::1/32',
             '::1/32',
@@ -62,6 +61,8 @@ class ValidateNetTestCase(TestCase):
             '::1/0',
             '::1/32d',
             '::1/129',
+            '2a03:4000:c:10aa:1017:f00d:aaaa:a:4506',
+            '2a03::1::2',
         ]
 
         for addr in true_addrs:

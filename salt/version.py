@@ -8,10 +8,16 @@ from __future__ import absolute_import, print_function, unicode_literals
 import re
 import sys
 import platform
+import warnings
 
 # linux_distribution deprecated in py3.7
 try:
-    from platform import linux_distribution
+    from platform import linux_distribution as _deprecated_linux_distribution
+
+    def linux_distribution(**kwargs):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            return _deprecated_linux_distribution(**kwargs)
 except ImportError:
     from distro import linux_distribution
 
@@ -102,8 +108,8 @@ class SaltStackVersion(object):
         'Neon'          : (MAX_SIZE - 99, 0),
         'Sodium'        : (MAX_SIZE - 98, 0),
         'Magnesium'     : (MAX_SIZE - 97, 0),
+        'Aluminium'     : (MAX_SIZE - 96, 0),
         # pylint: disable=E8265
-        #'Aluminium'    : (MAX_SIZE - 96, 0),
         #'Silicon'      : (MAX_SIZE - 95, 0),
         #'Phosphorus'   : (MAX_SIZE - 94, 0),
         #'Sulfur'       : (MAX_SIZE - 93, 0),
@@ -577,11 +583,8 @@ def dependency_information(include_salt_cloud=False):
         ('msgpack-pure', 'msgpack_pure', 'version'),
         ('pycrypto', 'Crypto', '__version__'),
         ('pycryptodome', 'Cryptodome', 'version_info'),
-        ('libnacl', 'libnacl', '__version__'),
         ('PyYAML', 'yaml', '__version__'),
-        ('ioflo', 'ioflo', '__version__'),
         ('PyZMQ', 'zmq', '__version__'),
-        ('RAET', 'raet', '__version__'),
         ('ZMQ', 'zmq', 'zmq_version'),
         ('Mako', 'mako', '__version__'),
         ('Tornado', 'tornado', 'version'),
@@ -617,7 +620,7 @@ def dependency_information(include_salt_cloud=False):
             if isinstance(version, (tuple, list)):
                 version = '.'.join(map(str, version))
             yield name, version
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             yield name, None
 
 
@@ -681,8 +684,8 @@ def system_information():
                     version = item
             release = version
 
-        _, ver, sp, extra = platform.win32_ver()
-        version = ' '.join([release, ver, sp, extra])
+        _, ver, service_pack, extra = platform.win32_ver()
+        version = ' '.join([release, ver, service_pack, extra])
     else:
         version = system_version()
         release = platform.release()
@@ -719,10 +722,11 @@ def versions_report(include_salt_cloud=False):
     Yield each version properly formatted for console output.
     '''
     ver_info = versions_information(include_salt_cloud)
-
+    not_installed = 'Not Installed'
+    ns_pad = len(not_installed)
     lib_pad = max(len(name) for name in ver_info['Dependency Versions'])
     sys_pad = max(len(name) for name in ver_info['System Versions'])
-    padding = max(lib_pad, sys_pad) + 1
+    padding = max(lib_pad, sys_pad, ns_pad) + 1
 
     fmt = '{0:>{pad}}: {1}'
     info = []
@@ -731,7 +735,7 @@ def versions_report(include_salt_cloud=False):
         # List dependencies in alphabetical, case insensitive order
         for name in sorted(ver_info[ver_type], key=lambda x: x.lower()):
             ver = fmt.format(name,
-                             ver_info[ver_type][name] or 'Not Installed',
+                             ver_info[ver_type][name] or not_installed,
                              pad=padding)
             info.append(ver)
         info.append(' ')

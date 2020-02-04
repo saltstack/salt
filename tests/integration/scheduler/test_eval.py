@@ -15,17 +15,15 @@ import datetime
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
-
-# Import Salt Testing Libs
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import skipIf
-import tests.integration as integration
+from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt libs
 import salt.utils.schedule
 import salt.utils.platform
 
-from salt.modules.test import ping as ping
+from salt.modules.test import ping
 
 try:
     import croniter  # pylint: disable=W0611
@@ -34,7 +32,7 @@ except ImportError:
     HAS_CRONITER = False
 
 log = logging.getLogger(__name__)
-ROOT_DIR = os.path.join(integration.TMP, 'schedule-unit-tests')
+ROOT_DIR = os.path.join(RUNTIME_VARS.TMP, 'schedule-unit-tests')
 SOCK_DIR = os.path.join(ROOT_DIR, 'test-socks')
 
 DEFAULT_CONFIG = salt.config.minion_config(None)
@@ -505,6 +503,38 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.schedule.job_status(job_name)
         self.assertNotIn('_last_run', ret)
         self.assertEqual(ret['_skip_reason'], 'disabled')
+
+        # Ensure job data still matches
+        self.assertEqual(ret, job['schedule'][job_name])
+
+    def test_eval_global_disabled_job_enabled(self):
+        '''
+        verify that scheduled job does not run
+        '''
+        job_name = 'test_eval_global_disabled'
+        job = {
+          'schedule': {
+            'enabled': False,
+            job_name: {
+              'function': 'test.ping',
+              'when': '11/29/2017 4:00pm',
+              'enabled': True,
+            }
+          }
+        }
+        run_time1 = dateutil_parser.parse('11/29/2017 4:00pm')
+
+        # Add the job to the scheduler
+        self.schedule.opts.update(job)
+
+        # Evaluate 1 second at the run time
+        self.schedule.eval(now=run_time1)
+        ret = self.schedule.job_status(job_name)
+        self.assertNotIn('_last_run', ret)
+        self.assertEqual(ret['_skip_reason'], 'disabled')
+
+        # Ensure job is still enabled
+        self.assertEqual(ret['enabled'], True)
 
     def test_eval_run_on_start(self):
         '''
