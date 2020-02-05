@@ -714,7 +714,7 @@ class SaltTestingParser(optparse.OptionParser):
         header = '{0} Tests'.format(display_name)
         print_header('Starting {0}'.format(header),
                      width=self.options.output_columns)
-
+        sys.stdout.flush()
         if self.options.xml_out:
             runner = XMLTestRunner(
                 stream=sys.stdout,

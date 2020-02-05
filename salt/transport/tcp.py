@@ -221,6 +221,15 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
 
     Note: this class returns a singleton
     '''
+    async_methods = [
+        'crypted_transfer_decode_dictentry',
+        '_crypted_transfer',
+        '_uncrypted_transfer',
+        'send',
+    ]
+    close_methods = [
+        'close',
+    ]
     # This class is only a singleton per minion/master pair
     # mapping of io_loop -> {key -> channel}
     instance_map = weakref.WeakKeyDictionary()

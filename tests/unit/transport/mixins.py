@@ -66,6 +66,7 @@ class ReqChannelMixin(object):
         '''
         msgs = ['', [], tuple()]
         for msg in msgs:
+            print(repr(self.channel))
             ret = self.channel.send(msg, timeout=2, tries=1)
             self.assertEqual(ret, 'payload and load must be a dict')
 

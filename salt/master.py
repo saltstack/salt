@@ -28,6 +28,7 @@ from salt.utils.zeromq import zmq, ZMQDefaultLoop, install_zmq, ZMQ_VERSION_INFO
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 import salt.ext.tornado.gen  # pylint: disable=F0401
+import salt.ext.tornado.ioloop  # pylint: disable=F0401
 
 # Import salt libs
 import salt.crypt
@@ -1026,9 +1027,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         Bind to the local port
         '''
         # using ZMQIOLoop since we *might* need zmq in there
-        install_zmq()
-        self.io_loop = ZMQDefaultLoop()
-        self.io_loop.make_current()
+        self.io_loop = salt.ext.tornado.ioloop.IOLoop.current()
         for req_channel in self.req_channels:
             req_channel.post_fork(self._handle_payload, io_loop=self.io_loop)  # TODO: cleaner? Maybe lazily?
         try:

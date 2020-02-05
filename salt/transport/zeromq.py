@@ -16,6 +16,7 @@ import logging
 import weakref
 import threading
 from random import randint
+from datetime import timedelta
 
 # Import Salt Libs
 import salt.auth
@@ -37,7 +38,7 @@ from salt.ext import six
 from salt.exceptions import SaltReqTimeoutError, SaltException
 from salt._compat import ipaddress
 
-from salt.utils.zeromq import zmq, ZMQDefaultLoop, install_zmq, ZMQ_VERSION_INFO, LIBZMQ_VERSION_INFO
+from salt.utils.zeromq import zmq, ZMQ_VERSION_INFO, LIBZMQ_VERSION_INFO
 import zmq.error
 import zmq.eventloop.ioloop
 import zmq.eventloop.zmqstream
@@ -66,6 +67,21 @@ except ImportError:
         from Crypto.Cipher import PKCS1_OAEP
 
 log = logging.getLogger(__name__)
+
+
+#if salt.utils.asynchronous.OLD_TORNADO:
+#    def run_future(future):
+#        return future
+#else:
+@salt.ext.tornado.gen.coroutine
+def run_future(future):
+    while not future.done():
+        try:
+            yield salt.ext.tornado.gen.with_timeout(timedelta(seconds=1), future)
+        except salt.ext.tornado.gen.TimeoutError:
+            pass
+        yield salt.ext.tornado.gen.moment
+    raise salt.ext.tornado.gen.Return(future.result())
 
 
 def _get_master_uri(master_ip,
@@ -118,6 +134,16 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
     # This class is only a singleton per minion/master pair
     # mapping of io_loop -> {key -> channel}
     instance_map = weakref.WeakKeyDictionary()
+    async_methods = [
+        'crypted_transfer_decode_dictentry',
+        '_crypted_transfer',
+        '_do_transfer',
+        '_uncrypted_transfer',
+        'send',
+    ]
+    close_methods = [
+        'close',
+    ]
 
     def __new__(cls, opts, **kwargs):
         '''
@@ -127,8 +153,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         # do we have any mapping for this io_loop
         io_loop = kwargs.get('io_loop')
         if io_loop is None:
-            install_zmq()
-            io_loop = ZMQDefaultLoop.current()
+            io_loop = salt.ext.tornado.ioloop.IOLoop.current()
         if io_loop not in cls.instance_map:
             cls.instance_map[io_loop] = weakref.WeakValueDictionary()
         loop_instance_map = cls.instance_map[io_loop]
@@ -201,8 +226,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
 
         self._io_loop = kwargs.get('io_loop')
         if self._io_loop is None:
-            install_zmq()
-            self._io_loop = ZMQDefaultLoop.current()
+            self._io_loop = salt.ext.tornado.ioloop.IOLoop.current()
 
         if self.crypt != 'clear':
             # we don't need to worry about auth as a kwarg, since its a singleton
@@ -294,7 +318,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
             tries=tries,
         )
         key = self.auth.get_keys()
-        if 'key' not in ret:
+        if 'key' not in ret or True:
             # Reauth in the case our key is deleted on the master side.
             yield self.auth.authenticate()
             ret = yield self.message_client.send(
@@ -332,11 +356,12 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         @salt.ext.tornado.gen.coroutine
         def _do_transfer():
             # Yield control to the caller. When send() completes, resume by populating data with the Future.result
-            data = yield self.message_client.send(
+            fdata = self.message_client.send(
                 self._package_load(self.auth.crypticle.dumps(load)),
                 timeout=timeout,
                 tries=tries,
             )
+            data = yield run_future(fdata)
             # we may not have always data
             # as for example for saltcall ret submission, this is a blind
             # communication, we do not subscribe to return events, we just
@@ -348,14 +373,14 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
             raise salt.ext.tornado.gen.Return(data)
         if not self.auth.authenticated:
             # Return control back to the caller, resume when authentication succeeds
-            yield self.auth.authenticate()
+            yield run_future(self.auth.authenticate())
         try:
             # We did not get data back the first time. Retry.
-            ret = yield _do_transfer()
+            ret = yield run_future(_do_transfer())
         except salt.crypt.AuthenticationError:
             # If auth error, return control back to the caller, continue when authentication succeeds
-            yield self.auth.authenticate()
-            ret = yield _do_transfer()
+            yield run_future(self.auth.authenticate())
+            ret = yield run_future(_do_transfer())
         raise salt.ext.tornado.gen.Return(ret)
 
     @salt.ext.tornado.gen.coroutine
@@ -367,11 +392,11 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         :param int tries: The number of times to make before failure
         :param int timeout: The number of seconds on a response before failing
         '''
-        ret = yield self.message_client.send(
+        ret = yield run_future(self.message_client.send(
             self._package_load(load),
             timeout=timeout,
             tries=tries,
-        )
+        ))
 
         raise salt.ext.tornado.gen.Return(ret)
 
@@ -381,9 +406,9 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         Send a request, return a future which will complete when we send the message
         '''
         if self.crypt == 'clear':
-            ret = yield self._uncrypted_transfer(load, tries=tries, timeout=timeout)
+            ret = yield run_future(self._uncrypted_transfer(load, tries=tries, timeout=timeout))
         else:
-            ret = yield self._crypted_transfer(load, tries=tries, timeout=timeout, raw=raw)
+            ret = yield run_future(self._crypted_transfer(load, tries=tries, timeout=timeout, raw=raw))
         raise salt.ext.tornado.gen.Return(ret)
 
 
@@ -400,8 +425,7 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
         self.io_loop = kwargs.get('io_loop')
 
         if self.io_loop is None:
-            install_zmq()
-            self.io_loop = ZMQDefaultLoop.current()
+            self.io_loop = salt.ext.tornado.ioloop.IOLoop.current()
 
         self.hexid = hashlib.sha1(salt.utils.stringutils.to_bytes(self.opts['id'])).hexdigest()
         self.auth = salt.crypt.AsyncAuth(self.opts, io_loop=self.io_loop)
@@ -1119,6 +1143,7 @@ class AsyncReqMessageClient(object):
                            http://api.zeromq.org/2-1:zmq-setsockopt [ZMQ_LINGER]
         :param IOLoop io_loop: A Tornado IOLoop event scheduler [tornado.ioloop.IOLoop]
         '''
+        self._closing = False
         self.opts = opts
         self.addr = addr
         self.linger = linger
@@ -1138,13 +1163,11 @@ class AsyncReqMessageClient(object):
         self.send_future_map = {}
 
         self.send_timeout_map = {}  # message -> timeout
-        self._closing = False
 
     # TODO: timeout all in-flight sessions, or error
     def close(self):
         if self._closing:
             return
-
         self._closing = True
         if hasattr(self, 'stream') and self.stream is not None:
             if ZMQ_VERSION_INFO < (14, 3, 0):
@@ -1175,7 +1198,11 @@ class AsyncReqMessageClient(object):
 
     # pylint: disable=W1701
     def __del__(self):
-        self.close()
+        # TODO: Testing this
+        try:
+            self.close()
+        except Exception:
+            log.execption("WTF")
     # pylint: enable=W1701
 
     def _init_socket(self):
@@ -1194,7 +1221,7 @@ class AsyncReqMessageClient(object):
             )
 
         _set_tcp_keepalive(self.socket, self.opts)
-        if self.addr.startswith('tcp://['):
+        if str(self.addr).startswith('tcp://['):
             # Hint PF type if bracket enclosed IPv6 address
             if hasattr(zmq, 'IPV6'):
                 self.socket.setsockopt(zmq.IPV6, 1)
@@ -1224,7 +1251,7 @@ class AsyncReqMessageClient(object):
             self.stream.send(message)
 
             try:
-                ret = yield future
+                ret = yield run_future(future)
             except Exception as err:  # pylint: disable=broad-except
                 log.debug('Re-init ZMQ socket: %s', err)
                 self._init_socket()  # re-init the zmq socket (no other way in zmq)
@@ -1292,12 +1319,13 @@ class AsyncReqMessageClient(object):
         if timeout is not None:
             send_timeout = self.io_loop.call_later(timeout, self.timeout_message, message)
             self.send_timeout_map[message] = send_timeout
-
         if len(self.send_queue) == 0:
-            self.io_loop.spawn_callback(self._internal_send_recv)
-
+            add_cb = True
+        else:
+            add_cb = False
         self.send_queue.append(message)
-
+        if add_cb:
+            self.io_loop.spawn_callback(self._internal_send_recv)
         return future
 
 

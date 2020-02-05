@@ -656,6 +656,16 @@ class AsyncAuth(object):
 
     @salt.ext.tornado.gen.coroutine
     def sign_in(self, timeout=60, safe=True, tries=1, channel=None):
+        if channel:
+            auth = yield self._sign_in(channel, timeout, safe, tries)
+        else:
+            with salt.transport.client.AsyncReqChannel.factory(
+                    self.opts, crypt='clear', io_loop=self.io_loop) as channel:
+                auth = yield self._sign_in(channel, timeout, safe, tries)
+        raise salt.ext.tornado.gen.Return(auth)
+
+    @salt.ext.tornado.gen.coroutine
+    def _sign_in(self, channel, timeout=60, safe=True, tries=1):
         '''
         Send a sign in request to the master, sets the key information and
         returns a dict containing the master publish interface to bind to
@@ -687,12 +697,12 @@ class AsyncAuth(object):
 
         auth['master_uri'] = self.opts['master_uri']
 
-        close_channel = False
-        if not channel:
-            close_channel = True
-            channel = salt.transport.client.AsyncReqChannel.factory(self.opts,
-                                                                    crypt='clear',
-                                                                    io_loop=self.io_loop)
+#        close_channel = False
+#        if not channel:
+#            close_channel = True
+#            channel = salt.transport.client.AsyncReqChannel.factory(self.opts,
+#                                                                    crypt='clear',
+#                                                                    io_loop=self.io_loop)
 
         sign_in_payload = self.minion_sign_in_payload()
         try:
@@ -710,8 +720,9 @@ class AsyncAuth(object):
             else:
                 raise SaltClientError('Attempt to authenticate with the salt master failed with timeout error')
         finally:
-            if close_channel:
-                channel.close()
+            pass
+            #if close_channel:
+            #    channel.close()
 
         if not isinstance(payload, dict):
             log.error('Sign-in attempt failed: %s', payload)
@@ -1247,6 +1258,15 @@ class SAuth(AsyncAuth):
             self._crypticle = Crypticle(self.opts, creds['aes'])
 
     def sign_in(self, timeout=60, safe=True, tries=1, channel=None):
+        if channel:
+            auth = self._sign_in(channel, timeout, safe, tries)
+        else:
+            with salt.transport.client.AsyncReqChannel.factory(
+                    self.opts, crypt='clear', io_loop=self.io_loop) as channel:
+                auth = self._sign_in(channel, timeout, safe, tries)
+        return auth
+
+    def _sign_in(self, channel, timeout=60, safe=True, tries=1):
         '''
         Send a sign in request to the master, sets the key information and
         returns a dict containing the master publish interface to bind to
@@ -1278,10 +1298,10 @@ class SAuth(AsyncAuth):
 
         auth['master_uri'] = self.opts['master_uri']
 
-        close_channel = False
-        if not channel:
-            close_channel = True
-            channel = salt.transport.client.ReqChannel.factory(self.opts, crypt='clear')
+        #close_channel = False
+        #if not channel:
+        #    close_channel = True
+        #    channel = salt.transport.client.ReqChannel.factory(self.opts, crypt='clear')
 
         sign_in_payload = self.minion_sign_in_payload()
         try:
@@ -1296,8 +1316,9 @@ class SAuth(AsyncAuth):
                 return 'retry'
             raise SaltClientError('Attempt to authenticate with the salt master failed with timeout error')
         finally:
-            if close_channel:
-                channel.close()
+            pass
+            #if close_channel:
+            #    channel.close()
 
         if 'load' in payload:
             if 'ret' in payload['load']:
@@ -1421,6 +1442,7 @@ class Crypticle(object):
         verify HMAC-SHA256 signature and decrypt data with AES-CBC
         '''
         aes_key, hmac_key = self.keys
+        adata = data
         sig = data[-self.SIG_SIZE:]
         data = data[:-self.SIG_SIZE]
         if six.PY3 and not isinstance(data, bytes):
@@ -1428,7 +1450,7 @@ class Crypticle(object):
         mac_bytes = hmac.new(hmac_key, data, hashlib.sha256).digest()
         if len(mac_bytes) != len(sig):
             log.debug('Failed to authenticate message')
-            raise AuthenticationError('message authentication failed')
+            raise AuthenticationError('message authentication failed A')
         result = 0
 
         if six.PY2:
@@ -1439,7 +1461,17 @@ class Crypticle(object):
                 result |= zipped_x ^ zipped_y
         if result != 0:
             log.debug('Failed to authenticate message')
-            raise AuthenticationError('message authentication failed')
+            try:
+                load = self.serial.loads(adata[len(self.PICKLE_PAD):], raw=raw)
+                print("MEH  1%r" %(load))
+                sys.stdout.flush()
+            except: pass
+            try:
+                load = self.serial.loads(adata, raw=raw)
+                print("MEH 2 %r" %(load))
+                sys.stdout.flush()
+            except: pass
+            raise AuthenticationError('message authentication failed B')
         iv_bytes = data[:self.AES_BLOCK_SIZE]
         data = data[self.AES_BLOCK_SIZE:]
         if HAS_M2:
@@ -1464,6 +1496,7 @@ class Crypticle(object):
         '''
         Decrypt and un-serialize a python object
         '''
+
         data = self.decrypt(data)
         # simple integrity check to verify that we got meaningful data
         if not data.startswith(self.PICKLE_PAD):
