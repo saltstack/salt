@@ -5,9 +5,7 @@ repos:
     rev: 0.6.0
     hooks:
       - id: salt-rewrite
-        args:
-          - --exclude-fix=fix_asserts
-        exclude: ^templates/.*$
+        exclude: ^(templates|salt/ext/tornado/test)/.*$
 
   - repo: https://github.com/saltstack/pip-tools-compile-impersonate
     rev: master
