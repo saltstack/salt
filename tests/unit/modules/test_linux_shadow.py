@@ -81,13 +81,13 @@ class LinuxShadowTest(TestCase, LoaderModuleMockMixin):
         isfile_mock = MagicMock(
             side_effect=lambda x: True if x == "/etc/shadow" else DEFAULT
         )
-        shadow_info_mock = MagicMock(return_value={"passwd": "newhash"})
+        password = "newhash"
+        shadow_info_mock = MagicMock(return_value={"passwd": password})
 
         #
         # CASE 1: Normal password change
         #
         user = "bar"
-        password = "newhash"
         user_exists_mock = MagicMock(
             side_effect=lambda x, **y: 0 if x == ["id", user] else DEFAULT
         )
@@ -125,7 +125,6 @@ class LinuxShadowTest(TestCase, LoaderModuleMockMixin):
         # CASE 2: Corner case: no /etc/shadow entry for user
         #
         user = "baz"
-        password = "newhash"
         user_exists_mock = MagicMock(
             side_effect=lambda x, **y: 0 if x == ["id", user] else DEFAULT
         )
