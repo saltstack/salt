@@ -15,7 +15,7 @@ import salt.modules.random_org as random_org
 
 # Import 3rd-party libs
 import pytest
-from tornado.httpclient import HTTPClient
+from salt.ext.tornado.httpclient import HTTPClient
 from salt.ext.tornado.httpclient import HTTPClient
 
 

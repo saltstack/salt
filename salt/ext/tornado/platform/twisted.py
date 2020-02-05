@@ -46,7 +46,7 @@ from zope.interface import implementer  # type: ignore
 from salt.ext.tornado.concurrent import Future
 from salt.ext.tornado.escape import utf8
 from salt.ext.tornado import gen
-import tornado.ioloop
+import salt.ext.tornado.ioloop
 from salt.ext.tornado.log import app_log
 from salt.ext.tornado.netutil import Resolver
 from salt.ext.tornado.stack_context import NullContext, wrap
@@ -128,7 +128,7 @@ class TornadoReactor(PosixReactorBase):
     """
     def __init__(self, io_loop=None):
         if not io_loop:
-            io_loop = tornado.ioloop.IOLoop.current()
+            io_loop = salt.ext.tornado.ioloop.IOLoop.current()
         self._io_loop = io_loop
         self._readers = {}  # map of reader objects to fd
         self._writers = {}  # map of writer objects to fd
@@ -352,7 +352,7 @@ def install(io_loop=None):
 
     """
     if not io_loop:
-        io_loop = tornado.ioloop.IOLoop.current()
+        io_loop = salt.ext.tornado.ioloop.IOLoop.current()
     reactor = TornadoReactor(io_loop)
     from twisted.internet.main import installReactor  # type: ignore
     installReactor(reactor)
@@ -374,22 +374,22 @@ class _FD(object):
 
     def doRead(self):
         if not self.lost:
-            self.handler(self.fileobj, tornado.ioloop.IOLoop.READ)
+            self.handler(self.fileobj, salt.ext.tornado.ioloop.IOLoop.READ)
 
     def doWrite(self):
         if not self.lost:
-            self.handler(self.fileobj, tornado.ioloop.IOLoop.WRITE)
+            self.handler(self.fileobj, salt.ext.tornado.ioloop.IOLoop.WRITE)
 
     def connectionLost(self, reason):
         if not self.lost:
-            self.handler(self.fileobj, tornado.ioloop.IOLoop.ERROR)
+            self.handler(self.fileobj, salt.ext.tornado.ioloop.IOLoop.ERROR)
             self.lost = True
 
     def logPrefix(self):
         return ''
 
 
-class TwistedIOLoop(tornado.ioloop.IOLoop):
+class TwistedIOLoop(salt.ext.tornado.ioloop.IOLoop):
     """IOLoop implementation that runs on Twisted.
 
     `TwistedIOLoop` implements the Tornado IOLoop interface on top of
@@ -434,16 +434,16 @@ class TwistedIOLoop(tornado.ioloop.IOLoop):
             raise ValueError('fd %s added twice' % fd)
         fd, fileobj = self.split_fd(fd)
         self.fds[fd] = _FD(fd, fileobj, wrap(handler))
-        if events & tornado.ioloop.IOLoop.READ:
+        if events & salt.ext.tornado.ioloop.IOLoop.READ:
             self.fds[fd].reading = True
             self.reactor.addReader(self.fds[fd])
-        if events & tornado.ioloop.IOLoop.WRITE:
+        if events & salt.ext.tornado.ioloop.IOLoop.WRITE:
             self.fds[fd].writing = True
             self.reactor.addWriter(self.fds[fd])
 
     def update_handler(self, fd, events):
         fd, fileobj = self.split_fd(fd)
-        if events & tornado.ioloop.IOLoop.READ:
+        if events & salt.ext.tornado.ioloop.IOLoop.READ:
             if not self.fds[fd].reading:
                 self.fds[fd].reading = True
                 self.reactor.addReader(self.fds[fd])
@@ -451,7 +451,7 @@ class TwistedIOLoop(tornado.ioloop.IOLoop):
             if self.fds[fd].reading:
                 self.fds[fd].reading = False
                 self.reactor.removeReader(self.fds[fd])
-        if events & tornado.ioloop.IOLoop.WRITE:
+        if events & salt.ext.tornado.ioloop.IOLoop.WRITE:
             if not self.fds[fd].writing:
                 self.fds[fd].writing = True
                 self.reactor.addWriter(self.fds[fd])
@@ -534,7 +534,7 @@ class TwistedResolver(Resolver):
         self.io_loop = io_loop or IOLoop.current()
         # partial copy of twisted.names.client.createResolver, which doesn't
         # allow for a reactor to be passed in.
-        self.reactor = tornado.platform.twisted.TornadoReactor(io_loop)
+        self.reactor = salt.ext.tornado.platform.twisted.TornadoReactor(io_loop)
 
         host_resolver = twisted.names.hosts.Resolver('/etc/hosts')
         cache_resolver = twisted.names.cache.CacheResolver(reactor=self.reactor)
