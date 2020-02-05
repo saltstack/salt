@@ -1150,6 +1150,10 @@ class JobSpawner(salt.utils.process.SignalHandlingProcess):
                 minion_instance.grains_cache = minion_instance.opts['grains']
                 minion_instance.matchers_refresh()
                 minion_instance.beacons_refresh()
+            elif payload['kind'] == 'refresh_beacons':
+                minion_instance.beacons = salt.beacons.Beacon(
+                    minion_instance.opts,
+                    minion_instance.functions)
             elif payload['kind'] == 'payload':
                 minion_instance.handle_payload(payload['data'])
             else:
@@ -1702,7 +1706,16 @@ class Minion(MinionBase):
                 payload = job_queue.get(block=False)
             except queue.Empty:
                 continue
+            print("PAYLOAD %r" %(payload))
+            sys.stdout.flush()
             if payload['kind'] == 'master_uri':
+                thread = threading.Thread(
+                    target=minion_instance.spawn_job,
+                    args=(minion_instance, payload, True)
+                )
+                thread.start()
+                threads.append(thread)
+            elif payload['kind'] == 'refresh_beacons':
                 thread = threading.Thread(
                     target=minion_instance.spawn_job,
                     args=(minion_instance, payload, True)
@@ -1735,6 +1748,10 @@ class Minion(MinionBase):
                 minion_instance.grains_cache = minion_instance.opts['grains']
                 minion_instance.matchers_refresh()
                 minion_instance.beacons_refresh()
+            elif payload['kind'] == 'refresh_beacons':
+                minion_instance.beacons = salt.beacons.Beacon(
+                    minion_instance.opts,
+                    minion_instance.functions)
             elif payload['kind'] == 'payload':
                # if payload['data']['fun']['saltutil.sync_all']:
                #     continue
@@ -2328,10 +2345,18 @@ class Minion(MinionBase):
         '''
         Refresh the functions and returners.
         '''
+        print('beacons refresh 1')
         if not self.beacons_leader:
             return
+        print('beacons refresh 2')
         log.debug('Refreshing beacons.')
-        self.beacons = salt.beacons.Beacon(self.opts, self.functions)
+        if hasattr(self, 'job_q'):
+            self.job_q.put(
+                {
+                    'kind': 'refresh_beacons',
+                }
+            )
+       # self.beacons = salt.beacons.Beacon(self.opts, self.functions)
 
     def matchers_refresh(self):
         '''
