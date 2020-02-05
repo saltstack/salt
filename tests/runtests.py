@@ -1048,8 +1048,6 @@ def main(**kwargs):
                 parser.start_daemons_only()
         status = parser.run_integration_tests()
         overall_status.extend(status)
-        print(parser.options.failfast)
-        print(repr(status))
         if not parser.options.failfast or False not in status:
             status = parser.run_multimaster_tests()
             overall_status.extend(status)
