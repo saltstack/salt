@@ -179,7 +179,7 @@ If (Test-Path "$($ini['Settings']['Python3Dir'])\python.exe") {
     DownloadFileWithProgress $url $file
 
     Write-Output " - $script_name :: Installing $($ini[$bitPrograms]['Python3']) . . ."
-    $p    = Start-Process $file -ArgumentList "/Quiet InstallAllUsers=1 TargetDir=`"$($ini['Settings']['Python3Dir'])`" Include_doc=0 Include_tcltk=0 Include_test=0 Include_launcher=0 PrependPath=1 Shortcuts=0" -Wait -NoNewWindow -PassThru
+    $p    = Start-Process $file -ArgumentList "/Quiet InstallAllUsers=1 TargetDir=`"$($ini['Settings']['Python3Dir'])`" Include_doc=0 Include_tcltk=0 Include_test=0 Include_launcher=1 PrependPath=1 Shortcuts=0" -Wait -NoNewWindow -PassThru
 }
 
 #------------------------------------------------------------------------------
