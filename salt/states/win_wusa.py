@@ -16,6 +16,7 @@ import logging
 import salt.utils.platform
 import salt.utils.url
 from salt.exceptions import SaltInvocationError
+from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -87,15 +88,21 @@ def installed(name, source):
         return ret
 
     # Install the KB
-    __salt__['wusa.install'](cached_source_path)
+
+    additional_comment = ''
+
+    try:
+        __salt__['wusa.install'](cached_source_path)
+    except CommandExecutionError as exc:
+        additional_comment = exc.message
 
     # Verify successful install
     if __salt__['wusa.is_installed'](name):
-        ret['comment'] = '{0} was installed'.format(name)
+        ret['comment'] = '{0} was installed. {1}'.format(name, additional_comment)
         ret['changes'] = {'old': False, 'new': True}
         ret['result'] = True
     else:
-        ret['comment'] = '{0} failed to install'.format(name)
+        ret['comment'] = '{0} failed to install. {1}'.format(name, additional_comment)
 
     return ret
 

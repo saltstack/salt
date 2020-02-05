@@ -92,7 +92,7 @@ def _send_email(name, email):
 
         try:
             mail_process = subprocess.Popen(['mail', '-s', subject, '-c', cc, email], stdin=subprocess.PIPE)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             log.error("unable to send email to %s: %s", email, e)
 
         mail_process.communicate(message)
@@ -241,7 +241,7 @@ def create_user(email, profile="splunk", **kwargs):
         for field in ['email', 'password', 'realname', 'roles']:
             response[field] = newuser[field]
 
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         log.error("Caught exception %s", e)
         return False
 

@@ -5,9 +5,11 @@ Display output in a table format
 
 .. versionadded:: 2017.7.0
 
-This outputter displays a sequence of rows as table.
+The ``table`` outputter displays a sequence of rows as table.
 
-Example output::
+Example output:
+
+.. code-block:: text
 
     edge01.bjm01:
     ----------
@@ -32,6 +34,13 @@ Example output::
             ______________________________________________________________________________
         result:
         ----------
+
+
+CLI Example:
+
+.. code-block:: bash
+
+    salt '*' foo.bar --out=table
 '''
 
 # Import Python libs

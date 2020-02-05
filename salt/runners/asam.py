@@ -107,7 +107,7 @@ def _get_asam_configuration(driver_url=''):
 
                 if (not driver_url) or (driver_url == asam_server):
                     return ret
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.error('Exception encountered: %s', exc)
             return False
 
@@ -202,7 +202,7 @@ def remove_platform(name, server_url):
 
     try:
         html_content = _make_post_request(url, data, auth, verify=False)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         err_msg = "Failed to look up existing platforms on {0}".format(server_url)
         log.error('%s:\n%s', err_msg, exc)
         return {name: err_msg}
@@ -218,7 +218,7 @@ def remove_platform(name, server_url):
         data['Submit'] = 'Yes'
         try:
             html_content = _make_post_request(url, data, auth, verify=False)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             err_msg = "Failed to delete platform from {1}".format(server_url)
             log.error('%s:\n%s', err_msg, exc)
             return {name: err_msg}
@@ -260,7 +260,7 @@ def list_platforms(server_url):
 
     try:
         html_content = _make_post_request(url, data, auth, verify=False)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         err_msg = "Failed to look up existing platforms"
         log.error('%s:\n%s', err_msg, exc)
         return {server_url: err_msg}
@@ -301,7 +301,7 @@ def list_platform_sets(server_url):
 
     try:
         html_content = _make_post_request(url, data, auth, verify=False)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         err_msg = "Failed to look up existing platform sets"
         log.error('%s:\n%s', err_msg, exc)
         return {server_url: err_msg}
@@ -356,7 +356,7 @@ def add_platform(name, platform_set, server_url):
 
     try:
         html_content = _make_post_request(url, data, auth, verify=False)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         err_msg = "Failed to add platform on {0}".format(server_url)
         log.error('%s:\n%s', err_msg, exc)
         return {name: err_msg}

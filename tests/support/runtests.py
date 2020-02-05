@@ -52,17 +52,31 @@ import os
 import shutil
 import logging
 
+# Import Salt libs
+import salt.utils.path
+import salt.utils.platform
+
+try:
+    import pwd
+except ImportError:
+    import salt.utils.win_functions
+
 # Import tests support libs
 import tests.support.paths as paths
-import tests.support.helpers
 
 # Import 3rd-party libs
 from salt.ext import six
 
-RUNNING_TESTS_USER = tests.support.helpers.this_user()
-
-
 log = logging.getLogger(__name__)
+
+
+def this_user():
+    '''
+    Get the user associated with the current process.
+    '''
+    if salt.utils.platform.is_windows():
+        return salt.utils.win_functions.get_current_user(with_domain=False)
+    return pwd.getpwuid(os.getuid())[0]
 
 
 class RootsDict(dict):
@@ -175,7 +189,14 @@ RUNTIME_VARS = RuntimeVars(
     TMP_STATE_TREE=paths.TMP_STATE_TREE,
     TMP_PILLAR_TREE=paths.TMP_PILLAR_TREE,
     TMP_PRODENV_STATE_TREE=paths.TMP_PRODENV_STATE_TREE,
-    RUNNING_TESTS_USER=RUNNING_TESTS_USER,
-    RUNTIME_CONFIGS={}
+    SHELL_TRUE_PATH=salt.utils.path.which('true') if not salt.utils.platform.is_windows() else 'cmd /c exit 0 > nul',
+    SHELL_FALSE_PATH=salt.utils.path.which('false') if not salt.utils.platform.is_windows() else 'cmd /c exit 1 > nul',
+    RUNNING_TESTS_USER=this_user(),
+    RUNTIME_CONFIGS={},
+    CODE_DIR=paths.CODE_DIR,
+    BASE_FILES=paths.BASE_FILES,
+    PROD_FILES=paths.PROD_FILES,
+    TESTS_DIR=paths.TESTS_DIR,
+    PYTEST_SESSION=False
 )
 # <---- Tests Runtime Variables --------------------------------------------------------------------------------------

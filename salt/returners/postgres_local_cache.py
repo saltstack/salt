@@ -306,7 +306,6 @@ def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argume
     '''
     Included for API consistency
     '''
-    pass
 
 
 def _escape_jid(jid):

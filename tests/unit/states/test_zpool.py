@@ -14,10 +14,8 @@ from __future__ import absolute_import, unicode_literals, print_function
 # Import Salt Testing Libs
 from tests.support.zfs import ZFSMockData
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
+from tests.support.unit import TestCase
 from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     MagicMock,
     patch)
 
@@ -30,7 +28,6 @@ import salt.loader
 from salt.utils.odict import OrderedDict
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.zpool

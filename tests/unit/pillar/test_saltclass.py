@@ -6,8 +6,7 @@ import os
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON
+from tests.support.unit import TestCase
 
 # Import Salt Libs
 import salt.pillar.saltclass as saltclass
@@ -24,7 +23,6 @@ fake_salt = {}
 fake_grains = {}
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class SaltclassPillarTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Tests for salt.pillar.saltclass
@@ -49,7 +47,6 @@ class SaltclassPillarTestCase(TestCase, LoaderModuleMockMixin):
         self._runner(ret)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class SaltclassPillarTestCaseListExpansion(TestCase, LoaderModuleMockMixin):
     '''
     Tests for salt.pillar.saltclass variable expansion in list

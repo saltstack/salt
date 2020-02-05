@@ -277,7 +277,7 @@ def _http_request(url, request_timeout=None):
         kwargs = {} if request_timeout is None else {'timeout': request_timeout}
         data = salt.utils.json.load(_urlopen(url, **kwargs))
         return _get_return_dict(True, data, [])
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         return _get_return_dict(False, {}, ["{0} : {1}".format(url, err)])
 
 

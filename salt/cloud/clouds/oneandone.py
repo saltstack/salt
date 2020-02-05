@@ -115,9 +115,7 @@ import salt.utils.stringutils
 from salt.ext import six
 
 try:
-    from oneandone.client import (
-        OneAndOneService, Server, Hdd, BlockStorage, SshKey
-    )
+    from oneandone.client import OneAndOneService, Server, Hdd, BlockStorage, SshKey  # pylint: disable=no-name-in-module
     HAS_ONEANDONE = True
 except ImportError:
     HAS_ONEANDONE = False
@@ -673,7 +671,7 @@ def create(vm_):
                 pprint.pformat(data['name']),
                 data['status']['state']
             )
-        except Exception as err:
+        except Exception as err:  # pylint: disable=broad-except
             log.error(
                 'Failed to get nodes list: %s', err,
                 # Show the trackback if the debug logging level is enabled

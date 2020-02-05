@@ -22,7 +22,7 @@ version 0.9+)
     Most functions in this module allow you to override or provide some or all
     of these settings via keyword arguments::
 
-        salt '*' influxdb.foo_function user='influxadmin' passwd='s3cr1t'
+        salt '*' influxdb.foo_function influxdb_user='influxadmin' influxdb_password='s3cr1t'
 
     would override ``user`` and ``password`` while still using the defaults for
     ``host`` and ``port``.

@@ -44,7 +44,7 @@ def _append_comment(ret, comment):
     '''
     append ``comment`` to ``ret['comment']``
     '''
-    if len(ret['comment']):
+    if ret['comment']:
         ret['comment'] = ret['comment'].rstrip() + '\n' + comment
     else:
         ret['comment'] = comment
@@ -99,7 +99,7 @@ def present(name, persist=False, mods=None):
 
     if __opts__['test']:
         ret['result'] = None
-        if len(ret['comment']):
+        if ret['comment']:
             ret['comment'] += '\n'
         if len(not_loaded) == 1:
             comment = 'Kernel module {0} is set to be loaded'.format(not_loaded[0])
@@ -152,7 +152,7 @@ def present(name, persist=False, mods=None):
     if len(loaded['no']) > 1:
         _append_comment(ret, 'Failed to load kernel modules {0}'.format(', '.join(loaded['no'])))
 
-    if len(loaded['failed']):
+    if loaded['failed']:
         for mod, msg in loaded['failed']:
             _append_comment(ret, 'Failed to load kernel module {0}: {1}'.format(mod, msg))
 
@@ -230,7 +230,7 @@ def absent(name, persist=False, comment=True, mods=None):
         if len(unloaded['no']) > 1:
             _append_comment(ret, 'Failed to remove kernel modules {0}'.format(', '.join(unloaded['no'])))
 
-        if len(unloaded['failed']):
+        if unloaded['failed']:
             for mod, msg in unloaded['failed']:
                 _append_comment(ret, 'Failed to remove kernel module {0}: {1}'.format(mod, msg))
 

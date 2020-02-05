@@ -87,7 +87,7 @@ def _get_all_packages(mirror=DEFAULT_MIRROR,
         __context__['cyg.all_packages'] = {}
     if mirror not in __context__['cyg.all_packages']:
         __context__['cyg.all_packages'][mirror] = []
-    if not len(__context__['cyg.all_packages'][mirror]):
+    if not __context__['cyg.all_packages'][mirror]:
         pkg_source = '/'.join([mirror, cyg_arch, 'setup.bz2'])
 
         file_data = _urlopen(pkg_source).read()

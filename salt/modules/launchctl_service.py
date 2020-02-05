@@ -97,7 +97,7 @@ def _available_services():
                             salt.utils.data.decode(true_path)
                         )
 
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     # If plistlib is unable to read the file we'll need to use
                     # the system provided plutil program to do the conversion
                     cmd = '/usr/bin/plutil -convert xml1 -o - -- "{0}"'.format(

@@ -20,19 +20,19 @@ log = logging.getLogger(__name__)
 try:
     # Python >2.5
     import xml.etree.cElementTree as ElementTree
-except Exception:
+except Exception:  # pylint: disable=broad-except
     try:
         # Python >2.5
         import xml.etree.ElementTree as ElementTree
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         try:
             # normal cElementTree install
             import elementtree.cElementTree as ElementTree
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             try:
                 # normal ElementTree install
                 import elementtree.ElementTree as ElementTree
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 ElementTree = None
 
 
@@ -215,7 +215,8 @@ class IPv6InterfaceScoped(ipaddress.IPv6Interface, IPv6AddressScoped):
     Update
     '''
     def __init__(self, address):
-        if isinstance(address, (bytes, int)):
+        if PY3 and isinstance(address, (bytes, int)) or \
+           not PY3 and isinstance(address, int):
             IPv6AddressScoped.__init__(self, address)
             self.network = ipaddress.IPv6Network(self._ip)
             self._prefixlen = self._max_prefixlen

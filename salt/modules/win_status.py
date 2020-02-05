@@ -474,7 +474,7 @@ def _get_process_owner(process):
         domain, error_code, user = process.GetOwner()
         owner['user'] = salt.utils.stringutils.to_unicode(user)
         owner['user_domain'] = salt.utils.stringutils.to_unicode(domain)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         pass
     if not error_code and all((user, domain)):
         owner['user'] = salt.utils.stringutils.to_unicode(user)
@@ -580,10 +580,10 @@ def master(master=None, connected=True):
 
     # Connection to master is not as expected
     if master_connection_status is not connected:
-        event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
-        if master_connection_status:
-            event.fire_event({'master': master}, salt.minion.master_event(type='connected'))
-        else:
-            event.fire_event({'master': master}, salt.minion.master_event(type='disconnected'))
+        with salt.utils.event.get_event('minion', opts=__opts__, listen=False) as event_bus:
+            if master_connection_status:
+                event_bus.fire_event({'master': master}, salt.minion.master_event(type='connected'))
+            else:
+                event_bus.fire_event({'master': master}, salt.minion.master_event(type='disconnected'))
 
     return master_connection_status

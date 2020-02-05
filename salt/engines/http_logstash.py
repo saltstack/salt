@@ -98,22 +98,24 @@ def start(url, funs=None, tags=None):
         instance = 'master'
     else:
         instance = 'minion'
-    event_bus = salt.utils.event.get_event(instance,
-                                           sock_dir=__opts__['sock_dir'],
-                                           transport=__opts__['transport'],
-                                           opts=__opts__)
-    while True:
-        event = event_bus.get_event(full=True)
-        if event:
-            publish = True
-            if tags and isinstance(tags, list):
-                found_match = False
-                for tag in tags:
-                    if fnmatch.fnmatch(event['tag'], tag):
-                        found_match = True
-                publish = found_match
-            if funs and 'fun' in event['data']:
-                if not event['data']['fun'] in funs:
-                    publish = False
-            if publish:
-                _logstash(url, event['data'])
+    with salt.utils.event.get_event(
+            instance,
+            sock_dir=__opts__['sock_dir'],
+            transport=__opts__['transport'],
+            opts=__opts__,
+        ) as event_bus:
+        while True:
+            event = event_bus.get_event(full=True)
+            if event:
+                publish = True
+                if tags and isinstance(tags, list):
+                    found_match = False
+                    for tag in tags:
+                        if fnmatch.fnmatch(event['tag'], tag):
+                            found_match = True
+                    publish = found_match
+                if funs and 'fun' in event['data']:
+                    if not event['data']['fun'] in funs:
+                        publish = False
+                if publish:
+                    _logstash(url, event['data'])

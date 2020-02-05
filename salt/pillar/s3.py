@@ -273,7 +273,13 @@ def _refresh_buckets_cache_file(creds, cache_file, multiple_env, environment, pr
     '''
 
     # helper s3 query function
-    def __get_s3_meta():
+    def __get_s3_meta(continuation_token=None):
+        # We want to use ListObjectsV2 so we get the NextContinuationToken
+        params = {'prefix': prefix, 'list-type': 2}
+
+        if continuation_token:
+            params['continuation-token'] = continuation_token
+
         return __utils__['s3.query'](
             key=creds.key,
             keyid=creds.keyid,
@@ -283,7 +289,7 @@ def _refresh_buckets_cache_file(creds, cache_file, multiple_env, environment, pr
             verify_ssl=creds.verify_ssl,
             location=creds.location,
             return_bin=False,
-            params={'prefix': prefix},
+            params=params,
             path_style=creds.path_style,
             https_enable=creds.https_enable)
 
@@ -295,6 +301,12 @@ def _refresh_buckets_cache_file(creds, cache_file, multiple_env, environment, pr
     def __get_pillar_environments(files):
         environments = [(os.path.dirname(k['Key']).split('/', 1))[0] for k in files]
         return set(environments)
+
+    def __get_continuation_token(s3_meta):
+        return next((item.get('NextContinuationToken')
+                     for item in s3_meta
+                     if item.get('NextContinuationToken')),
+                    None)
 
     log.debug('Refreshing S3 buckets pillar cache file')
 
@@ -312,6 +324,14 @@ def _refresh_buckets_cache_file(creds, cache_file, multiple_env, environment, pr
         if s3_meta:
             bucket_files[bucket] = __get_pillar_files_from_s3_meta(s3_meta)
 
+            # Check if we have a NextContinuationToken and loop until we don't
+            while True:
+                continuation_token = __get_continuation_token(s3_meta)
+                if not continuation_token:
+                    break
+                s3_meta = __get_s3_meta(continuation_token)
+                bucket_files[bucket] += __get_pillar_files_from_s3_meta(s3_meta)
+
             metadata[environment] = bucket_files
 
     else:
@@ -322,6 +342,15 @@ def _refresh_buckets_cache_file(creds, cache_file, multiple_env, environment, pr
         # s3 query returned data
         if s3_meta:
             files = __get_pillar_files_from_s3_meta(s3_meta)
+
+            # Check if we have a NextContinuationToken and loop until we don't
+            while True:
+                continuation_token = __get_continuation_token(s3_meta)
+                if not continuation_token:
+                    break
+                s3_meta = __get_s3_meta(continuation_token)
+                files += __get_pillar_files_from_s3_meta(s3_meta)
+
             environments = __get_pillar_environments(files)
 
             # pull out the files for the environment
@@ -343,7 +372,7 @@ def _refresh_buckets_cache_file(creds, cache_file, multiple_env, environment, pr
 
     log.debug('Writing S3 buckets pillar cache file')
 
-    with salt.utils.files.fopen(cache_file, 'w') as fp_:
+    with salt.utils.files.fopen(cache_file, 'wb') as fp_:
         pickle.dump(metadata, fp_)
 
     return metadata

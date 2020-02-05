@@ -13,16 +13,13 @@ import salt.modules.esxcluster as esxcluster
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class GetDetailsTestCase(TestCase, LoaderModuleMockMixin):
     '''Tests for salt.modules.esxcluster.get_details'''
     def setup_loader_modules(self):

@@ -52,7 +52,7 @@ def date_cast(date):
                 date = float(date)
 
         return datetime.datetime.fromtimestamp(date)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         if HAS_TIMELIB:
             raise ValueError('Unable to parse {0}'.format(date))
 

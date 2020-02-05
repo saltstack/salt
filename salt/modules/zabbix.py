@@ -2420,13 +2420,14 @@ def run_query(method, params, **connection_args):
     ret = False
     try:
         if conn_args:
-            method = method
-            params = params
             params = _params_extend(params, **connection_args)
             ret = _query(method, params, conn_args['url'], conn_args['auth'])
             if isinstance(ret['result'], bool):
                 return ret['result']
-            return ret['result'] if len(ret['result']) > 0 else False
+            if ret['result'] is True or len(ret['result']) > 0:
+                return ret['result']
+            else:
+                return False
         else:
             raise KeyError
     except KeyError:
