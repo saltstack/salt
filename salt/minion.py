@@ -1706,8 +1706,8 @@ class Minion(MinionBase):
                 payload = job_queue.get(block=False)
             except queue.Empty:
                 continue
-            print("PAYLOAD %r" %(payload))
-            sys.stdout.flush()
+            #print("PAYLOAD %r" %(payload))
+            #sys.stdout.flush()
             if payload['kind'] == 'master_uri':
                 thread = threading.Thread(
                     target=minion_instance.spawn_job,
