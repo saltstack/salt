@@ -104,15 +104,18 @@ goto eof
     echo ---------------------------------------------------------------------
     :: 64 bit
     if exist "%LOCALAPPDATA%\Package Cache\{8ae589dd-de2e-42cd-af56-102374115fee}" (
-        echo %0 :: - 3.7.4 64bit
+        echo %0 :: - Python 3.7.4 64bit
         "%LOCALAPPDATA%\Package Cache\{8ae589dd-de2e-42cd-af56-102374115fee}\python-3.7.4-amd64.exe" /uninstall /quiet
     )
 
     :: 32 bit
     if exist "%LOCALAPPDATA%\Package Cache\{b66087e3-469e-4725-8b9b-f0981244afea}" (
-        echo %0 :: - 3.7.4 32bit
+        echo %0 :: - Python 3.7.4 32bit
         "%LOCALAPPDATA%\Package Cache\{b66087e3-469e-4725-8b9b-f0981244afea}\python-3.7.4" /uninstall /quiet
     )
+    :: Python Launcher, seems to be the same for 32 and 64 bit
+    echo %0 :: - Python Launcher
+    msiexec.exe /x {D722DA3A-92F5-454A-BD5D-A48C94D82300} /quiet /qn
 
     rem wipe the Python directory
     echo %0 :: Removing the C:\Python37 Directory ...
