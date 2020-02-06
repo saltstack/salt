@@ -22,13 +22,13 @@ psutil==5.6.1
 pyasn1==0.4.5
 pycparser==2.19
 pycryptodomex==3.8.1
-pycurl==7.43.0.2
+pycurl==7.43.0.5
 pymssql==2.1.4
 PyMySQL==0.9.3
 pyopenssl==19.0.0
 python-dateutil==2.8.0
 python-gnupg==0.4.4
-pythonnet==2.3.0
+pythonnet==2.4.0
 pyyaml==5.1.2
 pyzmq==18.0.1
 requests==2.21.0
