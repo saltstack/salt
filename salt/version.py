@@ -793,9 +793,7 @@ def msi_conformant_version():
         minor = int(six.text_type(__saltstack_version__.major)[-2:])
         build = __saltstack_version__.bugfix
         noc = __saltstack_version__.noc
-        if noc == 0:
-            noc = 65535
-        return '%s.%s.%s' % (major, str(minor).zfill(2), build or noc)
+        return f'{major}.{str(minor).zfill(2)}.{build}.{noc}'
     else:
         short_year = int(six.text_type(__saltstack_version__.major)[2:])
         month = __saltstack_version__.minor
