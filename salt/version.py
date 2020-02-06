@@ -321,12 +321,15 @@ class SaltStackVersion(object):
 
     @property
     def info(self):
-        return (
-            self.major,
-            self.minor,
-            self.bugfix,
-            self.mbugfix
-        )
+        info = [self.major]
+        if self.new_version(self.major):
+            if self.minor:
+                info.append(self.minor)
+        else:
+            info.extend([self.minor,
+                        self.bugfix,
+                        self.mbugfix])
+        return tuple(info)
 
     @property
     def pre_info(self):

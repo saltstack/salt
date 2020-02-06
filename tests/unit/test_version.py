@@ -180,3 +180,31 @@ class VersionTestCase(TestCase):
                 with proc_mock, patch_os:
                     ret = getattr(salt.version, '__discover_version')(salt_ver)
                 assert ret == exp
+
+    def test_info_new_version(self):
+        '''
+        test info property method with new versioning scheme
+        '''
+        vers = ((3000, None, None),
+                (3000, 1, None),
+                (3001, 0, None))
+        for maj_ver, min_ver, bug_fix in vers:
+            ver = SaltStackVersion(major=maj_ver, minor=min_ver, bugfix=bug_fix)
+            if min_ver:
+                assert ver.info == (maj_ver, min_ver)
+            else:
+                assert ver.info == (maj_ver,)
+
+    def test_info_old_version(self):
+        '''
+        test info property method with old versioning scheme
+        '''
+        vers = ((2019, 2, 1),
+                (2018, 3, 0),
+                (2017, 7, None))
+        for maj_ver, min_ver, bug_fix in vers:
+            ver = SaltStackVersion(major=maj_ver, minor=min_ver, bugfix=bug_fix)
+            if bug_fix is None:
+                assert ver.info == (maj_ver, min_ver, 0, 0)
+            else:
+                assert ver.info == (maj_ver, min_ver, bug_fix, 0)
