@@ -784,17 +784,28 @@ def msi_conformant_version():
       2018.8          2018.3.2-1306        18.42.1306
       v2016.11.0      2016.11.0            16.200.65535        Tags have noc 0
       v2016.11.2      2016.11.2            16.202.65535
-
+      v3000           3000                 30.00.0
+      v3000.1         3000.1               30.00.1
+      v3001.1         3001.1               30.01.1
     '''
-    short_year = int(six.text_type(__saltstack_version__.major)[2:])
-    month = __saltstack_version__.minor
-    bugfix = __saltstack_version__.bugfix
-    if bugfix > 19:
-        bugfix = 19
-    noc = __saltstack_version__.noc
-    if noc == 0:
-        noc = 65535
-    return '{}.{}.{}'.format(short_year, 20*(month-1)+bugfix, noc)
+    if __saltstack_version__.new_version(__saltstack_version__.major):
+        major = int(six.text_type(__saltstack_version__.major)[:2])
+        minor = int(six.text_type(__saltstack_version__.major)[-2:])
+        build = __saltstack_version__.bugfix
+        noc = __saltstack_version__.noc
+        if noc == 0:
+            noc = 65535
+        return '%s.%s.%s' % (major, str(minor).zfill(2), build or noc)
+    else:
+        short_year = int(six.text_type(__saltstack_version__.major)[2:])
+        month = __saltstack_version__.minor
+        bugfix = __saltstack_version__.bugfix
+        if bugfix > 19:
+            bugfix = 19
+        noc = __saltstack_version__.noc
+        if noc == 0:
+            noc = 65535
+        return '{}.{}.{}'.format(short_year, 20*(month-1)+bugfix, noc)
 
 
 if __name__ == '__main__':
