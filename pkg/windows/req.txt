@@ -4,6 +4,7 @@ certifi
 cffi==1.12.2
 CherryPy==17.4.1
 cryptography==2.6.1
+distro==1.4.0
 enum34==1.1.6; python_version < '3.4'
 idna==2.8
 ioloop==0.1a0
