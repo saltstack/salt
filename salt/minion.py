@@ -1118,7 +1118,7 @@ class JobSpawner(salt.utils.process.MultiprocessingProcess):
     def __setstate__(self, state):
         self.__init__(
             state['cls'],
-            state['queue'],
+            state['job_queue'],
             state['opts'],
             log_queue=state['log_queue'],
             log_queue_level=state['log_queue_level']
@@ -1127,7 +1127,7 @@ class JobSpawner(salt.utils.process.MultiprocessingProcess):
     def __getstate__(self):
         return {
             'cls': self.cls,
-            'queue': self.queue,
+            'job_queue': self.job_queue,
             'opts': self.opts,
             'log_queue': self.log_queue,
             'log_queue_level': self.log_queue_level
