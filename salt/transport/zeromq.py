@@ -602,7 +602,11 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
 
         @salt.ext.tornado.gen.coroutine
         def wrap_callback(messages):
-            payload = yield self._decode_messages(messages)
+            try:
+                payload = yield self._decode_messages(messages)
+            except salt.crypt.AuthenticationError:
+                log.error('Authentication error, not calling callback: %r', callback)
+                return
             if payload is not None:
                 callback(payload)
         return self.stream.on_recv(wrap_callback)
