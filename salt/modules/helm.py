@@ -1,4 +1,35 @@
 # -*- coding: utf-8 -*-
+'''
+Interface with Helm
+
+:depends: helm_ package installed on minion's system.
+
+.. note::
+    This module use the helm-cli. The helm-cli binary have to be present in your Salt-Minion path.
+
+Helm-CLI vs Salt-Modules
+--------------
+
+This module is a wrapper of the helm binary.
+All helm v3.0 command are implemented.
+
+To install a chart with the helm-cli:
+
+.. code-block:: bash
+
+    helm install grafana stable/grafana --wait --values /path/to/values.yaml
+
+
+To install a chart with the Salt-Module:
+
+.. code-block:: bash
+
+    salt '*' helm.install grafana stable/grafana flags="['wait']" kvflags="{'values': '/path/to/values.yaml'}"
+
+
+Detailed Function Documentation
+-------------------------------
+'''
 
 # Import Python libs
 import copy
