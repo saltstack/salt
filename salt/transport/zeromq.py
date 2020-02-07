@@ -16,7 +16,7 @@ import logging
 import weakref
 import threading
 from random import randint
-#from datetime import timedelta
+from datetime import timedelta
 
 # Import Salt Libs
 import salt.auth
@@ -69,13 +69,8 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-#if salt.utils.asynchronous.OLD_TORNADO:
-#    def run_future(future):
-#        return future
-#else:
 @salt.ext.tornado.gen.coroutine
 def run_future(future):
-#    return future
     while not future.done():
         try:
             yield salt.ext.tornado.gen.with_timeout(timedelta(seconds=1), future)
