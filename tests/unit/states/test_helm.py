@@ -183,5 +183,3 @@ class HelmTestCase(TestCase, LoaderModuleMockMixin):
                    'comment': 'error',
                    'changes': {}}
             self.assertEqual(helm.release_absent('state_id'), ret)
-
-
