@@ -17,7 +17,6 @@ import threading
 import traceback
 import contextlib
 import multiprocessing
-import queue
 from random import randint, shuffle
 from stat import S_IMODE
 import salt.serializers.msgpack
@@ -25,6 +24,7 @@ from binascii import crc32
 # Import Salt Libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext import six
+from salt.ext.six.moves import queue
 import salt.utils.asynchronous
 from salt._compat import ipaddress
 from salt.utils.network import parse_host_port
@@ -2302,10 +2302,8 @@ class Minion(MinionBase):
         '''
         Refresh the functions and returners.
         '''
-        print('beacons refresh 1')
         if not self.beacons_leader:
             return
-        print('beacons refresh 2')
         log.debug('Refreshing beacons.')
         if hasattr(self, 'job_q'):
             self.job_q.put(
@@ -2313,7 +2311,6 @@ class Minion(MinionBase):
                     'kind': 'refresh_beacons',
                 }
             )
-       # self.beacons = salt.beacons.Beacon(self.opts, self.functions)
 
     def matchers_refresh(self):
         '''
