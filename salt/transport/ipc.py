@@ -17,7 +17,7 @@ import salt.ext.tornado.gen
 import salt.ext.tornado.netutil
 import salt.ext.tornado.concurrent
 from salt.ext.tornado.locks import Lock
-from salt.ext.tornado.ioloop import IOLoop, TimeoutError as TornadoTimeoutError
+from salt.ext.tornado.ioloop import TimeoutError as TornadoTimeoutError
 from salt.ext.tornado.iostream import IOStream, StreamClosedError
 # Import Salt libs
 import salt.utils.msgpack
@@ -117,8 +117,6 @@ class IPCServer(object):
 
         # Placeholders for attributes to be populated by method calls
         self.sock = None
-        #self.io_loop = io_loop or salt.utils.asynchronous.IOLoop()
-        #self.io_loop = io_loop or salt.ext.tornado.ioloop.IOLoop()
         self.io_loop = io_loop or salt.ext.tornado.ioloop.IOLoop.current()
         self._closing = False
 
@@ -350,7 +348,7 @@ class IPCClient(object):
                     break
 
                 yield salt.ext.tornado.gen.sleep(1)
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.exception("Unhandled IPCClient exception")
                 self._connecting_future.set_exception(exc)
         raise salt.ext.tornado.gen.Return(None)
@@ -769,7 +767,7 @@ class IPCMessageSubscriber(IPCClient):
             except StreamClosedError:
                 log.trace('Subscriber closed stream on IPC %s before connect', self.socket_path)
                 yield salt.ext.tornado.gen.sleep(1)
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.error('Exception occurred while Subscriber connecting: %s', exc)
                 yield salt.ext.tornado.gen.sleep(1)
         res = yield self._read(timeout)

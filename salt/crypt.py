@@ -1461,16 +1461,6 @@ class Crypticle(object):
                 result |= zipped_x ^ zipped_y
         if result != 0:
             log.debug('Failed to authenticate message')
-            try:
-                load = self.serial.loads(adata[len(self.PICKLE_PAD):], raw=raw)
-                print("MEH  1%r" %(load))
-                sys.stdout.flush()
-            except: pass
-            try:
-                load = self.serial.loads(adata, raw=raw)
-                print("MEH 2 %r" %(load))
-                sys.stdout.flush()
-            except: pass
             raise AuthenticationError('message authentication failed B')
         iv_bytes = data[:self.AES_BLOCK_SIZE]
         data = data[self.AES_BLOCK_SIZE:]
