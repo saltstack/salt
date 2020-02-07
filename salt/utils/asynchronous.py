@@ -84,7 +84,7 @@ class SyncWrapper(object):
                 method()
             except AttributeError:
                 log.error("No async method %s on object %r", method, self.obj)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 log.exception("Exception encountered while running stop method")
         io_loop = self.io_loop
         io_loop.stop()
@@ -117,7 +117,7 @@ class SyncWrapper(object):
             )
             results.append(True)
             results.append(result)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             results.append(False)
             results.append(sys.exc_info())
 

@@ -16,7 +16,7 @@ import logging
 import weakref
 import threading
 from random import randint
-from datetime import timedelta
+#from datetime import timedelta
 
 # Import Salt Libs
 import salt.auth
