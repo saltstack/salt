@@ -69,15 +69,26 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-@salt.ext.tornado.gen.coroutine
-def run_future(future):
-    while not future.done():
-        try:
-            yield salt.ext.tornado.gen.with_timeout(timedelta(seconds=1), future)
-        except salt.ext.tornado.gen.TimeoutError:
-            pass
-        yield salt.ext.tornado.gen.moment
-    raise salt.ext.tornado.gen.Return(future.result())
+#if sys.version_info < (2, 7, 6):
+#    def run_future(future):
+#        return future
+#else:
+if True:
+    @salt.ext.tornado.gen.coroutine
+    def run_future(future):
+        while not future.done():
+            try:
+                yield salt.ext.tornado.gen.with_timeout(
+                    timedelta(seconds=1),
+                    future,
+                    quiet_exceptions=(
+                        SaltReqTimeoutError
+                    )
+                )
+            except salt.ext.tornado.gen.TimeoutError:
+                pass
+            yield salt.ext.tornado.gen.moment
+        raise salt.ext.tornado.gen.Return(future.result())
 
 
 def _get_master_uri(master_ip,
