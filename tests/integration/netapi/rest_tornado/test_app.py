@@ -1,38 +1,38 @@
 # -*- coding: utf-8 -*-
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-import os
-import time
-import threading
-
-# Import Salt Libs
-import salt.utils.json
-import salt.utils.stringutils
-from salt.netapi.rest_tornado import saltnado
-from salt.utils.versions import StrictVersion
-
-# Import Salt Testing Libs
-from tests.unit.netapi.test_rest_tornado import SaltnadoTestCase
-from tests.support.helpers import flaky
-from tests.support.unit import skipIf
-
-# Import 3rd-party libs
-from salt.ext import six
-from salt.utils.zeromq import zmq, ZMQDefaultLoop as ZMQIOLoop
-import salt.ext.tornado.ioloop
-HAS_ZMQ_IOLOOP = bool(zmq)
-
-
-class _SaltnadoIntegrationTestCase(SaltnadoTestCase):  # pylint: disable=abstract-method
-
-    @property
-    def opts(self):
-        return self.get_config('client_config', from_scratch=True)
-
-    @property
-    def mod_opts(self):
-        return self.get_config('minion', from_scratch=True)
+## Import Python Libs
+#from __future__ import absolute_import, print_function, unicode_literals
+#import os
+#import time
+#import threading
+#
+## Import Salt Libs
+#import salt.utils.json
+#import salt.utils.stringutils
+#from salt.netapi.rest_tornado import saltnado
+#from salt.utils.versions import StrictVersion
+#
+## Import Salt Testing Libs
+#from tests.unit.netapi.test_rest_tornado import SaltnadoTestCase
+#from tests.support.helpers import flaky
+#from tests.support.unit import skipIf
+#
+## Import 3rd-party libs
+#from salt.ext import six
+#from salt.utils.zeromq import zmq, ZMQDefaultLoop as ZMQIOLoop
+#import salt.ext.tornado.ioloop
+#HAS_ZMQ_IOLOOP = bool(zmq)
+#
+#
+#class _SaltnadoIntegrationTestCase(SaltnadoTestCase):  # pylint: disable=abstract-method
+#
+#    @property
+#    def opts(self):
+#        return self.get_config('client_config', from_scratch=True)
+#
+#    @property
+#    def mod_opts(self):
+#        return self.get_config('minion', from_scratch=True)
 
 
 #@skipIf(HAS_ZMQ_IOLOOP is False, 'PyZMQ version must be >= 14.0.1 to run these tests.')

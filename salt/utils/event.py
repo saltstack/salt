@@ -362,7 +362,7 @@ class SaltEvent(object):
                     self.cpub = True
                 except salt.ext.tornado.iostream.StreamClosedError:
                     log.trace("Subscriber connect saw stream closed.")
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     log.exception(
                         "Unhandled exception while connecting subscriber"
                     )
@@ -411,7 +411,7 @@ class SaltEvent(object):
                     self.cpush = True
                 except salt.ext.tornado.iostream.StreamClosedError:
                     log.trace("Pusher connect saw stream closed.")
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     log.exception(
                         "Unhandled exception while connecting pusher"
                     )

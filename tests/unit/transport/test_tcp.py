@@ -4,34 +4,34 @@
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-import threading
-import socket
-import logging
-
-import salt.ext.tornado.gen
-import salt.ext.tornado.ioloop
-import salt.ext.tornado.concurrent
-from salt.ext.tornado.testing import AsyncTestCase, gen_test
-
-import salt.config
-from salt.ext import six
-import salt.utils.platform
-import salt.utils.process
-import salt.transport.server
-import salt.transport.client
-import salt.exceptions
-from salt.ext.six.moves import range
-from salt.transport.tcp import SaltMessageClientPool, SaltMessageClient, TCPPubServerChannel
-
-# Import Salt Testing libs
-from tests.support.unit import TestCase, skipIf
-from tests.support.helpers import get_unused_localhost_port, flaky
-from tests.support.mixins import AdaptedConfigurationTestCaseMixin
-from tests.support.mock import MagicMock, patch
-from tests.unit.transport.mixins import PubChannelMixin, ReqChannelMixin, run_loop_in_thread
-
-log = logging.getLogger(__name__)
+#from __future__ import absolute_import, print_function, unicode_literals
+#import threading
+#import socket
+#import logging
+#
+#import salt.ext.tornado.gen
+#import salt.ext.tornado.ioloop
+#import salt.ext.tornado.concurrent
+#from salt.ext.tornado.testing import AsyncTestCase, gen_test
+#
+#import salt.config
+#from salt.ext import six
+#import salt.utils.platform
+#import salt.utils.process
+#import salt.transport.server
+#import salt.transport.client
+#import salt.exceptions
+#from salt.ext.six.moves import range
+#from salt.transport.tcp import SaltMessageClientPool, SaltMessageClient, TCPPubServerChannel
+#
+## Import Salt Testing libs
+#from tests.support.unit import TestCase, skipIf
+#from tests.support.helpers import get_unused_localhost_port, flaky
+#from tests.support.mixins import AdaptedConfigurationTestCaseMixin
+#from tests.support.mock import MagicMock, patch
+#from tests.unit.transport.mixins import PubChannelMixin, ReqChannelMixin, run_loop_in_thread
+#
+#log = logging.getLogger(__name__)
 
 
 #class BaseTCPReqCase(TestCase, AdaptedConfigurationTestCaseMixin):

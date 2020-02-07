@@ -1859,7 +1859,7 @@ class Minion(MinionBase):
                 ret['out'] = 'nested'
                 ret['retcode'] = salt.defaults.exitcodes.EX_GENERIC
             except Exception as exc:  # pylint: disable=broad-except
-                msg = 'The minion function caused an exception: {!r}'.format(exc)
+                msg = 'The minion function caused an exception: {}'.format(exc)
                 log.warning(msg, exc_info_on_loglevel=True)
                 salt.utils.error.fire_exception(salt.exceptions.MinionError(msg), opts, job=data)
                 ret['return'] = '{0}: {1}'.format(msg, traceback.format_exc())
