@@ -44,26 +44,17 @@ def repo_managed(name, present=None, absent=None, prune=False, flags=None, kvfla
               - local_name_2
 
     '''
-    if present is None:
-        present = []
-    if absent is None:
-        absent = []
-    if flags is None:
-        flags = []
-    if kvflags is None:
-        kvflags = {}
-
     ret = {'name': name,
            'changes': {},
            'result': True,
-           'comment': 'Helm repo is managed'}
+           'comment': 'Helm repo is managed.'}
 
     if 'helm.repo_manage' not in __salt__:
         ret['result'] = False
         ret['comment'] = "'helm.repo_manage' modules not available on this minion."
     elif __opts__.get('test', False):
         ret['result'] = None
-        ret['comment'] = 'Helm repo would have been managed'
+        ret['comment'] = 'Helm repo would have been managed.'
     else:
         try:
             result = __salt__['helm.repo_manage'](
@@ -75,17 +66,17 @@ def repo_managed(name, present=None, absent=None, prune=False, flags=None, kvfla
             )
 
             if result['failed']:
-                ret['comment'] = 'Failed to add or remove some repositories'
+                ret['comment'] = 'Failed to add or remove some repositories.'
                 ret['changes'] = result
                 ret['result'] = False
 
-            if result['added'] or result['removed']:
-                ret['comment'] = 'Repositories were added or removed'
+            elif result['added'] or result['removed']:
+                ret['comment'] = 'Repositories were added or removed.'
                 ret['changes'] = result
 
-        except CommandExecutionError as e:
+        except CommandExecutionError as err:
             ret['result'] = False
-            ret['comment'] = "Failed to add some repositories: {}".format(e)
+            ret['comment'] = "Failed to add some repositories: {}.".format(err)
 
     return ret
 
@@ -112,22 +103,17 @@ def repo_updated(name, flags=None, kvflags=None):
           helm.repo_updated
 
     '''
-    if flags is None:
-        flags = []
-    if kvflags is None:
-        kvflags = {}
-
     ret = {'name': name,
            'changes': {},
            'result': True,
-           'comment': 'Helm repo is updated'}
+           'comment': 'Helm repo is updated.'}
 
     if 'helm.repo_update' not in __salt__:
         ret['result'] = False
         ret['comment'] = "'helm.repo_update' modules not available on this minion."
     elif __opts__.get('test', False):
         ret['result'] = None
-        ret['comment'] = 'Helm repo would have been updated'
+        ret['comment'] = 'Helm repo would have been updated.'
     else:
         try:
             result = __salt__['helm.repo_update'](flags=flags, kvflags=kvflags)
@@ -137,9 +123,9 @@ def repo_updated(name, flags=None, kvflags=None):
                 ret['changes'] = result
                 ret['comment'] = 'Failed to sync some repositories.'
 
-        except CommandExecutionError as e:
+        except CommandExecutionError as err:
             ret['result'] = False
-            ret['comment'] = "Failed to update some repositories: {}".format(e)
+            ret['comment'] = "Failed to update some repositories: {}.".format(err)
 
     return ret
 
@@ -186,11 +172,6 @@ def release_present(name, chart, flags=None, kvflags=None):
                 values: /path/to/values.yaml
 
     '''
-    if flags is None:
-        flags = []
-    if kvflags is None:
-        kvflags = {}
-
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -207,7 +188,7 @@ def release_present(name, chart, flags=None, kvflags=None):
         ret['comment'] = "'helm.upgrade' modules not available on this minion."
     elif __opts__.get('test', False):
         ret['result'] = None
-        ret['comment'] = 'Helm release would have been installed are updated.'
+        ret['comment'] = 'Helm release would have been installed or updated.'
     else:
         release_old_status = __salt__['helm.status'](release=name)
         if isinstance(release_old_status, dict):
@@ -276,25 +257,20 @@ def release_absent(name, flags=None, kvflags=None):
               - dry-run
 
     '''
-    if flags is None:
-        flags = []
-    if kvflags is None:
-        kvflags = {}
-
     ret = {'name': name,
            'changes': {},
            'result': True,
-           'comment': 'Helm release {} is absent'.format(name)}
+           'comment': 'Helm release {} is absent.'.format(name)}
 
     if 'helm.uninstall' not in __salt__:
         ret['result'] = False
         ret['comment'] = "'helm.uninstall' modules not available on this minion."
-    elif 'leni_helm.status' not in __salt__:
+    elif 'helm.status' not in __salt__:
         ret['result'] = False
         ret['comment'] = "'helm.status' modules not available on this minion."
     elif __opts__.get('test', False):
         ret['result'] = None
-        ret['comment'] = 'Helm release would have been installed are updated.'
+        ret['comment'] = 'Helm release would have been uninstalled.'
     else:
         release_status = __salt__['helm.status'](release=name)
         if isinstance(release_status, dict):
