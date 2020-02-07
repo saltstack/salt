@@ -697,13 +697,6 @@ class AsyncAuth(object):
 
         auth['master_uri'] = self.opts['master_uri']
 
-#        close_channel = False
-#        if not channel:
-#            close_channel = True
-#            channel = salt.transport.client.AsyncReqChannel.factory(self.opts,
-#                                                                    crypt='clear',
-#                                                                    io_loop=self.io_loop)
-
         sign_in_payload = self.minion_sign_in_payload()
         try:
             payload = yield channel.send(
@@ -719,10 +712,6 @@ class AsyncAuth(object):
                 raise salt.ext.tornado.gen.Return('retry')
             else:
                 raise SaltClientError('Attempt to authenticate with the salt master failed with timeout error')
-        finally:
-            pass
-            #if close_channel:
-            #    channel.close()
 
         if not isinstance(payload, dict):
             log.error('Sign-in attempt failed: %s', payload)
@@ -1298,11 +1287,6 @@ class SAuth(AsyncAuth):
 
         auth['master_uri'] = self.opts['master_uri']
 
-        #close_channel = False
-        #if not channel:
-        #    close_channel = True
-        #    channel = salt.transport.client.ReqChannel.factory(self.opts, crypt='clear')
-
         sign_in_payload = self.minion_sign_in_payload()
         try:
             payload = channel.send(
@@ -1315,10 +1299,6 @@ class SAuth(AsyncAuth):
                 log.warning('SaltReqTimeoutError: %s', e)
                 return 'retry'
             raise SaltClientError('Attempt to authenticate with the salt master failed with timeout error')
-        finally:
-            pass
-            #if close_channel:
-            #    channel.close()
 
         if 'load' in payload:
             if 'ret' in payload['load']:
