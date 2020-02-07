@@ -1173,7 +1173,6 @@ class JobSpawner(salt.utils.process.MultiprocessingProcess):
             if 'kind' not in payload:
                 log.error("Expect kind")
             if payload['kind'] == 'master_uri':
-                sys.stdout.flush()
                 minion_instance.opts['master_uri'] = payload['data']
                 minion_instance.connected = True
                 minion_instance.gen_modules(True)
@@ -1742,16 +1741,13 @@ class Minion(MinionBase):
             if '{0}.allow_missing_func'.format(executor) in minion_instance.executors
         ])
         if function_name in minion_instance.functions or allow_missing_funcs is True:
-            sys.stdout.flush()
             try:
                 minion_blackout_violation = False
-                sys.stdout.flush()
                 if minion_instance.connected and minion_instance.opts.get('pillar', {}).get('minion_blackout', False):
                     whitelist = minion_instance.opts['pillar'].get('minion_blackout_whitelist', [])
                     # this minion is blacked out. Only allow saltutil.refresh_pillar and the whitelist
                     if function_name != 'saltutil.refresh_pillar' and function_name not in whitelist:
                         minion_blackout_violation = True
-                sys.stdout.flush()
                 # use minion_blackout_whitelist from grains if it exists
                 if minion_instance.opts['grains'].get('minion_blackout', False):
                     whitelist = minion_instance.opts['grains'].get('minion_blackout_whitelist', [])
