@@ -12,8 +12,8 @@ import logging
 import salt.ext.tornado.ioloop
 import salt.ext.tornado.concurrent
 import contextlib
-from salt.ext import six
-from salt.utils import zeromq
+#from salt.ext import six
+#from salt.utils import zeromq
 from salt.ext.six import reraise
 
 
