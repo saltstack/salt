@@ -17,13 +17,7 @@ __func_alias__ = {
 }
 
 
-class HelmExecutionError(CommandExecutionError):
-    def __init__(self, cmd, error):
-        self.cmd = cmd
-        self.error = error
-
-
-def _prepare_cmd(binary='helm', commands=[], flags=[], kvflags={}):
+def _prepare_cmd(binary='helm', commands=None, flags=None, kvflags=None):
     '''
 
     :param binary:
@@ -32,8 +26,17 @@ def _prepare_cmd(binary='helm', commands=[], flags=[], kvflags={}):
     :param kvflags:
     :return:
     '''
-    flags = copy.deepcopy(flags)
-    kvflags = copy.deepcopy(kvflags)
+    if commands is None:
+        commands = []
+    if flags is None:
+        flags = []
+    else:
+        flags = copy.deepcopy(flags)
+    if kvflags is None:
+        kvflags = {}
+    else:
+        kvflags = copy.deepcopy(kvflags)
+
     cmd = (binary,)
 
     for command in commands:
@@ -52,7 +55,7 @@ def _prepare_cmd(binary='helm', commands=[], flags=[], kvflags={}):
     return cmd
 
 
-def _exec_cmd(commands=[], flags=[], kvflags={}):
+def _exec_cmd(commands=None, flags=None, kvflags=None):
     '''
 
     :param commands:
@@ -60,8 +63,16 @@ def _exec_cmd(commands=[], flags=[], kvflags={}):
     :param kvflags:
     :return:
     '''
-    flags = copy.deepcopy(flags)
-    kvflags = copy.deepcopy(kvflags)
+    if commands is None:
+        commands = []
+    if flags is None:
+        flags = []
+    else:
+        flags = copy.deepcopy(flags)
+    if kvflags is None:
+        kvflags = {}
+    else:
+        kvflags = copy.deepcopy(kvflags)
 
     cmd = _prepare_cmd(commands=commands, flags=flags, kvflags=kvflags)
     cmd_string = " ".join(cmd)
@@ -70,11 +81,11 @@ def _exec_cmd(commands=[], flags=[], kvflags={}):
         result = __salt__['cmd.run_all'](cmd=cmd)
         result.update({'cmd': cmd_string})
         return result
-    except CommandExecutionError as e:
-        raise HelmExecutionError(cmd_string, e)
+    except CommandExecutionError as err:
+        return {'retcode': -1, 'stderr': err}
 
 
-def completion(shell, flags=[], kvflags={}):
+def completion(shell, flags=None, kvflags=None):
     '''
     Generate auto-completions script for Helm for the specified shell (bash or zsh).
     Return the shell auto-completion content.
@@ -95,8 +106,15 @@ def completion(shell, flags=[], kvflags={}):
         salt '*' helm.completion bash
 
     '''
-    flags = copy.deepcopy(flags)
-    kvflags = copy.deepcopy(kvflags)
+    if flags is None:
+        flags = []
+    else:
+        flags = copy.deepcopy(flags)
+    if kvflags is None:
+        kvflags = {}
+    else:
+        kvflags = copy.deepcopy(kvflags)
+
     cmd_result = _exec_cmd(commands=['completion', shell], flags=flags, kvflags=kvflags)
     if cmd_result.get('retcode', -1) == 0:
         result = cmd_result.get('stdout', '')
@@ -105,7 +123,7 @@ def completion(shell, flags=[], kvflags={}):
     return result
 
 
-def create(name, flags=[], kvflags={}):
+def create(name, flags=None, kvflags=None):
     '''
     Creates a chart directory along with the common files and directories used in a chart.
     Return True if succeed, else the error message.
@@ -126,8 +144,15 @@ def create(name, flags=[], kvflags={}):
         salt '*' helm.create NAME
 
     '''
-    flags = copy.deepcopy(flags)
-    kvflags = copy.deepcopy(kvflags)
+    if flags is None:
+        flags = []
+    else:
+        flags = copy.deepcopy(flags)
+    if kvflags is None:
+        kvflags = {}
+    else:
+        kvflags = copy.deepcopy(kvflags)
+
     cmd_result = _exec_cmd(commands=['create', name], flags=flags, kvflags=kvflags)
     if cmd_result.get('retcode', -1) == 0:
         result = True
@@ -136,7 +161,7 @@ def create(name, flags=[], kvflags={}):
     return result
 
 
-def dependency_build(chart, flags=[], kvflags={}):
+def dependency_build(chart, flags=None, kvflags=None):
     '''
     Build out the charts/ directory from the Chart.lock file.
     Return True if succeed, else the error message.
@@ -157,8 +182,15 @@ def dependency_build(chart, flags=[], kvflags={}):
         salt '*' helm.dependency_build CHART
 
     '''
-    flags = copy.deepcopy(flags)
-    kvflags = copy.deepcopy(kvflags)
+    if flags is None:
+        flags = []
+    else:
+        flags = copy.deepcopy(flags)
+    if kvflags is None:
+        kvflags = {}
+    else:
+        kvflags = copy.deepcopy(kvflags)
+
     cmd_result = _exec_cmd(commands=['dependency', 'build', chart], flags=flags, kvflags=kvflags)
     if cmd_result.get('retcode', -1) == 0:
         result = True
@@ -167,7 +199,7 @@ def dependency_build(chart, flags=[], kvflags={}):
     return result
 
 
-def dependency_list(chart, flags=[], kvflags={}):
+def dependency_list(chart, flags=None, kvflags=None):
     '''
     List all of the dependencies declared in a chart.
     Return chart dependencies if succeed, else the error message.
@@ -188,8 +220,15 @@ def dependency_list(chart, flags=[], kvflags={}):
         salt '*' helm.dependency_list CHART
 
     '''
-    flags = copy.deepcopy(flags)
-    kvflags = copy.deepcopy(kvflags)
+    if flags is None:
+        flags = []
+    else:
+        flags = copy.deepcopy(flags)
+    if kvflags is None:
+        kvflags = {}
+    else:
+        kvflags = copy.deepcopy(kvflags)
+
     cmd_result = _exec_cmd(commands=['dependency', 'list', chart], flags=flags, kvflags=kvflags)
     if cmd_result.get('retcode', -1) == 0:
         result = cmd_result.get('stdout', '')
@@ -198,7 +237,7 @@ def dependency_list(chart, flags=[], kvflags={}):
     return result
 
 
-def dependency_update(chart, flags=[], kvflags={}):
+def dependency_update(chart, flags=None, kvflags=None):
     '''
     Update the on-disk dependencies to mirror Chart.yaml.
     Return True if succeed, else the error message.
@@ -219,7 +258,15 @@ def dependency_update(chart, flags=[], kvflags={}):
         salt '*' helm.dependency_update CHART
 
     '''
-    flags = copy.deepcopy(flags)
+    if flags is None:
+        flags = []
+    else:
+        flags = copy.deepcopy(flags)
+    if kvflags is None:
+        kvflags = {}
+    else:
+        kvflags = copy.deepcopy(kvflags)
+
     kvflags = copy.deepcopy(kvflags)
     cmd_result = _exec_cmd(commands=['dependency', 'update', chart], flags=flags, kvflags=kvflags)
     if cmd_result.get('retcode', -1) == 0:
@@ -229,7 +276,7 @@ def dependency_update(chart, flags=[], kvflags={}):
     return result
 
 
-def env(flags=[], kvflags={}):
+def env(flags=None, kvflags=None):
     '''
     Prints out all the environment information in use by Helm.
     Return Helm environments variables if succeed, else the error message.
@@ -247,8 +294,15 @@ def env(flags=[], kvflags={}):
         salt '*' helm.env
 
     '''
-    flags = copy.deepcopy(flags)
-    kvflags = copy.deepcopy(kvflags)
+    if flags is None:
+        flags = []
+    else:
+        flags = copy.deepcopy(flags)
+    if kvflags is None:
+        kvflags = {}
+    else:
+        kvflags = copy.deepcopy(kvflags)
+
     cmd_result = _exec_cmd(commands=['env'], flags=flags, kvflags=kvflags)
     if cmd_result.get('retcode', -1) == 0:
         result = cmd_result.get('stdout', '')
@@ -257,7 +311,7 @@ def env(flags=[], kvflags={}):
     return result
 
 
-def get_all(release, flags=[], kvflags={}):
+def get_all(release, flags=None, kvflags=None):
     '''
     Prints a human readable collection of information about the notes, hooks, supplied values, and generated manifest file of the given release.
     Return release information if succeed, else the error message.
@@ -278,8 +332,15 @@ def get_all(release, flags=[], kvflags={}):
         salt '*' helm.get_all RELEASE
 
     '''
-    flags = copy.deepcopy(flags)
-    kvflags = copy.deepcopy(kvflags)
+    if flags is None:
+        flags = []
+    else:
+        flags = copy.deepcopy(flags)
+    if kvflags is None:
+        kvflags = {}
+    else:
+        kvflags = copy.deepcopy(kvflags)
+
     cmd_result = _exec_cmd(commands=['get', 'all', release], flags=flags, kvflags=kvflags)
     if cmd_result.get('retcode', -1) == 0:
         result = cmd_result.get('stdout', '')
@@ -288,7 +349,7 @@ def get_all(release, flags=[], kvflags={}):
     return result
 
 
-def get_hooks(release, flags=[], kvflags={}):
+def get_hooks(release, flags=None, kvflags=None):
     '''
     Prints a human readable collection of information about the hooks of the given release.
     Return release hooks information if succeed, else the error message.
@@ -309,8 +370,15 @@ def get_hooks(release, flags=[], kvflags={}):
         salt '*' helm.get_hooks RELEASE
 
     '''
-    flags = copy.deepcopy(flags)
-    kvflags = copy.deepcopy(kvflags)
+    if flags is None:
+        flags = []
+    else:
+        flags = copy.deepcopy(flags)
+    if kvflags is None:
+        kvflags = {}
+    else:
+        kvflags = copy.deepcopy(kvflags)
+
     cmd_result = _exec_cmd(commands=['get', 'hooks', release], flags=flags, kvflags=kvflags)
     if cmd_result.get('retcode', -1) == 0:
         result = cmd_result.get('stdout', '')
@@ -319,7 +387,7 @@ def get_hooks(release, flags=[], kvflags={}):
     return result
 
 
-def get_manifest(release, flags=[], kvflags={}):
+def get_manifest(release, flags=None, kvflags=None):
     '''
     Prints a human readable collection of information about the manifest of the given release.
     Return release manifest information if succeed, else the error message.
@@ -340,8 +408,15 @@ def get_manifest(release, flags=[], kvflags={}):
         salt '*' helm.get_manifest RELEASE
 
     '''
-    flags = copy.deepcopy(flags)
-    kvflags = copy.deepcopy(kvflags)
+    if flags is None:
+        flags = []
+    else:
+        flags = copy.deepcopy(flags)
+    if kvflags is None:
+        kvflags = {}
+    else:
+        kvflags = copy.deepcopy(kvflags)
+
     cmd_result = _exec_cmd(commands=['get', 'manifest', release], flags=flags, kvflags=kvflags)
     if cmd_result.get('retcode', -1) == 0:
         result = cmd_result.get('stdout', '')
@@ -350,7 +425,7 @@ def get_manifest(release, flags=[], kvflags={}):
     return result
 
 
-def get_notes(release, flags=[], kvflags={}):
+def get_notes(release, flags=None, kvflags=None):
     '''
     Prints a human readable collection of information about the notes of the given release.
     Return release notes information if succeed, else the error message.
@@ -371,8 +446,15 @@ def get_notes(release, flags=[], kvflags={}):
         salt '*' helm.get_notes RELEASE
 
     '''
-    flags = copy.deepcopy(flags)
-    kvflags = copy.deepcopy(kvflags)
+    if flags is None:
+        flags = []
+    else:
+        flags = copy.deepcopy(flags)
+    if kvflags is None:
+        kvflags = {}
+    else:
+        kvflags = copy.deepcopy(kvflags)
+
     cmd_result = _exec_cmd(commands=['get', 'notes', release], flags=flags, kvflags=kvflags)
     if cmd_result.get('retcode', -1) == 0:
         result = cmd_result.get('stdout', '')
@@ -381,7 +463,7 @@ def get_notes(release, flags=[], kvflags={}):
     return result
 
 
-def get_values(release, flags=[], kvflags={}):
+def get_values(release, flags=None, kvflags=None):
     '''
     Prints a human readable collection of information about the values of the given release.
     Return release values information if succeed, else the error message.
@@ -405,8 +487,15 @@ def get_values(release, flags=[], kvflags={}):
         salt '*' helm.get_values RELEASE kvflags="{'output': 'yaml'}"
 
     '''
-    flags = copy.deepcopy(flags)
-    kvflags = copy.deepcopy(kvflags)
+    if flags is None:
+        flags = []
+    else:
+        flags = copy.deepcopy(flags)
+    if kvflags is None:
+        kvflags = {}
+    else:
+        kvflags = copy.deepcopy(kvflags)
+
     if not ('output' in kvflags.keys() or '--output' in kvflags.keys()):
         kvflags.update({'output': 'json'})
     cmd_result = _exec_cmd(commands=['get', 'values', release], flags=flags, kvflags=kvflags)
@@ -420,7 +509,7 @@ def get_values(release, flags=[], kvflags={}):
     return result
 
 
-def help(command, flags=[], kvflags={}):
+def help(command, flags=None, kvflags=None):
     '''
     Provides help for any command in the application.
     Return the full help if succeed, else the error message.
@@ -441,8 +530,15 @@ def help(command, flags=[], kvflags={}):
         salt '*' helm.help COMMAND
 
     '''
-    flags = copy.deepcopy(flags)
-    kvflags = copy.deepcopy(kvflags)
+    if flags is None:
+        flags = []
+    else:
+        flags = copy.deepcopy(flags)
+    if kvflags is None:
+        kvflags = {}
+    else:
+        kvflags = copy.deepcopy(kvflags)
+
     cmd_result = _exec_cmd(commands=['help', command], flags=flags, kvflags=kvflags)
     if cmd_result.get('retcode', -1) == 0:
         result = cmd_result.get('stdout', '')
@@ -451,7 +547,7 @@ def help(command, flags=[], kvflags={}):
     return result
 
 
-def history(release, flags=[], kvflags={}):
+def history(release, flags=None, kvflags=None):
     '''
     Prints historical revisions for a given release.
     Return release historic if succeed, else the error message.
@@ -475,8 +571,15 @@ def history(release, flags=[], kvflags={}):
         salt '*' helm.history RELEASE kvflags="{'output': 'yaml'}"
 
     '''
-    flags = copy.deepcopy(flags)
-    kvflags = copy.deepcopy(kvflags)
+    if flags is None:
+        flags = []
+    else:
+        flags = copy.deepcopy(flags)
+    if kvflags is None:
+        kvflags = {}
+    else:
+        kvflags = copy.deepcopy(kvflags)
+
     if not ('output' in kvflags.keys() or '--output' in kvflags.keys()):
         kvflags.update({'output': 'json'})
     cmd_result = _exec_cmd(commands=['history', release], flags=flags, kvflags=kvflags)
@@ -490,7 +593,7 @@ def history(release, flags=[], kvflags={}):
     return result
 
 
-def install(release, chart, flags=[], kvflags={}):
+def install(release, chart, flags=None, kvflags=None):
     '''
     Installs a chart archive.
     Return True if succeed, else the error message.
@@ -517,8 +620,15 @@ def install(release, chart, flags=[], kvflags={}):
         salt '*' helm.install RELEASE CHART kvflags="{'values': '/path/to/values.yaml'}"
 
     '''
-    flags = copy.deepcopy(flags)
-    kvflags = copy.deepcopy(kvflags)
+    if flags is None:
+        flags = []
+    else:
+        flags = copy.deepcopy(flags)
+    if kvflags is None:
+        kvflags = {}
+    else:
+        kvflags = copy.deepcopy(kvflags)
+
     cmd_result = _exec_cmd(commands=['install', release, chart], flags=flags, kvflags=kvflags)
     if cmd_result.get('retcode', -1) == 0:
         result = True
@@ -527,7 +637,7 @@ def install(release, chart, flags=[], kvflags={}):
     return result
 
 
-def lint(path, flags=[], kvflags={}):
+def lint(path, flags=None, kvflags=None):
     '''
     Takes a path to a chart and runs a series of tests to verify that the chart is well-formed.
     Return True if succeed, else the error message.
@@ -548,8 +658,15 @@ def lint(path, flags=[], kvflags={}):
         salt '*' helm.lint PATH
 
     '''
-    flags = copy.deepcopy(flags)
-    kvflags = copy.deepcopy(kvflags)
+    if flags is None:
+        flags = []
+    else:
+        flags = copy.deepcopy(flags)
+    if kvflags is None:
+        kvflags = {}
+    else:
+        kvflags = copy.deepcopy(kvflags)
+
     cmd_result = _exec_cmd(commands=['lint', path], flags=flags, kvflags=kvflags)
     if cmd_result.get('retcode', -1) == 0:
         result = True
@@ -558,7 +675,7 @@ def lint(path, flags=[], kvflags={}):
     return result
 
 
-def list_(flags=[], kvflags={}):
+def list_(flags=None, kvflags=None):
     '''
     Lists all of the releases. By default, it lists only releases that are deployed or failed.
     Return the list of release if succeed, else the error message.
@@ -579,8 +696,15 @@ def list_(flags=[], kvflags={}):
         salt '*' helm.list kvflags="{'output': 'yaml'}"
 
     '''
-    flags = copy.deepcopy(flags)
-    kvflags = copy.deepcopy(kvflags)
+    if flags is None:
+        flags = []
+    else:
+        flags = copy.deepcopy(flags)
+    if kvflags is None:
+        kvflags = {}
+    else:
+        kvflags = copy.deepcopy(kvflags)
+
     if not ('output' in kvflags.keys() or '--output' in kvflags.keys()):
         kvflags.update({'output': 'json'})
     cmd_result = _exec_cmd(commands=['list'], flags=flags, kvflags=kvflags)
@@ -594,7 +718,7 @@ def list_(flags=[], kvflags={}):
     return result
 
 
-def package(chart, flags=[], kvflags={}):
+def package(chart, flags=None, kvflags=None):
     '''
     Packages a chart into a versioned chart archive file. If a path is given, this will look at that path for a chart
     (which must contain a Chart.yaml file) and then package that directory.
@@ -619,8 +743,15 @@ def package(chart, flags=[], kvflags={}):
         salt '*' helm.package CHART kvflags="{'destination': '/path/to/the/package'}"
 
     '''
-    flags = copy.deepcopy(flags)
-    kvflags = copy.deepcopy(kvflags)
+    if flags is None:
+        flags = []
+    else:
+        flags = copy.deepcopy(flags)
+    if kvflags is None:
+        kvflags = {}
+    else:
+        kvflags = copy.deepcopy(kvflags)
+
     cmd_result = _exec_cmd(commands=['package', chart], flags=flags, kvflags=kvflags)
     if cmd_result.get('retcode', -1) == 0:
         result = True
@@ -629,7 +760,7 @@ def package(chart, flags=[], kvflags={}):
     return result
 
 
-def plugin_install(path, flags=[], kvflags={}):
+def plugin_install(path, flags=None, kvflags=None):
     '''
     Install a Helm plugin from a url to a VCS repo or a local path.
     Return True if succeed, else the error message.
@@ -650,8 +781,15 @@ def plugin_install(path, flags=[], kvflags={}):
         salt '*' helm.plugin_install PATH
 
     '''
-    flags = copy.deepcopy(flags)
-    kvflags = copy.deepcopy(kvflags)
+    if flags is None:
+        flags = []
+    else:
+        flags = copy.deepcopy(flags)
+    if kvflags is None:
+        kvflags = {}
+    else:
+        kvflags = copy.deepcopy(kvflags)
+
     cmd_result = _exec_cmd(commands=['plugin', 'install', path], flags=flags, kvflags=kvflags)
     if cmd_result.get('retcode', -1) == 0:
         result = True
@@ -660,7 +798,7 @@ def plugin_install(path, flags=[], kvflags={}):
     return result
 
 
-def plugin_list(flags=[], kvflags={}):
+def plugin_list(flags=None, kvflags=None):
     '''
     List installed Helm plugins.
     Return the plugin list if succeed, else the error message.
@@ -678,8 +816,15 @@ def plugin_list(flags=[], kvflags={}):
         salt '*' helm.plugin_list
 
     '''
-    flags = copy.deepcopy(flags)
-    kvflags = copy.deepcopy(kvflags)
+    if flags is None:
+        flags = []
+    else:
+        flags = copy.deepcopy(flags)
+    if kvflags is None:
+        kvflags = {}
+    else:
+        kvflags = copy.deepcopy(kvflags)
+
     cmd_result = _exec_cmd(commands=['plugin', 'list'], flags=flags, kvflags=kvflags)
     if cmd_result.get('retcode', -1) == 0:
         result = cmd_result.get('stdout', '')
@@ -688,7 +833,7 @@ def plugin_list(flags=[], kvflags={}):
     return result
 
 
-def plugin_uninstall(plugin, flags=[], kvflags={}):
+def plugin_uninstall(plugin, flags=None, kvflags=None):
     '''
     Uninstall a Helm plugin.
     Return True if succeed, else the error message.
@@ -709,8 +854,15 @@ def plugin_uninstall(plugin, flags=[], kvflags={}):
         salt '*' helm.plugin_uninstall PLUGIN
 
     '''
-    flags = copy.deepcopy(flags)
-    kvflags = copy.deepcopy(kvflags)
+    if flags is None:
+        flags = []
+    else:
+        flags = copy.deepcopy(flags)
+    if kvflags is None:
+        kvflags = {}
+    else:
+        kvflags = copy.deepcopy(kvflags)
+
     cmd_result = _exec_cmd(commands=['plugin', 'uninstall', plugin], flags=flags, kvflags=kvflags)
     if cmd_result.get('retcode', -1) == 0:
         result = True
@@ -719,7 +871,7 @@ def plugin_uninstall(plugin, flags=[], kvflags={}):
     return result
 
 
-def plugin_update(plugin, flags=[], kvflags={}):
+def plugin_update(plugin, flags=None, kvflags=None):
     '''
     Update a Helm plugin.
     Return True if succeed, else the error message.
@@ -740,8 +892,15 @@ def plugin_update(plugin, flags=[], kvflags={}):
         salt '*' helm.plugin_update PLUGIN
 
     '''
-    flags = copy.deepcopy(flags)
-    kvflags = copy.deepcopy(kvflags)
+    if flags is None:
+        flags = []
+    else:
+        flags = copy.deepcopy(flags)
+    if kvflags is None:
+        kvflags = {}
+    else:
+        kvflags = copy.deepcopy(kvflags)
+
     cmd_result = _exec_cmd(commands=['plugin', 'update', plugin], flags=flags, kvflags=kvflags)
     if cmd_result.get('retcode', -1) == 0:
         result = True
@@ -750,7 +909,7 @@ def plugin_update(plugin, flags=[], kvflags={}):
     return result
 
 
-def pull(package, flags=[], kvflags={}):
+def pull(package, flags=None, kvflags=None):
     '''
     Retrieve a package from a package repository, and download it locally.
     Return True if succeed, else the error message.
@@ -774,8 +933,15 @@ def pull(package, flags=[], kvflags={}):
         salt '*' helm.pull PACKAGE kvflags="{'destination': '/path/to/the/chart'}"
 
     '''
-    flags = copy.deepcopy(flags)
-    kvflags = copy.deepcopy(kvflags)
+    if flags is None:
+        flags = []
+    else:
+        flags = copy.deepcopy(flags)
+    if kvflags is None:
+        kvflags = {}
+    else:
+        kvflags = copy.deepcopy(kvflags)
+
     cmd_result = _exec_cmd(commands=['pull', package], flags=flags, kvflags=kvflags)
     if cmd_result.get('retcode', -1) == 0:
         result = True
@@ -784,7 +950,7 @@ def pull(package, flags=[], kvflags={}):
     return result
 
 
-def repo_add(name, url, flags=[], kvflags={}):
+def repo_add(name, url, flags=None, kvflags=None):
     '''
     Add a chart repository.
     Return True if succeed, else the error message.
@@ -808,8 +974,15 @@ def repo_add(name, url, flags=[], kvflags={}):
         salt '*' helm.repo_add NAME URL
 
     '''
-    flags = copy.deepcopy(flags)
-    kvflags = copy.deepcopy(kvflags)
+    if flags is None:
+        flags = []
+    else:
+        flags = copy.deepcopy(flags)
+    if kvflags is None:
+        kvflags = {}
+    else:
+        kvflags = copy.deepcopy(kvflags)
+
     cmd_result = _exec_cmd(commands=['repo', 'add', name, url], flags=flags, kvflags=kvflags)
     if cmd_result.get('retcode', -1) == 0:
         result = True
@@ -818,7 +991,7 @@ def repo_add(name, url, flags=[], kvflags={}):
     return result
 
 
-def repo_index(directory, flags=[], kvflags={}):
+def repo_index(directory, flags=None, kvflags=None):
     '''
     Read the current directory and generate an index file based on the charts found.
     Return True if succeed, else the error message.
@@ -839,8 +1012,15 @@ def repo_index(directory, flags=[], kvflags={}):
         salt '*' helm.index DIRECTORY
 
     '''
-    flags = copy.deepcopy(flags)
-    kvflags = copy.deepcopy(kvflags)
+    if flags is None:
+        flags = []
+    else:
+        flags = copy.deepcopy(flags)
+    if kvflags is None:
+        kvflags = {}
+    else:
+        kvflags = copy.deepcopy(kvflags)
+
     cmd_result = _exec_cmd(commands=['repo', 'index', directory], flags=flags, kvflags=kvflags)
     if cmd_result.get('retcode', -1) == 0:
         result = True
@@ -849,7 +1029,7 @@ def repo_index(directory, flags=[], kvflags={}):
     return result
 
 
-def repo_list(flags=[], kvflags={}):
+def repo_list(flags=None, kvflags=None):
     '''
     List a chart repository.
     Return the repository list if succeed, else the error message.
@@ -870,9 +1050,15 @@ def repo_list(flags=[], kvflags={}):
         salt '*' helm.repo_list kvflags="{'output': 'yaml'}"
 
     '''
-    flags = copy.deepcopy(flags)
-    kvflags = copy.deepcopy(kvflags)
-    log.error(kvflags)
+    if flags is None:
+        flags = []
+    else:
+        flags = copy.deepcopy(flags)
+    if kvflags is None:
+        kvflags = {}
+    else:
+        kvflags = copy.deepcopy(kvflags)
+
     if not ('output' in kvflags.keys() or '--output' in kvflags.keys()):
         kvflags.update({'output': 'json'})
     cmd_result = _exec_cmd(commands=['repo', 'list'], flags=flags, kvflags=kvflags)
@@ -886,7 +1072,7 @@ def repo_list(flags=[], kvflags={}):
     return result
 
 
-def repo_remove(name, flags=[], kvflags={}):
+def repo_remove(name, flags=None, kvflags=None):
     '''
     Remove a chart repository.
     Return True if succeed, else the error message.
@@ -907,8 +1093,15 @@ def repo_remove(name, flags=[], kvflags={}):
         salt '*' helm.repo_remove NAME
 
     '''
-    flags = copy.deepcopy(flags)
-    kvflags = copy.deepcopy(kvflags)
+    if flags is None:
+        flags = []
+    else:
+        flags = copy.deepcopy(flags)
+    if kvflags is None:
+        kvflags = {}
+    else:
+        kvflags = copy.deepcopy(kvflags)
+
     cmd_result = _exec_cmd(commands=['repo', 'remove', name], flags=flags, kvflags=kvflags)
     if cmd_result.get('retcode', -1) == 0:
         result = True
@@ -917,7 +1110,7 @@ def repo_remove(name, flags=[], kvflags={}):
     return result
 
 
-def repo_update(flags=[], kvflags={}):
+def repo_update(flags=None, kvflags=None):
     '''
     Update all charts repository.
     Return True if succeed, else the error message.
@@ -935,8 +1128,15 @@ def repo_update(flags=[], kvflags={}):
         salt '*' helm.repo_update
 
     '''
-    flags = copy.deepcopy(flags)
-    kvflags = copy.deepcopy(kvflags)
+    if flags is None:
+        flags = []
+    else:
+        flags = copy.deepcopy(flags)
+    if kvflags is None:
+        kvflags = {}
+    else:
+        kvflags = copy.deepcopy(kvflags)
+
     cmd_result = _exec_cmd(commands=['repo', 'update'], flags=flags, kvflags=kvflags)
     if cmd_result.get('retcode', -1) == 0:
         result = True
@@ -945,7 +1145,7 @@ def repo_update(flags=[], kvflags={}):
     return result
 
 
-def repo_manage(present=[], absent=[], prune=False, flags=[], kvflags={}):
+def repo_manage(present=None, absent=None, prune=False, flags=None, kvflags=None):
     '''
     Manage charts repository.
     Return the summery of all actions.
@@ -972,8 +1172,23 @@ def repo_manage(present=[], absent=[], prune=False, flags=[], kvflags={}):
         salt '*' helm.repo_manage present="[{'name': 'LOCAL_NAME', 'url': 'REPO_URL'}]" absent="['LOCAL_NAME']"
 
     '''
-    flags = copy.deepcopy(flags)
-    kvflags = copy.deepcopy(kvflags)
+    if present is None:
+        present = []
+    else:
+        present = copy.deepcopy(present)
+    if absent is None:
+        absent = []
+    else:
+        absent = copy.deepcopy(absent)
+    if flags is None:
+        flags = []
+    else:
+        flags = copy.deepcopy(flags)
+    if kvflags is None:
+        kvflags = {}
+    else:
+        kvflags = copy.deepcopy(kvflags)
+
     repos_present = repo_list(flags=flags, kvflags=kvflags)
     if not isinstance(repos_present, list):
         repos_present = []
@@ -1022,7 +1237,7 @@ def repo_manage(present=[], absent=[], prune=False, flags=[], kvflags={}):
     return result
 
 
-def rollback(release, revision, flags=[], kvflags={}):
+def rollback(release, revision, flags=None, kvflags=None):
     '''
     Rolls back a release to a previous revision.
     To see release revision number, execute the history module.
@@ -1050,8 +1265,15 @@ def rollback(release, revision, flags=[], kvflags={}):
         salt '*' helm.rollback RELEASE REVISION flags=['dry-run']
 
     '''
-    flags = copy.deepcopy(flags)
-    kvflags = copy.deepcopy(kvflags)
+    if flags is None:
+        flags = []
+    else:
+        flags = copy.deepcopy(flags)
+    if kvflags is None:
+        kvflags = {}
+    else:
+        kvflags = copy.deepcopy(kvflags)
+
     cmd_result = _exec_cmd(commands=['rollback', release, revision], flags=flags, kvflags=kvflags)
     if cmd_result.get('retcode', -1) == 0:
         result = True
@@ -1060,7 +1282,7 @@ def rollback(release, revision, flags=[], kvflags={}):
     return result
 
 
-def search_hub(keyword, flags=[], kvflags={}):
+def search_hub(keyword, flags=None, kvflags=None):
     '''
     Search the Helm Hub or an instance of Monocular for Helm charts.
     Return the research result if succeed, else the error message.
@@ -1084,9 +1306,15 @@ def search_hub(keyword, flags=[], kvflags={}):
         salt '*' helm.search_hub KEYWORD kvflags="{'output': 'yaml'}"
 
     '''
-    flags = copy.deepcopy(flags)
-    kvflags = copy.deepcopy(kvflags)
-    log.error(kvflags)
+    if flags is None:
+        flags = []
+    else:
+        flags = copy.deepcopy(flags)
+    if kvflags is None:
+        kvflags = {}
+    else:
+        kvflags = copy.deepcopy(kvflags)
+
     if not ('output' in kvflags.keys() or '--output' in kvflags.keys()):
         kvflags.update({'output': 'json'})
     cmd_result = _exec_cmd(commands=['search', 'hub', keyword], flags=flags, kvflags=kvflags)
@@ -1100,7 +1328,7 @@ def search_hub(keyword, flags=[], kvflags={}):
     return result
 
 
-def search_repo(keyword, flags=[], kvflags={}):
+def search_repo(keyword, flags=None, kvflags=None):
     '''
     Search reads through all of the repositories configured on the system, and looks for matches. Search of these
     repositories uses the metadata stored on the system.
@@ -1125,9 +1353,15 @@ def search_repo(keyword, flags=[], kvflags={}):
         salt '*' helm.search_hub KEYWORD kvflags="{'output': 'yaml'}"
 
     '''
-    flags = copy.deepcopy(flags)
-    kvflags = copy.deepcopy(kvflags)
-    log.error(kvflags)
+    if flags is None:
+        flags = []
+    else:
+        flags = copy.deepcopy(flags)
+    if kvflags is None:
+        kvflags = {}
+    else:
+        kvflags = copy.deepcopy(kvflags)
+
     if not ('output' in kvflags.keys() or '--output' in kvflags.keys()):
         kvflags.update({'output': 'json'})
     cmd_result = _exec_cmd(commands=['search', 'repo', keyword], flags=flags, kvflags=kvflags)
@@ -1141,7 +1375,7 @@ def search_repo(keyword, flags=[], kvflags={}):
     return result
 
 
-def show_all(chart, flags=[], kvflags={}):
+def show_all(chart, flags=None, kvflags=None):
     '''
     Inspects a chart (directory, file, or URL) and displays all its content (values.yaml, Charts.yaml, README).
     Return chart information if succeed, else the error message.
@@ -1162,8 +1396,15 @@ def show_all(chart, flags=[], kvflags={}):
         salt '*' helm.show_all CHART
 
     '''
-    flags = copy.deepcopy(flags)
-    kvflags = copy.deepcopy(kvflags)
+    if flags is None:
+        flags = []
+    else:
+        flags = copy.deepcopy(flags)
+    if kvflags is None:
+        kvflags = {}
+    else:
+        kvflags = copy.deepcopy(kvflags)
+
     cmd_result = _exec_cmd(commands=['show', 'all', chart], flags=flags, kvflags=kvflags)
     if cmd_result.get('retcode', -1) == 0:
         result = cmd_result.get('stdout', '')
@@ -1172,7 +1413,7 @@ def show_all(chart, flags=[], kvflags={}):
     return result
 
 
-def show_chart(chart, flags=[], kvflags={}):
+def show_chart(chart, flags=None, kvflags=None):
     '''
     Inspects a chart (directory, file, or URL) and displays the contents of the Charts.yaml file.
     Return chart information if succeed, else the error message.
@@ -1193,8 +1434,15 @@ def show_chart(chart, flags=[], kvflags={}):
         salt '*' helm.show_chart CHART
 
     '''
-    flags = copy.deepcopy(flags)
-    kvflags = copy.deepcopy(kvflags)
+    if flags is None:
+        flags = []
+    else:
+        flags = copy.deepcopy(flags)
+    if kvflags is None:
+        kvflags = {}
+    else:
+        kvflags = copy.deepcopy(kvflags)
+
     cmd_result = _exec_cmd(commands=['show', 'chart', chart], flags=flags, kvflags=kvflags)
     if cmd_result.get('retcode', -1) == 0:
         result = cmd_result.get('stdout', '')
@@ -1203,7 +1451,7 @@ def show_chart(chart, flags=[], kvflags={}):
     return result
 
 
-def show_readme(chart, flags=[], kvflags={}):
+def show_readme(chart, flags=None, kvflags=None):
     '''
     Inspects a chart (directory, file, or URL) and displays the contents of the README file.
     Return chart information if succeed, else the error message.
@@ -1224,8 +1472,15 @@ def show_readme(chart, flags=[], kvflags={}):
         salt '*' helm.show_readme CHART
 
     '''
-    flags = copy.deepcopy(flags)
-    kvflags = copy.deepcopy(kvflags)
+    if flags is None:
+        flags = []
+    else:
+        flags = copy.deepcopy(flags)
+    if kvflags is None:
+        kvflags = {}
+    else:
+        kvflags = copy.deepcopy(kvflags)
+
     cmd_result = _exec_cmd(commands=['show', 'readme', chart], flags=flags, kvflags=kvflags)
     if cmd_result.get('retcode', -1) == 0:
         result = cmd_result.get('stdout', '')
@@ -1234,7 +1489,7 @@ def show_readme(chart, flags=[], kvflags={}):
     return result
 
 
-def show_values(chart, flags=[], kvflags={}):
+def show_values(chart, flags=None, kvflags=None):
     '''
     Inspects a chart (directory, file, or URL) and displays the contents of the values.yaml file.
     Return chart information if succeed, else the error message.
@@ -1255,8 +1510,15 @@ def show_values(chart, flags=[], kvflags={}):
         salt '*' helm.show_values CHART
 
     '''
-    flags = copy.deepcopy(flags)
-    kvflags = copy.deepcopy(kvflags)
+    if flags is None:
+        flags = []
+    else:
+        flags = copy.deepcopy(flags)
+    if kvflags is None:
+        kvflags = {}
+    else:
+        kvflags = copy.deepcopy(kvflags)
+
     cmd_result = _exec_cmd(commands=['show', 'values', chart], flags=flags, kvflags=kvflags)
     if cmd_result.get('retcode', -1) == 0:
         result = cmd_result.get('stdout', '')
@@ -1265,7 +1527,7 @@ def show_values(chart, flags=[], kvflags={}):
     return result
 
 
-def status(release, flags=[], kvflags={}):
+def status(release, flags=None, kvflags=None):
     '''
     Show the status of the release.
     Return the release status if succeed, else the error message.
@@ -1289,8 +1551,15 @@ def status(release, flags=[], kvflags={}):
         salt '*' helm.status RELEASE kvflags="{'output': 'yaml'}"
 
     '''
-    flags = copy.deepcopy(flags)
-    kvflags = copy.deepcopy(kvflags)
+    if flags is None:
+        flags = []
+    else:
+        flags = copy.deepcopy(flags)
+    if kvflags is None:
+        kvflags = {}
+    else:
+        kvflags = copy.deepcopy(kvflags)
+
     if not ('output' in kvflags.keys() or '--output' in kvflags.keys()):
         kvflags.update({'output': 'json'})
     cmd_result = _exec_cmd(commands=['status', release], flags=flags, kvflags=kvflags)
@@ -1304,7 +1573,7 @@ def status(release, flags=[], kvflags={}):
     return result
 
 
-def template(name, chart, flags=[], kvflags={}):
+def template(name, chart, flags=None, kvflags=None):
     '''
     Render chart templates locally and display the output.
     Return the chart renderer if succeed, else the error message.
@@ -1331,8 +1600,15 @@ def template(name, chart, flags=[], kvflags={}):
         salt '*' helm.template NAME CHART kvflags="{'values': '/path/to/values.yaml', 'output-dir': 'path/to/output/dir'}"
 
     '''
-    flags = copy.deepcopy(flags)
-    kvflags = copy.deepcopy(kvflags)
+    if flags is None:
+        flags = []
+    else:
+        flags = copy.deepcopy(flags)
+    if kvflags is None:
+        kvflags = {}
+    else:
+        kvflags = copy.deepcopy(kvflags)
+
     cmd_result = _exec_cmd(commands=['template', name, chart], flags=flags, kvflags=kvflags)
     if cmd_result.get('retcode', -1) == 0:
         result = cmd_result.get('stdout', '')
@@ -1341,7 +1617,7 @@ def template(name, chart, flags=[], kvflags={}):
     return result
 
 
-def test(release, flags=[], kvflags={}):
+def test(release, flags=None, kvflags=None):
     '''
     Runs the tests for a release.
     Return the test result if succeed, else the error message.
@@ -1362,8 +1638,15 @@ def test(release, flags=[], kvflags={}):
         salt '*' helm.test RELEASE
 
     '''
-    flags = copy.deepcopy(flags)
-    kvflags = copy.deepcopy(kvflags)
+    if flags is None:
+        flags = []
+    else:
+        flags = copy.deepcopy(flags)
+    if kvflags is None:
+        kvflags = {}
+    else:
+        kvflags = copy.deepcopy(kvflags)
+
     cmd_result = _exec_cmd(commands=['test', release], flags=flags, kvflags=kvflags)
     if cmd_result.get('retcode', -1) == 0:
         result = cmd_result.get('stdout', '')
@@ -1372,7 +1655,7 @@ def test(release, flags=[], kvflags={}):
     return result
 
 
-def uninstall(release, flags=[], kvflags={}):
+def uninstall(release, flags=None, kvflags=None):
     '''
     Uninstall the release name.
     Return True if succeed, else the error message.
@@ -1396,8 +1679,15 @@ def uninstall(release, flags=[], kvflags={}):
         salt '*' helm.uninstall RELEASE flags=['dry-run']
 
     '''
-    flags = copy.deepcopy(flags)
-    kvflags = copy.deepcopy(kvflags)
+    if flags is None:
+        flags = []
+    else:
+        flags = copy.deepcopy(flags)
+    if kvflags is None:
+        kvflags = {}
+    else:
+        kvflags = copy.deepcopy(kvflags)
+
     cmd_result = _exec_cmd(commands=['uninstall', release], flags=flags, kvflags=kvflags)
     if cmd_result.get('retcode', -1) == 0:
         result = True
@@ -1406,7 +1696,7 @@ def uninstall(release, flags=[], kvflags={}):
     return result
 
 
-def upgrade(release, chart, flags=[], kvflags={}):
+def upgrade(release, chart, flags=None, kvflags=None):
     '''
     Upgrades a release to a new version of a chart.
     Return True if succeed, else the error message.
@@ -1436,8 +1726,15 @@ def upgrade(release, chart, flags=[], kvflags={}):
         salt '*' helm.upgrade RELEASE CHART kvflags="{'values': '/path/to/values.yaml'}"
 
     '''
-    flags = copy.deepcopy(flags)
-    kvflags = copy.deepcopy(kvflags)
+    if flags is None:
+        flags = []
+    else:
+        flags = copy.deepcopy(flags)
+    if kvflags is None:
+        kvflags = {}
+    else:
+        kvflags = copy.deepcopy(kvflags)
+
     cmd_result = _exec_cmd(commands=['upgrade', release, chart], flags=flags, kvflags=kvflags)
     if cmd_result.get('retcode', -1) == 0:
         result = True
@@ -1446,7 +1743,7 @@ def upgrade(release, chart, flags=[], kvflags={}):
     return result
 
 
-def verify(path, flags=[], kvflags={}):
+def verify(path, flags=None, kvflags=None):
     '''
     Verify that the given chart has a valid provenance file.
     Return True if succeed, else the error message.
@@ -1467,8 +1764,15 @@ def verify(path, flags=[], kvflags={}):
         salt '*' helm.verify PATH
 
     '''
-    flags = copy.deepcopy(flags)
-    kvflags = copy.deepcopy(kvflags)
+    if flags is None:
+        flags = []
+    else:
+        flags = copy.deepcopy(flags)
+    if kvflags is None:
+        kvflags = {}
+    else:
+        kvflags = copy.deepcopy(kvflags)
+
     cmd_result = _exec_cmd(commands=['verify', path], flags=flags, kvflags=kvflags)
     if cmd_result.get('retcode', -1) == 0:
         result = True
@@ -1477,7 +1781,7 @@ def verify(path, flags=[], kvflags={}):
     return result
 
 
-def version(flags=[], kvflags={}):
+def version(flags=None, kvflags=None):
     '''
     Show the version for Helm.
     Return version information if succeed, else the error message.
@@ -1495,8 +1799,15 @@ def version(flags=[], kvflags={}):
         salt '*' helm.version
 
     '''
-    flags = copy.deepcopy(flags)
-    kvflags = copy.deepcopy(kvflags)
+    if flags is None:
+        flags = []
+    else:
+        flags = copy.deepcopy(flags)
+    if kvflags is None:
+        kvflags = {}
+    else:
+        kvflags = copy.deepcopy(kvflags)
+
     cmd_result = _exec_cmd(commands=['version'], flags=flags, kvflags=kvflags)
     if cmd_result.get('retcode', -1) == 0:
         result = cmd_result.get('stdout', '')
