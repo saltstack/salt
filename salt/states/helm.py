@@ -9,7 +9,7 @@ from salt.exceptions import CommandExecutionError
 log = logging.getLogger(__name__)
 
 
-def repo_managed(name, present=[], absent=[], prune=False, flags=[], kvflags={}):
+def repo_managed(name, present=None, absent=None, prune=False, flags=None, kvflags=None):
     '''
     Make sure the repository is updated.
 
@@ -44,6 +44,15 @@ def repo_managed(name, present=[], absent=[], prune=False, flags=[], kvflags={})
               - local_name_2
 
     '''
+    if present is None:
+        present = []
+    if absent is None:
+        absent = []
+    if flags is None:
+        flags = []
+    if kvflags is None:
+        kvflags = {}
+
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -81,7 +90,7 @@ def repo_managed(name, present=[], absent=[], prune=False, flags=[], kvflags={})
     return ret
 
 
-def repo_updated(name, flags=[], kvflags={}):
+def repo_updated(name, flags=None, kvflags=None):
     '''
     Make sure the repository is updated.
     To execute after a repository changes.
@@ -103,6 +112,11 @@ def repo_updated(name, flags=[], kvflags={}):
           helm.repo_updated
 
     '''
+    if flags is None:
+        flags = []
+    if kvflags is None:
+        kvflags = {}
+
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -130,7 +144,7 @@ def repo_updated(name, flags=[], kvflags={}):
     return ret
 
 
-def release_present(name, chart, flags=[], kvflags={}):
+def release_present(name, chart, flags=None, kvflags=None):
     '''
     Make sure the release name is present.
 
@@ -172,6 +186,11 @@ def release_present(name, chart, flags=[], kvflags={}):
                 values: /path/to/values.yaml
 
     '''
+    if flags is None:
+        flags = []
+    if kvflags is None:
+        kvflags = {}
+
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -228,7 +247,7 @@ def release_present(name, chart, flags=[], kvflags={}):
     return ret
 
 
-def release_absent(name, flags=[], kvflags={}):
+def release_absent(name, flags=None, kvflags=None):
     '''
     Make sure the release name is absent.
 
@@ -257,6 +276,11 @@ def release_absent(name, flags=[], kvflags={}):
               - dry-run
 
     '''
+    if flags is None:
+        flags = []
+    if kvflags is None:
+        kvflags = {}
+
     ret = {'name': name,
            'changes': {},
            'result': True,
