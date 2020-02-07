@@ -1107,14 +1107,17 @@ class MinionManager(MinionBase):
             minion.destroy()
 
 
-class JobSpawner(salt.utils.process.SignalHandlingProcess):
+class JobSpawner(salt.utils.process.MultiprocessingProcess):
 
-    def __init__(self, job_queue, opts, is_ready):
+    def __init__(self, cls, job_queue, opts, **kwargs):
+        super(JobSpawner, self).__init__(**kwargs)
+        self.cls = cls
         self.job_queue = job_queue
         self.opts = opts
 
     def __setstate__(self, state):
         self.__init__(
+            state['cls'],
             state['queue'],
             state['opts'],
             log_queue=state['log_queue'],
@@ -1123,6 +1126,7 @@ class JobSpawner(salt.utils.process.SignalHandlingProcess):
 
     def __getstate__(self):
         return {
+            'cls': self.cls,
             'queue': self.queue,
             'opts': self.opts,
             'log_queue': self.log_queue,
@@ -1130,17 +1134,48 @@ class JobSpawner(salt.utils.process.SignalHandlingProcess):
         }
 
     def run(self):
-        minion_instance = cls(self.opts, proc_man=False)
+        minion_instance = self.cls(self.opts, proc_man=False)
         minion_instance._setup_core()
         last = time.time()
+        threads = []
         while True:
             try:
                 payload = self.job_queue.get(block=False)
             except queue.Empty:
                 continue
+            #print("PAYLOAD %r" %(payload))
+            #sys.stdout.flush()
+            if payload['kind'] == 'master_uri':
+                thread = threading.Thread(
+                    target=minion_instance.spawn_job,
+                    args=(minion_instance, payload, True)
+                )
+                thread.start()
+                threads.append(thread)
+            elif payload['kind'] == 'refresh_beacons':
+                thread = threading.Thread(
+                    target=minion_instance.spawn_job,
+                    args=(minion_instance, payload, True)
+                )
+                thread.start()
+                threads.append(thread)
+            else:
+                minion_instance.spawn_job(minion_instance, payload)
+            for thread in threads[:]:
+                if not thread.is_alive():
+                    threads.remove(thread)
+            if time.time() - last >= 10:
+                minion_instance.cleanup_subprocesses()
+                last = time.time()
+
+    def spawn_job(self, minion_instance, payload, new_loop=False):
+        if new_loop:
+            salt.ext.tornado.ioloop.IOLoop().make_current()
+        try:
             if 'kind' not in payload:
                 log.error("Expect kind")
             if payload['kind'] == 'master_uri':
+                sys.stdout.flush()
                 minion_instance.opts['master_uri'] = payload['data']
                 minion_instance.connected = True
                 minion_instance.gen_modules(True)
@@ -1155,12 +1190,14 @@ class JobSpawner(salt.utils.process.SignalHandlingProcess):
                     minion_instance.opts,
                     minion_instance.functions)
             elif payload['kind'] == 'payload':
+               # if payload['data']['fun']['saltutil.sync_all']:
+               #     continue
                 minion_instance.handle_payload(payload['data'])
             else:
                 log.error("unrecognized spawn kind %s", payload['kind'])
-            if time.time() - last >= 10:
-                minion_instance.cleanup_subprocesses()
-                last = time.time()
+        except Exception as exc:
+            print("WTFSON %r" %(exc))
+            sys.stdout.flush()
 
 class Minion(MinionBase):
     '''
@@ -1237,12 +1274,12 @@ class Minion(MinionBase):
             time.sleep(sleep_time)
 
         self.process_manager = ProcessManager(name='MinionProcessManager')
-        self.io_loop.spawn_callback(self.process_manager.run, **{'asynchronous': True})
         # We don't have the proxy setup yet, so we can't start engines
         # Engines need to be able to access __proxy__
         if not salt.utils.platform.is_proxy():
             self.io_loop.spawn_callback(salt.engines.start_engines, self.opts,
                                         self.process_manager)
+        self.io_loop.spawn_callback(self.process_manager.run, **{'asynchronous': True})
 
         # Install the SIGINT/SIGTERM handlers if not done so far
         if signal.getsignal(signal.SIGINT) is signal.SIG_DFL:
@@ -1252,28 +1289,15 @@ class Minion(MinionBase):
         if signal.getsignal(signal.SIGTERM) is signal.SIG_DFL:
             # No custom signal handling was added, install our own
             signal.signal(signal.SIGTERM, self._handle_signals)
-        if top and not hasattr(self, 'job_q'):
-            sys.stdout.flush()
-            self.job_q = multiprocessing.Queue()
 
-       # self.process_manager.add_process(
-       #     JobSpawner,
-       #     args=(
-       #         self.job_q,
-       #         self.opts,
-       #         self.is_ready,
-       #     )
-       # )
-            self.job_spawner_proc = multiprocessing.Process(
-                target=self.job_spawner,
-                args=(
-                    self.job_q,
-                    self.opts,
-                    self.is_ready,
-                ),
+        if top and not hasattr(self, 'job_q'):
+            self.job_q = multiprocessing.Queue()
+            self.job_spawner_proc = JobSpawner(
+                self.__class__,
+                self.job_q,
+                self.opts,
             )
             self.job_spawner_proc.start()
-            #print("WTF 1 %r %r" %(os.getpid(), self.job_spawner_proc.pid))
 
     def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
         self._running = False
@@ -1694,73 +1718,6 @@ class Minion(MinionBase):
                                                                   {'data': data, 'opts': opts})):
             with salt.ext.tornado.stack_context.StackContext(minion_instance.ctx):
                 run_func(minion_instance, opts, data)
-
-    @classmethod
-    def job_spawner(cls, job_queue, opts, is_ready):
-        minion_instance = cls(opts, proc_man=False)
-        minion_instance._setup_core()
-        last = time.time()
-        threads = []
-        while True:
-            try:
-                payload = job_queue.get(block=False)
-            except queue.Empty:
-                continue
-            #print("PAYLOAD %r" %(payload))
-            #sys.stdout.flush()
-            if payload['kind'] == 'master_uri':
-                thread = threading.Thread(
-                    target=minion_instance.spawn_job,
-                    args=(minion_instance, payload, True)
-                )
-                thread.start()
-                threads.append(thread)
-            elif payload['kind'] == 'refresh_beacons':
-                thread = threading.Thread(
-                    target=minion_instance.spawn_job,
-                    args=(minion_instance, payload, True)
-                )
-                thread.start()
-                threads.append(thread)
-            else:
-                minion_instance.spawn_job(minion_instance, payload)
-            for thread in threads[:]:
-                if not thread.is_alive():
-                    threads.remove(thread)
-            if time.time() - last >= 10:
-                minion_instance.cleanup_subprocesses()
-                last = time.time()
-
-    def spawn_job(self, minion_instance, payload, new_loop=False):
-        if new_loop:
-            salt.ext.tornado.ioloop.IOLoop().make_current()
-        try:
-            if 'kind' not in payload:
-                log.error("Expect kind")
-            if payload['kind'] == 'master_uri':
-                sys.stdout.flush()
-                minion_instance.opts['master_uri'] = payload['data']
-                minion_instance.connected = True
-                minion_instance.gen_modules(True)
-            elif payload['kind'] == 'pillar_update':
-                minion_instance.opts['pillar'] = payload['data']['pillar']
-                minion_instance.opts['grains'] = payload['data']['grains']
-                minion_instance.grains_cache = minion_instance.opts['grains']
-                minion_instance.matchers_refresh()
-                minion_instance.beacons_refresh()
-            elif payload['kind'] == 'refresh_beacons':
-                minion_instance.beacons = salt.beacons.Beacon(
-                    minion_instance.opts,
-                    minion_instance.functions)
-            elif payload['kind'] == 'payload':
-               # if payload['data']['fun']['saltutil.sync_all']:
-               #     continue
-                minion_instance.handle_payload(payload['data'])
-            else:
-                log.error("unrecognized spawn kind %s", payload['kind'])
-        except Exception as exc:
-            print("WTFSON %r" %(exc))
-            sys.stdout.flush()
 
     @classmethod
     def _thread_return(cls, minion_instance, opts, data):
