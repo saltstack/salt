@@ -283,6 +283,7 @@ import logging
 import os
 import copy
 import time
+import multiprocessing
 from salt.utils.json import loads, dumps
 
 # Import Salt libs
@@ -302,6 +303,7 @@ log = logging.getLogger(__name__)
 
 __virtualname__ = 'saltcheck'
 
+test_results = {}
 
 def __virtual__():
     '''
@@ -429,14 +431,37 @@ def run_state_tests(state, saltenv=None, check_all=False):
     for state_name in sls_list:
         stl.add_test_files_for_sls(state_name, check_all)
         stl.load_test_suite()
-        results_dict = OrderedDict()
+
+        p = multiprocessing.Pool(len(stl.test_dict))
         for key, value in stl.test_dict.items():
-            result = scheck.run_test(value)
-            results_dict[key] = result
+            log.error('TTTT key {} value {}'.format(key, value))
+            presults = p.apply_async(
+                parallel_scheck,
+                (key, value),
+                dict(scheck=scheck),
+                callback=gather_presults
+            )
+        p.close()
+        p.join()
+
         if not results.get(state_name):
             # If passed a duplicate state, don't overwrite with empty res
-            results[state_name] = results_dict
+            results[state_name] = test_results
+    log.error('Sending results: {}'.format(results))
     return _generate_out_list(results)
+
+def gather_presults(result):
+    log.error('DDDD callback got {}'.format(result))
+    for key, value in result.items():
+        test_results[key] = value
+
+def parallel_scheck(testname, testdata, scheck=None):
+    results = {}
+    log.error('AAAA name {} data {}'.format(testname, testdata))
+    log.error('BBBB scheck {}'.format(scheck))
+    results[testname] = scheck.run_test(testdata)
+    log.error('XXX returning: {}'.format(results))
+    return results
 
 
 run_state_tests_ssh = salt.utils.functools.alias_function(run_state_tests, 'run_state_tests_ssh')
@@ -474,6 +499,8 @@ def _generate_out_list(results):
     missing_tests = 0
     total_time = 0.0
     for state in results:
+        log.error('outputing state {}'.format(state))
+        log.error('results are {}'.format(results[state]))
         if not results[state].items():
             missing_tests = missing_tests + 1
         else:
