@@ -1147,20 +1147,20 @@ class JobSpawner(salt.utils.process.MultiprocessingProcess):
             #sys.stdout.flush()
             if payload['kind'] == 'master_uri':
                 thread = threading.Thread(
-                    target=minion_instance.spawn_job,
+                    target=self.spawn_job,
                     args=(minion_instance, payload, True)
                 )
                 thread.start()
                 threads.append(thread)
             elif payload['kind'] == 'refresh_beacons':
                 thread = threading.Thread(
-                    target=minion_instance.spawn_job,
+                    target=self.spawn_job,
                     args=(minion_instance, payload, True)
                 )
                 thread.start()
                 threads.append(thread)
             else:
-                minion_instance.spawn_job(minion_instance, payload)
+                self.spawn_job(minion_instance, payload)
             for thread in threads[:]:
                 if not thread.is_alive():
                     threads.remove(thread)
