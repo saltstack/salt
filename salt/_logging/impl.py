@@ -988,6 +988,9 @@ def set_lowest_log_level(log_level):
     Set the lowest log level
     """
     set_lowest_log_level.__log_level__ = log_level
+    # Additionally set the root logger to the same level.
+    # Nothing below this level should be processed by python's logging machinery
+    logging.root.setLevel(log_level)
 
 
 def set_lowest_log_level_by_opts(opts):
@@ -1002,7 +1005,7 @@ def set_lowest_log_level_by_opts(opts):
         log_levels.append(get_logging_level_from_string(log_level))
 
     log_level = min(log_levels)
-    set_lowest_log_level.__log_level__ = log_level
+    set_lowest_log_level(log_level)
 
 
 def __global_logging_exception_handler(
