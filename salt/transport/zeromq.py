@@ -1206,7 +1206,7 @@ class AsyncReqMessageClient(object):
         try:
             self.close()
         except Exception as exc:  # pylint: disable=broad-except
-            log.error('Unhandled exception in __del__: $r', exc)
+            log.error('Unhandled exception in __del__: %r', exc)
     # pylint: enable=W1701
 
     def _init_socket(self):

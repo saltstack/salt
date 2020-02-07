@@ -7,6 +7,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import sys
 import threading
+import logging
 
 import salt.ext.tornado.ioloop
 import salt.ext.tornado.concurrent
@@ -14,6 +15,9 @@ import contextlib
 from salt.ext import six
 from salt.utils import zeromq
 from salt.ext.six import reraise
+
+
+log = logging.getLogger(__name__)
 
 
 @contextlib.contextmanager
