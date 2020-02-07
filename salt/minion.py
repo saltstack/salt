@@ -1143,8 +1143,6 @@ class JobSpawner(salt.utils.process.MultiprocessingProcess):
                 payload = self.job_queue.get(block=False)
             except queue.Empty:
                 continue
-            #print("PAYLOAD %r" %(payload))
-            #sys.stdout.flush()
             if payload['kind'] == 'master_uri':
                 thread = threading.Thread(
                     target=self.spawn_job,
@@ -1190,14 +1188,12 @@ class JobSpawner(salt.utils.process.MultiprocessingProcess):
                     minion_instance.opts,
                     minion_instance.functions)
             elif payload['kind'] == 'payload':
-               # if payload['data']['fun']['saltutil.sync_all']:
-               #     continue
                 minion_instance.handle_payload(payload['data'])
             else:
-                log.error("unrecognized spawn kind %s", payload['kind'])
-        except Exception as exc:
-            print("WTFSON %r" %(exc))
-            sys.stdout.flush()
+                log.error("Unrecognized spawn kind %s", payload['kind'])
+        except Exception as exc:  # pylint: disable=broad-except
+            log.error('Exception spawining job: %r', exc)
+
 
 class Minion(MinionBase):
     '''
@@ -1867,9 +1863,9 @@ class Minion(MinionBase):
                 ret['out'] = 'nested'
                 ret['retcode'] = salt.defaults.exitcodes.EX_GENERIC
             except Exception as exc:  # pylint: disable=broad-except
-                msg = 'The minion function caused an exception %r' %(exc)
-            #    log.warning(msg, exc_info_on_loglevel=True)
-            #    salt.utils.error.fire_exception(salt.exceptions.MinionError(msg), opts, job=data)
+                msg = 'The minion function caused an exception: {!r}'.format(exc)
+                log.warning(msg, exc_info_on_loglevel=True)
+                salt.utils.error.fire_exception(salt.exceptions.MinionError(msg), opts, job=data)
                 ret['return'] = '{0}: {1}'.format(msg, traceback.format_exc())
                 ret['out'] = 'nested'
                 ret['retcode'] = salt.defaults.exitcodes.EX_GENERIC
@@ -2900,18 +2896,12 @@ class Minion(MinionBase):
                 self.destroy()
 
     def _handle_payload(self, payload):
-        #print("HANDLE PAYLOAD %r %r" %(os.getpid(), payload,))
-        try:
-            self.job_q.put(
-                    {'kind': 'payload', 'data': payload},
-                    block=False,
-            )
-        except Exception:
-            log.exception("DAMN")
-        #print("AFTER HP")
+        self.job_q.put(
+                {'kind': 'payload', 'data': payload},
+                block=False,
+        )
 
     def handle_payload(self, payload):
-        #print("HANDLE PAYLOAD 2 %r %r" %(os.getpid(), payload,))
         if payload is not None and payload['enc'] == 'aes':
             if self._target_load(payload['load']):
                 self._handle_decoded_payload(payload['load'])
@@ -2921,9 +2911,6 @@ class Minion(MinionBase):
                     'Broadcast message received not for this minion, Load: %s',
                     payload['load']
                 )
-        # If it's not AES, and thus has not been verified, we do nothing.
-        # In the future, we could add support for some clearfuncs, but
-        # the minion currently has no need.
 
     def _target_load(self, load):
         # Verify that the publication is valid

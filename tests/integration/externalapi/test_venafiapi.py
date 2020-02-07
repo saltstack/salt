@@ -11,6 +11,7 @@ import string
 
 # Import Salt Testing libs
 from tests.support.case import ShellCase
+from tests.support.helpers import skip_if_not_root
 from salt.ext.six.moves import range
 from salt.ext.six import text_type
 from cryptography import x509
@@ -40,6 +41,7 @@ def with_random_name(func):
     return wrapper
 
 
+@skip_if_not_root
 class VenafiTest(ShellCase):
     '''
     Test the venafi runner
