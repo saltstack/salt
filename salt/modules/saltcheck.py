@@ -303,7 +303,6 @@ log = logging.getLogger(__name__)
 
 __virtualname__ = 'saltcheck'
 
-test_results = {}
 
 def __virtual__():
     '''
@@ -424,42 +423,40 @@ def run_state_tests(state, saltenv=None, check_all=False):
             saltenv = __opts__['saltenv']
         else:
             saltenv = 'base'
-    scheck = SaltCheck(saltenv)
     stl = StateTestLoader(saltenv)
     results = OrderedDict()
     sls_list = salt.utils.args.split_input(state)
     for state_name in sls_list:
         stl.add_test_files_for_sls(state_name, check_all)
         stl.load_test_suite()
+        results_dict = OrderedDict()
 
-        p = multiprocessing.Pool(len(stl.test_dict))
-        for key, value in stl.test_dict.items():
-            log.error('TTTT key {} value {}'.format(key, value))
-            presults = p.apply_async(
-                parallel_scheck,
-                (key, value),
-                dict(scheck=scheck),
-                callback=gather_presults
-            )
-        p.close()
-        p.join()
+        presults = multiprocessing.Pool(len(stl.test_dict)).map(
+            func=parallel_scheck_wrapper,
+            iterable=stl.test_dict.items()
+        )
 
+        # Remove list and form expected data structure
+        for item in presults:
+            for key, value in item.items():
+                results_dict[key] = value
+
+        #results_dict[key] = result
         if not results.get(state_name):
             # If passed a duplicate state, don't overwrite with empty res
-            results[state_name] = test_results
+            results[state_name] = results_dict
     log.error('Sending results: {}'.format(results))
     return _generate_out_list(results)
 
-def gather_presults(result):
-    log.error('DDDD callback got {}'.format(result))
-    for key, value in result.items():
-        test_results[key] = value
+def parallel_scheck_wrapper(data):
+    saltenv = 'base'
+    scheck = SaltCheck(saltenv)
+    return parallel_scheck(*data, scheck)
 
-def parallel_scheck(testname, testdata, scheck=None):
+def parallel_scheck(key, value, scheck):
     results = {}
-    log.error('AAAA name {} data {}'.format(testname, testdata))
-    log.error('BBBB scheck {}'.format(scheck))
-    results[testname] = scheck.run_test(testdata)
+    log.error('AAAA key {} value {}'.format(key, value))
+    results[key] = scheck.run_test(value)
     log.error('XXX returning: {}'.format(results))
     return results
 
