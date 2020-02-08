@@ -12,7 +12,7 @@ import importlib
 
 class TornadoImporter(object):
 
-    def find_module(self, module_name, package_path):
+    def find_module(self, module_name, package_path=None):
         #if module_name.startswith('tornado'):
         if module_name.startswith('salt.ext.tornado'):
             return self
