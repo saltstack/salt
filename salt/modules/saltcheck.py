@@ -527,8 +527,6 @@ def _generate_out_list(results):
     missing_tests = 0
     total_time = 0.0
     for state in results:
-        log.error('outputing state {}'.format(state))
-        log.error('results are {}'.format(results[state]))
         if not results[state].items():
             missing_tests = missing_tests + 1
         else:
