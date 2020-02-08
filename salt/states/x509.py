@@ -512,11 +512,15 @@ def certificate_managed(name, days_remaining=90, append_certs=None, **kwargs):
         Path to the certificate
 
     days_remaining : 90
-        The minimum number of days remaining when the certificate should be
-        recreated. A value of 0 disables automatic renewal.
+        Recreate the certificate if the number of days remaining on it
+        are less than this number. The value should be less than
+        ``days_valid``, otherwise the certificate will be recreated
+        every time the state is run. A value of 0 disables automatic
+        renewal.
 
     append_certs:
         A list of certificates to be appended to the managed file.
+        They must be valid PEM files, otherwise an error will be thrown.
 
     kwargs:
         Any arguments supported by :py:func:`x509.create_certificate
