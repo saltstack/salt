@@ -661,7 +661,8 @@ class IPCMessageSubscriber(IPCClient):
         try:
             yield self._read_in_progress.acquire(timeout=0.00000001)
         except salt.ext.tornado.gen.TimeoutError:
-            raise RuntimeError("Unable to acquire read lock")
+            raise salt.ext.tornado.gen.Return(None)
+            #raise RuntimeError("Unable to acquire read lock")
 
         exc_to_raise = None
         ret = None

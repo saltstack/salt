@@ -199,14 +199,19 @@ class IPCMessagePubSubCase(salt.ext.tornado.testing.AsyncTestCase):
         pub_channel.start()
         return pub_channel
 
-    @salt.ext.tornado.gen.coroutine
+#    @salt.ext.tornado.gen.coroutine
     def _get_sub_channel(self):
         sub_channel = salt.transport.ipc.IPCMessageSubscriber(
             socket_path=self.socket_path,
             io_loop=self.io_loop,
         )
-        yield sub_channel.connect(callback=lambda x: x)
-        raise salt.ext.tornado.gen.Return(sub_channel)
+        sub_channel.connect(callback=self.stop)
+        self.wait()
+        return sub_channel
+#        def callback(*args):
+#            print("GOT %r" %(args))
+#        yield sub_channel.connect(callback=callback)
+#        raise salt.ext.tornado.gen.Return(sub_channel)
 
     def tearDown(self):
         super(IPCMessagePubSubCase, self).tearDown()
@@ -230,12 +235,12 @@ class IPCMessagePubSubCase(salt.ext.tornado.testing.AsyncTestCase):
         del self.pub_channel
         del self.sub_channel
 
-    @salt.ext.tornado.testing.gen_test
+#    @salt.ext.tornado.testing.gen_test
     def test_multi_client_reading(self):
-        self.sub_channel = yield self._get_sub_channel()
+        self.sub_channel = self._get_sub_channel()
         # To be completely fair let's create 2 clients.
         client1 = self.sub_channel
-        client2 = yield self._get_sub_channel()
+        client2 = self._get_sub_channel()
         print(repr(client2))
         call_cnt = []
 
@@ -246,7 +251,7 @@ class IPCMessagePubSubCase(salt.ext.tornado.testing.AsyncTestCase):
             if evt.wait(1):
                 return
             client2.close()
-#            self.stop()
+            self.stop()
 
         watchdog = threading.Thread(target=close_server)
         watchdog.start()
@@ -258,27 +263,29 @@ class IPCMessagePubSubCase(salt.ext.tornado.testing.AsyncTestCase):
                 evt.set()
                 self.stop()
 
+        client1.read_async(handler)
+        client2.read_async(handler)
         # Now let both waiting data at once
         self.pub_channel.publish('TEST')
         print("CLI 1")
-        yield client1.read_async(handler)
+        #yield client1.read_async(handler)
         print("CLI 2")
-        yield client2.read_async(handler)
-        #self.wait()
-#        self.assertEqual(len(call_cnt), 2)
-#        self.assertEqual(call_cnt[0], 'TEST')
+        #yield client2.read_async(handler)
+        self.wait()
+        self.assertEqual(len(call_cnt), 2)
+        self.assertEqual(call_cnt[0], 'TEST')
         self.assertEqual(call_cnt[1], 'TEST')
 
-    @skipIf(True, "No longer works with tornado 5.0")
-    def test_sync_reading(self):
-        # To be completely fair let's create 2 clients.
-        client1 = self.sub_channel
-        client2 = self._get_sub_channel()
-        call_cnt = []
-
-        # Now let both waiting data at once
-        self.pub_channel.publish('TEST')
-        ret1 = client1.read_sync()
-        ret2 = client2.read_sync()
-        self.assertEqual(ret1, 'TEST')
-        self.assertEqual(ret2, 'TEST')
+#    @skipIf(True, "No longer works with tornado 5.0")
+#    def test_sync_reading(self):
+#        # To be completely fair let's create 2 clients.
+#        client1 = self.sub_channel
+#        client2 = self._get_sub_channel()
+#        call_cnt = []
+#
+#        # Now let both waiting data at once
+#        self.pub_channel.publish('TEST')
+#        ret1 = client1.read_sync()
+#        ret2 = client2.read_sync()
+#        self.assertEqual(ret1, 'TEST')
+#        self.assertEqual(ret2, 'TEST')
