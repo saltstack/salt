@@ -1,13 +1,14 @@
-{% set tmp_dir = pillar['tmp_dir'] %}
+{% set keyfile = pillar['keyfile'] %}
+{% set crtfile = pillar['crtfile'] %}
 
 private_key:
   x509.private_key_managed:
-    - name: {{ tmp_dir }}/self.key
+    - name: {{ keyfile }}
 
 self_signed_cert:
   x509.certificate_managed:
-    - name: {{ tmp_dir }}/self.crt
-    - signing_private_key: {{ tmp_dir }}/self.key
+    - name: {{ crtfile }}
+    - signing_private_key: {{ keyfile }}
     - CN: localhost
     - days_valid: 30
     - days_remaining: 0
