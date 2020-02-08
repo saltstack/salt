@@ -101,6 +101,7 @@ SALT_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'base.t
 SALT_CRYPTO_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'crypto.txt')
 SALT_ZEROMQ_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'zeromq.txt')
 SALT_WINDOWS_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'pkg', 'windows', 'req.txt')
+SALT_WINDOWS_REQ_WIN = os.path.join(os.path.abspath(SETUP_DIRNAME), 'pkg', 'windows', 'req_win.txt')
 SALT_LONG_DESCRIPTION_FILE = os.path.join(os.path.abspath(SETUP_DIRNAME), 'README.rst')
 
 # Salt SSH Packaging Detection
@@ -1026,7 +1027,8 @@ class SaltDistribution(distutils.dist.Distribution):
             install_requires += _parse_requirements_file(SALT_ZEROMQ_REQS)
 
         if IS_WINDOWS_PLATFORM:
-            install_requires = _parse_requirements_file(SALT_WINDOWS_REQS)
+            install_requires = _parse_requirements_file(SALT_WINDOWS_REQ_WIN)
+            install_requires += _parse_requirements_file(SALT_WINDOWS_REQS)
         return install_requires
 
     @property
