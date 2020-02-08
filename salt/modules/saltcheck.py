@@ -301,6 +301,9 @@ from salt.defaults import DEFAULT_TARGET_DELIM
 
 log = logging.getLogger(__name__)
 
+global_saltenv = None
+global_scheck = None
+
 __virtualname__ = 'saltcheck'
 
 
@@ -423,6 +426,13 @@ def run_state_tests(state, saltenv=None, check_all=False):
             saltenv = __opts__['saltenv']
         else:
             saltenv = 'base'
+
+    # Use global scheck variable for reuse in each multiprocess
+    global global_saltenv
+    global_saltenv = saltenv
+    global global_scheck
+    global_scheck = SaltCheck(saltenv)
+
     stl = StateTestLoader(saltenv)
     results = OrderedDict()
     sls_list = salt.utils.args.split_input(state)
@@ -431,7 +441,13 @@ def run_state_tests(state, saltenv=None, check_all=False):
         stl.load_test_suite()
         results_dict = OrderedDict()
 
-        presults = multiprocessing.Pool(len(stl.test_dict)).map(
+        pool_size = min(len(stl.test_dict), multiprocessing.cpu_count())
+        for items in stl.test_dict.values():
+            if 'state.apply' in items.get('module_and_function', []):
+                pool_size = 1
+                log.debug('Tests include state.apply. Disabling parallization')
+
+        presults = multiprocessing.Pool(pool_size).map(
             func=parallel_scheck_wrapper,
             iterable=stl.test_dict.items()
         )
@@ -448,10 +464,10 @@ def run_state_tests(state, saltenv=None, check_all=False):
     log.error('Sending results: {}'.format(results))
     return _generate_out_list(results)
 
+
 def parallel_scheck_wrapper(data):
-    saltenv = 'base'
-    scheck = SaltCheck(saltenv)
-    return parallel_scheck(*data, scheck)
+    return parallel_scheck(*data, global_scheck)
+
 
 def parallel_scheck(key, value, scheck):
     results = {}
