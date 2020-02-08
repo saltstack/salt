@@ -421,7 +421,7 @@ def run_state_tests(state, saltenv=None, check_all=False):
         salt '*' saltcheck.run_state_tests postfix,common
 
     Tests will be run in parallel by adding "saltcheck_parallel: True" in minion config.
-    Setting this value to an integer will set the maxium parallel processes.
+    Setting this value to an integer will set the maximum parallel processes.
     '''
     if not saltenv:
         if 'saltenv' in __opts__ and __opts__['saltenv']:
