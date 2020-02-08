@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, unicode_literals
 import os
-import logging
 import datetime
+import textwrap
 
 import salt.utils.files
 from salt.ext import six
-import textwrap
 
 from tests.support.helpers import with_tempfile
 from tests.support.case import ModuleCase
@@ -20,9 +19,6 @@ try:
     HAS_M2CRYPTO = True
 except ImportError:
     HAS_M2CRYPTO = False
-
-
-log = logging.getLogger(__name__)
 
 
 @skipIf(not HAS_M2CRYPTO, "Skip when no M2Crypto found")
@@ -79,11 +75,6 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
         if os.path.exists(certs_path):
             salt.utils.files.rm_rf(certs_path)
         self.run_function("saltutil.refresh_pillar")
-
-    def run_function(self, *args, **kwargs):  # pylint: disable=arguments-differ
-        ret = super(x509Test, self).run_function(*args, **kwargs)
-        log.debug("ret = %s", ret)
-        return ret
 
     @with_tempfile(suffix=".pem", create=False)
     def test_issue_49027(self, pemfile):
