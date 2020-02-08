@@ -682,6 +682,15 @@ def _set_network_adapter_mapping(adapter_specs):
     return adapter_mapping
 
 
+def _get_fixed_ip_network_adapter(adapter_specs):
+    fixed_ip = None
+
+    if 'ip' in list(adapter_specs.keys()):
+        fixed_ip = six.text_type(adapter_specs['ip'])
+
+    return fixed_ip
+
+
 def _get_mode_spec(device, mode, disk_spec):
     if device.backing.diskMode != mode:
         if not disk_spec:
@@ -725,6 +734,7 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
     existing_cd_drives_label = []
     ide_controllers = {}
     nics_map = []
+    fixed_ips = []
     cloning_from_vm = vm is not None
 
     if cloning_from_vm:
@@ -798,6 +808,9 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
                         adapter_mapping = _set_network_adapter_mapping(devices['network'][device.deviceInfo.label])
                         device_specs.append(network_spec)
                         nics_map.append(adapter_mapping)
+                        adapter_fixed_ip = _get_fixed_ip_network_adapter(devices['network'][device.deviceInfo.label])
+                        if adapter_fixed_ip != None:
+                            fixed_ips.append(adapter_fixed_ip)
 
             elif hasattr(device, 'scsiCtlrUnitNumber'):
                 # this is a SCSI controller
@@ -847,6 +860,9 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
             adapter_mapping = _set_network_adapter_mapping(devices['network'][network_adapter_label])
             device_specs.append(network_spec)
             nics_map.append(adapter_mapping)
+            adapter_fixed_ip = _get_fixed_ip_network_adapter(devices['network'][network_adapter_label])
+            if adapter_fixed_ip != None:
+                fixed_ips.append(adapter_fixed_ip)
 
     if 'scsi' in list(devices.keys()):
         scsi_controllers_to_create = list(set(devices['scsi'].keys()) - set(existing_scsi_controllers_label))
@@ -959,7 +975,8 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
 
     ret = {
         'device_specs': device_specs,
-        'nics_map': nics_map
+        'nics_map': nics_map,
+        'fixed_ips': fixed_ips
     }
 
     return ret
@@ -1055,7 +1072,7 @@ def _master_supports_ipv6():
     return False
 
 
-def _wait_for_ip(vm_ref, max_wait):
+def _wait_for_ip(vm_ref, max_wait, fixed_ips=[]):
     max_wait_vmware_tools = max_wait
     max_wait_ip = max_wait
     vmware_tools_status = _wait_for_vmware_tools(vm_ref, max_wait_vmware_tools)
@@ -1088,14 +1105,16 @@ def _wait_for_ip(vm_ref, max_wait):
             if net.ipConfig.ipAddress:
                 for current_ip in net.ipConfig.ipAddress:
                     if master_supports_ipv6 and _valid_ip6(current_ip.ipAddress):
-                        log.info(
-                            "[ %s ] Successfully retrieved IPv6 information "
-                            "in %s seconds", vm_ref.name, time_counter
-                        )
-                        return current_ip.ipAddress
+                        if len(fixed_ips) == 0 or current_ip.ipAddress in fixed_ips:
+                            log.info(
+                                "[ %s ] Successfully retrieved IPv6 information "
+                                "in %s seconds", vm_ref.name, time_counter
+                            )
+                            return current_ip.ipAddress
                     if _valid_ip(current_ip.ipAddress) and not ipv4_address:
                         # Delay return in case we have a valid IPv6 available
-                        ipv4_address = current_ip
+                        if len(fixed_ips) == 0 or current_ip.ipAddress in fixed_ips:
+                            ipv4_address = current_ip
         if ipv4_address:
             log.info(
                 "[ %s ] Successfully retrieved IPv4 information "
@@ -2603,6 +2622,12 @@ def create(vm_):
     wait_for_ip_timeout = config.get_cloud_config_value(
         'wait_for_ip_timeout', vm_, __opts__, default=20 * 60
     )
+    wait_for_ip_priority = config.get_cloud_config_value(
+        'wait_for_ip_priority', vm_, __opts__, default='any'
+    )
+    wait_for_ip_address = config.get_cloud_config_value(
+        'wait_for_ip_address', vm_, __opts__, default=None
+    )
     domain = config.get_cloud_config_value(
         'domain', vm_, __opts__, search_global=False, default='local'
     )
@@ -2660,6 +2685,9 @@ def create(vm_):
 
     container_ref = None
     clonefrom_datacenter_ref = None
+
+    # List of static IPs
+    fixed_ips = []
 
     # If datacenter is specified, set the container reference to start search from it instead
     if datacenter:
@@ -2881,6 +2909,42 @@ def create(vm_):
     if devices:
         specs = _manage_devices(devices, vm=object_ref, container_ref=container_ref, new_vm_name=vm_name)
         config_spec.deviceChange = specs['device_specs']
+        fixed_ips = specs['fixed_ips']
+
+    if wait_for_ip_priority == 'any' or wait_for_ip_priority == 'dhcp':
+        fixed_ips = []
+        log.debug(
+            "Setting wait_for_ip_priority set to '{0}', "
+            "using the first IP to be registered".format(wait_for_ip_priority)
+        )
+    elif wait_for_ip_priority == 'static':
+        if len(fixed_ips) == 0:
+            log.debug(
+                "Setting wait_for_ip_priority set to 'static', "
+                "but no static IPs have been defined in network devices"
+            )
+        else:
+            log.debug(
+                "Setting wait_for_ip_priority set to 'static', "
+                "waiting any of the following IPs: {0}".format(",".join(fixed_ips))
+            )
+    elif wait_for_ip_priority == 'ip':
+        fixed_ip = six.text_type(wait_for_ip_address)
+        if _valid_ip(fixed_ip) or (_master_supports_ipv6() and _valid_ip6(fixed_ip)):
+            fixed_ips = [fixed_ip]
+            log.debug(
+                "Setting wait_for_ip_priority set to 'ip', "
+                "waiting for IP: {0}".format(fixed_ip)
+            )
+        else: 
+            log.debug(
+                "Setting wait_for_ip_priority set to 'ip', "
+                "but IP in wait_for_ip_address is not valid. Skipping."
+            )
+    else:
+        err_msg = "Invalid wait_for_ip_priority specified: '{0}'".format(wait_for_ip_priority)
+        log.error(err_msg)
+        return {'Error': err_msg}
 
     if extra_config:
         for key, value in six.iteritems(extra_config):
@@ -3051,7 +3115,7 @@ def create(vm_):
     # If it a template or if it does not need to be powered on then do not wait for the IP
     out = None
     if not template and power:
-        ip = _wait_for_ip(new_vm_ref, wait_for_ip_timeout)
+        ip = _wait_for_ip(new_vm_ref, wait_for_ip_timeout, fixed_ips)
         if ip:
             log.info("[ %s ] IPv4 is: %s", vm_name, ip)
             # ssh or smb using ip and install salt only if deploy is True
