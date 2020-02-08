@@ -1,17 +1,17 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, unicode_literals
-
-import logging
 import os
-import textwrap
+import logging
 
 import salt.utils.files
 from salt.ext import six
-from tests.support.case import ModuleCase
+import textwrap
+
 from tests.support.helpers import with_tempfile
+from tests.support.case import ModuleCase
+from tests.support.unit import skipIf
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 try:
     import M2Crypto  # pylint: disable=W0611
@@ -119,3 +119,37 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
         assert "changes" in ret[key]
         assert "Certificate" in ret[key]["changes"]
         assert "New" in ret[key]["changes"]["Certificate"]
+
+    def test_self_signed_cert(self):
+        """
+        Self-signed certificate, no CA.
+        Run the state twice to confirm the cert is only created once and its contents don't change.
+        """
+        first_run = self.run_function(
+            "state.apply", ["x509.self_signed"], pillar={"tmp_dir": RUNTIME_VARS.TMP}
+        )
+        key = "x509_|-self_signed_cert_|-{}/self.crt_|-certificate_managed".format(
+            RUNTIME_VARS.TMP
+        )
+        self.assertIn("New", first_run[key]["changes"]["Certificate"])
+        self.assertEqual(
+            "Certificate is valid and up to date",
+            first_run[key]["changes"]["Status"]["New"],
+        )
+        cert_path = first_run[key]["name"]
+        self.assertTrue(os.path.exists(cert_path), "Certificate was not created.")
+
+        with salt.utils.files.fopen(cert_path, "r") as first_cert:
+            cert_contents = first_cert.read()
+
+        second_run = self.run_function(
+            "state.apply", ["x509.self_signed"], pillar={"tmp_dir": RUNTIME_VARS.TMP}
+        )
+        key = "x509_|-self_signed_cert_|-{}/self.crt_|-certificate_managed".format(
+            RUNTIME_VARS.TMP
+        )
+        self.assertEqual({}, second_run[key]["changes"])
+        with salt.utils.files.fopen(cert_path, "r") as second_cert:
+            self.assertEqual(
+                cert_contents, second_cert.read(), "Certificate contents have changed."
+            )
