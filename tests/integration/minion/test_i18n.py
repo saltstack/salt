@@ -27,7 +27,7 @@ class i18nTestClass(ModuleCase):
     @with_tempdir()
     def test_i18n_characters_with_file_line(self, tempdir):
         tempfile = os.path.join(tempdir, 'temp_file')
-        content_in = "äü"
+        content_in = "äü".encode('utf-8')
         with salt.utils.files.fopen(tempfile, 'w') as fp:
             fp.write(content_in)
         ret = self.run_state('file.line',
