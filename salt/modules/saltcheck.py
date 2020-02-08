@@ -443,14 +443,15 @@ def run_state_tests(state, saltenv=None, check_all=False):
         stl.load_test_suite()
         results_dict = OrderedDict()
 
+        # Check for situations to disable parallization
         if parallel:
-            # Check for situations to disable parallization
             if multiprocessing.cpu_count() < 2:
                 parallel = False
-                log.debug('Only 1 CPU. Disabling parallization.')
-            elif parallel == 1:
+                log.debug('saltcheck_parallel set to 1. Disabling parallization.')
+            elif ((type(parallel) in (float, int)) and (parallel == 1)):
                 # Don't bother with multiprocessing overhead
                 parallel = False
+                log.debug('Only 1 CPU. Disabling parallization.')
             else:
                 for items in stl.test_dict.values():
                     if 'state.apply' in items.get('module_and_function', []):
@@ -478,8 +479,8 @@ def run_state_tests(state, saltenv=None, check_all=False):
                 result = global_scheck.run_test(value)
                 results_dict[key] = result
 
+        # If passed a duplicate state, don't overwrite with empty res
         if not results.get(state_name):
-            # If passed a duplicate state, don't overwrite with empty res
             results[state_name] = results_dict
     return _generate_out_list(results)
 
