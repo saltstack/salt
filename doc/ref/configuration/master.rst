@@ -484,6 +484,21 @@ grains for the master.
 
     enable_gpu_grains: True
 
+.. conf_master:: skip_grains
+
+``skip_grains``
+---------------------
+
+Default: ``False``
+
+MasterMinions should omit grains. A MasterMinion is "a minion function object
+for generic use on the master" that omit pillar. A RunnerClient creates a
+MasterMinion omitting states and renderer. Setting to True can improve master
+performance.
+
+.. code-block:: yaml
+    skip_grains: True
+
 .. conf_master:: job_cache
 
 ``job_cache``
