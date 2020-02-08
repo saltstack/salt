@@ -301,7 +301,6 @@ from salt.defaults import DEFAULT_TARGET_DELIM
 
 log = logging.getLogger(__name__)
 
-global_saltenv = None
 global_scheck = None
 
 __virtualname__ = 'saltcheck'
@@ -420,6 +419,9 @@ def run_state_tests(state, saltenv=None, check_all=False):
     .. code-block:: bash
 
         salt '*' saltcheck.run_state_tests postfix,common
+
+    Tests will be run in parallel by adding "saltcheck_parallel: True" in minion config.
+    Setting this value to an integer will set the maxium parallel processes.
     '''
     if not saltenv:
         if 'saltenv' in __opts__ and __opts__['saltenv']:
@@ -428,10 +430,10 @@ def run_state_tests(state, saltenv=None, check_all=False):
             saltenv = 'base'
 
     # Use global scheck variable for reuse in each multiprocess
-    global global_saltenv
-    global_saltenv = saltenv
     global global_scheck
     global_scheck = SaltCheck(saltenv)
+
+    parallel = __salt__['config.get']('saltcheck_parallel')
 
     stl = StateTestLoader(saltenv)
     results = OrderedDict()
@@ -441,39 +443,52 @@ def run_state_tests(state, saltenv=None, check_all=False):
         stl.load_test_suite()
         results_dict = OrderedDict()
 
-        pool_size = min(len(stl.test_dict), multiprocessing.cpu_count())
-        for items in stl.test_dict.values():
-            if 'state.apply' in items.get('module_and_function', []):
-                pool_size = 1
-                log.debug('Tests include state.apply. Disabling parallization')
+        if parallel:
+            # Check for situations to disable parallization
+            if multiprocessing.cpu_count() < 2:
+                parallel = False
+                log.debug('Only 1 CPU. Disabling parallization.')
+            elif parallel == 1:
+                # Don't bother with multiprocessing overhead
+                parallel = False
+            else:
+                for items in stl.test_dict.values():
+                    if 'state.apply' in items.get('module_and_function', []):
+                        # Multiprocessing doesn't ensure ordering, which state.apply
+                        # might require
+                        parallel = False
+                        log.warning('Tests include state.apply. Disabling parallization.')
 
-        presults = multiprocessing.Pool(pool_size).map(
-            func=parallel_scheck_wrapper,
-            iterable=stl.test_dict.items()
-        )
+        if parallel:
+            if type(parallel) in (float, int):
+                pool_size = parallel
+            else:
+                pool_size = min(len(stl.test_dict), multiprocessing.cpu_count())
+            log.debug('Running tests in parallel with %s processes', pool_size)
+            presults = multiprocessing.Pool(pool_size).map(
+                func=parallel_scheck,
+                iterable=stl.test_dict.items()
+            )
+            # Remove list and form expected data structure
+            for item in presults:
+                for key, value in item.items():
+                    results_dict[key] = value
+        else:
+            for key, value in stl.test_dict.items():
+                result = global_scheck.run_test(value)
+                results_dict[key] = result
 
-        # Remove list and form expected data structure
-        for item in presults:
-            for key, value in item.items():
-                results_dict[key] = value
-
-        #results_dict[key] = result
         if not results.get(state_name):
             # If passed a duplicate state, don't overwrite with empty res
             results[state_name] = results_dict
-    log.error('Sending results: {}'.format(results))
     return _generate_out_list(results)
 
 
-def parallel_scheck_wrapper(data):
-    return parallel_scheck(*data, global_scheck)
-
-
-def parallel_scheck(key, value, scheck):
+def parallel_scheck(data):
+    key = data[0]
+    value = data[1]
     results = {}
-    log.error('AAAA key {} value {}'.format(key, value))
-    results[key] = scheck.run_test(value)
-    log.error('XXX returning: {}'.format(results))
+    results[key] = global_scheck.run_test(value)
     return results
 
 
