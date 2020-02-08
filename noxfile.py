@@ -16,6 +16,8 @@ import pprint
 import shutil
 import tempfile
 
+IS_PY3 = sys.version_info >= (3,)
+
 if __name__ == '__main__':
     sys.stderr.write('Do not execute this file directly. Use nox instead, it will know how to handle this file\n')
     sys.stderr.flush()
@@ -24,8 +26,6 @@ if __name__ == '__main__':
 # Import 3rd-party libs
 import nox
 from nox.command import CommandFailed
-
-IS_PY3 = sys.version_info > (2,)
 
 # Be verbose when runing under a CI context
 PIP_INSTALL_SILENT = (os.environ.get('JENKINS_URL') or os.environ.get('CI') or os.environ.get('DRONE')) is None
@@ -37,7 +37,7 @@ SITECUSTOMIZE_DIR = os.path.join(REPO_ROOT, 'tests', 'support', 'coverage')
 IS_WINDOWS = sys.platform.lower().startswith('win')
 
 # Python versions to run against
-_PYTHON_VERSIONS = ('2', '2.7', '3', '3.4', '3.5', '3.6', '3.7')
+_PYTHON_VERSIONS = ('3', '3.4', '3.5', '3.6', '3.7')
 
 # Nox options
 #  Reuse existing virtualenvs
@@ -100,8 +100,8 @@ def _get_session_python_site_packages_dir(session):
 
 def _get_pydir(session):
     version_info = _get_session_python_version_info(session)
-    if version_info < (2, 7):
-        session.error('Only Python >= 2.7 is supported')
+    if version_info < (3,):
+        session.error('Only Python 3 is supported')
     return 'py{}.{}'.format(*version_info)
 
 
@@ -767,7 +767,11 @@ def _pytest(session, coverage, cmd_args):
 
 def _lint(session, rcfile, flags, paths):
     _install_requirements(session, 'zeromq')
-    session.install('--progress-bar=off', '-r', 'requirements/static/{}/lint.txt'.format(_get_pydir(session)), silent=PIP_INSTALL_SILENT)
+    pydir = _get_pydir(session)
+    session.install(
+        '--progress-bar=off',
+        '-r', 'requirements/static/{}/lint.txt'.format(pydir),
+        silent=PIP_INSTALL_SILENT)
     session.run('pylint', '--version')
     pylint_report_path = os.environ.get('PYLINT_REPORT')
 
@@ -801,7 +805,7 @@ def _lint(session, rcfile, flags, paths):
         stdout.close()
 
 
-@nox.session(python='2.7')
+@nox.session(python='3')
 def lint(session):
     '''
     Run PyLint against Salt and it's test suite. Set PYLINT_REPORT to a path to capture output.
@@ -810,7 +814,7 @@ def lint(session):
     session.notify('lint-tests-{}'.format(session.python))
 
 
-@nox.session(python='2.7', name='lint-salt')
+@nox.session(python='3', name='lint-salt')
 def lint_salt(session):
     '''
     Run PyLint against Salt. Set PYLINT_REPORT to a path to capture output.
@@ -825,7 +829,7 @@ def lint_salt(session):
     _lint(session, '.testing.pylintrc', flags, paths)
 
 
-@nox.session(python='2.7', name='lint-tests')
+@nox.session(python='3', name='lint-tests')
 def lint_tests(session):
     '''
     Run PyLint against Salt and it's test suite. Set PYLINT_REPORT to a path to capture output.
@@ -840,14 +844,20 @@ def lint_tests(session):
     _lint(session, '.testing.pylintrc', flags, paths)
 
 
-@nox.session(python='2.7')
+@nox.session(python='3')
 def docs(session):
     '''
     Build Salt's Documentation
     '''
-    session.install('--progress-bar=off', '-r', 'requirements/static/py2.7/docs.txt', silent=PIP_INSTALL_SILENT)
+    pydir = _get_pydir(session)
+    if pydir == 'py3.4':
+        session.error('Sphinx only runs on Python >= 3.5')
+    session.install(
+        '--progress-bar=off',
+        '-r', 'requirements/static/{}/docs.txt'.format(pydir),
+        silent=PIP_INSTALL_SILENT)
     os.chdir('doc/')
     session.run('make', 'clean', external=True)
-    session.run('make', 'html', external=True)
+    session.run('make', 'html', 'SPHINXOPTS=-W', external=True)
     session.run('tar', '-czvf', 'doc-archive.tar.gz', '_build/html')
     os.chdir('..')

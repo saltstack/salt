@@ -48,7 +48,7 @@ def __virtual__():
     '''
     Confirm this module is on a Gentoo based system.
     '''
-    if HAS_PORTAGE and __grains__['os_family'] == 'Gentoo':
+    if HAS_PORTAGE and __grains__.get('os_family') == 'Gentoo':
         return 'portage_config'
     return (False, 'portage_config execution module cannot be loaded: only available on Gentoo with portage installed.')
 
