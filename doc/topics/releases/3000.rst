@@ -4,6 +4,14 @@
 Salt 3000 Release Notes - Codename Neon
 =======================================
 
+Security Advisory
+=================
+
+For historical reasons, Salt requires PyCrypto as a "lowest common
+denominator". However, `PyCrypto is unmaintained`_ and best practice is to
+manually upgrade to use a more maintained library such as `PyCryptodome`_. See
+`Issue #52674`_ and `Issue #54115`_ for more info
+
 New Versioning
 ==============
 The neon release has removed the date versioning. Going forward we will
@@ -801,3 +809,9 @@ salt.auth.Authorize Class Removal
 - The salt.auth.Authorize Class inside of the `salt/auth/__init__.py` file has been removed and
   the `any_auth` method inside of the file `salt/utils/minions.py`. These method and classes were
   not being used inside of the salt code base.
+
+
+.. _PyCrypto is unmaintained: https://github.com/dlitz/pycrypto/issues/301#issue-551975699
+.. _PyCryptodome: https://pypi.org/project/pycryptodome/
+.. _Issue #52674: https://github.com/saltstack/salt/issues/52674
+.. _Issue #54115: https://github.com/saltstack/salt/issues/54115
