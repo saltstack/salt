@@ -486,6 +486,7 @@ def run_state_tests(state, saltenv=None, check_all=False):
 
 
 def parallel_scheck(data):
+    '''triggers salt-call in parallel'''
     key = data[0]
     value = data[1]
     results = {}
