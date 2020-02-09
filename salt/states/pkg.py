@@ -1511,10 +1511,19 @@ def installed(
 
     .. seealso:: unless and onlyif
 
-        You can use the :ref:`unless <unless-requisite>` or
-        :ref:`onlyif <onlyif-requisite>` syntax to skip a full package run.
-        This can be helpful in large environments with multiple states that
-        include requisites for packages to be installed.
+        You can use the :ref:`creates <creates-requisite>`,
+        :ref:`unless <unless-requisite>`, or :ref:`onlyif <onlyif-requisite>`
+        syntax to skip a full package run. This can be helpful in large environments
+        with multiple states that include requisites for packages to be installed.
+
+        .. code-block:: yaml
+
+            # Using creates for a simple single-factor check
+            install_nginx:
+              pkg.installed:
+                - name: nginx
+                - creates:
+                  - /etc/nginx/nginx.conf
 
         .. code-block:: yaml
 
@@ -1526,6 +1535,12 @@ def installed(
                   - fun: file.file_exists
                     args:
                       - /etc/nginx/nginx.conf
+
+            # Using unless with a shell test
+            install_nginx:
+              pkg.installed:
+                - name: nginx
+                - unless: test -f /etc/nginx/nginx.conf
 
         .. code-block:: yaml
 
@@ -1539,11 +1554,11 @@ def installed(
                       - /etc/nginx/nginx.conf
                       - 'user www-data;'
 
-        The above examples use two different methods to reasonably ensure
+        The above examples uses different methods to reasonably ensure
         that a package has already been installed. First, with checking for a
         file that would be created with the package. Second, by checking for
         specific text within a file that would be created or managed by salt.
-        With these requisists satisfied, unless will return ``True`` and the
+        With these requisists satisfied, creates/unless will return ``True`` and the
         ``pkg.installed`` state will be skipped.
 
         .. code-block:: bash
