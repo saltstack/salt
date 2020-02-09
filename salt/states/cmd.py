@@ -46,7 +46,8 @@ run if **any** of the files do not exist:
 
 .. note::
 
-    The ``creates`` option was added to version 2014.7.0
+    The ``creates`` option was added to the cmd state in version 2014.7.0,
+    and made a global requisite in Sodium.
 
 Sometimes when running a command that starts up a daemon, the init script
 doesn't return properly which causes Salt to wait indefinitely for a response.
@@ -325,7 +326,6 @@ def _is_true(val):
 
 
 def wait(name,
-         creates=None,
          cwd=None,
          root=None,
          runas=None,
@@ -584,7 +584,6 @@ def wait_script(name,
 
 
 def run(name,
-        creates=None,
         cwd=None,
         root=None,
         runas=None,
@@ -828,7 +827,6 @@ def run(name,
 def script(name,
            source=None,
            template=None,
-           creates=None,
            cwd=None,
            runas=None,
            shell=None,
@@ -1080,7 +1078,6 @@ def call(name,
          func,
          args=(),
          kws=None,
-         creates=None,
          output_loglevel='debug',
          hide_output=False,
          use_vt=False,
@@ -1143,7 +1140,6 @@ def wait_call(name,
               func,
               args=(),
               kws=None,
-              creates=None,
               stateful=False,
               use_vt=False,
               output_loglevel='debug',

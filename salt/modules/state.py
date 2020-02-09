@@ -342,7 +342,7 @@ def orchestrate(mods,
     .. seealso:: More Orchestrate documentation
 
         * :ref:`Full Orchestrate Tutorial <orchestrate-runner>`
-        * :py:mod:`Docs for the ``salt`` state module <salt.states.saltmod>`
+        * Docs for the salt state module :py:mod:`salt.states.saltmod`
 
     CLI Examples:
 

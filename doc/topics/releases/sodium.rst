@@ -27,3 +27,11 @@ in the salt mine function definition itself (or when calling :py:func:`mine.send
 This targeting works the same as the generic minion targeting as specified
 :ref:`here <targeting>`. The parameters used are ``allow_tgt`` and ``allow_tgt_type``.
 See also :ref:`the documentation of the Salt Mine <mine_minion-side-acl>`.
+
+State update
+============
+
+The ``creates`` state requisite has been migrated from the
+:mod:`docker_container <salt.states.docker_container>` and :mod:`cmd <salt.states.cmd>`
+states to become a global option. This acts similar to an equivalent
+``unless: test -f filename`` but can also accept a list of filenames.

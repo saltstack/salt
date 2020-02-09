@@ -96,6 +96,7 @@ STATE_RUNTIME_KEYWORDS = frozenset([
     'failhard',
     'onlyif',
     'unless',
+    'creates',
     'retry',
     'order',
     'parallel',

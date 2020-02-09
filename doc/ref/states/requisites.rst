@@ -1039,6 +1039,38 @@ if the gluster commands return a 0 ret value.
                 - /etc/crontab
                 - 'entry1'
 
+.. _creates-requisite:
+
+Creates
+-------
+
+.. versionadded:: Sodium
+
+The ``creates`` requisite specifies that a state should only run when any of
+the specified files do not already exist. Like ``unless``, ``creates`` requisite
+operates as NAND and is useful in giving more granular control over when a state
+should execute. This was previously used by the :mod:`cmd <salt.states.cmd>` and
+:mod:`docker_container <salt.states.docker_container>` states.
+
+    .. code-block:: yaml
+
+      contrived creates example:
+        file.touch:
+          - name: /path/to/file
+          - creates: /path/to/file
+
+``creates`` also accepts a list of files, in which case this state will
+run if **any** of the files do not exist:
+
+    .. code-block:: yaml
+
+      creates list:
+        file.cmd:
+          - name: /path/to/command
+          - creates:
+              - /path/file
+              - /path/file2
+
 runas
 ~~~~~
 
