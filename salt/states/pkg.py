@@ -1511,7 +1511,8 @@ def installed(
 
     .. seealso:: unless and onlyif
 
-        You can use the :ref:`creates <creates-requisite>`,
+        If running pkg commands together with :ref:`aggregate <mod-aggregate-state>`
+        isn't an option, you can use the :ref:`creates <creates-requisite>`,
         :ref:`unless <unless-requisite>`, or :ref:`onlyif <onlyif-requisite>`
         syntax to skip a full package run. This can be helpful in large environments
         with multiple states that include requisites for packages to be installed.
@@ -1591,8 +1592,6 @@ def installed(
 
         The result is a reduction of almost 3 seconds. In larger environments,
         small reductions in waiting time can add up.
-
-        :ref:`Unless Requisite <unless-requisite>`
     '''
     if isinstance(pkgs, list) and len(pkgs) == 0:
         return {'name': name,
