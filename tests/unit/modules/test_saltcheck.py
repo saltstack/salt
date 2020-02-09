@@ -355,6 +355,46 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
                                                 })
             self.assertEqual(returned['status'], 'Pass')
 
+    def test_run_test_muliassert(self):
+        '''test'''
+        with patch.dict(saltcheck.__salt__, {'config.get': MagicMock(return_value=True),
+                                             'sys.list_modules': MagicMock(return_value=['test']),
+                                             'sys.list_functions': MagicMock(return_value=['test.echo']),
+                                             'cp.cache_master': MagicMock(return_value=[True])}):
+            returned = saltcheck.run_test(test={"module_and_function": "test.echo",
+                                                "assertions": [
+                                                    {
+                                                    "assertion": "assertEqual",
+                                                    "expected_return": "This works!"
+                                                    }, {
+                                                    "assertion": "assertEqual",
+                                                    "expected_return": "This works!"
+                                                    }
+                                                ],
+                                                "args": ["This works!"]
+                                                })
+            self.assertEqual(returned['status'], 'Pass')
+
+    def test_run_test_muliassert_failure(self):
+        '''test'''
+        with patch.dict(saltcheck.__salt__, {'config.get': MagicMock(return_value=True),
+                                             'sys.list_modules': MagicMock(return_value=['test']),
+                                             'sys.list_functions': MagicMock(return_value=['test.echo']),
+                                             'cp.cache_master': MagicMock(return_value=[True])}):
+            returned = saltcheck.run_test(test={"module_and_function": "test.echo",
+                                                "assertions": [
+                                                    {
+                                                    "assertion": "assertEqual",
+                                                    "expected_return": "WRONG"
+                                                    }, {
+                                                    "assertion": "assertEqual",
+                                                    "expected_return": "This works!"
+                                                    }
+                                                ],
+                                                "args": ["This works!"]
+                                                })
+            self.assertEqual(returned['status'], 'Fail')
+
     def test_report_highstate_tests(self):
         '''test report_highstate_tests'''
         expected_output = {'TEST REPORT RESULTS': {
@@ -495,6 +535,29 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
         expected_return = True
         with patch.dict(saltcheck.__salt__, {'sys.list_modules': MagicMock(return_value=['saltcheck']),
                                              'sys.list_functions': MagicMock(return_value=['saltcheck.state_apply'])
+                                            }):
+            val_ret = sc_instance._SaltCheck__is_valid_test(test_dict)
+            self.assertEqual(val_ret, expected_return)
+
+        # Succeed on multiple assertions
+        test_dict = {
+                    'module_and_function': 'test.echo',
+                    'args': ["somearg"],
+                    'assertions': [
+                        {
+                            'assertion': 'assertEqual',
+                            'assertion_section': "0:program",
+                            'expected_return': "systemd-resolve"
+                        },
+                        {
+                            'assertion': 'assertEqual',
+                            'assertion_section': "0:proto",
+                            'expected_return': 'udp'
+                        }
+                    ]}
+        expected_return = True
+        with patch.dict(saltcheck.__salt__, {'sys.list_modules': MagicMock(return_value=['test']),
+                                             'sys.list_functions': MagicMock(return_value=['test.echo'])
                                             }):
             val_ret = sc_instance._SaltCheck__is_valid_test(test_dict)
             self.assertEqual(val_ret, expected_return)
