@@ -359,6 +359,48 @@ editing values from an xpath query, or editing XML IDs.
         - xpath: .//actor[@id='1']
         - value: William Shatner
 
+
+LGPO Execution Module
+=====================
+Multiple fixes were made to the :py:func:`win_lgpo <salt.modules.win_lgpo>` to
+expand support for additional policies and improve performance. Issues with
+encoding and unsupported characters (smart-quotes, em-dash, etc) found in the
+ADML files as well as whitespace in some policies have been addressed.
+
+Speed enhancements include:
+
+- Caching the compiled xml from ADMX/ADML files in ``__context__``
+- Lowercasing all keys before compiling XML to remove an expensive XPath lookup
+
+Additional functionality:
+
+- Adds the :py:func:`lgpo.get_policy <salt.modules.win_lgpo.get_policy>`
+  function that allows you to get the current settings for a single policy.
+- Changes some policy names that were overly long
+
+
+LGPO State Module
+=================
+Multiple changes were made to the :py:func:`win_lgpo <salt.states.win_lgpo>`
+state to improve performance.
+
+It now uses the :py:func:`lgpo.get_policy <salt.modules.win_lgpo.get_policy>`
+function instead of the :py:func:`lgpo.get <salt.modules.win_lgpo.get>` to avoid
+reloading all settings on the machine at the beginning and end of each state
+run.
+
+Supports the new shorter policy names but also attempts to resolve the older,
+longer policy names.
+
+
+Win_network Salt Util
+=====================
+Now uses .NET libraries to obtain Interface information on Windows systems that
+support it. Unsupported systems fall back to the more expensive WMI calls. This
+is important as this data is gathered for grains and occurs each time a process
+is forked.
+
+
 Jinja enhancements
 ==================
 
