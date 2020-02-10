@@ -106,7 +106,7 @@ def set_(name, value, **kwargs):
     if type(value) == int:
         value = str(value)
 
-    cmd.extend((name, "=\"", value, "\""))
+    cmd.extend((name, '="{}"'.format(value)))
 
     cmd = ' '.join(cmd)
 
