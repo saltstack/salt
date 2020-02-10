@@ -40,6 +40,22 @@ versions < 1.0.0 . This impacts the Salt Master's ability to run commands
 against minions. Please see `Issue 56007 <https://github.com/saltstack/salt/issues/56007>`_
 for more details and updates.
 
+
+Pip Installing Salt On Windows
+==============================
+
+This release will not install correctly on windows when using pip to install salt.
+This issue is addressed in `PR 56099 <https://github.com/saltstack/salt/pull/56099>`_.
+The workaround for this issue is:
+
+.. code-block:: text
+
+   pip install "pywin32==224" "WMI==1.4.9"
+
+
+Those using the Salt Windows Installer are not affected by this issue.
+
+
 Saltcheck Updates
 =================
 
