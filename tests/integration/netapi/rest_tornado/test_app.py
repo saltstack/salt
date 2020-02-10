@@ -44,6 +44,8 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         os.environ['ASYNC_TEST_TIMEOUT'] = '300'
 
     def get_new_ioloop(self):
+        if six.PY3:
+            return salt.ext.tornado.ioloop.IOLoop()
         return salt.ext.tornado.ioloop.IOLoop.current()
 
     def get_app(self):
