@@ -1168,8 +1168,10 @@ class JobSpawner(salt.utils.process.MultiprocessingProcess):
                 last = time.time()
 
     def spawn_job(self, minion_instance, payload, new_loop=False):
+        this_loop = None
         if new_loop:
-            salt.ext.tornado.ioloop.IOLoop().make_current()
+            this_loop = salt.ext.tornado.ioloop.IOLoop()
+            this_loop.make_current()
         try:
             if 'kind' not in payload:
                 log.error("Expect kind")
@@ -1193,6 +1195,9 @@ class JobSpawner(salt.utils.process.MultiprocessingProcess):
                 log.error("Unrecognized spawn kind %s", payload['kind'])
         except Exception as exc:  # pylint: disable=broad-except
             log.error('Exception spawining job: %r', exc)
+        finally:
+            if this_loop:
+                this_loop.close()
 
 
 class Minion(MinionBase):

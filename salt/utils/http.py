@@ -13,6 +13,7 @@ import logging
 import os
 import pprint
 import socket
+import threading
 import io
 import zlib
 import gzip
@@ -572,20 +573,48 @@ def query(url,
         # contain strings are str types.
         req_kwargs = salt.utils.data.decode(req_kwargs, to_str=True)
 
-        try:
-            download_client = HTTPClient(max_body_size=max_body) \
-                if supports_max_body_size \
-                else HTTPClient()
-            result = download_client.fetch(url_full, **req_kwargs)
-        except salt.ext.tornado.httpclient.HTTPError as exc:
-            ret['status'] = exc.code
-            ret['error'] = six.text_type(exc)
+#        try:
+#            download_client = HTTPClient(max_body_size=max_body) \
+#                if supports_max_body_size \
+#                else HTTPClient()
+#            result = download_client.fetch(url_full, **req_kwargs)
+#        except salt.ext.tornado.httpclient.HTTPError as exc:
+#            ret['status'] = exc.code
+#            ret['error'] = six.text_type(exc)
+#            return ret
+#        except socket.gaierror as exc:
+#            if status is True:
+#                ret['status'] = 0
+#            ret['error'] = six.text_type(exc)
+#            return ret
+        # TODO: Refactor this a bit, move target to module level?
+        # Run tornado HTTPClient in a thread so that it does not stop the
+        # current IOLoop.
+        thread_result = {}
+
+        def target():
+            try:
+                download_client = HTTPClient(max_body_size=max_body) \
+                    if supports_max_body_size \
+                    else HTTPClient()
+                thread_result['result'] = download_client.fetch(url_full, **req_kwargs)
+            except tornado.httpclient.HTTPError as exc:
+                thread_result['status'] = exc.code
+                thread_result['error'] = six.text_type(exc)
+            except socket.gaierror as exc:
+                if status is True:
+                    thread_result['status'] = 0
+                thread_result['error'] = six.text_type(exc)
+
+        thread = threading.Thread(target=target)
+        thread.start()
+        thread.join()
+        if 'error' in thread_result:
+            if 'status' in thread_result:
+                ret['status'] = thread_result['status']
+            ret['error'] = thread_result['error']
             return ret
-        except socket.gaierror as exc:
-            if status is True:
-                ret['status'] = 0
-            ret['error'] = six.text_type(exc)
-            return ret
+        result = thread_result['result']
 
         if stream is True or handle is True:
             return {
