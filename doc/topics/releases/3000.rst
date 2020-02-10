@@ -368,10 +368,12 @@ encoding and unsupported characters (smart-quotes, em-dash, etc) found in the
 ADML files as well as whitespace in some policies have been addressed.
 
 Speed enhancements include:
+
 - Caching the compiled xml from ADMX/ADML files in ``__context__``
 - Lowercasing all keys before compiling XML to remove an expensive XPath lookup
 
 Additional functionality:
+
 - Adds the :py:func:`lgpo.get_policy <salt.modules.win_lgpo.get_policy>`
   function that allows you to get the current settings for a single policy.
 - Changes some policy names that were overly long
