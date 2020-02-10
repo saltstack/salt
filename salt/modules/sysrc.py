@@ -38,20 +38,22 @@ def get(**kwargs):
          salt '*' sysrc.get includeDefaults=True
     '''
 
-    cmd = 'sysrc -v'
+    cmd = ['sysrc -v']
 
     if 'file' in kwargs:
-        cmd += ' -f '+kwargs['file']
+        cmd.extend(('-f', kwargs['file']))
 
     if 'jail' in kwargs:
-        cmd += ' -j '+kwargs['jail']
+        cmd.extend(('-j', kwargs['jail']))
 
     if 'name' in kwargs:
-        cmd += ' '+kwargs['name']
+        cmd.append(kwargs['name'])
     elif kwargs.get('includeDefaults', False):
-        cmd += ' -A'
+        cmd.append('-A')
     else:
-        cmd += ' -a'
+        cmd.append('-a')
+
+    cmd = ' '.join(cmd)
 
     sysrcs = __salt__['cmd.run'](cmd)
     if "sysrc: unknown variable" in sysrcs:
@@ -85,29 +87,28 @@ def set_(name, value, **kwargs):
          salt '*' sysrc.set name=sshd_flags value="-p 2222"
     '''
 
-    cmd = 'sysrc -v'
+    cmd = ['sysrc -v']
 
     if 'file' in kwargs:
-        cmd += ' -f '+kwargs['file']
+        cmd.extend(('-f', kwargs['file']))
 
     if 'jail' in kwargs:
-        cmd += ' -j '+kwargs['jail']
+        cmd.extend(('-j', kwargs['jail']))
 
     # This is here because the YAML parser likes to convert the string literals
     # YES, NO, Yes, No, True, False, etc. to boolean types.  However, in this case,
     # we will check to see if that happened and replace it with "YES" or "NO" because
     # those items are accepted in sysrc.
     if type(value) == bool:
-        if value:
-            value = "YES"
-        else:
-            value = "NO"
+        value = "YES" if value else "NO"
 
     # This is here for the same reason, except for numbers
     if type(value) == int:
         value = str(value)
 
-    cmd += ' '+name+"=\""+value+"\""
+    cmd.extend((name, "=\"", value, "\""))
+
+    cmd = ' '.join(cmd)
 
     sysrcs = __salt__['cmd.run'](cmd)
 
@@ -134,15 +135,17 @@ def remove(name, **kwargs):
          salt '*' sysrc.remove name=sshd_enable
     '''
 
-    cmd = 'sysrc -v'
+    cmd = ['sysrc -v']
 
     if 'file' in kwargs:
-        cmd += ' -f '+kwargs['file']
+        cmd.extend(('-f', kwargs['file']))
 
     if 'jail' in kwargs:
-        cmd += ' -j '+kwargs['jail']
+        cmd.extend(('-j', kwargs['jail']))
 
-    cmd += ' -x '+name
+    cmd.extend(('-x', name))
+
+    cmd = ' '.join(cmd)
 
     sysrcs = __salt__['cmd.run'](cmd)
     if "sysrc: unknown variable" in sysrcs:
