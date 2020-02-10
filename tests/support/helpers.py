@@ -1677,3 +1677,23 @@ class VirtualEnv(object):
     def _create_virtualenv(self):
         sminion = create_sminion()
         sminion.functions.virtualenv.create(self.venv_dir, python=self._get_real_python())
+
+
+def run_in_thread_with_loop(func, *args, **kwargs):
+    def wraps(*args, **kwargs):
+        result = {'exc': None}
+        def target(func, *args, **kwargs):
+            ioloop = salt.ext.tornado.ioloop.IOLoop()
+            ioloop.make_current()
+            try:
+                func(*args, **kwargs)
+            except AssertionError as exc:
+                result['exc'] = sys.exc_info()
+            finally:
+                ioloop.close()
+        thread = threading.Thread(target=target, args=[func] + list(args), kwargs=kwargs)
+        thread.start()
+        thread.join()
+        if result['exc']:
+           six.reraise(*result['exc'])
+    return wraps
