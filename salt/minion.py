@@ -1142,6 +1142,7 @@ class JobSpawner(salt.utils.process.MultiprocessingProcess):
             try:
                 payload = self.job_queue.get(block=False)
             except queue.Empty:
+                time.sleep(.3)
                 continue
             if payload['kind'] == 'master_uri':
                 thread = threading.Thread(
