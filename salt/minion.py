@@ -488,6 +488,14 @@ class MinionBase(object):
                 return self.beacons.process(b_conf, self.opts['grains'])  # pylint: disable=no-member
         return []
 
+    def process_grains_cache_refresh(self):
+        '''
+        Refresh the grain cache and the running minions grains
+        '''
+        salt.loader.grains(self.opts, force_refresh=True)
+        event = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
+        event.fire_event({}, tag='grains_refresh')
+
     @salt.ext.tornado.gen.coroutine
     def eval_master(self,
                     opts,
@@ -2127,24 +2135,6 @@ class Minion(MinionBase):
                     data['arg'] = []
                 self._handle_decoded_payload(data)
 
-    def _refresh_grains_watcher(self, refresh_interval_in_minutes):
-        '''
-        Create a loop that will fire a pillar refresh to inform a master about a change in the grains of this minion
-        :param refresh_interval_in_minutes:
-        :return: None
-        '''
-        if '__update_grains' not in self.opts.get('schedule', {}):
-            if 'schedule' not in self.opts:
-                self.opts['schedule'] = {}
-            self.opts['schedule'].update({
-                '__update_grains':
-                    {
-                        'function': 'event.fire',
-                        'args': [{}, 'grains_refresh'],
-                        'minutes': refresh_interval_in_minutes
-                    }
-            })
-
     def _fire_master_minion_start(self):
         include_grains = False
         if self.opts['start_event_grains']:
@@ -2393,10 +2383,10 @@ class Minion(MinionBase):
         elif tag.startswith('manage_beacons'):
             self.manage_beacons(tag, data)
         elif tag.startswith('grains_refresh'):
-            if (data.get('force_refresh', False) or
-                    self.grains_cache != self.opts['grains']):
+            if (data.get('force_refresh', False)):
                 self.pillar_refresh(force_refresh=True)
-                self.grains_cache = self.opts['grains']
+            else:
+                self.pillar_refresh(force_refresh=False)
         elif tag.startswith('environ_setenv'):
             self.environ_setenv(tag, data)
         elif tag.startswith('_minion_mine'):
@@ -2586,7 +2576,6 @@ class Minion(MinionBase):
                 self.beacons = salt.beacons.Beacon(self.opts, self.functions)
             uid = salt.utils.user.get_uid(user=self.opts.get('user', None))
             self.proc_dir = get_proc_dir(self.opts['cachedir'], uid=uid)
-            self.grains_cache = self.opts['grains']
             self.ready = True
 
     def setup_beacons(self, before_connect=False):
@@ -2643,19 +2632,6 @@ class Minion(MinionBase):
                     utils=self.utils,
                     cleanup=[master_event(type='alive')])
 
-            try:
-                if self.opts['grains_refresh_every']:  # In minutes, not seconds!
-                    log.debug(
-                        'Enabling the grains refresher. Will run every %d minute(s).',
-                        self.opts['grains_refresh_every']
-                    )
-                    self._refresh_grains_watcher(abs(self.opts['grains_refresh_every']))
-            except Exception as exc:  # pylint: disable=broad-except
-                log.error(
-                    'Exception occurred in attempt to initialize grain refresh '
-                    'routine during minion tune-in: %s', exc
-                )
-
             # TODO: actually listen to the return and change period
             def handle_schedule():
                 self.process_schedule(self, loop_interval)
@@ -2690,6 +2666,36 @@ class Minion(MinionBase):
         callback.stop()
         return True
 
+    def setup_grains_cache_refresh(self, before_connect=False):
+        '''
+        Setup the grains cache refresher.
+        This is safe to call multiple times.
+        '''
+        self._setup_core()
+
+        loop_interval = self.opts['loop_interval']
+        grains_refresh_interval = self.opts['grains_refresh_every'] * 60
+        new_periodic_callbacks = {}
+
+        if self.opts.get('grains_cache', False) and grains_refresh_interval > 0:
+            if 'grains_cache_refresh' not in self.periodic_callbacks:
+                def handle_grains_cache_refresh():
+                    proc = salt.utils.process.MultiprocessingProcess(target=self.process_grains_cache_refresh)
+                    proc.start()
+
+                new_periodic_callbacks['grains_cache_refresh'] = tornado.ioloop.PeriodicCallback(
+                    handle_grains_cache_refresh, grains_refresh_interval * 1000)
+
+            if 'cleanup' not in self.periodic_callbacks:
+                new_periodic_callbacks['cleanup'] = tornado.ioloop.PeriodicCallback(
+                    self._fallback_cleanups, loop_interval * 1000)
+
+            # start all the other callbacks
+            for periodic_cb in six.itervalues(new_periodic_callbacks):
+                periodic_cb.start()
+
+            self.periodic_callbacks.update(new_periodic_callbacks)
+
     # Main Minion Tune In
     def tune_in(self, start=True):
         '''
@@ -2722,6 +2728,7 @@ class Minion(MinionBase):
 
         self.setup_beacons()
         self.setup_scheduler()
+        self.setup_grains_cache_refresh()
         self.add_periodic_callback('cleanup', self.cleanup_subprocesses)
 
         # schedule the stuff that runs every interval
@@ -3492,5 +3499,4 @@ class SProxyMinion(SMinion):
 
         #  Sync the grains here so the proxy can communicate them to the master
         self.functions['saltutil.sync_grains'](saltenv='base')
-        self.grains_cache = self.opts['grains']
         self.ready = True
