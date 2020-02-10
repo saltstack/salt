@@ -28,6 +28,11 @@ nox will create a virtualenv with the specified interpreter. Once the virtualenv
 is created it will also install all of the required python dependencies required for
 that session and run the tests.
 
+.. warning::
+    Please note that you need to ensure to install `nox-py2` and not `nox` regardles of
+    installing Python 2 or Python 3 as these two libraries are incompatibile. Salt needs
+    to use `nox-py2` to ensure Python 2 support.
+
 For example if you want to run all of the tests using the zeromq transport on python3
 you would need to specify the zeromq transport and python3.
 
@@ -67,10 +72,10 @@ kitchen-salt `getting started`_ for instructions on how to install and set it up
 `Kitchen Salt`_ uses Test Kitchen to spin up the VM or container in the configured
 provider. Once the VM is spun up, `Kitchen Salt`_ can install salt and run a particular
 set of states. In the case of our branch and PR tests we create "Golden Images" which
-run the `salt-jenkins`_ states and install salt beforehand. We only update these "Golden
-Images" when we need to upgrade or install a system dependency. You can view the
-`kitchen-salt jenkins setup`_ docs for instructions on how to set up `Kitchen Salt`_ similar
-to the jenkins environment we use to run branch and PR tests.
+run the `salt-jenkins`_ states and install salt system dependencies beforehand. We only
+update these "Golden Images" when we need to upgrade or install a system dependency. You can
+view the `kitchen-salt jenkins setup`_ docs for instructions on how to set up `Kitchen Salt`_
+similar to the jenkins environment we use to run branch and PR tests.
 
 Test Directory Structure
 ========================
@@ -144,7 +149,7 @@ running salt's test suite: ``nox-py2``.
 
     pip install nox-py2
 
-Once this requirement is installed, you can use ``nox`` binary to run
+Once this requirement is installed, you can use the ``nox`` binary to run
 all of the tests included in Salt's test suite:
 
 .. code-block:: bash
@@ -167,7 +172,7 @@ Instead of running the entire test suite all at once, which can take a long time
 there are several ways to run only specific groups of tests or individual tests:
 
 * Run :ref:`unit tests only<running-unit-tests-no-daemons>`: ``nox -e 'pytest-zeromq-3(coverage=False)' -- tests/unit/``
-* Run unit and integration tests for states: ``nox -e 'pytest-zeromq-3(coverage=False)' -- tests/unit/states/ tests/unit/modules/``
+* Run unit and integration tests for states: ``nox -e 'pytest-zeromq-3(coverage=False)' -- tests/unit/states/ tests/integration/states/``
 * Run integration tests for an individual module: ``nox -e 'pytest-zeromq-3(coverage=False)' -- tests/integration/modules/test_virt.py``
 * Run unit tests for an individual module: ``nox -e 'pytest-zeromq-3(coverage=False)' -- tests/unit/modules/test_virt.py``
 * Run an individual test by using the class and test name (this example is for the
@@ -272,7 +277,7 @@ cloud provider tests can be run by setting the ``--cloud-provider-tests`` flag:
 
 .. code-block:: bash
 
-    nox -e 'pytest-zeromq-3(coverage=False)' -- tests/integration/cloud/
+    nox -e 'pytest-cloud-3(coverage=False)'
 
 Automated Test Runs
 ===================
