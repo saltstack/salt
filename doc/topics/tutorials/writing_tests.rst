@@ -393,7 +393,11 @@ Therefore, the example above is a good illustration of a unit test "blocking
 the exits" via the ``@patch`` decorator, as well as testing logic via asserting
 against the ``return`` statement in the ``if`` clause. In this example we used the
 python ``assert`` to verify the return from ``cp.get_file``. Pytest allows you to use
-these `asserts`_ when writing your tests.
+these `asserts`_ when writing your tests and, in fact, plain `asserts`_ is the preferred
+way to assert anything in your tests. As Salt dives deeper into Pytest, the use of
+`unittest.TestClass` will be replaced by plain test functions, or test functions grouped
+in a class, which **does not** subclass `unittest.TestClass`, which, of course, doesn't
+work with unittest assert functions.
 
 There are more examples of writing unit tests of varying complexities available
 in the following docs:
