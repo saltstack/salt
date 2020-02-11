@@ -497,6 +497,7 @@ MasterMinion omitting states and renderer. Setting to True can improve master
 performance.
 
 .. code-block:: yaml
+
     skip_grains: True
 
 .. conf_master:: job_cache
