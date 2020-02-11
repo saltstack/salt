@@ -409,6 +409,35 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         with patch.object(salt.utils.process.SignalHandlingProcess, 'start', mock_start):
             io_loop.run_sync(lambda: minion._handle_decoded_payload(job_data))
 
+    def test_setup_grains_cache_refresh(self):
+        '''
+        Tests that the 'scheduler_before_connect' option causes the scheduler to be initialized before connect.
+        '''
+        with patch('salt.minion.Minion.ctx', MagicMock(return_value={})), \
+                patch('salt.utils.process.MultiprocessingProcess', MagicMock(return_value=True)):
+            mock_opts = self.get_config('minion', from_scratch=True)
+            io_loop = tornado.ioloop.IOLoop()
+            io_loop.make_current()
+            try:
+                for (grains_cache, refresh_every, expected) in [
+                        (False, 0, False),
+                        (False, 5, False),
+                        (True, 0, False),
+                        (True, 5, True)
+                ]:
+                    mock_opts['grains_cache'] = grains_cache
+                    mock_opts['grains_refresh_every'] = refresh_every
+                    minion = salt.minion.Minion(mock_opts, io_loop=io_loop)
+                    minion.setup_grains_cache_refresh()
+                    print(minion.periodic_callbacks)
+                    if expected:
+                        self.assertTrue('grains_cache_refresh' in minion.periodic_callbacks)
+                    else:
+                        self.assertTrue('grains_cache_refresh' not in minion.periodic_callbacks)
+            finally:
+                minion.destroy()
+
+
 
 class MinionAsyncTestCase(TestCase, AdaptedConfigurationTestCaseMixin, salt.ext.tornado.testing.AsyncTestCase):
 
