@@ -150,6 +150,8 @@ Versions are `MAJOR.PATCH`.
 - [#55780](https://github.com/saltstack/salt/pull/55780) - Fallback to disabled `LG_INCLUDE_INDIRECT` when DC is unavailable - [@lukasraska](https://github.com/lukasraska)
 - [#55795](https://github.com/saltstack/salt/pull/55795) - Fixed issue with whitespace in ADML data - [@twangboy](https://github.com/twangboy)
 - [#55796](https://github.com/saltstack/salt/pull/55796) - Fixed cached `osrelease_info` grain type - [@srg91](https://github.com/srg91)
+- [#55817](https://github.com/saltstack/salt/pull/55817) - Bring #51372 to Master Branch - [@twangboy](https://github.com/twangboy)
+- [#55823](https://github.com/saltstack/salt/pull/55823) - Fix issue with overly long names in the LGPO module - [@twangboy](https://github.com/twangboy)
 - [#55843](https://github.com/saltstack/salt/pull/55843) - Fixed `file.mkdir` to respect `test=True` - [@mchugh19](https://github.com/mchugh19)
 - [#55845](https://github.com/saltstack/salt/pull/55845) - Fixed logging to return multiprocessing queue if it's already set - [@s0undt3ch](https://github.com/s0undt3ch)
 
