@@ -103,10 +103,10 @@ class ClearReqTestCases(BaseTCPReqCase, ReqChannelMixin):
     '''
     Test all of the clear msg stuff
     '''
-    def setUp(self):
+    def setup_channel(self):
         self.channel = salt.transport.client.ReqChannel.factory(self.minion_config, crypt='clear')
 
-    def tearDown(self):
+    def teardown_channel(self):
         self.channel.close()
         del self.channel
 
@@ -121,10 +121,10 @@ class ClearReqTestCases(BaseTCPReqCase, ReqChannelMixin):
 
 @skipIf(salt.utils.platform.is_darwin(), 'hanging test suite on MacOS')
 class AESReqTestCases(BaseTCPReqCase, ReqChannelMixin):
-    def setUp(self):
+    def setup_channel(self):
         self.channel = salt.transport.client.ReqChannel.factory(self.minion_config)
 
-    def tearDown(self):
+    def teardown_channel(self):
         self.channel.close()
         del self.channel
 
@@ -139,10 +139,13 @@ class AESReqTestCases(BaseTCPReqCase, ReqChannelMixin):
     # TODO: make failed returns have a specific framing so we can raise the same exception
     # on encrypted channels
     @flaky
+    @run_in_thread_with_loop
     def test_badload(self):
         '''
         Test a variety of bad requests, make sure that we get some sort of error
         '''
+        self.setup_channel()
+        self.addCleanup(self.teardown_channel)
         msgs = ['', [], tuple()]
         for msg in msgs:
             with self.assertRaises(salt.exceptions.AuthenticationError):

@@ -130,10 +130,10 @@ class ClearReqTestCases(BaseZMQReqCase, ReqChannelMixin):
     '''
     Test all of the clear msg stuff
     '''
-    def setUp(self):
+    def setup_channel(self):
         self.channel = salt.transport.client.ReqChannel.factory(self.minion_config, crypt='clear')
 
-    def tearDown(self):
+    def teardown_channel(self):
         self.channel.close()
         del self.channel
 
@@ -145,25 +145,28 @@ class ClearReqTestCases(BaseZMQReqCase, ReqChannelMixin):
         '''
         raise salt.ext.tornado.gen.Return((payload, {'fun': 'send_clear'}))
 
+    @run_in_thread_with_loop
     def test_master_uri_override(self):
         '''
         ensure master_uri kwarg is respected
         '''
         # minion_config should be 127.0.0.1, we want a different uri that still connects
-        uri = 'tcp://{master_ip}:{master_port}'.format(master_ip='localhost', master_port=self.minion_config['master_port'])
+        try:
+            uri = 'tcp://{master_ip}:{master_port}'.format(master_ip='localhost', master_port=self.minion_config['master_port'])
 
-        channel = salt.transport.Channel.factory(self.minion_config, master_uri=uri)
-        self.assertIn('localhost', channel.master_uri)
-        del channel
+            channel = salt.transport.Channel.factory(self.minion_config, master_uri=uri)
+            self.assertIn('localhost', channel.master_uri)
+        finally:
+            del channel
 
 
 @flaky
 @skipIf(ON_SUSE, 'Skipping until https://github.com/saltstack/salt/issues/32902 gets fixed')
 class AESReqTestCases(BaseZMQReqCase, ReqChannelMixin):
-    def setUp(self):
+    def setup_channel(self):
         self.channel = salt.transport.client.ReqChannel.factory(self.minion_config)
 
-    def tearDown(self):
+    def teardown_channel(self):
         self.channel.close()
         del self.channel
 
@@ -183,6 +186,7 @@ class AESReqTestCases(BaseZMQReqCase, ReqChannelMixin):
     # WARNING: This test will fail randomly on any system with > 1 CPU core!!!
     #
     #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    @run_in_thread_with_loop
     def test_badload(self):
         '''
         Test a variety of bad requests, make sure that we get some sort of error
@@ -190,6 +194,8 @@ class AESReqTestCases(BaseZMQReqCase, ReqChannelMixin):
         # TODO: This test should be re-enabled when Jenkins moves to C7.
         # Once the version of salt-testing is increased to something newer than the September
         # release of salt-testing, the @flaky decorator should be applied to this test.
+        self.setup_channel()
+        self.addCleanup(self.teardown_channel)
         msgs = ['', [], tuple()]
         for msg in msgs:
             with self.assertRaises(salt.exceptions.AuthenticationError):
