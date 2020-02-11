@@ -33,6 +33,9 @@ def managed(name, value, **kwargs):
         (optional) The rc file to add the variable to.
     jail
         (option) the name or JID of the jail to set the value in.
+    op
+        (optional) operation to perform (one of: "set", "append", or
+        "substract")
 
     Example:
 
@@ -42,6 +45,13 @@ def managed(name, value, **kwargs):
           sysrc.managed:
             - name: syslogd_flags
             - value: -ss
+
+        cloned_interfaces:
+          sysrc.managed:
+            - name: cloned_interfaces
+            - value: gif0
+            - op: append
+
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}

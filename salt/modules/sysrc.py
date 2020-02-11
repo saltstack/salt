@@ -85,7 +85,15 @@ def set_(name, value, **kwargs):
      .. code-block:: bash
 
          salt '*' sysrc.set name=sshd_flags value="-p 2222"
+         salt '*' sysrc.set name=cloned_interfaces value="gif0" op="append"
+         salt '*' sysrc.set name=cloned_interfaces value="gif0" op="substract"
     '''
+
+    ops = {
+        'set': '=',
+        'append': '+=',
+        'substract': '-='
+    }
 
     cmd = ['sysrc -v']
 
@@ -94,6 +102,8 @@ def set_(name, value, **kwargs):
 
     if 'jail' in kwargs:
         cmd.extend(('-j', kwargs['jail']))
+
+    op = ops.get(kwargs.get('op', 'set'))
 
     # This is here because the YAML parser likes to convert the string literals
     # YES, NO, Yes, No, True, False, etc. to boolean types.  However, in this case,
@@ -106,7 +116,7 @@ def set_(name, value, **kwargs):
     if type(value) == int:
         value = str(value)
 
-    cmd.append('{}="{}"'.format(name, value))
+    cmd.append('{}{}"{}"'.format(name, op, value))
 
     cmd = ' '.join(cmd)
 
