@@ -2642,30 +2642,6 @@ class Minion(MinionBase):
 
             self.add_periodic_callback('schedule', handle_schedule)
 
-    def add_periodic_callback(self, name, method, interval=1):
-        '''
-        Add a periodic callback to the event loop and call it's start method.
-        If a callback by the given name exists this method returns False
-        '''
-        if name in self.periodic_callbacks:
-            return False
-        self.periodic_callbacks[name] = salt.ext.tornado.ioloop.PeriodicCallback(
-            method, interval * 1000,
-        )
-        self.periodic_callbacks[name].start()
-        return True
-
-    def remove_periodic_callback(self, name):
-        '''
-        Remove a periodic callback.
-        If a callback by the given name does not exist this method returns False
-        '''
-        callback = self.periodic_callbacks.pop(name, None)
-        if callback is None:
-            return False
-        callback.stop()
-        return True
-
     def setup_grains_cache_refresh(self, before_connect=False):
         '''
         Setup the grains cache refresher.
@@ -2695,6 +2671,30 @@ class Minion(MinionBase):
                 periodic_cb.start()
 
             self.periodic_callbacks.update(new_periodic_callbacks)
+
+    def add_periodic_callback(self, name, method, interval=1):
+        '''
+        Add a periodic callback to the event loop and call it's start method.
+        If a callback by the given name exists this method returns False
+        '''
+        if name in self.periodic_callbacks:
+            return False
+        self.periodic_callbacks[name] = salt.ext.tornado.ioloop.PeriodicCallback(
+            method, interval * 1000,
+        )
+        self.periodic_callbacks[name].start()
+        return True
+
+    def remove_periodic_callback(self, name):
+        '''
+        Remove a periodic callback.
+        If a callback by the given name does not exist this method returns False
+        '''
+        callback = self.periodic_callbacks.pop(name, None)
+        if callback is None:
+            return False
+        callback.stop()
+        return True
 
     # Main Minion Tune In
     def tune_in(self, start=True):
