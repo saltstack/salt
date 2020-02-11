@@ -489,4 +489,4 @@ def user_remove(username, **kwargs):
         conn.close()
         return True
     except Exception as e:  # pylint: disable=broad-except
-        return 'Could not create the user: {0}'.format(e)
+        return 'Could not remove the user: {0}'.format(e)
