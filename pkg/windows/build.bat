@@ -61,7 +61,7 @@ if "%Version%"=="" (
 :: Define Variables
 @echo %0 :: Defining Variables...
 @echo ---------------------------------------------------------------------
-Set "PyDir=C:\Python37"
+Set "PyDir=C:\Python35"
 Set "PATH=%PATH%;%PyDir%;%PyDir%\Scripts"
 
 Set "CurDir=%~dp0"
