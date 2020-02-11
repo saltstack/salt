@@ -1422,15 +1422,14 @@ class Crypticle(object):
         verify HMAC-SHA256 signature and decrypt data with AES-CBC
         '''
         aes_key, hmac_key = self.keys
-        adata = data
         sig = data[-self.SIG_SIZE:]
         data = data[:-self.SIG_SIZE]
         if six.PY3 and not isinstance(data, bytes):
             data = salt.utils.stringutils.to_bytes(data)
         mac_bytes = hmac.new(hmac_key, data, hashlib.sha256).digest()
         if len(mac_bytes) != len(sig):
-            log.debug('Failed to authenticate message')
-            raise AuthenticationError('message authentication failed A')
+            log.debug('Failed to authenticate message (invalid mac length)')
+            raise AuthenticationError('message authentication failed (invalid mac length)')
         result = 0
 
         if six.PY2:
@@ -1440,8 +1439,8 @@ class Crypticle(object):
             for zipped_x, zipped_y in zip(mac_bytes, sig):
                 result |= zipped_x ^ zipped_y
         if result != 0:
-            log.debug('Failed to authenticate message')
-            raise AuthenticationError('message authentication failed B')
+            log.debug('Failed to authenticate message (invalid signature)')
+            raise AuthenticationError('message authentication failed (invalid signature)')
         iv_bytes = data[:self.AES_BLOCK_SIZE]
         data = data[self.AES_BLOCK_SIZE:]
         if HAS_M2:
@@ -1466,7 +1465,6 @@ class Crypticle(object):
         '''
         Decrypt and un-serialize a python object
         '''
-
         data = self.decrypt(data)
         # simple integrity check to verify that we got meaningful data
         if not data.startswith(self.PICKLE_PAD):

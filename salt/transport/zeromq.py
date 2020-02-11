@@ -73,7 +73,6 @@ log = logging.getLogger(__name__)
 #    def run_future(future):
 #        return future
 #else:
-#if True:
 @salt.ext.tornado.gen.coroutine
 def run_future(future):
     while not future.done():
@@ -325,7 +324,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
             tries=tries,
         )
         key = self.auth.get_keys()
-        if 'key' not in ret or True:
+        if 'key' not in ret:
             # Reauth in the case our key is deleted on the master side.
             yield self.auth.authenticate()
             ret = yield self.message_client.send(

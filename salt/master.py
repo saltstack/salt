@@ -1026,7 +1026,6 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         '''
         Bind to the local port
         '''
-        # using ZMQIOLoop since we *might* need zmq in there
         self.io_loop = salt.ext.tornado.ioloop.IOLoop.current()
         for req_channel in self.req_channels:
             req_channel.post_fork(self._handle_payload, io_loop=self.io_loop)  # TODO: cleaner? Maybe lazily?

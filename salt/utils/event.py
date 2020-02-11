@@ -538,8 +538,6 @@ class SaltEvent(object):
             # If no_block is False and wait is 0, that
             # means an infinite timeout.
             wait = None
-
-        #log.debug("_get_event IPCSubscriber read")
         while (run_once is False and not wait) or time.time() <= timeout_at:
             if no_block is True:
                 if run_once is True:
@@ -755,9 +753,11 @@ class SaltEvent(object):
             with salt.utils.asynchronous.current_ioloop(self.io_loop):
                 try:
                     self.pusher.send(msg)
-                except Exception as ex:
-                    log.exception("push SEND")
-                    log.debug(ex)
+                except Exception as exc:  # pylint: disable=broad-except
+                    log.debug(
+                        'Problem with push send: %r'
+                        exc, exc_info_on_loglevel=logging.DEBUG
+                    )
                     raise
         else:
             self.io_loop.spawn_callback(self.pusher.send, msg)

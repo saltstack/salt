@@ -183,8 +183,6 @@ class AsyncRemotePillar(RemotePillarMixin):
             raise SaltClientError('Exception getting pillar.')
 
         if not isinstance(ret_pillar, dict):
-            import traceback
-            log.error('\n'.join(traceback.format_stack()))
             msg = ('Got a bad pillar from master, type {0}, expecting dict: '
                    '{1}').format(type(ret_pillar).__name__, ret_pillar)
             log.error(msg)
@@ -252,8 +250,6 @@ class RemotePillar(RemotePillarMixin):
                                                                     )
 
         if not isinstance(ret_pillar, dict):
-            import traceback
-            log.error('\n'.join(traceback.format_stack()))
             log.error(
                 'Got a bad pillar from master, type %s, expecting dict: %s',
                 type(ret_pillar).__name__, ret_pillar

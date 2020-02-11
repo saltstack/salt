@@ -1275,12 +1275,12 @@ class Minion(MinionBase):
             time.sleep(sleep_time)
 
         self.process_manager = ProcessManager(name='MinionProcessManager')
+        self.io_loop.spawn_callback(self.process_manager.run, **{'asynchronous': True})
         # We don't have the proxy setup yet, so we can't start engines
         # Engines need to be able to access __proxy__
         if not salt.utils.platform.is_proxy():
             self.io_loop.spawn_callback(salt.engines.start_engines, self.opts,
                                         self.process_manager)
-        self.io_loop.spawn_callback(self.process_manager.run, **{'asynchronous': True})
 
         # Install the SIGINT/SIGTERM handlers if not done so far
         if signal.getsignal(signal.SIGINT) is signal.SIG_DFL:
@@ -1715,6 +1715,7 @@ class Minion(MinionBase):
                 return Minion._thread_multi_return(minion_instance, opts, data)
             else:
                 return Minion._thread_return(minion_instance, opts, data)
+
         with salt.ext.tornado.stack_context.StackContext(functools.partial(RequestContext,
                                                                   {'data': data, 'opts': opts})):
             with salt.ext.tornado.stack_context.StackContext(minion_instance.ctx):
