@@ -1636,6 +1636,7 @@ _OS_FAMILY_MAP = {
     "TurnKey": "Debian",
     "Pop": "Debian",
     "Alinux": "RedHat",
+    "AstraLinuxCE": "Debian",
 }
 
 # Matches any possible format:
