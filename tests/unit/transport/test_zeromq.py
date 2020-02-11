@@ -42,7 +42,7 @@ import salt.ext.tornado.ioloop
 # Import test support libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
-from tests.support.helpers import flaky, get_unused_localhost_port
+from tests.support.helpers import flaky, get_unused_localhost_port, run_in_thread_with_loop
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
 from tests.unit.transport.mixins import PubChannelMixin, ReqChannelMixin, run_loop_in_thread
