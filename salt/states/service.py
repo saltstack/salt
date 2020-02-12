@@ -428,7 +428,7 @@ def running(name,
 
     # lot of custom init script won't or mis implement the status
     # command, so it is just an indicator but can not be fully trusted
-    before_toggle_status = __salt__['service.status'](name, sig, **status_kwargs)
+    before_toggle_status = __salt__['service.status'](name, sig)
     if 'service.enabled' in __salt__:
         before_toggle_enable_status = __salt__['service.enabled'](name)
     else:
@@ -487,7 +487,7 @@ def running(name,
         time.sleep(init_delay)
 
     # only force a change state if we have explicitly detected them
-    after_toggle_status = __salt__['service.status'](name, sig, **kwargs)
+    after_toggle_status = __salt__['service.status'](name, sig)
     if 'service.enabled' in __salt__:
         after_toggle_enable_status = __salt__['service.enabled'](name)
     else:
@@ -586,7 +586,7 @@ def dead(name,
 
     # lot of custom init script won't or mis implement the status
     # command, so it is just an indicator but can not be fully trusted
-    before_toggle_status = __salt__['service.status'](name, sig, **status_kwargs)
+    before_toggle_status = __salt__['service.status'](name, sig)
     if 'service.enabled' in __salt__:
         if salt.utils.platform.is_windows():
             # service.enabled in Windows returns True for services that are set
@@ -634,7 +634,7 @@ def dead(name,
         time.sleep(init_delay)
 
     # only force a change state if we have explicitly detected them
-    after_toggle_status = __salt__['service.status'](name, **status_kwargs)
+    after_toggle_status = __salt__['service.status'](name)
     if 'service.enabled' in __salt__:
         after_toggle_enable_status = __salt__['service.enabled'](name)
     else:
@@ -907,14 +907,14 @@ def mod_watch(name,
     if sfun == 'dead':
         verb = 'stop'
         past_participle = verb + 'ped'
-        if __salt__['service.status'](name, sig, **status_kwargs):
+        if __salt__['service.status'](name, sig):
             func = __salt__['service.stop']
         else:
             ret['result'] = True
             ret['comment'] = 'Service is already {0}'.format(past_participle)
             return ret
     elif sfun == 'running':
-        if __salt__['service.status'](name, sig, **status_kwargs):
+        if __salt__['service.status'](name, sig):
             if 'service.reload' in __salt__ and reload:
                 if 'service.force_reload' in __salt__ and force:
                     func = __salt__['service.force_reload']
