@@ -24,7 +24,7 @@ To install a chart with the Salt-Module:
 
 .. code-block:: bash
 
-    salt '*' helm.install grafana stable/grafana flags="['wait']" kvflags="{'values': '/path/to/values.yaml'}"
+    salt '*' helm.install grafana stable/grafana values='/path/to/values.yaml' flags="['wait']"
 
 
 Detailed Function Documentation
