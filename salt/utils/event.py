@@ -755,7 +755,7 @@ class SaltEvent(object):
                     self.pusher.send(msg)
                 except Exception as exc:  # pylint: disable=broad-except
                     log.debug(
-                        'Problem with push send: %r'
+                        'Problem with push send: %r',
                         exc, exc_info_on_loglevel=logging.DEBUG
                     )
                     raise
