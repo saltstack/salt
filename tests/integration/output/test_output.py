@@ -112,7 +112,7 @@ class OutputReturnTest(ShellCase):
         try:
             # this should not raises UnicodeEncodeError
             display_output(data, opts=opts)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             # display trace in error message for debugging on jenkins
             trace = traceback.format_exc()
             sentinel = object()

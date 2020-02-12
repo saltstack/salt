@@ -82,12 +82,9 @@ class MacUserModuleTest(ModuleCase):
             self.run_function('user.delete', [DEL_USER])
             self.skipTest('Failed to create a user to delete')
 
-        try:
-            # Now try to delete the added user
-            ret = self.run_function('user.delete', [DEL_USER])
-            self.assertTrue(ret)
-        except CommandExecutionError:
-            raise
+        # Now try to delete the added user
+        ret = self.run_function('user.delete', [DEL_USER])
+        self.assertTrue(ret)
 
     def test_mac_user_primary_group(self):
         '''

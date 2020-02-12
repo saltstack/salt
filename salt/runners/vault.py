@@ -92,7 +92,7 @@ def generate_token(minion_id, signature, impersonated_by_master=False):
             'url': config['url'],
             'verify': verify,
         }
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         return {'error': six.text_type(e)}
 
 
@@ -253,7 +253,7 @@ def _selftoken_expired():
         if response.status_code != 200:
             return True
         return False
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         raise salt.exceptions.CommandExecutionError(
             'Error while looking up self token : {0}'.format(six.text_type(e))
             )

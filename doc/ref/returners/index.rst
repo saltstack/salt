@@ -383,4 +383,4 @@ Full List of Returners
 .. toctree::
     all/index
 
-.. _`redis`: https://github.com/saltstack/salt/tree/develop/salt/returners/redis_return.py
+.. _`redis`: https://github.com/saltstack/salt/tree/|repo_primary_branch|/salt/returners/redis_return.py

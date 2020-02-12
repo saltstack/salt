@@ -126,7 +126,7 @@ def _delete_resource(name, name_param, desc, res_type, wait=0, status_param=None
     '''
     try:
         wait = int(wait)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         raise SaltInvocationError("Bad value ('{0}') passed for 'wait' param - must be an "
                                   "int or boolean.".format(wait))
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
@@ -157,7 +157,7 @@ def _delete_resource(name, name_param, desc, res_type, wait=0, status_param=None
         orig_wait = wait
         while wait > 0:
             r = s(name=name, conn=conn)
-            if not r or not len(r) or r[0].get(status_param) == status_gone:
+            if not r or (r and r[0].get(status_param) == status_gone):
                 log.info('%s %s deleted.', desc.title(), name)
                 return True
             sleep = wait if wait % 60 == wait else 60
@@ -178,7 +178,7 @@ def _create_resource(name, name_param=None, desc=None, res_type=None, wait=0, st
                      **args):
     try:
         wait = int(wait)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         raise SaltInvocationError("Bad value ('{0}') passed for 'wait' param - must be an "
                                   "int or boolean.".format(wait))
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
@@ -231,7 +231,7 @@ def _modify_resource(name, name_param=None, desc=None, res_type=None, wait=0, st
                      **args):
     try:
         wait = int(wait)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         raise SaltInvocationError("Bad value ('{0}') passed for 'wait' param - must be an "
                                   "int or boolean.".format(wait))
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)

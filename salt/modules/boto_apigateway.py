@@ -1635,7 +1635,7 @@ def _update_usage_plan_apis(plan_id, apis, op, region=None, key=None, keyid=None
         return {'success': True, 'result': res}
     except ClientError as e:
         return {'error': __utils__['boto3.get_error'](e)}
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         return {'error': e}
 
 

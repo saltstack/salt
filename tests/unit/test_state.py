@@ -10,21 +10,21 @@ import shutil
 import tempfile
 
 # Import Salt Testing libs
-import tests.integration as integration
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     MagicMock,
     patch)
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
-from tests.support.paths import BASE_FILES
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.helpers import with_tempfile
 
 # Import Salt libs
 import salt.exceptions
 import salt.state
 from salt.utils.odict import OrderedDict
 from salt.utils.decorators import state as statedecorators
+import salt.utils.files
+import salt.utils.platform
 
 try:
     import pytest
@@ -32,7 +32,6 @@ except ImportError as err:
     pytest = None
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     '''
     TestCase for the state compiler.
@@ -73,10 +72,159 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             with self.assertRaises(salt.exceptions.SaltRenderError):
                 state_obj.call_high(high_data)
 
+    def test_verify_onlyif_parse(self):
+        low_data = {
+            "onlyif": [
+                {
+                    "fun": "test.arg",
+                    "args": [
+                        "arg1",
+                        "arg2"
+                    ]
+                }
+            ],
+            "name": "mysql-server-5.7",
+            "state": "debconf",
+            "__id__": "set root password",
+            "fun": "set",
+            "__env__": "base",
+            "__sls__": "debconf",
+            "data": {
+                "mysql-server/root_password": {
+                    "type": "password",
+                    "value": "temp123"
+                }
+            },
+            "order": 10000
+        }
+        expected_result = {'comment': 'onlyif condition is true', 'result': False}
+
+        with patch('salt.state.State._gather_pillar') as state_patch:
+            minion_opts = self.get_temp_config('minion')
+            state_obj = salt.state.State(minion_opts)
+            return_result = state_obj._run_check_onlyif(low_data, '')
+            self.assertEqual(expected_result, return_result)
+
+    def test_verify_unless_parse(self):
+        low_data = {
+            "unless": [
+                {
+                    "fun": "test.arg",
+                    "args": [
+                        "arg1",
+                        "arg2"
+                    ]
+                }
+            ],
+            "name": "mysql-server-5.7",
+            "state": "debconf",
+            "__id__": "set root password",
+            "fun": "set",
+            "__env__": "base",
+            "__sls__": "debconf",
+            "data": {
+                "mysql-server/root_password": {
+                    "type": "password",
+                    "value": "temp123"
+                }
+            },
+            "order": 10000
+        }
+        expected_result = {'comment': 'unless condition is true', 'result': True, 'skip_watch': True}
+
+        with patch('salt.state.State._gather_pillar') as state_patch:
+            minion_opts = self.get_temp_config('minion')
+            state_obj = salt.state.State(minion_opts)
+            return_result = state_obj._run_check_unless(low_data, '')
+            self.assertEqual(expected_result, return_result)
+
+    def _expand_win_path(self, path):
+        """
+        Expand C:/users/admini~1/appdata/local/temp/salt-tests-tmpdir/...
+        into C:/users/adminitrator/appdata/local/temp/salt-tests-tmpdir/...
+        to prevent file.search from expanding the "~" with os.path.expanduser
+        """
+        if salt.utils.platform.is_windows():
+            import win32file
+            return win32file.GetLongPathName(path).replace('\\', '/')
+        else:
+            return path
+
+    @with_tempfile()
+    def test_verify_onlyif_parse_slots(self, name):
+        with salt.utils.files.fopen(name, 'w') as fp:
+            fp.write('file-contents')
+        low_data = {
+            "onlyif": [
+                {
+                    "fun": "file.search",
+                    "args": [
+                        "__slot__:salt:test.echo({})".format(self._expand_win_path(name)),
+                    ],
+                    "pattern": "__slot__:salt:test.echo(file-contents)",
+                }
+            ],
+            "name": "mysql-server-5.7",
+            "state": "debconf",
+            "__id__": "set root password",
+            "fun": "set",
+            "__env__": "base",
+            "__sls__": "debconf",
+            "data": {
+                "mysql-server/root_password": {
+                    "type": "password",
+                    "value": "temp123"
+                }
+            },
+            "order": 10000
+        }
+        expected_result = {'comment': 'onlyif condition is true', 'result': False}
+        with patch('salt.state.State._gather_pillar') as state_patch:
+            minion_opts = self.get_temp_config('minion')
+            state_obj = salt.state.State(minion_opts)
+            return_result = state_obj._run_check_onlyif(low_data, '')
+            self.assertEqual(expected_result, return_result)
+
+    @with_tempfile()
+    def test_verify_unless_parse_slots(self, name):
+        with salt.utils.files.fopen(name, 'w') as fp:
+            fp.write('file-contents')
+        low_data = {
+            "unless": [
+                {
+                    "fun": "file.search",
+                    "args": [
+                        "__slot__:salt:test.echo({})".format(self._expand_win_path(name)),
+                    ],
+                    "pattern": "__slot__:salt:test.echo(file-contents)",
+                }
+            ],
+            "name": "mysql-server-5.7",
+            "state": "debconf",
+            "__id__": "set root password",
+            "fun": "set",
+            "__env__": "base",
+            "__sls__": "debconf",
+            "data": {
+                "mysql-server/root_password": {
+                    "type": "password",
+                    "value": "temp123"
+                }
+            },
+            "order": 10000
+        }
+        expected_result = {'comment': 'unless condition is true', 'result': True, 'skip_watch': True}
+
+        with patch('salt.state.State._gather_pillar') as state_patch:
+            minion_opts = self.get_temp_config('minion')
+            state_obj = salt.state.State(minion_opts)
+            return_result = state_obj._run_check_unless(low_data, '')
+            self.assertEqual(expected_result, return_result)
+
 
 class HighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     def setUp(self):
-        root_dir = tempfile.mkdtemp(dir=integration.TMP)
+        root_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.state_tree_dir = os.path.join(root_dir, 'state_tree')
         cache_dir = os.path.join(root_dir, 'cachedir')
         for dpath in (root_dir, self.state_tree_dir, cache_dir):
@@ -155,7 +303,7 @@ class HighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         sls_dir = 'issue-47182'
         shutil.copytree(
-            os.path.join(BASE_FILES, sls_dir),
+            os.path.join(RUNTIME_VARS.BASE_FILES, sls_dir),
             os.path.join(self.state_tree_dir, sls_dir)
         )
         shutil.move(
@@ -172,7 +320,6 @@ class HighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(ret, [('somestuff', 'cmd')])
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(pytest is None, 'PyTest is missing')
 class StateReturnsTestCase(TestCase):
     '''
@@ -281,6 +428,60 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         mock.assert_called_once_with('fun_arg', fun_key='fun_val')
         self.assertEqual(cdata, {'args': ['fun_return'], 'kwargs': {'key': 'val'}})
 
+    def test_format_slots_dict_arg(self):
+        '''
+        Test the format slots is calling a slot specified in dict arg.
+        '''
+        cdata = {
+                'args': [
+                    {'subarg': '__slot__:salt:mod.fun(fun_arg, fun_key=fun_val)'},
+                ],
+                'kwargs': {
+                    'key': 'val',
+                }
+        }
+        mock = MagicMock(return_value='fun_return')
+        with patch.dict(self.state_obj.functions, {'mod.fun': mock}):
+            self.state_obj.format_slots(cdata)
+        mock.assert_called_once_with('fun_arg', fun_key='fun_val')
+        self.assertEqual(cdata, {'args': [{'subarg': 'fun_return'}], 'kwargs': {'key': 'val'}})
+
+    def test_format_slots_listdict_arg(self):
+        '''
+        Test the format slots is calling a slot specified in list containing a dict.
+        '''
+        cdata = {
+                'args': [[
+                    {'subarg': '__slot__:salt:mod.fun(fun_arg, fun_key=fun_val)'},
+                ]],
+                'kwargs': {
+                    'key': 'val',
+                }
+        }
+        mock = MagicMock(return_value='fun_return')
+        with patch.dict(self.state_obj.functions, {'mod.fun': mock}):
+            self.state_obj.format_slots(cdata)
+        mock.assert_called_once_with('fun_arg', fun_key='fun_val')
+        self.assertEqual(cdata, {'args': [[{'subarg': 'fun_return'}]], 'kwargs': {'key': 'val'}})
+
+    def test_format_slots_liststr_arg(self):
+        '''
+        Test the format slots is calling a slot specified in list containing a dict.
+        '''
+        cdata = {
+                'args': [[
+                    '__slot__:salt:mod.fun(fun_arg, fun_key=fun_val)',
+                ]],
+                'kwargs': {
+                    'key': 'val',
+                }
+        }
+        mock = MagicMock(return_value='fun_return')
+        with patch.dict(self.state_obj.functions, {'mod.fun': mock}):
+            self.state_obj.format_slots(cdata)
+        mock.assert_called_once_with('fun_arg', fun_key='fun_val')
+        self.assertEqual(cdata, {'args': [['fun_return']], 'kwargs': {'key': 'val'}})
+
     def test_format_slots_kwarg(self):
         '''
         Test the format slots is calling a slot specified in kwargs with corresponding arguments.
@@ -360,3 +561,41 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             self.state_obj.format_slots(cdata)
         mock.assert_not_called()
         self.assertEqual(cdata, sls_data)
+
+    def test_slot_traverse_dict(self):
+        '''
+        Test the slot parsing of dict response.
+        '''
+        cdata = {
+            'args': [
+                'arg',
+            ],
+            'kwargs': {
+                'key': '__slot__:salt:mod.fun(fun_arg, fun_key=fun_val).key1',
+            }
+        }
+        return_data = {'key1': 'value1'}
+        mock = MagicMock(return_value=return_data)
+        with patch.dict(self.state_obj.functions, {'mod.fun': mock}):
+            self.state_obj.format_slots(cdata)
+        mock.assert_called_once_with('fun_arg', fun_key='fun_val')
+        self.assertEqual(cdata, {'args': ['arg'], 'kwargs': {'key': 'value1'}})
+
+    def test_slot_append(self):
+        '''
+        Test the slot parsing of dict response.
+        '''
+        cdata = {
+            'args': [
+                'arg',
+            ],
+            'kwargs': {
+                'key': '__slot__:salt:mod.fun(fun_arg, fun_key=fun_val).key1 ~ thing~',
+            }
+        }
+        return_data = {'key1': 'value1'}
+        mock = MagicMock(return_value=return_data)
+        with patch.dict(self.state_obj.functions, {'mod.fun': mock}):
+            self.state_obj.format_slots(cdata)
+        mock.assert_called_once_with('fun_arg', fun_key='fun_val')
+        self.assertEqual(cdata, {'args': ['arg'], 'kwargs': {'key': 'value1thing~'}})

@@ -12,11 +12,12 @@ from tests.support.helpers import (
     destructiveTest,
     requires_network,
     requires_salt_modules,
-    requires_system_grains)
+    requires_salt_states,
+    requires_system_grains,
+    skip_if_not_root)
 from tests.support.unit import skipIf
 
 # Import Salt libs
-from salt.utils import six
 import salt.utils.path
 import salt.utils.pkg
 import salt.utils.platform
@@ -29,7 +30,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
     @classmethod
     @requires_system_grains
-    def setUpClass(cls, grains=None):
+    def setUpClass(cls, grains):  # pylint: disable=arguments-differ
         cls.ctx = {}
         cls.pkg = 'figlet'
         if salt.utils.platform.is_windows():
@@ -37,6 +38,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         elif grains['os_family'] == 'RedHat':
             cls.pkg = 'units'
 
+    @skip_if_not_root
     @requires_salt_modules('pkg.refresh_db')
     def setUp(self):
         if 'refresh' not in self.ctx:
@@ -96,7 +98,6 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 self.assertIsInstance(ret, dict,
                                       'The \'pkg.get_repo\' command did not return the excepted dictionary. '
                                       'Output:\n{}'.format(ret))
-
                 self.assertEqual(
                     ret['uri'],
                     uri,
@@ -133,6 +134,54 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             if repo is not None:
                 self.run_function('pkg.del_repo', [repo])
 
+    def test_mod_del_repo_multiline_values(self):
+        '''
+        test modifying and deleting a software repository defined with multiline values
+        '''
+        os_grain = self.run_function('grains.item', ['os'])['os']
+        repo = None
+        try:
+            if os_grain in ['CentOS', 'RedHat']:
+                my_baseurl = 'http://my.fake.repo/foo/bar/\n http://my.fake.repo.alt/foo/bar/'
+                expected_get_repo_baseurl = 'http://my.fake.repo/foo/bar/\nhttp://my.fake.repo.alt/foo/bar/'
+                major_release = int(
+                    self.run_function(
+                        'grains.item',
+                        ['osmajorrelease']
+                    )['osmajorrelease']
+                )
+                repo = 'fakerepo'
+                name = 'Fake repo for RHEL/CentOS/SUSE'
+                baseurl = my_baseurl
+                gpgkey = 'https://my.fake.repo/foo/bar/MY-GPG-KEY.pub'
+                failovermethod = 'priority'
+                gpgcheck = 1
+                enabled = 1
+                ret = self.run_function(
+                    'pkg.mod_repo',
+                    [repo],
+                    name=name,
+                    baseurl=baseurl,
+                    gpgkey=gpgkey,
+                    gpgcheck=gpgcheck,
+                    enabled=enabled,
+                    failovermethod=failovermethod,
+                )
+                # return data from pkg.mod_repo contains the file modified at
+                # the top level, so use next(iter(ret)) to get that key
+                self.assertNotEqual(ret, {})
+                repo_info = ret[next(iter(ret))]
+                self.assertIn(repo, repo_info)
+                self.assertEqual(repo_info[repo]['baseurl'], my_baseurl)
+                ret = self.run_function('pkg.get_repo', [repo])
+                self.assertEqual(ret['baseurl'], expected_get_repo_baseurl)
+                self.run_function('pkg.mod_repo', [repo])
+                ret = self.run_function('pkg.get_repo', [repo])
+                self.assertEqual(ret['baseurl'], expected_get_repo_baseurl)
+        finally:
+            if repo is not None:
+                self.run_function('pkg.del_repo', [repo])
+
     @requires_salt_modules('pkg.owner')
     def test_owner(self):
         '''
@@ -140,6 +189,16 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         func = 'pkg.owner'
         ret = self.run_function(func, ['/bin/ls'])
+        self.assertNotEqual(len(ret), 0)
+
+    # Similar to pkg.owner, but for FreeBSD's pkgng
+    @requires_salt_modules('pkg.which')
+    def test_which(self):
+        '''
+        test finding the package owning a file
+        '''
+        func = 'pkg.which'
+        ret = self.run_function(func, ['/usr/local/bin/salt-call'])
         self.assertNotEqual(len(ret), 0)
 
     @destructiveTest
@@ -170,37 +229,47 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             test_remove()
 
     @destructiveTest
-    @requires_salt_modules('pkg.hold', 'pkg.unhold', 'pkg.install', 'pkg.version', 'pkg.remove')
+    @requires_salt_modules('pkg.hold', 'pkg.unhold', 'pkg.install', 'pkg.version', 'pkg.remove', 'pkg.list_pkgs')
+    @requires_salt_states('pkg.installed')
     @requires_network()
     @requires_system_grains
     def test_hold_unhold(self, grains):
         '''
         test holding and unholding a package
         '''
-        ret = None
+        versionlock_pkg = None
         if grains['os_family'] == 'RedHat':
-            # get correct plugin for dnf packages following the logic in `salt.modules.yumpkg._yum`
-            lock_pkg = 'yum-versionlock' if grains['osmajorrelease'] == '5' else 'yum-plugin-versionlock'
-            if 'fedora' in grains['os'].lower() and int(grains['osrelease']) >= 22:
-                if int(grains['osmajorrelease']) >= 26:
-                    lock_pkg = 'python{py}-dnf-plugin-versionlock'.format(py=3 if six.PY3 else 2)
-                else:
-                    lock_pkg = 'python{py}-dnf-plugins-extras-versionlock'.format(py=3 if six.PY3 else '')
-            ret = self.run_state('pkg.installed', name=lock_pkg)
+            pkgs = {p for p in self.run_function('pkg.list_pkgs') if '-versionlock' in p}
+            if not pkgs:
+                self.skipTest('No versionlock package found in repositories')
+            for versionlock_pkg in pkgs:
+                ret = self.run_state('pkg.installed', name=versionlock_pkg, refresh=False)
+                # Exit loop if a versionlock package installed correctly
+                try:
+                    self.assertSaltTrueReturn(ret)
+                    break
+                except AssertionError:
+                    pass
+            else:
+                self.fail('Could not install versionlock package from {}'.format(pkgs))
 
         self.run_function('pkg.install', [self.pkg])
 
-        hold_ret = self.run_function('pkg.hold', [self.pkg])
-        if 'versionlock is not installed' in hold_ret:
-            self.run_function('pkg.remove', [self.pkg])
-            self.skipTest('Versionlock could not be installed on this system: {}'.format(ret))
-        self.assertIn(self.pkg, hold_ret)
-        self.assertTrue(hold_ret[self.pkg]['result'])
+        try:
+            hold_ret = self.run_function('pkg.hold', [self.pkg])
+            if versionlock_pkg and '-versionlock is not installed' in str(hold_ret):
+                self.skipTest('{}  `{}` is installed'.format(hold_ret, versionlock_pkg))
+            self.assertIn(self.pkg, hold_ret)
+            self.assertTrue(hold_ret[self.pkg]['result'])
 
-        unhold_ret = self.run_function('pkg.unhold', [self.pkg])
-        self.assertIn(self.pkg, unhold_ret)
-        self.assertTrue(unhold_ret[self.pkg]['result'])
-        self.run_function('pkg.remove', [self.pkg])
+            unhold_ret = self.run_function('pkg.unhold', [self.pkg])
+            self.assertIn(self.pkg, unhold_ret)
+            self.assertTrue(unhold_ret[self.pkg]['result'])
+            self.run_function('pkg.remove', [self.pkg])
+        finally:
+            if versionlock_pkg:
+                ret = self.run_state('pkg.removed', name=versionlock_pkg)
+                self.assertSaltTrueReturn(ret)
 
     @destructiveTest
     @requires_salt_modules('pkg.refresh_db')
@@ -240,9 +309,9 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         func = 'pkg.info_installed'
 
         if grains['os_family'] == 'Debian':
-            ret = self.run_function(func, ['bash-completion', 'dpkg'])
+            ret = self.run_function(func, ['bash', 'dpkg'])
             keys = ret.keys()
-            self.assertIn('bash-completion', keys)
+            self.assertIn('bash', keys)
             self.assertIn('dpkg', keys)
         elif grains['os_family'] == 'RedHat':
             ret = self.run_function(func, ['rpm', 'bash'])
@@ -267,6 +336,9 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         Test running a system upgrade when there are packages that need upgrading
         '''
+        if grains['os'] == 'Arch':
+            self.skipTest('Arch moved to Python 3.8 and we\'re not ready for it yet')
+
         func = 'pkg.upgrade'
 
         # First make sure that an up-to-date copy of the package db is available
@@ -331,6 +403,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
     @destructiveTest
     @skipIf(salt.utils.platform.is_darwin(), 'The jenkins user is equivalent to root on mac, causing the test to be unrunnable')
     @requires_salt_modules('pkg.remove', 'pkg.latest_version')
+    @requires_salt_states('pkg.removed')
     @requires_system_grains
     def test_pkg_latest_version(self, grains):
         '''
@@ -348,6 +421,8 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             cmd_pkg = self.run_function('cmd.run', ['apt list {0}'.format(self.pkg)])
         elif grains['os_family'] == 'Arch':
             cmd_pkg = self.run_function('cmd.run', ['pacman -Si {0}'.format(self.pkg)])
+        elif grains['os_family'] == 'FreeBSD':
+            cmd_pkg = self.run_function('cmd.run', ['pkg search -S name -qQ version -e {0}'.format(self.pkg)])
         elif grains['os_family'] == 'Suse':
             cmd_pkg = self.run_function('cmd.run', ['zypper info {0}'.format(self.pkg)])
         elif grains['os_family'] == 'MacOS':

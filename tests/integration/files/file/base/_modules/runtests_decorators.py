@@ -7,10 +7,10 @@ import time
 
 # Import Salt libs
 import salt.utils.decorators
-from tests.support.paths import BASE_FILES
+from tests.support.runtests import RUNTIME_VARS
 
-EXIT_CODE_SH = os.path.join(BASE_FILES, 'exit_code.sh')
-EXIT_CODE_CMD = os.path.join(BASE_FILES, 'exit_code.cmd')
+EXIT_CODE_SH = os.path.join(RUNTIME_VARS.BASE_FILES, 'exit_code.sh')
+EXIT_CODE_CMD = os.path.join(RUNTIME_VARS.BASE_FILES, 'exit_code.cmd')
 
 
 def _exit_code(code):
@@ -91,4 +91,21 @@ def command_success_nonzero_retcode_false():
 
 @salt.utils.decorators.depends(_exit_code(42), nonzero_retcode=False)
 def command_failure_nonzero_retcode_false():
+    return True
+
+
+# The 'depends_versioned.py'-module has __version__ = '1.8'
+@salt.utils.decorators.depends('depends_versioned', version='1.0')
+def version_depends_false():
+    return True
+
+
+@salt.utils.decorators.depends('depends_versioned', version='2.0')
+def version_depends_true():
+    return True
+
+
+# The 'depends_versionless.py'-module does not have a `__version__`-string
+@salt.utils.decorators.depends('depends_versionless', version='0.2')
+def version_depends_versionless_true():
     return True

@@ -13,7 +13,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch, call
+from tests.support.mock import MagicMock, patch, call
 
 # Import salt libs
 import salt.modules.mysql as mysql
@@ -21,7 +21,7 @@ import salt.modules.mysql as mysql
 NO_MYSQL = False
 try:
     import MySQLdb  # pylint: disable=W0611
-except Exception:
+except Exception:  # pylint: disable=broad-except
     NO_MYSQL = True
 
 __all_privileges__ = [
@@ -71,7 +71,6 @@ __all_privileges__ = [
 ]
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(NO_MYSQL, 'Install MySQL bindings before running MySQL unit tests.')
 class MySQLTestCase(TestCase, LoaderModuleMockMixin):
 
@@ -450,7 +449,9 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
         connect_mock = MagicMock()
         with patch.object(mysql, '_connect', connect_mock):
             with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
-                side_effect = MySQLdb.OperationalError(9999, 'Something Went Wrong')
+                # Use the OperationalError from the salt mysql module because that
+                # exception can come from either MySQLdb or pymysql
+                side_effect = mysql.OperationalError(9999, 'Something Went Wrong')
                 with patch.object(mysql, '_execute', MagicMock(side_effect=side_effect)):
                     mysql.query('testdb', 'SELECT * FROM testdb')
             self.assertIn('mysql.error', mysql.__context__)

@@ -73,7 +73,7 @@ def usage():
                 'available': total_free_bytes / 1024,
                 'capacity': '{0:.0f}%'.format(capacity),
             }
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             ret['{0}:\\'.format(drive)] = {
                 'filesystem': '{0}:\\'.format(drive),
                 '1K-blocks': None,

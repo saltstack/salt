@@ -14,13 +14,13 @@ import errno
 import types
 import signal
 import logging
+import functools
 import threading
 import contextlib
 import subprocess
 import multiprocessing
 import multiprocessing.util
 import socket
-
 
 # Import salt libs
 import salt.defaults.exitcodes
@@ -35,7 +35,7 @@ from salt.log.mixins import NewStyleClassMixIn
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import queue, range  # pylint: disable=import-error,redefined-builtin
-from tornado import gen
+from salt.ext.tornado import gen
 
 log = logging.getLogger(__name__)
 
@@ -163,7 +163,7 @@ def notify_systemd():
     Notify systemd that this process has started
     '''
     try:
-        import systemd.daemon
+        import systemd.daemon  # pylint: disable=no-name-in-module
     except ImportError:
         if salt.utils.path.which('systemd-notify') \
                 and systemd_notify_call('--booted'):
@@ -367,7 +367,7 @@ class ThreadPool(object):
                     func, args, kwargs
                 )
                 func(*args, **kwargs)
-            except Exception as err:
+            except Exception as err:  # pylint: disable=broad-except
                 log.debug(err, exc_info=True)
 
 
@@ -541,7 +541,7 @@ class ProcessManager(object):
             # OSError is raised if a signal handler is called (SIGTERM) during os.wait
             except OSError:
                 break
-            except IOError as exc:
+            except IOError as exc:  # pylint: disable=duplicate-except
                 # IOError with errno of EINTR (4) may be raised
                 # when using time.sleep() on Windows.
                 if exc.errno != errno.EINTR:
@@ -716,6 +716,15 @@ class Process(multiprocessing.Process, NewStyleClassMixIn):
             (salt.log.setup.shutdown_multiprocessing_logging, [], {})
         ]
 
+        # Because we need to enforce our after fork and finalize routines,
+        # we must wrap this class run method to allow for these extra steps
+        # to be executed pre and post calling the actual run method,
+        # having subclasses call super would just not work.
+        #
+        # We use setattr here to fool pylint not to complain that we're
+        # overriding run from the subclass here
+        setattr(self, 'run', self.__decorate_run(self.run))
+
     # __setstate__ and __getstate__ are only used on Windows.
     def __setstate__(self, state):
         args = state['args']
@@ -741,25 +750,30 @@ class Process(multiprocessing.Process, NewStyleClassMixIn):
     def _setup_process_logging(self):
         salt.log.setup.setup_multiprocessing_logging(self.log_queue)
 
-    def run(self):
-        for method, args, kwargs in self._after_fork_methods:
-            method(*args, **kwargs)
-        try:
-            return super(Process, self).run()
-        except SystemExit:
-            # These are handled by multiprocessing.Process._bootstrap()
-            raise
-        except Exception as exc:
-            log.error(
-                'An un-handled exception from the multiprocessing process '
-                '\'%s\' was caught:\n', self.name, exc_info=True)
-            # Re-raise the exception. multiprocessing.Process will write it to
-            # sys.stderr and set the proper exitcode and we have already logged
-            # it above.
-            raise
-        finally:
-            for method, args, kwargs in self._finalize_methods:
+    def __decorate_run(self, run_func):
+
+        @functools.wraps(run_func)
+        def wrapped_run_func():
+            for method, args, kwargs in self._after_fork_methods:
                 method(*args, **kwargs)
+            try:
+                return run_func()
+            except SystemExit:
+                # These are handled by multiprocessing.Process._bootstrap()
+                six.reraise(*sys.exc_info())
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error(
+                    'An un-handled exception from the multiprocessing process '
+                    '\'%s\' was caught:\n', self.name, exc_info=True)
+                # Re-raise the exception. multiprocessing.Process will write it to
+                # sys.stderr and set the proper exitcode and we have already logged
+                # it above.
+                six.reraise(*sys.exc_info())
+            finally:
+                for method, args, kwargs in self._finalize_methods:
+                    method(*args, **kwargs)
+
+        return wrapped_run_func
 
 
 class MultiprocessingProcess(Process):

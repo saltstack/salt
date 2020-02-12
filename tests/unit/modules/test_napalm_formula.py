@@ -9,14 +9,13 @@ import textwrap
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
+from tests.support.unit import TestCase
+from tests.support.mock import patch
 
 # Import Salt modules
 import salt.modules.napalm_formula as napalm_formula
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class TestModulesNAPALMFormula(TestCase, LoaderModuleMockMixin):
 
     model = {

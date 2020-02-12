@@ -7,7 +7,7 @@ NAPALM: Network Automation and Programmability Abstraction Layer with Multivendo
 
 Proxy minion for managing network devices via NAPALM_ library.
 
-:codeauthor: Mircea Ulinic <mircea@cloudflare.com> & Jerome Fleury <jf@cloudflare.com>
+:codeauthor: Mircea Ulinic <ping@mirceaulinic.net> & Jerome Fleury <jf@cloudflare.com>
 :maturity:   new
 :depends:    napalm
 :platform:   unix
@@ -287,7 +287,7 @@ def shutdown(opts):
         if not NETWORK_DEVICE.get('UP', False):
             raise Exception('not connected!')
         NETWORK_DEVICE.get('DRIVER').close()
-    except Exception as error:
+    except Exception as error:  # pylint: disable=broad-except
         port = NETWORK_DEVICE.get('OPTIONAL_ARGS', {}).get('port')
         log.error(
             'Cannot close connection with %s%s! Please check error: %s',

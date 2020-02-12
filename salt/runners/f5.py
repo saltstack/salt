@@ -53,7 +53,7 @@ class F5Mgmt(object):
                                   fromurl=True,
                                   wsdls=['LocalLB.VirtualServer',
                                          'LocalLB.Pool'])
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             raise Exception(
                 'Unable to connect to {0}'.format(self.lb)
             )
@@ -127,7 +127,7 @@ class F5Mgmt(object):
                       wildmasks=['255.255.255.255'],
                       resources=resource_seq,
                       profiles=[vs_profile_seq])
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             raise Exception(
                 'Unable to create `{0}` virtual server\n\n{1}'.format(name, e)
             )
@@ -150,7 +150,7 @@ class F5Mgmt(object):
                 self.bigIP.LocalLB.Pool.create(pool_names=[name],
                                                lb_methods=[supported_method],
                                                members=[[]])
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-except
                 raise Exception(
                     'Unable to create `{0}` pool\n\n{1}'.format(name, e)
                 )
@@ -184,7 +184,7 @@ class F5Mgmt(object):
         try:
             self.bigIP.LocalLB.Pool.add_member(pool_names=[pool_name],
                                                members=[members_seq])
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             raise Exception(
                 'Unable to add `{0}` to `{1}`\n\n{2}'.format(name,
                                                              pool_name,

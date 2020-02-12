@@ -94,6 +94,13 @@ def salt_master():
     Start the salt master.
     '''
     import salt.cli.daemons
+
+    # Fix for setuptools generated scripts, so that it will
+    # work with multiprocessing fork emulation.
+    # (see multiprocessing.forking.get_preparation_data())
+    if __name__ != '__main__':
+        sys.modules['__main__'] = sys.modules[__name__]
+
 # REMOVEME after Python 2.7 support is dropped (also the six import)
     if six.PY2:
         from salt.utils.versions import warn_until
@@ -183,6 +190,13 @@ def salt_minion():
 
     import salt.cli.daemons
     import multiprocessing
+
+    # Fix for setuptools generated scripts, so that it will
+    # work with multiprocessing fork emulation.
+    # (see multiprocessing.forking.get_preparation_data())
+    if __name__ != '__main__':
+        sys.modules['__main__'] = sys.modules[__name__]
+
     if '' in sys.path:
         sys.path.remove('')
 
@@ -296,7 +310,7 @@ def proxy_minion_process(queue):
         status = salt.defaults.exitcodes.EX_OK
         proxyminion = salt.cli.daemons.ProxyMinion()
         proxyminion.start()
-    except (Exception, SaltClientError, SaltReqTimeoutError, SaltSystemExit) as exc:
+    except (Exception, SaltClientError, SaltReqTimeoutError, SaltSystemExit) as exc:  # pylint: disable=broad-except
         log.error('Proxy Minion failed to start: ', exc_info=True)
         restart = True
         # status is superfluous since the process will be restarted
@@ -347,7 +361,7 @@ def salt_proxy():
     while True:
         try:
             queue = multiprocessing.Queue()
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             # This breaks in containers
             proxyminion = salt.cli.daemons.ProxyMinion()
             proxyminion.start()
@@ -358,7 +372,7 @@ def salt_proxy():
             process.join()
             try:
                 restart_delay = queue.get(block=False)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 if process.exitcode == 0:
                     # Minion process ended naturally, Ctrl+C or --version
                     break
@@ -403,7 +417,7 @@ def salt_key():
         client = salt.cli.key.SaltKey()
         _install_signal_handlers(client)
         client.run()
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         sys.stderr.write("Error: {0}\n".format(err))
 
 
@@ -539,3 +553,29 @@ def salt_extend(extension, name, description, salt_dir, merge):
                           description=description,
                           salt_dir=salt_dir,
                           merge=merge)
+
+
+def salt_unity():
+    '''
+    Change the args and redirect to another salt script
+    '''
+    avail = []
+    for fun in dir(sys.modules[__name__]):
+        if fun.startswith('salt'):
+            avail.append(fun[5:])
+    if len(sys.argv) < 2:
+        msg = 'Must pass in a salt command, available commands are:'
+        for cmd in avail:
+            msg += '\n{0}'.format(cmd)
+        print(msg)
+        sys.exit(1)
+    cmd = sys.argv[1]
+    if cmd not in avail:
+        # Fall back to the salt command
+        sys.argv[0] = 'salt'
+        s_fun = salt_main
+    else:
+        sys.argv[0] = 'salt-{0}'.format(cmd)
+        sys.argv.pop(1)
+        s_fun = getattr(sys.modules[__name__], 'salt_{0}'.format(cmd))
+    s_fun()

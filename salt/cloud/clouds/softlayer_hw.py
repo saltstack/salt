@@ -336,7 +336,7 @@ def create(vm_):
         response = conn.placeOrder(kwargs)
         # Leaving the following line in, commented, for easy debugging
         #response = conn.verifyOrder(kwargs)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error(
             'Error creating %s on SoftLayer\n\n'
             'The following exception was thrown when trying to '

@@ -11,23 +11,20 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
 from salt.modules import elasticsearch
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # Import elasticsearch exceptions
 NO_ELASTIC = False
 try:
     from elasticsearch import TransportError, NotFoundError
-except Exception:
+except Exception:  # pylint: disable=broad-except
     NO_ELASTIC = True
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(NO_ELASTIC, 'Install elasticsearch-py before running Elasticsearch unit tests.')
 class ElasticsearchTestCase(TestCase):
     '''
@@ -998,6 +995,91 @@ class ElasticsearchTestCase(TestCase):
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
             self.assertRaises(CommandExecutionError, elasticsearch.index_exists, "foo", "bar")
+
+    def test_index_get_settings(self):
+        '''
+        Test if settings can be obtained from the index
+        '''
+
+        fake_es = MagicMock()
+        fake_es.indices = MagicMock()
+        fake_es.indices.get_settings = MagicMock(return_value={"foo": "key"})
+        fake_instance = MagicMock(return_value=fake_es)
+
+        with patch.object(elasticsearch, '_get_instance', fake_instance):
+            self.assertDictEqual(elasticsearch.index_get_settings("foo", "bar"), {"foo": "key"})
+
+    def test_index_get_settings_not_exists(self):
+        '''
+        Test index_get_settings if index doesn't exist
+        '''
+
+        fake_es = MagicMock()
+        fake_es.indices = MagicMock()
+        fake_es.indices.get_settings = MagicMock()
+        fake_es.indices.get_settings.side_effect = NotFoundError("custom error", 123)
+        fake_instance = MagicMock(return_value=fake_es)
+
+        with patch.object(elasticsearch, '_get_instance', fake_instance):
+            self.assertIs(elasticsearch.index_get_settings(index='foo'), None)
+
+    def test_get_settings_failure(self):
+        '''
+        Test if index settings get fails with CommandExecutionError
+        '''
+
+        fake_es = MagicMock()
+        fake_es.indices = MagicMock()
+        fake_es.indices.get_settings = MagicMock()
+        fake_es.indices.get_settings.side_effect = TransportError("custom error", 123)
+        fake_instance = MagicMock(return_value=fake_es)
+
+        with patch.object(elasticsearch, '_get_instance', fake_instance):
+            self.assertRaises(CommandExecutionError, elasticsearch.index_get_settings, index='foo')
+
+    def test_index_put_settings(self):
+        '''
+        Test if we can put settings for the index
+        '''
+
+        body = {"settings": {"index": {"number_of_replicas": 2}}}
+        fake_es = MagicMock()
+        fake_es.indices = MagicMock()
+        fake_es.indices.put_settings = MagicMock(return_value={"acknowledged": True})
+        fake_instance = MagicMock(return_value=fake_es)
+
+        with patch.object(elasticsearch, '_get_instance', fake_instance):
+            self.assertTrue(elasticsearch.index_put_settings(index='foo', body=body))
+
+    def test_index_put_settings_not_exists(self):
+        '''
+        Test if settings put executed agains non-existinf index
+        '''
+
+        body = {"settings": {"index": {"number_of_replicas": 2}}}
+        fake_es = MagicMock()
+        fake_es.indices = MagicMock()
+        fake_es.indices.put_settings = MagicMock()
+        fake_es.indices.put_settings.side_effect = NotFoundError("custom error", 123)
+        fake_instance = MagicMock(return_value=fake_es)
+
+        with patch.object(elasticsearch, '_get_instance', fake_instance):
+            self.assertIs(elasticsearch.index_put_settings(index='foo', body=body), None)
+
+    def test_index_put_settings_failure(self):
+        '''
+        Test if settings put failed with CommandExecutionError
+        '''
+
+        body = {"settings": {"index": {"number_of_replicas": 2}}}
+        fake_es = MagicMock()
+        fake_es.indices = MagicMock()
+        fake_es.indices.put_settings = MagicMock()
+        fake_es.indices.put_settings.side_effect = TransportError("custom error", 123)
+        fake_instance = MagicMock(return_value=fake_es)
+
+        with patch.object(elasticsearch, '_get_instance', fake_instance):
+            self.assertRaises(CommandExecutionError, elasticsearch.index_put_settings, index='foo', body=body)
 
     # 'index_get' function tests: 3
 
@@ -2264,3 +2346,111 @@ class ElasticsearchTestCase(TestCase):
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
             self.assertRaises(CommandExecutionError, elasticsearch.search_template_delete, "foo")
+
+    # Cluster settings tests below.
+    # We're assuming that _get_instance is properly tested
+    # These tests are very simple in nature, mostly checking default arguments.
+    def test_cluster_get_settings_succeess(self):
+        '''
+        Test if cluster get_settings fetch succeeds
+        '''
+
+        expected_settings = {"transient": {}, "persistent": {}}
+        fake_es = MagicMock()
+        fake_es.cluster = MagicMock()
+        fake_es.cluster.get_settings = MagicMock(return_value=expected_settings)
+        fake_instance = MagicMock(return_value=fake_es)
+
+        with patch.object(elasticsearch, '_get_instance', fake_instance):
+            actual_settings = elasticsearch.cluster_get_settings()
+            fake_es.cluster.get_settings.assert_called_with(flat_settings=False, include_defaults=False)
+            assert actual_settings == expected_settings
+
+    def test_cluster_get_settings_failure(self):
+        '''
+        Test if cluster get_settings fetch fails with CommandExecutionError
+        '''
+
+        fake_es = MagicMock()
+        fake_es.cluster = MagicMock()
+        fake_es.cluster.get_settings = MagicMock()
+        fake_es.cluster.get_settings.side_effect = TransportError("custom error", 123)
+        fake_instance = MagicMock(return_value=fake_es)
+
+        with patch.object(elasticsearch, '_get_instance', fake_instance):
+            self.assertRaises(CommandExecutionError, elasticsearch.cluster_get_settings)
+
+    def test_cluster_put_settings_succeess(self):
+        '''
+        Test if cluster put_settings succeeds
+        '''
+
+        expected_settings = {"acknowledged": True,
+                             "transient": {},
+                             "persistent": {"indices": {"recovery": {"max_bytes_per_sec": "50mb"}}}
+                            }
+        body = {"transient": {}, "persistent": {"indices.recovery.max_bytes_per_sec": "50mb"}}
+        fake_es = MagicMock()
+        fake_es.cluster = MagicMock()
+        fake_es.cluster.put_settings = MagicMock(return_value=expected_settings)
+        fake_instance = MagicMock(return_value=fake_es)
+
+        with patch.object(elasticsearch, '_get_instance', fake_instance):
+            actual_settings = elasticsearch.cluster_put_settings(body=body)
+            fake_es.cluster.put_settings.assert_called_with(body=body, flat_settings=False)
+            assert actual_settings == expected_settings
+
+    def test_cluster_put_settings_failure(self):
+        '''
+        Test if cluster put_settings fails with CommandExecutionError
+        '''
+
+        body = {"transient": {}, "persistent": {"indices.recovery.max_bytes_per_sec": "50mb"}}
+        fake_es = MagicMock()
+        fake_es.cluster = MagicMock()
+        fake_es.cluster.put_settings = MagicMock()
+        fake_es.cluster.put_settings.side_effect = TransportError("custom error", 123)
+        fake_instance = MagicMock(return_value=fake_es)
+
+        with patch.object(elasticsearch, '_get_instance', fake_instance):
+            self.assertRaises(CommandExecutionError, elasticsearch.cluster_put_settings, body=body)
+
+    def test_cluster_put_settings_nobody(self):
+        '''
+        Test if cluster put_settings fails with SaltInvocationError
+        '''
+
+        self.assertRaises(SaltInvocationError, elasticsearch.cluster_put_settings)
+
+    # flush_synced tests below.
+    # We're assuming that _get_instance is properly tested
+    # These tests are very simple in nature, mostly checking default arguments.
+    def test_flush_synced_succeess(self):
+        '''
+        Test if flush_synced succeeds
+        '''
+
+        expected_return = {'_shards': {'failed': 0, 'successful': 0, 'total': 0}}
+        fake_es = MagicMock()
+        fake_es.indices = MagicMock()
+        fake_es.indices.flush_synced = MagicMock(return_value=expected_return)
+        fake_instance = MagicMock(return_value=fake_es)
+
+        with patch.object(elasticsearch, '_get_instance', fake_instance):
+            output = elasticsearch.flush_synced(index='_all', ignore_unavailable=True, allow_no_indices=True, expand_wildcards='all')
+            fake_es.indices.flush_synced.assert_called_with({'index': '_all', 'ignore_unavailable': True, 'allow_no_indices': True, 'expand_wildcards': 'all'})
+            assert output == expected_return
+
+    def test_flush_synced_failure(self):
+        '''
+        Test if flush_synced fails with CommandExecutionError
+        '''
+
+        fake_es = MagicMock()
+        fake_es.indices = MagicMock()
+        fake_es.indices.flush_synced = MagicMock()
+        fake_es.indices.flush_synced.side_effect = TransportError("custom error", 123)
+        fake_instance = MagicMock(return_value=fake_es)
+
+        with patch.object(elasticsearch, '_get_instance', fake_instance):
+            self.assertRaises(CommandExecutionError, elasticsearch.flush_synced)

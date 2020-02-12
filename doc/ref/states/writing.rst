@@ -21,7 +21,7 @@ illustrate:
 .. code-block:: yaml
 
     /etc/salt/master: # maps to "name", unless a "name" argument is specified below
-      file.managed: # maps to <filename>.<function> - e.g. "managed" in https://github.com/saltstack/salt/tree/develop/salt/states/file.py
+      file.managed: # maps to <filename>.<function> - e.g. "managed" in https://github.com/saltstack/salt/tree/|repo_primary_branch|/salt/states/file.py
         - user: root # one of many options passed to the manage function
         - group: root
         - mode: 644
@@ -59,7 +59,7 @@ A well-written state function will follow these steps:
     This is an extremely simplified example. Feel free to browse the `source
     code`_ for Salt's state modules to see other examples.
 
-    .. _`source code`: https://github.com/saltstack/salt/tree/develop/salt/states
+    .. _`source code`: https://github.com/saltstack/salt/tree/|repo_primary_branch|/salt/states
 
 1. Set up the return dictionary and perform any necessary input validation
    (type checking, looking for use of mutually-exclusive arguments, etc.).

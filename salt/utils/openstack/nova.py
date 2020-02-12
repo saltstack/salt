@@ -11,6 +11,7 @@ import time
 
 # Import third party libs
 from salt.ext import six
+
 HAS_NOVA = False
 # pylint: disable=import-error
 try:
@@ -22,6 +23,7 @@ try:
     import novaclient.exceptions
     import novaclient.extension
     import novaclient.base
+
     HAS_NOVA = True
 except ImportError:
     pass
@@ -30,6 +32,7 @@ HAS_KEYSTONEAUTH = False
 try:
     import keystoneauth1.loading
     import keystoneauth1.session
+
     HAS_KEYSTONEAUTH = True
 except ImportError:
     pass
@@ -77,6 +80,14 @@ def check_nova():
         log.debug('Newer novaclient version required.  Minimum: %s',
                   NOVACLIENT_MINVER)
     return False
+
+
+if check_nova():
+    try:
+        import novaclient.auth_plugin
+    except ImportError:
+        log.debug('Using novaclient version 7.0.0 or newer. Authentication '
+                  'plugin auth_plugin.py is not available anymore.')
 
 
 # kwargs has to be an object instead of a dictionary for the __post_parse_arg__
@@ -199,7 +210,7 @@ def get_endpoint_url_v3(catalog, service_type, region_name):
         if service_entry['type'] == service_type:
             for endpoint_entry in service_entry['endpoints']:
                 if (endpoint_entry['region'] == region_name and
-                            endpoint_entry['interface'] == 'public'):
+                    endpoint_entry['interface'] == 'public'):
                     return endpoint_entry['url']
     return None
 
@@ -259,7 +270,8 @@ class SaltNova(object):
                            os_auth_plugin=os_auth_plugin,
                            **kwargs)
 
-    def _new_init(self, username, project_id, auth_url, region_name, password, os_auth_plugin, auth=None, verify=True, **kwargs):
+    def _new_init(self, username, project_id, auth_url, region_name, password, os_auth_plugin, auth=None, verify=True,
+                  **kwargs):
         if auth is None:
             auth = {}
 
@@ -303,7 +315,12 @@ class SaltNova(object):
         conn = client.Client(version=self.version, session=self.session, **self.client_kwargs)
         self.kwargs['auth_token'] = conn.client.session.get_token()
         identity_service_type = kwargs.get('identity_service_type', 'identity')
-        self.catalog = conn.client.session.get('/auth/catalog', endpoint_filter={'service_type': identity_service_type}).json().get('catalog', [])
+        self.catalog = conn.client.session.get(
+            '/auth/catalog',
+            endpoint_filter={
+                'service_type': identity_service_type
+            }
+        ).json().get('catalog', [])
         if conn.client.get_endpoint(service_type=identity_service_type).endswith('v3'):
             self._v3_setup(region_name)
         else:
@@ -472,7 +489,7 @@ class SaltNova(object):
             trycount += 1
             try:
                 return self.server_show_libcloud(self.uuid)
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.debug(
                     'Server information not yet available: %s', exc
                 )
@@ -550,15 +567,11 @@ class SaltNova(object):
         '''
         if self.volume_conn is None:
             raise SaltCloudSystemExit('No cinder endpoint available')
-        nt_ks = self.volume_conn
+
         volumes = self.volume_list(
             search_opts={'display_name': name},
         )
         volume = volumes[name]
-#        except Exception as esc:
-#            # volume doesn't exist
-#            log.error(esc.strerror)
-#            return {'name': name, 'status': 'deleted'}
 
         return volume
 
@@ -620,7 +633,7 @@ class SaltNova(object):
                 response = self._volume_get(volume['id'])
                 if response['status'] == 'available':
                     return response
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.debug('Volume is detaching: %s', name)
                 time.sleep(1)
                 if time.time() - start > timeout:
@@ -658,7 +671,7 @@ class SaltNova(object):
                 response = self._volume_get(volume['id'])
                 if response['status'] == 'in-use':
                     return response
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.debug('Volume is attaching: %s', name)
                 time.sleep(1)
                 if time.time() - start > timeout:
@@ -728,8 +741,8 @@ class SaltNova(object):
     list_sizes = flavor_list
 
     def flavor_create(self,
-                      name,             # pylint: disable=C0103
-                      flavor_id=0,      # pylint: disable=C0103
+                      name,  # pylint: disable=C0103
+                      flavor_id=0,  # pylint: disable=C0103
                       ram=0,
                       disk=0,
                       vcpus=1):
@@ -864,7 +877,7 @@ class SaltNova(object):
         return {image_id: kwargs}
 
     def image_meta_delete(self,
-                          image_id=None,     # pylint: disable=C0103
+                          image_id=None,  # pylint: disable=C0103
                           name=None,
                           keys=None):
         '''
@@ -899,7 +912,7 @@ class SaltNova(object):
                                'links': item.flavor['links']},
                     'image': {'id': item.image['id'] if item.image else 'Boot From Volume',
                               'links': item.image['links'] if item.image else ''},
-                    }
+                }
             except TypeError:
                 pass
         return ret

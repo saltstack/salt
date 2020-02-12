@@ -5,7 +5,7 @@ from __future__ import absolute_import
 
 # Salt testing libs
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON
+from tests.support.mock import patch, MagicMock
 from tests.support.mixins import LoaderModuleMockMixin
 try:
     from pyroute2 import IPDB
@@ -20,7 +20,15 @@ import logging
 log = logging.getLogger(__name__)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
+class MockIPClass(object):
+    def __init__(self, *args, **kwargs):
+        self.args = args
+        self.kwargs = kwargs
+
+    def by_name(self):
+        return {}
+
+
 class NetworkSettingsBeaconTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test case for salt.beacons.network_settings
@@ -48,6 +56,83 @@ class NetworkSettingsBeaconTestCase(TestCase, LoaderModuleMockMixin):
         ret = network_settings.validate(config)
 
         self.assertEqual(ret, (True, 'Valid beacon configuration'))
+
+    def test_interface(self):
+        config = [{'interfaces': {'enp14s0u1u2': {'promiscuity': None}}}]
+        LAST_STATS = network_settings._copy_interfaces_info({'enp14s0u1u2': {'family': '0',
+                                                                             'promiscuity': '0',
+                                                                             'group': '0'}})
+
+        NEW_STATS = network_settings._copy_interfaces_info({'enp14s0u1u2': {'family': '0',
+                                                                            'promiscuity': '1',
+                                                                            'group': '0'}})
+
+        ret = network_settings.validate(config)
+        self.assertEqual(ret, (True, 'Valid beacon configuration'))
+
+        with patch.object(network_settings, 'LAST_STATS', {}), \
+            patch.object(network_settings, 'IP', MockIPClass), \
+            patch('salt.beacons.network_settings._copy_interfaces_info',
+                  MagicMock(side_effect=[LAST_STATS, NEW_STATS])):
+            ret = network_settings.beacon(config)
+            self.assertEqual(ret, [])
+
+            ret = network_settings.beacon(config)
+            _expected = [{'interface': 'enp14s0u1u2',
+                          'tag': 'enp14s0u1u2',
+                          'change': {'promiscuity': '1'}
+                         }]
+            self.assertEqual(ret, _expected)
+
+    def test_interface_no_change(self):
+        config = [{'interfaces': {'enp14s0u1u2': {'promiscuity': None}}}]
+        LAST_STATS = network_settings._copy_interfaces_info({'enp14s0u1u2': {'family': '0',
+                                                                             'promiscuity': '0',
+                                                                             'group': '0'}})
+
+        NEW_STATS = network_settings._copy_interfaces_info({'enp14s0u1u2': {'family': '0',
+                                                                            'promiscuity': '0',
+                                                                            'group': '0'}})
+
+        ret = network_settings.validate(config)
+        self.assertEqual(ret, (True, 'Valid beacon configuration'))
+
+        with patch.object(network_settings, 'LAST_STATS', {}), \
+            patch.object(network_settings, 'IP', MockIPClass), \
+            patch('salt.beacons.network_settings._copy_interfaces_info',
+                  MagicMock(side_effect=[LAST_STATS, NEW_STATS])):
+            ret = network_settings.beacon(config)
+            self.assertEqual(ret, [])
+
+            ret = network_settings.beacon(config)
+            self.assertEqual(ret, [])
+
+    def test_wildcard_interface(self):
+        config = [{'interfaces': {'en*': {'promiscuity': None}}}]
+        LAST_STATS = network_settings._copy_interfaces_info({'enp14s0u1u2': {'family': '0',
+                                                                             'promiscuity': '0',
+                                                                             'group': '0'}})
+
+        NEW_STATS = network_settings._copy_interfaces_info({'enp14s0u1u2': {'family': '0',
+                                                                            'promiscuity': '1',
+                                                                            'group': '0'}})
+
+        ret = network_settings.validate(config)
+        self.assertEqual(ret, (True, 'Valid beacon configuration'))
+
+        with patch.object(network_settings, 'LAST_STATS', {}), \
+            patch.object(network_settings, 'IP', MockIPClass), \
+            patch('salt.beacons.network_settings._copy_interfaces_info',
+                  MagicMock(side_effect=[LAST_STATS, NEW_STATS])):
+            ret = network_settings.beacon(config)
+            self.assertEqual(ret, [])
+
+            ret = network_settings.beacon(config)
+            _expected = [{'interface': 'enp14s0u1u2',
+                          'tag': 'enp14s0u1u2',
+                          'change': {'promiscuity': '1'}
+                         }]
+            self.assertEqual(ret, _expected)
 
 
 @skipIf(not HAS_PYROUTE2, 'no pyroute2 installed, skipping')

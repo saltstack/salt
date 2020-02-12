@@ -13,7 +13,7 @@ table if needed. The keys are indexed using the `bank` and `etcd_key` columns.
 To enable this cache plugin, the master will need the python client for
 MySQL installed. This can be easily installed with pip:
 
-.. code-block: bash
+.. code-block:: bash
 
     pip install python-mysql
 
@@ -112,7 +112,7 @@ def run_query(conn, query, retries=3):
         global client
         client = MySQLdb.connect(**_mysql_kwargs)
         return run_query(client, query, retries - 1)
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         if len(query) > 150:
             query = query[:150] + "<...>"
         raise SaltCacheError("Error running {0}: {1}".format(query, e))

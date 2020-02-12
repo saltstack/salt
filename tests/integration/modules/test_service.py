@@ -134,8 +134,8 @@ class ServiceModuleTest(ModuleCase):
             self.assertTrue(self.run_function('service.disable', [srv_name]))
         elif self.run_function('grains.item', ['os'])['os'] == 'Debian' and \
              self.run_function('grains.item', ['osmajorrelease'])['osmajorrelease'] < 9 and systemd:
-             # currently disabling a service via systemd that does not exist
-             # on Debian 8 results in a True return code
+            # currently disabling a service via systemd that does not exist
+            # on Debian 8 results in a True return code
             self.assertTrue(self.run_function('service.disable', [srv_name]))
         else:
             try:

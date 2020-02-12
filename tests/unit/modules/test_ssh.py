@@ -6,11 +6,9 @@ import tempfile
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
-    NO_MOCK,
-    NO_MOCK_REASON,
     patch
 )
 
@@ -21,7 +19,6 @@ import salt.modules.ssh as ssh
 from salt.exceptions import CommandExecutionError
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.ssh
