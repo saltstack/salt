@@ -42,7 +42,7 @@ class MockBlob(dict):
              'location_mode': None})
 
 
-class MockContainerClient:
+class MockContainerClient(object):
     '''
     Creates a Mock ContainerClient.
     '''
@@ -56,7 +56,7 @@ class MockContainerClient:
         pass
 
 
-class MockBlobServiceClient:
+class MockBlobServiceClient(object):
     '''
     Creates a Mock BlobServiceClient.
     '''
