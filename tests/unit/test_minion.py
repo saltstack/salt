@@ -416,7 +416,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         with patch('salt.minion.Minion.ctx', MagicMock(return_value={})), \
                 patch('salt.utils.process.MultiprocessingProcess', MagicMock(return_value=True)):
             mock_opts = self.get_config('minion', from_scratch=True)
-            io_loop = tornado.ioloop.IOLoop()
+            io_loop = salt.ext.tornado.ioloop.IOLoop()
             io_loop.make_current()
             try:
                 for (grains_cache, refresh_every, expected) in [
@@ -436,7 +436,6 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                         self.assertTrue('grains_cache_refresh' not in minion.periodic_callbacks)
             finally:
                 minion.destroy()
-
 
 
 class MinionAsyncTestCase(TestCase, AdaptedConfigurationTestCaseMixin, salt.ext.tornado.testing.AsyncTestCase):

@@ -2383,7 +2383,7 @@ class Minion(MinionBase):
         elif tag.startswith('manage_beacons'):
             self.manage_beacons(tag, data)
         elif tag.startswith('grains_refresh'):
-            if (data.get('force_refresh', False)):
+            if data.get('force_refresh', False):
                 self.pillar_refresh(force_refresh=True)
             else:
                 self.pillar_refresh(force_refresh=False)
@@ -2642,16 +2642,14 @@ class Minion(MinionBase):
 
             self.add_periodic_callback('schedule', handle_schedule)
 
-    def setup_grains_cache_refresh(self, before_connect=False):
+    def setup_grains_cache_refresh(self):
         '''
         Setup the grains cache refresher.
         This is safe to call multiple times.
         '''
         self._setup_core()
 
-        loop_interval = self.opts['loop_interval']
         grains_refresh_interval = self.opts['grains_refresh_every'] * 60
-        new_periodic_callbacks = {}
 
         if self.opts.get('grains_cache', False) and grains_refresh_interval > 0:
             if 'grains_cache_refresh' not in self.periodic_callbacks:
@@ -2659,18 +2657,11 @@ class Minion(MinionBase):
                     proc = salt.utils.process.MultiprocessingProcess(target=self.process_grains_cache_refresh)
                     proc.start()
 
-                new_periodic_callbacks['grains_cache_refresh'] = tornado.ioloop.PeriodicCallback(
-                    handle_grains_cache_refresh, grains_refresh_interval * 1000)
-
-            if 'cleanup' not in self.periodic_callbacks:
-                new_periodic_callbacks['cleanup'] = tornado.ioloop.PeriodicCallback(
-                    self._fallback_cleanups, loop_interval * 1000)
-
-            # start all the other callbacks
-            for periodic_cb in six.itervalues(new_periodic_callbacks):
-                periodic_cb.start()
-
-            self.periodic_callbacks.update(new_periodic_callbacks)
+                self.add_periodic_callback(
+                    'grains_cache_refresh',
+                    handle_grains_cache_refresh,
+                    grains_refresh_interval
+                )
 
     def add_periodic_callback(self, name, method, interval=1):
         '''
