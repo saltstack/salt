@@ -164,9 +164,12 @@ def _auth(profile=None, api_version=1, **connection_args):
     except KeyError:
         heat_endpoint = __salt__['keystone.endpoint_get']('heat', profile)['publicurl']
     heat_endpoint = heat_endpoint % token
-    log.debug('Calling heatclient.client.Client(' +
-              '{0}, {1}, **{2})'.format(api_version, heat_endpoint,
-                                        kwargs))
+    log.debug(
+        'Calling heatclient.client.Client(%s, %s, **%s)',
+        api_version,
+        heat_endpoint,
+        kwargs
+    )
     # may raise exc.HTTPUnauthorized, exc.HTTPNotFound
     # but we deal with those elsewhere
     return heatclient.client.Client(api_version, endpoint=heat_endpoint, **kwargs)
@@ -472,7 +475,7 @@ def create_stack(name=None, template_file=None, environment=None,
     .. versionadded:: 2017.7.5,2018.3.1
 
         The spelling mistake in parameter `enviroment` was corrected to `environment`.
-        The `enviroment` spelling mistake has been removed in Salt Neon.
+        The `enviroment` spelling mistake has been removed in Salt 3000.
 
     '''
     h_client = _auth(profile)
@@ -666,7 +669,7 @@ def update_stack(name=None, template_file=None, environment=None,
     .. versionadded:: 2017.7.5,2018.3.1
 
         The spelling mistake in parameter `enviroment` was corrected to `environment`.
-        The `enviroment` spelling mistake has been removed in Salt Neon.
+        The `enviroment` spelling mistake has been removed in Salt 3000.
 
     '''
     h_client = _auth(profile)

@@ -39,7 +39,7 @@ def __virtual__():
     '''
     try:
         kernel_grain = __grains__['kernel']
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return (False, 'The powerpath execution module cannot be loaded: unable to detect kernel grain.')
 
     if not has_powerpath():

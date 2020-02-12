@@ -286,7 +286,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                              'user.current': mock_user}),\
                 patch.dict(filestate.__opts__, {'test': False}),\
                 patch.object(os.path, 'isdir', mock_t),\
-                patch.object(os.path, 'exists', mock_f),\
+                patch.object(os.path, 'exists', mock_t),\
                 patch.object(os.path, 'lexists', mock_t),\
                 patch('salt.utils.win_functions.get_sid_from_name', return_value='test-sid'):
             comt = 'Symlink & backup dest exists and Force not set. {0} -> ' \
@@ -307,6 +307,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                              'user.info': mock_empty,
                                              'user.current': mock_user}),\
                 patch.dict(filestate.__opts__, {'test': False}),\
+                patch.object(os.path, 'exists', mock_t),\
                 patch.object(os.path, 'isfile', mock_t), \
                 patch.object(os.path, 'isdir', mock_t),\
                 patch('salt.utils.win_functions.get_sid_from_name', return_value='test-sid'):
@@ -327,7 +328,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                              'user.current': mock_user}),\
                 patch.dict(filestate.__opts__, {'test': False}),\
                 patch.object(os.path, 'isdir', mock_t),\
-                patch.object(os.path, 'exists', mock_f),\
+                patch.object(os.path, 'exists', mock_t),\
                 patch.object(os.path, 'isfile', mock_t),\
                 patch('salt.utils.win_functions.get_sid_from_name', return_value='test-sid'):
             comt = 'File exists where the symlink {0} should be'.format(name)
@@ -349,7 +350,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 patch.dict(filestate.__opts__, {'test': False}),\
                 patch.object(os.path, 'isdir', MagicMock(side_effect=[True, False])),\
                 patch.object(os.path, 'isdir', mock_t),\
-                patch.object(os.path, 'exists', mock_f),\
+                patch.object(os.path, 'exists', mock_t),\
                 patch('salt.utils.win_functions.get_sid_from_name', return_value='test-sid'):
             comt = 'Directory exists where the symlink {0} should be'.format(name)
             ret = return_val({'comment': comt,
@@ -1067,8 +1068,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
                                 with patch.object(salt.utils.files, 'mkstemp',
                                                   return_value=name):
-                                    comt = ('Unable to copy file {0} to {0}: '
-                                            .format(name))
+                                    comt = 'Unable to copy file {0} to {0}: '.format(name)
                                     ret.update({'comment': comt, 'result': False})
                                     self.assertDictEqual(filestate.managed
                                                          (name, user=user,
@@ -1469,7 +1469,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
             with patch.object(os.path, 'isabs', mock_t):
                 with patch.dict(filestate.__salt__,
-                                {'file.search': MagicMock(side_effect=[True, True, True, False, False])}):
+                                {'file.search': MagicMock(side_effect=[False, True, False, False])}):
                     comt = ('Pattern already commented')
                     ret.update({'comment': comt, 'result': True})
                     self.assertDictEqual(filestate.comment(name, regex), ret)
@@ -1479,7 +1479,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                     self.assertDictEqual(filestate.comment(name, regex), ret)
 
                 with patch.dict(filestate.__salt__,
-                                {'file.search': MagicMock(side_effect=[False, True, False, True, True]),
+                                {'file.search': MagicMock(side_effect=[True, True, True]),
                                  'file.comment': mock_t,
                                  'file.comment_line': mock_t}):
                     with patch.dict(filestate.__opts__, {'test': True}):
@@ -1517,7 +1517,9 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
             mock_t = MagicMock(return_value=True)
             mock_f = MagicMock(return_value=False)
-            mock = MagicMock(side_effect=[True, False, False, False, True, False,
+            mock = MagicMock(side_effect=[False, True,
+                                          False, False,
+                                          True,
                                           True, True])
             with patch.object(os.path, 'isabs', mock_f):
                 comt = ('Specified file {0} is not an absolute path'.format(name))

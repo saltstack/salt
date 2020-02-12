@@ -129,7 +129,7 @@ def migrate(settings_module,
 
     Execute the Django-Admin migrate command (requires Django 1.7 or higher).
 
-    .. versionadded:: Neon
+    .. versionadded:: 3000
 
     settings_module
         Specifies the settings module to use.

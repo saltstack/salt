@@ -325,6 +325,8 @@ def mounted(name,
             if label_device and label_device not in device_list:
                 device_list.append(label_device)
             if opts:
+                opts.sort()
+
                 mount_invisible_options = [
                     '_netdev',
                     'actimeo',
@@ -731,8 +733,6 @@ def swap(name, persist=True, config='/etc/fstab'):
         real_swap_device = __salt__['file.readlink'](name)
         if not real_swap_device.startswith('/'):
             real_swap_device = '/dev/{0}'.format(os.path.basename(real_swap_device))
-        else:
-            real_swap_device = real_swap_device
     else:
         real_swap_device = name
 

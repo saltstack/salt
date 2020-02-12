@@ -30,7 +30,7 @@ from datetime import datetime
 
 try:
     from shlex import quote as _cmd_quote  # pylint: disable=E0611
-except Exception:
+except Exception:  # pylint: disable=broad-except
     from pipes import quote as _cmd_quote
 
 # Import Salt libs

@@ -27,7 +27,7 @@ from salt.ext.six.moves import range
 from salt.utils.zeromq import zmq, ZMQDefaultLoop, install_zmq, ZMQ_VERSION_INFO
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
-import tornado.gen  # pylint: disable=F0401
+import salt.ext.tornado.gen  # pylint: disable=F0401
 
 # Import salt libs
 import salt.crypt
@@ -90,7 +90,7 @@ try:
 except ImportError:
     HAS_HALITE = False
 
-from tornado.stack_context import StackContext
+from salt.ext.tornado.stack_context import StackContext
 from salt.utils.ctx import RequestContext
 
 
@@ -317,7 +317,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         try:
             for pillar in self.git_pillar:
                 pillar.fetch_remotes()
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.error('Exception caught while updating git_pillar',
                       exc_info=True)
 
@@ -331,7 +331,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
             # the loop_interval setting
             if self.schedule.loop_interval < self.loop_interval:
                 self.loop_interval = self.schedule.loop_interval
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.error('Exception %s occurred in scheduled job', exc)
         self.schedule.cleanup_subprocesses()
 
@@ -459,7 +459,7 @@ class FileserverUpdate(salt.utils.process.SignalHandlingProcess):
                         args = ()
 
                     update_func(*args)
-                except Exception as exc:
+                except Exception as exc:  # pylint: disable=broad-except
                     log.exception(
                         'Uncaught exception while updating %s fileserver '
                         'cache', backend_name
@@ -719,7 +719,7 @@ class Master(SMaster):
                     _tmp = __import__(mod, globals(), locals(), [cls], -1)
                     cls = _tmp.__getattribute__(cls)
                     self.process_manager.add_process(cls, args=(self.opts,))
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     log.error('Error creating ext_processes process: %s', proc)
 
             if HAS_HALITE and 'halite' in self.opts:
@@ -1037,7 +1037,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
             # Tornado knows what to do
             pass
 
-    @tornado.gen.coroutine
+    @salt.ext.tornado.gen.coroutine
     def _handle_payload(self, payload):
         '''
         The _handle_payload method is the key method used to figure out what
@@ -1063,7 +1063,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         load = payload['load']
         ret = {'aes': self._handle_aes,
                'clear': self._handle_clear}[key](load)
-        raise tornado.gen.Return(ret)
+        raise salt.ext.tornado.gen.Return(ret)
 
     def _post_stats(self, start, cmd):
         '''
@@ -1625,7 +1625,7 @@ class AESFuncs(object):
                 log.info('Failed to verify event signature from minion %s.', load['id'])
                 if self.opts['drop_messages_signature_fail']:
                     log.critical(
-                        'Drop_messages_signature_fail is enabled, dropping '
+                        'drop_messages_signature_fail is enabled, dropping '
                         'message from %s', load['id']
                     )
                     return False
@@ -1841,7 +1841,7 @@ class AESFuncs(object):
                     'Master function call %s took %s seconds',
                     func, time.time() - start
                 )
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 ret = ''
                 log.error('Error in function %s:\n', func, exc_info=True)
         else:
@@ -1944,7 +1944,7 @@ class ClearFuncs(object):
             return runner_client.asynchronous(fun,
                                               clear_load.get('kwarg', {}),
                                               username)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.error('Exception occurred while introspecting %s: %s', fun, exc)
             return {'error': {'name': exc.__class__.__name__,
                               'args': exc.args,
@@ -2009,7 +2009,7 @@ class ClearFuncs(object):
             self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
             return {'tag': tag,
                     'data': data}
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.error('Exception occurred while introspecting %s: %s', fun, exc)
             data['return'] = 'Exception occurred in wheel {0}: {1}: {2}'.format(
                              fun,
@@ -2269,7 +2269,7 @@ class ClearFuncs(object):
             if save_load_func:
                 try:
                     self.mminion.returners[fstr](clear_load['jid'], clear_load, minions=minions)
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     log.critical(
                         'The specified returner threw a stack trace:\n',
                         exc_info=True
@@ -2285,7 +2285,7 @@ class ClearFuncs(object):
                 '"%s" does not have a save_load function!',
                 self.opts['master_job_cache']
             )
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             log.critical(
                 'The specified returner threw a stack trace:\n',
                 exc_info=True

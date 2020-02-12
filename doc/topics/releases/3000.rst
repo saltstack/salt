@@ -1,8 +1,233 @@
-:orphan:
+.. _release-3000:
 
-==================================
-Salt Release Notes - Codename Neon
-==================================
+=======================================
+Salt 3000 Release Notes - Codename Neon
+=======================================
+
+Security Advisory
+=================
+
+For historical reasons, Salt requires PyCrypto as a "lowest common
+denominator". However, `PyCrypto is unmaintained`_ and best practice is to
+manually upgrade to use a more maintained library such as `PyCryptodome`_. See
+`Issue #52674`_ and `Issue #54115`_ for more info
+
+New Versioning
+==============
+The neon release has removed the date versioning. Going forward we will
+use a non-date based version schema beginning at 3000. The version will
+be MAJOR.PATCH. For a planned release containing features and/or bug fixes
+the MAJOR version will be incremented. Please review the approved
+`SEP <https://github.com/saltstack/salt-enhancement-proposals/pull/20>`_
+for further details.
+
+The new versioning scheme is PEP 440 compliant, but distutils.StrictVersion
+will result in an error ``invalid version number``. If using StrictVersion to
+compare Salt's versions, please use LooseVersion. There is also the packaging
+library you can use to compare versions. Another alternative is using the
+:py:func:`salt version module<salt.modules.salt_version>`
+
+Python 3.8 Not Supported
+==========================
+Please note that running Salt with Python 3.8 is currently not supported.
+It is recommended to not use a version higher than 3.7.
+
+Vendored Tornado Code Base
+==========================
+
+The Tornado code base has been included as ``salt.ext.tornado``. This was done
+to provide a consistent version of Tornado across all operating systems while
+we continue to work on upgrading Tornado to a recent version. New code that
+uses Tornado should import the module from ``salt.ext.tornado`` instead of
+importing the system version of Tornado.
+
+Msgpack 1.0.0rc1 Incompatibility
+================================
+Salt is currently incompatible with mgspack 1.0.0rc1. We recommend using
+versions < 1.0.0 . This impacts the Salt Master's ability to run commands
+against minions. Please see `Issue 56007 <https://github.com/saltstack/salt/issues/56007>`_
+for more details and updates.
+
+
+Pip Installing Salt On Windows
+==============================
+
+This release will not install correctly on windows when using pip to install salt.
+This issue is addressed in `PR 56099 <https://github.com/saltstack/salt/pull/56099>`_.
+The workaround for this issue is:
+
+.. code-block:: text
+
+   pip install "pywin32==224" "WMI==1.4.9"
+
+
+Those using the Salt Windows Installer are not affected by this issue.
+
+
+Saltcheck Updates
+=================
+
+Available since 2018.3, the :py:func:`saltcheck module <salt.modules.saltcheck>`
+has been enhanced to:
+
+* Support saltenv environments
+* Associate tests with states by naming convention
+* Adds report_highstate_tests function
+* Adds empty and notempty assertions
+* Adds skip keyword
+* Adds print_result keyword
+* Adds assertion_section keyword
+* Use saltcheck.state_apply to run state.apply for test setup or teardown
+* Changes output to display test time
+* Works with salt-ssh
+
+Saltcheck provides unittest like functionality requiring only the knowledge of
+salt module execution and yaml. Saltcheck uses salt modules to return data, then
+runs an assertion against that return. This allows for testing with all the
+features included in salt modules.
+
+In order to run state and highstate saltcheck tests, a sub-folder in the state directory
+must be created and named ``saltcheck-tests``. Tests for a state should be created in files
+ending in ``*.tst`` and placed in the ``saltcheck-tests`` folder. ``tst`` files are run
+through the salt rendering system, enabling tests to be written in yaml (or renderer of choice),
+and include jinja, as well as the usual grain and pillar information. Like states, multiple tests can
+be specified in a ``tst`` file. Multiple ``tst`` files can be created in the ``saltcheck-tests``
+folder, and should be named the same as the associated state. The ``id`` of a test works in the
+same manner as in salt state files and should be unique and descriptive.
+
+Usage
+-----
+
+Example file system layout:
+
+.. code-block:: text
+
+    /srv/salt/apache/
+        init.sls
+        config.sls
+        saltcheck-tests/
+            init.tst
+            config.tst
+            deployment_validation.tst
+
+Tests can be run for each state by name, for all ``apache/saltcheck/*.tst`` files,
+or for all states assigned to the minion in top.sls. Tests may also be created
+with no associated state. These tests will be run through the use of
+``saltcheck.run_state_tests``, but will not be automatically run by
+``saltcheck.run_highstate_tests``.
+
+.. code-block:: bash
+
+    salt '*' saltcheck.run_state_tests apache,apache.config
+    salt '*' saltcheck.run_state_tests apache check_all=True
+    salt '*' saltcheck.run_highstate_tests
+    salt '*' saltcheck.run_state_tests apache.deployment_validation
+
+Example Tests
+-------------
+
+.. code-block:: jinja
+
+    {# will run the common salt state before further testing #}
+    setup_test_environment:
+      module_and_function: saltcheck.state_apply
+      args:
+        - common
+      pillar-data:
+        data: value
+
+    {% for package in ["apache2", "openssh"] %}
+    {# or another example #}
+    {# for package in salt['pillar.get']("packages") #}
+    jinja_test_{{ package }}_latest:
+      module_and_function: pkg.upgrade_available
+      args:
+        - {{ package }}
+      assertion: assertFalse
+    {% endfor %}
+
+    validate_user_present_and_shell:
+      module_and_function: user.info
+      args:
+        - root
+      assertion: assertEqual
+      expected-return: /bin/bash
+      assertion_section: shell
+      print_result: False
+
+    skip_test:
+      module_and_function: pkg.upgrade_available
+      args:
+        - apache2
+      assertion: assertFalse
+      skip: True
+
+Output Format Changes
+---------------------
+
+Saltcheck output has been enhanced to display the time taken per test. This results
+in a change to the output format.
+
+Previous Output:
+
+.. code-block:: text
+
+  local:
+    |_
+      ----------
+      ntp:
+          ----------
+          ntp-client-installed:
+              Pass
+          ntp-service-status:
+              Pass
+    |_
+      ----------
+      TEST RESULTS:
+          ----------
+          Failed:
+              0
+          Missing Tests:
+              0
+          Passed:
+              2
+
+New output:
+
+.. code-block:: text
+
+  local:
+    |_
+      ----------
+      ntp:
+          ----------
+          ntp-client-installed:
+              ----------
+              duration:
+                  1.0408
+              status:
+                  Pass
+          ntp-service-status:
+              ----------
+              duration:
+                  1.464
+              status:
+                  Pass
+    |_
+      ----------
+      TEST RESULTS:
+          ----------
+          Execution Time:
+              2.5048
+          Failed:
+              0
+          Missing Tests:
+              0
+          Passed:
+              2
+          Skipped:
+              0
+
 
 Unless and onlyif Enhancements
 ==============================
@@ -12,15 +237,40 @@ The dictionary must contain an argument ``fun`` which is the module that is
 being run, and everything else must be passed in under the args key or will be
 passed as individual kwargs to the module function.
 
+.. note::
+
+  Certain states have an ``unless``/``onlyif`` implementation that predates this feature, and may not work as expected:
+
+  * states.git
+  * states.cmd
+  * states.macpackage
+  * states.file
+  * states.docker_container
+
+Examples:
+
 .. code-block:: yaml
 
-  install apache on debian based distros:
-    cmd.run:
-      - name: make install
-      - cwd: /path/to/dir/whatever-2.1.5/
-      - unless:
+  check external ip address:
+    http.query:
+      - name: https://icanhazip.com
+      - status: 200
+      - onlyif:
         - fun: file.file_exists
           path: /usr/local/bin/whatever
+
+is equivalent to
+
+.. code-block:: yaml
+
+  check another ip address:
+    http.query:
+      - name: https://icanhazip.com
+      - status: 200
+      - onlyif:
+        - test -f /tmp/fnord.txt
+
+Another example:
 
 .. code-block:: yaml
 
@@ -81,6 +331,83 @@ as well as managing keystore files.
             Hn+GmxZA
             -----END CERTIFICATE-----
 
+XML Module
+==========
+
+A new state and execution module for editing XML files is now included. Currently it allows for
+editing values from an xpath query, or editing XML IDs.
+
+.. code-block:: bash
+
+  # salt-call xml.set_attribute /tmp/test.xml ".//actor[@id='3']" editedby "Jane Doe"
+  local:
+      True
+  # salt-call xml.get_attribute /tmp/test.xml ".//actor[@id='3']"
+  local:
+      ----------
+      editedby:
+          Jane Doe
+      id:
+          3
+  # salt-call xml.get_value /tmp/test.xml ".//actor[@id='2']"
+  local:
+      Liam Neeson
+  # salt-call xml.set_value /tmp/test.xml ".//actor[@id='2']" "Patrick Stewart"
+  local:
+      True
+  # salt-call xml.get_value /tmp/test.xml ".//actor[@id='2']"
+  local:
+      Patrick Stewart
+
+.. code-block:: yaml
+
+    ensure_value_true:
+      xml.value_present:
+        - name: /tmp/test.xml
+        - xpath: .//actor[@id='1']
+        - value: William Shatner
+
+
+LGPO Execution Module
+=====================
+Multiple fixes were made to the :py:func:`win_lgpo <salt.modules.win_lgpo>` to
+expand support for additional policies and improve performance. Issues with
+encoding and unsupported characters (smart-quotes, em-dash, etc) found in the
+ADML files as well as whitespace in some policies have been addressed.
+
+Speed enhancements include:
+
+- Caching the compiled xml from ADMX/ADML files in ``__context__``
+- Lowercasing all keys before compiling XML to remove an expensive XPath lookup
+
+Additional functionality:
+
+- Adds the :py:func:`lgpo.get_policy <salt.modules.win_lgpo.get_policy>`
+  function that allows you to get the current settings for a single policy.
+- Changes some policy names that were overly long
+
+
+LGPO State Module
+=================
+Multiple changes were made to the :py:func:`win_lgpo <salt.states.win_lgpo>`
+state to improve performance.
+
+It now uses the :py:func:`lgpo.get_policy <salt.modules.win_lgpo.get_policy>`
+function instead of the :py:func:`lgpo.get <salt.modules.win_lgpo.get>` to avoid
+reloading all settings on the machine at the beginning and end of each state
+run.
+
+Supports the new shorter policy names but also attempts to resolve the older,
+longer policy names.
+
+
+Win_network Salt Util
+=====================
+Now uses .NET libraries to obtain Interface information on Windows systems that
+support it. Unsupported systems fall back to the more expensive WMI calls. This
+is important as this data is gathered for grains and occurs each time a process
+is forked.
+
 
 Jinja enhancements
 ==================
@@ -110,7 +437,6 @@ The module can be also used to test ``json`` and ``yaml`` maps:
   salt myminion jinja.import_yaml myformula/defaults.yaml
 
   salt myminion jinja.import_json myformula/defaults.json
-
 
 json_query filter
 -----------------
@@ -170,12 +496,22 @@ Also, slot parsing is now supported inside of nested state data structures (dict
             - "DO NOT OVERRIDE"
           ignore_if_missing: True
 
-
 State Changes
 =============
 
+- The :py:func:`file.symlink <salt.states.file.symlink>` state was
+  fixed to remove existing file system entries other than files,
+  directories and symbolic links properly.
+
+- The ``onchanges`` and ``prereq`` :ref:`requisites <requisites>` now behave
+  properly in test mode, due to removing ``pchanges``.
+
 - Added new :py:func:`ssh_auth.manage <salt.states.ssh_auth.manage>` state to
   ensure only the specified ssh keys are present for the specified user.
+
+- Added new :py:func:`saltutil <salt.states.saltutil>` state to use instead of
+  ``module.run`` to more easily handle change.
+
 
 Module Changes
 ==============
@@ -183,8 +519,86 @@ Module Changes
 - Added new :py:func:`boto_ssm <salt.modules.boto_ssm>` module to set and query
   secrets in AWS SSM parameters.
 
+- The :py:func:`file.remove <salt.modules.file.remove>` module was
+  fixed to remove file system entries other than files, directories
+  and symbolic links properly.
+
+
+Enhancements to Engines
+=======================
+
+Multiple copies of a particular Salt engine can be configured by including
+the ``engine_module`` parameter in the engine configuration.
+
+.. code-block:: yaml
+
+   engines:
+     - production_logstash:
+         host: production_log.my_network.com
+         port: 5959
+         proto: tcp
+         engine_module: logstash
+     - develop_logstash:
+         host: develop_log.my_network.com
+         port: 5959
+         proto: tcp
+         engine_module: logstash
+
+
+- A new :py:func:`fluent engine <salt.engines.salt.engines.fluent>` has been
+  added to export Salt events to fluentd.
+
+  .. code-block:: yaml
+
+    engines:
+      - fluent
+          host: localhost
+          port: 24224
+
+  .. code-block::
+
+    <source>
+      @type forward
+      port 24224
+    </source>
+    <match saltstack.**>
+      @type file
+      path /var/log/td-agent/saltstack
+    </match>
+
+Enhancements to Beacons
+=======================
+
+Multiple copies of a particular Salt beacon can be configured by including
+the ``beacon_module`` parameter in the beacon configuration.
+
+ .. code-block:: yaml
+
+    beacons:
+      watch_importand_file:
+        - files:
+            /etc/important_file: {}
+        - beacon_module: inotify
+      watch_another_file:
+        - files:
+            /etc/another_file: {}
+        - beacon_module: inotify
+
+Enhancements to chroot
+======================
+
+- New functions added to chroot :py:func:`apply<salt.modules.chroot.apply_>`,
+  :py:func:`sls<salt.modules.chroot.sls>`, and
+  :py:func:`highstate<salt.modules.chroot.highstate>` that allow executing
+  states in sls files or running apply/highstate inside of a chroot.
+
 Deprecations
 ============
+
+Raet Deprecated
+---------------
+- The Raet transport has been deprecated. Please use the supported
+  transport protocols tcp or zeromq.
 
 Module Deprecations
 -------------------
@@ -453,3 +867,9 @@ salt.auth.Authorize Class Removal
 - The salt.auth.Authorize Class inside of the `salt/auth/__init__.py` file has been removed and
   the `any_auth` method inside of the file `salt/utils/minions.py`. These method and classes were
   not being used inside of the salt code base.
+
+
+.. _PyCrypto is unmaintained: https://github.com/dlitz/pycrypto/issues/301#issue-551975699
+.. _PyCryptodome: https://pypi.org/project/pycryptodome/
+.. _Issue #52674: https://github.com/saltstack/salt/issues/52674
+.. _Issue #54115: https://github.com/saltstack/salt/issues/54115

@@ -237,7 +237,7 @@ def __get_conn(**kwargs):
                       libvirt.VIR_CRED_PASSPHRASE,
                       libvirt.VIR_CRED_EXTERNAL]
         conn = libvirt.openAuth(conn_str, [auth_types, __get_request_auth(username, password), None], 0)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         raise CommandExecutionError(
             'Sorry, {0} failed to open a connection to the hypervisor '
             'software at {1}'.format(
@@ -1180,7 +1180,7 @@ def _handle_remote_boot_params(orig_boot):
                                                 saltinst_dir)
 
         return new_boot
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         raise err
 
 
@@ -1351,7 +1351,7 @@ def init(name,
                 'cmdline': 'console=ttyS0 ks=http://example.com/f8-i386/os/'
             }
 
-        .. versionadded:: neon
+        .. versionadded:: 3000
 
     .. _init-nic-def:
 
@@ -1833,7 +1833,7 @@ def update(name,
                 'cmdline': 'console=ttyS0 ks=http://example.com/f8-i386/os/'
             }
 
-        .. versionadded:: neon
+        .. versionadded:: 3000
 
     :return:
 
@@ -3348,7 +3348,7 @@ def purge(vm_, dirs=False, removables=None, **kwargs):
         # This one is only in 1.2.8+
         try:
             dom.undefineFlags(libvirt.VIR_DOMAIN_UNDEFINE_NVRAM)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             dom.undefine()
     else:
         dom.undefine()
@@ -4429,7 +4429,7 @@ def network_define(name,
         a possible DHCP configuration. The structure is documented
         in net-define-ip_.
 
-        ..versionadded:: Neon
+        .. versionadded:: 3000
     :type ipv4_config: dict or None
 
     :param ipv6_config: IP v6 configuration
@@ -4437,7 +4437,7 @@ def network_define(name,
         a possible DHCP configuration. The structure is documented
         in net-define-ip_.
 
-        ..versionadded:: Neon
+        .. versionadded:: 3000
     :type ipv6_config: dict or None
 
     :param connection: libvirt connection URI, overriding defaults
@@ -4584,6 +4584,30 @@ def network_info(name=None, **kwargs):
     return result
 
 
+def network_get_xml(name, **kwargs):
+    '''
+    Return the XML definition of a virtual network
+
+    :param name: libvirt network name
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    .. versionadded:: 3000
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.network_get_xml default
+    '''
+    conn = __get_conn(**kwargs)
+    try:
+        return conn.networkLookupByName(name).XMLDesc()
+    finally:
+        conn.close()
+
+
 def network_start(name, **kwargs):
     '''
     Start a defined virtual network.
@@ -4727,7 +4751,7 @@ def pool_capabilities(**kwargs):
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    .. versionadded:: Neon
+    .. versionadded:: 3000
 
     CLI Example:
 
@@ -4885,7 +4909,7 @@ def pool_define(name,
     :param source_initiator:
         Initiator IQN for libiscsi-direct pool types. (Default: ``None``)
 
-        .. versionadded:: neon
+        .. versionadded:: 3000
     :param source_adapter:
         SCSI source definition. The value is a dictionary with ``type``, ``name``, ``parent``,
         ``managed``, ``parent_wwnn``, ``parent_wwpn``, ``parent_fabric_wwn``, ``wwnn``, ``wwpn``
@@ -4932,7 +4956,7 @@ def pool_define(name,
                 }
             }
 
-        Since neon, instead the source authentication can only contain ``username``
+        Since 3000, instead the source authentication can only contain ``username``
         and ``password`` properties. In this case the libvirt secret will be defined and used.
         For Ceph authentications a base64 encoded key is expected.
 
@@ -5105,7 +5129,7 @@ def pool_update(name,
     :param source_initiator:
         Initiator IQN for libiscsi-direct pool types. (Default: ``None``)
 
-        .. versionadded:: neon
+        .. versionadded:: 3000
     :param source_adapter:
         SCSI source definition. The value is a dictionary with ``type``, ``name``, ``parent``,
         ``managed``, ``parent_wwnn``, ``parent_wwpn``, ``parent_fabric_wwn``, ``wwnn``, ``wwpn``
@@ -5152,7 +5176,7 @@ def pool_update(name,
                 }
             }
 
-        Since neon, instead the source authentication can only contain ``username``
+        Since 3000, instead the source authentication can only contain ``username``
         and ``password`` properties. In this case the libvirt secret will be defined and used.
         For Ceph authentications a base64 encoded key is expected.
 
@@ -5183,7 +5207,7 @@ def pool_update(name,
         salt '*' virt.pool_update myshare netfs source_format=cifs \
                                   source_dir=samba_share source_hosts="['example.com']" target=/mnt/cifs
 
-    .. versionadded:: neon
+    .. versionadded:: 3000
     '''
     # Get the current definition to compare the two
     conn = __get_conn(**kwargs)
@@ -5326,6 +5350,30 @@ def pool_info(name=None, **kwargs):
     finally:
         conn.close()
     return result
+
+
+def pool_get_xml(name, **kwargs):
+    '''
+    Return the XML definition of a virtual storage pool
+
+    :param name: libvirt storage pool name
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    .. versionadded:: 3000
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.pool_get_xml default
+    '''
+    conn = __get_conn(**kwargs)
+    try:
+        return conn.storagePoolLookupByName(name).XMLDesc()
+    finally:
+        conn.close()
 
 
 def pool_start(name, **kwargs):
@@ -5588,7 +5636,7 @@ def volume_infos(pool=None, volume=None, **kwargs):
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    .. versionadded:: Neon
+    .. versionadded:: 3000
 
     CLI Example:
 
@@ -5660,7 +5708,7 @@ def volume_delete(pool, volume, **kwargs):
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    .. versionadded:: Neon
+    .. versionadded:: 3000
 
     CLI Example:
 

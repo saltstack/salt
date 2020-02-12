@@ -495,7 +495,7 @@ def managed(name, ppa=None, **kwargs):
             __salt__['pkg.mod_repo'](repo, saltenv=__env__, **kwargs)
         else:
             __salt__['pkg.mod_repo'](repo, **kwargs)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         # This is another way to pass information back from the mod_repo
         # function.
         ret['result'] = False
@@ -518,7 +518,7 @@ def managed(name, ppa=None, **kwargs):
 
         ret['result'] = True
         ret['comment'] = 'Configured package repo \'{0}\''.format(name)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         ret['result'] = False
         ret['comment'] = \
             'Failed to confirm config of repo \'{0}\': {1}'.format(name, exc)

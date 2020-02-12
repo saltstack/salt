@@ -298,7 +298,7 @@ def _do_search(conf):
     except IndexError:  # we got no results for this search
         log.debug('LDAP search returned no results for filter %s', _filter)
         result = {}
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         log.critical(
             'Failed to retrieve pillar data from LDAP:\n', exc_info=True
         )
@@ -317,7 +317,7 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
         config_template = _render_template(config_file)
     except jinja2.exceptions.TemplateNotFound:
         log.debug('pillar_ldap: missing configuration file %s', config_file)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         log.debug('pillar_ldap: failed to render template for %s',
                   config_file, exc_info=True)
 
@@ -329,7 +329,7 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
     try:
         opts = salt.utils.yaml.safe_load(config_template) or {}
         opts['conf_file'] = config_file
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         import salt.log
         msg = 'pillar_ldap: error parsing configuration file: {0} - {1}'
         if salt.log.is_console_configured():

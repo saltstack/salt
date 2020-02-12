@@ -146,7 +146,7 @@ class _ServiceManager(win32serviceutil.ServiceFramework):
         self.log_info("Monitor")
         try:
             self.target(self, *args, **kwargs)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             # TODO: Add traceback info to windows event log objects
             self.log_exception("Exception In Target")
 
@@ -256,11 +256,11 @@ test_service = service_class_factory('test_service', 'test service', target=targ
 if __name__ == '__main__':
     try:
         test_service.stop()
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         logger.debug("stop service failed, this is ok.")
     try:
         test_service.remove()
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         logger.debug("remove service failed, this os ok.")
     test_service.install()
     sys.exit(0)

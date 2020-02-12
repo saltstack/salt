@@ -612,7 +612,7 @@ def sync_serializers(saltenv='base', extmod_whitelist=None, extmod_blacklist=Non
 
 def sync_executors(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
     '''
-    .. versionadded:: Neon
+    .. versionadded:: 3000
 
     Sync executor modules from ``salt://_executors`` to the master
 

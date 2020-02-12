@@ -52,7 +52,7 @@ class ExtendedTestCase(TestCase):
         try:
             func(*args, **kwargs)
             self.assertFail()
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             self.assertEqual(type(exc), exc_type)
             self.assertEqual(exc.message, exc_msg)
 

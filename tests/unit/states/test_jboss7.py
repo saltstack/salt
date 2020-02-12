@@ -399,3 +399,60 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
                 self.fail('An exception should be thrown')
             except CommandExecutionError as e:
                 self.assertEqual(six.text_type(e), 'Incorrect binding name.')
+
+    def test_datasource_exist_create_datasource_good_code(self):
+        jboss_config = {'cli_path': '/home/ch44d/Desktop/wildfly-18.0.0.Final/bin/jboss-cli.sh',
+                        'controller': '127.0.0.1: 9990',
+                        'cli_user': 'user',
+                        'cli_password': 'user'}
+
+        datasource_properties = {'driver - name': 'h2',
+                                 'connection - url': 'jdbc:sqlserver://127.0.0.1:1433;DatabaseName=test_s2',
+                                 'jndi - name': 'java:/home/ch44d/Desktop/sqljdbc_7.4/enu/mssql-jdbc-7.4.1.jre8.jar',
+                                 'user - name': 'user',
+                                 'password': 'user',
+                                 'use - java - context': True}
+
+        read_datasource = MagicMock(return_value={'success': False,
+                                                  'err_code': 'WFLYCTL0216'})
+
+        error_msg = 'Error: -1'
+        create_datasource = MagicMock(return_value={'success': False,
+                                                    'stdout': error_msg})
+
+        with patch.dict(jboss7.__salt__, {'jboss7.read_datasource': read_datasource,
+                                          'jboss7.create_datasource': create_datasource}):
+            ret = jboss7.datasource_exists("SQL", jboss_config, datasource_properties)
+
+            self.assertTrue('result' in ret)
+            self.assertFalse(ret['result'])
+            self.assertTrue('comment' in ret)
+            self.assertTrue(error_msg in ret['comment'])
+
+            read_datasource.assert_called_once()
+            create_datasource.assert_called_once()
+
+    def test_datasource_exist_create_datasource_bad_code(self):
+        jboss_config = {'cli_path': '/home/ch44d/Desktop/wildfly-18.0.0.Final/bin/jboss-cli.sh',
+                        'controller': '127.0.0.1: 9990',
+                        'cli_user': 'user',
+                        'cli_password': 'user'}
+
+        datasource_properties = {'driver - name': 'h2',
+                                 'connection - url': 'jdbc:sqlserver://127.0.0.1:1433;DatabaseName=test_s2',
+                                 'jndi - name': 'java:/home/ch44d/Desktop/sqljdbc_7.4/enu/mssql-jdbc-7.4.1.jre8.jar',
+                                 'user - name': 'user',
+                                 'password': 'user',
+                                 'use - java - context': True}
+
+        read_datasource = MagicMock(return_value={'success': False,
+                                                  'err_code': 'WFLYCTL0217',
+                                                  'failure-description': 'Something happened'})
+
+        with patch.dict(jboss7.__salt__, {'jboss7.read_datasource': read_datasource}):
+            self.assertRaises(CommandExecutionError,
+                              jboss7.datasource_exists,
+                              'SQL',
+                              jboss_config,
+                              datasource_properties)
+            read_datasource.assert_called_once()

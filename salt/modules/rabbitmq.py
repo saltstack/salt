@@ -67,7 +67,7 @@ def __virtual__():
                 raise IOError('"rabbitmq_server-*" subdirectory not found in: {0}'.format(dir_path))
             RABBITMQCTL = os.path.join(subdir_match, 'sbin', 'rabbitmqctl.bat')
             RABBITMQ_PLUGINS = os.path.join(subdir_match, 'sbin', 'rabbitmq-plugins.bat')
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             pass
         finally:
             if key is not None:
@@ -269,7 +269,7 @@ def list_upstreams(runas=None):
 
         salt '*' rabbitmq.list_upstreams
 
-    .. versionadded:: Neon
+    .. versionadded:: 3000
     '''
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()
@@ -329,7 +329,7 @@ def upstream_exists(name, runas=None):
 
         salt '*' rabbitmq.upstream_exists rabbit_upstream
 
-    .. versionadded:: Neon
+    .. versionadded:: 3000
     '''
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()
@@ -383,7 +383,7 @@ def add_user(name, password=None, runas=None):
         # Now, Clear the random password from the account, if necessary
         try:
             clear_password(name, runas)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             # Clearing the password failed. We should try to cleanup
             # and rerun and error.
             delete_user(name, runas)
@@ -1223,7 +1223,7 @@ def set_upstream(
         salt '*' rabbitmq.set_upstream upstream_name ack_mode=on-confirm max_hops=1 \
             trust_user_id=True uri=amqp://hostname
 
-    .. versionadded:: Neon
+    .. versionadded:: 3000
     '''
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()
@@ -1262,7 +1262,7 @@ def delete_upstream(name, runas=None):
 
         salt '*' rabbitmq.delete_upstream upstream_name
 
-    .. versionadded:: Neon
+    .. versionadded:: 3000
     '''
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()

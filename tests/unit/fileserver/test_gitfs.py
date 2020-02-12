@@ -10,7 +10,7 @@ import os
 import shutil
 import tempfile
 import textwrap
-import tornado.ioloop
+import salt.ext.tornado.ioloop
 import logging
 import stat
 try:
@@ -73,7 +73,7 @@ def _rmtree_error(func, path, excinfo):
 
 def _clear_instance_map():
     try:
-        del salt.utils.gitfs.GitFS.instance_map[tornado.ioloop.IOLoop.current()]
+        del salt.utils.gitfs.GitFS.instance_map[salt.ext.tornado.ioloop.IOLoop.current()]
     except KeyError:
         pass
 
@@ -444,7 +444,8 @@ class GitFSTestBase(object):
 
         shutil.copytree(
             salt.ext.six.text_type(RUNTIME_VARS.BASE_FILES),
-            salt.ext.six.text_type(cls.tmp_repo_dir + '/')
+            salt.ext.six.text_type(cls.tmp_repo_dir + '/'),
+            symlinks=True
         )
 
         repo = git.Repo.init(cls.tmp_repo_dir)

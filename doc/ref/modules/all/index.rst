@@ -388,6 +388,7 @@ execution modules
     s3
     s6
     salt_proxy
+    salt_version
     saltcheck
     saltcloudmod
     saltutil
@@ -512,6 +513,7 @@ execution modules
     xapi_virt
     xbpspkg
     xfs
+    xml
     xmpp
     yumpkg
     zabbix

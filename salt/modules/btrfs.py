@@ -658,7 +658,7 @@ def properties(obj, type=None, set=None):
                                for keyset in set.split(",")]:
                 cmd.append(key)
                 cmd.append(value)
-        except Exception as ex:
+        except Exception as ex:  # pylint: disable=broad-except
             raise CommandExecutionError(ex)
 
     out = __salt__['cmd.run_all'](' '.join(cmd))

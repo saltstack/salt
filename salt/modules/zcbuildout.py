@@ -119,7 +119,7 @@ def _salt_callback(func, **kwargs):
                                              status=out.get('status', True),
                                              comment=out.get('comment', ''),
                                              out=out.get('out', out))
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             trace = traceback.format_exc(None)
             LOG.error(trace)
             _invalid(status)
@@ -326,7 +326,7 @@ def _has_old_distribute(python=sys.executable, runas=None, env=()):
         ret = _Popen(cmd, runas=runas, env=env, output=True)
         if 'distribute-0.6' in ret:
             old_distribute = True
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         old_distribute = False
     return old_distribute
 
@@ -342,7 +342,7 @@ def _has_setuptools7(python=sys.executable, runas=None, env=()):
         ret = _Popen(cmd, runas=runas, env=env, output=True)
         if 'true' in ret.lower():
             new_st = True
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         new_st = False
     return new_st
 

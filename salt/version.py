@@ -33,6 +33,7 @@ if sys.version_info[0] == 3:
 else:
     MAX_SIZE = sys.maxint
     string_types = (six.string_types,)
+VERSION_LIMIT = MAX_SIZE - 200
 # pylint: enable=invalid-name,redefined-builtin
 
 # ----- ATTENTION --------------------------------------------------------------------------------------------------->
@@ -67,15 +68,18 @@ class SaltStackVersion(object):
 
     __slots__ = ('name', 'major', 'minor', 'bugfix', 'mbugfix', 'pre_type', 'pre_num', 'noc', 'sha')
 
+    git_sha_regex = r'(?P<sha>g?[a-f0-9]{7,40})'
+
     git_describe_regex = re.compile(
         r'(?:[^\d]+)?(?P<major>[\d]{1,4})'
-        r'\.(?P<minor>[\d]{1,2})'
+        r'(?:\.(?P<minor>[\d]{1,2}))?'
         r'(?:\.(?P<bugfix>[\d]{0,2}))?'
         r'(?:\.(?P<mbugfix>[\d]{0,2}))?'
         r'(?:(?P<pre_type>rc|a|b|alpha|beta|nb)(?P<pre_num>[\d]{1}))?'
-        r'(?:(?:.*)-(?P<noc>(?:[\d]+|n/a))-(?P<sha>[a-z0-9]{8}))?'
+        r'(?:(?:.*)-(?P<noc>(?:[\d]+|n/a))-' + git_sha_regex + r')?'
     )
-    git_sha_regex = r'(?P<sha>[a-z0-9]{7})'
+    git_sha_regex = r'^' + git_sha_regex
+
     if six.PY2:
         git_sha_regex = git_sha_regex.decode(__salt_system_encoding__)
     git_sha_regex = re.compile(git_sha_regex)
@@ -105,13 +109,13 @@ class SaltStackVersion(object):
         'Nitrogen'      : (2017, 7),
         'Oxygen'        : (2018, 3),
         'Fluorine'      : (2019, 2),
-        'Neon'          : (MAX_SIZE - 99, 0),
+        'Neon'          : (3000,),
         'Sodium'        : (MAX_SIZE - 98, 0),
         'Magnesium'     : (MAX_SIZE - 97, 0),
         'Aluminium'     : (MAX_SIZE - 96, 0),
+        'Silicon'      : (MAX_SIZE - 95, 0),
+        'Phosphorus'   : (MAX_SIZE - 94, 0),
         # pylint: disable=E8265
-        #'Silicon'      : (MAX_SIZE - 95, 0),
-        #'Phosphorus'   : (MAX_SIZE - 94, 0),
         #'Sulfur'       : (MAX_SIZE - 93, 0),
         #'Chlorine'     : (MAX_SIZE - 92, 0),
         #'Argon'        : (MAX_SIZE - 91, 0),
@@ -216,8 +220,8 @@ class SaltStackVersion(object):
 
     def __init__(self,              # pylint: disable=C0103
                  major,
-                 minor,
-                 bugfix=0,
+                 minor=None,
+                 bugfix=None,
                  mbugfix=0,
                  pre_type=None,
                  pre_num=None,
@@ -230,7 +234,7 @@ class SaltStackVersion(object):
         if isinstance(minor, string_types):
             minor = int(minor)
 
-        if bugfix is None:
+        if bugfix is None and not self.new_version(major=major):
             bugfix = 0
         elif isinstance(bugfix, string_types):
             bugfix = int(bugfix)
@@ -264,6 +268,12 @@ class SaltStackVersion(object):
         self.noc = noc
         self.sha = sha
 
+    def new_version(self, major):
+        '''
+        determine if using new versioning scheme
+        '''
+        return bool(int(major) >= 3000 and int(major) < VERSION_LIMIT)
+
     @classmethod
     def parse(cls, version_string):
         if version_string.lower() in cls.LNAMES:
@@ -290,7 +300,7 @@ class SaltStackVersion(object):
             cls.VNAMES[
                 max([version_info for version_info in
                      cls.VNAMES if
-                     version_info[0] < (MAX_SIZE - 200)])
+                     version_info[0] < (VERSION_LIMIT)])
             ]
         )
 
@@ -356,11 +366,16 @@ class SaltStackVersion(object):
 
     @property
     def string(self):
-        version_string = '{0}.{1}.{2}'.format(
-            self.major,
-            self.minor,
-            self.bugfix
-        )
+        if self.new_version(self.major):
+            version_string = '{0}'.format(self.major)
+            if self.minor:
+                version_string = '{0}.{1}'.format(self.major, self.minor)
+        else:
+            version_string = '{0}.{1}.{2}'.format(
+                self.major,
+                self.minor,
+                self.bugfix
+            )
         if self.mbugfix:
             version_string += '.{0}'.format(self.mbugfix)
         if self.pre_type:
@@ -403,21 +418,25 @@ class SaltStackVersion(object):
                     )
                 )
 
-        if (self.pre_type and other.pre_type) or (not self.pre_type and not other.pre_type):
-            # Both either have or don't have pre-release information, regular compare is ok
-            return method(self.noc_info, other.noc_info)
+        other_noc_info = list(other.noc_info)
+        noc_info = list(self.noc_info)
+
+        if self.new_version(self.major):
+            if isinstance(self.minor, int) and not isinstance(other.minor, int):
+                other_noc_info[1] = 0
+
+            if not isinstance(self.minor, int) and isinstance(other.minor, int):
+                noc_info[1] = 0
 
         if self.pre_type and not other.pre_type:
             # We have pre-release information, the other side doesn't
-            other_noc_info = list(other.noc_info)
             other_noc_info[4] = 'zzzzz'
-            return method(self.noc_info, tuple(other_noc_info))
 
         if not self.pre_type and other.pre_type:
             # The other side has pre-release informatio, we don't
-            noc_info = list(self.noc_info)
             noc_info[4] = 'zzzzz'
-            return method(tuple(noc_info), other.noc_info)
+
+        return method(tuple(noc_info), tuple(other_noc_info))
 
     def __lt__(self, other):
         return self.__compare__(other, lambda _self, _other: _self < _other)
@@ -519,15 +538,13 @@ def __discover_version(saltstack_version):
         if not out or err:
             return saltstack_version
 
-        try:
-            return SaltStackVersion.parse(out)
-        except ValueError:
-            if not SaltStackVersion.git_sha_regex.match(out):
-                raise
-
+        if SaltStackVersion.git_sha_regex.match(out):
             # We only define the parsed SHA and set NOC as ??? (unknown)
             saltstack_version.sha = out.strip()
             saltstack_version.noc = -1
+            return saltstack_version
+
+        return SaltStackVersion.parse(out)
 
     except OSError as os_err:
         if os_err.errno != 2:
@@ -620,7 +637,7 @@ def dependency_information(include_salt_cloud=False):
             if isinstance(version, (tuple, list)):
                 version = '.'.join(map(str, version))
             yield name, version
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             yield name, None
 
 
@@ -684,8 +701,8 @@ def system_information():
                     version = item
             release = version
 
-        _, ver, sp, extra = platform.win32_ver()
-        version = ' '.join([release, ver, sp, extra])
+        _, ver, service_pack, extra = platform.win32_ver()
+        version = ' '.join([release, ver, service_pack, extra])
     else:
         version = system_version()
         release = platform.release()

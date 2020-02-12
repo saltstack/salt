@@ -36,7 +36,7 @@ mysql:
 .. versionadded:: 2017.7.5,2018.3.1
 
     The spelling mistake in parameter `enviroment` was corrected to `environment`.
-    The `enviroment` spelling mistake has been removed in Salt Neon.
+    The `enviroment` spelling mistake has been removed in Salt 3000.
 
 '''
 # Import Python libs
@@ -131,13 +131,22 @@ def deployed(name, template=None, environment=None, params=None, poll=5,
     .. versionadded:: 2017.7.5,2018.3.1
 
         The spelling mistake in parameter `enviroment` was corrected to `environment`.
-        The `enviroment` spelling mistake has been removed in Salt Neon.
+        The `enviroment` spelling mistake has been removed in Salt 3000.
 
     '''
-    log.debug('Deployed with(' +
-              '{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9})'
-              .format(name, template, environment, params, poll, rollback,
-                      timeout, update, profile, connection_args))
+    log.debug(
+        'Deployed with(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)',
+        name,
+        template,
+        environment,
+        params,
+        poll,
+        rollback,
+        timeout,
+        update,
+        profile,
+        connection_args
+    )
     ret = {'name': None,
            'comment': '',
            'changes': {},
@@ -291,8 +300,10 @@ def absent(name, poll=5, timeout=60, profile=None):
         Profile to use
 
     '''
-    log.debug('Absent with(' +
-              '{0}, {1} {2})'.format(name, poll, profile))
+    log.debug(
+        'Absent with(%s, %s %s)',
+        name, poll, profile
+    )
     ret = {'name': None,
            'comment': '',
            'changes': {},

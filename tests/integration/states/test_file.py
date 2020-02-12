@@ -125,8 +125,6 @@ def _test_managed_file_mode_keep_helper(testcase, local=False):
         testcase.assertSaltTrueReturn(ret)
         managed_mode = stat.S_IMODE(os.stat(name).st_mode)
         testcase.assertEqual(oct(managed_mode), oct(new_mode_2))
-    except Exception:
-        raise
     finally:
         # Set the mode of the file in the file_roots back to what it
         # originally was.
@@ -4127,7 +4125,7 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
             if exc.errno != errno.ENOENT:
                 six.reraise(*sys.exc_info())
 
-    def run_state(self, *args, **kwargs):
+    def run_state(self, *args, **kwargs):  # pylint: disable=arguments-differ
         ret = super(RemoteFileTest, self).run_state(*args, **kwargs)
         log.debug('ret = %s', ret)
         return ret

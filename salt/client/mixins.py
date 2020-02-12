@@ -33,7 +33,7 @@ import salt.log.setup
 from salt.ext import six
 
 # Import 3rd-party libs
-import tornado.stack_context
+import salt.ext.tornado.stack_context
 
 log = logging.getLogger(__name__)
 
@@ -368,7 +368,7 @@ class SyncClientMixin(object):
                 func_globals['__jid_event__'].fire_event(data, 'new')
 
                 # Initialize a context for executing the method.
-                with tornado.stack_context.StackContext(self.functions.context_dict.clone):
+                with salt.ext.tornado.stack_context.StackContext(self.functions.context_dict.clone):
                     func = self.functions[fun]
                     try:
                         data['return'] = func(*args, **kwargs)
@@ -382,7 +382,7 @@ class SyncClientMixin(object):
                     if isinstance(data['return'], dict) and 'data' in data['return']:
                         # some functions can return boolean values
                         data['success'] = salt.utils.state.check_result(data['return']['data'])
-            except (Exception, SystemExit) as ex:
+            except (Exception, SystemExit) as ex:  # pylint: disable=broad-except
                 if isinstance(ex, salt.exceptions.NotImplemented):
                     data['return'] = six.text_type(ex)
                 else:
