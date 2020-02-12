@@ -74,7 +74,7 @@ log = logging.getLogger(__name__)
 #        return future
 #else:
 @salt.ext.tornado.gen.coroutine
-def run_future(future):
+def x_run_future(future):
     while not future.done():
         try:
             yield salt.ext.tornado.gen.with_timeout(
@@ -89,6 +89,9 @@ def run_future(future):
         yield salt.ext.tornado.gen.moment
     raise salt.ext.tornado.gen.Return(future.result())
 
+
+def run_future(future):
+    return future
 
 def _get_master_uri(master_ip,
                     master_port,
