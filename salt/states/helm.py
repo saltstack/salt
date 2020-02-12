@@ -131,7 +131,7 @@ def repo_updated(name, flags=None, kvflags=None):
     return ret
 
 
-def release_present(name, chart, flags=None, kvflags=None):
+def release_present(name, chart, values=None, flags=None, kvflags=None):
     '''
     Make sure the release name is present.
 
@@ -140,6 +140,9 @@ def release_present(name, chart, flags=None, kvflags=None):
 
     chart
         (string) The chart to install.
+
+    values
+        (string) Absolute path to the values.yaml file.
 
     flags
         (list) Flags in argument of the command without values. ex: ['help', '--help']
@@ -191,6 +194,8 @@ def release_present(name, chart, flags=None, kvflags=None):
         ret['result'] = None
         ret['comment'] = 'Helm release would have been installed or updated.'
     else:
+        if values:
+            kvflags.update({'values': values})
         release_old_status = __salt__['helm.status'](release=name)
         if isinstance(release_old_status, dict):
             release_upgrade = __salt__['helm.upgrade'](release=name,
