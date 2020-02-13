@@ -157,8 +157,7 @@ def _split_docker_uuid(uuid):
         if len(uuid) == 2:
             tag = uuid[1]
             repo = uuid[0]
-            if len(repo.split('/')) == 2:
-                return repo, tag
+            return repo, tag
     return None, None
 
 
@@ -373,6 +372,9 @@ def config_present(name, value):
     # apply change if needed
     if not __opts__['test'] and ret['changes']:
         ret['result'] = _write_config(config)
+
+        if not ret['result']:
+            ret['comment'] = 'Could not add property {0} with value "{1}" to config'.format(name, value)
 
     return ret
 
@@ -809,6 +811,19 @@ def vm_present(name, vmconfig, config=None):
             else:
                 ret['result'] = False
                 ret['comment'] = 'image {0} not installed'.format(vmconfig['image_uuid'])
+
+    # prepare disk.*.image_uuid
+    for disk in vmconfig['disks'] if 'disks' in vmconfig else []:
+        if 'image_uuid' in disk and disk['image_uuid'] not in __salt__['imgadm.list']():
+            if config['auto_import']:
+                if not __opts__['test']:
+                    res = __salt__['imgadm.import'](disk['image_uuid'])
+                    if disk['image_uuid'] not in res:
+                        ret['result'] = False
+                        ret['comment'] = 'failed to import image {0}'.format(disk['image_uuid'])
+            else:
+                ret['result'] = False
+                ret['comment'] = 'image {0} not installed'.format(disk['image_uuid'])
 
     # docker json-array handling
     if 'internal_metadata' in vmconfig:
