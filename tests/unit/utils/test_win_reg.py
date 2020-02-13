@@ -637,6 +637,10 @@ class WinFunctionsTestCase(TestCase):
         result = win_reg.cast_vdata(vdata=vdata, vtype='REG_DWORD')
         self.assertTrue(isinstance(result, six.integer_types))
 
+        vdata = '0000001'
+        result = win_reg.cast_vdata(vdata=vdata, vtype='REG_DWORD')
+        self.assertTrue(isinstance(result, six.integer_types))
+
     def test_cast_vdata_reg_expand_sz(self):
         '''
         Test the cast_vdata function with REG_EXPAND_SZ
