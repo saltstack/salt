@@ -7,7 +7,7 @@ This state wraps the saltutil execution modules to make them easier to run
 from a states. Rather than needing to to use ``module.run`` this state allows for
 improved change detection.
 
-    .. versionadded: Neon
+    .. versionadded: 3000
 '''
 from __future__ import absolute_import, unicode_literals, print_function
 
@@ -39,7 +39,7 @@ def _sync_single(name, module, **kwargs):
         if sync_status:
             ret['changes'][module] = sync_status
             ret['comment'] = "Updated {0}.".format(module)
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         log.error("Failed to run saltutil.sync_%s: %s", module, e)
         ret['result'] = False
         ret['comment'] = "Failed to run sync_{0}: {1}".format(module, e)
@@ -75,7 +75,7 @@ def sync_all(name, **kwargs):
             if value:
                 ret['changes'][key] = value
                 ret['comment'] = "Sync performed"
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         log.error("Failed to run saltutil.sync_all: %s", e)
         ret['result'] = False
         ret['comment'] = "Failed to run sync_all: {0}".format(e)

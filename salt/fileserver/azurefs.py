@@ -127,7 +127,7 @@ def find_file(path, saltenv='base', **kwargs):
                 # 8 => st_mtime=1456338235
                 # 9 => st_ctime=1456338235
                 fnd['stat'] = list(os.stat(full))
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 pass
             return fnd
     return fnd
@@ -193,14 +193,14 @@ def update():
             elif not os.path.isdir(path):
                 shutil.rmtree(path)
                 os.makedirs(path)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.exception('Error occurred creating cache directory for azurefs')
             continue
         blob_service = _get_container_service(container)
         name = container['container_name']
         try:
             blob_list = blob_service.list_blobs(name)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.exception('Error occurred fetching blob list for azurefs')
             continue
 
@@ -215,7 +215,7 @@ def update():
                     salt.fileserver.wait_lock(fname + '.lk', fname)
                     try:
                         os.unlink(fname)
-                    except Exception:
+                    except Exception:  # pylint: disable=broad-except
                         pass
             if not dirs and not files:
                 shutil.rmtree(root)
@@ -243,14 +243,14 @@ def update():
 
                 try:
                     blob_service.get_blob_to_path(name, blob.name, fname)
-                except Exception as exc:
+                except Exception as exc:  # pylint: disable=broad-except
                     log.exception('Error occurred fetching blob from azurefs')
                     continue
 
                 # Unlock writes
                 try:
                     os.unlink(lk_fn)
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     pass
 
         # Write out file list
@@ -263,12 +263,12 @@ def update():
             salt.utils.json.dump(blob_names, fp_)
         try:
             os.unlink(lk_fn)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             pass
         try:
             hash_cachedir = os.path.join(__opts__['cachedir'], 'azurefs', 'hashes')
             shutil.rmtree(hash_cachedir)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             log.exception('Problem occurred trying to invalidate hash cach for azurefs')
 
 
@@ -315,7 +315,7 @@ def file_list(load):
                 continue
             with salt.utils.files.fopen(container_list, 'r') as fp_:
                 ret.update(set(salt.utils.json.load(fp_)))
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error('azurefs: an error ocurred retrieving file lists. '
                   'It should be resolved next time the fileserver '
                   'updates. Please do not manually modify the azurefs '

@@ -12,8 +12,6 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -95,7 +93,6 @@ class MockTwilioRestClient(object):
 
 
 @skipIf(not HAS_LIBS, 'twilio.rest is not available')
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class TwilioNotifyTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.twilio_notify

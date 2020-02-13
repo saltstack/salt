@@ -423,7 +423,7 @@ def append_to_package_conf(conf, atom='', flags=None, string='', overwrite=False
                     new_contents += l
             if not added:
                 new_contents += string.strip() + '\n'
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.error('Failed to write to %s: %s', complete_file_path, exc)
         else:
             file_handler.seek(0)
@@ -616,7 +616,7 @@ def get_iuse(cp):
         # aux_get might return dupes, so run them through set() to remove them
         dirty_flags = _porttree().dbapi.aux_get(cpv, ["IUSE"])[0].split()
         return list(set(dirty_flags))
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         return []
 
 

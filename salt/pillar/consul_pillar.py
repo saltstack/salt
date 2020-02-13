@@ -187,10 +187,10 @@ def ext_pillar(minion_id,
         if minion_id not in minions:
             return {}
 
-    root_re = re.compile('root=(\S*)')  # pylint: disable=W1401
+    root_re = re.compile('(?<!_)root=(\S*)')  # pylint: disable=W1401
     match = root_re.search(temp)
     if match:
-        opts['root'] = match.group(1)
+        opts['root'] = match.group(1).rstrip('/')
         temp = temp.replace(match.group(0), '')
     else:
         opts['root'] = ""
@@ -198,7 +198,7 @@ def ext_pillar(minion_id,
     pillar_root_re = re.compile('pillar_root=(\S*)')  # pylint: disable=W1401
     match = pillar_root_re.search(temp)
     if match:
-        opts['pillar_root'] = match.group(1)
+        opts['pillar_root'] = match.group(1).rstrip('/')
         temp = temp.replace(match.group(0), '')
     else:
         opts['pillar_root'] = ""
@@ -237,7 +237,7 @@ def ext_pillar(minion_id,
 
             pillar = {}
             branch = pillar
-            keys = opts['pillar_root'].rstrip('/').split('/')
+            keys = opts['pillar_root'].split('/')
 
             for i, k in enumerate(keys):
                 if i == len(keys) - 1:
@@ -258,7 +258,9 @@ def consul_fetch(client, path):
     '''
     Query consul for all keys/values within base path
     '''
-    return client.kv.get(path, recurse=True)
+    # Unless the root path is blank, it needs a trailing slash for
+    # the kv get from Consul to work as expected
+    return client.kv.get('' if not path else path.rstrip('/') + '/', recurse=True)
 
 
 def fetch_tree(client, path, expand_keys):
@@ -276,9 +278,9 @@ def fetch_tree(client, path, expand_keys):
     if items is None:
         return ret
     for item in reversed(items):
-        key = re.sub(r'^' + path + '/?', '', item['Key'])
+        key = re.sub(r'^' + re.escape(path) + '/?', '', item['Key'])
         if key != '':
-            log.debug('key/path - %s: %s', path, key)
+            log.debug('path/key - %s: %s', path, key)
             log.debug('has_children? %r', has_children.search(key))
         if has_children.search(key) is None:
             ret = pillar_format(ret, key.split('/'), item['Value'], expand_keys)

@@ -198,7 +198,7 @@ def list_nodes():
         if not record['is_a_template'] and not record['is_control_domain']:
             try:
                 base_template_name = record['other_config']['base_template_name']
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 base_template_name = None
                 log.debug(
                     'VM %s, doesnt have base_template_name attribute',
@@ -254,7 +254,7 @@ def get_vm_ip(name=None, session=None, call=None):
                 name, net["0/ip"]
             )
             ret = net["0/ip"]
-    # except Exception as ex:
+    # except Exception as ex:  # pylint: disable=broad-except
     except XenAPI.Failure:
         log.info('Could not get vm metrics at this time')
     return ret
@@ -322,7 +322,7 @@ def list_nodes_full(session=None):
             # deal with cases where the VM doesn't have 'base_template_name' attribute
             try:
                 base_template_name = record['other_config']['base_template_name']
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 base_template_name = None
                 log.debug(
                     'VM %s, doesnt have base_template_name attribute',
@@ -489,7 +489,7 @@ def show_instance(name, session=None, call=None):
     if not record['is_a_template'] and not record['is_control_domain']:
         try:
             base_template_name = record['other_config']['base_template_name']
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             base_template_name = None
             log.debug(
                 'VM %s, doesnt have base_template_name attribute',

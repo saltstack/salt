@@ -31,7 +31,7 @@ class OutputUnifier(object):
             for pls in self.policies:
                 try:
                     result = pls(result)
-                except Exception as exc:
+                except Exception as exc:  # pylint: disable=broad-except
                     log.debug('An exception occurred in this state: %s', exc,
                               exc_info_on_loglevel=logging.DEBUG)
                     result = {

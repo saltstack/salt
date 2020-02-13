@@ -31,7 +31,7 @@ def __virtual__():  # pylint: disable=expected-2-blank-lines-found-0
         if not __salt__:
             __salt__ = salt.loader.minion_mods(__opts__)
             return True
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         log.error("Could not load __salt__: %s", e)
         return False
 
@@ -180,7 +180,7 @@ def _selftoken_expired():
         if response.status_code != 200:
             return True
         return False
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         raise salt.exceptions.CommandExecutionError(
             'Error while looking up self token : {0}'.format(e)
         )
@@ -200,7 +200,7 @@ def _wrapped_token_valid():
         if response.status_code != 200:
             return False
         return True
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         raise salt.exceptions.CommandExecutionError(
             'Error while looking up wrapped token : {0}'.format(e)
         )

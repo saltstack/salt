@@ -4,10 +4,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
+from tests.support.unit import TestCase
 from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     Mock,
     MagicMock,
     patch
@@ -28,7 +26,6 @@ def mock_json_response(data):
     return Mock(return_value=response)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class GrafanaDatasourceTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {grafana_datasource: {}}
