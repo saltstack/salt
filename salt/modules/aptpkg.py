@@ -1330,7 +1330,7 @@ def list_pkgs(versions_as_list=False,
                 name += ':{0}'.format(arch)
         if cols:
             if ('install' in linetype or 'hold' in linetype) and \
-                    'installed' in status:
+                    ('installed' in status or 'triggers-pending' in status):
                 __salt__['pkg_resource.add_pkg'](ret['installed'],
                                                  name,
                                                  version_num)
