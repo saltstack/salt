@@ -8,10 +8,11 @@ import time
 import pprint
 
 # Import Salt Testing libs
-from tests.support.case import ModuleCase
+from tests.support.case import ModuleCase, ShellCase
+from tests.support.runtests import RUNTIME_VARS
 
 
-class MineTest(ModuleCase):
+class MineTest(ModuleCase, ShellCase):
     '''
     Test the mine system
     '''
@@ -22,15 +23,8 @@ class MineTest(ModuleCase):
         '''
         test mine.get and mine.update
         '''
-        self.assertTrue(self.run_function('mine.update', minion_tgt='minion'))
-        # The sub_minion does not have mine_functions defined in its configuration
-        # In this case, mine.update returns None
-        self.assertIsNone(
-            self.run_function(
-                'mine.update',
-                minion_tgt='sub_minion'
-            )
-        )
+        assert self.run_function('mine.update', minion_tgt='minion')
+        assert self.run_function('mine.update', minion_tgt='sub_minion')
         # Since the minion has mine_functions defined in its configuration,
         # mine.update will return True
         self.assertTrue(
@@ -39,6 +33,78 @@ class MineTest(ModuleCase):
                 ['minion', 'test.ping']
             )
         )
+
+    def test_get_allow_tgt(self):
+        '''
+        test mine.get and mine.update using allow_tgt
+        '''
+        assert self.run_function('mine.update', minion_tgt='minion')
+        assert self.run_function('mine.update', minion_tgt='sub_minion')
+
+        # sub_minion should be able to view test.arg data
+        sub_min_ret = self.run_call(r'mine.get \* test.arg', config_dir=RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR)
+        assert "            - isn't" in sub_min_ret
+
+        # minion should not be able to view test.arg data
+        min_ret = self.run_call(r'mine.get \* test.arg')
+        assert "            - isn't" not in min_ret
+
+    def test_send_allow_tgt(self):
+        '''
+        test mine.send with allow_tgt set
+        '''
+        mine_name = 'test_this'
+        for minion in ['sub_minion', 'minion']:
+            assert self.run_function('mine.send', [mine_name,
+                'mine_function=test.arg_clean', 'one'], allow_tgt='sub_minion',
+                minion_tgt=minion)
+        min_ret = self.run_call(r'mine.get \* ' + mine_name)
+        sub_ret = self.run_call(r'mine.get \* ' + mine_name,
+                config_dir=RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR)
+
+        # ensure we did get the mine_name mine function for sub_minion
+        assert '            - one' in sub_ret
+        # ensure we did not get the mine_name mine function for minion
+        assert '            - one' not in min_ret
+
+    def test_send_allow_tgt_compound(self):
+        '''
+        test mine.send with allow_tgt set
+        and using compound targeting
+        '''
+        mine_name = 'test_this_comp'
+        for minion in ['sub_minion', 'minion']:
+            assert self.run_function('mine.send', [mine_name,
+                'mine_function=test.arg_clean', 'one'],
+                allow_tgt='L@minion,sub_minion',
+                allow_tgt_type='compound',
+                minion_tgt=minion)
+        min_ret = self.run_call(r'mine.get \* ' + mine_name)
+        sub_ret = self.run_call(r'mine.get \* ' + mine_name,
+                config_dir=RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR)
+
+        # ensure we get the mine_name mine function for both minions
+        for ret in [min_ret, sub_ret]:
+            assert '            - one' in ret
+
+    def test_send_allow_tgt_doesnotexist(self):
+        '''
+        test mine.send with allow_tgt set when
+        the minion defined in allow_tgt does
+        not exist
+        '''
+        mine_name = 'mine_doesnotexist'
+        for minion in ['sub_minion', 'minion']:
+            assert self.run_function('mine.send', [mine_name,
+                'mine_function=test.arg_clean', 'one'], allow_tgt='doesnotexist',
+                minion_tgt=minion)
+        min_ret = self.run_call(r'mine.get \* ' + mine_name)
+        sub_ret = self.run_call(r'mine.get \* ' + mine_name,
+                config_dir=RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR)
+
+        # ensure we did not get the mine_name mine function for both minions
+        for ret in [sub_ret, min_ret]:
+            assert '            - one' not in ret
 
     def test_send(self):
         '''

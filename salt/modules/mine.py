@@ -194,10 +194,13 @@ def update(clear=False, mine_functions=None):
             log.error('Function %s in mine.update failed to execute', function_name or function_alias)
             log.debug('Error: %s', trace)
             continue
-        mine_data[function_alias] = salt.utils.mine.wrap_acl_structure(
-            res,
-            **minion_acl
-        )
+        if minion_acl.get('allow_tgt'):
+            mine_data[function_alias] = salt.utils.mine.wrap_acl_structure(
+                res,
+                **minion_acl
+            )
+        else:
+            mine_data[function_alias] = res
     return _mine_store(mine_data, clear)
 
 
@@ -213,9 +216,13 @@ def send(name, *args, **kwargs):
     :param str mine_function: The name of the execution_module.function to run
         and whose value will be stored in the salt mine. Defaults to ``name``.
     :param str allow_tgt: Targeting specification for ACL. Specifies which minions
-        are allowed to access this function.
+        are allowed to access this function. Please note both your master and
+        minion need to be on atleast version 3000 for this to work properly.
+
     :param str allow_tgt_type: Type of the targeting specification. This value will
-        be ignored if ``allow_tgt`` is not specified.
+        be ignored if ``allow_tgt`` is not specified. Please note both your
+        master and minion need to be on atleast version 3000 for this to work
+        properly.
 
     Remaining args and kwargs will be passed on to the function to run.
 
@@ -252,11 +259,15 @@ def send(name, *args, **kwargs):
         log.error('Function %s in mine.send failed to execute', mine_function or name)
         log.debug('Error: %s', trace)
         return False
-    mine_data[name] = salt.utils.mine.wrap_acl_structure(
-        res,
-        allow_tgt=allow_tgt,
-        allow_tgt_type=allow_tgt_type
-    )
+
+    if allow_tgt:
+        mine_data[name] = salt.utils.mine.wrap_acl_structure(
+            res,
+            allow_tgt=allow_tgt,
+            allow_tgt_type=allow_tgt_type
+        )
+    else:
+        mine_data[name] = res
     return _mine_store(mine_data)
 
 
