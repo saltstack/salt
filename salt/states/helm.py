@@ -258,12 +258,15 @@ def release_present(name, chart, namespace=None, flags=None, kvflags=None):
     return ret
 
 
-def release_absent(name, flags=None, kvflags=None):
+def release_absent(name, namespace=None, flags=None, kvflags=None):
     '''
     Make sure the release name is absent.
 
     name
         (string) The release name to uninstall.
+
+    namespace
+        (string) The namespace scope for this request.
 
     flags
         (list) Flags in argument of the command without values. ex: ['help', '--help']
@@ -302,9 +305,10 @@ def release_absent(name, flags=None, kvflags=None):
         ret['result'] = None
         ret['comment'] = 'Helm release would have been uninstalled.'
     else:
-        release_status = __salt__['helm.status'](release=name)
+        release_status = __salt__['helm.status'](release=name, namespace=namespace)
         if isinstance(release_status, dict):
             release_uninstall = __salt__['helm.uninstall'](release=name,
+                                                           namespace=namespace,
                                                            flags=flags,
                                                            kvflags=kvflags)
             if isinstance(release_uninstall, bool) and release_uninstall:
