@@ -262,7 +262,8 @@ def alive(opts):
     if not netmiko_device['always_alive']:
         return True
     if ping() and initialized():
-        return netmiko_device['connection'].remote_conn.transport.is_alive()
+        netmiko_device['up'] = netmiko_device['connection'].remote_conn.transport.is_alive()
+        return netmiko_device['up']
     return False
 
 
