@@ -23,15 +23,25 @@ class HelmTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {helm: {}}
 
-    def test_repo_managed_import_failed(self):
+    def test_repo_managed_import_failed_repo_manage(self):
         ret = {'name': 'state_id',
                'changes': {},
                'result': False,
                'comment': "'helm.repo_manage' modules not available on this minion."}
         self.assertEqual(helm.repo_managed('state_id'), ret)
 
-    def test_repo_managed_is_testing(self):
+    def test_repo_managed_import_failed_repo_update(self):
         mock_helm_modules = {'helm.repo_manage': MagicMock(return_value=True)}
+        with patch.dict(helm.__salt__, mock_helm_modules):
+            ret = {'name': 'state_id',
+                   'changes': {},
+                   'result': False,
+                   'comment': "'helm.repo_update' modules not available on this minion."}
+            self.assertEqual(helm.repo_managed('state_id'), ret)
+
+    def test_repo_managed_is_testing(self):
+        mock_helm_modules = {'helm.repo_manage': MagicMock(return_value=True),
+                             'helm.repo_update': MagicMock(return_value=True)}
         with patch.dict(helm.__salt__, mock_helm_modules):
             mock__opts__ = {'test': MagicMock(return_value=True)}
             with patch.dict(helm.__opts__, mock__opts__):
@@ -43,7 +53,8 @@ class HelmTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_repo_managed_success(self):
         result_changes = {'added': True, 'removed': True, 'failed': False}
-        mock_helm_modules = {'helm.repo_manage': MagicMock(return_value=result_changes)}
+        mock_helm_modules = {'helm.repo_manage': MagicMock(return_value=result_changes),
+                             'helm.repo_update': MagicMock(return_value=True)}
         with patch.dict(helm.__salt__, mock_helm_modules):
             ret = {'name': 'state_id',
                    'result': True,
@@ -51,9 +62,23 @@ class HelmTestCase(TestCase, LoaderModuleMockMixin):
                    'changes': result_changes}
             self.assertEqual(helm.repo_managed('state_id'), ret)
 
+    def test_repo_managed_success_with_update(self):
+        result_changes = {'added': True, 'removed': True, 'failed': False}
+        mock_helm_modules = {'helm.repo_manage': MagicMock(return_value=result_changes),
+                             'helm.repo_update': MagicMock(return_value=True)}
+        result_wanted = result_changes
+        result_wanted.update({'repo_update': True})
+        with patch.dict(helm.__salt__, mock_helm_modules):
+            ret = {'name': 'state_id',
+                   'result': True,
+                   'comment': 'Repositories were added or removed.',
+                   'changes': result_wanted}
+            self.assertEqual(helm.repo_managed('state_id'), ret)
+
     def test_repo_managed_failed(self):
         result_changes = {'added': True, 'removed': True, 'failed': True}
-        mock_helm_modules = {'helm.repo_manage': MagicMock(return_value=result_changes)}
+        mock_helm_modules = {'helm.repo_manage': MagicMock(return_value=result_changes),
+                             'helm.repo_update': MagicMock(return_value=True)}
         with patch.dict(helm.__salt__, mock_helm_modules):
             ret = {'name': 'state_id',
                    'result': False,

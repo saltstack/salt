@@ -10,7 +10,14 @@ from salt.exceptions import CommandExecutionError
 log = logging.getLogger(__name__)
 
 
-def repo_managed(name, present=None, absent=None, prune=False, flags=None, kvflags=None):
+def repo_managed(name,
+                 present=None,
+                 absent=None,
+                 prune=False,
+                 repo_update=False,
+                 namespace=None,
+                 flags=None,
+                 kvflags=None):
     '''
     Make sure the repository is updated.
 
@@ -25,6 +32,12 @@ def repo_managed(name, present=None, absent=None, prune=False, flags=None, kvfla
 
     prune
         (boolean - default: False) If True, all repository already present but not in the present list would be removed.
+
+    repo_update
+        (boolean - default: False) If True, the Helm repository is updated after a repository add or remove.
+
+    namespace
+        (string) The namespace scope for this request.
 
     flags
         (list) Flags in argument of the command without values. ex: ['help', '--help']
@@ -53,18 +66,20 @@ def repo_managed(name, present=None, absent=None, prune=False, flags=None, kvfla
     if 'helm.repo_manage' not in __salt__:
         ret['result'] = False
         ret['comment'] = "'helm.repo_manage' modules not available on this minion."
+    elif 'helm.repo_update' not in __salt__:
+        ret['result'] = False
+        ret['comment'] = "'helm.repo_update' modules not available on this minion."
     elif __opts__.get('test', False):
         ret['result'] = None
         ret['comment'] = 'Helm repo would have been managed.'
     else:
         try:
-            result = __salt__['helm.repo_manage'](
-                present=present,
-                absent=absent,
-                prune=prune,
-                flags=flags,
-                kvflags=kvflags
-            )
+            result = __salt__['helm.repo_manage'](present=present,
+                                                  absent=absent,
+                                                  prune=prune,
+                                                  namespace=namespace,
+                                                  flags=flags,
+                                                  kvflags=kvflags)
 
             if result['failed']:
                 ret['comment'] = 'Failed to add or remove some repositories.'
@@ -72,6 +87,12 @@ def repo_managed(name, present=None, absent=None, prune=False, flags=None, kvfla
                 ret['result'] = False
 
             elif result['added'] or result['removed']:
+                if repo_update:
+                    result_repo_update = __salt__['helm.repo_update'](namespace=namespace,
+                                                                      flags=flags,
+                                                                      kvflags=kvflags)
+                    result.update({'repo_update': result_repo_update})
+
                 ret['comment'] = 'Repositories were added or removed.'
                 ret['changes'] = result
 
@@ -82,13 +103,16 @@ def repo_managed(name, present=None, absent=None, prune=False, flags=None, kvfla
     return ret
 
 
-def repo_updated(name, flags=None, kvflags=None):
+def repo_updated(name, namespace=None, flags=None, kvflags=None):
     '''
     Make sure the repository is updated.
     To execute after a repository changes.
 
     name
         (string) Not used.
+
+    namespace
+        (string) The namespace scope for this request.
 
     flags
         (list) Flags in argument of the command without values. ex: ['help', '--help']
@@ -117,7 +141,7 @@ def repo_updated(name, flags=None, kvflags=None):
         ret['comment'] = 'Helm repo would have been updated.'
     else:
         try:
-            result = __salt__['helm.repo_update'](flags=flags, kvflags=kvflags)
+            result = __salt__['helm.repo_update'](namespace=namespace, flags=flags, kvflags=kvflags)
 
             if not (isinstance(result, bool) and result):
                 ret['result'] = False
@@ -131,7 +155,7 @@ def repo_updated(name, flags=None, kvflags=None):
     return ret
 
 
-def release_present(name, chart, values_file=None, flags=None, kvflags=None):
+def release_present(name, chart, namespace=None, flags=None, kvflags=None):
     '''
     Make sure the release name is present.
 
@@ -141,8 +165,8 @@ def release_present(name, chart, values_file=None, flags=None, kvflags=None):
     chart
         (string) The chart to install.
 
-    values_file
-        (string) Absolute path to the values.yaml file.
+    namespace
+        (string) The namespace scope for this request.
 
     flags
         (list) Flags in argument of the command without values. ex: ['help', '--help']
@@ -194,19 +218,15 @@ def release_present(name, chart, values_file=None, flags=None, kvflags=None):
         ret['result'] = None
         ret['comment'] = 'Helm release would have been installed or updated.'
     else:
-        if values_file:
-            if kvflags:
-                kvflags.update({'values': values_file})
-            else:
-                kvflags = {'values': values_file}
-        release_old_status = __salt__['helm.status'](release=name)
+        release_old_status = __salt__['helm.status'](release=name, namespace=namespace)
         if isinstance(release_old_status, dict):
             release_upgrade = __salt__['helm.upgrade'](release=name,
                                                        chart=chart,
+                                                       namespace=namespace,
                                                        flags=flags,
                                                        kvflags=kvflags)
             if isinstance(release_upgrade, bool) and release_upgrade:
-                release_cur_status = __salt__['helm.status'](release=name)
+                release_cur_status = __salt__['helm.status'](release=name, namespace=namespace)
                 if isinstance(release_cur_status, dict):
                     release_cur_status.pop('manifest')
                     ret['changes'] = release_cur_status
@@ -220,10 +240,11 @@ def release_present(name, chart, values_file=None, flags=None, kvflags=None):
         else:
             release_install = __salt__['helm.install'](release=name,
                                                        chart=chart,
+                                                       namespace=namespace,
                                                        flags=flags,
                                                        kvflags=kvflags)
             if isinstance(release_install, bool) and release_install:
-                release_cur_status = __salt__['helm.status'](release=name)
+                release_cur_status = __salt__['helm.status'](release=name, namespace=namespace)
                 if isinstance(release_cur_status, dict):
                     release_cur_status.pop('manifest')
                     ret['changes'] = release_cur_status
