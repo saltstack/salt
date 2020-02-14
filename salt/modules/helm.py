@@ -479,7 +479,7 @@ def history(release, flags=None, kvflags=None):
     return _exec_dict_return(commands=['history', release], flags=flags, kvflags=kvflags)
 
 
-def install(release, chart, values_file=None, flags=None, kvflags=None):
+def install(release, chart, values_file=None, namespace=None, flags=None, kvflags=None):
     '''
     Installs a chart archive.
     Return True if succeed, else the error message.
@@ -492,6 +492,9 @@ def install(release, chart, values_file=None, flags=None, kvflags=None):
 
     values_file
         (string) Absolute path to the values.yaml file.
+
+    namespace
+        (string) The namespace scope for this request.
 
     flags
         (list) Flags in argument of the command without values. ex: ['help', '--help']
@@ -514,6 +517,11 @@ def install(release, chart, values_file=None, flags=None, kvflags=None):
             kvflags.update({'values': values_file})
         else:
             kvflags = {'values': values_file}
+    if namespace:
+        if kvflags:
+            kvflags.update({'namespace': namespace})
+        else:
+            kvflags = {'namespace': namespace}
     return _exec_true_return(commands=['install', release, chart], flags=flags, kvflags=kvflags)
 
 
@@ -541,10 +549,13 @@ def lint(path, flags=None, kvflags=None):
     return _exec_true_return(commands=['lint', path], flags=flags, kvflags=kvflags)
 
 
-def list_(flags=None, kvflags=None):
+def list_(namespace=None, flags=None, kvflags=None):
     '''
     Lists all of the releases. By default, it lists only releases that are deployed or failed.
     Return the list of release if succeed, else the error message.
+
+    namespace
+        (string) The namespace scope for this request.
 
     flags
         (list) Flags in argument of the command without values. ex: ['help', '--help']
@@ -562,6 +573,11 @@ def list_(flags=None, kvflags=None):
         salt '*' helm.list kvflags="{'output': 'yaml'}"
 
     '''
+    if namespace:
+        if kvflags:
+            kvflags.update({'namespace': namespace})
+        else:
+            kvflags = {'namespace': namespace}
     return _exec_dict_return(commands=['list'], flags=flags, kvflags=kvflags)
 
 
@@ -713,7 +729,7 @@ def pull(pkg, flags=None, kvflags=None):
     return _exec_true_return(commands=['pull', pkg], flags=flags, kvflags=kvflags)
 
 
-def repo_add(name, url, flags=None, kvflags=None):
+def repo_add(name, url, namespace=None, flags=None, kvflags=None):
     '''
     Add a chart repository.
     Return True if succeed, else the error message.
@@ -723,6 +739,9 @@ def repo_add(name, url, flags=None, kvflags=None):
 
     url
         (string) The url to the repository.
+
+    namespace
+        (string) The namespace scope for this request.
 
     flags
         (list) Flags in argument of the command without values. ex: ['help', '--help']
@@ -737,16 +756,24 @@ def repo_add(name, url, flags=None, kvflags=None):
         salt '*' helm.repo_add NAME URL
 
     '''
+    if namespace:
+        if kvflags:
+            kvflags.update({'namespace': namespace})
+        else:
+            kvflags = {'namespace': namespace}
     return _exec_true_return(commands=['repo', 'add', name, url], flags=flags, kvflags=kvflags)
 
 
-def repo_index(directory, flags=None, kvflags=None):
+def repo_index(directory, namespace=None, flags=None, kvflags=None):
     '''
     Read the current directory and generate an index file based on the charts found.
     Return True if succeed, else the error message.
 
     directory
         (string) The path to the index.
+
+    namespace
+        (string) The namespace scope for this request.
 
     flags
         (list) Flags in argument of the command without values. ex: ['help', '--help']
@@ -761,13 +788,21 @@ def repo_index(directory, flags=None, kvflags=None):
         salt '*' helm.index DIRECTORY
 
     '''
+    if namespace:
+        if kvflags:
+            kvflags.update({'namespace': namespace})
+        else:
+            kvflags = {'namespace': namespace}
     return _exec_true_return(commands=['repo', 'index', directory], flags=flags, kvflags=kvflags)
 
 
-def repo_list(flags=None, kvflags=None):
+def repo_list(namespace=None, flags=None, kvflags=None):
     '''
     List a chart repository.
     Return the repository list if succeed, else the error message.
+
+    namespace
+        (string) The namespace scope for this request.
 
     flags
         (list) Flags in argument of the command without values. ex: ['help', '--help']
@@ -785,16 +820,24 @@ def repo_list(flags=None, kvflags=None):
         salt '*' helm.repo_list kvflags="{'output': 'yaml'}"
 
     '''
+    if namespace:
+        if kvflags:
+            kvflags.update({'namespace': namespace})
+        else:
+            kvflags = {'namespace': namespace}
     return _exec_dict_return(commands=['repo', 'list'], flags=flags, kvflags=kvflags)
 
 
-def repo_remove(name, flags=None, kvflags=None):
+def repo_remove(name, namespace=None, flags=None, kvflags=None):
     '''
     Remove a chart repository.
     Return True if succeed, else the error message.
 
     name
         (string) The local name of the repository to remove.
+
+    namespace
+        (string) The namespace scope for this request.
 
     flags
         (list) Flags in argument of the command without values. ex: ['help', '--help']
@@ -809,13 +852,21 @@ def repo_remove(name, flags=None, kvflags=None):
         salt '*' helm.repo_remove NAME
 
     '''
+    if namespace:
+        if kvflags:
+            kvflags.update({'namespace': namespace})
+        else:
+            kvflags = {'namespace': namespace}
     return _exec_true_return(commands=['repo', 'remove', name], flags=flags, kvflags=kvflags)
 
 
-def repo_update(flags=None, kvflags=None):
+def repo_update(namespace=None, flags=None, kvflags=None):
     '''
     Update all charts repository.
     Return True if succeed, else the error message.
+
+    namespace
+        (string) The namespace scope for this request.
 
     flags
         (list) Flags in argument of the command without values. ex: ['help', '--help']
@@ -830,10 +881,15 @@ def repo_update(flags=None, kvflags=None):
         salt '*' helm.repo_update
 
     '''
+    if namespace:
+        if kvflags:
+            kvflags.update({'namespace': namespace})
+        else:
+            kvflags = {'namespace': namespace}
     return _exec_true_return(commands=['repo', 'update'], flags=flags, kvflags=kvflags)
 
 
-def repo_manage(present=None, absent=None, prune=False, flags=None, kvflags=None):
+def repo_manage(present=None, absent=None, prune=False, namespace=None, flags=None, kvflags=None):
     '''
     Manage charts repository.
     Return the summery of all actions.
@@ -846,6 +902,9 @@ def repo_manage(present=None, absent=None, prune=False, flags=None, kvflags=None
 
     prune
         (boolean - default: False) If True, all repository already present but not in the present list would be removed.
+
+    namespace
+        (string) The namespace scope for this request.
 
     flags
         (list) Flags in argument of the command without values. ex: ['help', '--help']
@@ -868,8 +927,13 @@ def repo_manage(present=None, absent=None, prune=False, flags=None, kvflags=None
         absent = []
     else:
         absent = copy.deepcopy(absent)
+    if namespace:
+        if kvflags:
+            kvflags.update({'namespace': namespace})
+        else:
+            kvflags = {'namespace': namespace}
 
-    repos_present = repo_list(flags=flags, kvflags=kvflags)
+    repos_present = repo_list(namespace=namespace, flags=flags, kvflags=kvflags)
     if not isinstance(repos_present, list):
         repos_present = []
     result = {
@@ -894,7 +958,11 @@ def repo_manage(present=None, absent=None, prune=False, flags=None, kvflags=None
                 break
 
         if not already_present:
-            repo_add_status = repo_add(repo.get('name'), repo.get('url'), flags=flags, kvflags=kvflags)
+            repo_add_status = repo_add(repo.get('name'),
+                                       repo.get('url'),
+                                       namespace=namespace,
+                                       flags=flags,
+                                       kvflags=kvflags)
             if isinstance(repo_add_status, bool) and repo_add_status:
                 result['added'].append(repo)
             else:
@@ -907,7 +975,7 @@ def repo_manage(present=None, absent=None, prune=False, flags=None, kvflags=None
             result['present'].append(repo)
 
     for name in absent:
-        remove_status = repo_remove(name)
+        remove_status = repo_remove(name, namespace=namespace)
         if isinstance(remove_status, bool) and remove_status:
             result['removed'].append(name)
         else:
@@ -916,7 +984,7 @@ def repo_manage(present=None, absent=None, prune=False, flags=None, kvflags=None
     return result
 
 
-def rollback(release, revision, flags=None, kvflags=None):
+def rollback(release, revision, namespace=None, flags=None, kvflags=None):
     '''
     Rolls back a release to a previous revision.
     To see release revision number, execute the history module.
@@ -927,6 +995,9 @@ def rollback(release, revision, flags=None, kvflags=None):
 
     revision
         (string) The revision number to roll back to.
+
+    namespace
+        (string) The namespace scope for this request.
 
     flags
         (list) Flags in argument of the command without values. ex: ['help', '--help']
@@ -944,6 +1015,11 @@ def rollback(release, revision, flags=None, kvflags=None):
         salt '*' helm.rollback RELEASE REVISION flags=['dry-run']
 
     '''
+    if namespace:
+        if kvflags:
+            kvflags.update({'namespace': namespace})
+        else:
+            kvflags = {'namespace': namespace}
     return _exec_true_return(commands=['rollback', release, revision], flags=flags, kvflags=kvflags)
 
 
@@ -1098,13 +1174,16 @@ def show_values(chart, flags=None, kvflags=None):
     return _exec_string_return(commands=['show', 'values', chart], flags=flags, kvflags=kvflags)
 
 
-def status(release, flags=None, kvflags=None):
+def status(release, namespace=None, flags=None, kvflags=None):
     '''
     Show the status of the release.
     Return the release status if succeed, else the error message.
 
     release
         (string) The release to status.
+
+    namespace
+        (string) The namespace scope for this request.
 
     flags
         (list) Flags in argument of the command without values. ex: ['help', '--help']
@@ -1122,6 +1201,11 @@ def status(release, flags=None, kvflags=None):
         salt '*' helm.status RELEASE kvflags="{'output': 'yaml'}"
 
     '''
+    if namespace:
+        if kvflags:
+            kvflags.update({'namespace': namespace})
+        else:
+            kvflags = {'namespace': namespace}
     return _exec_dict_return(commands=['status', release], flags=flags, kvflags=kvflags)
 
 
@@ -1192,13 +1276,16 @@ def test(release, flags=None, kvflags=None):
     return _exec_string_return(commands=['test', release], flags=flags, kvflags=kvflags)
 
 
-def uninstall(release, flags=None, kvflags=None):
+def uninstall(release, namespace=None, flags=None, kvflags=None):
     '''
     Uninstall the release name.
     Return True if succeed, else the error message.
 
     release
         (string) The name of the release to managed.
+
+    namespace
+        (string) The namespace scope for this request.
 
     flags
         (list) Flags in argument of the command without values. ex: ['help', '--help']
@@ -1216,10 +1303,15 @@ def uninstall(release, flags=None, kvflags=None):
         salt '*' helm.uninstall RELEASE flags=['dry-run']
 
     '''
+    if namespace:
+        if kvflags:
+            kvflags.update({'namespace': namespace})
+        else:
+            kvflags = {'namespace': namespace}
     return _exec_true_return(commands=['uninstall', release], flags=flags, kvflags=kvflags)
 
 
-def upgrade(release, chart, values_file=None, flags=None, kvflags=None):
+def upgrade(release, chart, values_file=None, namespace=None, flags=None, kvflags=None):
     '''
     Upgrades a release to a new version of a chart.
     Return True if succeed, else the error message.
@@ -1232,6 +1324,9 @@ def upgrade(release, chart, values_file=None, flags=None, kvflags=None):
 
     values_file
         (string) Absolute path to the values.yaml file.
+
+    namespace
+        (string) The namespace scope for this request.
 
     flags
         (list) Flags in argument of the command without values. ex: ['help', '--help']
@@ -1257,6 +1352,11 @@ def upgrade(release, chart, values_file=None, flags=None, kvflags=None):
             kvflags.update({'values': values_file})
         else:
             kvflags = {'values': values_file}
+    if namespace:
+        if kvflags:
+            kvflags.update({'namespace': namespace})
+        else:
+            kvflags = {'namespace': namespace}
     return _exec_true_return(commands=['upgrade', release, chart], flags=flags, kvflags=kvflags)
 
 
