@@ -9,10 +9,10 @@ import threading
 import socket
 import logging
 
-import tornado.gen
-import tornado.ioloop
-import tornado.concurrent
-from tornado.testing import AsyncTestCase, gen_test
+import salt.ext.tornado.gen
+import salt.ext.tornado.ioloop
+import salt.ext.tornado.concurrent
+from salt.ext.tornado.testing import AsyncTestCase, gen_test
 
 import salt.config
 from salt.ext import six
@@ -72,7 +72,7 @@ class BaseTCPReqCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
         cls.server_channel = salt.transport.server.ReqServerChannel.factory(cls.master_config)
         cls.server_channel.pre_fork(cls.process_manager)
-        cls.io_loop = tornado.ioloop.IOLoop()
+        cls.io_loop = salt.ext.tornado.ioloop.IOLoop()
         cls.stop = threading.Event()
         cls.server_channel.post_fork(cls._handle_payload, io_loop=cls.io_loop)
         cls.server_thread = threading.Thread(
@@ -90,12 +90,12 @@ class BaseTCPReqCase(TestCase, AdaptedConfigurationTestCaseMixin):
         del cls.server_channel
 
     @classmethod
-    @tornado.gen.coroutine
+    @salt.ext.tornado.gen.coroutine
     def _handle_payload(cls, payload):
         '''
         TODO: something besides echo
         '''
-        raise tornado.gen.Return((payload, {'fun': 'send_clear'}))
+        raise salt.ext.tornado.gen.Return((payload, {'fun': 'send_clear'}))
 
 
 @skipIf(salt.utils.platform.is_darwin(), 'hanging test suite on MacOS')
@@ -111,12 +111,12 @@ class ClearReqTestCases(BaseTCPReqCase, ReqChannelMixin):
         del self.channel
 
     @classmethod
-    @tornado.gen.coroutine
+    @salt.ext.tornado.gen.coroutine
     def _handle_payload(cls, payload):
         '''
         TODO: something besides echo
         '''
-        raise tornado.gen.Return((payload, {'fun': 'send_clear'}))
+        raise salt.ext.tornado.gen.Return((payload, {'fun': 'send_clear'}))
 
 
 @skipIf(salt.utils.platform.is_darwin(), 'hanging test suite on MacOS')
@@ -129,12 +129,12 @@ class AESReqTestCases(BaseTCPReqCase, ReqChannelMixin):
         del self.channel
 
     @classmethod
-    @tornado.gen.coroutine
+    @salt.ext.tornado.gen.coroutine
     def _handle_payload(cls, payload):
         '''
         TODO: something besides echo
         '''
-        raise tornado.gen.Return((payload, {'fun': 'send'}))
+        raise salt.ext.tornado.gen.Return((payload, {'fun': 'send'}))
 
     # TODO: make failed returns have a specific framing so we can raise the same exception
     # on encrypted channels
@@ -190,7 +190,7 @@ class BaseTCPPubCase(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
         # we also require req server for auth
         cls.req_server_channel = salt.transport.server.ReqServerChannel.factory(cls.master_config)
         cls.req_server_channel.pre_fork(cls.process_manager)
-        cls.io_loop = tornado.ioloop.IOLoop()
+        cls.io_loop = salt.ext.tornado.ioloop.IOLoop()
         cls.stop = threading.Event()
         cls.req_server_channel.post_fork(cls._handle_payload, io_loop=cls.io_loop)
         cls.server_thread = threading.Thread(
@@ -308,7 +308,7 @@ class SaltMessageClientPoolTest(AsyncTestCase):
             yield self.message_client_pool.connect()
 
         for message_client_mock in self.message_client_pool.message_clients:
-            future = tornado.concurrent.Future()
+            future = salt.ext.tornado.concurrent.Future()
             future.set_result('foo')
             message_client_mock.connect.return_value = future
 
@@ -320,12 +320,12 @@ class SaltMessageClientPoolTest(AsyncTestCase):
             yield self.message_client_pool.connect()
 
         for idx, message_client_mock in enumerate(self.message_client_pool.message_clients):
-            future = tornado.concurrent.Future()
+            future = salt.ext.tornado.concurrent.Future()
             if idx % 2 == 0:
                 future.set_result('foo')
             message_client_mock.connect.return_value = future
 
-        with self.assertRaises(tornado.ioloop.TimeoutError):
+        with self.assertRaises(salt.ext.tornado.ioloop.TimeoutError):
             test_connect(self)
 
 
@@ -347,7 +347,7 @@ class SaltMessageClientCleanupTest(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         test message client cleanup on close
         '''
-        orig_loop = tornado.ioloop.IOLoop()
+        orig_loop = salt.ext.tornado.ioloop.IOLoop()
         orig_loop.make_current()
         opts = self.get_temp_config('master')
         client = SaltMessageClient(opts, self.listen_on, self.port)
