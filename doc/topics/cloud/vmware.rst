@@ -451,6 +451,14 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
     Specifies whether the new virtual machine should be powered on or not. If
     ``template: True`` is set, this field is ignored. Default is ``power_on: True``.
 
+``cpu_hot_add``
+    Boolean value that enables hot-add support for modifying CPU resources while
+    the guest is powered on.
+
+``mem_hot_add``
+    Boolean value that enables hot-add support for modifying memory resources while
+    the guest is powered on.
+
 ``extra_config``
     Specifies the additional configuration information for the virtual machine. This
     describes a set of modifications to the additional options. If the key is already
