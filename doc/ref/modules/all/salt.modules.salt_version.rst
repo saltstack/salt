@@ -1,6 +1,6 @@
-salt.modules.salt_version module
-================================
+=========================
+salt.modules.salt_version
+=========================
 
 .. automodule:: salt.modules.salt_version
     :members:
-    :undoc-members:
