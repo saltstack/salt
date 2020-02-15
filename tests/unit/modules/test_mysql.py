@@ -127,23 +127,28 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
             )
 
         with patch.object(mysql, 'version', return_value='8.0.11'):
-            self._test_call(mysql.user_exists,
-                            {'sql': ('SELECT User,Host FROM mysql.user WHERE '
-                                     'User = %(user)s AND Host = %(host)s'),
-                             'sql_args': {'host': '%',
-                                          'user': 'mytestuser'
-                                         }
-                            },
-                            user='mytestuser',
-                            host='%',
-                            password='BLUECOW'
-            )
+            with patch.object(mysql, '__get_auth_plugin', MagicMock(return_value='mysql_native_password')):
+                self._test_call(mysql.user_exists,
+                                {'sql': ('SELECT User,Host FROM mysql.user WHERE '
+                                         'User = %(user)s AND Host = %(host)s AND '
+                                         'Password = %(password)s'),
+                                 'sql_args': {'host': '%',
+                                              'password': '*1A01CF8FBE6425398935FB90359AD8B817399102',
+                                              'user': 'mytestuser'
+                                             }
+                                },
+                                user='mytestuser',
+                                host='%',
+                                password='BLUECOW'
+                )
 
         with patch.object(mysql, 'version', return_value='10.2.21-MariaDB'):
             self._test_call(mysql.user_exists,
                             {'sql': ('SELECT User,Host FROM mysql.user WHERE '
-                                     'User = %(user)s AND Host = %(host)s'),
+                                     'User = %(user)s AND Host = %(host)s AND '
+                                     'Password = PASSWORD(%(password)s)'),
                              'sql_args': {'host': 'localhost',
+                                          'password': 'BLUECOW',
                                           'user': 'mytestuser'
                                          }
                             },
@@ -175,16 +180,32 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test the creation of a MySQL user in mysql exec module
         '''
-        self._test_call(mysql.user_create,
-                        {'sql': 'CREATE USER %(user)s@%(host)s IDENTIFIED BY %(password)s',
-                         'sql_args': {'password': 'BLUECOW',
-                                      'user': 'testuser',
-                                      'host': 'localhost',
-                                     }
-                        },
-                        'testuser',
-                        password='BLUECOW'
-        )
+        with patch.object(mysql, 'version', return_value='8.0.10'):
+            with patch.object(mysql, '__get_auth_plugin', MagicMock(return_value='mysql_native_password')):
+                self._test_call(mysql.user_create,
+                                {'sql': 'CREATE USER %(user)s@%(host)s IDENTIFIED BY %(password)s',
+                                 'sql_args': {'password': 'BLUECOW',
+                                              'user': 'testuser',
+                                              'host': 'localhost',
+                                             }
+                                },
+                                'testuser',
+                                password='BLUECOW'
+                )
+
+        with patch.object(mysql, 'version', return_value='8.0.11'):
+            with patch.object(mysql, '__get_auth_plugin', MagicMock(return_value='mysql_native_password')):
+                self._test_call(mysql.user_create,
+                                {'sql': 'CREATE USER %(user)s@%(host)s IDENTIFIED WITH %(auth_plugin)s BY %(password)s',
+                                 'sql_args': {'password': 'BLUECOW',
+                                              'auth_plugin': 'mysql_native_password',
+                                              'user': 'testuser',
+                                              'host': 'localhost',
+                                             }
+                                },
+                                'testuser',
+                                password='BLUECOW'
+                )
 
     def test_user_chpass(self):
         '''
@@ -193,36 +214,38 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
         connect_mock = MagicMock()
         with patch.object(mysql, '_connect', connect_mock):
             with patch.object(mysql, 'version', return_value='8.0.10'):
-                with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
-                    mysql.user_chpass('testuser', password='BLUECOW')
-                    calls = (
-                        call().cursor().execute(
-                            'UPDATE mysql.user SET Password=PASSWORD(%(password)s) WHERE User=%(user)s AND Host = %(host)s;',
-                            {'password': 'BLUECOW',
-                             'user': 'testuser',
-                             'host': 'localhost',
-                            }
-                        ),
-                        call().cursor().execute('FLUSH PRIVILEGES;'),
-                    )
-                    connect_mock.assert_has_calls(calls, any_order=True)
+                with patch.object(mysql, 'user_exists', MagicMock(return_value=True)):
+                    with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
+                        mysql.user_chpass('testuser', password='BLUECOW')
+                        calls = (
+                            call().cursor().execute(
+                                'UPDATE mysql.user SET Password=PASSWORD(%(password)s) WHERE User=%(user)s AND Host = %(host)s;',
+                                {'password': 'BLUECOW',
+                                 'user': 'testuser',
+                                 'host': 'localhost',
+                                }
+                            ),
+                            call().cursor().execute('FLUSH PRIVILEGES;'),
+                        )
+                        connect_mock.assert_has_calls(calls, any_order=True)
 
         connect_mock = MagicMock()
         with patch.object(mysql, '_connect', connect_mock):
             with patch.object(mysql, 'version', return_value='8.0.11'):
-                with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
-                    mysql.user_chpass('testuser', password='BLUECOW')
-                    calls = (
-                        call().cursor().execute(
-                            "ALTER USER %(user)s@%(host)s IDENTIFIED BY %(password)s;",
-                            {'password': 'BLUECOW',
-                             'user': 'testuser',
-                             'host': 'localhost',
-                            }
-                        ),
-                        call().cursor().execute('FLUSH PRIVILEGES;'),
-                    )
-                    connect_mock.assert_has_calls(calls, any_order=True)
+                with patch.object(mysql, 'user_exists', MagicMock(return_value=True)):
+                    with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
+                        mysql.user_chpass('testuser', password='BLUECOW')
+                        calls = (
+                            call().cursor().execute(
+                                "ALTER USER %(user)s@%(host)s IDENTIFIED BY %(password)s;",
+                                {'password': 'BLUECOW',
+                                 'user': 'testuser',
+                                 'host': 'localhost',
+                                }
+                            ),
+                            call().cursor().execute('FLUSH PRIVILEGES;'),
+                        )
+                        connect_mock.assert_has_calls(calls, any_order=True)
 
     def test_user_remove(self):
         '''
