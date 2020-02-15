@@ -262,7 +262,8 @@ class DocTestCase(TestCase):
         module_dir = ['salt', 'modules']
         skip_doc_files = ['index', 'group', 'inspectlib', 'inspectlib.collector', 'inspectlib.dbhandle',
                           'inspectlib.entities', 'inspectlib.exceptions', 'inspectlib.fsdb',
-                          'inspectlib.kiwiproc', 'inspectlib.query', 'kernelpkg', 'pkg', 'user']
+                          'inspectlib.kiwiproc', 'inspectlib.query', 'kernelpkg', 'pkg', 'user',
+                          'service', 'shadow']
         doc_dir = ['doc', 'ref', 'modules', 'all']
         self._check_doc_files(skip_module_files, module_dir, skip_doc_files, doc_dir)
 

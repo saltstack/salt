@@ -14,12 +14,12 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-import salt.modules.service as service
+import salt.modules.linux_service as service
 
 
 class ServiceTestCase(TestCase, LoaderModuleMockMixin):
     '''
-    Test cases for salt.modules.service
+    Test cases for salt.modules.linux_service
     '''
     def setup_loader_modules(self):
         return {service: {}}
