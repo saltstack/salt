@@ -69,8 +69,13 @@ class Beacon(object):
                         self._remove_list_item(config[mod], 'enabled')
 
             log.trace('Beacon processing: %s', mod)
-            fun_str = '{0}.beacon'.format(mod)
-            validate_str = '{0}.validate'.format(mod)
+            beacon_name = None
+            if self._determine_beacon_config(current_beacon_config, 'beacon_module'):
+                beacon_name = current_beacon_config['beacon_module']
+            else:
+                beacon_name = mod
+            fun_str = '{0}.beacon'.format(beacon_name)
+            validate_str = '{0}.validate'.format(beacon_name)
             if fun_str in self.beacons:
                 runonce = self._determine_beacon_config(current_beacon_config, 'run_once')
                 interval = self._determine_beacon_config(current_beacon_config, 'interval')
@@ -88,7 +93,7 @@ class Beacon(object):
                         if re.match('state.*', job['fun']):
                             is_running = True
                     if is_running:
-                        close_str = '{0}.close'.format(mod)
+                        close_str = '{0}.close'.format(beacon_name)
                         if close_str in self.beacons:
                             log.info('Closing beacon %s. State run in progress.', mod)
                             self.beacons[close_str](b_config[mod])
@@ -116,7 +121,9 @@ class Beacon(object):
                         tag += data.pop('tag')
                     if 'id' not in data:
                         data['id'] = self.opts['id']
-                    ret.append({'tag': tag, 'data': data})
+                    ret.append({'tag': tag,
+                                'data': data,
+                                'beacon_name': beacon_name})
                 if runonce:
                     self.disable_beacon(mod)
             else:

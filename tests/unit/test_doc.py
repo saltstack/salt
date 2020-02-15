@@ -46,16 +46,19 @@ class DocTestCase(TestCase):
                 # Use grep from git-bash when it exists.
                 cmd = 'bash -c \'grep -r :doc: ./salt/'
                 grep_call = salt.modules.cmdmod.run_stdout(cmd=cmd, cwd=salt_dir).split(os.linesep)
+                os_sep = '/'
             else:
                 # No grep in Windows, use findstr
                 # findstr in windows doesn't prepend 'Binary` to binary files, so
                 # use the '/P' switch to skip files with unprintable characters
                 cmd = 'findstr /C:":doc:" /S /P {0}\\*'.format(salt_dir)
                 grep_call = salt.modules.cmdmod.run_stdout(cmd=cmd).split(os.linesep)
+                os_sep = os.sep
         else:
             salt_dir += '/'
             cmd = 'grep -r :doc: ' + salt_dir
             grep_call = salt.modules.cmdmod.run_stdout(cmd=cmd).split(os.linesep)
+            os_sep = os.sep
 
         test_ret = {}
         for line in grep_call:
@@ -76,15 +79,16 @@ class DocTestCase(TestCase):
             # the page that documents to not use ":doc:", the doc/conf.py file
             # or the artifacts directory on nox CI test runs
             if 'man' in key \
-                    or '.tox{}'.format(os.sep) in key \
-                    or '.nox{}'.format(os.sep) in key \
-                    or 'artifacts{}'.format(os.sep) in key \
+                    or '.tox{}'.format(os_sep) in key \
+                    or '.nox{}'.format(os_sep) in key \
+                    or 'ext{}'.format(os_sep) in key \
+                    or 'artifacts{}'.format(os_sep) in key \
                     or key.endswith('test_doc.py') \
-                    or key.endswith(os.sep.join(['doc', 'conf.py'])) \
-                    or key.endswith(os.sep.join(['conventions', 'documentation.rst'])) \
-                    or key.endswith(os.sep.join(['doc', 'topics', 'releases', '2016.11.2.rst'])) \
-                    or key.endswith(os.sep.join(['doc', 'topics', 'releases', '2016.11.3.rst'])) \
-                    or key.endswith(os.sep.join(['doc', 'topics', 'releases', '2016.3.5.rst'])):
+                    or key.endswith(os_sep.join(['doc', 'conf.py'])) \
+                    or key.endswith(os_sep.join(['conventions', 'documentation.rst'])) \
+                    or key.endswith(os_sep.join(['doc', 'topics', 'releases', '2016.11.2.rst'])) \
+                    or key.endswith(os_sep.join(['doc', 'topics', 'releases', '2016.11.3.rst'])) \
+                    or key.endswith(os_sep.join(['doc', 'topics', 'releases', '2016.3.5.rst'])):
                 continue
 
             # Set up test return dict
