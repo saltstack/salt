@@ -46,8 +46,8 @@ def __virtual__():
     return False
 
 
-def installed(name, target="LocalSystem", dmg=False, store=False, app=False, mpkg=False, user=None, onlyif=None,
-              unless=None, force=False, allow_untrusted=False, version_check=None):
+def installed(name, target="LocalSystem", dmg=False, store=False, app=False, mpkg=False,
+              force=False, allow_untrusted=False, version_check=None):
     '''
     Install a Mac OS Package from a pkg or dmg file, if given a dmg file it
     will first be mounted in a temporary location
@@ -71,17 +71,6 @@ def installed(name, target="LocalSystem", dmg=False, store=False, app=False, mpk
     mpkg
         Is the file a .mpkg? If so then we'll check all of the .pkg files found are installed
 
-    user
-        Name of the user performing the unless or onlyif checks
-
-    onlyif
-        A command to run as a check, run the named command only if the command
-        passed to the ``onlyif`` option returns true
-
-    unless
-        A command to run as a check, only run the named command if the command
-        passed to the ``unless`` option returns false
-
     force
         Force the package to be installed even if its already been found installed
 
@@ -104,17 +93,6 @@ def installed(name, target="LocalSystem", dmg=False, store=False, app=False, mpk
     installing = []
 
     real_pkg = name
-
-    # Check onlyif, unless first
-    run_check_cmd_kwargs = {'runas': user, 'python_shell': True}
-    if 'shell' in __grains__:
-        run_check_cmd_kwargs['shell'] = __grains__['shell']
-
-    cret = _mod_run_check(run_check_cmd_kwargs, onlyif, unless)
-
-    if isinstance(cret, dict):
-        ret.update(cret)
-        return ret
 
     # Check version info
     if version_check is not None:
@@ -243,27 +221,3 @@ def installed(name, target="LocalSystem", dmg=False, store=False, app=False, mpk
             __salt__['macpackage.unmount'](mount_point)
 
     return ret
-
-
-def _mod_run_check(cmd_kwargs, onlyif, unless):
-    '''
-    Execute the onlyif and unless logic.
-    Return a result dict if:
-    * onlyif failed (onlyif != 0)
-    * unless succeeded (unless == 0)
-    else return True
-    '''
-    if onlyif:
-        if __salt__['cmd.retcode'](onlyif, **cmd_kwargs) != 0:
-            return {'comment': 'onlyif condition is false',
-                    'skip_watch': True,
-                    'result': True}
-
-    if unless:
-        if __salt__['cmd.retcode'](unless, **cmd_kwargs) == 0:
-            return {'comment': 'unless condition is true',
-                    'skip_watch': True,
-                    'result': True}
-
-    # No reason to stop, return True
-    return True
