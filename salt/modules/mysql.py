@@ -1405,6 +1405,7 @@ def user_exists(user,
         password_column = __password_column(**connection_args)
 
     auth_plugin = __get_auth_plugin(user, host, **connection_args)
+    log.debug('=== auth_plugin %s ===', auth_plugin)
 
     cur = dbc.cursor()
     if 'MariaDB' in server_version:
@@ -1872,10 +1873,10 @@ def user_chpass(user,
         return False
 
     compare_version = '10.4.0' if 'MariaDB' in server_version else '8.0.11'
+    res = False
     if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
-        if result == 0:
-            _execute(cur, 'FLUSH PRIVILEGES;')
-            res = True
+        _execute(cur, 'FLUSH PRIVILEGES;')
+        res = True
     else:
         if result:
             _execute(cur, 'FLUSH PRIVILEGES;')
