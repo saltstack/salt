@@ -149,7 +149,7 @@ def installed(name, target="LocalSystem", dmg=False, store=False, app=False, mpk
                 pkg_ids = [os.path.basename(name)]
                 mount_point = os.path.dirname(name)
 
-            if onlyif is None and unless is None and version_check is None:
+            if version_check is None:
                 for p in pkg_ids:
                     if target[-4:] == ".app":
                         install_dir = target
