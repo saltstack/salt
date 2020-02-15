@@ -222,7 +222,7 @@ def send(name, *args, **kwargs):
     :rtype: bool
     :return: Whether executing the function and storing the information was succesful.
 
-    .. versionchanged:: Sodium
+    .. versionchanged:: 3000
 
         Added ``allow_tgt``- and ``allow_tgt_type``-parameters to specify which
         minions are allowed to access this function.

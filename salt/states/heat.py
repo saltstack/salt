@@ -36,7 +36,7 @@ mysql:
 .. versionadded:: 2017.7.5,2018.3.1
 
     The spelling mistake in parameter `enviroment` was corrected to `environment`.
-    The `enviroment` spelling mistake has been removed in Salt Neon.
+    The `enviroment` spelling mistake has been removed in Salt 3000.
 
 '''
 # Import Python libs
@@ -131,7 +131,7 @@ def deployed(name, template=None, environment=None, params=None, poll=5,
     .. versionadded:: 2017.7.5,2018.3.1
 
         The spelling mistake in parameter `enviroment` was corrected to `environment`.
-        The `enviroment` spelling mistake has been removed in Salt Neon.
+        The `enviroment` spelling mistake has been removed in Salt 3000.
 
     '''
     log.debug(

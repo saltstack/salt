@@ -253,7 +253,7 @@ def _create_pbuilders(env, runas='root'):
             idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies>`.
 
     runas : root
-        .. versionadded:: fluorine
+        .. versionadded:: 2019.2.1
 
         User to create the files and directories
 
@@ -364,7 +364,7 @@ def make_src_pkg(dest_dir, spec, sources, env=None, saltenv='base', runas='root'
 
 
     runas : root
-        .. versionadded:: fluorine
+        .. versionadded:: 2019.2.1
 
         User to create the files and directories
 

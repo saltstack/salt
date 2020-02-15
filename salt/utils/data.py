@@ -1044,7 +1044,7 @@ def filter_falsey(data, recurse_depth=None, ignore_types=()):
 
     :return type(data)
 
-    .. version-added:: Neon
+    .. versionadded:: 3000
     '''
     filter_element = (
         functools.partial(filter_falsey,

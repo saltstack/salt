@@ -437,7 +437,7 @@ def extracted(name,
             minions ``hash_type`` config option to the same one that you're going
             to pass via ``source_hash`` argument.
 
-        .. versionadded:: Neon
+        .. versionadded:: 3000
 
     skip_verify : False
         If ``True``, hash verification of remote file sources (``http://``,
@@ -553,7 +553,7 @@ def extracted(name,
         then re-create that directory before extracting. Note that ``clean``
         and ``clean_parent`` are mutually exclusive.
 
-        .. versionadded:: Neon
+        .. versionadded:: 3000
 
     user
         The user to own each extracted file. Not available on Windows.

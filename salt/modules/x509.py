@@ -1391,7 +1391,7 @@ def create_certificate(
         for ignore in list(_STATE_INTERNAL_KEYWORDS) + \
                 ['listen_in', 'prerequired', '__prerequired__']:
             kwargs.pop(ignore, None)
-        # TODO: Make timeout configurable in Neon
+        # TODO: Make timeout configurable in 3000
         certs = __salt__['publish.publish'](
             tgt=ca_server,
             fun='x509.sign_remote_certificate',

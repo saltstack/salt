@@ -1631,7 +1631,7 @@ def symlink(
         will be deleted to make room for the symlink, unless
         backupname is set, when it will be renamed
 
-        .. versionchanged:: Neon
+        .. versionchanged:: 3000
             Force will now remove all types of existing file system entries,
             not just files, directories and symlinks.
 

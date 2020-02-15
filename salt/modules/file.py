@@ -3780,7 +3780,7 @@ def remove(path):
 
         salt '*' file.remove /tmp/foo
 
-    .. versionchanged:: Neon
+    .. versionchanged:: 3000
         The method now works on all types of file system entries, not just
         files, directories and symlinks.
     '''

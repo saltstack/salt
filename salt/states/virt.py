@@ -343,12 +343,12 @@ def running(name,
         The default value is taken from the host capabilities, with a preference for ``hvm``.
         Only used when creating a new virtual machine.
 
-        .. versionadded:: Neon
+        .. versionadded:: 3000
     :param arch:
         architecture of the virtual machine. The default value is taken from the host capabilities,
         but ``x86_64`` is prefed over ``i686``. Only used when creating a new virtual machine.
 
-        .. versionadded:: Neon
+        .. versionadded:: 3000
 
     :param boot:
         Specifies kernel for the virtual machine, as well as boot parameters
@@ -365,7 +365,7 @@ def running(name,
                 'cmdline': 'console=ttyS0 ks=http://example.com/f8-i386/os/'
             }
 
-        .. versionadded:: neon
+        .. versionadded:: 3000
 
     .. rubric:: Example States
 
@@ -677,14 +677,14 @@ def network_running(name,
         for more details on this dictionary.
         (Default: None).
 
-        .. versionadded:: neon
+        .. versionadded:: 3000
     :param ipv6_config:
         IPv6 network configuration. See the :py:func`virt.network_define
         <salt.modules.virt.network_define>` function corresponding parameter documentation
         for more details on this dictionary.
         (Default: None).
 
-        .. versionadded:: neon
+        .. versionadded:: 3000
     :param autostart: Network autostart (default ``'True'``)
     :param connection: libvirt connection URI, overriding defaults
 
@@ -970,7 +970,7 @@ def pool_deleted(name,
           uyuni_virt.pool_deleted:
             - purge: True
 
-    .. versionadded:: Neon
+    .. versionadded:: 3000
     '''
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
 

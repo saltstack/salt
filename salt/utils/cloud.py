@@ -3137,7 +3137,7 @@ def _strip_cache_events(data, opts):
     are configured in the main Salt Cloud configuration file, usually
     ``/etc/salt/cloud``.
 
-    .. code-block: yaml
+    .. code-block:: yaml
 
         cache_event_strip_fields:
           - password
