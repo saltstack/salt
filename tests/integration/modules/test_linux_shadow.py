@@ -17,7 +17,7 @@ from tests.support.helpers import destructiveTest, flaky, skip_if_not_root
 # Import Salt libs
 import salt.utils.files
 import salt.utils.platform
-import salt.modules.shadow
+import salt.modules.linux_shadow as shadow
 from salt.ext.six.moves import range
 
 
@@ -45,7 +45,7 @@ class ShadowModuleTest(ModuleCase):
             )
         self._test_user = self.__random_string()
         self._no_user = self.__random_string()
-        self._password = salt.modules.shadow.gen_password('Password1234')
+        self._password = shadow.gen_password('Password1234')
 
     def __random_string(self, size=6):
         '''
