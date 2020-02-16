@@ -25,7 +25,7 @@ def __virtual__():
 
 def value_present(name, xpath, value, **kwargs):
     '''
-    .. versionadded:: Neon
+    .. versionadded:: 3000
 
     Manages a given XML file
 

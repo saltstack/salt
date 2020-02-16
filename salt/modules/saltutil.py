@@ -922,7 +922,7 @@ def sync_pillar(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blackl
 
 def sync_executors(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
     '''
-    .. versionadded:: Neon
+    .. versionadded:: 3000
 
     Sync executors from ``salt://_executors`` to the minion
 

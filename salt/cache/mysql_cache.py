@@ -13,7 +13,7 @@ table if needed. The keys are indexed using the `bank` and `etcd_key` columns.
 To enable this cache plugin, the master will need the python client for
 MySQL installed. This can be easily installed with pip:
 
-.. code-block: bash
+.. code-block:: bash
 
     pip install python-mysql
 

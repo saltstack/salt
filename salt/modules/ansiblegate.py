@@ -48,8 +48,8 @@ from salt.ext import six
 
 try:
     import ansible
-    import ansible.constants
-    import ansible.modules
+    import ansible.constants  # pylint: disable=no-name-in-module
+    import ansible.modules  # pylint: disable=no-name-in-module
 except ImportError:
     ansible = None
 

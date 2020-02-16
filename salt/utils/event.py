@@ -70,8 +70,8 @@ from salt.ext.six.moves import range
 
 # Import third party libs
 from salt.ext import six
-import tornado.ioloop
-import tornado.iostream
+import salt.ext.tornado.ioloop
+import salt.ext.tornado.iostream
 
 # Import salt libs
 import salt.config
@@ -226,7 +226,7 @@ class SaltEvent(object):
             self.io_loop = io_loop
             self._run_io_loop_sync = False
         else:
-            self.io_loop = tornado.ioloop.IOLoop()
+            self.io_loop = salt.ext.tornado.ioloop.IOLoop()
             self._run_io_loop_sync = True
         self.cpub = False
         self.cpush = False
@@ -537,7 +537,7 @@ class SaltEvent(object):
                 # Trigger that at least a single iteration has gone through
                 run_once = True
             try:
-                # tornado.ioloop.IOLoop.run_sync() timeouts are in seconds.
+                # salt.ext.tornado.ioloop.IOLoop.run_sync() timeouts are in seconds.
                 # IPCMessageSubscriber.read_sync() uses this type of timeout.
                 if not self.cpub and not self.connect_pub(timeout=wait):
                     break
@@ -548,7 +548,7 @@ class SaltEvent(object):
                 ret = {'data': data, 'tag': mtag}
             except KeyboardInterrupt:
                 return {'tag': 'salt/event/exit', 'data': {}}
-            except tornado.iostream.StreamClosedError:
+            except salt.ext.tornado.iostream.StreamClosedError:
                 if self.raise_errors:
                     raise
                 else:
@@ -637,7 +637,7 @@ class SaltEvent(object):
                         try:
                             ret = self._get_event(wait, tag, match_func, no_block)
                             break
-                        except tornado.iostream.StreamClosedError:
+                        except salt.ext.tornado.iostream.StreamClosedError:
                             self.close_pub()
                             self.connect_pub(timeout=wait)
                             continue
@@ -966,7 +966,7 @@ class AsyncEventPublisher(object):
         default_minion_sock_dir = self.opts['sock_dir']
         self.opts.update(opts)
 
-        self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
+        self.io_loop = io_loop or salt.ext.tornado.ioloop.IOLoop.current()
         self._closing = False
 
         hash_type = getattr(hashlib, self.opts['hash_type'])
@@ -1098,7 +1098,7 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
         Bind the pub and pull sockets for events
         '''
         salt.utils.process.appendproctitle(self.__class__.__name__)
-        self.io_loop = tornado.ioloop.IOLoop()
+        self.io_loop = salt.ext.tornado.ioloop.IOLoop()
         with salt.utils.asynchronous.current_ioloop(self.io_loop):
             if self.opts['ipc_mode'] == 'tcp':
                 epub_uri = int(self.opts['tcp_master_pub_port'])
