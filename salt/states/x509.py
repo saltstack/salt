@@ -24,7 +24,7 @@ For remote signing, peers must be permitted to remotely call the
 
     peer:
       .*:
-        - x509.sign_remote_certificate
+        - sign_remote_certificate
 
 
 /srv/salt/top.sls
