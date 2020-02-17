@@ -1405,7 +1405,6 @@ def user_exists(user,
         password_column = __password_column(**connection_args)
 
     auth_plugin = __get_auth_plugin(user, host, **connection_args)
-    log.debug('=== auth_plugin %s ===', auth_plugin)
 
     cur = dbc.cursor()
     if 'MariaDB' in server_version:
@@ -1504,13 +1503,17 @@ def _mysql_user_create(user,
             qry += ' IDENTIFIED BY PASSWORD %(password)s'
         args['password'] = password_hash
     elif salt.utils.data.is_true(allow_passwordless):
-        if salt.utils.data.is_true(unix_socket):
-            if host == 'localhost':
-                qry += ' IDENTIFIED VIA unix_socket'
-            else:
-                log.error(
-                    'Auth via unix_socket can be set only for host=localhost'
-                )
+        if not plugin_status('auth_socket', **connection_args):
+            log.error('The auth_socket plugin is not enabled.')
+            qry = False
+        else:
+            if salt.utils.data.is_true(unix_socket):
+                if host == 'localhost':
+                    qry += ' IDENTIFIED WITH auth_socket'
+                else:
+                    log.error(
+                        'Auth via unix_socket can be set only for host=localhost'
+                    )
     else:
         log.error('password or password_hash must be specified, unless '
                   'allow_passwordless=True')
@@ -1540,13 +1543,17 @@ def _mariadb_user_create(user,
         qry += ' IDENTIFIED BY PASSWORD %(password)s'
         args['password'] = password_hash
     elif salt.utils.data.is_true(allow_passwordless):
-        if salt.utils.data.is_true(unix_socket):
-            if host == 'localhost':
-                qry += ' IDENTIFIED VIA unix_socket'
-            else:
-                log.error(
-                    'Auth via unix_socket can be set only for host=localhost'
-                )
+        if not plugin_status('unix_socket', **connection_args):
+            log.error('The unix_socket plugin is not enabled.')
+            qry = False
+        else:
+            if salt.utils.data.is_true(unix_socket):
+                if host == 'localhost':
+                    qry += ' IDENTIFIED VIA unix_socket'
+                else:
+                    log.error(
+                        'Auth via unix_socket can be set only for host=localhost'
+                    )
     else:
         log.error('password or password_hash must be specified, unless '
                   'allow_passwordless=True')
@@ -1593,6 +1600,12 @@ def user_create(user,
 
     unix_socket
         If ``True`` and allow_passwordless is ``True`` then will be used unix_socket auth plugin.
+
+    password_column
+        The password column to use in the user table.
+
+    auth_plugin
+        The authentication plugin to use, default is to use the mysql_native_password plugin.
 
     .. versionadded:: 0.16.2
         The ``allow_passwordless`` option was added.
@@ -2653,3 +2666,156 @@ def verify_login(user, password=None, **connection_args):
             del __context__['mysql.error']
         return False
     return True
+
+
+def plugins_list(**connection_args):
+    '''
+    Return a list of plugins and their status
+    from the ``SHOW PLUGINS`` query.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mysql.plugins_list
+    '''
+    dbc = _connect(**connection_args)
+    if dbc is None:
+        return []
+    cur = dbc.cursor()
+    qry = 'SHOW PLUGINS'
+    try:
+        _execute(cur, qry)
+    except MySQLdb.OperationalError as exc:
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
+        __context__['mysql.error'] = err
+        log.error(err)
+        return []
+
+    ret = []
+    results = cur.fetchall()
+    for dbs in results:
+        ret.append({'name': dbs[0], 'status': dbs[1]})
+
+    log.debug(ret)
+    return ret
+
+
+def plugin_add(name, soname=None, **connection_args):
+    '''
+    Add a plugina.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mysql.plugin_add auth_socket
+    '''
+    if not name:
+        log.error('Plugin name is required.')
+        return False
+
+    if plugin_status(name, **connection_args):
+        log.error('Plugin %s is already installed.', name)
+        return True
+
+    dbc = _connect(**connection_args)
+    if dbc is None:
+        return False
+    cur = dbc.cursor()
+    qry = 'INSTALL PLUGIN %(name)s'
+    args = {}
+    args['name'] = name
+
+    if soname:
+        args['soname'] = soname
+    else:
+        args['soname'] = '{0}.so'.format(name)
+    qry += ' SONAME "%(soname)s"'
+
+    try:
+        _execute(cur, qry, args)
+    except MySQLdb.OperationalError as exc:
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
+        __context__['mysql.error'] = err
+        log.error(err)
+        return False
+
+    return True
+
+
+def plugin_remove(name, **connection_args):
+    '''
+    Remove a plugin.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mysql.plugin_remove auth_socket
+    '''
+    if not name:
+        log.error('Plugin name is required.')
+        return False
+
+    if not plugin_status(name, **connection_args):
+        log.error('Plugin %s is not installed.', name)
+        return True
+
+    dbc = _connect(**connection_args)
+    if dbc is None:
+        return []
+    cur = dbc.cursor()
+    qry = 'UNINSTALL PLUGIN %(name)s'
+    args = {}
+    args['name'] = name
+
+    try:
+        _execute(cur, qry, args)
+    except MySQLdb.OperationalError as exc:
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
+        __context__['mysql.error'] = err
+        log.error(err)
+        return False
+
+    return True
+
+
+def plugin_status(name, **connection_args):
+    '''
+    Return the status of a plugin.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mysql.plugin_status auth_socket
+    '''
+    if not name:
+        log.error('Plugin name is required.')
+        return False
+
+    dbc = _connect(**connection_args)
+    if dbc is None:
+        return ''
+    cur = dbc.cursor()
+    qry = 'SELECT PLUGIN_STATUS FROM INFORMATION_SCHEMA.PLUGINS WHERE PLUGIN_NAME = "%(name)s"'
+    args = {}
+    args['name'] = name
+
+    try:
+        _execute(cur, qry, args)
+    except MySQLdb.OperationalError as exc:
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
+        __context__['mysql.error'] = err
+        log.error(err)
+        return ''
+
+    try:
+        status = cur.fetchone()
+        if status is None:
+            return ''
+        else:
+            return status[0]
+    except IndexError:
+        return ''
