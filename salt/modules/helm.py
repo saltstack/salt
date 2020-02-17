@@ -24,7 +24,7 @@ To install a chart with the Salt-Module:
 
 .. code-block:: bash
 
-    salt '*' helm.install grafana stable/grafana values_file='/path/to/values.yaml' flags="['wait']"
+    salt '*' helm.install grafana stable/grafana values='/path/to/values.yaml' flags="['wait']"
 
 
 Detailed Function Documentation
@@ -479,7 +479,7 @@ def history(release, flags=None, kvflags=None):
     return _exec_dict_return(commands=['history', release], flags=flags, kvflags=kvflags)
 
 
-def install(release, chart, values_file=None, namespace=None, flags=None, kvflags=None):
+def install(release, chart, values=None, version=None, namespace=None, flags=None, kvflags=None):
     '''
     Installs a chart archive.
     Return True if succeed, else the error message.
@@ -490,8 +490,11 @@ def install(release, chart, values_file=None, namespace=None, flags=None, kvflag
     chart
         (string) Chart name to install.
 
-    values_file
+    values
         (string) Absolute path to the values.yaml file.
+
+    version
+        (string) The exact chart version to install. If this is not specified, the latest version is installed.
 
     namespace
         (string) The namespace scope for this request.
@@ -509,14 +512,19 @@ def install(release, chart, values_file=None, namespace=None, flags=None, kvflag
         salt '*' helm.install RELEASE CHART
 
         # With values file.
-        salt '*' helm.install RELEASE CHART values_file='/path/to/values.yaml'
+        salt '*' helm.install RELEASE CHART values='/path/to/values.yaml'
 
     '''
-    if values_file:
+    if values:
         if kvflags:
-            kvflags.update({'values': values_file})
+            kvflags.update({'values': values})
         else:
-            kvflags = {'values': values_file}
+            kvflags = {'values': values}
+    if version:
+        if kvflags:
+            kvflags.update({'version': version})
+        else:
+            kvflags = {'version': version}
     if namespace:
         if kvflags:
             kvflags.update({'namespace': namespace})
@@ -1209,7 +1217,7 @@ def status(release, namespace=None, flags=None, kvflags=None):
     return _exec_dict_return(commands=['status', release], flags=flags, kvflags=kvflags)
 
 
-def template(name, chart, values_file=None, output_dir=None, flags=None, kvflags=None):
+def template(name, chart, values=None, output_dir=None, flags=None, kvflags=None):
     '''
     Render chart templates locally and display the output.
     Return the chart renderer if succeed, else the error message.
@@ -1220,7 +1228,7 @@ def template(name, chart, values_file=None, output_dir=None, flags=None, kvflags
     chart
         (string) The chart to template.
 
-    values_file
+    values
         (string) Absolute path to the values.yaml file.
 
     output_dir
@@ -1239,14 +1247,14 @@ def template(name, chart, values_file=None, output_dir=None, flags=None, kvflags
         salt '*' helm.template NAME CHART
 
         # With values file.
-        salt '*' helm.template NAME CHART values_file='/path/to/values.yaml' output_dir='path/to/output/dir'
+        salt '*' helm.template NAME CHART values='/path/to/values.yaml' output_dir='path/to/output/dir'
 
     '''
-    if values_file:
+    if values:
         if kvflags:
-            kvflags.update({'values': values_file})
+            kvflags.update({'values': values})
         else:
-            kvflags = {'values': values_file}
+            kvflags = {'values': values}
     if output_dir:
         kvflags.update({'output-dir': output_dir})
     return _exec_string_return(commands=['template', name, chart], flags=flags, kvflags=kvflags)
@@ -1311,7 +1319,7 @@ def uninstall(release, namespace=None, flags=None, kvflags=None):
     return _exec_true_return(commands=['uninstall', release], flags=flags, kvflags=kvflags)
 
 
-def upgrade(release, chart, values_file=None, namespace=None, flags=None, kvflags=None):
+def upgrade(release, chart, values=None, version=None, namespace=None, flags=None, kvflags=None):
     '''
     Upgrades a release to a new version of a chart.
     Return True if succeed, else the error message.
@@ -1322,8 +1330,11 @@ def upgrade(release, chart, values_file=None, namespace=None, flags=None, kvflag
     chart
         (string) The chart to managed.
 
-    values_file
+    values
         (string) Absolute path to the values.yaml file.
+
+    version
+        (string) The exact chart version to install. If this is not specified, the latest version is installed.
 
     namespace
         (string) The namespace scope for this request.
@@ -1344,14 +1355,19 @@ def upgrade(release, chart, values_file=None, namespace=None, flags=None, kvflag
         salt '*' helm.upgrade RELEASE CHART flags=['dry-run']
 
         # With values file.
-        salt '*' helm.upgrade RELEASE CHART values_file='/path/to/values.yaml'
+        salt '*' helm.upgrade RELEASE CHART values='/path/to/values.yaml'
 
     '''
-    if values_file:
+    if values:
         if kvflags:
-            kvflags.update({'values': values_file})
+            kvflags.update({'values': values})
         else:
-            kvflags = {'values': values_file}
+            kvflags = {'values': values}
+    if version:
+        if kvflags:
+            kvflags.update({'version': version})
+        else:
+            kvflags = {'version': version}
     if namespace:
         if kvflags:
             kvflags.update({'namespace': namespace})
