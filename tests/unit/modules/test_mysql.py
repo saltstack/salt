@@ -207,6 +207,33 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
                                 password='BLUECOW'
                 )
 
+        # Test creating a user with passwordless=True and unix_socket=True
+        with patch.object(mysql, 'version', return_value='8.0.10'):
+            with patch.object(mysql, 'plugin_status', MagicMock(return_value='ACTIVE')):
+                self._test_call(mysql.user_create,
+                                {'sql': 'CREATE USER %(user)s@%(host)s IDENTIFIED WITH auth_socket',
+                                 'sql_args': {'user': 'testuser',
+                                              'host': 'localhost',
+                                             }
+                                },
+                                'testuser',
+                                allow_passwordless=True,
+                                unix_socket=True,
+                )
+
+        with patch.object(mysql, 'version', return_value='10.2.21-MariaDB'):
+            with patch.object(mysql, 'plugin_status', MagicMock(return_value='ACTIVE')):
+                self._test_call(mysql.user_create,
+                                {'sql': 'CREATE USER %(user)s@%(host)s IDENTIFIED VIA unix_socket',
+                                 'sql_args': {'user': 'testuser',
+                                              'host': 'localhost',
+                                             }
+                                },
+                                'testuser',
+                                allow_passwordless=True,
+                                unix_socket=True,
+                )
+
     def test_user_chpass(self):
         '''
         Test changing a MySQL user password in mysql exec module
@@ -480,6 +507,45 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
             self.assertIn('mysql.error', mysql.__context__)
             expected = 'MySQL Error 9999: Something Went Wrong'
             self.assertEqual(mysql.__context__['mysql.error'], expected)
+
+    def test_plugin_add(self):
+        '''
+        Test the adding/installing a MySQL / MariaDB plugin
+        '''
+        with patch.object(mysql, 'plugin_status', MagicMock(return_value='')):
+            self._test_call(mysql.plugin_add,
+                            {'sql': 'INSTALL PLUGIN %(name)s SONAME "%(soname)s"',
+                             'sql_args': {'name': 'auth_socket',
+                                          'soname': 'auth_socket.so',
+                                         }
+                            },
+                            'auth_socket',
+            )
+
+    def test_plugin_remove(self):
+        '''
+        Test the removing/uninstalling a MySQL / MariaDB plugin
+        '''
+        with patch.object(mysql, 'plugin_status', MagicMock(return_value='ACTIVE')):
+            self._test_call(mysql.plugin_remove,
+                            {'sql': 'UNINSTALL PLUGIN %(name)s',
+                             'sql_args': {'name': 'auth_socket',
+                                         }
+                            },
+                            'auth_socket',
+            )
+
+    def test_plugin_status(self):
+        '''
+        Test checking the status of a MySQL / MariaDB plugin
+        '''
+        self._test_call(mysql.plugin_status,
+                        {'sql': 'SELECT PLUGIN_STATUS FROM INFORMATION_SCHEMA.PLUGINS WHERE PLUGIN_NAME = "%(name)s"',
+                         'sql_args': {'name': 'auth_socket',
+                                     }
+                        },
+                        'auth_socket',
+        )
 
     def _test_call(self, function, expected_sql, *args, **kwargs):
         connect_mock = MagicMock()
