@@ -1302,7 +1302,7 @@ def _mysql_user_exists(user,
     if salt.utils.data.is_true(passwordless):
         if salt.utils.data.is_true(unix_socket):
             qry += ' AND plugin=%(unix_socket)s'
-            args['unix_socket'] = 'unix_socket'
+            args['unix_socket'] = 'auth_socket'
         else:
             qry += ' AND ' + password_column + ' = \'\''
     elif password:
@@ -1725,13 +1725,17 @@ def _mysql_user_chpass(user,
     if salt.utils.data.is_true(allow_passwordless) and \
             salt.utils.data.is_true(unix_socket):
         if host == 'localhost':
-            args['unix_socket'] = 'auth_socket'
-            if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
-                qry = "ALTER USER %(user)s@%(host)s IDENTIFIED WITH %(unix_socket)s AS %(user)s;"
+            if not plugin_status('auth_socket', **connection_args):
+                log.error('The auth_socket plugin is not enabled.')
+                qry = False
             else:
-                qry = ('UPDATE mysql.user SET ' + password_column + '='
-                       + password_sql + ', plugin=%(unix_socket)s' +
-                       ' WHERE User=%(user)s AND Host = %(host)s;')
+                args['unix_socket'] = 'auth_socket'
+                if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
+                    qry = "ALTER USER %(user)s@%(host)s IDENTIFIED WITH %(unix_socket)s AS %(user)s;"
+                else:
+                    qry = ('UPDATE mysql.user SET ' + password_column + '='
+                           + password_sql + ', plugin=%(unix_socket)s' +
+                           ' WHERE User=%(user)s AND Host = %(host)s;')
         else:
             log.error('Auth via unix_socket can be set only for host=localhost')
 
@@ -1777,10 +1781,14 @@ def _mariadb_user_chpass(user,
     if salt.utils.data.is_true(allow_passwordless) and \
             salt.utils.data.is_true(unix_socket):
         if host == 'localhost':
-            args['unix_socket'] = 'auth_socket'
-            qry = ('UPDATE mysql.user SET ' + password_column + '='
-                   + password_sql + ', plugin=%(unix_socket)s' +
-                   ' WHERE User=%(user)s AND Host = %(host)s;')
+            if not plugin_status('unix_socket', **connection_args):
+                log.error('The unix_socket plugin is not enabled.')
+                qry = False
+            else:
+                args['unix_socket'] = 'unix_socket'
+                qry = ('UPDATE mysql.user SET ' + password_column + '='
+                       + password_sql + ', plugin=%(unix_socket)s' +
+                       ' WHERE User=%(user)s AND Host = %(host)s;')
         else:
             log.error('Auth via unix_socket can be set only for host=localhost')
 
