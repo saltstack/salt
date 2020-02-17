@@ -155,7 +155,7 @@ def repo_updated(name, namespace=None, flags=None, kvflags=None):
     return ret
 
 
-def release_present(name, chart, namespace=None, flags=None, kvflags=None):
+def release_present(name, chart, values=None, version=None, namespace=None, flags=None, kvflags=None):
     '''
     Make sure the release name is present.
 
@@ -164,6 +164,12 @@ def release_present(name, chart, namespace=None, flags=None, kvflags=None):
 
     chart
         (string) The chart to install.
+
+    values
+        (string) Absolute path to the values.yaml file.
+
+    version
+        (string) The exact chart version to install. If this is not specified, the latest version is installed.
 
     namespace
         (string) The namespace scope for this request.
@@ -218,15 +224,19 @@ def release_present(name, chart, namespace=None, flags=None, kvflags=None):
         ret['result'] = None
         ret['comment'] = 'Helm release would have been installed or updated.'
     else:
-        release_old_status = __salt__['helm.status'](release=name, namespace=namespace)
+        release_old_status = __salt__['helm.status'](release=name,
+                                                     namespace=namespace)
         if isinstance(release_old_status, dict):
             release_upgrade = __salt__['helm.upgrade'](release=name,
                                                        chart=chart,
+                                                       values=values,
+                                                       version=version,
                                                        namespace=namespace,
                                                        flags=flags,
                                                        kvflags=kvflags)
             if isinstance(release_upgrade, bool) and release_upgrade:
-                release_cur_status = __salt__['helm.status'](release=name, namespace=namespace)
+                release_cur_status = __salt__['helm.status'](release=name,
+                                                             namespace=namespace)
                 if isinstance(release_cur_status, dict):
                     release_cur_status.pop('manifest')
                     ret['changes'] = release_cur_status
@@ -240,11 +250,14 @@ def release_present(name, chart, namespace=None, flags=None, kvflags=None):
         else:
             release_install = __salt__['helm.install'](release=name,
                                                        chart=chart,
+                                                       values=values,
+                                                       version=version,
                                                        namespace=namespace,
                                                        flags=flags,
                                                        kvflags=kvflags)
             if isinstance(release_install, bool) and release_install:
-                release_cur_status = __salt__['helm.status'](release=name, namespace=namespace)
+                release_cur_status = __salt__['helm.status'](release=name,
+                                                             namespace=namespace)
                 if isinstance(release_cur_status, dict):
                     release_cur_status.pop('manifest')
                     ret['changes'] = release_cur_status
@@ -305,7 +318,8 @@ def release_absent(name, namespace=None, flags=None, kvflags=None):
         ret['result'] = None
         ret['comment'] = 'Helm release would have been uninstalled.'
     else:
-        release_status = __salt__['helm.status'](release=name, namespace=namespace)
+        release_status = __salt__['helm.status'](release=name,
+                                                 namespace=namespace)
         if isinstance(release_status, dict):
             release_uninstall = __salt__['helm.uninstall'](release=name,
                                                            namespace=namespace,
