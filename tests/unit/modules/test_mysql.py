@@ -278,14 +278,15 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test the removal of a MySQL user in mysql exec module
         '''
-        self._test_call(mysql.user_remove,
-                        {'sql': 'DROP USER %(user)s@%(host)s',
-                         'sql_args': {'user': 'testuser',
-                                      'host': 'localhost',
-                                     }
-                        },
-                        'testuser'
-        )
+        with patch.object(mysql, 'user_exists', MagicMock(return_value=True)):
+            self._test_call(mysql.user_remove,
+                            {'sql': 'DROP USER %(user)s@%(host)s',
+                             'sql_args': {'user': 'testuser',
+                                          'host': 'localhost',
+                                         }
+                            },
+                            'testuser'
+            )
 
     def test_db_check(self):
         '''
@@ -514,11 +515,7 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.object(mysql, 'plugin_status', MagicMock(return_value='')):
             self._test_call(mysql.plugin_add,
-                            {'sql': 'INSTALL PLUGIN %(name)s SONAME "%(soname)s"',
-                             'sql_args': {'name': 'auth_socket',
-                                          'soname': 'auth_socket.so',
-                                         }
-                            },
+                            'INSTALL PLUGIN auth_socket SONAME "auth_socket.so"',
                             'auth_socket',
             )
 
@@ -528,10 +525,7 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.object(mysql, 'plugin_status', MagicMock(return_value='ACTIVE')):
             self._test_call(mysql.plugin_remove,
-                            {'sql': 'UNINSTALL PLUGIN %(name)s',
-                             'sql_args': {'name': 'auth_socket',
-                                         }
-                            },
+                            'UNINSTALL PLUGIN auth_socket',
                             'auth_socket',
             )
 
@@ -540,10 +534,7 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
         Test checking the status of a MySQL / MariaDB plugin
         '''
         self._test_call(mysql.plugin_status,
-                        {'sql': 'SELECT PLUGIN_STATUS FROM INFORMATION_SCHEMA.PLUGINS WHERE PLUGIN_NAME = "%(name)s"',
-                         'sql_args': {'name': 'auth_socket',
-                                     }
-                        },
+                        'SELECT PLUGIN_STATUS FROM INFORMATION_SCHEMA.PLUGINS WHERE PLUGIN_NAME = "%(name)s"',
                         'auth_socket',
         )
 

@@ -1312,7 +1312,9 @@ def _mysql_user_exists(user,
                 qry += ' AND ' + password_column + ' = %(password)s'
                 args['password'] = six.text_type(_password)
             else:
-                log.error('Unable to verify password.')
+                err = 'Unable to verify password.'
+                log.error(err)
+                __context__['mysql.error'] = err
         else:
             qry += ' AND ' + password_column + ' = PASSWORD(%(password)s)'
             args['password'] = six.text_type(password)
@@ -1504,7 +1506,9 @@ def _mysql_user_create(user,
         args['password'] = password_hash
     elif salt.utils.data.is_true(allow_passwordless):
         if not plugin_status('auth_socket', **connection_args):
-            log.error('The auth_socket plugin is not enabled.')
+            err = 'The auth_socket plugin is not enabled.'
+            log.error(err)
+            __context__['mysql.error'] = err
             qry = False
         else:
             if salt.utils.data.is_true(unix_socket):
@@ -1544,7 +1548,9 @@ def _mariadb_user_create(user,
         args['password'] = password_hash
     elif salt.utils.data.is_true(allow_passwordless):
         if not plugin_status('unix_socket', **connection_args):
-            log.error('The unix_socket plugin is not enabled.')
+            err = 'The unix_socket plugin is not enabled.'
+            log.error(err)
+            __context__['mysql.error'] = err
             qry = False
         else:
             if salt.utils.data.is_true(unix_socket):
@@ -1624,6 +1630,7 @@ def user_create(user,
         err = 'MySQL Error: Unable to fetch current server version. Last error was: "{}"'.format(last_err)
         log.error(err)
         return False
+
     if user_exists(user, host, **connection_args):
         log.info('User \'%s\'@\'%s\' already exists', user, host)
         return False
@@ -1726,7 +1733,9 @@ def _mysql_user_chpass(user,
             salt.utils.data.is_true(unix_socket):
         if host == 'localhost':
             if not plugin_status('auth_socket', **connection_args):
-                log.error('The auth_socket plugin is not enabled.')
+                err = 'The auth_socket plugin is not enabled.'
+                log.error(err)
+                __context__['mysql.error'] = err
                 qry = False
             else:
                 args['unix_socket'] = 'auth_socket'
@@ -1782,7 +1791,9 @@ def _mariadb_user_chpass(user,
             salt.utils.data.is_true(unix_socket):
         if host == 'localhost':
             if not plugin_status('unix_socket', **connection_args):
-                log.error('The unix_socket plugin is not enabled.')
+                err = 'The unix_socket plugin is not enabled.'
+                log.error(err)
+                __context__['mysql.error'] = err
                 qry = False
             else:
                 args['unix_socket'] = 'unix_socket'
@@ -1931,6 +1942,12 @@ def user_remove(user,
 
         salt '*' mysql.user_remove frank localhost
     '''
+    if not user_exists(user, host, **connection_args):
+        err = 'User \'%s\'@\'%s\' does not exists', user, host
+        __context__['mysql.error'] = err
+        log.info(err)
+        return False
+
     dbc = _connect(**connection_args)
     if dbc is None:
         return False
@@ -2731,18 +2748,15 @@ def plugin_add(name, soname=None, **connection_args):
     if dbc is None:
         return False
     cur = dbc.cursor()
-    qry = 'INSTALL PLUGIN %(name)s'
-    args = {}
-    args['name'] = name
+    qry = 'INSTALL PLUGIN {0}'.format(name)
 
     if soname:
-        args['soname'] = soname
+        qry += ' SONAME "{0}"'.format(soname)
     else:
-        args['soname'] = '{0}.so'.format(name)
-    qry += ' SONAME "%(soname)s"'
+        qry += ' SONAME "{0}.so"'.format(name)
 
     try:
-        _execute(cur, qry, args)
+        _execute(cur, qry)
     except MySQLdb.OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc.args)
         __context__['mysql.error'] = err
@@ -2772,14 +2786,14 @@ def plugin_remove(name, **connection_args):
 
     dbc = _connect(**connection_args)
     if dbc is None:
-        return []
+        return False
     cur = dbc.cursor()
-    qry = 'UNINSTALL PLUGIN %(name)s'
+    qry = 'UNINSTALL PLUGIN {0}'.format(name)
     args = {}
     args['name'] = name
 
     try:
-        _execute(cur, qry, args)
+        _execute(cur, qry)
     except MySQLdb.OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc.args)
         __context__['mysql.error'] = err
@@ -2812,7 +2826,7 @@ def plugin_status(name, **connection_args):
     args['name'] = name
 
     try:
-        _execute(cur, qry, args)
+        _execute(cur, qry)
     except MySQLdb.OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc.args)
         __context__['mysql.error'] = err
