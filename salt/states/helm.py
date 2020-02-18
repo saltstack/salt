@@ -141,8 +141,9 @@ def repo_updated(name, namespace=None, flags=None, kvflags=None):
         ret['comment'] = 'Helm repo would have been updated.'
     else:
         try:
-            result = __salt__['helm.repo_update'](namespace=namespace, flags=flags, kvflags=kvflags)
-
+            result = __salt__['helm.repo_update'](namespace=namespace,
+                                                  flags=flags,
+                                                  kvflags=kvflags)
             if not (isinstance(result, bool) and result):
                 ret['result'] = False
                 ret['changes'] = result
@@ -155,7 +156,7 @@ def repo_updated(name, namespace=None, flags=None, kvflags=None):
     return ret
 
 
-def release_present(name, chart, values=None, version=None, namespace=None, flags=None, kvflags=None):
+def release_present(name, chart, values=None, version=None, namespace=None, set=None, flags=None, kvflags=None):
     '''
     Make sure the release name is present.
 
@@ -173,6 +174,9 @@ def release_present(name, chart, values=None, version=None, namespace=None, flag
 
     namespace
         (string) The namespace scope for this request.
+
+    set
+        (string or list) Set a values on the command line.
 
     flags
         (list) Flags in argument of the command without values. ex: ['help', '--help']
@@ -232,6 +236,7 @@ def release_present(name, chart, values=None, version=None, namespace=None, flag
                                                        values=values,
                                                        version=version,
                                                        namespace=namespace,
+                                                       set=set,
                                                        flags=flags,
                                                        kvflags=kvflags)
             if isinstance(release_upgrade, bool) and release_upgrade:
@@ -253,6 +258,7 @@ def release_present(name, chart, values=None, version=None, namespace=None, flag
                                                        values=values,
                                                        version=version,
                                                        namespace=namespace,
+                                                       set=set,
                                                        flags=flags,
                                                        kvflags=kvflags)
             if isinstance(release_install, bool) and release_install:
