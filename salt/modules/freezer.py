@@ -242,7 +242,7 @@ def restore(name=None, clean=False, **kwargs):
     clean
         If True remove the frozen information YAML from the cache
 
-        .. version-added:: 3000
+        .. versionadded:: 3000
 
     CLI Example:
 

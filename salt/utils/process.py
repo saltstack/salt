@@ -35,7 +35,7 @@ from salt.log.mixins import NewStyleClassMixIn
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import queue, range  # pylint: disable=import-error,redefined-builtin
-from tornado import gen
+from salt.ext.tornado import gen
 
 log = logging.getLogger(__name__)
 
