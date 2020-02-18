@@ -83,7 +83,11 @@ def _prepare_cmd(binary='helm', commands=None, flags=None, kvflags=None):
     for key, val in kvflags.items():
         if not re.search(r'^--.*', key):
             key = '--' + key
-        cmd += (key, val,)
+        if key == '--set' and isinstance(val, list):
+            for set_val in val:
+                cmd += (key, set_val,)
+        else:
+            cmd += (key, val,)
 
     return cmd
 
@@ -479,7 +483,7 @@ def history(release, flags=None, kvflags=None):
     return _exec_dict_return(commands=['history', release], flags=flags, kvflags=kvflags)
 
 
-def install(release, chart, values=None, version=None, namespace=None, flags=None, kvflags=None):
+def install(release, chart, values=None, version=None, namespace=None, set=None, flags=None, kvflags=None):
     '''
     Installs a chart archive.
     Return True if succeed, else the error message.
@@ -498,6 +502,9 @@ def install(release, chart, values=None, version=None, namespace=None, flags=Non
 
     namespace
         (string) The namespace scope for this request.
+
+    set
+        (string or list) Set a values on the command line.
 
     flags
         (list) Flags in argument of the command without values. ex: ['help', '--help']
@@ -530,16 +537,30 @@ def install(release, chart, values=None, version=None, namespace=None, flags=Non
             kvflags.update({'namespace': namespace})
         else:
             kvflags = {'namespace': namespace}
+    if set:
+        if kvflags:
+            kvflags.update({'set': set})
+        else:
+            kvflags = {'set': set}
     return _exec_true_return(commands=['install', release, chart], flags=flags, kvflags=kvflags)
 
 
-def lint(path, flags=None, kvflags=None):
+def lint(path, values=None, namespace=None, set=None, flags=None, kvflags=None):
     '''
     Takes a path to a chart and runs a series of tests to verify that the chart is well-formed.
     Return True if succeed, else the error message.
 
     path
         (string) The path to the chart to lint.
+
+    values
+        (string) Absolute path to the values.yaml file.
+
+    namespace
+        (string) The namespace scope for this request.
+
+    set
+        (string or list) Set a values on the command line.
 
     flags
         (list) Flags in argument of the command without values. ex: ['help', '--help']
@@ -554,6 +575,21 @@ def lint(path, flags=None, kvflags=None):
         salt '*' helm.lint PATH
 
     '''
+    if values:
+        if kvflags:
+            kvflags.update({'values': values})
+        else:
+            kvflags = {'values': values}
+    if namespace:
+        if kvflags:
+            kvflags.update({'namespace': namespace})
+        else:
+            kvflags = {'namespace': namespace}
+    if set:
+        if kvflags:
+            kvflags.update({'set': set})
+        else:
+            kvflags = {'set': set}
     return _exec_true_return(commands=['lint', path], flags=flags, kvflags=kvflags)
 
 
@@ -1217,7 +1253,7 @@ def status(release, namespace=None, flags=None, kvflags=None):
     return _exec_dict_return(commands=['status', release], flags=flags, kvflags=kvflags)
 
 
-def template(name, chart, values=None, output_dir=None, flags=None, kvflags=None):
+def template(name, chart, values=None, output_dir=None, set=None, flags=None, kvflags=None):
     '''
     Render chart templates locally and display the output.
     Return the chart renderer if succeed, else the error message.
@@ -1233,6 +1269,9 @@ def template(name, chart, values=None, output_dir=None, flags=None, kvflags=None
 
     output_dir
         (string) Absolute path to the output directory.
+
+    set
+        (string or list) Set a values on the command line.
 
     flags
         (list) Flags in argument of the command without values. ex: ['help', '--help']
@@ -1255,6 +1294,11 @@ def template(name, chart, values=None, output_dir=None, flags=None, kvflags=None
             kvflags.update({'values': values})
         else:
             kvflags = {'values': values}
+    if set:
+        if kvflags:
+            kvflags.update({'set': set})
+        else:
+            kvflags = {'set': set}
     if output_dir:
         kvflags.update({'output-dir': output_dir})
     return _exec_string_return(commands=['template', name, chart], flags=flags, kvflags=kvflags)
@@ -1319,7 +1363,7 @@ def uninstall(release, namespace=None, flags=None, kvflags=None):
     return _exec_true_return(commands=['uninstall', release], flags=flags, kvflags=kvflags)
 
 
-def upgrade(release, chart, values=None, version=None, namespace=None, flags=None, kvflags=None):
+def upgrade(release, chart, values=None, version=None, namespace=None, set=None, flags=None, kvflags=None):
     '''
     Upgrades a release to a new version of a chart.
     Return True if succeed, else the error message.
@@ -1338,6 +1382,9 @@ def upgrade(release, chart, values=None, version=None, namespace=None, flags=Non
 
     namespace
         (string) The namespace scope for this request.
+
+    set
+        (string or list) Set a values on the command line.
 
     flags
         (list) Flags in argument of the command without values. ex: ['help', '--help']
@@ -1373,6 +1420,11 @@ def upgrade(release, chart, values=None, version=None, namespace=None, flags=Non
             kvflags.update({'namespace': namespace})
         else:
             kvflags = {'namespace': namespace}
+    if set:
+        if kvflags:
+            kvflags.update({'set': set})
+        else:
+            kvflags = {'set': set}
     return _exec_true_return(commands=['upgrade', release, chart], flags=flags, kvflags=kvflags)
 
 
