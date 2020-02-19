@@ -534,9 +534,10 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
         Test checking the status of a MySQL / MariaDB plugin
         '''
         self._test_call(mysql.plugin_status,
-                        'SELECT PLUGIN_STATUS FROM INFORMATION_SCHEMA.PLUGINS WHERE PLUGIN_NAME = "%(name)s"',
-                        'auth_socket',
-        )
+                        {'sql': 'SELECT PLUGIN_STATUS FROM INFORMATION_SCHEMA.PLUGINS WHERE PLUGIN_NAME = %(name)s',
+                         'sql_args': {'name': 'auth_socket'}
+                        },
+                        'auth_socket')
 
     def _test_call(self, function, expected_sql, *args, **kwargs):
         connect_mock = MagicMock()

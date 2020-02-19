@@ -2821,12 +2821,12 @@ def plugin_status(name, **connection_args):
     if dbc is None:
         return ''
     cur = dbc.cursor()
-    qry = 'SELECT PLUGIN_STATUS FROM INFORMATION_SCHEMA.PLUGINS WHERE PLUGIN_NAME = "%(name)s"'
+    qry = 'SELECT PLUGIN_STATUS FROM INFORMATION_SCHEMA.PLUGINS WHERE PLUGIN_NAME = %(name)s'
     args = {}
     args['name'] = name
 
     try:
-        _execute(cur, qry)
+        _execute(cur, qry, args)
     except MySQLdb.OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc.args)
         __context__['mysql.error'] = err
