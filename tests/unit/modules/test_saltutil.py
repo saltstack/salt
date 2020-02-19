@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-
+from salt.client import LocalClient
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
-from tests.support.mock import MagicMock, sentinel as s
+from tests.support.mock import create_autospec, sentinel as s
 
 import salt.modules.saltutil as saltutil
 
@@ -14,7 +14,7 @@ class ScheduleTestCase(TestCase, LoaderModuleMockMixin):
     def test_exec_kwargs(self):
         _cmd_expected_kwargs = {'tgt': s.tgt, 'fun': s.fun, 'arg': s.arg, 'timeout': s.timeout,
                                 'tgt_type': s.tgt_type, 'ret': s.ret, 'kwarg': s.kwarg}
-        client = MagicMock()
+        client = create_autospec(LocalClient)
 
         saltutil._exec(client, **_cmd_expected_kwargs)
         client.cmd_iter.assert_called_with(**_cmd_expected_kwargs)
