@@ -1485,7 +1485,7 @@ def _exec(client, tgt, fun, arg, timeout, tgt_type, ret, kwarg, batch=False, sub
     seen = 0
 
     kwargs.update({
-        'tgt': tgt, 'fun': fun, 'arg': arg,
+        'tgt': tgt, 'fun': fun, 'arg': arg, 'timeout': timeout,
         'tgt_type': tgt_type, 'ret': ret, 'kwarg': kwarg
     })
 
@@ -1497,7 +1497,6 @@ def _exec(client, tgt, fun, arg, timeout, tgt_type, ret, kwarg, batch=False, sub
         kwargs.update({'subset': subset, 'cli': True})
     else:
         _cmd = client.cmd_iter
-        kwargs.update({'timeout': timeout})
 
     for ret_comp in _cmd(**kwargs):
         fcn_ret.update(ret_comp)
