@@ -1480,19 +1480,21 @@ def _get_ssh_or_api_client(cfgfile, ssh=False):
     return client
 
 
-def _exec(client, tgt, fun, arg, timeout, tgt_type, ret, kwarg, **kwargs):
+def _exec(client, tgt, fun, arg, timeout, tgt_type, ret, kwarg, batch=False, subset=False, **kwargs):
     fcn_ret = {}
     seen = 0
 
     kwargs.update({
-        'tgt': tgt, 'fun': fun, 'arg': arg, 'tgt_type': tgt_type, 'ret': ret, 'kwarg': kwarg
+        'tgt': tgt, 'fun': fun, 'arg': arg,
+        'tgt_type': tgt_type, 'ret': ret, 'kwarg': kwarg
     })
 
-    if 'batch' in kwargs:
+    if batch:
         _cmd = client.cmd_batch
-    elif 'subset' in kwargs:
+        kwargs.update({'batch': batch})
+    elif subset:
         _cmd = client.cmd_subset
-        kwargs.update({'cli': True})
+        kwargs.update({'subset': subset, 'cli': True})
     else:
         _cmd = client.cmd_iter
         kwargs.update({'timeout': timeout})
@@ -1506,7 +1508,7 @@ def _exec(client, tgt, fun, arg, timeout, tgt_type, ret, kwarg, **kwargs):
             # and all results are there
             break
 
-    if 'batch' in kwargs:
+    if batch:
         old_ret, fcn_ret = fcn_ret, {}
         for key, value in old_ret.items():
             fcn_ret[key] = {
