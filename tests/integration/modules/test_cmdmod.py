@@ -491,3 +491,39 @@ class CMDModuleTest(ModuleCase):
         out = self.run_function('cmd.run', ['set'], env={"abc": "123", "ABC": "456"}).splitlines()
         self.assertIn('abc=123', out)
         self.assertIn('ABC=456', out)
+
+    @skipIf(not salt.utils.platform.is_windows(), 'minion is not windows')
+    def test_windows_cmd_shell_list(self):
+        '''
+        Ensure that cmd.run_all supports running shell='cmd' with cmd passed
+        as a list
+        '''
+        out = self.run_function('cmd.run_all', ['echo', 'salt'], python_shell=False, shell='cmd')
+        self.assertIn('salt', out)
+
+    @skipIf(not salt.utils.platform.is_windows(), 'minion is not windows')
+    def test_windows_cmd_shell_string(self):
+        '''
+        Ensure that cmd.run_all supports running shell='cmd' with cmd passed
+        as a string
+        '''
+        out = self.run_function('cmd.run_all', 'echo salt', python_shell=False, shell='cmd')
+        self.assertIn('salt', out)
+
+    @skipIf(not salt.utils.platform.is_windows(), 'minion is not windows')
+    def test_windows_cmd_powershell_list(self):
+        '''
+        Ensure that cmd.run_all supports running shell='cmd' with cmd passed
+        as a list
+        '''
+        out = self.run_function('cmd.run_all', ['echo', 'salt'], python_shell=False, shell='powershell')
+        self.assertIn('salt', out)
+
+    @skipIf(not salt.utils.platform.is_windows(), 'minion is not windows')
+    def test_windows_cmd_powershell_string(self):
+        '''
+        Ensure that cmd.run_all supports running shell='cmd' with cmd passed
+        as a string
+        '''
+        out = self.run_function('cmd.run_all', 'echo salt', python_shell=False, shell='powershell')
+        self.assertIn('salt', out)
