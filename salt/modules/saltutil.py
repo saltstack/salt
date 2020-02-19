@@ -1484,21 +1484,23 @@ def _exec(client, tgt, fun, arg, timeout, tgt_type, ret, kwarg, batch=False, sub
     fcn_ret = {}
     seen = 0
 
-    kwargs.update({
+    cmd_kwargs = {
         'tgt': tgt, 'fun': fun, 'arg': arg, 'timeout': timeout,
         'tgt_type': tgt_type, 'ret': ret, 'kwarg': kwarg
-    })
+    }
 
     if batch:
         _cmd = client.cmd_batch
-        kwargs.update({'batch': batch})
+        cmd_kwargs.update({'batch': batch})
     elif subset:
         _cmd = client.cmd_subset
-        kwargs.update({'subset': subset, 'cli': True})
+        cmd_kwargs.update({'subset': subset,
+                           'cli': True})
     else:
         _cmd = client.cmd_iter
 
-    for ret_comp in _cmd(**kwargs):
+    cmd_kwargs.update(kwargs)
+    for ret_comp in _cmd(**cmd_kwargs):
         fcn_ret.update(ret_comp)
         seen += 1
         # fcn_ret can be empty, so we cannot len the whole return dict

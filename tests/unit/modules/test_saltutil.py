@@ -19,11 +19,17 @@ class ScheduleTestCase(TestCase, LoaderModuleMockMixin):
         saltutil._exec(client, **_cmd_expected_kwargs)
         client.cmd_iter.assert_called_with(**_cmd_expected_kwargs)
 
-        saltutil._exec(client, s.tgt, s.fun, s.arg, s.timeout, s.tgt_type, s.ret, s.kwarg, **{'batch': s.batch})
+        saltutil._exec(client, s.tgt, s.fun, s.arg, s.timeout, s.tgt_type, s.ret, s.kwarg,
+                       **{'batch': s.batch})
         client.cmd_batch.assert_called_with(batch=s.batch, **_cmd_expected_kwargs)
 
-        saltutil._exec(client, s.tgt, s.fun, s.arg, s.timeout, s.tgt_type, s.ret, s.kwarg, **{'subset': s.subset})
+        saltutil._exec(client, s.tgt, s.fun, s.arg, s.timeout, s.tgt_type, s.ret, s.kwarg,
+                       **{'subset': s.subset})
         client.cmd_subset.assert_called_with(subset=s.subset, cli=True, **_cmd_expected_kwargs)
+
+        saltutil._exec(client, s.tgt, s.fun, s.arg, s.timeout, s.tgt_type, s.ret, s.kwarg,
+                       **{'subset': s.subset, 'cli': s.cli})
+        client.cmd_subset.assert_called_with(subset=s.subset, cli=s.cli, **_cmd_expected_kwargs)
 
         # cmd_batch doesn't know what to do with 'subset', don't pass it along.
         saltutil._exec(client, s.tgt, s.fun, s.arg, s.timeout, s.tgt_type, s.ret, s.kwarg,
