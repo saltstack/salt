@@ -11,12 +11,18 @@ import pprint
 from tests.support.case import ModuleCase, ShellCase
 from tests.support.runtests import RUNTIME_VARS
 
+# Import Salt libs
+import salt.utils.platform
+
 
 class MineTest(ModuleCase, ShellCase):
     '''
     Test the mine system
     '''
     def setUp(self):
+        self.tgt = r'\*'
+        if salt.utils.platform.is_windows():
+            self.tgt = '*'
         self.wait_for_all_jobs()
 
     def test_get(self):
@@ -42,11 +48,11 @@ class MineTest(ModuleCase, ShellCase):
         assert self.run_function('mine.update', minion_tgt='sub_minion')
 
         # sub_minion should be able to view test.arg data
-        sub_min_ret = self.run_call(r'mine.get \* test.arg', config_dir=RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR)
+        sub_min_ret = self.run_call('mine.get {0} test.arg'.format(self.tgt), config_dir=RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR)
         assert "            - isn't" in sub_min_ret
 
         # minion should not be able to view test.arg data
-        min_ret = self.run_call(r'mine.get \* test.arg')
+        min_ret = self.run_call('mine.get {0} test.arg'.format(self.tgt))
         assert "            - isn't" not in min_ret
 
     def test_send_allow_tgt(self):
@@ -58,8 +64,8 @@ class MineTest(ModuleCase, ShellCase):
             assert self.run_function('mine.send', [mine_name,
                 'mine_function=test.arg_clean', 'one'], allow_tgt='sub_minion',
                 minion_tgt=minion)
-        min_ret = self.run_call(r'mine.get \* ' + mine_name)
-        sub_ret = self.run_call(r'mine.get \* ' + mine_name,
+        min_ret = self.run_call('mine.get {0} {1}'.format(self.tgt, mine_name))
+        sub_ret = self.run_call('mine.get {0} {1}'.format(self.tgt, mine_name),
                 config_dir=RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR)
 
         # ensure we did get the mine_name mine function for sub_minion
@@ -79,8 +85,8 @@ class MineTest(ModuleCase, ShellCase):
                 allow_tgt='L@minion,sub_minion',
                 allow_tgt_type='compound',
                 minion_tgt=minion)
-        min_ret = self.run_call(r'mine.get \* ' + mine_name)
-        sub_ret = self.run_call(r'mine.get \* ' + mine_name,
+        min_ret = self.run_call('mine.get {0} {1}'.format(self.tgt, mine_name))
+        sub_ret = self.run_call('mine.get {0} {1}'.format(self.tgt, mine_name),
                 config_dir=RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR)
 
         # ensure we get the mine_name mine function for both minions
@@ -98,8 +104,8 @@ class MineTest(ModuleCase, ShellCase):
             assert self.run_function('mine.send', [mine_name,
                 'mine_function=test.arg_clean', 'one'], allow_tgt='doesnotexist',
                 minion_tgt=minion)
-        min_ret = self.run_call(r'mine.get \* ' + mine_name)
-        sub_ret = self.run_call(r'mine.get \* ' + mine_name,
+        min_ret = self.run_call('mine.get {0} {1}'.format(self.tgt, mine_name))
+        sub_ret = self.run_call('mine.get {0} {1}'.format(self.tgt, mine_name),
                 config_dir=RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR)
 
         # ensure we did not get the mine_name mine function for both minions
