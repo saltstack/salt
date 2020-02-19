@@ -501,7 +501,7 @@ def check_password(name, password, runas=None):
         old_server_version = re.search(r'\{rabbit,"RabbitMQ","(.+)"\}', res)
         # Check regex against newer RabbitMQ version status output
         server_version = re.search(r'RabbitMQ version:\s*(.+)', res)
-        
+
         if server_version is None and old_server_version is None:
             raise ValueError
 
