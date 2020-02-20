@@ -420,7 +420,8 @@ class Terminal(object):
             # /bin/sh -> To Start
             # /bin/bash -> For Most Linux
             # /bin/ksh -> For AIX/HP-UX and the Like
-            # /usr/local/bin/tcsh -> For FreeBSDers
+            # /bin/tcsh -> For FreeBSDers
+            # /bin/csh -> For some generic BSD/Unix fun
             for best_shell in ["/bin/bash", "/bin/ksh", "/bin/tcsh", "/bin/csh"]:
                 if os.path.exists(best_shell):
                     shell_path = best_shell
