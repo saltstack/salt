@@ -52,14 +52,14 @@ class CloudUtilsTestCase(TestCase):
                 def supported(self):
                     return 0
 
-                def set_password(self, servicename, username, password):
+                def set_password(self, servicename, username, password):  # pylint: disable=arguments-differ
                     self.__storage.setdefault(servicename, {}).update({username: password})
                     return 0
 
-                def get_password(self, servicename, username):
+                def get_password(self, servicename, username):  # pylint: disable=arguments-differ
                     return self.__storage.setdefault(servicename, {}).get(username, None)
 
-                def delete_password(self, servicename, username):
+                def delete_password(self, servicename, username):  # pylint: disable=arguments-differ
                     self.__storage.setdefault(servicename, {}).pop(username, None)
                     return 0
 

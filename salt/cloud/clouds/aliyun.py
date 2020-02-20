@@ -667,7 +667,7 @@ def create(vm_):
 
     try:
         ret = create_node(kwargs)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error(
             'Error creating %s on Aliyun ECS\n\n'
             'The following exception was thrown when trying to '

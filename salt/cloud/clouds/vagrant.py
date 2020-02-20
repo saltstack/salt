@@ -22,7 +22,7 @@ import os
 import tempfile
 
 # Import salt libs
-import salt.utils
+import salt.utils.cloud
 import salt.config as config
 import salt.client
 from salt._compat import ipaddress

@@ -256,10 +256,14 @@ class GrainsAppendTestCase(ModuleCase):
         for i in range(10):
             ret = self.run_function('grains.setval', [self.GRAIN_KEY, []])
             self.assertEqual(ret[self.GRAIN_KEY], [])
+            self.wait_for_grain(self.GRAIN_KEY, [])
             ret = self.run_function('grains.append', [self.GRAIN_KEY, self.GRAIN_VAL])
+            self.assertEqual(ret[self.GRAIN_KEY], [self.GRAIN_VAL])
             self.assertEqual(ret[self.GRAIN_KEY], [self.GRAIN_VAL])
 
             ret = self.run_function('grains.setval', [self.GRAIN_KEY, []])
+            self.wait_for_grain(self.GRAIN_KEY, [])
             self.assertTrue(self.wait_for_grain(self.GRAIN_KEY, []))
             ret = self.run_function('grains.append', [self.GRAIN_KEY, [self.GRAIN_VAL, second_grain]])
+            self.assertEqual(ret[self.GRAIN_KEY], [self.GRAIN_VAL, second_grain])
             self.assertEqual(ret[self.GRAIN_KEY], [self.GRAIN_VAL, second_grain])

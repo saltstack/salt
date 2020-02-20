@@ -70,7 +70,7 @@ def write(key, value):
                 salt.utils.stringutils.to_str('{0}\n'.format(value))
             )
             return True
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return False
 
 
@@ -108,7 +108,7 @@ def read(key, root=''):
                 subkeys = subkey.split('/')
                 subkey = subkeys.pop()
                 subresult = result
-                if len(subkeys):
+                if subkeys:
                     for skey in subkeys:
                         if skey not in subresult:
                             subresult[skey] = {}
@@ -129,13 +129,13 @@ def read(key, root=''):
                     return False
                 try:
                     val = int(val)
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     try:
                         val = float(val)
-                    except Exception:
+                    except Exception:  # pylint: disable=broad-except
                         pass
                 return val
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             return False
 
 

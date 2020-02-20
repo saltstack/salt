@@ -145,7 +145,7 @@ def _snapper_pre(opts, jid):
                     snapshot_type='pre',
                     description='Salt State run for jid {0}'.format(jid),
                     __pub_jid=jid)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         log.error('Failed to create snapper pre snapshot for jid: %s', jid)
     return snapper_pre
 
@@ -163,7 +163,7 @@ def _snapper_post(opts, jid, pre_num):
                     pre_number=pre_num,
                     description='Salt State run for jid {0}'.format(jid),
                     __pub_jid=jid)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         log.error('Failed to create snapper pre snapshot for jid: %s', jid)
 
 

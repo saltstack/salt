@@ -352,6 +352,8 @@ class MasterPillarUtil(object):
         minion_pillars = {}
         minion_grains = {}
         minion_ids = self._tgt_to_list()
+        if self.tgt and not minion_ids:
+            return {}
         if any(arg for arg in [self.use_cached_grains, self.use_cached_pillar, self.grains_fallback, self.pillar_fallback]):
             log.debug('Getting cached minion data')
             cached_minion_grains, cached_minion_pillars = self._get_cached_minion_data(*minion_ids)
@@ -424,7 +426,7 @@ class MasterPillarUtil(object):
             clear_what.append('mine')
         if clear_mine_func is not None:
             clear_what.append('mine_func: \'{0}\''.format(clear_mine_func))
-        if not len(clear_what):
+        if not clear_what:
             log.debug('No cached data types specified for clearing.')
             return False
 

@@ -91,7 +91,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             returned = wusa.installed(name=self.kb,
                                       source='salt://{0}.msu'.format(self.kb))
             expected = {'changes': {'new': True, 'old': False},
-                        'comment': '{0} was installed'.format(self.kb),
+                        'comment': '{0} was installed. '.format(self.kb),
                         'name': self.kb,
                         'result': True}
             self.assertDictEqual(expected, returned)
@@ -108,7 +108,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             returned = wusa.installed(name=self.kb,
                                       source='salt://{0}.msu'.format(self.kb))
             expected = {'changes': {},
-                        'comment': '{0} failed to install'.format(self.kb),
+                        'comment': '{0} failed to install. '.format(self.kb),
                         'name': self.kb,
                         'result': False}
             self.assertDictEqual(expected, returned)

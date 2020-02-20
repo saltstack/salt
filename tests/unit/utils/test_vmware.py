@@ -38,7 +38,7 @@ import salt.utils.vmware
 # Import Third Party Libs
 from salt.ext import six
 try:
-    from pyVmomi import vim, vmodl
+    from pyVmomi import vim, vmodl  # pylint: disable=no-name-in-module
     HAS_PYVMOMI = True
 except ImportError:
     HAS_PYVMOMI = False

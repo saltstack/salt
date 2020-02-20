@@ -210,7 +210,7 @@ class NamespacedDictWrapper(MutableMapping, dict):
         if override_name is not None:
             import salt.utils.versions
             salt.utils.versions.warn_until(
-                'Neon',
+                'Sodium',
                 'Overriding the class name is no longer supported. Please '
                 'remove the override_name argument before it is removed in '
                 'Salt Sodium.'

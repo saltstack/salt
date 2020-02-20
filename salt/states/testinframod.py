@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, unicode_literals, print_function
 
-import re
 import logging
+
+from salt.utils.stringutils import camel_to_snake_case
 
 log = logging.getLogger(__name__)
 
@@ -36,24 +37,9 @@ def _wrap_module_function(func_name):
     return _module_function_wrapper
 
 
-def _to_snake_case(pascal_case):
-    """Convert a PascalCase string to its snake_case equivalent.
-
-    :param pascal_case: PascalCased string to be converted
-    :returns: snake_case string
-    :rtype: str
-
-    """
-    snake_case = re.sub('(^|[a-z])([A-Z])',
-                        lambda match: '{0}_{1}'.format(match.group(1).lower(),
-                                                       match.group(2).lower()),
-                        pascal_case)
-    return snake_case.lower().strip('_')
-
-
 def _generate_functions():
     try:
-        modules_ = [_to_snake_case(module_) for module_ in modules.__all__]
+        modules_ = [camel_to_snake_case(module_) for module_ in modules.__all__]
     except AttributeError:
         modules_ = [module_ for module_ in modules.modules]
 

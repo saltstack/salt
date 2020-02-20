@@ -154,9 +154,11 @@ import salt.utils.vmware
 # Import 3rd-party libs
 from salt.ext import six
 try:
+    # pylint: disable=no-name-in-module
     from pyVmomi import vim
     from pyVim.connect import Disconnect
     HAS_LIBS = True
+    # pylint: enable=no-name-in-module
 except ImportError:
     HAS_LIBS = False
 

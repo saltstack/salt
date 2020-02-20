@@ -73,6 +73,9 @@ of the 2015.5 branch:
    example, cwd: 'C:\\salt\\bin\\scripts'. Sometimes python thinks the single
    back slash is an escape character.
 
+   There is a known incompatibility between Python2 pip>=10.* and Salt <=2018.3.0.
+   The issue is decribed here: https://github.com/saltstack/salt/issues/46163
+
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 

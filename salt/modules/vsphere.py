@@ -225,7 +225,7 @@ except ImportError:
     HAS_JSONSCHEMA = False
 
 try:
-    from pyVmomi import vim, vmodl, pbm, VmomiSupport
+    from pyVmomi import vim, vmodl, pbm, VmomiSupport  # pylint: disable=no-name-in-module
 
     # We check the supported vim versions to infer the pyVmomi version
     if 'vim25/6.0' in VmomiSupport.versionMap and \
@@ -424,7 +424,7 @@ def gets_service_instance_via_proxy(fn):
             if local_service_instance:
                 salt.utils.vmware.disconnect(local_service_instance)
             return ret
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             # Disconnect if connected in the decorator
             if local_service_instance:
                 salt.utils.vmware.disconnect(local_service_instance)
@@ -1389,7 +1389,7 @@ def upload_ssh_key(host, username, password, ssh_key=None, ssh_key_file=None,
         else:
             ret['status'] = False
             ret['Error'] = result['error']
-    except Exception as msg:
+    except Exception as msg:  # pylint: disable=broad-except
         ret['status'] = False
         ret['Error'] = msg
 
@@ -1446,7 +1446,7 @@ def get_ssh_key(host,
         else:
             ret['status'] = False
             ret['Error'] = result['error']
-    except Exception as msg:
+    except Exception as msg:  # pylint: disable=broad-except
         ret['status'] = False
         ret['Error'] = msg
 
@@ -3480,7 +3480,7 @@ def vsan_add_disks(host, username, password, protocol=None, port=None, host_name
                     log.debug(err.msg)
                     ret.update({host_name: {'Error': err.msg}})
                     continue
-                except Exception as err:
+                except Exception as err:  # pylint: disable=broad-except
                     msg = '\'vsphere.vsan_add_disks\' failed for host {0}: {1}'.format(host_name, err)
                     log.debug(msg)
                     ret.update({host_name: {'Error': msg}})
@@ -3581,7 +3581,7 @@ def vsan_disable(host, username, password, protocol=None, port=None, host_names=
                 log.debug(err.msg)
                 ret.update({host_name: {'Error': err.msg}})
                 continue
-            except Exception as err:
+            except Exception as err:  # pylint: disable=broad-except
                 msg = '\'vsphere.vsan_disable\' failed for host {0}: {1}'.format(host_name, err)
                 log.debug(msg)
                 ret.update({host_name: {'Error': msg}})
@@ -7118,7 +7118,7 @@ def add_host_to_dvs(host, username, password, vmknic_name, vmnic_name,
             salt.utils.vmware.wait_for_task(task, host_name,
                                             'Adding host to the DVS',
                                             sleep_seconds=3)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             if hasattr(e, 'message') and hasattr(e.message, 'msg'):
                 if not (host_name in e.message.msg and 'already exists' in e.message.msg):
                     ret['success'] = False
@@ -7175,7 +7175,7 @@ def add_host_to_dvs(host, username, password, vmknic_name, vmnic_name,
             network_system.UpdateNetworkConfig(changeMode='modify',
                                                config=host_network_config)
             ret[host_name].update({'status': True})
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             if hasattr(e, 'msg'):
                 ret[host_name].update({'message': 'Failed to migrate adapters ({0})'.format(e.msg)})
                 continue
@@ -7906,7 +7906,7 @@ def _apply_scsi_controller(adapter, adapter_type, bus_sharing, key,
         Describes the operation which should be done on the object,
         the possibles values: 'add' and 'edit', the default value is 'add'
 
-    .. code-block: bash
+    .. code-block:: bash
 
         scsi:
           adapter: 'SCSI controller 0'
@@ -8097,7 +8097,7 @@ def _apply_cd_drive(drive_label, key, device_type, operation,
     parent_ref
         Parent object
 
-    .. code-block: bash
+    .. code-block:: bash
 
         cd:
             adapter: "CD/DVD drive 1"
@@ -8278,7 +8278,7 @@ def _create_disks(service_instance, disks, scsi_controllers=None, parent=None):
     parent
         Parent object reference
 
-    .. code-block: bash
+    .. code-block:: bash
 
         disk:
           adapter: 'Hard disk 1'
@@ -8389,7 +8389,7 @@ def _create_network_adapters(network_interfaces, parent=None):
     parent
         Parent object reference
 
-    .. code-block: bash
+    .. code-block:: bash
 
         interfaces:
           adapter: 'Network adapter 1'

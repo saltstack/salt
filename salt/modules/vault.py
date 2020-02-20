@@ -74,7 +74,7 @@ Functions to interact with Hashicorp Vault.
         You can still use the token auth via a OS environment variable via this
         config example:
 
-        .. code-block: yaml
+        .. code-block:: yaml
 
            vault:
              url: https://vault.service.domain:8200
@@ -86,7 +86,8 @@ Functions to interact with Hashicorp Vault.
 
         And then export the VAULT_TOKEN variable in your OS:
 
-        .. code-block: bash
+        .. code-block:: bash
+
            export VAULT_TOKEN=11111111-1111-1111-1111-1111111111111
 
     policies
@@ -100,7 +101,7 @@ Functions to interact with Hashicorp Vault.
         expanded into multiple policies. For example, given the template
         ``saltstack/by-role/{grains[roles]}``, and a minion having these grains:
 
-        .. code-block: yaml
+        .. code-block:: yaml
 
             grains:
                 roles:
@@ -167,7 +168,7 @@ def read_secret(path, key=None):
         if key is not None:
             return data[key]
         return data
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         log.error('Failed to read secret! %s: %s', type(err).__name__, err)
         return None
 
@@ -192,7 +193,7 @@ def write_secret(path, **kwargs):
         elif response.status_code != 204:
             response.raise_for_status()
         return True
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         log.error('Failed to write secret! %s: %s', type(err).__name__, err)
         return False
 
@@ -216,7 +217,7 @@ def write_raw(path, raw):
         elif response.status_code != 204:
             response.raise_for_status()
         return True
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         log.error('Failed to write secret! %s: %s', type(err).__name__, err)
         return False
 
@@ -238,7 +239,7 @@ def delete_secret(path):
         if response.status_code != 204:
             response.raise_for_status()
         return True
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         log.error('Failed to delete secret! %s: %s', type(err).__name__, err)
         return False
 
@@ -261,6 +262,6 @@ def list_secrets(path):
         if response.status_code != 200:
             response.raise_for_status()
         return response.json()['data']
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         log.error('Failed to list secrets! %s: %s', type(err).__name__, err)
         return None

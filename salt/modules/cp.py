@@ -492,7 +492,7 @@ def cache_file(path, saltenv='base', source_hash=None):
 
     contextkey = '{0}_|-{1}_|-{2}'.format('cp.cache_file', path, saltenv)
 
-    path_is_remote = _urlparse(path).scheme in ('http', 'https', 'ftp')
+    path_is_remote = _urlparse(path).scheme in salt.utils.files.REMOTE_PROTOS
     try:
         if path_is_remote and contextkey in __context__:
             # Prevent multiple caches in the same salt run. Affects remote URLs
@@ -711,8 +711,8 @@ def list_minion(saltenv='base'):
 
 def is_cached(path, saltenv='base'):
     '''
-    Return a boolean if the given path on the master has been cached on the
-    minion
+    Returns the full path to a file if it is cached locally on the minion
+    otherwise returns a blank string
 
     CLI Example:
 

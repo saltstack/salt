@@ -33,10 +33,7 @@ log = logging.getLogger(__name__)
 
 # Import salt modules
 import salt.utils.http
-try:
-    from salt.utils import clean_kwargs
-except ImportError:
-    from salt.utils.args import clean_kwargs
+from salt.utils.args import clean_kwargs
 
 __virtualname__ = 'peeringdb'
 __proxyenabled__ = ['*']

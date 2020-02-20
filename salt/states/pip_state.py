@@ -121,7 +121,7 @@ if HAS_PIP is True:
         purge_pip.__pip_ver__ = pip.__version__
     if salt.utils.versions.compare(ver1=pip.__version__,
                                    oper='>=',
-                                   ver2='18.1'):
+                                   ver2='10.0'):
         from pip._internal.exceptions import InstallationError  # pylint: disable=E0611,E0401
     elif salt.utils.versions.compare(ver1=pip.__version__,
                                      oper='>=',
@@ -248,7 +248,7 @@ def _check_pkg_version_format(pkg):
         try:
             ret['prefix'] = install_req.req.project_name
             ret['version_spec'] = install_req.req.specs
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             ret['prefix'] = re.sub('[^A-Za-z0-9.]+', '-', install_req.name)
             if hasattr(install_req, "specifier"):
                 specifier = install_req.specifier
@@ -372,7 +372,7 @@ def _pep440_version_cmp(pkg1, pkg2, ignore_epoch=False):
             return 0
         if pkg_resources.parse_version(pkg1) > pkg_resources.parse_version(pkg2):
             return 1
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.exception(exc)
     return None
 
@@ -832,15 +832,13 @@ def installed(name,
         try:
             pip_list = __salt__['pip.list'](bin_env=bin_env, user=user, cwd=cwd)
         # If we fail, then just send False, and we'll try again in the next function call
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.exception(exc)
             pip_list = False
 
         for prefix, state_pkg_name, version_spec in pkgs_details:
 
             if prefix:
-                state_pkg_name = state_pkg_name
-                version_spec = version_spec
                 out = _check_if_installed(prefix, state_pkg_name, version_spec,
                                           ignore_installed, force_reinstall,
                                           upgrade, user, cwd, bin_env, env_vars,
@@ -1141,7 +1139,7 @@ def uptodate(name,
 
     try:
         packages = __salt__['pip.list_upgrades'](bin_env=bin_env, user=user, cwd=cwd)
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         ret['comment'] = six.text_type(e)
         return ret
 

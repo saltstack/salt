@@ -297,6 +297,7 @@ class DNSlookupsCase(TestCase):
                         msg='Error parsing DNSSEC\'d {0} returns'.format(rec_t)
                     )
 
+    @skipIf(not salt.utils.dns.HAS_NSLOOKUP, 'nslookup is not available')
     def test_lookup_with_servers(self):
         rights = {
             'A': [

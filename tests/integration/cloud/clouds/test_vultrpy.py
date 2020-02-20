@@ -26,7 +26,7 @@ class VultrTest(CloudTest):
         image_list = self.run_cloud('--list-images {0}'.format(self.PROVIDER))
 
         self.assertIn(
-            'Debian 8 x64 (jessie)',
+            'Debian 10 x64 (buster)',
             [i.strip() for i in image_list]
         )
 
