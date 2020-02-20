@@ -3,7 +3,7 @@
 An engine that reads messages from the salt event bus and pushes
 them onto a fluent endpoint.
 
-.. versionadded:: neon
+.. versionadded:: 3000
 
 :Configuration:
 

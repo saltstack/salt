@@ -56,7 +56,7 @@ will be notified about style and lint issues before you ever open a PR.
 Salt Coding Style
 -----------------
 
-After the Neon release, SaltStack is `joining the ranks <SEP 15_>`_ of projects
+After the 3000 release, SaltStack is `joining the ranks <SEP 15_>`_ of projects
 in adopting the `Black code formatter <Black_>`_ in order to ease the adoption
 of a unified code formatting style.
 
