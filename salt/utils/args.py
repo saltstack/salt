@@ -158,7 +158,7 @@ def yamlify_arg(arg):
     if not isinstance(arg, six.string_types):
         return arg
 
-    if arg.strip() == "":
+    if arg.strip() in ("", "---", "..."):
         # Because YAML loads empty (or all whitespace) strings as None, we
         # return the original string
         # >>> import yaml

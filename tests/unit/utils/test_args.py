@@ -321,6 +321,16 @@ class ArgsTestCase(TestCase):
         self.assertEqual(_yamlify_arg('["foo", "bar"]'), ["foo", "bar"])
         self.assertEqual(_yamlify_arg('{"foo": "bar"}'), {"foo": "bar"})
 
+        # Make sure that an empty string is loaded properly.
+        self.assertEqual(_yamlify_arg('   '), '   ')
+
+        # Make sure that we don't improperly load strings that would be
+        # interpreted by PyYAML as YAML document start/end.
+        self.assertEqual(_yamlify_arg('---'), '---')
+        self.assertEqual(_yamlify_arg('--- '), '--- ')
+        self.assertEqual(_yamlify_arg('...'), '...')
+        self.assertEqual(_yamlify_arg(' ...'), ' ...')
+
 
 class KwargRegexTest(TestCase):
     def test_arguments_regex(self):
