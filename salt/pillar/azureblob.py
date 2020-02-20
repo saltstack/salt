@@ -273,7 +273,7 @@ def _refresh_containers_cache_file(connection_string, container, cache_file,
 
         # Create the ContainerClient object
         container_client = blob_service_client.get_container_client(container)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error('Exception: %s', exc)
         return False
 
@@ -430,7 +430,7 @@ def _get_file_from_blob(connection_string, metadata, saltenv, container, path, c
 
         # Create the BlobClient object
         blob_client = container_client.get_blob_client(path)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error('Exception: %s', exc)
         return False
 
