@@ -158,14 +158,21 @@ def yamlify_arg(arg):
     if not isinstance(arg, six.string_types):
         return arg
 
+    # YAML loads empty (or all whitespace) strings as None:
+    #
+    # >>> import yaml
+    # >>> yaml.load('') is None
+    # True
+    # >>> yaml.load('      ') is None
+    # True
+    #
+    # Similarly, YAML document start/end markers would not load properly if
+    # passed through PyYAML, as loading '---' results in None and '...' raises
+    # an exception.
+    #
+    # Therefore, skip YAML loading for these cases and just return the string
+    # that was passed in.
     if arg.strip() in ("", "---", "..."):
-        # Because YAML loads empty (or all whitespace) strings as None, we
-        # return the original string
-        # >>> import yaml
-        # >>> yaml.load('') is None
-        # True
-        # >>> yaml.load('      ') is None
-        # True
         return arg
 
     elif "_" in arg and all([x in "0123456789_" for x in arg.strip()]):
