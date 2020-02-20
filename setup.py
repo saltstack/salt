@@ -206,7 +206,7 @@ def _parse_requirements_file(requirements_file):
             except ValueError:
                 pkg, pyverspec = line, ''
             pyverspec = pyverspec.strip()
-            if pyverspec:
+            if pyverspec and (not pkg.startswith('pycrypto') or pkg.startswith('pycryptodome')):
                 _, op, ver = pyverspec.split(' ', 2)
                 if not _check_ver(platform.python_version(), _parse_op(op), _parse_ver(ver)):
                     continue
