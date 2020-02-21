@@ -2268,3 +2268,27 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(state_run[state_id]['comment'],
                          'Success!')
         self.assertTrue(state_run[state_id]['result'])
+
+    def test_issue_56131(self):
+        module_path = os.path.join(RUNTIME_VARS.CODE_DIR, 'pip.py')
+        if six.PY3:
+            modulec_path = os.path.join(RUNTIME_VARS.CODE_DIR, '__pycache__', 'pip.pyc')
+        else:
+            modulec_path = os.path.join(RUNTIME_VARS.CODE_DIR, 'pip.pyc')
+        print('*' * 80)
+        print(module_path)
+        print('*' * 80)
+        unzip_path = os.path.join(RUNTIME_VARS.TMP, 'issue-56131.txt')
+        def clean_paths(paths):
+            for path in paths:
+                try:
+                    os.remove(path)
+                except OSError:
+                    log.warn("Path not found: %s", path)
+        with open(module_path, 'w') as fp:
+            fp.write('raise ImportError("No module named pip")')
+        self.addCleanup(clean_paths, [unzip_path, module_path, modulec_path])
+        assert not os.path.exists(unzip_path)
+        state_run = self.run_function('state.sls', mods='issue-56131', pillar={'unzip_to': RUNTIME_VARS.TMP}, timeout=30)
+        assert state_run is not False
+        assert os.path.exists(unzip_path)
