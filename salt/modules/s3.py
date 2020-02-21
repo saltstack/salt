@@ -303,19 +303,19 @@ def _get_key(key, keyid, service_url, verify_ssl, kms_keyid, location, role_arn,
     if not service_url:
         service_url = 's3.amazonaws.com'
 
-    if verify_ssl is None and __salt__['config.option']('s3.verify_ssl') is not None:
+    if verify_ssl is None and __salt__['config.option']('s3.verify_ssl'):
         verify_ssl = __salt__['config.option']('s3.verify_ssl')
 
     if verify_ssl is None:
         verify_ssl = True
 
-    if location is None and __salt__['config.option']('s3.location') is not None:
+    if location is None and __salt__['config.option']('s3.location'):
         location = __salt__['config.option']('s3.location')
 
     if role_arn is None and __salt__['config.option']('s3.role_arn'):
         role_arn = __salt__['config.option']('s3.role_arn')
 
-    if path_style is None and __salt__['config.option']('s3.path_style') is not None:
+    if path_style is None and __salt__['config.option']('s3.path_style'):
         path_style = __salt__['config.option']('s3.path_style')
 
     if path_style is None:
