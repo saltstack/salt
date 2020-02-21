@@ -701,7 +701,7 @@ class Install(install):
 
     def run(self):
         from distutils.version import StrictVersion
-        if StrictVersion(setuptools.__version__) < StrictVersion('9.1'):
+        if LooseVersion(setuptools.__version__) < LooseVersion('9.1'):
             sys.stderr.write(
                 '\n\nInstalling Salt requires setuptools >= 9.1\n'
                 'Available setuptools version is {}\n\n'.format(setuptools.__version__)
