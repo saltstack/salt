@@ -251,7 +251,6 @@ def grains(**kwargs):
 
         salt '*' nxos.cmd grains
     '''
-    import __main__ as main
     if not DEVICE_DETAILS['grains_cache']:
         data = sendline('show version')
         if CONNECTION == 'nxapi':
@@ -317,7 +316,7 @@ def sendline(command, method='cli_show_ascii', **kwargs):
     return result
 
 
-def proxy_config(commands, **kwargs):
+def proxy_config(commands, no_save_config=None):
     '''
     Send configuration commands over SSH or NX-API
 
@@ -336,8 +335,8 @@ def proxy_config(commands, **kwargs):
     '''
     COPY_RS = 'copy running-config startup-config'
 
-    no_save_config = DEVICE_DETAILS['no_save_config']
-    no_save_config = kwargs.get('no_save_config', no_save_config)
+    if no_save_config is None:
+        no_save_config = DEVICE_DETAILS.get('no_save_config', False)
     if not isinstance(commands, list):
         commands = [commands]
     try:
@@ -402,7 +401,7 @@ def _init_ssh(opts):
         log.error('-- Verify that "feature ssh" is enabled on your NX-OS device: %s', opts['proxy']['host'])
         log.error('-- Exception Generated: %s', ex)
         log.error(ex)
-        exit()
+        raise
     DEVICE_DETAILS['initialized'] = True
     DEVICE_DETAILS['no_save_config'] = opts['proxy'].get('no_save_config', False)
 
@@ -435,7 +434,7 @@ def _sendline_ssh(command, **kwargs):
     return out
 
 
-def _parse_output_for_errors(data, command, **kwargs):
+def _parse_output_for_errors(data, command, error_pattern=None):
     '''
     Helper method to parse command output for error information
     '''
@@ -446,8 +445,7 @@ def _parse_output_for_errors(data, command, **kwargs):
             'code': '400',
             'cli_error': data.lstrip(),
         })
-    if kwargs.get('error_pattern') is not None:
-        error_pattern = kwargs.get('error_pattern')
+    if error_pattern:
         if isinstance(error_pattern, str):
             error_pattern = [error_pattern]
         for re_line in error_pattern:
@@ -493,7 +491,7 @@ def _init_nxapi(opts):
         log.error('-- Verify that "feature nxapi" is enabled on your NX-OS device: %s', conn_args['host'])
         log.error('-- Verify that nxapi settings on the NX-OS device and proxy minion config file match')
         log.error('-- Exception Generated: %s', ex)
-        exit()
+        raise
     log.info('nxapi DEVICE_DETAILS info: {}'.format(DEVICE_DETAILS))
     return True
 
