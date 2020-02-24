@@ -217,11 +217,11 @@ def send(name, *args, **kwargs):
         and whose value will be stored in the salt mine. Defaults to ``name``.
     :param str allow_tgt: Targeting specification for ACL. Specifies which minions
         are allowed to access this function. Please note both your master and
-        minion need to be on atleast version 3000 for this to work properly.
+        minion need to be on, at least, version 3000 for this to work properly.
 
     :param str allow_tgt_type: Type of the targeting specification. This value will
         be ignored if ``allow_tgt`` is not specified. Please note both your
-        master and minion need to be on atleast version 3000 for this to work
+        master and minion need to be on, at least, version 3000 for this to work
         properly.
 
     Remaining args and kwargs will be passed on to the function to run.
