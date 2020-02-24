@@ -35,6 +35,7 @@ singledispatch==3.4.0.3; python_version < '3.4'
 timelib==0.2.4
 watchdog==0.9.0
 wheel==0.33.4
+wmi==1.4.9
 
 # GitPython
 GitPython==2.1.10
