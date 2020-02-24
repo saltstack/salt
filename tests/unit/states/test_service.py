@@ -261,7 +261,8 @@ class ServiceTestCaseFunctional(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         opts = salt.config.DEFAULT_MINION_OPTS.copy()
         opts['grains'] = salt.loader.grains(opts)
-        self.modules = salt.loader.minion_mods(opts)
+        self.utils = salt.loader.utils(opts)
+        self.modules = salt.loader.minion_mods(opts, utils=self.utils)
 
         self.service_name = 'cron'
         cmd_name = 'crontab'
@@ -285,6 +286,7 @@ class ServiceTestCaseFunctional(TestCase, LoaderModuleMockMixin):
         return {
             service: {
                 '__salt__': self.modules,
+                '__utils__': self.utils,
             },
         }
 
