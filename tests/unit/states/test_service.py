@@ -259,15 +259,15 @@ class ServiceTestCaseFunctional(TestCase, LoaderModuleMockMixin):
         Validate the service state
     '''
     def setup_loader_modules(self):
-        opts = salt.config.DEFAULT_MINION_OPTS.copy()
-        opts['grains'] = salt.loader.grains(opts)
-        self.utils = salt.loader.utils(opts)
-        self.modules = salt.loader.minion_mods(opts, utils=self.utils)
+        self.opts = salt.config.DEFAULT_MINION_OPTS.copy()
+        self.opts['grains'] = salt.loader.grains(self.opts)
+        self.utils = salt.loader.utils(self.opts)
+        self.modules = salt.loader.minion_mods(self.opts, utils=self.utils)
 
         self.service_name = 'cron'
         cmd_name = 'crontab'
-        os_family = opts['grains']['os_family']
-        os_release = opts['grains']['osrelease']
+        os_family = self.opts['grains']['os_family']
+        os_release = self.opts['grains']['osrelease']
         if os_family == 'RedHat':
             self.service_name = 'crond'
         elif os_family == 'Arch':
@@ -285,6 +285,8 @@ class ServiceTestCaseFunctional(TestCase, LoaderModuleMockMixin):
 
         return {
             service: {
+                '__grains__': self.opts['grains'],
+                '__opts__': self.opts,
                 '__salt__': self.modules,
                 '__utils__': self.utils,
             },
