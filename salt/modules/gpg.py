@@ -535,7 +535,7 @@ def delete_key(
                     ret['message'].append('Secret key {} deleted.'.format(fingerprint))
                 else:
                     ret['message'].append(
-                        'Failed to delete secret key {}: {}\n'
+                        'Failed to delete secret key {}: {}'
                         ''.format(fingerprint, res)
                     )
             else:
