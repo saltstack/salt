@@ -424,7 +424,7 @@ def owner(*paths):
         if "not owned" in ret[path].lower():
             ret[path] = ""
     if len(ret) == 1:
-        return list(ret.values())[0]
+        return next(iter(ret.values()))
     return ret
 
 

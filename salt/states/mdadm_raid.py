@@ -112,7 +112,7 @@ def present(name, level, devices, **kwargs):
         ret["result"] = False
         return ret
     elif len(uuid_dict) == 1:
-        uuid = list(uuid_dict.keys())[0]
+        uuid = next(iter(uuid_dict.keys()))
         if present and present["uuid"] != uuid:
             ret[
                 "comment"

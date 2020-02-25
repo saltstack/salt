@@ -475,12 +475,12 @@ def _global_indexes_present(
     if global_indexes:
         for index in global_indexes:
             # Each index config is a key that maps to a list of OrderedDicts.
-            index_config = list(index.values())[0]
+            index_config = next(iter(index.values()))
             index_name = None
             for entry in index_config:
                 # Key by the name field in the index config.
                 if entry.keys() == ["name"]:
-                    index_name = list(entry.values())[0]
+                    index_name = next(iter(entry.values()))
             if not index_name:
                 ret["result"] = False
                 ret["comment"] = "Index name not found for table {0}".format(name)
