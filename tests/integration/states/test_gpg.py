@@ -20,16 +20,17 @@ from tests.support.mixins import SaltReturnAssertsMixin
 # Import salt libs
 import salt.utils.files
 
+
 class HostTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the host state
     '''
-
     @classmethod
     def setUpClass(cls):
         cls.gnupghome = tempfile.mkdtemp(prefix='saltgpg')
         cls.tempdir = tempfile.mkdtemp(prefix='herbert')
-        cls.secret_key = textwrap.dedent('''\
+        cls.secret_key = textwrap.dedent(
+            '''\
             -----BEGIN PGP PRIVATE KEY BLOCK-----
 
             lQIGBF1j4XwBBADVcoGjgf3ZGym6GYL6wLztZtMzDvQXUD4OS0qFBVp80d/k4Wdw
@@ -51,16 +52,27 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
             MHLCCQqOaivEoEIH9SoNwy3wrIZPvq7FtT8=
             =WPfN
             -----END PGP PRIVATE KEY BLOCK-----
-            ''')
-        with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, 'gpg.sls'), 'w') as fp:
-            fp.write(textwrap.dedent('''
+            '''
+        )
+        with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, 'gpg.sls'),
+                                    'w') as fp:
+            fp.write(
+                textwrap.dedent(
+                    '''
                 sneaky_stuff: secret data
-                data_to_sign: test data to get signed'''))
-        with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, 'top.sls'), 'w') as fp:
-            fp.write(textwrap.dedent('''
+                data_to_sign: test data to get signed'''
+                )
+            )
+        with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, 'top.sls'),
+                                    'w') as fp:
+            fp.write(
+                textwrap.dedent(
+                    '''
                 base:
                   '*':
-                    - gpg'''))
+                    - gpg'''
+                )
+            )
 
     @classmethod
     def tearDownClass(cls):
@@ -109,8 +121,7 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         self.assertInSaltComment(
-            'Deleted "1B52281BF159856CA76A04F5857C86FCF8A3FB11" from GPG keychain',
-            ret
+            'Deleted "1B52281BF159856CA76A04F5857C86FCF8A3FB11" from GPG keychain', ret
         )
         # Test repeated run does not have any changes
         ret = self.run_state(
@@ -155,8 +166,7 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(ret, {})
         self.assertInSaltComment(
-            'Target file already exists. Not forcing overwrite.',
-            ret,
+            'Target file already exists. Not forcing overwrite.', ret,
         )
 
     def test_03_encrypt_decrypt_from_contents(self):
@@ -187,14 +197,11 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         self.assertInSaltComment(
-            'Encrypted data has been written to {}'.format(encrypted_file),
-            ret,
+            'Encrypted data has been written to {}'.format(encrypted_file), ret,
         )
         self.assertSaltStateChangesEqual(
-            ret,
-            {
-                'old': {encrypted_file: None},
-                'new': {encrypted_file: 'encrypted data'}
+            ret, {
+                'old': {encrypted_file: None}, 'new': {encrypted_file: 'encrypted data'}
             }
         )
         # Test no changes on repeated runs (without force)
@@ -207,10 +214,7 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(ret, {})
-        self.assertInSaltComment(
-            'File already contains encrypted data',
-            ret,
-        )
+        self.assertInSaltComment('File already contains encrypted data', ret, )
 
         # Get encrypted data
         with salt.utils.files.flopen(encrypted_file, 'rb') as _fp:
@@ -226,22 +230,16 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         self.assertInSaltComment(
-            'Decrypted data has been written to {}'.format(decrypted_file),
-            ret,
+            'Decrypted data has been written to {}'.format(decrypted_file), ret,
         )
         self.assertSaltStateChangesEqual(
-            ret,
-            {
-                'old': {decrypted_file: None},
-                'new': {decrypted_file: 'decrypted data'}
+            ret, {
+                'old': {decrypted_file: None}, 'new': {decrypted_file: 'decrypted data'}
             }
         )
         # Verify decrypted data
         with salt.utils.files.flopen(decrypted_file, 'rb') as _fp:
-            self.assertEqual(
-                b'very big secret',
-                _fp.read(),
-            )
+            self.assertEqual(b'very big secret', _fp.read(), )
 
         # Test no changes on repeated runs
         ret = self.run_state(
@@ -254,8 +252,7 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(ret, {})
         self.assertInSaltComment(
-            'Target file already exists. Not forcing overwrite.',
-            ret,
+            'Target file already exists. Not forcing overwrite.', ret,
         )
 
     def test_04_encrypt_decrypt_from_contents_pillar(self):
@@ -286,14 +283,11 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         self.assertInSaltComment(
-            'Encrypted data has been written to {}'.format(encrypted_file),
-            ret,
+            'Encrypted data has been written to {}'.format(encrypted_file), ret,
         )
         self.assertSaltStateChangesEqual(
-            ret,
-            {
-                'old': {encrypted_file: None},
-                'new': {encrypted_file: 'encrypted data'}
+            ret, {
+                'old': {encrypted_file: None}, 'new': {encrypted_file: 'encrypted data'}
             }
         )
         # Test no changes on repeated runs (without force)
@@ -306,10 +300,7 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(ret, {})
-        self.assertInSaltComment(
-            'File already contains encrypted data',
-            ret,
-        )
+        self.assertInSaltComment('File already contains encrypted data', ret, )
 
         # Get encrypted data
         with salt.utils.files.flopen(encrypted_file, 'rb') as _fp:
@@ -325,22 +316,16 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         self.assertInSaltComment(
-            'Decrypted data has been written to {}'.format(decrypted_file),
-            ret,
+            'Decrypted data has been written to {}'.format(decrypted_file), ret,
         )
         self.assertSaltStateChangesEqual(
-            ret,
-            {
-                'old': {decrypted_file: None},
-                'new': {decrypted_file: 'decrypted data'}
+            ret, {
+                'old': {decrypted_file: None}, 'new': {decrypted_file: 'decrypted data'}
             }
         )
         # Verify decrypted data
         with salt.utils.files.flopen(decrypted_file, 'rb') as _fp:
-            self.assertEqual(
-                b'secret data',
-                _fp.read(),
-            )
+            self.assertEqual(b'secret data', _fp.read(), )
 
     def test_05_encrypt_decrypt_from_source(self):
         '''
@@ -364,14 +349,11 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         self.assertInSaltComment(
-            'Encrypted data has been written to {}'.format(encrypted_file),
-            ret,
+            'Encrypted data has been written to {}'.format(encrypted_file), ret,
         )
         self.assertSaltStateChangesEqual(
-            ret,
-            {
-                'old': {encrypted_file: None},
-                'new': {encrypted_file: 'encrypted data'}
+            ret, {
+                'old': {encrypted_file: None}, 'new': {encrypted_file: 'encrypted data'}
             }
         )
         # Test no changes on repeated run
@@ -384,10 +366,7 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(ret, {})
-        self.assertInSaltComment(
-            'File already contains encrypted data',
-            ret,
-        )
+        self.assertInSaltComment('File already contains encrypted data', ret, )
 
         # Test decrypting the encrypted file
         ret = self.run_state(
@@ -399,22 +378,16 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         self.assertInSaltComment(
-            'Decrypted data has been written to {}'.format(decrypted_file),
-            ret,
+            'Decrypted data has been written to {}'.format(decrypted_file), ret,
         )
         self.assertSaltStateChangesEqual(
-            ret,
-            {
-                'old': {decrypted_file: None},
-                'new': {decrypted_file: 'decrypted data'}
+            ret, {
+                'old': {decrypted_file: None}, 'new': {decrypted_file: 'decrypted data'}
             }
         )
         # Verify contents of decrypted file
         with salt.utils.files.flopen(decrypted_file, 'r') as _fp:
-            self.assertEqual(
-                'plaintext data',
-                _fp.read(),
-            )
+            self.assertEqual('plaintext data', _fp.read(), )
 
         # Test no changes on repeated runs
         ret = self.run_state(
@@ -427,8 +400,7 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(ret, {})
         self.assertInSaltComment(
-            'Target file already exists. Not forcing overwrite.',
-            ret,
+            'Target file already exists. Not forcing overwrite.', ret,
         )
 
     def test_06_sign_verify_contents(self):
@@ -448,15 +420,10 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         self.assertInSaltComment(
-            'Signed data has been written to {}'.format(signed_file),
-            ret,
+            'Signed data has been written to {}'.format(signed_file), ret,
         )
         self.assertSaltStateChangesEqual(
-            ret,
-            {
-                'old': {signed_file: None},
-                'new': {signed_file: 'signed data'}
-            }
+            ret, {'old': {signed_file: None}, 'new': {signed_file: 'signed data'}}
         )
         # Test no changes on repeated run
         ret = self.run_state(
@@ -469,8 +436,7 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(ret, {})
         self.assertInSaltComment(
-            'Target file already exists. Not forcing overwrite.',
-            ret,
+            'Target file already exists. Not forcing overwrite.', ret,
         )
 
         # Get signed data
@@ -483,10 +449,7 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
             gnupghome=self.gnupghome,
         )
         self.assertSaltTrueReturn(ret)
-        self.assertInSaltComment(
-            'The signature is verified.',
-            ret,
-        )
+        self.assertInSaltComment('The signature is verified.', ret, )
         self.assertSaltStateChangesEqual(ret, {})
 
     def test_07_sign_verify_contents_from_pillar(self):
@@ -505,15 +468,10 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         self.assertInSaltComment(
-            'Signed data has been written to {}'.format(signed_file),
-            ret,
+            'Signed data has been written to {}'.format(signed_file), ret,
         )
         self.assertSaltStateChangesEqual(
-            ret,
-            {
-                'old': {signed_file: None},
-                'new': {signed_file: 'signed data'}
-            }
+            ret, {'old': {signed_file: None}, 'new': {signed_file: 'signed data'}}
         )
         # Test no changes on repeated run
         ret = self.run_state(
@@ -526,8 +484,7 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(ret, {})
         self.assertInSaltComment(
-            'Target file already exists. Not forcing overwrite.',
-            ret,
+            'Target file already exists. Not forcing overwrite.', ret,
         )
         # Get signed data
         with salt.utils.files.flopen(signed_file, 'rb') as _fp:
@@ -539,10 +496,7 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
             gnupghome=self.gnupghome,
         )
         self.assertSaltTrueReturn(ret)
-        self.assertInSaltComment(
-            'The signature is verified.',
-            ret,
-        )
+        self.assertInSaltComment('The signature is verified.', ret, )
         self.assertSaltStateChangesEqual(ret, {})
 
     def test_08_sign_verify_source(self):
@@ -566,15 +520,10 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         self.assertInSaltComment(
-            'Signed data has been written to {}'.format(signed_file),
-            ret,
+            'Signed data has been written to {}'.format(signed_file), ret,
         )
         self.assertSaltStateChangesEqual(
-            ret,
-            {
-                'old': {signed_file: None},
-                'new': {signed_file: 'signed data'}
-            }
+            ret, {'old': {signed_file: None}, 'new': {signed_file: 'signed data'}}
         )
         # Test no changes on repeated run
         ret = self.run_state(
@@ -587,21 +536,15 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(ret, {})
         self.assertInSaltComment(
-            'Target file already exists. Not forcing overwrite.',
-            ret,
+            'Target file already exists. Not forcing overwrite.', ret,
         )
 
         # Verify signed data
         ret = self.run_state(
-            'gpg.data_verified',
-            name=signed_file,
-            gnupghome=self.gnupghome,
+            'gpg.data_verified', name=signed_file, gnupghome=self.gnupghome,
         )
         self.assertSaltTrueReturn(ret)
-        self.assertInSaltComment(
-            'The signature is verified.',
-            ret,
-        )
+        self.assertInSaltComment('The signature is verified.', ret, )
         self.assertSaltStateChangesEqual(ret, {})
 
     def test_09_sign_verify_contents_detached(self):
@@ -622,15 +565,10 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         self.assertInSaltComment(
-            'Signature has been written to {}'.format(signature_file),
-            ret,
+            'Signature has been written to {}'.format(signature_file), ret,
         )
         self.assertSaltStateChangesEqual(
-            ret,
-            {
-                'old': {signature_file: None},
-                'new': {signature_file: 'signature'}
-            }
+            ret, {'old': {signature_file: None}, 'new': {signature_file: 'signature'}}
         )
         # Test no changes on repeated run
         ret = self.run_state(
@@ -644,8 +582,7 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(ret, {})
         self.assertInSaltComment(
-            'Target file already exists. Not forcing overwrite.',
-            ret,
+            'Target file already exists. Not forcing overwrite.', ret,
         )
 
         # Get signature data
@@ -659,10 +596,7 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
             gnupghome=self.gnupghome,
         )
         self.assertSaltTrueReturn(ret)
-        self.assertInSaltComment(
-            'The signature is verified.',
-            ret,
-        )
+        self.assertInSaltComment('The signature is verified.', ret, )
         self.assertSaltStateChangesEqual(ret, {})
 
     def test_10_sign_verify_contents_pillar_detached(self):

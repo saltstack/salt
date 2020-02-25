@@ -79,11 +79,7 @@ INV_NUM_TRUST_DICT = {
 }
 
 VERIFY_TRUST_LEVELS = {
-    '0': 'Undefined',
-    '1': 'Never',
-    '2': 'Marginal',
-    '3': 'Fully',
-    '4': 'Ultimate',
+    '0': 'Undefined', '1': 'Never', '2': 'Marginal', '3': 'Fully', '4': 'Ultimate',
 }
 
 STR_TRUST_LEVELS = {
@@ -308,10 +304,7 @@ def search_keys(text, keyserver='pool.sks-keyservers.net', user=None, gnupghome=
     '''
     return [
         _parse_key(gpg_key)
-        for gpg_key in _search_keys(text,
-                                    keyserver,
-                                    user=user,
-                                    gnupghome=gnupghome)
+        for gpg_key in _search_keys(text, keyserver, user=user, gnupghome=gnupghome)
     ]
 
 
@@ -355,9 +348,7 @@ def list_secret_keys(user=None, gnupghome=None):
     """
     return [
         _parse_key(gpg_key)
-        for gpg_key in _list_keys(user=user,
-                                  gnupghome=gnupghome,
-                                  secret=True)
+        for gpg_key in _list_keys(user=user, gnupghome=gnupghome, secret=True)
     ]
 
 
@@ -533,25 +524,19 @@ def delete_key(
     if key:
         fingerprint = key['fingerprint']
         skey = get_secret_key(
-            keyid=keyid,
-            fingerprint=fingerprint,
-            user=user,
-            gnupghome=gnupghome
+            keyid=keyid, fingerprint=fingerprint, user=user, gnupghome=gnupghome
         )
         if skey:
             if delete_secret:
                 res = six.text_type(
-                    gpg.delete_keys(fingerprint,
-                                    secret=True,
-                                    passphrase=passphrase)
+                    gpg.delete_keys(fingerprint, secret=True, passphrase=passphrase)
                 )
                 if res == 'ok':
                     ret['message'].append('Secret key {} deleted.'.format(fingerprint))
                 else:
                     ret['message'].append(
                         'Failed to delete secret key {}: {}\n'
-                        ''.format(fingerprint,
-                                  res)
+                        ''.format(fingerprint, res)
                     )
             else:
                 ret['result'] = False
@@ -605,8 +590,7 @@ def get_key(keyid=None, fingerprint=None, user=None, gnupghome=None):
     return next(
         iter([
             _parse_key(gpg_key)
-            for gpg_key in _list_keys(user=user,
-                                      gnupghome=gnupghome)
+            for gpg_key in _list_keys(user=user, gnupghome=gnupghome)
             if gpg_key['fingerprint'] == fingerprint or gpg_key['keyid'] == keyid
             or gpg_key['keyid'][8:] == keyid
         ]),
@@ -640,9 +624,7 @@ def get_secret_key(keyid=None, fingerprint=None, user=None, gnupghome=None):
     return next(
         iter([
             _parse_key(gpg_key)
-            for gpg_key in _list_keys(user=user,
-                                      gnupghome=gnupghome,
-                                      secret=True)
+            for gpg_key in _list_keys(user=user, gnupghome=gnupghome, secret=True)
             if gpg_key['fingerprint'] == fingerprint or gpg_key['keyid'] == keyid
             or gpg_key['keyid'][8:] == keyid
         ]),
@@ -886,10 +868,7 @@ def trust_key(keyid=None, fingerprint=None, trust_level=None, user=None, gnupgho
         ownertrust_string = '{}:{}\n'.format(fingerprint, NUM_TRUST_DICT[trust_level])
 
         res = __salt__['cmd.run_all'](
-            cmd,
-            stdin=ownertrust_string,
-            python_shell=False,
-            **run_kwargs
+            cmd, stdin=ownertrust_string, python_shell=False, **run_kwargs
         )
 
         if not res['retcode'] == 0:
@@ -900,8 +879,7 @@ def trust_key(keyid=None, fingerprint=None, trust_level=None, user=None, gnupgho
             _match = re.findall(r'\d', res['stderr'])
             if len(_match) == 2:
                 ret['message'] = 'Changing ownership trust from {} to {}.'.format(
-                    INV_NUM_TRUST_DICT[_match[0]],
-                    INV_NUM_TRUST_DICT[_match[1]]
+                    INV_NUM_TRUST_DICT[_match[0]], INV_NUM_TRUST_DICT[_match[1]]
                 )
             else:
                 ret['message'] = 'Setting ownership trust to {}.'.format(
@@ -1010,8 +988,8 @@ def sign(
         'passphrase': gpg_passphrase,
         'detach': detach,
         'output':
-            output if salt.utils.versions.version_cmp(gnupg.__version__,
-                                                      '0.3.7') >= 0 else None,
+            output
+            if salt.utils.versions.version_cmp(gnupg.__version__, '0.3.7') >= 0 else None,
     })
     if salt.utils.versions.version_cmp(gnupg.__version__, '0.4.1') >= 0:
         # Avoid getting a popup asking for a password
@@ -1024,14 +1002,12 @@ def sign(
     if isinstance(res, gnupg.Sign):
         if res.status:
             ret['result'] = True
-            if (salt.utils.versions.version_cmp(gnupg.__version__,
-                                                '0.3.7') < 0 and output):
+            if (salt.utils.versions.version_cmp(gnupg.__version__, '0.3.7') < 0 and output):
                 with salt.utils.files.flopen(output, 'wb') as fout:
                     fout.write(res.data)
             if output:
                 ret['message'] = '{} has been written to {}'.format(
-                    'Signature' if detach else 'Signed data',
-                    output
+                    'Signature' if detach else 'Signed data', output
                 )
             else:
                 ret['message'] = res.data
@@ -1050,12 +1026,7 @@ def sign(
 
 
 def verify(
-    text=None,
-    user=None,
-    filename=None,
-    gnupghome=None,
-    signature=None,
-    trustmodel=None
+    text=None, user=None, filename=None, gnupghome=None, signature=None, trustmodel=None
 ):
     '''
     Verify a message or file.
@@ -1387,8 +1358,7 @@ def decrypt(
                          'signature_id',
                          'fingerprint',
                          'trust_level',
-                         'trust_text',
-                         ]:
+                         'trust_text', ]:
                 ret[item] = getattr(res, item, None)
             ret = salt.utils.data.filter_falsey(ret)
             if output:

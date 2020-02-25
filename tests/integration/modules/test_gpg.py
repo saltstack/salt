@@ -43,17 +43,22 @@ class GpgTestCase(ModuleCase):
         cls.top_pillar = os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, 'top.sls')
         cls.minion_pillar = os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, 'gpg.sls')
         with salt.utils.files.fopen(cls.top_pillar, 'w') as wfh:
-            wfh.write(textwrap.dedent('''\
+            wfh.write(
+                textwrap.dedent(
+                    '''\
                 base:
                   '*':
                     - gpg
-                '''))
+                '''
+                )
+            )
         with salt.utils.files.fopen(cls.minion_pillar, 'w') as wfh:
             wfh.write('secret_password: foo')
 
         cls.gnupghome = tempfile.mkdtemp(prefix='saltgpg')
         cls.tempdir = tempfile.mkdtemp(prefix='herbert')
-        cls.secret_key = textwrap.dedent('''\
+        cls.secret_key = textwrap.dedent(
+            '''\
             -----BEGIN PGP PRIVATE KEY BLOCK-----
 
             lQIGBF1j4XwBBADVcoGjgf3ZGym6GYL6wLztZtMzDvQXUD4OS0qFBVp80d/k4Wdw
@@ -75,7 +80,8 @@ class GpgTestCase(ModuleCase):
             MHLCCQqOaivEoEIH9SoNwy3wrIZPvq7FtT8=
             =WPfN
             -----END PGP PRIVATE KEY BLOCK-----
-            ''')
+            '''
+        )
         cls.secret_key_spec = {
             'keyid': '857C86FCF8A3FB11',
             'fingerprint': '1B52281BF159856CA76A04F5857C86FCF8A3FB11',
@@ -124,10 +130,14 @@ class GpgTestCase(ModuleCase):
         '''
         step_1_gnupghome = tempfile.mkdtemp(prefix='saltgpg')
         expected_result = {
-            'message': 'GPG key pair successfully generated.',
-            'result': True,
+            'message': 'GPG key pair successfully generated.', 'result': True,
         }
-        res = self.run_function('gpg.create_key', gnupghome=step_1_gnupghome, passphrase='foo', name_email='salt@saltstack.com')
+        res = self.run_function(
+            'gpg.create_key',
+            gnupghome=step_1_gnupghome,
+            passphrase='foo',
+            name_email='salt@saltstack.com'
+        )
         self.assertIn('fingerprint', res)
         del res['fingerprint']
         self.assertEqual(res, expected_result)
@@ -137,7 +147,9 @@ class GpgTestCase(ModuleCase):
         '''
         Test gpg.import_key
         '''
-        res = self.run_function('gpg.import_key', text=self.secret_key, gnupghome=self.gnupghome)
+        res = self.run_function(
+            'gpg.import_key', text=self.secret_key, gnupghome=self.gnupghome
+        )
         self.assertTrue(res['result'])
         self.assertEqual(res['message'], 'Successfully imported key(s).')
 
@@ -145,7 +157,9 @@ class GpgTestCase(ModuleCase):
         '''
         Test gpg.import_key with incorrect data
         '''
-        res = self.run_function('gpg.import_key', text='gargleblaster', gnupghome=self.gnupghome)
+        res = self.run_function(
+            'gpg.import_key', text='gargleblaster', gnupghome=self.gnupghome
+        )
         self.assertFalse(res['result'])
         self.assertEqual(res['message'], 'Unable to import key: No valid data found')
 
@@ -168,10 +182,16 @@ class GpgTestCase(ModuleCase):
         Test gpg.get_key, get key imported in step_2
         '''
         # Test getting by keyid
-        res = self.run_function('gpg.get_key', keyid='857C86FCF8A3FB11', gnupghome=self.gnupghome)
+        res = self.run_function(
+            'gpg.get_key', keyid='857C86FCF8A3FB11', gnupghome=self.gnupghome
+        )
         self.assertEqual(res, self.secret_key_spec)
         # Test getting by fingerprint
-        res = self.run_function('gpg.get_key', fingerprint='1B52281BF159856CA76A04F5857C86FCF8A3FB11', gnupghome=self.gnupghome)
+        res = self.run_function(
+            'gpg.get_key',
+            fingerprint='1B52281BF159856CA76A04F5857C86FCF8A3FB11',
+            gnupghome=self.gnupghome
+        )
         self.assertEqual(res, self.secret_key_spec)
 
     def step_04b_get_secret_key(self):
@@ -179,17 +199,25 @@ class GpgTestCase(ModuleCase):
         Test gpg.get_secret_key, get key imported in step 2
         '''
         # Test getting by keyid
-        res = self.run_function('gpg.get_secret_key', keyid='857C86FCF8A3FB11', gnupghome=self.gnupghome)
+        res = self.run_function(
+            'gpg.get_secret_key', keyid='857C86FCF8A3FB11', gnupghome=self.gnupghome
+        )
         self.assertEqual(res, self.secret_key_spec)
         # Test getting by fingerprint
-        res = self.run_function('gpg.get_secret_key', fingerprint='1B52281BF159856CA76A04F5857C86FCF8A3FB11', gnupghome=self.gnupghome)
+        res = self.run_function(
+            'gpg.get_secret_key',
+            fingerprint='1B52281BF159856CA76A04F5857C86FCF8A3FB11',
+            gnupghome=self.gnupghome
+        )
         self.assertEqual(res, self.secret_key_spec)
 
     def step_05a_export_key(self):
         '''
         Test gpg.export_key to export public key.
         '''
-        res = self.run_function('gpg.export_key', keyids='857C86FCF8A3FB11', gnupghome=self.gnupghome)
+        res = self.run_function(
+            'gpg.export_key', keyids='857C86FCF8A3FB11', gnupghome=self.gnupghome
+        )
         self.assertTrue(res.startswith('-----BEGIN PGP PUBLIC KEY BLOCK-----'))
         self.assertTrue(res.endswith('-----END PGP PUBLIC KEY BLOCK-----\n'))
 
@@ -197,7 +225,13 @@ class GpgTestCase(ModuleCase):
         '''
         Test gpg.export_key to export private key.
         '''
-        res = self.run_function('gpg.export_key', keyids='857C86FCF8A3FB11', gnupghome=self.gnupghome, secret=True, passphrase='foo')
+        res = self.run_function(
+            'gpg.export_key',
+            keyids='857C86FCF8A3FB11',
+            gnupghome=self.gnupghome,
+            secret=True,
+            passphrase='foo'
+        )
         self.assertTrue(res.startswith('-----BEGIN PGP PRIVATE KEY BLOCK-----'))
         self.assertTrue(res.endswith('-----END PGP PRIVATE KEY BLOCK-----\n'))
 
@@ -206,9 +240,18 @@ class GpgTestCase(ModuleCase):
         Test gpg.export_key to export private key, failing to provide passphrase in GPG >=2.1
         '''
         if salt.utils.versions.version_cmp(GPG_VERSION, '2.1') >= 0:
-            res = self.run_function('gpg.export_key', keyids='857C86FCF8A3FB11', gnupghome=self.gnupghome, secret=True)
+            res = self.run_function(
+                'gpg.export_key',
+                keyids='857C86FCF8A3FB11',
+                gnupghome=self.gnupghome,
+                secret=True
+            )
             self.assertTrue(res.startswith('The minion function caused an exception:'))
-            self.assertTrue(res.endswith('ValueError: For GnuPG >= 2.1, exporting secret keys needs a passphrase to be provided\n'))
+            self.assertTrue(
+                res.endswith(
+                    'ValueError: For GnuPG >= 2.1, exporting secret keys needs a passphrase to be provided\n'
+                )
+            )
 
     def step_06a_trust_key_by_fingerprint(self):
         '''
@@ -241,11 +284,15 @@ class GpgTestCase(ModuleCase):
         Test failing gpg.trust_key
         '''
         if salt.utils.versions.version_cmp(gnupg.__version__, '0.4.2') >= 0:
-            res = self.run_function('gpg.trust_key', keyid='foobar', gnupghome=self.gnupghome, trust_level='unknown')
+            res = self.run_function(
+                'gpg.trust_key',
+                keyid='foobar',
+                gnupghome=self.gnupghome,
+                trust_level='unknown'
+            )
             self.assertFalse(res['result'])
             self.assertEqual(
-                res['message'],
-                'KeyID or fingerprint foobar not in GPG keychain'
+                res['message'], 'KeyID or fingerprint foobar not in GPG keychain'
             )
         res = self.run_function(
             'gpg.trust_key',
@@ -263,9 +310,16 @@ class GpgTestCase(ModuleCase):
         '''
         Test signing a test message but failing because no passphrase is supplied.
         '''
-        res = self.run_function('gpg.sign', keyid='857C86FCF8A3FB11', text='sign here', gnupghome=self.gnupghome)
+        res = self.run_function(
+            'gpg.sign',
+            keyid='857C86FCF8A3FB11',
+            text='sign here',
+            gnupghome=self.gnupghome
+        )
         self.assertFalse(res['result'])
-        self.assertEqual(res['message'], 'Failed to sign data. Check minion log for details.')
+        self.assertEqual(
+            res['message'], 'Failed to sign data. Check minion log for details.'
+        )
 
     def step_07g_sign_message(self):
         '''
@@ -279,9 +333,13 @@ class GpgTestCase(ModuleCase):
             passphrase='foo'
         )
         self.assertTrue(res['result'])
-        self.assertTrue(res['message'].startswith('-----BEGIN PGP SIGNED MESSAGE-----\n'
-                                                  'Hash: SHA512\n\nsign here\n'
-                                                  '-----BEGIN PGP SIGNATURE-----\n\n'))
+        self.assertTrue(
+            res['message'].startswith(
+                '-----BEGIN PGP SIGNED MESSAGE-----\n'
+                'Hash: SHA512\n\nsign here\n'
+                '-----BEGIN PGP SIGNATURE-----\n\n'
+            )
+        )
         self.assertTrue(res['message'].endswith('\n-----END PGP SIGNATURE-----\n'))
 
     def step_07h_sign_file(self):
@@ -300,9 +358,13 @@ class GpgTestCase(ModuleCase):
             passphrase='foo',
         )
         self.assertTrue(res['result'])
-        self.assertTrue(res['message'].startswith('-----BEGIN PGP SIGNED MESSAGE-----\n'
-                                                  'Hash: SHA512\n\nStatement of authority.\n'
-                                                  '-----BEGIN PGP SIGNATURE-----\n\n'))
+        self.assertTrue(
+            res['message'].startswith(
+                '-----BEGIN PGP SIGNED MESSAGE-----\n'
+                'Hash: SHA512\n\nStatement of authority.\n'
+                '-----BEGIN PGP SIGNATURE-----\n\n'
+            )
+        )
         self.assertTrue(res['message'].endswith('\n-----END PGP SIGNATURE-----\n'))
 
     def step_07i_sign_message(self):
@@ -320,9 +382,13 @@ class GpgTestCase(ModuleCase):
             passphrase_pillar='secret_password',
         )
         self.assertTrue(res['result'])
-        self.assertTrue(res['message'].startswith('-----BEGIN PGP SIGNED MESSAGE-----\n'
-                                                  'Hash: SHA512\n\nsign here\n'
-                                                  '-----BEGIN PGP SIGNATURE-----\n\n'))
+        self.assertTrue(
+            res['message'].startswith(
+                '-----BEGIN PGP SIGNED MESSAGE-----\n'
+                'Hash: SHA512\n\nsign here\n'
+                '-----BEGIN PGP SIGNATURE-----\n\n'
+            )
+        )
         self.assertTrue(res['message'].endswith('\n-----END PGP SIGNATURE-----\n'))
 
     def step_07j_sign_verify_detached_signature(self):
@@ -364,7 +430,8 @@ class GpgTestCase(ModuleCase):
             {
                 'result': True,
                 'message': 'The signature is verified.',
-                'username': 'Autogenerated Key (Generated by SaltStack) <salt@saltstack.com>',
+                'username':
+                    'Autogenerated Key (Generated by SaltStack) <salt@saltstack.com>',
                 'key_id': '857C86FCF8A3FB11',
                 'trust_level': 'Ultimate'
             }
@@ -385,7 +452,9 @@ class GpgTestCase(ModuleCase):
             gnupghome=self.gnupghome,
             passphrase='foo'
         )['message']
-        res = self.run_function('gpg.verify', text=signed_message, gnupghome=self.gnupghome)
+        res = self.run_function(
+            'gpg.verify', text=signed_message, gnupghome=self.gnupghome
+        )
         self.assertEqual(
             res,
             {
@@ -423,9 +492,7 @@ class GpgTestCase(ModuleCase):
         self.assertTrue(encrypted_message.endswith('\n-----END PGP MESSAGE-----\n'))
 
         decrypt = self.run_function(
-            'gpg.decrypt',
-            text=encrypted_message,
-            gnupghome=self.gnupghome
+            'gpg.decrypt', text=encrypted_message, gnupghome=self.gnupghome
         )
         self.assertTrue(decrypt['result'])
         self.assertEqual(decrypt['message'], 'secret')
@@ -496,13 +563,14 @@ class GpgTestCase(ModuleCase):
             gnupghome=self.gnupghome
         )
         self.assertTrue(encrypt['result'])
-        self.assertEqual(encrypt['message'], 'Encrypted data has been written to {}'.format(encrypted_file))
+        self.assertEqual(
+            encrypt['message'],
+            'Encrypted data has been written to {}'.format(encrypted_file)
+        )
 
         # Decrypt from file, to returned string
         decrypt = self.run_function(
-            'gpg.decrypt',
-            filename=encrypted_file,
-            gnupghome=self.gnupghome
+            'gpg.decrypt', filename=encrypted_file, gnupghome=self.gnupghome
         )
         self.assertTrue(decrypt['result'])
         self.assertEqual(decrypt['message'], 'Very big secret! Hush')
@@ -542,9 +610,7 @@ class GpgTestCase(ModuleCase):
         self.assertTrue(encrypt['message'].endswith('\n-----END PGP MESSAGE-----\n'))
 
         decrypt = self.run_function(
-            'gpg.decrypt',
-            text=encrypt['message'],
-            gnupghome=self.gnupghome,
+            'gpg.decrypt', text=encrypt['message'], gnupghome=self.gnupghome,
         )
         self.assertIn('signature_id', decrypt)
         del decrypt['signature_id']
@@ -553,7 +619,8 @@ class GpgTestCase(ModuleCase):
             {
                 'result': True,
                 'message': 'secret',
-                'username': 'Autogenerated Key (Generated by SaltStack) <salt@saltstack.com>',
+                'username':
+                    'Autogenerated Key (Generated by SaltStack) <salt@saltstack.com>',
                 'key_id': '857C86FCF8A3FB11',
                 'fingerprint': '1B52281BF159856CA76A04F5857C86FCF8A3FB11',
                 'trust_level': 4,
@@ -580,7 +647,10 @@ class GpgTestCase(ModuleCase):
             gnupghome=self.gnupghome,
         )
         self.assertTrue(encrypt['result'])
-        self.assertEqual(encrypt['message'], 'Encrypted data has been written to {}'.format(encrypted_file))
+        self.assertEqual(
+            encrypt['message'],
+            'Encrypted data has been written to {}'.format(encrypted_file)
+        )
 
         decrypted_file = os.path.join(RUNTIME_VARS.TMP, 'decrypted_data.txt')
         decrypt = self.run_function(
@@ -596,7 +666,8 @@ class GpgTestCase(ModuleCase):
             {
                 'result': True,
                 'message': 'Decrypted data has been written to {}'.format(decrypted_file),
-                'username': 'Autogenerated Key (Generated by SaltStack) <salt@saltstack.com>',
+                'username':
+                    'Autogenerated Key (Generated by SaltStack) <salt@saltstack.com>',
                 'key_id': '857C86FCF8A3FB11',
                 'fingerprint': '1B52281BF159856CA76A04F5857C86FCF8A3FB11',
                 'trust_level': 4,
@@ -649,7 +720,10 @@ class GpgTestCase(ModuleCase):
             gnupghome=self.gnupghome,
         )
         self.assertTrue(res['result'])
-        self.assertEqual(res['message'], 'Key 754A1A7AE731F165D5E6D4BD0E08A149DE57BFBE added to keychain')
+        self.assertEqual(
+            res['message'],
+            'Key 754A1A7AE731F165D5E6D4BD0E08A149DE57BFBE added to keychain'
+        )
 
     def test_fail_receive_keys(self):
         '''
@@ -662,8 +736,7 @@ class GpgTestCase(ModuleCase):
             gnupghome=self.gnupghome,
         )
         self.assertEqual(
-            res,
-            {'result': False, 'message': 'Unable to receive key: Other failure'}
+            res, {'result': False, 'message': 'Unable to receive key: Other failure'}
         )
 
     def step_10_delete_key(self):
@@ -672,20 +745,18 @@ class GpgTestCase(ModuleCase):
         '''
         # Verify the key exists in the keychain first
         res = self.run_function(
-            'gpg.get_key',
-            keyid='857C86FCF8A3FB11',
-            gnupghome=self.gnupghome,
+            'gpg.get_key', keyid='857C86FCF8A3FB11', gnupghome=self.gnupghome,
         )
         self.assertEqual(res['fingerprint'], '1B52281BF159856CA76A04F5857C86FCF8A3FB11')
 
         # Test that deleting a private key before deleting a public key fails.
         res = self.run_function(
-            'gpg.delete_key',
-            keyid='857C86FCF8A3FB11',
-            gnupghome=self.gnupghome,
+            'gpg.delete_key', keyid='857C86FCF8A3FB11', gnupghome=self.gnupghome,
         )
         self.assertFalse(res['result'])
-        self.assertEqual(res['message'], 'Secret key exists, delete first or pass delete_secret=True.')
+        self.assertEqual(
+            res['message'], 'Secret key exists, delete first or pass delete_secret=True.'
+        )
 
         # Test deleting secret key requires passphrase
         if salt.utils.versions.version_cmp(GPG_VERSION, '2.1') >= 0:
@@ -695,8 +766,12 @@ class GpgTestCase(ModuleCase):
                 delete_secret=True,
                 gnupghome=self.gnupghome,
             )
-            self.assertTrue(res.endswith('ValueError: For GnuPG >= 2.1, deleting '
-                                         'secret keys needs a passphrase to be provided\n'))
+            self.assertTrue(
+                res.endswith(
+                    'ValueError: For GnuPG >= 2.1, deleting '
+                    'secret keys needs a passphrase to be provided\n'
+                )
+            )
 
         # Deleting private/secret keys was broken in 0.4.4, do not run this test there.
         if salt.utils.versions.version_cmp(gnupg.__version__, '0.4.5') >= 0:
@@ -710,13 +785,14 @@ class GpgTestCase(ModuleCase):
             self.assertTrue(res['result'])
             self.assertEqual(
                 res['message'],
-                ('Secret key 1B52281BF159856CA76A04F5857C86FCF8A3FB11 deleted.\n'
-                 'Public key 1B52281BF159856CA76A04F5857C86FCF8A3FB11 deleted')
+                (
+                    'Secret key 1B52281BF159856CA76A04F5857C86FCF8A3FB11 deleted.\n'
+                    'Public key 1B52281BF159856CA76A04F5857C86FCF8A3FB11 deleted'
+                )
             )
 
     def test_get_fingerprint_from_data(self):
         res = self.run_function(
-            'gpg.get_fingerprint_from_data',
-            keydata=self.secret_key,
+            'gpg.get_fingerprint_from_data', keydata=self.secret_key,
         )
         self.assertEqual(res, '1B52281BF159856CA76A04F5857C86FCF8A3FB11')

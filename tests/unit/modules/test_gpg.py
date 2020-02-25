@@ -18,6 +18,7 @@ import re
 import errno
 
 # Import Salt Testing Libs
+from tests.support.helpers import destructiveTest, slowTest
 from tests.support.unit import TestCase, skipIf
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.runtests import RUNTIME_VARS
@@ -29,13 +30,6 @@ import salt.utils.files
 import salt.modules.gpg as gpg
 import salt.utils.path
 from salt.exceptions import SaltInvocationError
-
-# Import Salt Testing Libs
-from tests.support.helpers import destructiveTest, slowTest
-from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, patch
-from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
 
 try:
     import gnupg  # pylint: disable=import-error,unused-import
@@ -75,7 +69,9 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
             'keyid': 'xxxxxxxxxxxxxxxx',
             'expires': '2011188692',
             'sigs': [],
-            'subkeys': [['xxxxxxxxxxxxxxxx', 'e', 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx']],
+            'subkeys': [[
+                'xxxxxxxxxxxxxxxx', 'e', 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+            ]],
             'length': '4096',
             'ownertrust': '-',
             'sig': '',
@@ -86,7 +82,8 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
             'type': 'pub',
             'uids': ['GPG Person <person@example.com>']
         }]
-        cls.secret_key = textwrap.dedent('''\
+        cls.secret_key = textwrap.dedent(
+            '''\
             -----BEGIN PGP PRIVATE KEY BLOCK-----
             
             lQIGBF1j4XwBBADVcoGjgf3ZGym6GYL6wLztZtMzDvQXUD4OS0qFBVp80d/k4Wdw
@@ -108,7 +105,8 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
             MHLCCQqOaivEoEIH9SoNwy3wrIZPvq7FtT8=
             =WPfN
             -----END PGP PRIVATE KEY BLOCK-----
-            ''')
+            '''
+        )
 
     @classmethod
     def tearDownClass(cls):
@@ -152,14 +150,16 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test gpg.list_keys
         """
-        _expected_result = [{'keyid': 'xxxxxxxxxxxxxxxx',
-                             'uids': ['GPG Person <person@example.com>'],
-                             'created': '2017-09-28',
-                             'expires': '2033-09-24',
-                             'keyLength': '4096',
-                             'ownerTrust': 'Unknown',
-                             'fingerprint': 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-                             'trust': 'Unknown'}]
+        _expected_result = [{
+            'keyid': 'xxxxxxxxxxxxxxxx',
+            'uids': ['GPG Person <person@example.com>'],
+            'created': '2017-09-28',
+            'expires': '2033-09-24',
+            'keyLength': '4096',
+            'ownerTrust': 'Unknown',
+            'fingerprint': 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+            'trust': 'Unknown'
+        }]
 
         with \
                 patch.dict(gpg.__salt__, {'user.info': MagicMock(return_value=self.user_mock)}), \
@@ -172,14 +172,16 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test get_key by providing keyid.
         '''
-        _expected_result = {'fingerprint': 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-                            'keyid': 'xxxxxxxxxxxxxxxx',
-                            'uids': ['GPG Person <person@example.com>'],
-                            'created': '2017-09-28',
-                            'trust': 'Unknown',
-                            'ownerTrust': 'Unknown',
-                            'expires': '2033-09-24',
-                            'keyLength': '4096'}
+        _expected_result = {
+            'fingerprint': 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+            'keyid': 'xxxxxxxxxxxxxxxx',
+            'uids': ['GPG Person <person@example.com>'],
+            'created': '2017-09-28',
+            'trust': 'Unknown',
+            'ownerTrust': 'Unknown',
+            'expires': '2033-09-24',
+            'keyLength': '4096'
+        }
 
         with \
                 patch.dict(gpg.__salt__, {'user.info': MagicMock(return_value=self.user_mock)}), \
@@ -205,14 +207,16 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test get_key by providing fingerprint.
         '''
-        _expected_result = {'fingerprint': 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-                            'keyid': 'xxxxxxxxxxxxxxxx',
-                            'uids': ['GPG Person <person@example.com>'],
-                            'created': '2017-09-28',
-                            'trust': 'Unknown',
-                            'ownerTrust': 'Unknown',
-                            'expires': '2033-09-24',
-                            'keyLength': '4096'}
+        _expected_result = {
+            'fingerprint': 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+            'keyid': 'xxxxxxxxxxxxxxxx',
+            'uids': ['GPG Person <person@example.com>'],
+            'created': '2017-09-28',
+            'trust': 'Unknown',
+            'ownerTrust': 'Unknown',
+            'expires': '2033-09-24',
+            'keyLength': '4096'
+        }
 
         with \
                 patch.dict(gpg.__salt__, {'user.info': MagicMock(return_value=self.user_mock)}), \
@@ -240,8 +244,10 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
         '''
         _expected_result = {
             'result': True,
-            'message': ('Secret key xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx deleted.\n'
-                        'Public key xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx deleted')
+            'message': (
+                'Secret key xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx deleted.\n'
+                'Public key xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx deleted'
+            )
         }
 
         mock_opt = MagicMock(return_value='root')
@@ -258,19 +264,23 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test gpg.search_keys
         """
-        _search_result = [{'keyid': 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-                           'uids': ['GPG Person <person@example.com>'],
-                           'expires': '',
-                           'sigs': [],
-                           'length': '1024',
-                           'algo': '17',
-                           'date': int(time.mktime(datetime.datetime(2004, 11, 13).timetuple())),
-                           'type': 'pub'}]
+        _search_result = [{
+            'keyid': 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+            'uids': ['GPG Person <person@example.com>'],
+            'expires': '',
+            'sigs': [],
+            'length': '1024',
+            'algo': '17',
+            'date': int(time.mktime(datetime.datetime(2004, 11, 13).timetuple())),
+            'type': 'pub'
+        }]
 
-        _expected_result = [{'uids': ['GPG Person <person@example.com>'],
-                             'created': '2004-11-13',
-                             'keyLength': '1024',
-                             'keyid': 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'}]
+        _expected_result = [{
+            'uids': ['GPG Person <person@example.com>'],
+            'created': '2004-11-13',
+            'keyLength': '1024',
+            'keyid': 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+        }]
 
         with \
                 patch.dict(gpg.__salt__, {'user.info': MagicMock(return_value=self.user_mock)}), \
@@ -285,7 +295,9 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
         Test creation of a key.
         '''
         gen_key_result = MagicMock(gnupg.GenKey)
-        gen_key_result.configure_mock(fingerprint='27B96AE67417199205303964F38F92D1A7B9196D')
+        gen_key_result.configure_mock(
+            fingerprint='27B96AE67417199205303964F38F92D1A7B9196D'
+        )
         expected_result = {
             'fingerprint': '27B96AE67417199205303964F38F92D1A7B9196D',
             'message': 'GPG key pair successfully generated.',
@@ -296,11 +308,12 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                 patch.dict(gpg.__salt__, {'config.option': MagicMock(return_value='root')}), \
                 patch.object(gpg, '_create_gpg', return_value=self.gpgobject), \
                 patch.object(self.gpgobject, 'gen_key', MagicMock(return_value=gen_key_result)):
-            res = gpg.create_key(gnupghome=self.gnupghome, passphrase='foo', name_email='salt@saltstack.com')
-        self.assertEqual(
-            res,
-            expected_result
-        )
+            res = gpg.create_key(
+                gnupghome=self.gnupghome,
+                passphrase='foo',
+                name_email='salt@saltstack.com'
+            )
+        self.assertEqual(res, expected_result)
 
     def test_import_secret_key(self):
         '''
@@ -308,19 +321,25 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
         Succesful attempt, key does not exist prior to importing.
         '''
         import_key_result = MagicMock(gnupg.ImportResult)
-        import_key_result.configure_mock(**{
-            'gpg': self.gpgobject,
-            'imported': 1,
-            'results': [{
-                'fingerprint': '1B52281BF159856CA76A04F5857C86FCF8A3FB11',
-                'ok': '1',
-                'text': 'Not actually changed\nEntirely new key\n'
-            }, {
-                'fingerprint': '1B52281BF159856CA76A04F5857C86FCF8A3FB11',
-                'ok': '17',
-                'text': 'Not actually changed\nEntirely new key\nContains private key\n'
-            }],
-                'fingerprints': ['1B52281BF159856CA76A04F5857C86FCF8A3FB11', '1B52281BF159856CA76A04F5857C86FCF8A3FB11'],
+        import_key_result.configure_mock(
+            **{
+                'gpg': self.gpgobject,
+                'imported': 1,
+                'results': [{
+                    'fingerprint': '1B52281BF159856CA76A04F5857C86FCF8A3FB11',
+                    'ok': '1',
+                    'text': 'Not actually changed\nEntirely new key\n'
+                },
+                            {
+                                'fingerprint': '1B52281BF159856CA76A04F5857C86FCF8A3FB11',
+                                'ok': '17',
+                                'text':
+                                    'Not actually changed\nEntirely new key\nContains private key\n'
+                            }],
+                'fingerprints': [
+                    '1B52281BF159856CA76A04F5857C86FCF8A3FB11',
+                    '1B52281BF159856CA76A04F5857C86FCF8A3FB11'
+                ],
                 'count': 1,
                 'no_user_id': 0,
                 'imported_rsa': 0,
@@ -333,20 +352,23 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                 'sec_imported': 1,
                 'sec_dups': 0,
                 'not_imported': 0,
-                'stderr': ('[GNUPG:] KEY_CONSIDERED 1B52281BF159856CA76A04F5857C86FCF8A3FB11 0\n'
-                           'gpg: key 857C86FCF8A3FB11: public key "Autogenerated Key (Generated by SaltStack) <salt@saltstack.com>" imported\n'
-                           '[GNUPG:] IMPORTED 857C86FCF8A3FB11 Autogenerated Key (Generated by SaltStack) <salt@saltstack.com>\n'
-                           '[GNUPG:] IMPORT_OK 1 1B52281BF159856CA76A04F5857C86FCF8A3FB11\n'
-                           '[GNUPG:] KEY_CONSIDERED 1B52281BF159856CA76A04F5857C86FCF8A3FB11 0\n'
-                           'gpg: key 857C86FCF8A3FB11: secret key imported\n'
-                           '[GNUPG:] IMPORT_OK 17 1B52281BF159856CA76A04F5857C86FCF8A3FB11\n'
-                           'gpg: Total number processed: 1\n'
-                           'gpg:               imported: 1\n'
-                           'gpg:       secret keys read: 1\n'
-                           'gpg:   secret keys imported: 1\n'
-                           '[GNUPG:] IMPORT_RES 1 0 1 0 0 0 0 0 0 1 1 0 0 0 0\n'),
+                'stderr': (
+                    '[GNUPG:] KEY_CONSIDERED 1B52281BF159856CA76A04F5857C86FCF8A3FB11 0\n'
+                    'gpg: key 857C86FCF8A3FB11: public key "Autogenerated Key (Generated by SaltStack) <salt@saltstack.com>" imported\n'
+                    '[GNUPG:] IMPORTED 857C86FCF8A3FB11 Autogenerated Key (Generated by SaltStack) <salt@saltstack.com>\n'
+                    '[GNUPG:] IMPORT_OK 1 1B52281BF159856CA76A04F5857C86FCF8A3FB11\n'
+                    '[GNUPG:] KEY_CONSIDERED 1B52281BF159856CA76A04F5857C86FCF8A3FB11 0\n'
+                    'gpg: key 857C86FCF8A3FB11: secret key imported\n'
+                    '[GNUPG:] IMPORT_OK 17 1B52281BF159856CA76A04F5857C86FCF8A3FB11\n'
+                    'gpg: Total number processed: 1\n'
+                    'gpg:               imported: 1\n'
+                    'gpg:       secret keys read: 1\n'
+                    'gpg:   secret keys imported: 1\n'
+                    '[GNUPG:] IMPORT_RES 1 0 1 0 0 0 0 0 0 1 1 0 0 0 0\n'
+                ),
                 'data': b''
-            })
+            }
+        )
         with \
                 patch.dict(gpg.__salt__, {'user.info': MagicMock(return_value=self.user_mock)}), \
                 patch.dict(gpg.__salt__, {'config.option': MagicMock(return_value='root')}), \
@@ -358,7 +380,10 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
             {
                 'result': True,
                 'message': 'Successfully imported key(s).',
-                'fingerprints': ['1B52281BF159856CA76A04F5857C86FCF8A3FB11', '1B52281BF159856CA76A04F5857C86FCF8A3FB11'],
+                'fingerprints': [
+                    '1B52281BF159856CA76A04F5857C86FCF8A3FB11',
+                    '1B52281BF159856CA76A04F5857C86FCF8A3FB11'
+                ],
             }
         )
 
@@ -368,47 +393,52 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
         Succesful attempt, key already exists.
         '''
         import_key_result = MagicMock(gnupg.ImportResult)
-        import_key_result.configure_mock(**{
-            'gpg': self.gpgobject,
-            'imported': 0,
-            'results': [{
-                'fingerprint': '1B52281BF159856CA76A04F5857C86FCF8A3FB11',
-                'ok': '0',
-                'text': 'Not actually changed\n'
-            }, {
-                'fingerprint': '1B52281BF159856CA76A04F5857C86FCF8A3FB11',
-                'ok': '16',
-                'text': 'Not actually changed\nContains private key\n'
-            }],
-            'fingerprints': [
-                '1B52281BF159856CA76A04F5857C86FCF8A3FB11',
-                '1B52281BF159856CA76A04F5857C86FCF8A3FB11'
-            ],
-            'count': 1,
-            'no_user_id': 0,
-            'imported_rsa': 0,
-            'unchanged': 1,
-            'n_uids': 0,
-            'n_subk': 0,
-            'n_sigs': 0,
-            'n_revoc': 0,
-            'sec_read': 1,
-            'sec_imported': 0,
-            'sec_dups': 1,
-            'not_imported': 0,
-            'stderr': ('[GNUPG:] IMPORT_OK 0 1B52281BF159856CA76A04F5857C86FCF8A3FB11\n'
-                       '[GNUPG:] KEY_CONSIDERED 1B52281BF159856CA76A04F5857C86FCF8A3FB11 0\n'
-                       'gpg: key 857C86FCF8A3FB11: "Autogenerated Key (Generated by SaltStack) <salt@saltstack.com>" not changed\n'
-                       '[GNUPG:] KEY_CONSIDERED 1B52281BF159856CA76A04F5857C86FCF8A3FB11 0\n'
-                       'gpg: key 857C86FCF8A3FB11: secret key imported\n'
-                       '[GNUPG:] IMPORT_OK 16 1B52281BF159856CA76A04F5857C86FCF8A3FB11\n'
-                       'gpg: Total number processed: 1\n'
-                       'gpg:              unchanged: 1\n'
-                       'gpg:       secret keys read: 1\n'
-                       'gpg:  secret keys unchanged: 1\n'
-                       '[GNUPG:] IMPORT_RES 1 0 0 0 1 0 0 0 0 1 0 1 0 0 0\n'),
-            'data': b''
-        })
+        import_key_result.configure_mock(
+            **{
+                'gpg': self.gpgobject,
+                'imported': 0,
+                'results': [{
+                    'fingerprint': '1B52281BF159856CA76A04F5857C86FCF8A3FB11',
+                    'ok': '0',
+                    'text': 'Not actually changed\n'
+                },
+                            {
+                                'fingerprint': '1B52281BF159856CA76A04F5857C86FCF8A3FB11',
+                                'ok': '16',
+                                'text': 'Not actually changed\nContains private key\n'
+                            }],
+                'fingerprints': [
+                    '1B52281BF159856CA76A04F5857C86FCF8A3FB11',
+                    '1B52281BF159856CA76A04F5857C86FCF8A3FB11'
+                ],
+                'count': 1,
+                'no_user_id': 0,
+                'imported_rsa': 0,
+                'unchanged': 1,
+                'n_uids': 0,
+                'n_subk': 0,
+                'n_sigs': 0,
+                'n_revoc': 0,
+                'sec_read': 1,
+                'sec_imported': 0,
+                'sec_dups': 1,
+                'not_imported': 0,
+                'stderr': (
+                    '[GNUPG:] IMPORT_OK 0 1B52281BF159856CA76A04F5857C86FCF8A3FB11\n'
+                    '[GNUPG:] KEY_CONSIDERED 1B52281BF159856CA76A04F5857C86FCF8A3FB11 0\n'
+                    'gpg: key 857C86FCF8A3FB11: "Autogenerated Key (Generated by SaltStack) <salt@saltstack.com>" not changed\n'
+                    '[GNUPG:] KEY_CONSIDERED 1B52281BF159856CA76A04F5857C86FCF8A3FB11 0\n'
+                    'gpg: key 857C86FCF8A3FB11: secret key imported\n'
+                    '[GNUPG:] IMPORT_OK 16 1B52281BF159856CA76A04F5857C86FCF8A3FB11\n'
+                    'gpg: Total number processed: 1\n'
+                    'gpg:              unchanged: 1\n'
+                    'gpg:       secret keys read: 1\n'
+                    'gpg:  secret keys unchanged: 1\n'
+                    '[GNUPG:] IMPORT_RES 1 0 0 0 1 0 0 0 0 1 0 1 0 0 0\n'
+                ),
+                'data': b''
+            }
+        )
         with \
                 patch.dict(gpg.__salt__, {'user.info': MagicMock(return_value=self.user_mock)}), \
                 patch.dict(gpg.__salt__, {'config.option': MagicMock(return_value='root')}), \
@@ -416,11 +446,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                 patch.object(self.gpgobject, 'import_keys', MagicMock(return_value=import_key_result)):
             res = gpg.import_key(text=self.secret_key, gnupghome=self.gnupghome)
         self.assertDictEqual(
-            res,
-            {
-                'result': True,
-                'message': 'Key(s) already exist in keychain.',
-            }
+            res, {'result': True, 'message': 'Key(s) already exist in keychain.', }
         )
 
     def test_import_secret_key_malformed_data(self):
@@ -430,42 +456,40 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
         '''
         malformed_data = re.sub(r'T8=', r'T8=a', self.secret_key, count=1)
         import_key_result = MagicMock(gnupg.ImportResult)
-        import_key_result.configure_mock(**{
-            'gpg': self.gpgobject,
-            'imported': 0,
-            'results': [],
-            'fingerprints': [],
-            'count': 0,
-            'no_user_id': 0,
-            'imported_rsa': 0,
-            'unchanged': 0,
-            'n_uids': 0,
-            'n_subk': 0,
-            'n_sigs': 0,
-            'n_revoc': 0,
-            'sec_read': 0,
-            'sec_imported': 0,
-            'sec_dups': 0,
-            'not_imported': 0,
-            'stderr': ("gpg: malformed CRC\n"
-                       "gpg: read_block: read error: Invalid keyring\n"
-                       "gpg: import from '[stdin]' failed: Invalid keyring\n"
-                       "gpg: Total number processed: 0\n[GNUPG:] IMPORT_RES 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0\n"),
-            'data': b''
-        })
+        import_key_result.configure_mock(
+            **{
+                'gpg': self.gpgobject,
+                'imported': 0,
+                'results': [],
+                'fingerprints': [],
+                'count': 0,
+                'no_user_id': 0,
+                'imported_rsa': 0,
+                'unchanged': 0,
+                'n_uids': 0,
+                'n_subk': 0,
+                'n_sigs': 0,
+                'n_revoc': 0,
+                'sec_read': 0,
+                'sec_imported': 0,
+                'sec_dups': 0,
+                'not_imported': 0,
+                'stderr': (
+                    "gpg: malformed CRC\n"
+                    "gpg: read_block: read error: Invalid keyring\n"
+                    "gpg: import from '[stdin]' failed: Invalid keyring\n"
+                    "gpg: Total number processed: 0\n[GNUPG:] IMPORT_RES 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0\n"
+                ),
+                'data': b''
+            }
+        )
         with \
                 patch.dict(gpg.__salt__, {'user.info': MagicMock(return_value=self.user_mock)}), \
                 patch.dict(gpg.__salt__, {'config.option': MagicMock(return_value='root')}), \
                 patch.object(gpg, '_create_gpg', return_value=self.gpgobject), \
                 patch.object(self.gpgobject, 'import_keys', MagicMock(return_value=import_key_result)):
             res = gpg.import_key(text=self.secret_key, gnupghome=self.gnupghome)
-        self.assertDictEqual(
-            res,
-            {
-                'result': False,
-                'message': 'Unable to import key',
-            }
-        )
+        self.assertDictEqual(res, {'result': False, 'message': 'Unable to import key', })
 
     def test_export_keys(self):
         '''
@@ -473,37 +497,40 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
         Whatever gnupg.export_keys returns is returned by gpg.export_key,
         including an empty string when no matching keyid was found.
         '''
-        export_key_result = ('-----BEGIN PGP PUBLIC KEY BLOCK-----\n\n'
-                             'jibberjabber\n'
-                             '-----END PGP PUBLIC KEY BLOCK-----\n')
+        export_key_result = (
+            '-----BEGIN PGP PUBLIC KEY BLOCK-----\n\n'
+            'jibberjabber\n'
+            '-----END PGP PUBLIC KEY BLOCK-----\n'
+        )
         with \
                 patch.dict(gpg.__salt__, {'user.info': MagicMock(return_value=self.user_mock)}), \
                 patch.dict(gpg.__salt__, {'config.option': MagicMock(return_value='root')}), \
                 patch.object(gpg, '_create_gpg', return_value=self.gpgobject), \
                 patch.object(self.gpgobject, 'export_keys', MagicMock(return_value=export_key_result)):
             res = gpg.export_key(keyids='randomkey', gnupghome=self.gnupghome)
-        self.assertEqual(
-            res,
-            export_key_result
-        )
+        self.assertEqual(res, export_key_result)
 
     def test_export_secret_key(self):
         '''
         Test exporting a secret key.
         '''
-        export_key_result = ('-----BEGIN PGP PRIVATE KEY BLOCK-----\n\n'
-                             'jibberjabber\n'
-                             '-----END PGP PRIVATE KEY BLOCK-----\n')
+        export_key_result = (
+            '-----BEGIN PGP PRIVATE KEY BLOCK-----\n\n'
+            'jibberjabber\n'
+            '-----END PGP PRIVATE KEY BLOCK-----\n'
+        )
         with \
                 patch.dict(gpg.__salt__, {'user.info': MagicMock(return_value=self.user_mock)}), \
                 patch.dict(gpg.__salt__, {'config.option': MagicMock(return_value='root')}), \
                 patch.object(gpg, '_create_gpg', return_value=self.gpgobject), \
                 patch.object(self.gpgobject, 'export_keys', MagicMock(return_value=export_key_result)):
-            res = gpg.export_key(keyids='randomkey', gnupghome=self.gnupghome, secret=True, passphrase='secret')
-        self.assertEqual(
-            res,
-            export_key_result
-        )
+            res = gpg.export_key(
+                keyids='randomkey',
+                gnupghome=self.gnupghome,
+                secret=True,
+                passphrase='secret'
+            )
+        self.assertEqual(res, export_key_result)
 
     def test_export_secret_key_passphrase_req(self):
         '''
@@ -519,7 +546,9 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                 ValueError,
                 'For GnuPG >= 2.1, exporting secret keys needs a passphrase to be provided',
                 gpg.export_key,
-                keyids='randomkey', gnupghome=self.gnupghome, secret=True,
+                keyids='randomkey',
+                gnupghome=self.gnupghome,
+                secret=True,
             )
 
     def test_trust_key_happy(self):
@@ -534,21 +563,13 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                 patch.object(salt.utils.versions, 'version_cmp', MagicMock(return_value=-1)), \
                 patch.dict(gpg.__salt__, {'cmd.run_all': MagicMock(side_effect=cmd_run_result)}):
             res = gpg.trust_key(
-                keyid='anything',
-                trust_level='marginally',
-                gnupghome=self.gnupghome,
+                keyid='anything', trust_level='marginally', gnupghome=self.gnupghome,
             )
             res2 = gpg.trust_key(
-                keyid='anything',
-                trust_level='marginally',
-                gnupghome=self.gnupghome,
+                keyid='anything', trust_level='marginally', gnupghome=self.gnupghome,
             )
         self.assertEqual(
-            res,
-            {
-                'result': True,
-                'message': 'Setting ownership trust to Marginally.'
-            }
+            res, {'result': True, 'message': 'Setting ownership trust to Marginally.'}
         )
         self.assertEqual(
             res2,
@@ -596,12 +617,12 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                     'message': 'KeyID or fingerprint nope not in GPG keychain'
                 }
             )
-        with patch.object(gpg, 'get_key', MagicMock(return_value={'keyid': 'butnofingerprint'})):
+        with patch.object(gpg,
+                          'get_key',
+                          MagicMock(return_value={'keyid': 'butnofingerprint'})):
             self.assertEqual(
-                gpg.trust_key(keyid='foo', trust_level='marginally'),
-                {
-                    'result': False,
-                    'message': 'Fingerprint not found for KeyID foo'
+                gpg.trust_key(keyid='foo', trust_level='marginally'), {
+                    'result': False, 'message': 'Fingerprint not found for KeyID foo'
                 }
             )
 
@@ -617,52 +638,30 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                 patch.object(salt.utils.versions, 'version_cmp', MagicMock(return_value=-1)), \
                 patch.dict(gpg.__salt__, {'cmd.run_all': MagicMock(return_value=cmd_run_result)}):
             res = gpg.trust_key(
-                keyid='anything',
-                trust_level='fully',
-                gnupghome=self.gnupghome,
+                keyid='anything', trust_level='fully', gnupghome=self.gnupghome,
             )
-        self.assertEqual(
-            res,
-            {
-                'result': False,
-                'message': 'foobar!'
-            }
-        )
+        self.assertEqual(res, {'result': False, 'message': 'foobar!'})
 
     def test_trust_key_fail_ge042(self):
         '''
         Test failing to trust a key.
         For versions of python-gnupg >= 0.4.2
         '''
-        trust_keys_result = MagicMock(
-            problem_reason='because of reasons'
-        )
+        trust_keys_result = MagicMock(problem_reason='because of reasons')
         with \
                 patch.object(gpg, '_create_gpg', return_value=self.gpgobject), \
                 patch.object(gpg, 'get_key', return_value={'fingerprint': 'foo'}), \
                 patch.object(self.gpgobject, 'trust_keys', return_value=trust_keys_result):
             res = gpg.trust_key(
-                keyid='anything',
-                trust_level='fully',
-                gnupghome=self.gnupghome,
+                keyid='anything', trust_level='fully', gnupghome=self.gnupghome,
             )
-        self.assertEqual(
-            res,
-            {
-                'result': False,
-                'message': 'because of reasons'
-            }
-        )
+        self.assertEqual(res, {'result': False, 'message': 'because of reasons'})
 
     def test_sign_message_happy(self):
         '''
         Test signing a message. Happy paths.
         '''
-        signed_data = MagicMock(
-            spec=gnupg.Sign,
-            status='OK',
-            data='Signed X',
-        )
+        signed_data = MagicMock(spec=gnupg.Sign, status='OK', data='Signed X', )
         outputfile = os.path.join(RUNTIME_VARS.TMP, 'foobar')
         m_open = mock_open()
         with \
@@ -701,7 +700,13 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(res_1, {'result': True, 'message': 'Signed X'})
         self.assertEqual(res_2, res_1)
         self.assertEqual(res_3, res_1)
-        self.assertEqual(res_4, {'result': True, 'message': 'Signed data has been written to {}'.format(outputfile)})
+        self.assertEqual(
+            res_4,
+            {
+                'result': True,
+                'message': 'Signed data has been written to {}'.format(outputfile)
+            }
+        )
         # Check whether the data was actually written to file
         # But salt only does this for versions of gnupg up to 0.3.7
         if salt.utils.versions.version_cmp(gnupg.__version__, '0.3.7') < 0:
@@ -725,9 +730,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
             text='sign this please',
             filename='sign this please',
         )
-        signed_data = MagicMock(
-            data='Signed X'
-        )
+        signed_data = MagicMock(data='Signed X')
         with \
                 patch.object(gpg, '_create_gpg', return_value=self.gpgobject), \
                 patch.object(gpg, '_list_keys', return_value=[]), \
@@ -743,14 +746,19 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                 SaltInvocationError,
                 'Passphrase could not be read from pillar. secret does not exist.',
                 gpg.sign,
-                passphrase_pillar='secret', keyid='xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', text='sign here please',
+                passphrase_pillar='secret',
+                keyid='xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+                text='sign here please',
             )
             # No keys available
             self.assertRaisesRegex(
                 SaltInvocationError,
                 'No keyid provided and no secret keys found.',
                 gpg.sign,
-                passphrase='secret', user='salt', gnupghome=self.gnupghome, text='sign here please'
+                passphrase='secret',
+                user='salt',
+                gnupghome=self.gnupghome,
+                text='sign here please'
             )
             # Cannot write to output file
             # Only for versions of gnupg up to 0.3.7, since only then does salt do the writing to file.
@@ -759,7 +767,10 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                     IOError,
                     'Permission denied',
                     gpg.sign,
-                    passphrase='secret', keyid='xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', text='sign here please', output='foobar',
+                    passphrase='secret',
+                    keyid='xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+                    text='sign here please',
+                    output='foobar',
                 )
 
     def test_receive_keys_happy(self):
@@ -767,20 +778,26 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
         Test receiving key from a keyserver.
         '''
         recv_result = MagicMock(
-            results=[
-            {'fingerprint': 'D5D468D13E79442E92BBB9E50B3B4060449522BF', 'ok': '1', 'text': 'Not actually changed\nEntirely new key\n'}
-        ])
+            results=[{
+                'fingerprint': 'D5D468D13E79442E92BBB9E50B3B4060449522BF',
+                'ok': '1',
+                'text': 'Not actually changed\nEntirely new key\n'
+            }]
+        )
         with \
                 patch.dict(gpg.__salt__, {'user.info': MagicMock(return_value=self.user_mock)}), \
                 patch.dict(gpg.__salt__, {'config.option': MagicMock(return_value='root')}), \
                 patch.object(gpg, '_create_gpg', return_value=self.gpgobject), \
                 patch.object(self.gpgobject, 'recv_keys', return_value=recv_result):
-            res = gpg.receive_keys(keyserver='server', keys='key', user='salt', gnupghome=self.gnupghome)
+            res = gpg.receive_keys(
+                keyserver='server', keys='key', user='salt', gnupghome=self.gnupghome
+            )
         self.assertEqual(
             res,
             {
                 'result': True,
-                'message': 'Key D5D468D13E79442E92BBB9E50B3B4060449522BF added to keychain'
+                'message':
+                    'Key D5D468D13E79442E92BBB9E50B3B4060449522BF added to keychain'
             }
         )
 
@@ -788,21 +805,19 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test failing at receiving a key from keyserver.
         '''
-        recv_result = MagicMock(results=[
-            {'fingerprint': None, 'problem': '0', 'text': 'Key expired'},
-        ])
+        recv_result = MagicMock(
+            results=[{'fingerprint': None, 'problem': '0', 'text': 'Key expired'}, ]
+        )
         with \
                 patch.dict(gpg.__salt__, {'user.info': MagicMock(return_value=self.user_mock)}), \
                 patch.dict(gpg.__salt__, {'config.option': MagicMock(return_value='root')}), \
                 patch.object(gpg, '_create_gpg', return_value=self.gpgobject), \
                 patch.object(self.gpgobject, 'recv_keys', return_value=recv_result):
-            res = gpg.receive_keys(keyserver='server', keys='key', user='salt', gnupghome=self.gnupghome)
+            res = gpg.receive_keys(
+                keyserver='server', keys='key', user='salt', gnupghome=self.gnupghome
+            )
         self.assertEqual(
-            res,
-            {
-                'result': False,
-                'message': 'Unable to receive key: Key expired'
-            }
+            res, {'result': False, 'message': 'Unable to receive key: Key expired'}
         )
 
     def test_verify_happy(self):
@@ -832,16 +847,14 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
             res_1,
             {
                 'result': True,
-                'username': 'Autogenerated Key (Generated by SaltStack) <salt@saltstack.com>',
+                'username':
+                    'Autogenerated Key (Generated by SaltStack) <salt@saltstack.com>',
                 'key_id': '857C86FCF8A3FB11',
                 'trust_level': 'Undefined',
                 'message': 'The signature is verified.',
             }
         )
-        self.assertEqual(
-            res_2,
-            res_1,
-        )
+        self.assertEqual(res_2, res_1, )
         # Check whether the data was actually read from (the cached) file
         self.assertEqual(m_open.filehandles['foobar'][0].read_data, 'signature_here')
 
@@ -869,10 +882,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
             trustmodel='foobar',
         )
         verify_result = MagicMock(
-            trust_level=None,
-            username=None,
-            key_id=None,
-            __bool__=lambda x: False,
+            trust_level=None, username=None, key_id=None, __bool__=lambda x: False,
         )
         m_open = mock_open(read_data=IOError(errno.EACCES, 'Permission denied'))
         with \
@@ -892,25 +902,20 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
             # Fail to cache signature file
             res_3 = gpg.verify('anything', signature='blerp')
         self.assertEqual(
-            res_1,
-            {
-                'result': False,
-                'message': 'The signature could not be verified.',
-            }
+            res_1, {'result': False, 'message': 'The signature could not be verified.', }
         )
         self.assertEqual(
             res_2,
             {
                 'result': False,
-                'message': 'Failed to store signature in tempfile: [Errno 13] Permission denied.',
+                'message':
+                    'Failed to store signature in tempfile: [Errno {}] Permission denied.'.format(
+                        errno.EACCES
+                    ),
             }
         )
         self.assertEqual(
-            res_3,
-            {
-                'result': False,
-                'message': 'Failed to cache source locally.',
-            }
+            res_3, {'result': False, 'message': 'Failed to cache source locally.', }
         )
 
     def test_encrypt_happy(self):
@@ -935,15 +940,13 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
             # Test encrypting symmetrically with a passphrase
             res_2 = gpg.encrypt(text='secret data', recipients=None, passphrase='secret')
             # Test encrypting symmetrically with a pillar passphrase
-            res_3 = gpg.encrypt(text='secret data', recipients=None, passphrase_pillar='secret')
+            res_3 = gpg.encrypt(
+                text='secret data', recipients=None, passphrase_pillar='secret'
+            )
             # Test encrypting a file to a recipient
             res_4 = gpg.encrypt(filename='foobar', recipients='salt@saltstack.com')
         self.assertEqual(
-            res_1,
-            {
-                'result': True,
-                'message': b'a nice block of encrypted data',
-            }
+            res_1, {'result': True, 'message': b'a nice block of encrypted data', }
         )
         self.assertEqual(res_2, res_1)
         self.assertEqual(res_3, res_1)
@@ -975,14 +978,16 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                 SaltInvocationError,
                 'Passphrase could not be read from pillar. secret does not exist.',
                 gpg.encrypt,
-                passphrase_pillar='secret', text='secret data',
+                passphrase_pillar='secret',
+                text='secret data',
             )
             # Permission denied to file to encrypt
             self.assertRaisesRegex(
                 IOError,
                 'Permission denied',
                 gpg.encrypt,
-                passphrase='secret', filename='foobar',
+                passphrase='secret',
+                filename='foobar',
             )
 
     def test_decrypt_happy(self):
@@ -991,10 +996,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
         '''
         m_open = mock_open(read_data='encrypted data')
         decrypted_data = MagicMock(
-            spec=gnupg.Crypt,
-            ok=True,
-            data=b'secret data',
-            status='decryption ok',
+            spec=gnupg.Crypt, ok=True, data=b'secret data', status='decryption ok',
         )
         with \
                 patch.object(gpg, '_create_gpg', return_value=self.gpgobject), \
@@ -1009,25 +1011,12 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
             res_3 = gpg.decrypt(filename='foobar', output='baz')
             # Test decrypting bare result
             res_4 = gpg.decrypt(text='encrypted data', bare=True)
-        self.assertEqual(
-            res_1,
-            {
-                'result': True,
-                'message': 'secret data'
-            }
-        )
+        self.assertEqual(res_1, {'result': True, 'message': 'secret data'})
         self.assertEqual(res_2, res_1)
         self.assertEqual(
-            res_3,
-            {
-                'result': True,
-                'message': 'Decrypted data has been written to baz'
-            }
+            res_3, {'result': True, 'message': 'Decrypted data has been written to baz'}
         )
-        self.assertEqual(
-            res_4,
-            'secret data'
-        )
+        self.assertEqual(res_4, 'secret data')
 
     def test_decrypt_fail(self):
         '''
@@ -1051,9 +1040,11 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
             data=b'',
             username='root',
             status='no data was provided',
-            stderr=('gpg: no valid OpenPGP data found.\n[GNUPG:] NODATA 1\n'
-                    '[GNUPG:] NODATA 2\n[GNUPG:] FAILURE decrypt 4294967295\n'
-                    'gpg: decrypt_message failed: Unknown system error\n')
+            stderr=(
+                'gpg: no valid OpenPGP data found.\n[GNUPG:] NODATA 1\n'
+                '[GNUPG:] NODATA 2\n[GNUPG:] FAILURE decrypt 4294967295\n'
+                'gpg: decrypt_message failed: Unknown system error\n'
+            )
         )
         with \
                 patch.object(gpg, '_create_gpg', return_value=self.gpgobject), \
@@ -1065,20 +1056,23 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                 SaltInvocationError,
                 'Passphrase could not be read from pillar. secret does not exist.',
                 gpg.decrypt,
-                passphrase_pillar='secret', text='encrypted data',
+                passphrase_pillar='secret',
+                text='encrypted data',
             )
             # Permission denied to file to encrypt
             self.assertRaisesRegex(
                 IOError,
                 'Permission denied',
                 gpg.decrypt,
-                passphrase='secret', filename='foobar',
+                passphrase='secret',
+                filename='foobar',
             )
             self.assertEqual(
                 gpg.decrypt(text='encrypted data'),
                 {
                     'result': False,
-                    'message': 'no data was provided.\nPlease check the salt-minion log for further details.'
+                    'message':
+                        'no data was provided.\nPlease check the salt-minion log for further details.'
                 }
             )
 
@@ -1086,12 +1080,15 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test extracting fingerprint from key data.
         '''
-        cmd_result = textwrap.dedent('''
+        cmd_result = textwrap.dedent(
+            '''
             sec:-:1024:1:857C86FCF8A3FB11:1566826876:::-:::escaESCA:::#:::::0:
             fpr:::::::::1B52281BF159856CA76A04F5857C86FCDEADBEEF:
             grp:::::::::2296D2163F386E1B4962BB20887333BFEB6FDAE1:
-            uid:-::::1566826876::775802546B03C759D62E424FE586B389ED6E450E::Autogenerated Key (Generated by SaltStack) <salt@saltstack.com>::::::::::0:''')
+            uid:-::::1566826876::775802546B03C759D62E424FE586B389ED6E450E::Autogenerated Key (Generated by SaltStack) <salt@saltstack.com>::::::::::0:'''
+        )
 
-        with patch.dict(gpg.__salt__, {'cmd.run_stdout': MagicMock(return_value=cmd_result)}):
+        with patch.dict(gpg.__salt__,
+                        {'cmd.run_stdout': MagicMock(return_value=cmd_result)}):
             res = gpg.get_fingerprint_from_data(self.secret_key)
         self.assertEqual(res, '1B52281BF159856CA76A04F5857C86FCDEADBEEF')

@@ -38,10 +38,7 @@ def __virtual__():
     This state can only be used if the required functions exist.
     '''
     requirements = [
-        'gpg.list_keys',
-        'gpg.receive_keys',
-        'gpg.delete_key',
-        'gpg.trust_key',
+        'gpg.list_keys', 'gpg.receive_keys', 'gpg.delete_key', 'gpg.trust_key',
     ]
     for req in requirements:
         if req not in __salt__:
@@ -50,14 +47,8 @@ def __virtual__():
 
 
 def present(
-        name,
-        keys=None,
-        user=None,
-        keyserver=None,
-        keydata=None,
-        gnupghome=None,
-        trust=None
-    ):
+    name, keys=None, user=None, keyserver=None, keydata=None, gnupghome=None, trust=None
+):
     '''
     Ensure GPG key is present in the keychain specified by either ``user`` or
     ``gnupghome``. Also ensures GPG key is trusted at level ``trust``.
@@ -88,9 +79,7 @@ def present(
             ret['comment'].append('Invalid trust level {}'.format(trust))
             return ret
 
-    _current_keys = __salt__['gpg.list_keys'](
-        user=user,
-        gnupghome=gnupghome)
+    _current_keys = __salt__['gpg.list_keys'](user=user, gnupghome=gnupghome)
 
     trust_keys = []
     current_keys = {}
@@ -105,23 +94,19 @@ def present(
             fingerprint = __salt__['gpg.get_fingerprint_from_data'](keydata)
             if fingerprint in fingerprints:
                 ret['result'] = True
-                ret['comment'].append('GPG key with fingerprint "{}" from keydata '
-                                      'already in keychain.'
-                                      ''.format(fingerprint))
+                ret['comment'].append(
+                    'GPG key with fingerprint "{}" from keydata '
+                    'already in keychain.'
+                    ''.format(fingerprint)
+                )
                 return ret
         # Just (try to) import it
         if __opts__['test']:
             ret['result'] = None
             ret['comment'].append('GPG key would have been imported.')
+            salt.utils.dictupdate.update_dict_key_value(ret, 'changes:old', {'key': None})
             salt.utils.dictupdate.update_dict_key_value(
-                ret,
-                'changes:old',
-                {'key': None}
-            )
-            salt.utils.dictupdate.update_dict_key_value(
-                ret,
-                'changes:new',
-                {'key': 'Imported'}
+                ret, 'changes:new', {'key': 'Imported'}
             )
         else:
             res = __salt__['gpg.import_key'](text=keydata, user=user, gnupghome=gnupghome)
@@ -131,14 +116,10 @@ def present(
                 trust_keys.extend(list(set(res['fingerprints'])))
                 for fingerprint in res['fingerprints']:
                     salt.utils.dictupdate.set_dict_key_value(
-                        ret,
-                        'changes:old',
-                        {fingerprint: None},
+                        ret, 'changes:old', {fingerprint: None},
                     )
                     salt.utils.dictupdate.update_dict_key_value(
-                        ret,
-                        'changes:new',
-                        {fingerprint: {} if trust else 'present'}
+                        ret, 'changes:new', {fingerprint: {} if trust else 'present'}
                     )
             else:
                 ret['result'] = False
@@ -149,35 +130,34 @@ def present(
         for key in keys:
             if key in current_keys or key in fingerprints:
                 ret['result'] = True
-                ret['comment'].append('GPG public key "{}" already in keychain.'
-                                      ''.format(key))
+                ret['comment'].append(
+                    'GPG public key "{}" already in keychain.'
+                    ''.format(key)
+                )
                 trust_keys.append(key)
             else:
                 salt.utils.dictupdate.update_dict_key_value(
-                    ret,
-                    'changes:old',
-                    {key: None},
+                    ret, 'changes:old', {key: None},
                 )
                 salt.utils.dictupdate.update_dict_key_value(
-                    ret,
-                    'changes:new',
-                    {key: {} if trust else 'present'},
+                    ret, 'changes:new', {key: {} if trust else 'present'},
                 )
                 if __opts__['test']:
                     ret['result'] = None
-                    ret['comment'].append('GPG public key "{}" would have been added.'
-                                          ''.format(key))
+                    ret['comment'].append(
+                        'GPG public key "{}" would have been added.'
+                        ''.format(key)
+                    )
                 else:
                     res = __salt__['gpg.receive_keys'](
-                        keyserver=keyserver,
-                        keys=key,
-                        user=user,
-                        gnupghome=gnupghome,
+                        keyserver=keyserver, keys=key, user=user, gnupghome=gnupghome,
                     )
                     if res['result']:
                         ret['result'] = True
-                        ret['comment'].append('GPG public key "{}" added to GPG keychain.'
-                                              ''.format(key))
+                        ret['comment'].append(
+                            'GPG public key "{}" added to GPG keychain.'
+                            ''.format(key)
+                        )
                         trust_keys.append(key)
                     else:
                         ret['result'] = False
@@ -187,37 +167,27 @@ def present(
     if trust and ret['result']:
         for key in trust_keys:
             res = trusted(
-                name,
-                keys=trust_keys,
-                user=user,
-                gnupghome=gnupghome,
-                trust=trust
+                name, keys=trust_keys, user=user, gnupghome=gnupghome, trust=trust
             )
             if res['result'] and res['changes']:
                 if ret['changes']['old'] and ret['changes']['old'][key]:
                     # Only report old trust-level if key existed before.
                     salt.utils.dictupdate.update_dict_key_value(
                         ret,
-                        'changes:old:{}'.format(key),
-                        {'trust': res['changes']['old'][key]}
+                        'changes:old:{}'.format(key), {
+                            'trust': res['changes']['old'][key]
+                        }
                     )
                 salt.utils.dictupdate.update_dict_key_value(
                     ret,
-                    'changes:new:{}'.format(key),
-                    {'trust': res['changes']['new'][key]}
+                    'changes:new:{}'.format(key), {'trust': res['changes']['new'][key]}
                 )
             ret['result'] = res['result']
             ret['comment'].extend(res['comment'])
     return ret
 
 
-def absent(
-        name,
-        keys=None,
-        user=None,
-        passphrases=None,
-        gnupghome=None
-    ):
+def absent(name, keys=None, user=None, passphrases=None, gnupghome=None):
     '''
     Ensure GPG private/public key is absent in keychain.
     Note that a public key can only be removed after a private key is also removed,
@@ -244,9 +214,7 @@ def absent(
     elif passphrases is None:
         passphrases = []
 
-    _current_keys = __salt__['gpg.list_keys'](
-        user=user,
-        gnupghome=gnupghome)
+    _current_keys = __salt__['gpg.list_keys'](user=user, gnupghome=gnupghome)
 
     keys_by_keyid = {}
     keys_by_fingerprint = {}
@@ -258,17 +226,17 @@ def absent(
         current_key = keys_by_keyid.get(key, keys_by_fingerprint.get(key))
         if current_key:
             salt.utils.dictupdate.set_dict_key_value(
-                ret,
-                'changes:old:{}'.format(key),
-                'present')
+                ret, 'changes:old:{}'.format(key), 'present'
+            )
             salt.utils.dictupdate.set_dict_key_value(
-                ret,
-                'changes:new:{}'.format(key),
-                None)
+                ret, 'changes:new:{}'.format(key), None
+            )
             if __opts__['test']:
                 ret['result'] = None
-                ret['comment'].append('Key "{}" would have been removed from the '
-                                      'GPG keychain.'.format(key))
+                ret['comment'].append(
+                    'Key "{}" would have been removed from the '
+                    'GPG keychain.'.format(key)
+                )
             else:
                 delete_kwargs = salt.utils.data.filter_falsey({
                     'fingerprint': current_key['fingerprint'],
@@ -290,13 +258,7 @@ def absent(
     return ret
 
 
-def trusted(
-        name,
-        keys=None,
-        user=None,
-        gnupghome=None,
-        trust=None
-    ):
+def trusted(name, keys=None, user=None, gnupghome=None, trust=None):
     '''
     Ensures the gpgkey(s) specified is/are trusted to the specified trust level.
 
@@ -319,9 +281,7 @@ def trusted(
     if isinstance(keys, six.string_types):
         keys = [keys]
 
-    _current_keys = __salt__['gpg.list_keys'](
-        user=user,
-        gnupghome=gnupghome)
+    _current_keys = __salt__['gpg.list_keys'](user=user, gnupghome=gnupghome)
 
     keys_by_keyid = {}
     keys_by_fingerprint = {}
@@ -335,22 +295,20 @@ def trusted(
         if current_key:
             if current_key['ownerTrust'] != TRUST_MAP[trust]:
                 salt.utils.dictupdate.set_dict_key_value(
-                    ret,
-                    'changes:old:{}'.format(key),
-                    current_key['ownerTrust'])
+                    ret, 'changes:old:{}'.format(key), current_key['ownerTrust']
+                )
                 salt.utils.dictupdate.set_dict_key_value(
-                    ret,
-                    'changes:new:{}'.format(key),
-                    trust)
+                    ret, 'changes:new:{}'.format(key), trust
+                )
                 if __opts__['test']:
                     ret['result'] = None
-                    ret['comment'].append('Key "{}" would have been tusted to "{}".'
-                                          ''.format(key, trust))
+                    ret['comment'].append(
+                        'Key "{}" would have been tusted to "{}".'
+                        ''.format(key, trust)
+                    )
                 else:
                     params = salt.utils.data.filter_falsey({
-                        'trust_level': trust,
-                        'user': user,
-                        'gnupghome': gnupghome,
+                        'trust_level': trust, 'user': user, 'gnupghome': gnupghome,
                     })
                     if 'fingerprint' in current_key:
                         params.update({'fingerprint': current_key['fingerprint']})
@@ -358,36 +316,42 @@ def trusted(
                         params.update({'keyid': current_key['keyid']})
                     res = __salt__['gpg.trust_key'](**params)
                     if res['result']:
-                        ret['comment'].append('Set trust level for "{}" to "{}".'.format(key, trust))
+                        ret['comment'].append(
+                            'Set trust level for "{}" to "{}".'.format(key, trust)
+                        )
                     else:
                         ret['result'] = False
                         ret['comment'].append(res['message'])
                         del ret['changes']['old'][key]
                         del ret['changes']['new'][key]
             else:
-                ret['comment'].append('Trust level for key "{}" already set to "{}".'
-                                      ''.format(key, trust))
+                ret['comment'].append(
+                    'Trust level for key "{}" already set to "{}".'
+                    ''.format(key, trust)
+                )
         else:
             ret['result'] = False
-            ret['comment'].append('Key "{}" not in keychain, cannot trust.'
-                                  ''.format(key))
+            ret['comment'].append(
+                'Key "{}" not in keychain, cannot trust.'
+                ''.format(key)
+            )
     return ret
 
 
 def data_encrypted(
-        name,
-        source=None,
-        contents=None,
-        contents_pillar=None,
-        recipients=None,
-        symmetric=None,
-        passphrase=None,
-        passphrase_pillar=None,
-        armor=None,
-        sign=None,
-        user=None,
-        gnupghome=None,
-    ):
+    name,
+    source=None,
+    contents=None,
+    contents_pillar=None,
+    recipients=None,
+    symmetric=None,
+    passphrase=None,
+    passphrase_pillar=None,
+    armor=None,
+    sign=None,
+    user=None,
+    gnupghome=None,
+):
     '''
     Ensures file with name ``name`` contains encrypted data either from file ``source``,
     from ``contents`` or the pillar entry denoted by ``contents_pillar``.
@@ -428,14 +392,18 @@ def data_encrypted(
     # Sanity-checking input
     if not salt.utils.data.exactly_one((source, contents, contents_pillar)):
         ret['result'] = False
-        ret['comment'].append('Exactly one of either source, contents or '
-                              'contents_pillar must be provided.')
+        ret['comment'].append(
+            'Exactly one of either source, contents or '
+            'contents_pillar must be provided.'
+        )
     elif contents_pillar:
         # Sneakily preload data from pillar into contents variable
         contents = __salt__['pillar.get'](contents_pillar, None)
         if contents is None:
             ret['result'] = False
-            ret['comment'].append('No data found in pillar for {}'.format(contents_pillar))
+            ret['comment'].append(
+                'No data found in pillar for {}'.format(contents_pillar)
+            )
     if not ret['result']:
         return ret
 
@@ -452,28 +420,21 @@ def data_encrypted(
             # From https://github.com/file/file/blob/master/magic/Magdir/pgp
             with salt.utils.files.flopen(name, 'rb') as _fp:
                 data = _fp.read(27)
-                if (
-                        data.startswith(b'-----BEGIN PGP MESSAGE-----') or  # Armored encrypted message
+                if (data.startswith(b'-----BEGIN PGP MESSAGE-----') or  # Armored encrypted message
                         data.startswith(r'\x84\x8c\x03') or  # 1024b RSA encrypted data
                         data.startswith(r'\x85\x01\x0c\x03') or  # 2048b RSA encrypted data
                         data.startswith(r'\x85\x01\x8c\x03') or  # 3072b RSA encrypted data
                         data.startswith(r'\x85\x02\x0c\x03') or  # 3072b RSA encrypted data
                         data.startswith(r'\x85\x04\x0c\x03')  # 4096b RSA encrypted data
-                        ):
+                    ):
                     ret['result'] = True
         if ret['result'] is True:
             ret['comment'].append('File already contains encrypted data')
             return ret
     # Encryption is go
+    salt.utils.dictupdate.set_dict_key_value(ret, 'changes:old:{}'.format(name), None, )
     salt.utils.dictupdate.set_dict_key_value(
-        ret,
-        'changes:old:{}'.format(name),
-        None,
-    )
-    salt.utils.dictupdate.set_dict_key_value(
-        ret,
-        'changes:new:{}'.format(name),
-        'encrypted data',
+        ret, 'changes:new:{}'.format(name), 'encrypted data',
     )
     if __opts__['test']:
         ret['result'] = None
@@ -520,18 +481,18 @@ def data_encrypted(
 
 
 def data_decrypted(
-        name,
-        source=None,
-        user=None,
-        contents=None,
-        contents_pillar=None,
-        symmetric=None,
-        passphrase=None,
-        passphrase_pillar=None,
-        gnupghome=None,
-        always_trust=False,
-        force=False,
-    ):
+    name,
+    source=None,
+    user=None,
+    contents=None,
+    contents_pillar=None,
+    symmetric=None,
+    passphrase=None,
+    passphrase_pillar=None,
+    gnupghome=None,
+    always_trust=False,
+    force=False,
+):
     '''
     Ensures file with name ``name`` contains decrypted data either from file ``source``,
     from ``contents`` or the pillar entry denoted by ``contents_pillar``.
@@ -566,14 +527,18 @@ def data_decrypted(
     # Sanity-checking input
     if not salt.utils.data.exactly_one((source, contents, contents_pillar)):
         ret['result'] = False
-        ret['comment'].append('Exactly one of either source, contents or '
-                              'contents_pillar must be provided.')
+        ret['comment'].append(
+            'Exactly one of either source, contents or '
+            'contents_pillar must be provided.'
+        )
     elif contents_pillar:
         # Sneakily preload data from pillar into contents variable
         contents = __salt__['pillar.get'](contents_pillar, None)
         if contents is None:
             ret['result'] = False
-            ret['comment'].append('No data found in pillar for {}'.format(contents_pillar))
+            ret['comment'].append(
+                'No data found in pillar for {}'.format(contents_pillar)
+            )
     if not ret['result']:
         return ret
 
@@ -587,15 +552,9 @@ def data_decrypted(
     # are the same.
     # Just check afterwards if the contents were the same and delete changes.
 
+    salt.utils.dictupdate.set_dict_key_value(ret, 'changes:old:{}'.format(name), None, )
     salt.utils.dictupdate.set_dict_key_value(
-        ret,
-        'changes:old:{}'.format(name),
-        None,
-    )
-    salt.utils.dictupdate.set_dict_key_value(
-        ret,
-        'changes:new:{}'.format(name),
-        'decrypted data',
+        ret, 'changes:new:{}'.format(name), 'decrypted data',
     )
 
     target_hash = None
@@ -603,9 +562,7 @@ def data_decrypted(
     if __salt__['file.file_exists'](name):
         target_hash = __salt__['file.get_hash'](name)
         salt.utils.dictupdate.set_dict_key_value(
-            ret,
-            'changes:old:{}'.format(name),
-            target_hash,
+            ret, 'changes:old:{}'.format(name), target_hash,
         )
 
     decrypt_kwargs = salt.utils.data.filter_falsey({
@@ -653,18 +610,18 @@ def data_decrypted(
 
 
 def data_signed(
-        name,
-        source=None,
-        contents=None,
-        contents_pillar=None,
-        keyid=None,
-        detach=False,
-        passphrase=None,
-        passphrase_pillar=None,
-        user=None,
-        gnupghome=None,
-        force=None,
-    ):
+    name,
+    source=None,
+    contents=None,
+    contents_pillar=None,
+    keyid=None,
+    detach=False,
+    passphrase=None,
+    passphrase_pillar=None,
+    user=None,
+    gnupghome=None,
+    force=None,
+):
     '''
     Ensures file with name ``name`` contains the data from ``source``, ``contents``
     or ``contents_pillar`` and signature using ``keyid``.
@@ -701,14 +658,18 @@ def data_signed(
     # Sanity-checking input
     if not salt.utils.data.exactly_one((source, contents, contents_pillar)):
         ret['result'] = False
-        ret['comment'].append('Exactly one of either source, contents or '
-                              'contents_pillar must be provided.')
+        ret['comment'].append(
+            'Exactly one of either source, contents or '
+            'contents_pillar must be provided.'
+        )
     elif contents_pillar:
         # Sneakily preload data from pillar into contents variable
         contents = __salt__['pillar.get'](contents_pillar, None)
         if contents is None:
             ret['result'] = False
-            ret['comment'].append('No data found in pillar for {}'.format(contents_pillar))
+            ret['comment'].append(
+                'No data found in pillar for {}'.format(contents_pillar)
+            )
     if not ret['result']:
         return ret
 
@@ -718,15 +679,9 @@ def data_signed(
         ret['comment'].append('Target file already exists. Not forcing overwrite.')
         return ret
 
+    salt.utils.dictupdate.set_dict_key_value(ret, 'changes:old:{}'.format(name), None, )
     salt.utils.dictupdate.set_dict_key_value(
-        ret,
-        'changes:old:{}'.format(name),
-        None,
-    )
-    salt.utils.dictupdate.set_dict_key_value(
-        ret,
-        'changes:new:{}'.format(name),
-        'signature' if detach else 'signed data',
+        ret, 'changes:new:{}'.format(name), 'signature' if detach else 'signed data',
     )
 
     sign_kwargs = salt.utils.data.filter_falsey({
@@ -774,15 +729,15 @@ def data_signed(
 
 
 def data_verified(
-        name,
-        contents=None,
-        contents_pillar=None,
-        user=None,
-        filename=None,
-        gnupghome=None,
-        signature=None,
-        trustmodel=None,
-    ):
+    name,
+    contents=None,
+    contents_pillar=None,
+    user=None,
+    filename=None,
+    gnupghome=None,
+    signature=None,
+    trustmodel=None,
+):
     '''
     Ensures file with name ``name`` or data provided in ``contents`` or
     ``contents_pillar`` verifies its signature check.
@@ -819,7 +774,9 @@ def data_verified(
         contents = __salt__['pillar.get'](contents_pillar, None)
         if contents is None:
             ret['result'] = False
-            ret['comment'].append('No data found in pillar for {}'.format(contents_pillar))
+            ret['comment'].append(
+                'No data found in pillar for {}'.format(contents_pillar)
+            )
     if not ret['result']:
         return ret
 
@@ -832,8 +789,7 @@ def data_verified(
 
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'].append(('data' if contents else name) +
-                              'would have been verified.')
+        ret['comment'].append(('data' if contents else name) + 'would have been verified.')
     else:
         if contents:
             verify_kwargs.update({'text': contents})
