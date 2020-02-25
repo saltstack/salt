@@ -1091,7 +1091,7 @@ def remove(path, force=False):
         else:
             for name in os.listdir(path):
                 item = '{0}\\{1}'.format(path, name)
-                # If it's a normal directory, recurse to remove it's contents
+                # If it's a normal directory, recurse to remove its contents
                 remove(item, force)
 
             # rmdir will work now because the directory is empty
