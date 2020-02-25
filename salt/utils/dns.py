@@ -95,7 +95,7 @@ class RFC(object):
             return [code for code, name in ref.items() if lookup in name][-1]
         else:
             # OrderedDicts only!(?)
-            return ref.keys()[ref.values().index(lookup)]
+            return list(ref.keys())[ref.values().index(lookup)]
 
 
 def _to_port(port):
@@ -165,7 +165,7 @@ def _weighted_order(recs):
 
 def _cast(rec_data, rec_cast):
     if isinstance(rec_cast, dict):
-        rec_data = type(rec_cast.keys()[0])(rec_data)
+        rec_data = type(list(rec_cast.keys())[0])(rec_data)
         res = rec_cast[rec_data]
         return res
     elif isinstance(rec_cast, (list, tuple)):

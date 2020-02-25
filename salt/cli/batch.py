@@ -180,7 +180,7 @@ class Batch(object):
                     if to_run:
                         minion_id = to_run.pop()
                         if isinstance(minion_id, dict):
-                            next_.append(minion_id.keys()[0])
+                            next_.append(list(minion_id.keys())[0])
                         else:
                             next_.append(minion_id)
 

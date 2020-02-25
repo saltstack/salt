@@ -887,7 +887,7 @@ def tablespace_alter(
     if set_option:
         queries.append(
             'ALTER TABLESPACE "{0}" SET ({1} = {2})'.format(
-                name, set_option.keys()[0], set_option.values()[0]
+                name, list(set_option.keys())[0], list(set_option.values())[0]
             )
         )
     if reset_option:

@@ -436,7 +436,7 @@ def image_update(id=None, name=None, profile=None, **kwargs):  # pylint: disable
         if "result" in image and not image["result"]:
             return image
         elif len(image) == 1:
-            image = image.values()[0]
+            image = list(image.values())[0]
     elif name:
         img_list = image_list(name=name, profile=profile)
         if img_list is dict and "result" in img_list:

@@ -685,7 +685,7 @@ def hpa(disks, size=None):
 
     hpa_data = {}
     for disk, data in hdparms(disks, "N").items():
-        visible, total, status = data.values()[0]
+        visible, total, status = list(data.values())[0]
         if visible == total or "disabled" in status:
             hpa_data[disk] = {"total": total}
         else:
