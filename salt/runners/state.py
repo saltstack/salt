@@ -217,7 +217,7 @@ def orchestrate_show_sls(mods,
     Display the state data from a specific sls, or list of sls files, after
     being render using the master minion.
 
-    Note, the master minion adds a "_master" suffix to it's minion id.
+    Note, the master minion adds a "_master" suffix to its minion id.
 
     .. seealso:: The state.show_sls module function
 

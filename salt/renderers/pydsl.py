@@ -349,7 +349,7 @@ __all__ = ['render']
 def render(template, saltenv='base', sls='', tmplpath=None, rendered_sls=None, **kws):
     sls = salt.utils.stringutils.to_str(sls)
     mod = types.ModuleType(sls)
-    # Note: mod object is transient. It's existence only lasts as long as
+    # Note: mod object is transient. Its existence only lasts as long as
     #       the lowstate data structure that the highstate in the sls file
     #       is compiled to.
 

@@ -124,7 +124,7 @@ def __virtual__():
                     NILRT_RESTARTCHECK_STATE_PATH,
                     exc.errno,
                     exc.strerror)
-        # modules.dep always exists, make sure it's restart state files also exist
+        # modules.dep always exists, make sure its restart state files also exist
         if not (os.path.exists(os.path.join(NILRT_RESTARTCHECK_STATE_PATH, 'modules.dep.timestamp')) and
                 os.path.exists(os.path.join(NILRT_RESTARTCHECK_STATE_PATH, 'modules.dep.md5sum'))):
             _update_nilrt_restart_state()

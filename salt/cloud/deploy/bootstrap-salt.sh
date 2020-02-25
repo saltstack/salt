@@ -1859,7 +1859,7 @@ if [ "$ITYPE" = "git" ]; then
 
     if [ "$_POST_NEON_INSTALL" -eq $BS_TRUE ]; then
         echo
-        echowarn "Post Neon git based installations will always install salt and it's dependencies using pip"
+        echowarn "Post Neon git based installations will always install salt and its dependencies using pip"
         echowarn "You have 10 seconds to cancel and stop the bootstrap process"
         echo
         sleep 10
@@ -6922,7 +6922,7 @@ install_macosx_stable_post() {
     set +o nounset
     # shellcheck disable=SC1091
     . /etc/profile
-    # Revert nounset to it's previous state
+    # Revert nounset to its previous state
     set -o nounset
 
     return 0

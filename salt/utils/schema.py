@@ -442,7 +442,7 @@ class SchemaMeta(six.with_metaclass(Prepareable, type)):
                 # the value is an item instance
                 if hasattr(value, 'title') and value.title is None:
                     # It's an item instance without a title, make the title
-                    # it's name
+                    # its name
                     value.title = key
                 entry_name = value.__item_name__ or key
                 items[entry_name] = value
@@ -462,7 +462,7 @@ class SchemaMeta(six.with_metaclass(Prepareable, type)):
         if flatten is True:
             # This configuration block is to be treated as a part of the
             # configuration for which it was defined as an attribute, not as
-            # it's own sub configuration
+            # its own sub configuration
             instance.__flatten__ = True
         if allow_additional_items is True:
             # The configuration block only accepts the configuration items
@@ -502,7 +502,7 @@ class BaseSchemaItemMeta(six.with_metaclass(Prepareable, type)):
                     attributes.append(argname)
             except TypeError:
                 # On the base object type, __init__ is just a wrapper which
-                # triggers a TypeError when we're trying to find out it's
+                # triggers a TypeError when we're trying to find out its
                 # argspec
                 continue
         attrs['_attributes'] = attributes
@@ -1162,7 +1162,7 @@ class ArrayItem(BaseSchemaItem):
 
     def __get_items__(self):
         if isinstance(self.items, (Schema, SchemaItem)):
-            # This is either a Schema or a Basetem, return it in it's
+            # This is either a Schema or a Basetem, return it in its
             # serialized form
             return self.items.serialize()
         if isinstance(self.items, (tuple, list)):

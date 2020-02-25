@@ -200,7 +200,7 @@ def runas(cmdLine, username, password=None, cwd=None):
         # Resume the process
         psutil.Process(dwProcessId).resume()
 
-        # Wait for the process to exit and get it's return code.
+        # Wait for the process to exit and get its return code.
         if win32event.WaitForSingleObject(hProcess, win32event.INFINITE) == win32con.WAIT_OBJECT_0:
             exitcode = win32process.GetExitCodeProcess(hProcess)
             ret['retcode'] = exitcode

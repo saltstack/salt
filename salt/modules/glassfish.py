@@ -220,7 +220,7 @@ def _create_element(name, element_type, data, server=None):
 
 def _update_element(name, element_type, data, server=None):
     '''
-    Update an element, including it's properties
+    Update an element, including its properties
     '''
     # Urlencode the name (names may have slashes)
     name = quote(name, safe='')

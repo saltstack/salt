@@ -64,7 +64,7 @@ def start(cmd, output='json', interval=1):
 
     The script engine will scrap stdout of the
     given script and generate an event based on the
-    presence of the 'tag' key and it's value.
+    presence of the 'tag' key and its value.
 
     If there is a data obj available, that will also
     be fired along with the tag.

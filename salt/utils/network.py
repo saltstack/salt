@@ -811,7 +811,7 @@ def _interfaces_ifconfig(out):
         if iface in ret:
             # SunOS optimization, where interfaces occur twice in 'ifconfig -a'
             # output with the same name: for ipv4 and then for ipv6 addr family.
-            # Every instance has it's own 'UP' status and we assume that ipv4
+            # Every instance has its own 'UP' status and we assume that ipv4
             # status determines global interface status.
             #
             # merge items with higher priority for older values
@@ -1018,7 +1018,7 @@ def get_net_start(ipaddr, netmask):
 
 def get_net_size(mask):
     '''
-    Turns an IPv4 netmask into it's corresponding prefix length
+    Turns an IPv4 netmask into its corresponding prefix length
     (255.255.255.0 -> 24 as in 192.168.1.10/24).
     '''
     binary_str = ''

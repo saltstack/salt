@@ -2184,7 +2184,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                     new_retains = set(generate_fake_files(maxfiles=fake_retain[retainable], every=retain_interval))
                     # if we generate less than the number of files expected,
                     # then the oldest file will also be retained
-                    # (correctly, since it's the first in it's category)
+                    # (correctly, since it's the first in its category)
                     if fake_retain[retainable] == 'all' or len(new_retains) < fake_retain[retainable]:
                         new_retains.add(fake_file_list[0])
                     retained_files |= new_retains

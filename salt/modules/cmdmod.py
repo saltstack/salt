@@ -1004,7 +1004,7 @@ def run(cmd,
         redirection.
 
     :param bool bg: If ``True``, run command in background and do not await or
-        deliver it's results
+        deliver its results
 
         .. versionadded:: 2016.3.0
 
@@ -2415,7 +2415,7 @@ def script(source,
         redirection.
 
     :param bool bg: If True, run script in background and do not await or
-        deliver it's results
+        deliver its results
 
     :param dict env: Environment variables to be set prior to execution.
 
@@ -4009,7 +4009,7 @@ def run_bg(cmd,
     r'''
     .. versionadded: 2016.3.0
 
-    Execute the passed command in the background and return it's PID
+    Execute the passed command in the background and return its PID
 
     .. note::
 

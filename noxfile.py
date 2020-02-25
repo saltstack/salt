@@ -1005,7 +1005,7 @@ def _lint_pre_commit(session, rcfile, flags, paths):
 @nox.session(python='3')
 def lint(session):
     '''
-    Run PyLint against Salt and it's test suite. Set PYLINT_REPORT to a path to capture output.
+    Run PyLint against Salt and its test suite. Set PYLINT_REPORT to a path to capture output.
     '''
     session.notify('lint-salt-{}'.format(session.python))
     session.notify('lint-tests-{}'.format(session.python))
@@ -1029,7 +1029,7 @@ def lint_salt(session):
 @nox.session(python='3', name='lint-tests')
 def lint_tests(session):
     '''
-    Run PyLint against Salt and it's test suite. Set PYLINT_REPORT to a path to capture output.
+    Run PyLint against Salt and its test suite. Set PYLINT_REPORT to a path to capture output.
     '''
     flags = [
         '--disable=I'
@@ -1059,7 +1059,7 @@ def lint_salt_pre_commit(session):
 @nox.session(python=False, name='lint-tests-pre-commit')
 def lint_tests_pre_commit(session):
     '''
-    Run PyLint against Salt and it's test suite. Set PYLINT_REPORT to a path to capture output.
+    Run PyLint against Salt and its test suite. Set PYLINT_REPORT to a path to capture output.
     '''
     flags = [
         '--disable=I'

@@ -3762,7 +3762,7 @@ def create_snapshot(name, kwargs=None, call=None):
 
 def revert_to_snapshot(name, kwargs=None, call=None):
     '''
-    Revert virtual machine to it's current snapshot. If no snapshot
+    Revert virtual machine to its current snapshot. If no snapshot
     exists, the state of the virtual machine remains unchanged
 
     .. note::

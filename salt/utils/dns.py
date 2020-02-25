@@ -665,7 +665,7 @@ def query(
 ):
     '''
     Query DNS for information.
-    Where `lookup()` returns record data, `query()` tries to interpret the data and return it's results
+    Where `lookup()` returns record data, `query()` tries to interpret the data and return its results
 
     :param name: name to lookup
     :param rdtype: DNS record type
@@ -1038,7 +1038,7 @@ def service(
     secure=None
 ):
     '''
-    Find an SRV service in a domain or it's parents
+    Find an SRV service in a domain or its parents
     :param svc: service to find (ldap, 389, etc)
     :param proto: protocol the service talks (tcp, udp, etc)
     :param domain: domain to start search in

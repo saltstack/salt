@@ -70,7 +70,7 @@ def uuid(dev=None):
     '''
     try:
         if dev is None:
-            # take the only directory in /sys/fs/bcache and return it's basename
+            # take the only directory in /sys/fs/bcache and return its basename
             return list(salt.utils.path.os_walk('/sys/fs/bcache/'))[0][1][0]
         else:
             # basename of the /sys/block/{dev}/bcache/cache symlink target
@@ -133,7 +133,7 @@ def detach(dev=None):
     Detach a backing device(s) from a cache set
     If no dev is given, all backing devices will be attached.
 
-    Detaching a backing device will flush it's write cache.
+    Detaching a backing device will flush its write cache.
     This should leave the underlying device in a consistent state, but might take a while.
 
     CLI example:
@@ -409,7 +409,7 @@ def config_(dev=None, **kwargs):
 
 def status(stats=False, config=False, internals=False, superblock=False, alldevs=False):
     '''
-    Show the full status of the BCache system and optionally all it's involved devices
+    Show the full status of the BCache system and optionally all its involved devices
 
     CLI example:
 

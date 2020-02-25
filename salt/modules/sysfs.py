@@ -32,7 +32,7 @@ def __virtual__():
 def attr(key, value=None):
     '''
     Access/write a SysFS attribute.
-    If the attribute is a symlink, it's destination is returned
+    If the attribute is a symlink, its destination is returned
 
     :return: value or bool
 
