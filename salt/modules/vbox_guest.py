@@ -281,7 +281,7 @@ def grant_access_to_shared_folders_to(name, users=None):
     '''
     Grant access to auto-mounted shared folders to the users.
 
-    User is specified by it's name. To grant access for several users use argument `users`.
+    User is specified by its name. To grant access for several users use argument `users`.
     Access will be denied to the users not listed in `users` argument.
 
     See https://www.virtualbox.org/manual/ch04.html#sf_mount_auto for more details.

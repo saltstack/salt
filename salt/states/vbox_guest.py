@@ -97,7 +97,7 @@ def grant_access_to_shared_folders_to(name, users=None):
     '''
     Grant access to auto-mounted shared folders to the users.
 
-    User is specified by it's name. To grant access for several users use
+    User is specified by its name. To grant access for several users use
     argument `users`.
 
     name
