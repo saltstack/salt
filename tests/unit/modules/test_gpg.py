@@ -658,8 +658,11 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test signing a message. Happy paths.
         '''
-        signed_data = MagicMock()
-        signed_data.configure_mock(**{'data': 'Signed X'})
+        signed_data = MagicMock(
+            spec=gnupg.Sign,
+            status='OK',
+            data='Signed X',
+        )
         outputfile = os.path.join(RUNTIME_VARS.TMP, 'foobar')
         m_open = mock_open()
         with \
@@ -698,7 +701,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(res_1, {'result': True, 'message': 'Signed X'})
         self.assertEqual(res_2, res_1)
         self.assertEqual(res_3, res_1)
-        self.assertEqual(res_4, res_1)
+        self.assertEqual(res_4, {'result': True, 'message': 'Signed data has been written to {}'.format(outputfile)})
         # Check whether the data was actually written to file
         # But salt only does this for versions of gnupg up to 0.3.7
         if salt.utils.versions.version_cmp(gnupg.__version__, '0.3.7') < 0:
@@ -818,6 +821,8 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                 patch.object(gpg, '_create_gpg', return_value=self.gpgobject), \
                 patch.object(self.gpgobject, 'verify', return_value=verify_result), \
                 patch.object(self.gpgobject, 'verify_file', return_value=verify_result), \
+                patch.dict(gpg.__salt__, {'cp.cache_file': MagicMock(return_value='foobar')}), \
+                patch.object(salt.utils.files, 'safe_rm', return_value=True), \
                 patch.object(salt.utils.files, 'fopen', m_open):
             # Verify message passed as text
             res_1 = gpg.verify(text='some_signed_message')
@@ -837,7 +842,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
             res_2,
             res_1,
         )
-        # Check whether the data was actually read from file
+        # Check whether the data was actually read from (the cached) file
         self.assertEqual(m_open.filehandles['foobar'][0].read_data, 'signature_here')
 
     def test_verify_fail(self):
@@ -878,6 +883,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                 patch.object(self.gpgobject, 'verify_file', return_value=verify_result), \
                 patch.dict(gpg.__salt__, {'cp.cache_file': MagicMock(return_value=False)}), \
                 patch.object(salt.utils.files, 'mkstemp', return_value='/noooo'), \
+                patch.object(salt.utils.files, 'safe_rm', return_value=True), \
                 patch.object(salt.utils.files, 'fopen', m_open):
             # Verify non-signed message passed as text
             res_1 = gpg.verify('not a signed text')
@@ -896,7 +902,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
             res_2,
             {
                 'result': False,
-                'message': 'Failed to store signature in tempfile: /noooo.',
+                'message': 'Failed to store signature in tempfile: [Errno 13] Permission denied.',
             }
         )
         self.assertEqual(

@@ -1029,7 +1029,7 @@ def sign(
                 with salt.utils.files.flopen(output, 'wb') as fout:
                     fout.write(res.data)
             if output:
-                ret['message'] = '{} has been written to {}.'.format(
+                ret['message'] = '{} has been written to {}'.format(
                     'Signature' if detach else 'Signed data',
                     output
                 )
@@ -1142,10 +1142,10 @@ def verify(
             verified = gpg.verify(text, extra_args=extra_args)
     else:
         if signature:
-            with salt.utils.files.flopen(cached_signature, 'rb') as _fp:
+            with salt.utils.files.fopen(cached_signature, 'rb') as _fp:
                 verified = gpg.verify_file(_fp, filename, extra_args=extra_args)
         else:
-            with salt.utils.files.flopen(filename, "rb") as _fp:
+            with salt.utils.files.fopen(filename, 'rb') as _fp:
                 verified = gpg.verify_file(_fp, extra_args=extra_args)
     if cached_signature:
         salt.utils.files.safe_rm(cached_signature)
