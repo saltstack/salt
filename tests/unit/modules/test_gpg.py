@@ -238,9 +238,9 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
             ret = gpg.get_key(fingerprint='someweirdandfunkynonexistingfingerprintA')
         self.assertEqual(ret, False)
 
-    def test_delete_key(self):
-        """
-        Test gpg.delete_key
+    def test_delete_key_happy(self):
+        '''
+        Test gpg.delete_key succesfully
         '''
         _expected_result = {
             'result': True,
@@ -250,15 +250,82 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
             )
         }
 
-        mock_opt = MagicMock(return_value='root')
         with \
                 patch.dict(gpg.__salt__, {'user.info': MagicMock(return_value=self.user_mock)}), \
-                patch.dict(gpg.__salt__, {'config.option': mock_opt}), \
+                patch.dict(gpg.__salt__, {'config.option': MagicMock(return_value='root')}), \
                 patch.object(gpg, '_create_gpg', return_value=self.gpgobject), \
                 patch.object(gpg, '_list_keys', return_value=self.list_result), \
                 patch.object(self.gpgobject, 'delete_keys', MagicMock(return_value='ok')):
             ret = gpg.delete_key('xxxxxxxxxxxxxxxx', delete_secret=True)
         self.assertEqual(ret, _expected_result)
+
+    def test_delete_key_fail(self):
+        '''
+        Test gpg.delete_key failing
+        '''
+        with \
+                patch.dict(gpg.__salt__, {'user.info': MagicMock(return_value=self.user_mock)}), \
+                patch.dict(gpg.__salt__, {'config.option': MagicMock(return_value='root')}):
+            # Missing arguments
+            self.assertRaisesRegex(
+                SaltInvocationError,
+                'Exactly one of either keyid or fingerprint must be specified.',
+                gpg.delete_key,
+            )
+            # Both keyid and fingerprint provided
+            self.assertRaisesRegex(
+                SaltInvocationError,
+                'Exactly one of either keyid or fingerprint must be specified.',
+                gpg.delete_key,
+                keyid='foo',
+                fingerprint='foo',
+            )
+
+    def test_delete_key_fail_custom(self):
+        '''
+        Test gpg.delete_key failing to delete, passing the custom return from delete_keys.
+        '''
+        get_key_result = {
+            'fingerprint': 'key_fingerprint',
+            'keyid': 'key_id',
+        }
+        with \
+                patch.dict(gpg.__salt__, {'user.info': MagicMock(return_value=self.user_mock)}), \
+                patch.dict(gpg.__salt__, {'config.option': MagicMock(return_value='root')}), \
+                patch.object(gpg, '_create_gpg', return_value=self.gpgobject), \
+                patch.object(gpg, 'get_key', return_value=get_key_result), \
+                patch.object(gpg, 'get_secret_key', return_value=None), \
+                patch.object(self.gpgobject, 'delete_keys', MagicMock(return_value='not ok')):
+            res = gpg.delete_key(
+                gnupghome=self.gnupghome,
+                keyid='foo',
+            )
+        self.assertEqual(
+            res,
+            {'result': False, 'message': 'Failed to delete public key {}: not ok'.format('key_fingerprint')},
+        )
+
+    def test_delete_key_fail_notfound(self):
+        '''
+        Test gpg.delete_key failing to delete nonexisting key.
+        '''
+        get_key_result = {
+            'fingerprint': 'key_fingerprint',
+            'keyid': 'key_id',
+        }
+        with \
+                patch.dict(gpg.__salt__, {'user.info': MagicMock(return_value=self.user_mock)}), \
+                patch.dict(gpg.__salt__, {'config.option': MagicMock(return_value='root')}), \
+                patch.object(gpg, '_create_gpg', return_value=self.gpgobject), \
+                patch.object(gpg, 'get_key', return_value=None):
+            res = gpg.delete_key(
+                gnupghome=self.gnupghome,
+                keyid='foo',
+            )
+        self.assertEqual(
+            res,
+            {'result': False, 'message': 'Key not available in keychain.'},
+        )
 
     def test_search_keys(self):
         """
@@ -290,7 +357,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
             ret = gpg.search_keys('person@example.com')
         self.assertEqual(ret, _expected_result)
 
-    def test_create_key(self):
+    def test_create_key_happy(self):
         '''
         Test creation of a key.
         '''
@@ -314,6 +381,42 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                 name_email='salt@saltstack.com'
             )
         self.assertEqual(res, expected_result)
+
+    def test_create_key_fail(self):
+        '''
+        Test failing creating a key.
+        '''
+        with \
+                patch.dict(gpg.__salt__, {'user.info': MagicMock(return_value=self.user_mock)}), \
+                patch.dict(gpg.__salt__, {'config.option': MagicMock(return_value='root')}), \
+                patch.dict(gpg.__salt__, {'pillar.get': MagicMock(return_value=None)}), \
+                patch.object(gpg, '_create_gpg', return_value=self.gpgobject), \
+                patch.object(self.gpgobject, 'gen_key', MagicMock(return_value=False)):
+            # Fail with non-existing or empty passphrase_pillar
+            self.assertRaisesRegex(
+                SaltInvocationError,
+                'Passphrase could not be read from pillar. foo does not exist.',
+                gpg.create_key,
+                gnupghome=self.gnupghome,
+                passphrase_pillar='foo',
+            )
+            # Fail with empty passphrase
+            self.assertRaisesRegex(
+                SaltInvocationError,
+                'No or empty passphrase supplied. GnuPG version >= 2.1 requires a password.',
+                gpg.create_key,
+                gnupghome=self.gnupghome,
+                passphrase='',
+            )
+            # Manual induced failure
+            res = gpg.create_key(
+                gnupghome=self.gnupghome,
+                passphrase='foo',
+            )
+        self.assertEqual(
+            res,
+            {'result': False, 'fingerprint': '', 'message': 'Unable to generate GPG key pair.'}
+        )
 
     def test_import_secret_key(self):
         '''
