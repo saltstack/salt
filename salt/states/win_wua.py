@@ -428,8 +428,7 @@ def uptodate(name,
     ret = {'name': name,
            'changes': {},
            'result': True,
-           'comment': '',
-           'not_installed': ''}
+           'comment': ''}
 
     wua = salt.utils.win_update.WindowsUpdateAgent()
 
@@ -505,8 +504,10 @@ def uptodate(name,
 
     # Add the list of updates not installed to the return
     if len(updates_not_installed) > 0:
-        ret['not_installed'] = 'Updates that did not install'
-        ret['list_not_installed'] = updates_not_installed
+        ret['comment'] = 'Updates that were not installed:'
+        for update in updates_not_installed:
+            ret['comment'] += '\n'
+            ret['comment'] += ': '.join([update])
 
     if ret['changes'].get('failed', False):
         ret['comment'] = 'Updates failed'
