@@ -167,8 +167,9 @@ def create(path,
         # Virtualenv package
         try:
             import virtualenv
-            version = getattr(virtualenv, '__version__',
-                              virtualenv.virtualenv_version)
+            version = getattr(virtualenv, '__version__', False)
+            if not version:  # virtualenv<1.7.2
+                version = virtualenv.virtualenv_version
             virtualenv_version_info = tuple(
                 [int(i) for i in version.split('rc')[0].split('.')]
             )
