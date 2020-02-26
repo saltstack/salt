@@ -23,7 +23,7 @@
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
 
-__ScriptVersion="2020.02.04"
+__ScriptVersion="2020.02.24"
 __ScriptName="bootstrap-salt.sh"
 
 __ScriptFullName="$0"
@@ -603,10 +603,10 @@ elif [ "$ITYPE" = "stable" ]; then
     if [ "$#" -eq 0 ];then
         STABLE_REV="latest"
     else
-        if [ "$(echo "$1" | grep -E '^(latest|1\.6|1\.7|2014\.1|2014\.7|2015\.5|2015\.8|2016\.3|2016\.11|2017\.7|2018\.3|2019\.2)$')" != "" ]; then
+        if [ "$(echo "$1" | grep -E '^(latest|1\.6|1\.7|2014\.1|2014\.7|2015\.5|2015\.8|2016\.3|2016\.11|2017\.7|2018\.3|2019\.2|3000)$')" != "" ]; then
             STABLE_REV="$1"
             shift
-        elif [ "$(echo "$1" | grep -E '^([0-9]*\.[0-9]*\.[0-9]*)$')" != "" ]; then
+        elif [ "$(echo "$1" | grep -E '^(2[0-9]*\.[0-9]*\.[0-9]*|[3-9][0-9]{3}*(\.[0-9]*)?)$')" != "" ]; then
             if [ "$(uname)" = "Darwin" ]; then
               STABLE_REV="$1"
             else
@@ -614,7 +614,7 @@ elif [ "$ITYPE" = "stable" ]; then
             fi
             shift
         else
-            echo "Unknown stable version: $1 (valid: 1.6, 1.7, 2014.1, 2014.7, 2015.5, 2015.8, 2016.3, 2016.11, 2017.7, 2018.3, 2019.2, latest, \$MAJOR.\$MINOR.\$PATCH)"
+            echo "Unknown stable version: $1 (valid: 1.6, 1.7, 2014.1, 2014.7, 2015.5, 2015.8, 2016.3, 2016.11, 2017.7, 2018.3, 2019.2, 3000, latest, \$MAJOR.\$MINOR.\$PATCH until 2019.2, \$MAJOR or \$MAJOR.\$PATCH starting from 3000)"
             exit 1
         fi
     fi
@@ -1446,6 +1446,9 @@ __ubuntu_codename_translation() {
         "18")
             DISTRO_CODENAME="bionic"
             ;;
+        "20")
+            DISTRO_CODENAME="focal"
+            ;;
         *)
             DISTRO_CODENAME="trusty"
             ;;
@@ -1606,14 +1609,16 @@ __check_end_of_life_versions() {
             #
             # < 11 SP4
             # < 12 SP2
-            SUSE_PATCHLEVEL=$(awk '/PATCHLEVEL/ {print $3}' /etc/SuSE-release )
+            # < 15 SP1
+            SUSE_PATCHLEVEL=$(awk -F'=' '/VERSION_ID/ { print $2 }' /etc/os-release | grep -oP "\.\K\w+")
             if [ "${SUSE_PATCHLEVEL}" = "" ]; then
                 SUSE_PATCHLEVEL="00"
             fi
             if [ "$DISTRO_MAJOR_VERSION" -lt 11 ] || \
                 { [ "$DISTRO_MAJOR_VERSION" -eq 11 ] && [ "$SUSE_PATCHLEVEL" -lt 04 ]; } || \
+                { [ "$DISTRO_MAJOR_VERSION" -eq 15 ] && [ "$SUSE_PATCHLEVEL" -lt 01 ]; } || \
                 { [ "$DISTRO_MAJOR_VERSION" -eq 12 ] && [ "$SUSE_PATCHLEVEL" -lt 02 ]; }; then
-                echoerror "Versions lower than SuSE 11 SP4 or 12 SP2 are not supported."
+                echoerror "Versions lower than SuSE 11 SP4, 12 SP2 or 15 SP1 are not supported."
                 echoerror "Please consider upgrading to the next stable"
                 echoerror "    https://www.suse.com/lifecycle/"
                 exit 1
@@ -2578,7 +2583,7 @@ __install_pip_pkgs() {
     if ! __check_command_exists "${_pip_cmd} --version"; then
         __PACKAGES="${_py_pkg}-setuptools ${_py_pkg}-pip gcc"
         # shellcheck disable=SC2086
-        if [ "$DISTRO_NAME_L" = "debian" ];then
+        if [ "$DISTRO_NAME_L" = "debian" ] || [ "$DISTRO_NAME_L" = "ubuntu" ];then
             __PACKAGES="${__PACKAGES} ${_py_pkg}-dev"
             __apt_get_install_noinput ${__PACKAGES} || return 1
         else
@@ -2872,9 +2877,9 @@ __enable_universe_repository() {
 
 __install_saltstack_ubuntu_repository() {
     # Workaround for latest non-LTS ubuntu
-    if [ "$DISTRO_MAJOR_VERSION" -gt 18 ] || \
+    if [ "$DISTRO_MAJOR_VERSION" -eq 19 ] || \
         { [ "$DISTRO_MAJOR_VERSION" -eq 18 ] && [ "$DISTRO_MINOR_VERSION" -eq 10 ]; }; then
-        echowarn "Non-LTS Ubuntu detected, but stable packages requested. Trying packages for latest LTS release. You may experience problems."
+        echowarn "Non-LTS Ubuntu detected, but stable packages requested. Trying packages for previous LTS release. You may experience problems."
         UBUNTU_VERSION=18.04
         UBUNTU_CODENAME="bionic"
     else
@@ -5235,7 +5240,12 @@ install_amazon_linux_ami_2_git_deps() {
             # We're on the master branch, install whichever tornado is on the requirements file
             __REQUIRED_TORNADO="$(grep tornado "${_SALT_GIT_CHECKOUT_DIR}/requirements/base.txt")"
             if [ "${__REQUIRED_TORNADO}" != "" ]; then
-                __PACKAGES="${__PACKAGES} ${pkg_append}${PY_PKG_VER}-tornado"
+                if [ -n "$_PY_EXE" ] && [ "$_PY_MAJOR_VERSION" -eq "3" ]; then
+                    __PACKAGES="${__PACKAGES} python3-pip"
+                    __PIP_PACKAGES="${__PIP_PACKAGES} tornado<$_TORNADO_MAX_PY3_VERSION"
+                else
+                    __PACKAGES="${__PACKAGES} ${pkg_append}${PY_PKG_VER}-tornado"
+                fi
             fi
         fi
 
@@ -6206,7 +6216,13 @@ __zypper() {
         sleep 1
     done
 
-    zypper --non-interactive "${@}"; return $?
+    zypper --non-interactive "${@}"
+    # Return codes between 100 and 104 are only informations, not errors
+    # https://en.opensuse.org/SDB:Zypper_manual#EXIT_CODES
+    if [ "$?" -gt "99" ] && [ "$?" -le "104" ]; then
+        return 0
+    fi
+    return $?
 }
 
 __zypper_install() {
@@ -6339,7 +6355,6 @@ install_opensuse_stable() {
 }
 
 install_opensuse_git() {
-
     if [ "${_POST_NEON_INSTALL}" -eq $BS_TRUE ]; then
          __install_salt_from_repo_post_neon "${_PY_EXE}" || return 1
         return 0
@@ -6572,6 +6587,60 @@ install_opensuse_15_git() {
 
 #
 #   End of openSUSE Leap 15
+#
+#######################################################################################################################
+
+#######################################################################################################################
+#
+#   SUSE Enterprise 15
+#
+
+install_suse_15_stable_deps() {
+    __opensuse_prep_install || return 1
+    install_opensuse_15_stable_deps || return 1
+
+    return 0
+}
+
+install_suse_15_git_deps() {
+    install_suse_15_stable_deps || return 1
+
+    if ! __check_command_exists git; then
+        __zypper_install git-core  || return 1
+    fi
+
+    install_opensuse_15_git_deps || return 1
+
+    return 0
+}
+
+install_suse_15_stable() {
+    install_opensuse_stable || return 1
+    return 0
+}
+
+install_suse_15_git() {
+    install_opensuse_15_git || return 1
+    return 0
+}
+
+install_suse_15_stable_post() {
+    install_opensuse_stable_post || return 1
+    return 0
+}
+
+install_suse_15_git_post() {
+    install_opensuse_git_post || return 1
+    return 0
+}
+
+install_suse_15_restart_daemons() {
+    install_opensuse_restart_daemons || return 1
+    return 0
+}
+
+#
+#   End of SUSE Enterprise 15
 #
 #######################################################################################################################
 
