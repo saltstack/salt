@@ -428,7 +428,8 @@ def uptodate(name,
     ret = {'name': name,
            'changes': {},
            'result': True,
-           'comment': ''}
+           'comment': '',
+           'not_installed': ''}
 
     wua = salt.utils.win_update.WindowsUpdateAgent()
 
@@ -481,20 +482,31 @@ def uptodate(name,
 
     post_info = wua.updates().list()
 
+    # First gather list of updates that weren't installed
+    updates_not_installed = [item for item in install.list()
+                             if item not in post_info]
+
     # Verify the installation
     for item in install.list():
-        if not salt.utils.data.is_true(post_info[item]['Installed']):
-            ret['changes']['failed'] = {
-                item: {'Title': post_info[item]['Title'][:40] + '...',
-                       'KBs': post_info[item]['KBs']}
-            }
-            ret['result'] = False
-        else:
-            ret['changes']['installed'] = {
-                item: {'Title': post_info[item]['Title'][:40] + '...',
-                       'NeedsReboot': post_info[item]['NeedsReboot'],
-                       'KBs': post_info[item]['KBs']}
-            }
+        # Only check for items that were installed
+        if item not in updates_not_installed:
+            if not salt.utils.data.is_true(post_info[item]['Installed']):
+                ret['changes']['failed'] = {
+                    item: {'Title': post_info[item]['Title'][:40] + '...',
+                           'KBs': post_info[item]['KBs']}
+                }
+                ret['result'] = False
+            else:
+                ret['changes']['installed'] = {
+                    item: {'Title': post_info[item]['Title'][:40] + '...',
+                           'NeedsReboot': post_info[item]['NeedsReboot'],
+                           'KBs': post_info[item]['KBs']}
+                }
+
+    # Add the list of updates not installed to the return
+    if len(updates_not_installed) > 0:
+        ret['not_installed'] = 'Updates that did not install'
+        ret['list_not_installed'] = updates_not_installed
 
     if ret['changes'].get('failed', False):
         ret['comment'] = 'Updates failed'
