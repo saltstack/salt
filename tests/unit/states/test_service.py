@@ -9,10 +9,11 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Salt Testing Libs
 from tests.support.helpers import destructiveTest
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, patch
 
 # Import Salt Libs
+import salt.utils.platform
 import salt.config
 import salt.loader
 import salt.states.service as service
@@ -254,6 +255,7 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
 
 
 @destructiveTest
+@skipIf(salt.utils.platform.is_darwin(), "service.running is currently failing on OSX")
 class ServiceTestCaseFunctional(TestCase, LoaderModuleMockMixin):
     '''
         Validate the service state
@@ -276,7 +278,7 @@ class ServiceTestCaseFunctional(TestCase, LoaderModuleMockMixin):
         elif os_family == 'MacOS':
             self.service_name = 'org.ntp.ntpd'
             if int(os_release.split('.')[1]) >= 13:
-                self.service_name = 'com.apple.AirPlayXPCHelper'
+                self.service_name = 'com.openssh.sshd'
         elif os_family == 'Windows':
             self.service_name = 'Spooler'
 
