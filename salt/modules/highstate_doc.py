@@ -642,22 +642,30 @@ def proccesser_markdown(lowstate_item, config, **kwargs):
     if s.get("watch"):
         requisites += "run or update after changes in:\n"
         for w in s.get("watch", []):
-            requisites += _format_markdown_requisite(w.items()[0][0], w.items()[0][1])
+            requisites += _format_markdown_requisite(
+                next(iter(w.items()))[0], next(iter(w.items()))[1],
+            )
         requisites += "\n"
     if s.get("watch_in"):
         requisites += "after changes, run or update:\n"
         for w in s.get("watch_in", []):
-            requisites += _format_markdown_requisite(w.items()[0][0], w.items()[0][1])
+            requisites += _format_markdown_requisite(
+                next(iter(w.items()))[0], next(iter(w.items()))[1],
+            )
         requisites += "\n"
     if s.get("require") and len(s.get("require")) > 0:
         requisites += "require:\n"
         for w in s.get("require", []):
-            requisites += _format_markdown_requisite(w.items()[0][0], w.items()[0][1])
+            requisites += _format_markdown_requisite(
+                next(iter(w.items()))[0], next(iter(w.items()))[1],
+            )
         requisites += "\n"
     if s.get("require_in"):
         requisites += "required in:\n"
         for w in s.get("require_in", []):
-            requisites += _format_markdown_requisite(w.items()[0][0], w.items()[0][1])
+            requisites += _format_markdown_requisite(
+                next(iter(w.items()))[0], next(iter(w.items()))[1],
+            )
         requisites += "\n"
 
     details = ""
