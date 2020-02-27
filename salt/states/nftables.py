@@ -483,7 +483,7 @@ def delete(name, family='ipv4', **kwargs):
         return ret
 
 
-def flush(name, family='ipv4', ignore_absence=True, **kwargs):
+def flush(name, family='ipv4', ignore_absence=False, **kwargs):
     '''
     .. versionadded:: 2014.7.0
 
