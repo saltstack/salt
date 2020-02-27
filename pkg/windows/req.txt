@@ -25,7 +25,6 @@ PyMySQL==0.9.3
 pyopenssl==19.0.0
 python-dateutil==2.8.0
 python-gnupg==0.4.4
-pythonnet==2.4.0
 pyyaml==5.1.2
 pyzmq==18.0.1 ; python_version < "3.8"
 pyzmq==19.0.0 ; python_version >= "3.8"
@@ -35,7 +34,6 @@ singledispatch==3.4.0.3; python_version < '3.4'
 timelib==0.2.4
 watchdog==0.9.0
 wheel==0.33.4
-wmi==1.4.9
 
 # GitPython
 GitPython==2.1.10
