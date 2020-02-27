@@ -203,10 +203,7 @@ def purge(**kwargs):
             ret['result'] = True
             ret['comment'].append('Job: {0} would be deleted from schedule.'.format(name))
         else:
-
-            persist = True
-            if 'persist' in kwargs:
-                persist = kwargs['persist']
+            persist = kwargs.get('persist', True)
 
             try:
                 with salt.utils.event.get_event('minion', opts=__opts__) as event_bus:
@@ -252,9 +249,7 @@ def delete(name, **kwargs):
         ret['comment'] = 'Job: {0} would be deleted from schedule.'.format(name)
         ret['result'] = True
     else:
-        persist = True
-        if 'persist' in kwargs:
-            persist = kwargs['persist']
+        persist = kwargs.get('persist', True)
 
         if name in list_(show_all=True, where='opts', return_yaml=False):
             event_data = {'name': name, 'func': 'delete', 'persist': persist}
@@ -436,9 +431,7 @@ def add(name, **kwargs):
         ret['comment'] = 'Unable to use "when" and "cron" options together.  Ignoring.'
         return ret
 
-    persist = True
-    if 'persist' in kwargs:
-        persist = kwargs['persist']
+    persist = kwargs.get('persist', True)
 
     _new = build_schedule_item(name, **kwargs)
     if 'result' in _new and not _new['result']:
@@ -542,9 +535,7 @@ def modify(name, **kwargs):
     if 'test' in kwargs and kwargs['test']:
         ret['comment'] = 'Job: {0} would be modified in schedule.'.format(name)
     else:
-        persist = True
-        if 'persist' in kwargs:
-            persist = kwargs['persist']
+        persist = kwargs.get('persist', True)
         if name in list_(show_all=True, where='opts', return_yaml=False):
             event_data = {'name': name,
                           'schedule': _new,
@@ -626,9 +617,7 @@ def enable_job(name, **kwargs):
     if 'test' in __opts__ and __opts__['test']:
         ret['comment'] = 'Job: {0} would be enabled in schedule.'.format(name)
     else:
-        persist = True
-        if 'persist' in kwargs:
-            persist = kwargs['persist']
+        persist = kwargs.get('persist', True)
 
         if name in list_(show_all=True, where='opts', return_yaml=False):
             event_data = {'name': name, 'func': 'enable_job', 'persist': persist}
@@ -684,9 +673,7 @@ def disable_job(name, **kwargs):
     if 'test' in kwargs and kwargs['test']:
         ret['comment'] = 'Job: {0} would be disabled in schedule.'.format(name)
     else:
-        persist = True
-        if 'persist' in kwargs:
-            persist = kwargs['persist']
+        persist = kwargs.get('persist', True)
 
         if name in list_(show_all=True, where='opts', return_yaml=False):
             event_data = {'name': name, 'func': 'disable_job', 'persist': persist}
@@ -775,9 +762,11 @@ def enable(**kwargs):
     if 'test' in kwargs and kwargs['test']:
         ret['comment'] = 'Schedule would be enabled.'
     else:
+        persist = kwargs.get('persist', True)
+
         try:
             with salt.utils.event.get_event('minion', opts=__opts__) as event_bus:
-                res = __salt__['event.fire']({'func': 'enable'}, 'manage_schedule')
+                res = __salt__['event.fire']({'func': 'enable', 'persist': persist}, 'manage_schedule')
                 if res:
                     event_ret = event_bus.get_event(
                         tag='/salt/minion/minion_schedule_enabled_complete',
@@ -815,9 +804,11 @@ def disable(**kwargs):
     if 'test' in kwargs and kwargs['test']:
         ret['comment'] = 'Schedule would be disabled.'
     else:
+        persist = kwargs.get('persist', True)
+
         try:
             with salt.utils.event.get_event('minion', opts=__opts__) as event_bus:
-                res = __salt__['event.fire']({'func': 'disable'}, 'manage_schedule')
+                res = __salt__['event.fire']({'func': 'disable', 'persist': persist}, 'manage_schedule')
                 if res:
                     event_ret = event_bus.get_event(
                         tag='/salt/minion/minion_schedule_disabled_complete',

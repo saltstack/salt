@@ -4918,7 +4918,7 @@ def _parse_xml(adm_file):
         for file_path in file_list:
             os.remove(file_path)
 
-        # Load the file
+        # Lowercase all the keys
         with salt.utils.files.fopen(adm_file, 'rb') as rfh:
 
             encoding = 'utf-8'
@@ -4937,6 +4937,13 @@ def _parse_xml(adm_file):
                     line = line.replace(line[start:q2], line[start:q2].lower())
                     found_key = True
                 modified_xml += line + '\r\n'
+
+        # Convert smart quotes to regular quotes
+        modified_xml = modified_xml.replace('\u201c', '"').replace('\u201d', '"')
+        modified_xml = modified_xml.replace('\u2018', '\'').replace('\u2019', '\'')
+
+        # Convert em dash and en dash to dash
+        modified_xml = modified_xml.replace('\u2013', '-').replace('\u2014', '-')
 
         with salt.utils.files.fopen(out_file, 'wb') as wfh:
             wfh.write(modified_xml.encode(encoding))
@@ -5655,23 +5662,6 @@ def _getAdmlPresentationRefId(adml_data, ref_id):
     if search_results:
         for result in search_results:
             the_localname = etree.QName(result.tag).localname
-            presentation_element = PRESENTATION_ANCESTOR_XPATH(result)
-            if presentation_element:
-                presentation_element = presentation_element[0]
-                if TEXT_ELEMENT_XPATH(presentation_element):
-                    for p_item in presentation_element.getchildren():
-                        if p_item == result:
-                            break
-                        else:
-                            if etree.QName(p_item.tag).localname == 'text':
-                                if prepended_text:
-                                    prepended_text = ' '.join((text for text in (prepended_text, getattr(p_item, 'text', '').rstrip()) if text))
-                                else:
-                                    prepended_text = getattr(p_item, 'text', '').rstrip() if getattr(p_item, 'text', '') else ''
-                            else:
-                                prepended_text = ''
-                    if prepended_text.endswith('.'):
-                        prepended_text = ''
             if the_localname == 'textBox' \
                     or the_localname == 'comboBox':
                 label_items = result.xpath('.//*[local-name() = "label"]')
@@ -6652,13 +6642,14 @@ def _checkAllAdmxPolicies(policy_class,
                         unpathed_dict[policy_namespace] = {}
                     unpathed_dict[policy_namespace][full_names[policy_namespace][policy_item]] = policy_item
             # go back and remove any "unpathed" policies that need a full path
-            for path_needed in unpathed_dict[policy_namespace]:
-                # remove the item with the same full name and re-add it w/a path'd version
-                full_path_list = hierarchy[policy_namespace][unpathed_dict[policy_namespace][path_needed]]
-                full_path_list.reverse()
-                full_path_list.append(path_needed)
-                log.trace('full_path_list == %s', full_path_list)
-                policy_vals['\\'.join(full_path_list)] = policy_vals[policy_namespace].pop(path_needed)
+            if policy_namespace in unpathed_dict:
+                for path_needed in unpathed_dict[policy_namespace]:
+                    # remove the item with the same full name and re-add it w/a path'd version
+                    full_path_list = hierarchy[policy_namespace][unpathed_dict[policy_namespace][path_needed]]
+                    full_path_list.reverse()
+                    full_path_list.append(path_needed)
+                    log.trace('full_path_list == %s', full_path_list)
+                    policy_vals['\\'.join(full_path_list)] = policy_vals[policy_namespace].pop(path_needed)
         log.trace('Compilation complete: %s seconds', time.time() - start_time)
     for policy_namespace in list(policy_vals):
         if policy_vals[policy_namespace] == {}:
@@ -8226,10 +8217,8 @@ def _get_policy_adm_setting(admx_policy,
                                 configured_elements[this_element_name] = True
                                 log.trace('element %s is configured true',
                                           child_item.attrib['id'])
-                    elif etree.QName(child_item).localname == 'decimal' \
-                        or etree.QName(child_item).localname == 'text' \
-                        or etree.QName(child_item).localname == 'longDecimal' \
-                        or etree.QName(child_item).localname == 'multiText':
+                    elif etree.QName(child_item).localname in [
+                            'decimal', 'text', 'longDecimal', 'multiText']:
                         # https://msdn.microsoft.com/en-us/library/dn605987(v=vs.85).aspx
                         if _regexSearchRegPolData(
                                 re.escape(_processValueItem(
@@ -8301,10 +8290,12 @@ def _get_policy_adm_setting(admx_policy,
                                             configured_elements[this_element_name] = _getAdmlDisplayName(
                                                 adml_xml_data=adml_policy_resources,
                                                 display_name=enum_item.attrib['displayName'])
+                                            break
                                     else:
                                         configured_elements[this_element_name] = _getAdmlDisplayName(
                                             adml_xml_data=adml_policy_resources,
                                             display_name=enum_item.attrib['displayName'])
+                                        break
                     elif etree.QName(child_item).localname == 'list':
                         return_value_name = False
                         if 'explicitValue' in child_item.attrib \
