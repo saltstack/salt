@@ -12,6 +12,7 @@ import tempfile
 # Import Salt Libs
 import salt.utils.files
 import salt.utils.platform
+import salt.utils.stringutils
 import salt.modules.cmdmod as cmdmod
 from salt.exceptions import CommandExecutionError
 from salt.log import LOG_LEVELS
@@ -21,12 +22,11 @@ from salt.ext.six.moves import builtins  # pylint: disable=import-error
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.runtests import RUNTIME_VARS
+from tests.support.helpers import TstSuiteLoggingHandler
 from tests.support.mock import (
     mock_open,
     Mock,
     MagicMock,
-    NO_MOCK,
-    NO_MOCK_REASON,
     patch
 )
 
@@ -69,7 +69,6 @@ class MockTimedProc(object):
         return self._stderr
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Unit tests for the salt.modules.cmdmod module
@@ -335,6 +334,59 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
                     if not salt.utils.platform.is_darwin():
                         getpwnam_mock.assert_called_with('foobar')
 
+    @skipIf(not salt.utils.platform.is_darwin(), 'applicable to macOS only')
+    def test_shell_properly_handled_on_macOS(self):
+        '''
+        cmd.run should invoke a new bash login only
+        when bash is the default shell for the selected user
+        '''
+        class _CommandHandler(object):
+            '''
+            Class for capturing cmd
+            '''
+            def __init__(self):
+                self.cmd = None
+
+            def clear(self):
+                self.cmd = None
+
+        cmd_handler = _CommandHandler()
+
+        def mock_proc(__cmd__, **kwargs):
+            cmd_handler.cmd = ' '.join(__cmd__)
+            return MagicMock(return_value=MockTimedProc(stdout=None, stderr=None))
+
+        with patch('pwd.getpwnam') as getpwnam_mock:
+            with patch('salt.utils.timed_subprocess.TimedProc', mock_proc):
+
+                # User default shell is '/usr/local/bin/bash'
+                user_default_shell = '/usr/local/bin/bash'
+                with patch.dict(cmdmod.__salt__,
+                                {'user.info': MagicMock(return_value={'shell': user_default_shell})}):
+
+                    cmd_handler.clear()
+                    cmdmod._run('ls',
+                                cwd=tempfile.gettempdir(),
+                                runas='foobar',
+                                use_vt=False)
+
+                    self.assertRegex(cmd_handler.cmd, "{} -l -c".format(user_default_shell),
+                                        "cmd invokes right bash session on macOS")
+
+                # User default shell is '/bin/zsh'
+                user_default_shell = '/bin/zsh'
+                with patch.dict(cmdmod.__salt__,
+                                {'user.info': MagicMock(return_value={'shell': user_default_shell})}):
+
+                    cmd_handler.clear()
+                    cmdmod._run('ls',
+                                cwd=tempfile.gettempdir(),
+                                runas='foobar',
+                                use_vt=False)
+
+                    self.assertNotRegex(cmd_handler.cmd, "bash -l -c",
+                                        "cmd does not invoke user shell on macOS")
+
     def test_run_cwd_doesnt_exist_issue_7154(self):
         '''
         cmd.run should fail and raise
@@ -439,6 +491,40 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
             ret = cmdmod.run_all('some command', output_encoding='latin1')
 
         self.assertEqual(ret['stdout'], stdout)
+
+    def test_run_all_output_loglevel_quiet(self):
+        '''
+        Test that specifying quiet for loglevel
+        does not log the command.
+        '''
+        stdout = b'test'
+        proc = MagicMock(return_value=MockTimedProc(stdout=stdout))
+
+        msg = "INFO:Executing command 'some command' in directory"
+        with patch('salt.utils.timed_subprocess.TimedProc', proc):
+            with TstSuiteLoggingHandler() as log_handler:
+                ret = cmdmod.run_all('some command', output_loglevel='quiet')
+                assert not [x for x in log_handler.messages if msg in x]
+
+        self.assertEqual(ret['stdout'],
+                         salt.utils.stringutils.to_unicode(stdout))
+
+    def test_run_all_output_loglevel_debug(self):
+        '''
+        Test that specifying debug for loglevel
+        does log the command.
+        '''
+        stdout = b'test'
+        proc = MagicMock(return_value=MockTimedProc(stdout=stdout))
+
+        msg = "INFO:Executing command 'some command' in directory"
+        with patch('salt.utils.timed_subprocess.TimedProc', proc):
+            with TstSuiteLoggingHandler() as log_handler:
+                ret = cmdmod.run_all('some command', output_loglevel='debug')
+                assert [x for x in log_handler.messages if msg in x]
+
+        self.assertEqual(ret['stdout'],
+                         salt.utils.stringutils.to_unicode(stdout))
 
     def test_run_chroot_mount(self):
         '''

@@ -15,12 +15,10 @@ from __future__ import absolute_import, unicode_literals, print_function
 # Import Salt Testing libs
 from tests.support.zfs import ZFSMockData
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON,
 )
 
 # Import Salt Execution module to test
@@ -34,7 +32,6 @@ from salt.utils.dateutils import strftime
 
 
 # Skip this test case if we don't have access to mock!
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class ZfsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     This class contains a set of functions that test salt.modules.zfs module

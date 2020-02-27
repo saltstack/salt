@@ -11,7 +11,7 @@ import logging
 
 # Import Salt testing libraries
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, \
+from tests.support.mock import patch, MagicMock, \
         PropertyMock
 
 # Import Salt libraries
@@ -21,7 +21,7 @@ from salt.ext.six.moves import range
 import salt.utils.pbm
 
 try:
-    from pyVmomi import vim, vmodl, pbm
+    from pyVmomi import vim, vmodl, pbm  # pylint: disable=no-name-in-module
     HAS_PYVMOMI = True
 except ImportError:
     HAS_PYVMOMI = False
@@ -31,7 +31,6 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetProfileManagerTestCase(TestCase):
     '''Tests for salt.utils.pbm.get_profile_manager'''
@@ -106,7 +105,6 @@ class GetProfileManagerTestCase(TestCase):
         self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetPlacementSolverTestCase(TestCase):
     '''Tests for salt.utils.pbm.get_placement_solver'''
@@ -181,7 +179,6 @@ class GetPlacementSolverTestCase(TestCase):
         self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetCapabilityDefinitionsTestCase(TestCase):
     '''Tests for salt.utils.pbm.get_capability_definitions'''
@@ -252,7 +249,6 @@ class GetCapabilityDefinitionsTestCase(TestCase):
                                'fake_cap_meta3'])
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetPoliciesByIdTestCase(TestCase):
     '''Tests for salt.utils.pbm.get_policies_by_id'''
@@ -302,7 +298,6 @@ class GetPoliciesByIdTestCase(TestCase):
         self.assertEqual(ret, self.mock_policies)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetStoragePoliciesTestCase(TestCase):
     '''Tests for salt.utils.pbm.get_storage_policies'''
@@ -392,7 +387,6 @@ class GetStoragePoliciesTestCase(TestCase):
         self.assertEqual(ret, [self.mock_policies[1], self.mock_policies[3]])
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class CreateStoragePolicyTestCase(TestCase):
     '''Tests for salt.utils.pbm.create_storage_policy'''
@@ -440,7 +434,6 @@ class CreateStoragePolicyTestCase(TestCase):
         self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class UpdateStoragePolicyTestCase(TestCase):
     '''Tests for salt.utils.pbm.update_storage_policy'''
@@ -489,7 +482,6 @@ class UpdateStoragePolicyTestCase(TestCase):
         self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetDefaultStoragePolicyOfDatastoreTestCase(TestCase):
     '''Tests for salt.utils.pbm.get_default_storage_policy_of_datastore'''
@@ -592,7 +584,6 @@ class GetDefaultStoragePolicyOfDatastoreTestCase(TestCase):
         self.assertEqual(ret, self.mock_policy_refs[0])
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class AssignDefaultStoragePolicyToDatastoreTestCase(TestCase):
     '''Tests for salt.utils.pbm.assign_default_storage_policy_to_datastore'''

@@ -86,6 +86,7 @@ import types
 # Import salt libs
 from salt.log.setup import LOG_LEVELS
 from salt.log.mixins import NewStyleClassMixIn
+import salt.utils.msgpack
 import salt.utils.network
 
 # Import Third party libs
@@ -93,26 +94,6 @@ from salt.ext import six
 
 log = logging.getLogger(__name__)
 
-try:
-    # Attempt to import msgpack
-    import msgpack
-    # There is a serialization issue on ARM and potentially other platforms
-    # for some msgpack bindings, check for it
-    if msgpack.loads(msgpack.dumps([1, 2, 3]), use_list=True) is None:
-        raise ImportError
-except ImportError:
-    # Fall back to msgpack_pure
-    try:
-        import msgpack_pure as msgpack
-    except ImportError:
-        # TODO: Come up with a sane way to get a configured logfile
-        #       and write to the logfile when this error is hit also
-        LOG_FORMAT = '[%(levelname)-8s] %(message)s'
-        salt.log.setup_console_logger(log_format=LOG_FORMAT)
-        log.fatal('Unable to import msgpack or msgpack_pure python modules')
-        # Don't exit if msgpack is not available, this is to make local mode
-        # work without msgpack
-        #sys.exit(salt.exitcodes.EX_GENERIC)
 
 # Define the module's virtual name
 __virtualname__ = 'fluent'
@@ -435,7 +416,7 @@ class FluentSender(object):
 
         try:
             self._reconnect()
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             # will be retried in emit()
             self._close()
 
@@ -455,7 +436,7 @@ class FluentSender(object):
         packet = (tag, timestamp, data)
         if self.verbose:
             print(packet)
-        return msgpack.packb(packet)
+        return salt.utils.msgpack.packb(packet)
 
     def _send(self, bytes_):
         self.lock.acquire()
@@ -479,7 +460,7 @@ class FluentSender(object):
 
             # send finished
             self.pendings = None
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             # close socket
             self._close()
             # clear buffer if it exceeds max bufer size

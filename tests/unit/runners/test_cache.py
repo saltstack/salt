@@ -9,10 +9,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Salt Testing Libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
+from tests.support.unit import TestCase
 from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     patch
 )
 
@@ -21,7 +19,6 @@ import salt.runners.cache as cache
 import salt.utils.master
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class CacheTest(TestCase, LoaderModuleMockMixin):
     '''
     Validate the cache runner

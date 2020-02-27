@@ -19,8 +19,6 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     MagicMock,
-    NO_MOCK,
-    NO_MOCK_REASON,
     patch
 )
 
@@ -117,7 +115,6 @@ def _has_required_boto():
         ('The boto3 module must be greater than or equal to version {0}, '
          'and botocore must be greater than or equal to {1}'.format(
              required_boto3_version, required_botocore_version)))
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class BotoLambdaTestCaseBase(TestCase, LoaderModuleMockMixin):
     conn = None
 
@@ -468,7 +465,6 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
 @skipIf(_has_required_boto() is False, 'The boto3 module must be greater than'
                                        ' or equal to version {0}'
         .format(required_boto3_version))
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class BotoLambdaAliasTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin):
     '''
     TestCase for salt.modules.boto_lambda module aliases
@@ -619,7 +615,6 @@ class BotoLambdaAliasTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin):
 @skipIf(_has_required_boto() is False, 'The boto3 module must be greater than'
                                        ' or equal to version {0}'
         .format(required_boto3_version))
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class BotoLambdaEventSourceMappingTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin):
     '''
     TestCase for salt.modules.boto_lambda module mappings

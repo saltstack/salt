@@ -13,8 +13,6 @@ from tests.support.mock import (
     MagicMock,
     patch,
     Mock,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -63,7 +61,6 @@ class Mockwinapi(object):
                 return False
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.win_network

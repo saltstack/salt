@@ -12,12 +12,10 @@ import salt.modules.logrotate as logrotate
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 PARSE_CONF = {
@@ -31,7 +29,6 @@ PARSE_CONF = {
 }
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class LogrotateTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.logrotate

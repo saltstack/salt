@@ -5,7 +5,7 @@ Network Users
 
 Manage the users configuration on network devices via the NAPALM proxy.
 
-:codeauthor: Mircea Ulinic <mircea@cloudflare.com>
+:codeauthor: Mircea Ulinic <ping@mirceaulinic.net>
 :maturity:   new
 :depends:    napalm
 :platform:   unix
@@ -25,11 +25,11 @@ log = logging.getLogger(__name__)
 
 # Python std lib
 from copy import deepcopy
-from json import loads, dumps
 
 # salt lib
 from salt.ext import six
 # import NAPALM utils
+import salt.utils.json
 import salt.utils.napalm
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -69,7 +69,7 @@ def _ordered_dict_to_dict(probes):
 
     '''.'''
 
-    return loads(dumps(probes))
+    return salt.utils.json.loads(salt.utils.json.dumps(probes))
 
 
 def _expand_users(device_users, common_users):

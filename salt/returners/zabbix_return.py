@@ -54,7 +54,9 @@ def zabbix_send(key, output):
 
 
 def save_load(jid, load, minions=None):
-    pass
+    '''
+    Included for API consistency
+    '''
 
 
 def returner(ret):

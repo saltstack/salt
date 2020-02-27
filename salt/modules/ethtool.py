@@ -228,7 +228,7 @@ def set_coalesce(devname, **kwargs):
 
     try:
         if changed:
-            ethtool.set_coalesce(devname, coalesce)
+            ethtool.set_coalesce(devname, coalesce)  # pylint: disable=too-many-function-args
         return show_coalesce(devname)
     except IOError:
         log.error('Invalid coalesce arguments on %s: %s', devname, coalesce)

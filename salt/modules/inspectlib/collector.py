@@ -480,7 +480,7 @@ def is_alive(pidfile):
         with salt.utils.files.fopen(pidfile) as fp_:
             os.kill(int(fp_.read().strip()), 0)
         return True
-    except Exception as ex:
+    except Exception as ex:  # pylint: disable=broad-except
         if os.access(pidfile, os.W_OK) and os.path.isfile(pidfile):
             os.unlink(pidfile)
         return False
@@ -498,7 +498,7 @@ if __name__ == '__main__':
         print("This module is not intended to use directly!", file=sys.stderr)
         sys.exit(1)
 
-    pidfile, dbfile, mode = sys.argv[1:]
+    pidfile, dbfile, mode = sys.argv[1:]  # pylint: disable=unbalanced-tuple-unpacking
     if is_alive(pidfile):
         sys.exit(1)
 

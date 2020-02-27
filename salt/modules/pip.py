@@ -73,6 +73,9 @@ of the 2015.5 branch:
    example, cwd: 'C:\\salt\\bin\\scripts'. Sometimes python thinks the single
    back slash is an escape character.
 
+   There is a known incompatibility between Python2 pip>=10.* and Salt <=2018.3.0.
+   The issue is decribed here: https://github.com/saltstack/salt/issues/46163
+
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 
@@ -481,6 +484,11 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         behind an authenticated proxy. If you provide
         ``user@proxy.server:port`` then you will be prompted for a password.
 
+        .. note::
+            If the the Minion has a globaly configured proxy - it will be used
+            even if no proxy was set here. To explicitly disable proxy for pip
+            you should pass ``False`` as a value.
+
     timeout
         Set the socket timeout (default 15 seconds)
 
@@ -711,8 +719,16 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
         cmd.extend(['--log', log])
 
+    config = __opts__
     if proxy:
         cmd.extend(['--proxy', proxy])
+    # If proxy arg is set to False we won't use the global proxy even if it's set.
+    elif proxy is not False and config.get('proxy_host') and config.get('proxy_port'):
+        if config.get('proxy_username') and config.get('proxy_password'):
+            http_proxy_url = 'http://{proxy_username}:{proxy_password}@{proxy_host}:{proxy_port}'.format(**config)
+        else:
+            http_proxy_url = 'http://{proxy_host}:{proxy_port}'.format(**config)
+        cmd.extend(['--proxy', http_proxy_url])
 
     if timeout:
         try:
@@ -995,6 +1011,11 @@ def uninstall(pkgs=None,
         behind an authenticated proxy.  If you provide
         ``user@proxy.server:port`` then you will be prompted for a password.
 
+        .. note::
+            If the the Minion has a globaly configured proxy - it will be used
+            even if no proxy was set here. To explicitly disable proxy for pip
+            you should pass ``False`` as a value.
+
     timeout
         Set the socket timeout (default 15 seconds)
 
@@ -1036,8 +1057,16 @@ def uninstall(pkgs=None,
 
         cmd.extend(['--log', log])
 
+    config = __opts__
     if proxy:
         cmd.extend(['--proxy', proxy])
+    # If proxy arg is set to False we won't use the global proxy even if it's set.
+    elif proxy is not False and config.get('proxy_host') and config.get('proxy_port'):
+        if config.get('proxy_username') and config.get('proxy_password'):
+            http_proxy_url = 'http://{proxy_username}:{proxy_password}@{proxy_host}:{proxy_port}'.format(**config)
+        else:
+            http_proxy_url = 'http://{proxy_host}:{proxy_port}'.format(**config)
+        cmd.extend(['--proxy', http_proxy_url])
 
     if timeout:
         try:

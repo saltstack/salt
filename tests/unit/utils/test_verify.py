@@ -24,13 +24,11 @@ from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf, TestCase
 from tests.support.helpers import (
     requires_network,
-    TestsLoggingHandler
+    TstSuiteLoggingHandler
 )
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import salt libs
@@ -142,7 +140,7 @@ class TestVerify(TestCase):
                 pass
 
     def test_max_open_files(self):
-        with TestsLoggingHandler() as handler:
+        with TstSuiteLoggingHandler() as handler:
             logmsg_dbg = (
                 'DEBUG:This salt-master instance has accepted {0} minion keys.'
             )
@@ -261,7 +259,6 @@ class TestVerify(TestCase):
                     resource.setrlimit(resource.RLIMIT_NOFILE, (mof_s, mof_h))
                 shutil.rmtree(tempdir)
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_verify_log(self):
         '''
         Test that verify_log works as expected

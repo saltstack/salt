@@ -72,6 +72,7 @@ try:
     import kubernetes.client
     from kubernetes.client.rest import ApiException
     from urllib3.exceptions import HTTPError
+    # pylint: disable=no-name-in-module
     try:
         # There is an API change in Kubernetes >= 2.0.0.
         from kubernetes.client import V1beta1Deployment as AppsV1beta1Deployment
@@ -79,6 +80,7 @@ try:
     except ImportError:
         from kubernetes.client import AppsV1beta1Deployment
         from kubernetes.client import AppsV1beta1DeploymentSpec
+    # pylint: enable=no-name-in-module
 
     HAS_LIBS = True
 except ImportError:
@@ -209,7 +211,7 @@ def _setup_conn(**kwargs):
                     'Use \'kubeconfig\' and \'context\' instead.')
             try:
                 return _setup_conn_old(**kwargs)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 raise CommandExecutionError('Old style kubernetes configuration is only supported up to python-kubernetes 2.0.0')
         else:
             raise CommandExecutionError('Invalid kubernetes configuration. Parameter \'kubeconfig\' and \'context\' are required.')
@@ -230,7 +232,7 @@ def _cleanup_old(**kwargs):
             salt.utils.files.safe_rm(key)
         if ca and os.path.exists(ca) and os.path.basename(ca).startswith('salt-kube-'):
             salt.utils.files.safe_rm(ca)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         pass
 
 

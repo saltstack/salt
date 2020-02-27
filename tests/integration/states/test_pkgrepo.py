@@ -14,11 +14,13 @@ from tests.support.unit import skipIf
 from tests.support.helpers import (
     destructiveTest,
     requires_salt_modules,
+    requires_salt_states,
     requires_system_grains,
 )
 
 # Import Salt libs
 import salt.utils.platform
+import salt.utils.files
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -44,7 +46,7 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
 
         if grains['os_family'] == 'Debian':
             try:
-                from aptsources import sourceslist
+                from aptsources import sourceslist  # pylint: disable=unused-import
             except ImportError:
                 self.skipTest(
                     'aptsources.sourceslist python module not found'
@@ -77,21 +79,22 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
         for state_id, state_result in six.iteritems(ret):
             self.assertSaltTrueReturn(dict([(state_id, state_result)]))
 
-    @requires_salt_modules('pkgrepo.absent', 'pkgrepo.managed')
+    @requires_salt_states('pkgrepo.absent', 'pkgrepo.managed')
     @requires_system_grains
     def test_pkgrepo_03_with_comments(self, grains):
         '''
         Test adding a repo with comments
         '''
-        if grains['os_family'] in ('redhat',):
+        kwargs = {}
+        if grains['os_family'] == 'RedHat':
             kwargs = {
                 'name': 'examplerepo',
                 'baseurl': 'http://example.com/repo',
                 'enabled': False,
                 'comments': ['This is a comment']
             }
-        elif grains['os_family'] in ('debian',):
-            self.skipTest('Debian/Ubuntu test case needed')
+        else:
+            self.skipTest('{}/{} test case needed'.format(grains['os_family'], grains['os']))
 
         try:
             # Run the state to add the repo
@@ -127,7 +130,7 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
             # Clean up
             self.run_state('pkgrepo.absent', name=kwargs['name'])
 
-    @requires_salt_modules('pkgrepo.managed')
+    @requires_salt_states('pkgrepo.managed')
     @requires_system_grains
     def test_pkgrepo_04_apt_with_architectures(self, grains):
         '''

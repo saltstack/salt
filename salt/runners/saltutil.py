@@ -230,7 +230,7 @@ def sync_proxymodules(saltenv='base', extmod_whitelist=None, extmod_blacklist=No
 
     .. code-block:: bash
 
-        salt-run saltutil.sync_proxy
+        salt-run saltutil.sync_proxymodules
     '''
     return salt.utils.extmods.sync(__opts__, 'proxy', saltenv=saltenv, extmod_whitelist=extmod_whitelist,
                                    extmod_blacklist=extmod_blacklist)[0]
@@ -612,7 +612,7 @@ def sync_serializers(saltenv='base', extmod_whitelist=None, extmod_blacklist=Non
 
 def sync_executors(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
     '''
-    .. versionadded:: Neon
+    .. versionadded:: 3000
 
     Sync executor modules from ``salt://_executors`` to the master
 

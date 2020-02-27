@@ -873,7 +873,7 @@ def hypermedia_handler(*args, **kwargs):
         raise cherrypy.HTTPError(504)
     except cherrypy.CherryPyException:
         raise
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         # The TimeoutError exception class was removed in CherryPy in 12.0.0, but
         # Still check existence of TimeoutError and handle in CherryPy < 12.
         # The check was moved down from the SaltClientTimeout error line because
@@ -906,7 +906,7 @@ def hypermedia_handler(*args, **kwargs):
         if six.PY3:
             response = salt.utils.stringutils.to_bytes(response)
         return response
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         msg = 'Could not serialize the return data from Salt.'
         logger.debug(msg, exc_info=True)
         raise cherrypy.HTTPError(500, msg)
@@ -1233,8 +1233,6 @@ class LowDataAdapter(object):
             HTTP/1.1 200 OK
             Content-Type: application/json
         '''
-        import inspect
-
         return {
             'return': "Welcome",
             'clients': salt.netapi.CLIENTS,
@@ -1908,7 +1906,7 @@ class Login(LowDataAdapter):
 
             if not perms:
                 logger.debug("Eauth permission list not found.")
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             logger.debug("Configuration for external_auth malformed for "
                 "eauth '{0}', and user '{1}'."
                 .format(token.get('eauth'), token.get('name')), exc_info=True)

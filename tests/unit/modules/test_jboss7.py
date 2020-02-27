@@ -5,15 +5,14 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import salt testing libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock
+from tests.support.unit import TestCase
+from tests.support.mock import MagicMock
 
 # Import salt libs
 from salt.utils.odict import OrderedDict
 import salt.modules.jboss7 as jboss7
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class JBoss7TestCase(TestCase, LoaderModuleMockMixin):
 
     jboss_config = {}

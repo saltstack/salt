@@ -8,10 +8,8 @@ import os
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
+from tests.support.unit import TestCase
 from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     MagicMock,
     patch)
 
@@ -19,7 +17,6 @@ from tests.support.mock import (
 import salt.states.mount as mount
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class MountTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.mount
@@ -450,6 +447,56 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertDictEqual(mount.mod_watch(name, sfun='unmount'), ret)
 
+    def test_mounted_multiple_mounts(self):
+        '''
+        Test to verify that a device is mounted.
+        '''
+        name = '/mnt/nfs1'
+        device = 'localhost:/mnt/nfsshare'
+        fstype = 'nfs4'
+
+        name2 = '/mnt/nfs2'
+        device2 = 'localhost:/mnt/nfsshare'
+        fstype2 = 'nfs4'
+
+        ret = {'name': name,
+               'result': False,
+               'comment': '',
+               'changes': {}}
+
+        mock = MagicMock(side_effect=['new', 'present', 'new', 'change',
+                                      'bad config', 'salt', 'present'])
+        mock_t = MagicMock(return_value=True)
+        mock_f = MagicMock(return_value=False)
+        mock_ret = MagicMock(return_value={'retcode': 1})
+        mock_mnt = MagicMock(return_value={name: {'device': device, 'opts': [],
+                                                  'superopts': []}})
+        mock_read_cache = MagicMock(return_value={})
+        mock_write_cache = MagicMock(return_value=True)
+        mock_user = MagicMock(return_value={'uid': 510})
+        mock_group = MagicMock(return_value={'gid': 100})
+        mock_str = MagicMock(return_value='salt')
+        mock_fstab_config = ['localhost:/mnt/nfsshare		/mnt/nfs1	nfs	defaults	0 0']
+
+        # Test no change for uid provided as a name #25293
+        with patch.dict(mount.__grains__, {'os': 'CentOS'}):
+            with patch.dict(mount.__opts__, {'test': True}):
+                with patch.dict(mount.__salt__, {'mount.active': mock_mnt,
+                                                 'mount.mount': mock_str,
+                                                 'mount.umount': mock_f,
+                                                 'mount.read_mount_cache': mock_read_cache,
+                                                 'mount.write_mount_cache': mock_write_cache,
+                                                 'user.info': mock_user,
+                                                 'group.info': mock_group}):
+                    with patch.object(os.path, 'exists', mock_t):
+                        comt = '/mnt/nfs2 would be mounted'
+                        ret.update({'name': name2, 'result': None})
+                        ret.update({'comment': comt, 'changes': {}})
+                        self.assertDictEqual(mount.mounted(name2, device2,
+                                                           fstype2,
+                                                           opts=[]),
+                                            ret)
+
     def test__convert_to_fast_none(self):
         '''
         Test the device name conversor
@@ -534,7 +581,8 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                                                                  fstype='ext2',
                                                                  opts='noowners',
                                                                  config='/etc/auto_salt',
-                                                                 test=True)
+                                                                 test=True,
+                                                                 not_change=False)
 
     def test_fstab_present_aix_test_present(self):
         '''
@@ -563,7 +611,8 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                                                                   opts='',
                                                                   config='/etc/filesystems',
                                                                   test=True,
-                                                                  match_on='auto')
+                                                                  match_on='auto',
+                                                                  not_change=False)
 
     def test_fstab_present_test_present(self):
         '''
@@ -593,7 +642,8 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                                                             pass_num=0,
                                                             config='/etc/fstab',
                                                             test=True,
-                                                            match_on='auto')
+                                                            match_on='auto',
+                                                            not_change=False)
 
     def test_fstab_present_test_new(self):
         '''
@@ -623,7 +673,8 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                                                             pass_num=0,
                                                             config='/etc/fstab',
                                                             test=True,
-                                                            match_on='auto')
+                                                            match_on='auto',
+                                                            not_change=False)
 
     def test_fstab_present_test_change(self):
         '''
@@ -653,7 +704,8 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                                                             pass_num=0,
                                                             config='/etc/fstab',
                                                             test=True,
-                                                            match_on='auto')
+                                                            match_on='auto',
+                                                            not_change=False)
 
     def test_fstab_present_test_error(self):
         '''
@@ -683,7 +735,8 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                                                             pass_num=0,
                                                             config='/etc/fstab',
                                                             test=True,
-                                                            match_on='auto')
+                                                            match_on='auto',
+                                                            not_change=False)
 
     def test_fstab_present_macos_present(self):
         '''
@@ -709,7 +762,8 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                                                                  device='/dev/sda1',
                                                                  fstype='ext2',
                                                                  opts='noowners',
-                                                                 config='/etc/auto_salt')
+                                                                 config='/etc/auto_salt',
+                                                                 not_change=False)
 
     def test_fstab_present_aix_present(self):
         '''
@@ -737,7 +791,8 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                                                                   mount=True,
                                                                   opts='',
                                                                   config='/etc/filesystems',
-                                                                  match_on='auto')
+                                                                  match_on='auto',
+                                                                  not_change=False)
 
     def test_fstab_present_present(self):
         '''
@@ -766,7 +821,8 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                                                             dump=0,
                                                             pass_num=0,
                                                             config='/etc/fstab',
-                                                            match_on='auto')
+                                                            match_on='auto',
+                                                            not_change=False)
 
     def test_fstab_present_new(self):
         '''
@@ -795,7 +851,8 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                                                             dump=0,
                                                             pass_num=0,
                                                             config='/etc/fstab',
-                                                            match_on='auto')
+                                                            match_on='auto',
+                                                            not_change=False)
 
     def test_fstab_present_change(self):
         '''
@@ -824,7 +881,8 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                                                             dump=0,
                                                             pass_num=0,
                                                             config='/etc/fstab',
-                                                            match_on='auto')
+                                                            match_on='auto',
+                                                            not_change=False)
 
     def test_fstab_present_fail(self):
         '''
@@ -853,7 +911,8 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                                                             dump=0,
                                                             pass_num=0,
                                                             config='/etc/fstab',
-                                                            match_on='auto')
+                                                            match_on='auto',
+                                                            not_change=False)
 
     def test_fstab_absent_macos_test_absent(self):
         '''
