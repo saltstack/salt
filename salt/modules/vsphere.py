@@ -7906,7 +7906,7 @@ def _apply_scsi_controller(adapter, adapter_type, bus_sharing, key,
         Describes the operation which should be done on the object,
         the possibles values: 'add' and 'edit', the default value is 'add'
 
-    .. code-block: bash
+    .. code-block:: bash
 
         scsi:
           adapter: 'SCSI controller 0'
@@ -8097,7 +8097,7 @@ def _apply_cd_drive(drive_label, key, device_type, operation,
     parent_ref
         Parent object
 
-    .. code-block: bash
+    .. code-block:: bash
 
         cd:
             adapter: "CD/DVD drive 1"
@@ -8278,7 +8278,7 @@ def _create_disks(service_instance, disks, scsi_controllers=None, parent=None):
     parent
         Parent object reference
 
-    .. code-block: bash
+    .. code-block:: bash
 
         disk:
           adapter: 'Hard disk 1'
@@ -8389,7 +8389,7 @@ def _create_network_adapters(network_interfaces, parent=None):
     parent
         Parent object reference
 
-    .. code-block: bash
+    .. code-block:: bash
 
         interfaces:
           adapter: 'Network adapter 1'
