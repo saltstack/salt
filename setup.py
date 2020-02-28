@@ -98,6 +98,7 @@ SALT_VERSION = os.path.join(os.path.abspath(SETUP_DIRNAME), 'salt', 'version.py'
 SALT_VERSION_HARDCODED = os.path.join(os.path.abspath(SETUP_DIRNAME), 'salt', '_version.py')
 SALT_SYSPATHS_HARDCODED = os.path.join(os.path.abspath(SETUP_DIRNAME), 'salt', '_syspaths.py')
 SALT_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'base.txt')
+SALT_CRYPTO_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'crypto.txt')
 SALT_ZEROMQ_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'zeromq.txt')
 SALT_WINDOWS_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'pkg', 'windows', 'req.txt')
 SALT_LONG_DESCRIPTION_FILE = os.path.join(os.path.abspath(SETUP_DIRNAME), 'README.rst')
@@ -205,7 +206,7 @@ def _parse_requirements_file(requirements_file):
             except ValueError:
                 pkg, pyverspec = line, ''
             pyverspec = pyverspec.strip()
-            if pyverspec:
+            if pyverspec and (not pkg.startswith('pycrypto') or pkg.startswith('pycryptodome')):
                 _, op, ver = pyverspec.split(' ', 2)
                 if not _check_ver(platform.python_version(), _parse_op(op), _parse_ver(ver)):
                     continue
@@ -1021,6 +1022,7 @@ class SaltDistribution(distutils.dist.Distribution):
         install_requires = _parse_requirements_file(SALT_REQS)
 
         if self.salt_transport == 'zeromq':
+            install_requires += _parse_requirements_file(SALT_CRYPTO_REQS)
             install_requires += _parse_requirements_file(SALT_ZEROMQ_REQS)
 
         if IS_WINDOWS_PLATFORM:
