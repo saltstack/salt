@@ -708,7 +708,8 @@ class WinLGPOGetPolicyFromPolicyResources(TestCase, LoaderModuleMockMixin):
         return LOADER_DICTS
 
     def setUp(self):
-        self.adml_data = win_lgpo._get_policy_resources('en-US')
+        if self.adml_data is None:
+            self.adml_data = win_lgpo._get_policy_resources('en-US')
 
     def test__getAdmlPresentationRefId(self):
         ref_id = 'LetAppsAccessAccountInfo_Enum'
