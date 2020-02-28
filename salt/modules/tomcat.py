@@ -259,6 +259,10 @@ def _wget(cmd, opts=None, url='http://localhost:8080/manager', timeout=180):
         except Exception:  # pylint: disable=broad-except
             ret['msg'] = 'Failed to create HTTP request'
 
+    # Force all byte strings to utf-8 strings, for python >= 3.5
+    for key, item in enumerate(ret['msg']):
+        ret['msg'][key] = item.decode('utf-8')
+
     if not ret['msg'][0].startswith('OK'):
         ret['res'] = False
 
