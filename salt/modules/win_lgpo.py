@@ -6162,6 +6162,10 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
 
         if standard_element_expected_string and not check_deleted:
             if this_element_value is not None:
+                # Sometimes values come in as strings
+                if isinstance(this_element_value, str):
+                    log.debug('Converting {0} to bytes'.format(this_element_value))
+                    this_element_value = this_element_value.encode('utf-32-le')
                 expected_string = b''.join(['['.encode('utf-16-le'),
                                             reg_key,
                                             encoded_null,
@@ -6173,7 +6177,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
                                             encoded_semicolon,
                                             six.unichr(len(this_element_value)).encode('utf-32-le'),
                                             encoded_semicolon,
-                                            this_element_value.encode('utf-32-le'),
+                                            this_element_value,
                                             ']'.encode('utf-16-le')])
             else:
                 expected_string = b''.join(['['.encode('utf-16-le'),
