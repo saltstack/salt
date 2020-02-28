@@ -13,37 +13,22 @@ from tests.support.unit import TestCase, skipIf
 
 # Import Salt Libs
 import salt.config
-import salt.modules.cmdmod
-import salt.modules.file
-import salt.modules.win_file as win_file
-import salt.modules.win_lgpo as win_lgpo_mod
+import salt.loader
 import salt.states.win_lgpo as win_lgpo
 import salt.utils.platform
-import salt.utils.win_dacl
-import salt.utils.win_lgpo_auditpol
-import salt.utils.win_reg
+
+# We're going to actually use the loader, without grains (slow)
+opts = salt.config.DEFAULT_MINION_OPTS.copy()
+utils = salt.loader.utils(opts)
+modules = salt.loader.minion_mods(opts, utils=utils)
 
 LOADER_DICTS = {
     win_lgpo: {
-        '__salt__': {
-            'lgpo.get_policy': win_lgpo_mod.get_policy,
-            'lgpo.get_policy_info': win_lgpo_mod.get_policy_info,
-            'lgpo.set': win_lgpo_mod.set_}},
-    win_lgpo_mod: {
-        '__salt__': {
-            'cmd.run': salt.modules.cmdmod.run,
-            'file.file_exists': salt.modules.file.file_exists,
-            'file.makedirs': win_file.makedirs_,
-            'file.remove': win_file.remove,
-            'file.write': salt.modules.file.write},
-        '__opts__': salt.config.DEFAULT_MINION_OPTS.copy(),
-        '__utils__': {
-            'reg.read_value': salt.utils.win_reg.read_value,
-            'auditpol.get_auditpol_dump':
-                salt.utils.win_lgpo_auditpol.get_auditpol_dump}},
-    win_file: {
-        '__utils__': {
-            'dacl.set_perms': salt.utils.win_dacl.set_perms}}}
+        '__opts__': opts,
+        '__salt__': modules,
+        '__utils__': utils,
+    }
+}
 
 
 class WinLGPOComparePoliciesTestCase(TestCase):

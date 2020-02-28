@@ -15,31 +15,22 @@ from tests.support.unit import TestCase, skipIf
 
 # Import Salt Libs
 import salt.config
-import salt.modules.cmdmod
-import salt.modules.file
-import salt.modules.win_file as win_file
+import salt.loader
 import salt.modules.win_lgpo as win_lgpo
 import salt.utils.platform
-import salt.utils.win_dacl
-import salt.utils.win_lgpo_auditpol
-import salt.utils.win_reg
+
+# We're going to actually use the loader, without grains (slow)
+opts = salt.config.DEFAULT_MINION_OPTS.copy()
+utils = salt.loader.utils(opts)
+modules = salt.loader.minion_mods(opts, utils=utils)
 
 LOADER_DICTS = {
     win_lgpo: {
-        '__salt__': {
-            'file.file_exists': salt.modules.file.file_exists,
-            'file.makedirs': win_file.makedirs_,
-            'file.write': salt.modules.file.write,
-            'file.remove': win_file.remove,
-            'cmd.run': salt.modules.cmdmod.run},
-        '__opts__': salt.config.DEFAULT_MINION_OPTS.copy(),
-        '__utils__': {
-            'reg.read_value': salt.utils.win_reg.read_value,
-            'auditpol.get_auditpol_dump':
-                salt.utils.win_lgpo_auditpol.get_auditpol_dump}},
-    win_file: {
-        '__utils__': {
-            'dacl.set_perms': salt.utils.win_dacl.set_perms}}}
+        '__opts__': opts,
+        '__salt__': modules,
+        '__utils__': utils,
+    }
+}
 
 
 class WinLGPOTestCase(TestCase):
@@ -704,3 +695,30 @@ class WinLGPOGetPointAndPrintENTestCase(TestCase, LoaderModuleMockMixin):
                             u'When updating drivers for an existing connection':
                                 'Show warning only'}}}}}
         self.assertDictEqual(result, expected)
+
+
+@skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
+class WinLGPOGetPolicyFromPolicyResources(TestCase, LoaderModuleMockMixin):
+    '''
+    Test functions related to policy info gathered from ADMX/ADML files
+    '''
+    adml_data = None
+
+    def setup_loader_modules(self):
+        return LOADER_DICTS
+
+    def setUp(self):
+        self.adml_data = win_lgpo._get_policy_resources('en-US')
+
+    def test__getAdmlPresentationRefId(self):
+        ref_id = 'LetAppsAccessAccountInfo_Enum'
+        expected = 'Default for all apps'
+        result = win_lgpo._getAdmlPresentationRefId(self.adml_data, ref_id)
+        self.assertEqual(result, expected)
+
+    def test__getAdmlPresentationRefId_result_text_is_none(self):
+        ref_id = 'LetAppsAccessAccountInfo_UserInControlOfTheseApps_List'
+        expected = 'Put user in control of these specific apps (use Package ' \
+                   'Family Names)'
+        result = win_lgpo._getAdmlPresentationRefId(self.adml_data, ref_id)
+        self.assertEqual(result, expected)
