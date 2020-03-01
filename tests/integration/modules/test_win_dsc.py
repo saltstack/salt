@@ -14,6 +14,7 @@ from tests.support.helpers import destructiveTest
 import salt.utils.files
 import salt.utils.platform
 
+
 @skipIf(not salt.utils.platform.is_windows(), 'Tests for only Windows')
 class DscModuleTest(ModuleCase):
     '''
@@ -38,6 +39,6 @@ class DscModuleTest(ModuleCase):
         super(DscModuleTest, self).tearDown()
 
     @destructiveTest
-    def test_compile_config():
+    def test_compile_config(self):
         ret = self.run_function('dsc.compile_config', self.ps1file, config_name='HelloWorld', config_data=self.psd1file)
         self.assertTrue(ret['Exists'])
