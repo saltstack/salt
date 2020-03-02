@@ -33,9 +33,8 @@ from salt.utils.decorators.jinja import jinja_filter
 
 # Import 3rd-party libs
 from salt.ext import six
-from salt.utils.versions import LooseVersion as _LooseVersion
-
-try:  # pylint: disable=incompatible-py3-code
+# pylint: disable=incompatible-py3-code
+try:
     import gnupg
 
     HAS_GPG_BINDINGS = True
@@ -1434,7 +1433,7 @@ def get_fingerprint_from_data(keydata, secret=False):
 
 @jinja_filter('gpg_encrypt')
 def text_encrypt(
-    text=None,
+    text,
     recipients=None,
     symmetric=None,
     passphrase=None,
