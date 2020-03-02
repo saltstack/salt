@@ -783,6 +783,24 @@ def apply_(mods=None, **kwargs):
     return highstate(**kwargs)
 
 
+def test(*args, **kwargs):
+    '''
+    Alias for `state.apply` with the kwarg `test` forced to `True`.
+
+    This is a nicety to avoid the need to type out `test=True` and the possibility of
+    a typo causing changes you do not intend.
+    '''
+    test_state_before = __opts__["test"]
+    __opts__["test"] = True
+
+    kwargs["test"] = True
+
+    try:
+        return apply_(*args, **kwargs)
+    finally:
+        __opts__["test"] = test_state_before
+        
+
 def request(mods=None,
             **kwargs):
     '''
