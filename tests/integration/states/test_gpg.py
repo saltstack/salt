@@ -5,11 +5,9 @@ Tests for gpg state.
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import shutil
 import tempfile
 import textwrap
 import os
-import errno
 
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
