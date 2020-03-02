@@ -218,8 +218,8 @@ class GpgTestCase(ModuleCase):
         res = self.run_function(
             'gpg.export_key', keyids='857C86FCF8A3FB11', gnupghome=self.gnupghome
         )
-        self.assertTrue(res.startswith('-----BEGIN PGP PUBLIC KEY BLOCK-----'))
-        self.assertTrue(res.endswith('-----END PGP PUBLIC KEY BLOCK-----\n'))
+        self.assertTrue(res['message'].startswith('-----BEGIN PGP PUBLIC KEY BLOCK-----'))
+        self.assertTrue(res['message'].endswith('-----END PGP PUBLIC KEY BLOCK-----\n'))
 
     def step_05b_export_secret_key(self):
         '''
@@ -232,8 +232,8 @@ class GpgTestCase(ModuleCase):
             secret=True,
             passphrase='foo'
         )
-        self.assertTrue(res.startswith('-----BEGIN PGP PRIVATE KEY BLOCK-----'))
-        self.assertTrue(res.endswith('-----END PGP PRIVATE KEY BLOCK-----\n'))
+        self.assertTrue(res['message'].startswith('-----BEGIN PGP PRIVATE KEY BLOCK-----'))
+        self.assertTrue(res['message'].endswith('-----END PGP PRIVATE KEY BLOCK-----\n'))
 
     def step_05f_export_secret_key(self):
         '''
