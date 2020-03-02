@@ -59,8 +59,10 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
             fp.write(
                 textwrap.dedent(
                     '''
-                sneaky_stuff: secret data
-                data_to_sign: test data to get signed'''
+                    sneaky_stuff: secret data
+                    data_to_sign: test data to get signed
+                    data_to_sign_10: more test data
+                    '''
                 )
             )
         with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, 'top.sls'),
@@ -68,9 +70,10 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
             fp.write(
                 textwrap.dedent(
                     '''
-                base:
-                  '*':
-                    - gpg'''
+                    base:
+                      '*':
+                        - gpg
+                    '''
                 )
             )
 
@@ -549,7 +552,8 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
 
     def test_09_sign_verify_contents_detached(self):
         '''
-        Test signing and verifying pillar contents with detached signature.
+        Test signing and verifying directly provided contents with detached
+        (also directly provided) signature.
         '''
         signature_file = os.path.join(self.tempdir, 'signature.asc')
         self.addCleanup(salt.utils.files.safe_rm, signature_file)
@@ -600,7 +604,54 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltStateChangesEqual(ret, {})
 
     def test_10_sign_verify_contents_pillar_detached(self):
-        pass
+        '''
+        Test signing and verifying pillar-provided contents with detached
+        directly provided signature.
+        '''
+        signature_file = os.path.join(self.tempdir, 'signature.asc')
+        self.addCleanup(salt.utils.files.safe_rm, signature_file)
 
-    def test_11_sign_verify_source_detached(self):
-        pass
+        # Test signing
+        ret = self.run_state(
+            'gpg.data_signed',
+            name=signature_file,
+            contents_pillar='data_to_sign_10',
+            keyid='857C86FCF8A3FB11',
+            gnupghome=self.gnupghome,
+            detach=True,
+        )
+        self.assertSaltTrueReturn(ret)
+        self.assertInSaltComment(
+            'Signature has been written to {}'.format(signature_file), ret,
+        )
+        self.assertSaltStateChangesEqual(
+            ret, {'old': {signature_file: None}, 'new': {signature_file: 'signature'}}
+        )
+        # Test no changes on repeated run
+        ret = self.run_state(
+            'gpg.data_signed',
+            name=signature_file,
+            contents_pillar='data_to_sign_10',
+            keyid='857C86FCF8A3FB11',
+            gnupghome=self.gnupghome,
+            detach=True,
+        )
+        self.assertSaltTrueReturn(ret)
+        self.assertSaltStateChangesEqual(ret, {})
+        self.assertInSaltComment(
+            'Target file already exists. Not forcing overwrite.', ret,
+        )
+
+        # Get signature data
+        with salt.utils.files.flopen(signature_file, 'rb') as _fp:
+            signature = _fp.read()
+        ret = self.run_state(
+            'gpg.data_verified',
+            name='foobar',
+            contents_pillar='data_to_sign_10',
+            signature=signature,
+            gnupghome=self.gnupghome,
+        )
+        self.assertSaltTrueReturn(ret)
+        self.assertInSaltComment('The signature is verified.', ret, )
+        self.assertSaltStateChangesEqual(ret, {})

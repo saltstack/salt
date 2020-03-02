@@ -231,7 +231,9 @@ class GpgTestCase(ModuleCase):
             secret=True,
             passphrase='foo'
         )
-        self.assertTrue(res['message'].startswith('-----BEGIN PGP PRIVATE KEY BLOCK-----'))
+        self.assertTrue(
+            res['message'].startswith('-----BEGIN PGP PRIVATE KEY BLOCK-----')
+        )
         self.assertTrue(res['message'].endswith('-----END PGP PRIVATE KEY BLOCK-----\n'))
 
     def step_05f_export_secret_key(self):
