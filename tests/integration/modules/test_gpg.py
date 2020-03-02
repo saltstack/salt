@@ -17,7 +17,6 @@ import salt.utils.platform
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.runtests import RUNTIME_VARS
-
 # pylint: disable=incompatible-py3-code
 
 try:
