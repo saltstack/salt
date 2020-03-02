@@ -796,10 +796,13 @@ def test(*args, **kwargs):
     kwargs["test"] = True
 
     try:
-        return apply_(*args, **kwargs)
+        ret = apply_(*args, **kwargs)
     finally:
         __opts__["test"] = test_state_before
-        
+
+    return ret
+
+
 
 def request(mods=None,
             **kwargs):
