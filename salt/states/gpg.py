@@ -12,7 +12,7 @@ import logging
 import os
 
 # Import salt libs
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import SaltInvocationError, CheckError
 
 # Import 3rd-party libs
 from salt.ext import six
