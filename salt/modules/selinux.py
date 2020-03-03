@@ -748,12 +748,18 @@ def fcontext_apply_policy(name, recursive=False):
     cmd += re.escape(name)
     apply_ret = __salt__["cmd.run_all"](cmd)
     ret.update(apply_ret)
-    if apply_ret["retcode"] == 0:
-        changes_list = re.findall(
-            "restorecon reset (.*) context (.*)->(.*)$", changes_text, re.M
-        )
-        if len(changes_list) > 0:
-            ret.update({"changes": {}})
+    if apply_ret['retcode'] == 0:
+        changes_list = []
+        if changes_text.startswith('Would relabel'):
+            changes_list = re.findall('Would relabel (.*) from (.*) to (.*)$', changes_text, re.M)
+        elif changes_text.startswith('restorecon reset'):
+            changes_list = re.findall('restorecon reset (.*) context (.*)->(.*)$', changes_text, re.M)
+        else:
+            ret['retcode'] = 1
+            ret['error'] = 'Unrecognized response from restorecon command.'
+            return ret
+        if changes_list:
+            ret.update({'changes': {}})
         for item in changes_list:
             filespec = item[0]
             old = _context_string_to_dict(item[1])
