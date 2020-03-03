@@ -96,7 +96,9 @@ def get(key, profile=None):
             response.raise_for_status()
         data = response.json()['data']
 
-        return data[key]
+        if key in data:
+            return data[key]
+        return None
     except Exception as e:  # pylint: disable=broad-except
         log.error('Failed to read secret! %s: %s', type(e).__name__, e)
         raise salt.exceptions.CommandExecutionError(e)
