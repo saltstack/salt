@@ -91,3 +91,13 @@ class TestVaultSDB(LoaderModuleMockMixin, TestCase):
         assert mock_vault.call_args_list == [call('GET',
                                                   'v1/sdb://myvault/path/to/foo',
                                                   None)]
+
+    def test_get_missing(self):
+        '''
+        Test salt.sdb.vault.get function returns None
+        if vault does not have a value
+        '''
+        mock_vault = MagicMock()
+        mock_vault.return_value.status_code = 404
+        with patch.dict(vault.__utils__, {'vault.make_request': mock_vault}):
+            self.assertIsNone(vault.get('sdb://myvault/path/to/foo/bar'))
