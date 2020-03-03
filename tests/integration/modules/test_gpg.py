@@ -337,9 +337,12 @@ class GpgTestCase(ModuleCase):
         self.assertTrue(
             res['message'].startswith(
                 '-----BEGIN PGP SIGNED MESSAGE-----\n'
-                'Hash: SHA512\n\nsign here\n'
-                '-----BEGIN PGP SIGNATURE-----\n\n'
             )
+        )
+        self.assertTrue(
+            'Hash: ' in res['message']
+            and
+            '\n\nsign here\n-----BEGIN PGP SIGNATURE-----\n\n' in res['message']
         )
         self.assertTrue(res['message'].endswith('\n-----END PGP SIGNATURE-----\n'))
 
@@ -362,9 +365,12 @@ class GpgTestCase(ModuleCase):
         self.assertTrue(
             res['message'].startswith(
                 '-----BEGIN PGP SIGNED MESSAGE-----\n'
-                'Hash: SHA512\n\nStatement of authority.\n'
-                '-----BEGIN PGP SIGNATURE-----\n\n'
             )
+        )
+        self.assertTrue(
+            'Hash: ' in res['message']
+            and
+            '\n\nStatement of authority.\n-----BEGIN PGP SIGNATURE-----\n\n' in res['message']
         )
         self.assertTrue(res['message'].endswith('\n-----END PGP SIGNATURE-----\n'))
 
@@ -386,9 +392,12 @@ class GpgTestCase(ModuleCase):
         self.assertTrue(
             res['message'].startswith(
                 '-----BEGIN PGP SIGNED MESSAGE-----\n'
-                'Hash: SHA512\n\nsign here\n'
-                '-----BEGIN PGP SIGNATURE-----\n\n'
             )
+        )
+        self.assertTrue(
+            'Hash: ' in res['message']
+            and
+            '\n\nsign here\n-----BEGIN PGP SIGNATURE-----\n\n' in res['message']
         )
         self.assertTrue(res['message'].endswith('\n-----END PGP SIGNATURE-----\n'))
 
