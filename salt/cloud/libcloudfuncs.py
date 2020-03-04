@@ -45,7 +45,8 @@ import salt.config as config
 from salt.exceptions import SaltCloudNotFound, SaltCloudSystemExit
 
 # Get logging started
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 
 LIBCLOUD_MINIMAL_VERSION = (0, 14, 0)

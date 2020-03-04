@@ -30,7 +30,8 @@ except ImportError:
 import salt.utils.files
 import salt.utils.json
 
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 
 def __virtual__():

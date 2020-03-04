@@ -65,7 +65,8 @@ except ImportError:
 
 __virtualname__ = 'azurearm_resource'
 
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 
 def __virtual__():

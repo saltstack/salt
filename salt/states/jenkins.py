@@ -21,7 +21,8 @@ import salt.utils.stringutils
 
 # Import XML parser
 import xml.etree.ElementTree as ET
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 
 def _elements_equal(e1, e2):

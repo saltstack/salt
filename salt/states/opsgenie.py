@@ -40,7 +40,8 @@ import inspect
 # Import Salt libs
 import salt.exceptions
 
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 
 def create_alert(name=None, api_key=None, reason=None, action_type="Create"):

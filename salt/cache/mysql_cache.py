@@ -71,7 +71,8 @@ _DEFAULT_DATABASE_NAME = "salt_cache"
 _DEFAULT_CACHE_TABLE_NAME = "cache"
 _RECONNECT_INTERVAL_SEC = 0.050
 
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 client = None
 _mysql_kwargs = None
 _table_name = None

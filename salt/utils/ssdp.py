@@ -59,7 +59,8 @@ class SSDPBase(object):
     '''
     Salt Service Discovery Protocol.
     '''
-    log = logging.getLogger(__name__)
+    import salt.log
+    log = salt.log.LogBlocker(logging.getLogger(__name__))
 
     # Fields
     SIGNATURE = 'signature'

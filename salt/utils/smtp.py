@@ -44,7 +44,8 @@ except ImportError:
     HAS_GNUPG = False
 
 
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 
 def send(kwargs, opts):

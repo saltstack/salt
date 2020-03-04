@@ -13,7 +13,8 @@ import salt.utils.files
 import salt.utils.network
 import salt.utils.stringutils
 
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 
 def wollist(maclist, bcast='255.255.255.255', destport=9):

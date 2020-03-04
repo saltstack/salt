@@ -40,7 +40,8 @@ import logging
 from salt.ext import six
 import salt.utils.versions
 
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 # Import third party libs
 # pylint: disable=import-error

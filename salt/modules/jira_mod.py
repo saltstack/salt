@@ -21,8 +21,8 @@ Configuration example:
 from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
-import logging
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 # Import salt modules
 from salt.utils.args import clean_kwargs

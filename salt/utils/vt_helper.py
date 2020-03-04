@@ -22,7 +22,8 @@ from salt.utils.vt import Terminal, TerminalException
 SSH_PASSWORD_PROMPT_RE = re.compile(r'(?:.*)[Pp]assword(?: for .*)?:', re.M)
 KEY_VALID_RE = re.compile(r'.*\(yes\/no\).*')
 
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 
 class SSHConnection(object):

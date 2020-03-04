@@ -12,7 +12,8 @@ import salt.utils.json
 import salt.utils.path
 from salt.ext import six
 
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 _OUTPUT = '--output json'
 
@@ -237,7 +238,8 @@ def delete_queue(name, region, opts=None, user=None):
     queues = list_queues(region, opts, user)
     url_map = _parse_queue_list(queues)
 
-    logger = logging.getLogger(__name__)
+    import salt.log
+    logger = salt.log.LogBlocker(logging.getLogger(__name__))
     logger.debug('map %s', six.text_type(url_map))
     if name in url_map:
         delete = {'queue-url': url_map[name]}

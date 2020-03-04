@@ -51,7 +51,8 @@ from salt.ext import six
 # Import Salt libs
 from salt.ext.six.moves.urllib.parse import quote as _quote  # pylint: disable=no-name-in-module
 
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 
 def __virtual__():

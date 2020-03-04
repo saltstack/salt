@@ -18,7 +18,8 @@ import logging
 # Import Salt libs
 import salt.utils.platform
 
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 __virtualname__ = "certutil"
 
 

@@ -13,7 +13,8 @@ try:
 except ImportError:
     from collections import MutableMapping
 
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 
 def verify_fun(lazy_obj, fun):

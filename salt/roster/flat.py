@@ -12,7 +12,8 @@ from salt.template import compile_template
 from salt.roster import get_roster_file
 
 import logging
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 
 def targets(tgt, tgt_type='glob', **kwargs):

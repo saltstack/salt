@@ -49,7 +49,8 @@ from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-b
 # Import 3rd-party libs
 from salt.ext import six
 
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 try:
     LIBC = CDLL(find_library('c'))

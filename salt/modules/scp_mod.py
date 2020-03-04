@@ -26,7 +26,8 @@ except ImportError:
 __proxyenabled__ = ['*']
 __virtualname__ = 'scp'
 
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 
 def __virtual__():

@@ -343,7 +343,8 @@ from salt.ext import six
 
 # Set up logging
 import logging
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 
 def __virtual__():

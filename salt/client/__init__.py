@@ -71,7 +71,8 @@ except ImportError:
 # Import tornado
 import salt.ext.tornado.gen  # pylint: disable=F0401
 
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 
 def get_local_client(

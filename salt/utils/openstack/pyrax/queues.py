@@ -4,7 +4,8 @@ from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 import logging
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 # Import pyrax (SDK for Rackspace cloud) third party libs
 # pylint: disable=3rd-party-module-not-gated

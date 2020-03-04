@@ -47,7 +47,8 @@ __func_alias__ = {
     'key_str': 'print',
 }
 
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 
 def list_(match):

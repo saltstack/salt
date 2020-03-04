@@ -41,7 +41,8 @@ import salt.version
 import salt.utils.versions
 
 
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 __virtualname__ = 'salt_version'
 

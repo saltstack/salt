@@ -24,4 +24,5 @@ from salt.log.setup import (
     setup_console_logger,
     setup_logfile_logger,
     set_logger_level,
+    LogBlocker
 )

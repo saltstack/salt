@@ -13,7 +13,8 @@ import salt.utils.yaml
 # Import 3rd-party libs
 from salt.ext import six
 
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 
 # Renders jinja from a template file

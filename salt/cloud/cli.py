@@ -33,7 +33,8 @@ from salt.utils.verify import check_user, verify_env, verify_log_files, verify_l
 # Import 3rd-party libs
 from salt.ext import six
 
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 
 class SaltCloud(salt.utils.parsers.SaltCloudParser):

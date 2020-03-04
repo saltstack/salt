@@ -78,7 +78,8 @@ import logging
 # Import Salt libs
 from salt.utils.odict import OrderedDict
 
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 # Define the state's virtual name
 __virtualname__ = 'zpool'

@@ -37,7 +37,8 @@ from salt.ext import six
 from salt.ext.six.moves import queue, range  # pylint: disable=import-error,redefined-builtin
 from salt.ext.tornado import gen
 
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 # pylint: disable=import-error
 HAS_PSUTIL = False

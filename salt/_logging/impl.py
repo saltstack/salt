@@ -438,7 +438,32 @@ def __get_exposed_module_attributes():
 
 
 # Define what can be imported by wildcard imports
-__all__ = __get_exposed_module_attributes()
+__all__ = __get_exposed_module_attributes() + ["LogBlocker"]
 
 # We're done with the function, nuke it
 del __get_exposed_module_attributes
+
+
+class LogBlocker(object):
+    def __init__(self, this_log):
+        self._log = this_log
+
+    def __getattribute__(self, item):
+        try:
+            return object.__getattribute__(self, item)
+        except AttributeError:
+            return getattr(object.__getattribute__(self, "_log"), item)
+
+    @staticmethod
+    def _log_blocker(func, *args, **kwargs):
+        if LOG_LEVELS[func.__name__] >= 20:
+            func(*args, **kwargs)
+
+    def info(self, *args, **kwargs):
+        self._log_blocker(self._log.info, *args, **kwargs)
+
+    def trace(self, *args, **kwargs):
+        self._log_blocker(self._log.trace, *args, **kwargs)
+
+    def debug(self, *args, **kwargs):
+        self._log_blocker(self._log.debug, *args, **kwargs)

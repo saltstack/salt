@@ -16,7 +16,8 @@ import fnmatch
 import copy
 
 import logging
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 # Try to import range from https://github.com/ytoolshed/range
 HAS_RANGE = False

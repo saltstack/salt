@@ -25,7 +25,8 @@ from salt.utils.odict import OrderedDict as _OrderedDict
 # Import 3rd-party lib
 from salt.ext import six
 
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 # Don't shadow built-in's.
 __func_alias__ = {

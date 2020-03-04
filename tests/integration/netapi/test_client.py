@@ -26,7 +26,8 @@ from salt.exceptions import (
     EauthAuthenticationError
 )
 
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 
 class NetapiClientTest(TestCase):

@@ -20,7 +20,8 @@ import salt.utils.stringutils
 from salt.ext import six
 
 import logging
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 _SSHConfRegex = collections.namedtuple('_SSHConfRegex', ['target_field', 'pattern'])
 _ROSTER_FIELDS = (

@@ -75,7 +75,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import salt.utils.stringutils
 
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 
 def __virtual__():

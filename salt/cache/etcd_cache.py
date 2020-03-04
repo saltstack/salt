@@ -66,7 +66,8 @@ if HAS_ETCD:
     # and is too verbose
     etcd._log.setLevel(logging.INFO)  # pylint: disable=W0212
 
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 client = None
 path_prefix = None
 

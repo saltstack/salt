@@ -79,7 +79,8 @@ import salt.modules.cmdmod
 from salt.exceptions import CommandExecutionError
 from salt.ext.six.moves import zip
 
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 __hostname__ = socket.gethostname()
 __virtualname__ = 'netsh'
 

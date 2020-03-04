@@ -12,7 +12,8 @@ import logging
 # Import salt libs
 import salt.utils.http
 
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 
 def query(url, output=True, **kwargs):

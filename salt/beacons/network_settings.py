@@ -21,7 +21,8 @@ import salt.loader
 import logging
 from salt.ext.six.moves import map
 
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 __virtual_name__ = 'network_settings'
 

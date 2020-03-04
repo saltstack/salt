@@ -113,7 +113,8 @@ import salt.defaults.exitcodes
 from salt.utils.filebuffer import BufferedReader
 
 # Set up logger
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 _REQUIRES_PATH = 1
 _REQUIRES_STAT = 2

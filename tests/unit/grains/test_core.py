@@ -40,7 +40,8 @@ import salt.grains.core as core
 from salt.ext import six
 from salt._compat import ipaddress
 
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 # Globals
 IPv4Address = ipaddress.IPv4Address

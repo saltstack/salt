@@ -58,7 +58,8 @@ import salt.utils.stringutils
 from salt.ext.six import string_types
 from salt.log.setup import LOG_LEVELS
 
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 
 class TerminalException(Exception):

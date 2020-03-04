@@ -19,7 +19,8 @@ import logging
 from salt.ext import six
 
 
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 
 def _check_error(result, success_message):

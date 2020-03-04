@@ -73,7 +73,8 @@ from salt.exceptions import CommandExecutionError
 from salt.ext import six
 
 # Set up logging
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 __VALID_PROTO = ('static', 'dhcp')
 

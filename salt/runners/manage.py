@@ -33,7 +33,8 @@ import salt.version
 from salt.exceptions import SaltClientError, SaltSystemExit
 FINGERPRINT_REGEX = re.compile(r'^([a-f0-9]{2}:){15}([a-f0-9]{2})$')
 
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 
 def _ping(tgt, tgt_type, timeout, gather_job_timeout):

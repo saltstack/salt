@@ -63,7 +63,8 @@ import salt.utils.json
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError
 
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 # Import third party libs
 

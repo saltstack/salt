@@ -15,7 +15,8 @@ from salt.ext import six
 
 # Import 3rd-party libs
 
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 __virtualname__ = 'postgres'
 

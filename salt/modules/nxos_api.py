@@ -148,7 +148,8 @@ __virtualname__ = 'nxos_api'
 # globals
 # -----------------------------------------------------------------------------
 
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 # -----------------------------------------------------------------------------
 # propery functions

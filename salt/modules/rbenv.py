@@ -27,7 +27,8 @@ from salt.exceptions import SaltInvocationError
 from salt.ext import six
 
 # Set up logger
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 __func_alias__ = {
     'list_': 'list'

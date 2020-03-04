@@ -28,7 +28,8 @@ import logging
 import salt.utils.path
 
 # Set up logger
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 # Define the module's virtual name
 __virtualname__ = 'raid'

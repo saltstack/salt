@@ -25,7 +25,8 @@ from salt.utils.versions import LooseVersion as _LooseVersion
 from salt.ext import six
 from salt.ext.six.moves import range
 
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 RABBITMQCTL = None
 RABBITMQ_PLUGINS = None

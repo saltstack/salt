@@ -34,7 +34,8 @@ from salt.ext.six.moves.urllib.parse import urlparse  # pylint: disable=import-e
 from salt._logging import (LOG_COLORS,
                            LOG_LEVELS,
                            LOG_VALUES_TO_LEVELS,
-                           SORTED_LEVEL_NAMES)
+                           SORTED_LEVEL_NAMES,
+                           LogBlocker)
 from salt._logging.impl import (SaltLogRecord,
                                 SaltColorLogRecord,
                                 LOGGING_NULL_HANDLER,

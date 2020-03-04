@@ -24,7 +24,8 @@ import salt.utils.event
 import salt.utils.process
 from salt.ext.six import string_types
 
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 __func_alias__ = {
     'list_': 'list',

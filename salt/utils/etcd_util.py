@@ -68,7 +68,8 @@ except ImportError:
     HAS_LIBS = False
 
 # Set up logging
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 
 class EtcdUtilWatchTimeout(Exception):

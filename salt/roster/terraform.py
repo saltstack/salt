@@ -63,7 +63,8 @@ import os.path
 import salt.utils.files
 import salt.utils.json
 
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 TF_OUTPUT_PREFIX = 'salt.roster.'
 TF_ROSTER_ATTRS = {'host': 's',

@@ -41,7 +41,8 @@ __virtualname__ = 'parallels'
 __func_alias__ = {
     'exec_': 'exec',
 }
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 # Match any GUID
 GUID_REGEX = re.compile(r'{?([0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12})}?', re.I)
 

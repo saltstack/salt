@@ -22,7 +22,8 @@ from salt.exceptions import SaltCacheError
 import salt.utils.atomicfile
 import salt.utils.files
 
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 __func_alias__ = {'list_': 'list'}
 

@@ -19,7 +19,8 @@ import salt.utils.decorators as decorators
 import salt.utils.files
 import salt.utils.stringutils
 
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 default_conf = '/etc/logadm.conf'
 option_toggles = {
     '-c': 'copy',

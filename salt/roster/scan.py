@@ -17,7 +17,8 @@ from salt.ext import six
 # Import 3rd-party libs
 from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-builtin
 
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 
 def targets(tgt, tgt_type='glob', **kwargs):

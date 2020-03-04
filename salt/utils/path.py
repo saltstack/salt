@@ -35,7 +35,8 @@ try:
 except ImportError:
     HAS_WIN32FILE = False
 
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 
 def islink(path):

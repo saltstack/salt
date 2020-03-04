@@ -41,7 +41,8 @@ import salt.pillar
 import salt.utils.args
 from salt.exceptions import SaltClientError
 
-log = logging.getLogger(__name__)  # pylint: disable=invalid-name
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__)) # pylint: disable=invalid-name
 
 
 def cmd(fun, *args, **kwargs):

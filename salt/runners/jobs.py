@@ -28,7 +28,8 @@ try:
 except ImportError:
     DATEUTIL_SUPPORT = False
 
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 
 def active(display_progress=False):

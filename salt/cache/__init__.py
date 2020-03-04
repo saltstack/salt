@@ -18,7 +18,8 @@ from salt.utils.odict import OrderedDict
 import salt.loader
 import salt.syspaths
 
-log = logging.getLogger(__name__)
+import salt.log
+log = salt.log.LogBlocker(logging.getLogger(__name__))
 
 
 def factory(opts, **kwargs):
