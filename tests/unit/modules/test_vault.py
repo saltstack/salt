@@ -5,8 +5,10 @@ Test case for the vault execution module
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import os
 
 # Import Salt libs
+from salt.exceptions import CommandExecutionError
 import salt.modules.vault as vault
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
@@ -136,3 +138,50 @@ class TestVaultModule(LoaderModuleMockMixin, TestCase):
             vault_return = vault.read_secret("/secret/my/secret", "akey")
 
         self.assertEqual(vault_return, "avalue")
+
+
+class VaultDefaultTestCase(TestCase, LoaderModuleMockMixin):
+    """
+    Test cases for the default argument in the vault module
+
+    NOTE: This test class is crafted such that the vault.make_request call will
+    always fail. If you want to add other unit tests, you should put them in a
+    separate class.
+    """
+
+    def setup_loader_modules(self):
+        return {
+            vault: {
+                "__grains__": {"id": "foo",},
+                "__utils__": {
+                    "vault.make_request": MagicMock(side_effect=Exception("FAILED")),
+                },
+            },
+        }
+
+    def setUp(self):
+        self.path = "foo/bar/"
+
+    def test_read_secret_with_default(self):
+        assert vault.read_secret(self.path, default="baz") == "baz"
+
+    def test_read_secret_no_default(self):
+        try:
+            vault.read_secret(self.path)
+        except CommandExecutionError:
+            # This is expected
+            pass
+        else:
+            raise Exception("Should have raised a CommandExecutionError")
+
+    def test_list_secrets_with_default(self):
+        assert vault.list_secrets(self.path, default=["baz"]) == ["baz"]
+
+    def test_list_secrets_no_default(self):
+        try:
+            vault.list_secrets(self.path)
+        except CommandExecutionError:
+            # This is expected
+            pass
+        else:
+            raise Exception("Should have raised a CommandExecutionError")
