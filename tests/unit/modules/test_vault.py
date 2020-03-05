@@ -5,11 +5,11 @@ Test case for the vault execution module
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import os
+
+import salt.modules.vault as vault
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError
-import salt.modules.vault as vault
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 
