@@ -425,12 +425,16 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
         '''
             Test to apply states in test mode
         '''
-        mock = MagicMock(return_value=True)
-        with patch.object(state, 'sls', mock):
-            self.assertTrue(state.test(True))
+        with patch.dict(state.__opts__, {'test': False}):
+            mock = MagicMock(return_value=True)
+            with patch.object(state, 'sls', mock):
+                self.assertTrue(state.test(True))
+                mock.assert_called_once_with(True, test=True)
 
-        with patch.object(state, 'highstate', mock):
-            self.assertTrue(state.test(None))
+            mock = MagicMock(return_value=True)
+            with patch.object(state, 'highstate', mock):
+                self.assertTrue(state.test(None))
+                mock.assert_called_once_with(test=True)
 
     def test_list_disabled(self):
         '''
