@@ -244,7 +244,8 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
 
         # Make Start Times
         last = int(time.time())
-        last_git_pillar_update = last
+        # update git_pillar on first loop
+        last_git_pillar_update = 0
 
         git_pillar_update_interval = self.opts.get("git_pillar_update_interval", 0)
         old_present = set()
