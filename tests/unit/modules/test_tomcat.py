@@ -14,6 +14,7 @@ import salt.modules.tomcat as tomcat
 # Import 3rd-party libs
 from io import StringIO, BytesIO
 
+
 class TomcatTestCasse(TestCase, LoaderModuleMockMixin):
     '''
     Tests cases for salt.modules.tomcat
@@ -21,15 +22,14 @@ class TomcatTestCasse(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {tomcat: {}}
 
-
     def test_tomcat_wget_no_bytestring(self):
         responses = {
             'string': StringIO('Best response ever\r\nAnd you know it!'),
             'bytes': BytesIO(b'Best response ever\r\nAnd you know it!')
         }
 
-        string_mock= MagicMock(return_value=responses['string'])
-        bytes_mock= MagicMock(return_value=responses['bytes'])
+        string_mock = MagicMock(return_value=responses['string'])
+        bytes_mock = MagicMock(return_value=responses['bytes'])
         with patch('salt.modules.tomcat._auth', MagicMock(return_value=True)):
             with patch('salt.modules.tomcat._urlopen', string_mock):
                 response = tomcat._wget('tomcat.wait', url='http://localhost:8080/nofail')
