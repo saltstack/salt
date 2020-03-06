@@ -16,6 +16,10 @@ import salt.config
 import salt.loader
 import salt.states.win_lgpo as win_lgpo
 import salt.utils.platform
+import salt.utils.stringutils
+
+# Import 3rd Party Libs
+import salt.ext.six as six
 
 # We're going to actually use the loader, without grains (slow)
 opts = salt.config.DEFAULT_MINION_OPTS.copy()
@@ -159,6 +163,19 @@ class WinLGPOPolicyElementNames(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_lgpo.__opts__, {'test': False}):
             win_lgpo.set_(name='nc_state', computer_policy=computer_policy)
 
+    def _convert_to_unicode(self, data):
+        if isinstance(data, six.string_types):
+            data = data.replace('\x00', '')
+            return salt.utils.stringutils.to_unicode(data)
+        elif isinstance(data, dict):
+            return dict((self._convert_to_unicode(k),
+                         self._convert_to_unicode(v))
+                        for k, v in data.items())
+        elif isinstance(data, list):
+            return list(self._convert_to_unicode(v) for v in data)
+        else:
+            return data
+
     def test_current_element_naming_style(self):
         computer_policy = {
             'Point and Print Restrictions': {
@@ -178,6 +195,7 @@ class WinLGPOPolicyElementNames(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_lgpo.__opts__, {'test': False}):
             result = win_lgpo.set_(name='test_state',
                                    computer_policy=computer_policy)
+            result = self._convert_to_unicode(result)
         expected = {
             'Point and Print Restrictions': {
                 'Enter fully qualified server names separated by '
@@ -188,9 +206,9 @@ class WinLGPOPolicyElementNames(TestCase, LoaderModuleMockMixin):
                 'Users can only point and print to machines in '
                 'their forest':
                     True,
-                u'Users can only point and print to these servers':
+                'Users can only point and print to these servers':
                     True,
-                u'When updating drivers for an existing connection':
+                'When updating drivers for an existing connection':
                     'Show warning only'}}
         self.assertDictEqual(
             result['changes']['new']['Computer Configuration'], expected)
@@ -216,6 +234,8 @@ class WinLGPOPolicyElementNames(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_lgpo.__opts__, {'test': False}):
             result = win_lgpo.set_(name='test_state',
                                    computer_policy=computer_policy)
+            if six.PY2:
+                result = self._convert_to_unicode(result)
         expected = {
             'Point and Print Restrictions': {
                 'Enter fully qualified server names separated by '
@@ -226,9 +246,9 @@ class WinLGPOPolicyElementNames(TestCase, LoaderModuleMockMixin):
                 'Users can only point and print to machines in '
                 'their forest':
                     True,
-                u'Users can only point and print to these servers':
+                'Users can only point and print to these servers':
                     True,
-                u'When updating drivers for an existing connection':
+                'When updating drivers for an existing connection':
                     'Show warning only'}}
         self.assertDictEqual(
             result['changes']['new']['Computer Configuration'], expected)
@@ -317,7 +337,7 @@ class WinLGPOPolicyElementNamesTestTrue(TestCase, LoaderModuleMockMixin):
             'comment': 'All specified policies are properly configured'}
         self.assertDictEqual(result['changes'], expected['changes'])
         self.assertTrue(result['result'])
-        self.assertEqual(result['comment'], result['comment'])
+        self.assertEqual(result['comment'], expected['comment'])
 
     def test_old_element_naming_style(self):
         computer_policy = {
@@ -347,7 +367,7 @@ class WinLGPOPolicyElementNamesTestTrue(TestCase, LoaderModuleMockMixin):
                        'All specified policies are properly configured'}
         self.assertDictEqual(result['changes'], expected['changes'])
         self.assertTrue(result['result'])
-        self.assertEqual(result['comment'], result['comment'])
+        self.assertEqual(result['comment'], expected['comment'])
 
     def test_invalid_elements(self):
         computer_policy = {

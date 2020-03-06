@@ -18,6 +18,10 @@ import salt.config
 import salt.loader
 import salt.modules.win_lgpo as win_lgpo
 import salt.utils.platform
+import salt.utils.stringutils
+
+# Import 3rd Party Libs
+import salt.ext.six as six
 
 # We're going to actually use the loader, without grains (slow)
 opts = salt.config.DEFAULT_MINION_OPTS.copy()
@@ -585,6 +589,19 @@ class WinLGPOGetPointAndPrintENTestCase(TestCase, LoaderModuleMockMixin):
             win_lgpo.set_(computer_policy=computer_policy)
             self.configured = True
 
+    def _convert_to_unicode(self, data):
+        if isinstance(data, six.string_types):
+            data = data.replace('\x00', '')
+            return salt.utils.stringutils.to_unicode(data)
+        elif isinstance(data, dict):
+            return dict((self._convert_to_unicode(k),
+                         self._convert_to_unicode(v))
+                        for k, v in data.items())
+        elif isinstance(data, list):
+            return list(self._convert_to_unicode(v) for v in data)
+        else:
+            return data
+
     def _get_policy_adm_setting(self, policy_name, policy_class,
                                 return_full_policy_names, hierarchical_return):
         '''
@@ -596,13 +613,16 @@ class WinLGPOGetPointAndPrintENTestCase(TestCase, LoaderModuleMockMixin):
             policy_class=policy_class,
             adml_language='en-US')
         if success:
-            return salt.modules.win_lgpo._get_policy_adm_setting(
+            results = salt.modules.win_lgpo._get_policy_adm_setting(
                 admx_policy=policy_obj,
                 policy_class=policy_class,
                 adml_language='en-US',
                 return_full_policy_names=return_full_policy_names,
                 hierarchical_return=hierarchical_return
             )
+            if six.PY2:
+                results = self._convert_to_unicode(results)
+            return results
         return 'Policy Not Found'
 
     def test_point_and_print_enabled(self):
@@ -622,7 +642,7 @@ class WinLGPOGetPointAndPrintENTestCase(TestCase, LoaderModuleMockMixin):
                     True,
                 'PointAndPrint_TrustedServers_Chk':
                     True,
-                u'PointAndPrint_TrustedServers_Edit':
+                'PointAndPrint_TrustedServers_Edit':
                     'fakeserver1;fakeserver2'}}
         self.assertDictEqual(result, expected)
 
@@ -646,7 +666,7 @@ class WinLGPOGetPointAndPrintENTestCase(TestCase, LoaderModuleMockMixin):
                                 True,
                             'PointAndPrint_TrustedServers_Chk':
                                 True,
-                            u'PointAndPrint_TrustedServers_Edit':
+                            'PointAndPrint_TrustedServers_Edit':
                                 'fakeserver1;fakeserver2'}}}}}
         self.assertDictEqual(result, expected)
 
@@ -665,8 +685,8 @@ class WinLGPOGetPointAndPrintENTestCase(TestCase, LoaderModuleMockMixin):
                     'Show warning and elevation prompt',
                 'Users can only point and print to machines in their forest':
                     True,
-                u'Users can only point and print to these servers': True,
-                u'When updating drivers for an existing connection':
+                'Users can only point and print to these servers': True,
+                'When updating drivers for an existing connection':
                     'Show warning only'}}
         self.assertDictEqual(result, expected)
 
@@ -690,9 +710,9 @@ class WinLGPOGetPointAndPrintENTestCase(TestCase, LoaderModuleMockMixin):
                             'Users can only point and print to machines in '
                             'their forest':
                                 True,
-                            u'Users can only point and print to these servers':
+                            'Users can only point and print to these servers':
                                 True,
-                            u'When updating drivers for an existing connection':
+                            'When updating drivers for an existing connection':
                                 'Show warning only'}}}}}
         self.assertDictEqual(result, expected)
 
