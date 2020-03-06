@@ -260,8 +260,10 @@ def _wget(cmd, opts=None, url='http://localhost:8080/manager', timeout=180):
             ret['msg'] = 'Failed to create HTTP request'
 
     # Force all byte strings to utf-8 strings, for python >= 3.5
+    # the encode is to make sure we can safely decode.
+    # depending on the python3 version str doesn't have a decode method
     for key, item in enumerate(ret['msg']):
-        ret['msg'][key] = item.decode('utf-8')
+        ret['msg'][key] = item.encode('utf-8').decode('utf-8')
 
     if not ret['msg'][0].startswith('OK'):
         ret['res'] = False
