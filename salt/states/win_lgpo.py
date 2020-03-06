@@ -152,6 +152,20 @@ def _compare_policies(new_policy, current_policy):
             return False
 
 
+def _convert_to_unicode(data):
+    if isinstance(data, six.string_types):
+        data = data.replace('\x00', '')
+        return salt.utils.stringutils.to_unicode(data)
+    elif isinstance(data, dict):
+        return dict((_convert_to_unicode(k),
+                     _convert_to_unicode(v))
+                    for k, v in data.items())
+    elif isinstance(data, list):
+        return list(_convert_to_unicode(v) for v in data)
+    else:
+        return data
+
+
 def set_(name,
          setting=None,
          policy_class=None,
@@ -341,6 +355,9 @@ def set_(name,
 
                     requested_policy_check = salt.utils.json.loads(requested_policy_json)
                     current_policy_check = salt.utils.json.loads(current_policy_json)
+
+                    if six.PY2:
+                        current_policy_check = _convert_to_unicode(current_policy_check)
 
                     # Are the requested and current policies identical
                     policies_are_equal = _compare_policies(
