@@ -430,11 +430,13 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(state, 'sls', mock):
                 self.assertTrue(state.test(True))
                 mock.assert_called_once_with(True, test=True)
+                self.assertEqual(state.__opts__["test"], False)
 
             mock = MagicMock(return_value=True)
             with patch.object(state, 'highstate', mock):
                 self.assertTrue(state.test(None))
                 mock.assert_called_once_with(test=True)
+                self.assertEqual(state.__opts__["test"], False)
 
     def test_list_disabled(self):
         '''
