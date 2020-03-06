@@ -5,6 +5,7 @@ Support for nftables
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
+import json
 import logging
 import re
 
@@ -301,6 +302,36 @@ def get_saved_rules(conf_file=None):
     return rules
 
 
+def list_tables(family='ipv4'):
+    '''
+    Return a data structure of the current, in-memory tables
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' nftables.list_tables
+
+        salt '*' nftables.list_tables family=ipv6
+
+    '''
+    nft_family = _NFTABLES_FAMILIES[family]
+    tables = []
+    cmd = '{0} --json --numeric --numeric --numeric ' \
+          'list tables {1}'. format(_nftables_cmd(),
+                                    nft_family)
+    out = __salt__['cmd.run'](cmd, python_shell=False)
+    if not out:
+        return tables
+    data = json.loads(out)
+
+    for item in data.get('nftables', []):
+        if 'metainfo' not in item:
+            tables.append(item['table'])
+    log.debug(tables)
+    return tables
+
+
 def get_rules(family='ipv4'):
     '''
     Return a data structure of the current, in-memory rules
@@ -314,18 +345,12 @@ def get_rules(family='ipv4'):
         salt '*' nftables.get_rules family=ipv6
 
     '''
+    tables = list_tables(family)
     nft_family = _NFTABLES_FAMILIES[family]
-    rules = []
-    cmd = '{0} --numeric --numeric --numeric ' \
-          'list tables {1}'. format(_nftables_cmd(),
-                                    nft_family)
-    out = __salt__['cmd.run'](cmd, python_shell=False)
-    if not out:
-        return rules
 
-    tables = re.split('\n+', out)
+    rules = []
     for table in tables:
-        table_name = table.split(' ')[1]
+        table_name = table['name']
         cmd = '{0} --numeric --numeric --numeric ' \
               'list table {1} {2}'.format(_nftables_cmd(),
                                           nft_family, table_name)
@@ -359,7 +384,7 @@ def save(filename=None, family='ipv4'):
     try:
         with salt.utils.files.fopen(filename, 'wb') as _fh:
             # Write out any changes
-            _fh.writelines(salt.utils.data.encode(rules))
+            _fh.write(salt.utils.data.encode(rules))
     except (IOError, OSError) as exc:
         raise CommandExecutionError(
             'Problem writing to configuration file: {0}'.format(exc)

@@ -4,7 +4,6 @@
 from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 from tests.support.unit import TestCase, skipIf
 
 # Import Salt Libs
@@ -12,7 +11,6 @@ import salt.utils.platform
 import salt.utils.win_pdh as win_pdh
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
 class WinPdhTestCase(TestCase):
     def test_list_objects(self):

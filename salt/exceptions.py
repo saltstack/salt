@@ -207,7 +207,7 @@ class FileLockError(SaltException):
     '''
     Used when an error occurs obtaining a file lock
     '''
-    def __init__(self, message, time_start=None, *args, **kwargs):
+    def __init__(self, message, time_start=None, *args, **kwargs):  # pylint: disable=keyword-arg-before-vararg
         super(FileLockError, self).__init__(message, *args, **kwargs)
         if time_start is None:
             log.warning(
@@ -309,7 +309,7 @@ class SaltClientTimeout(SaltException):
 
     Takes the ``jid`` as a parameter
     '''
-    def __init__(self, message, jid=None, *args, **kwargs):
+    def __init__(self, message, jid=None, *args, **kwargs):  # pylint: disable=keyword-arg-before-vararg
         super(SaltClientTimeout, self).__init__(message, *args, **kwargs)
         self.jid = jid
 

@@ -8,11 +8,10 @@ import salt.modules.mac_pkgutil as mac_pkgutil
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
+from tests.support.unit import TestCase
+from tests.support.mock import patch
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class MacPkgutilTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):

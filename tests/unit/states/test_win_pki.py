@@ -14,12 +14,10 @@ import salt.states.win_pki as win_pki
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON,
 )
 
 CERT_PATH = r'C:\certs\testdomain.local.cer'
@@ -37,7 +35,6 @@ CERTS = {
 }
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class WinPkiTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.win_pki

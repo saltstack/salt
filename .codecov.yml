@@ -68,9 +68,9 @@ flags:
 
 comment:
   layout: "reach, diff, flags, files"
-  after_n_builds: 46             # Only comment on PRs after N builds
-                                 # This value is the output of:
-                                 #    sh -c 'echo "$(ls .ci/ | grep kitchen | wc -l)"'
+#  after_n_builds: 46             # Only comment on PRs after N builds
+#                                 # This value is the output of:
+#                                 #    sh -c 'echo "$(ls .ci/ | grep kitchen | wc -l)"'
 
   behavior: new                  # Comment posting behaviour
                                  #   default: update, if exists. Otherwise post new.

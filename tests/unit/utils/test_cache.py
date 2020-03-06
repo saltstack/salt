@@ -14,8 +14,7 @@ import tempfile
 import shutil
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase, skipIf
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON
+from tests.support.unit import TestCase
 
 # Import salt libs
 import salt.config
@@ -103,7 +102,6 @@ __context__ = {'a': 'b'}
 __opts__ = {'cachedir': '/tmp'}
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class ContextCacheTest(TestCase):
     '''
     Test case for salt.utils.cache.ContextCache
@@ -126,7 +124,6 @@ class ContextCacheTest(TestCase):
             This will inherit globals from the test module itself.
             Normally these are injected by the salt loader [salt.loader]
             '''
-            pass
 
         _test_set_cache()
 

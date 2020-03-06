@@ -159,7 +159,14 @@ class GrainsAppendTestCase(ModuleCase):
     def setUp(self):
         # Start off with an empty list
         self.run_function('grains.setval', [self.GRAIN_KEY, []])
-        self.addCleanup(self.run_function, 'grains.setval', [self.GRAIN_KEY, []])
+        if not self.wait_for_grain(self.GRAIN_KEY, []):
+            raise Exception('Failed to set grain')
+        self.addCleanup(self.cleanup_grain)
+
+    def cleanup_grain(self):
+        self.run_function('grains.setval', [self.GRAIN_KEY, []])
+        if not self.wait_for_grain(self.GRAIN_KEY, []):
+            raise Exception('Failed to set grain')
 
     def test_grains_append(self):
         '''
@@ -182,6 +189,7 @@ class GrainsAppendTestCase(ModuleCase):
 
         # Now try to append again
         ret = self.run_function('grains.append', [self.GRAIN_KEY, self.GRAIN_VAL])
+        self.assertTrue(self.wait_for_grain(self.GRAIN_KEY, [self.GRAIN_VAL]))
         if not ret or isinstance(ret, dict):
             # Sleep for a bit, sometimes the second "append" runs too quickly
             time.sleep(5)
@@ -231,16 +239,31 @@ class GrainsAppendTestCase(ModuleCase):
             )
         )
 
+    def wait_for_grain(self, key, val, timeout=60, sleep=.3):
+        start = time.time()
+        while time.time() - start <= timeout:
+            ret = self.run_function('grains.get', [key])
+            if ret == val:
+                return True
+            time.sleep(sleep)
+        return False
+
     def test_grains_remove_add(self):
         second_grain = self.GRAIN_VAL + '-2'
         ret = self.run_function('grains.get', [self.GRAIN_KEY])
         self.assertEqual(ret, [])
 
         for i in range(10):
-            self.run_function('grains.setval', [self.GRAIN_KEY, []])
+            ret = self.run_function('grains.setval', [self.GRAIN_KEY, []])
+            self.assertEqual(ret[self.GRAIN_KEY], [])
+            self.wait_for_grain(self.GRAIN_KEY, [])
             ret = self.run_function('grains.append', [self.GRAIN_KEY, self.GRAIN_VAL])
             self.assertEqual(ret[self.GRAIN_KEY], [self.GRAIN_VAL])
+            self.assertEqual(ret[self.GRAIN_KEY], [self.GRAIN_VAL])
 
-            self.run_function('grains.setval', [self.GRAIN_KEY, []])
+            ret = self.run_function('grains.setval', [self.GRAIN_KEY, []])
+            self.wait_for_grain(self.GRAIN_KEY, [])
+            self.assertTrue(self.wait_for_grain(self.GRAIN_KEY, []))
             ret = self.run_function('grains.append', [self.GRAIN_KEY, [self.GRAIN_VAL, second_grain]])
+            self.assertEqual(ret[self.GRAIN_KEY], [self.GRAIN_VAL, second_grain])
             self.assertEqual(ret[self.GRAIN_KEY], [self.GRAIN_VAL, second_grain])

@@ -6,16 +6,14 @@ Module for working with the Glassfish/Payara 4.x management API
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 
-try:  # python2
-    from urllib import quote, unquote
-except ImportError:  # python3
-    from urllib.parse import quote, unquote
 
+import salt.defaults.exitcodes
+import salt.utils.json
+from salt.exceptions import CommandExecutionError
+
+from salt.ext.six.moves.urllib.parse import quote, unquote  # pylint: disable=no-name-in-module
 try:
     import requests
-    import salt.defaults.exitcodes
-    import salt.utils.json
-    from salt.exceptions import CommandExecutionError
     HAS_LIBS = True
 except ImportError:
     HAS_LIBS = False

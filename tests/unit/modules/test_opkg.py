@@ -11,12 +11,10 @@ import copy
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -64,7 +62,6 @@ PACKAGES = {
 }
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class OpkgTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.opkg
@@ -210,3 +207,15 @@ class OpkgTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value=ret_value)
         with patch.dict(opkg.__salt__, {'cmd.run_all': mock}):
             self.assertEqual(opkg.info_installed('vim'), expected_dict)
+
+    def test_version_clean(self):
+        '''
+        Test - Return the information of version_clean
+        '''
+        self.assertEqual(opkg.version_clean('1.0.1'), '1.0.1')
+
+    def test_check_extra_requirements(self):
+        '''
+        Test - Return the information of check_extra_requirements
+        '''
+        self.assertEqual(opkg.check_extra_requirements('vim', '1.0.1'), True)

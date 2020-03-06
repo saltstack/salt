@@ -92,3 +92,20 @@ def command_success_nonzero_retcode_false():
 @salt.utils.decorators.depends(_exit_code(42), nonzero_retcode=False)
 def command_failure_nonzero_retcode_false():
     return True
+
+
+# The 'depends_versioned.py'-module has __version__ = '1.8'
+@salt.utils.decorators.depends('depends_versioned', version='1.0')
+def version_depends_false():
+    return True
+
+
+@salt.utils.decorators.depends('depends_versioned', version='2.0')
+def version_depends_true():
+    return True
+
+
+# The 'depends_versionless.py'-module does not have a `__version__`-string
+@salt.utils.decorators.depends('depends_versionless', version='0.2')
+def version_depends_versionless_true():
+    return True

@@ -6,7 +6,7 @@ import random
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
+from tests.support.mock import patch, MagicMock
 from tests.support.unit import TestCase, skipIf
 
 # Import Salt Libs
@@ -17,7 +17,6 @@ import salt.utils.win_lgpo_auditpol as win_lgpo_auditpol
 settings = ['No Auditing', 'Success', 'Failure', 'Success and Failure']
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
 class WinLgpoAuditpolTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):

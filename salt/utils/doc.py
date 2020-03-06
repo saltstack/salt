@@ -33,7 +33,7 @@ def strip_rst(docs):
                 repl = salt.utils.data.encode(repl)
             try:
                 docstring_new = re.sub(regex, repl, docstring_new)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 log.debug(
                     'Exception encountered while matching regex %r to '
                     'docstring for function %s', regex, func,

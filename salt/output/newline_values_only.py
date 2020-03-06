@@ -27,6 +27,10 @@ the various minions.
 Example 1
 ~~~~~~~~~
 
+.. code-block:: bash
+
+    salt '*' foo.bar --out=newline_values_only
+
 Input
 -----
 
@@ -40,7 +44,7 @@ Input
 Output
 ------
 
-.. code-block:: python
+.. code-block:: text
 
     127.0.0.1
     10.0.0.1
@@ -49,6 +53,10 @@ Output
 
 Example 2
 ~~~~~~~~~
+
+.. code-block:: bash
+
+    salt '*' foo.bar --out=newline_values_only
 
 Input
 -----

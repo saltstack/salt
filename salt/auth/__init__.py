@@ -108,7 +108,7 @@ class LoadAuth(object):
                 return self.auth[fstr](*fcall['args'], **fcall['kwargs'])
             else:
                 return self.auth[fstr](*fcall['args'])
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             log.debug('Authentication module threw %s', e)
             return False
 
@@ -152,7 +152,7 @@ class LoadAuth(object):
             expected_extra_kws=AUTH_INTERNAL_KEYWORDS)
         try:
             return self.auth[fstr](*fcall['args'], **fcall['kwargs'])
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             log.debug('Authentication module threw %s', e)
             return None
 
@@ -168,7 +168,7 @@ class LoadAuth(object):
             return auth_list
         try:
             return self.auth[fstr](auth_list, self.opts)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             log.debug('Authentication module threw %s', e)
             return auth_list
 
@@ -190,7 +190,7 @@ class LoadAuth(object):
             return self.auth[fstr](*fcall['args'], **fcall['kwargs'])
         except IndexError:
             return False
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             return None
 
     def _allow_custom_expire(self, load):
@@ -484,199 +484,6 @@ class LoadAuth(object):
         return ret
 
 
-class Authorize(object):
-    '''
-    The authorization engine used by EAUTH
-    '''
-    def __init__(self, opts, load, loadauth=None):
-        salt.utils.versions.warn_until(
-            'Neon',
-            'The \'Authorize\' class has been deprecated. Please use the '
-            '\'LoadAuth\', \'Reslover\', or \'AuthUser\' classes instead. '
-            'Support for the \'Authorze\' class will be removed in Salt '
-            '{version}.'
-        )
-        self.opts = salt.config.master_config(opts['conf_file'])
-        self.load = load
-        self.ckminions = salt.utils.minions.CkMinions(opts)
-        if loadauth is None:
-            self.loadauth = LoadAuth(opts)
-        else:
-            self.loadauth = loadauth
-
-    @property
-    def auth_data(self):
-        '''
-        Gather and create the authorization data sets
-
-        We're looking at several constructs here.
-
-        Standard eauth: allow jsmith to auth via pam, and execute any command
-        on server web1
-        external_auth:
-          pam:
-            jsmith:
-              - web1:
-                - .*
-
-        Django eauth: Import the django library, dynamically load the Django
-        model called 'model'.  That model returns a data structure that
-        matches the above for standard eauth.  This is what determines
-        who can do what to which machines
-
-        django:
-          ^model:
-            <stuff returned from django>
-
-        Active Directory Extended:
-
-        Users in the AD group 'webadmins' can run any command on server1
-        Users in the AD group 'webadmins' can run test.ping and service.restart
-        on machines that have a computer object in the AD 'webservers' OU
-        Users in the AD group 'webadmins' can run commands defined in the
-        custom attribute (custom attribute not implemented yet, this is for
-        future use)
-          ldap:
-             webadmins%:  <all users in the AD 'webadmins' group>
-               - server1:
-                   - .*
-               - ldap(OU=webservers,dc=int,dc=bigcompany,dc=com):
-                  - test.ping
-                  - service.restart
-               - ldap(OU=Domain Controllers,dc=int,dc=bigcompany,dc=com):
-                 - allowed_fn_list_attribute^
-        '''
-        auth_data = self.opts['external_auth']
-        merge_lists = self.opts['pillar_merge_lists']
-
-        if 'django' in auth_data and '^model' in auth_data['django']:
-            auth_from_django = salt.auth.django.retrieve_auth_entries()
-            auth_data = salt.utils.dictupdate.merge(auth_data,
-                                                    auth_from_django,
-                                                    strategy='list',
-                                                    merge_lists=merge_lists)
-
-        if 'ldap' in auth_data and __opts__.get('auth.ldap.activedirectory', False):
-            auth_data['ldap'] = salt.auth.ldap.__expand_ldap_entries(auth_data['ldap'])
-            log.debug(auth_data['ldap'])
-
-        #for auth_back in self.opts.get('external_auth_sources', []):
-        #    fstr = '{0}.perms'.format(auth_back)
-        #    if fstr in self.loadauth.auth:
-        #        auth_data.append(getattr(self.loadauth.auth)())
-        return auth_data
-
-    def token(self, adata, load):
-        '''
-        Determine if token auth is valid and yield the adata
-        '''
-        try:
-            token = self.loadauth.get_tok(load['token'])
-        except Exception as exc:
-            log.error('Exception occurred when generating auth token: %s', exc)
-            yield {}
-        if not token:
-            log.warning('Authentication failure of type "token" occurred.')
-            yield {}
-        for sub_auth in adata:
-            for sub_adata in adata:
-                if token['eauth'] not in adata:
-                    continue
-            if not ((token['name'] in adata[token['eauth']]) |
-                    ('*' in adata[token['eauth']])):
-                continue
-            yield {'sub_auth': sub_auth, 'token': token}
-        yield {}
-
-    def eauth(self, adata, load):
-        '''
-        Determine if the given eauth is valid and yield the adata
-        '''
-        for sub_auth in [adata]:
-            if load['eauth'] not in sub_auth:
-                continue
-            try:
-                name = self.loadauth.load_name(load)
-                if not ((name in sub_auth[load['eauth']]) |
-                        ('*' in sub_auth[load['eauth']])):
-                    continue
-                if not self.loadauth.time_auth(load):
-                    continue
-            except Exception as exc:
-                log.error('Exception occurred while authenticating: %s', exc)
-                continue
-            yield {'sub_auth': sub_auth, 'name': name}
-        yield {}
-
-    def rights_check(self, form, sub_auth, name, load, eauth=None):
-        '''
-        Read in the access system to determine if the validated user has
-        requested rights
-        '''
-        if load.get('eauth'):
-            sub_auth = sub_auth[load['eauth']]
-        good = self.ckminions.any_auth(
-                form,
-                sub_auth[name] if name in sub_auth else sub_auth['*'],
-                load.get('fun', None),
-                load.get('arg', None),
-                load.get('tgt', None),
-                load.get('tgt_type', 'glob'))
-
-        # Handle possible return of dict data structure from any_auth call to
-        # avoid a stacktrace. As mentioned in PR #43181, this entire class is
-        # dead code and is marked for removal in Salt Neon. But until then, we
-        # should handle the dict return, which is an error and should return
-        # False until this class is removed.
-        if isinstance(good, dict):
-            return False
-
-        if not good:
-            # Accept find_job so the CLI will function cleanly
-            if load.get('fun', '') != 'saltutil.find_job':
-                return good
-        return good
-
-    def rights(self, form, load):
-        '''
-        Determine what type of authentication is being requested and pass
-        authorization
-
-        Note: this will check that the user has at least one right that will let
-        the user execute "load", this does not deal with conflicting rules
-        '''
-
-        adata = self.auth_data
-        good = False
-        if load.get('token', False):
-            for sub_auth in self.token(self.auth_data, load):
-                if sub_auth:
-                    if self.rights_check(
-                            form,
-                            self.auth_data[sub_auth['token']['eauth']],
-                            sub_auth['token']['name'],
-                            load,
-                            sub_auth['token']['eauth']):
-                        return True
-            log.warning(
-                'Authentication failure of type "token" occurred.'
-            )
-        elif load.get('eauth'):
-            for sub_auth in self.eauth(self.auth_data, load):
-                if sub_auth:
-                    if self.rights_check(
-                            form,
-                            sub_auth['sub_auth'],
-                            sub_auth['name'],
-                            load,
-                            load['eauth']):
-                        return True
-            log.warning(
-                'Authentication failure of type "eauth" occurred.'
-            )
-        return False
-
-
 class Resolver(object):
     '''
     The class used to resolve options for the command line and for generic
@@ -687,12 +494,14 @@ class Resolver(object):
         self.auth = salt.loader.auth(opts)
 
     def _send_token_request(self, load):
-        master_uri = 'tcp://' + salt.utils.zeromq.ip_bracket(self.opts['interface']) + \
-                     ':' + six.text_type(self.opts['ret_port'])
-        channel = salt.transport.client.ReqChannel.factory(self.opts,
-                                                           crypt='clear',
-                                                           master_uri=master_uri)
-        return channel.send(load)
+        master_uri = 'tcp://{}:{}'.format(
+            salt.utils.zeromq.ip_bracket(self.opts['interface']),
+            six.text_type(self.opts['ret_port'])
+        )
+        with salt.transport.client.ReqChannel.factory(self.opts,
+                                                      crypt='clear',
+                                                      master_uri=master_uri) as channel:
+            return channel.send(load)
 
     def cli(self, eauth):
         '''

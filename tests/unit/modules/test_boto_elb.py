@@ -60,7 +60,6 @@ import salt.utils.versions
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 
 log = logging.getLogger(__name__)
 
@@ -93,7 +92,6 @@ def _has_required_moto():
     return True
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
 @skipIf(HAS_MOTO is False, 'The moto module must be installed.')
 @skipIf(_has_required_moto() is False, 'The moto module must be >= to {0} for '

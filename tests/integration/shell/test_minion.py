@@ -41,6 +41,8 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
     Various integration tests for the salt-minion executable.
     '''
 
+    _call_binary_ = 'salt-minion'
+
     _test_minions = (
         'minion',
         'subminion',
@@ -260,7 +262,6 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
             # cause timeout exceptions and respective traceback
             minion.shutdown()
 
-    # pylint: disable=invalid-name
 #    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows OS')
     def test_exit_status_unknown_argument(self):
         '''

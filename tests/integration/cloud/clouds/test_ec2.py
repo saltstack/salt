@@ -15,7 +15,6 @@ import salt.utils.yaml
 
 # Import Salt Testing Libs
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.helpers import expensiveTest
 from tests.support.unit import skipIf
 from tests.support import win_installer
 
@@ -59,7 +58,6 @@ class EC2Test(CloudTest):
             self._installer = self.__fetch_installer()
         return self._installer
 
-    @expensiveTest
     def setUp(self):
         '''
         Sets up the test requirements

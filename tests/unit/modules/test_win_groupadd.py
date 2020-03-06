@@ -13,8 +13,6 @@ from tests.support.mock import (
     MagicMock,
     Mock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -53,22 +51,18 @@ class MockGroupObj(object):
         This should be a no-op unless we want to test raising an error, in
         which case this should be overridden in a subclass.
         '''
-        pass
 
     def Remove(self, name):
         '''
         This should be a no-op unless we want to test raising an error, in
         which case this should be overridden in a subclass.
         '''
-        pass
 
 
-if not NO_MOCK:
-    sam_mock = MagicMock(side_effect=lambda x: 'HOST\\' + x)
+sam_mock = MagicMock(side_effect=lambda x: 'HOST\\' + x)
 
 
 @skipIf(not HAS_WIN_LIBS, 'win_groupadd unit tests can only be run if win32com, pythoncom, and pywintypes are installed')
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.win_groupadd

@@ -26,15 +26,12 @@ from tests.support.helpers import no_symlinks
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import salt libs
 from salt.modules.inspectlib.collector import Inspector
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(no_symlinks(), "Git missing 'core.symlinks=true' config")
 class InspectorCollectorTestCase(TestCase):
     '''

@@ -11,8 +11,8 @@ import tempfile
 
 # Import Salt Testing libs
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin, LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
-from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
+from tests.support.unit import TestCase
+from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt libs
@@ -31,13 +31,10 @@ UNICODE_FILENAME = 'питон.txt'
 UNICODE_DIRNAME = UNICODE_ENVNAME = 'соль'
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
-        self.tmp_cachedir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.opts = self.get_temp_config('master')
-        self.opts['cachedir'] = self.tmp_cachedir
         empty_dir = os.path.join(RUNTIME_VARS.TMP_STATE_TREE, 'empty_dir')
         if not os.path.isdir(empty_dir):
             os.makedirs(empty_dir)

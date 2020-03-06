@@ -6,8 +6,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
+from tests.support.unit import TestCase
+from tests.support.mock import patch
 
 # Import Salt Libs
 import salt.modules.google_chat as gchat
@@ -29,7 +29,6 @@ def mocked_http_query_failure(url, method, **kwargs):  # pylint: disable=unused-
             'dict': None}
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class TestModulesCfutils(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.google_chat

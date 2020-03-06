@@ -92,7 +92,7 @@ def get_salt_vars():
     else:
         __pillar__ = {}
 
-    JINJA = lambda x, **y: jinja2.Template(x).render(  # pylint: disable=C0103,W0612
+    JINJA = lambda x, **y: jinja2.Template(x).render(  # pylint: disable=invalid-name,unused-variable,possibly-unused-variable
             grains=__grains__,
             salt=__salt__,
             opts=__opts__,

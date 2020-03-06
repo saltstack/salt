@@ -9,11 +9,9 @@ import os
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
+from tests.support.unit import TestCase
 from tests.support.mock import (
     mock_open,
-    NO_MOCK,
-    NO_MOCK_REASON,
     MagicMock,
     patch
 )
@@ -22,7 +20,6 @@ from tests.support.mock import (
 import salt.states.augeas as augeas
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class AugeasTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.augeas
