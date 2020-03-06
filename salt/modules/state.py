@@ -791,7 +791,13 @@ def test(*args, **kwargs):
     This is a nicety to avoid the need to type out `test=True` and the possibility of
     a typo causing changes you do not intend.
     '''
-    test_state_before = __opts__["test"]
+    try:
+        test_state_before = __opts__["test"]
+    except KeyError:
+        reset_opts_test = False  # track if __opts__["test"] should be set after run
+    else:
+        reset_opts_test = True
+
     __opts__["test"] = True
 
     kwargs["test"] = True
@@ -799,10 +805,12 @@ def test(*args, **kwargs):
     try:
         ret = apply_(*args, **kwargs)
     finally:
-        __opts__["test"] = test_state_before
+        if reset_opts_test:
+            __opts__["test"] = test_state_before
+        else:
+            del __opts__["test"]
 
     return ret
-
 
 
 def request(mods=None,
