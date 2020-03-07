@@ -10,9 +10,9 @@
 
 from __future__ import absolute_import
 
-# Import pytoml
+# Import toml lib
 try:
-    import pytoml as toml
+    import toml
     available = True
 except ImportError:
     available = False
