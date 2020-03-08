@@ -6873,8 +6873,8 @@ def serialize(name,
         .. versionadded:: 2015.8.0
 
     formatter
-        Write the data as this format. See the list of :py:mod:`serializer
-        modules <salt.serializers>` for supported output formats.
+        Write the data as this format. See the list of
+        :ref:`all-salt.serializers` for supported output formats.
 
     encoding
         If specified, then the specified encoding will be used. Otherwise, the
