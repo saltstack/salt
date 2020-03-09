@@ -490,7 +490,7 @@ def encode_list(data, encoding=None, errors='strict', keep=False,
     '''
     # Clean data object before encoding to avoid circular references
     data = _remove_circular_refs(data)
-    
+
     ret = []
     for item in data:
         if isinstance(item, list):
