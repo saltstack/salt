@@ -259,11 +259,12 @@ def _wget(cmd, opts=None, url='http://localhost:8080/manager', timeout=180):
         except Exception:  # pylint: disable=broad-except
             ret['msg'] = 'Failed to create HTTP request'
 
-    # Force all byte strings to utf-8 strings, for python >= 3.5
-    # the encode is to make sure we can safely decode.
-    # depending on the python3 version str doesn't have a decode method
+    # Force all byte strings to utf-8 strings, for python >= 3.4
     for key, item in enumerate(ret['msg']):
-        ret['msg'][key] = item.encode('utf-8').decode('utf-8')
+        try:
+            ret['msg'][key] = item.encode('utf-8').decode('utf-8')
+        except (UnicodeDecodeError, AttributeError):
+            pass
 
     if not ret['msg'][0].startswith('OK'):
         ret['res'] = False
