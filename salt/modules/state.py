@@ -786,6 +786,7 @@ def apply_(mods=None, **kwargs):
 
 def test(*args, **kwargs):
     '''
+    .. versionadded:: Sodium
     Alias for `state.apply` with the kwarg `test` forced to `True`.
 
     This is a nicety to avoid the need to type out `test=True` and the possibility of
