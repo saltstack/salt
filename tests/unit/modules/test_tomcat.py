@@ -34,7 +34,7 @@ class TomcatTestCasse(TestCase, LoaderModuleMockMixin):
             with patch('salt.modules.tomcat._urlopen', string_mock):
                 response = tomcat._wget('tomcat.wait', url='http://localhost:8080/nofail')
                 for line in response['msg']:
-                    self.assertEqual(type(line).__name__, 'str')
+                    self.assertIsInstance(line, unicode) or self.assertIsInstance(line, str)
 
             with patch('salt.modules.tomcat._urlopen', bytes_mock):
                 try:
@@ -46,4 +46,4 @@ class TomcatTestCasse(TestCase, LoaderModuleMockMixin):
                         raise type_error
 
                 for line in response['msg']:
-                    self.assertEqual(type(line).__name__, 'str')
+                    self.assertIsInstance(line, unicode) or self.assertIsInstance(line, str)

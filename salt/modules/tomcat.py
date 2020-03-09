@@ -262,7 +262,7 @@ def _wget(cmd, opts=None, url='http://localhost:8080/manager', timeout=180):
     # Force all byte strings to utf-8 strings, for python >= 3.4
     for key, item in enumerate(ret['msg']):
         try:
-            ret['msg'][key] = item.encode('utf-8').decode('utf-8')
+            ret['msg'][key] = item.decode('utf-8')
         except (UnicodeDecodeError, AttributeError):
             pass
 
