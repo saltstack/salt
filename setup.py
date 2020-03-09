@@ -219,8 +219,8 @@ def _parse_requirements_file(requirements_file):
                 continue
             if not line or line.startswith('-r'):
                 file = line.split()[1]
-                parsed_requirements = _parse_requirements_file(os.path.join(os.path.dirname(requirements_file), file))
-                parsed_requirements.extend(parsed_requirements)
+                ret_requirements = _parse_requirements_file(os.path.join(os.path.dirname(requirements_file), file))
+                parsed_requirements.extend(ret_requirements)
                 continue
             if IS_WINDOWS_PLATFORM:
                 if 'libcloud' in line:
