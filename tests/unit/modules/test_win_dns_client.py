@@ -10,11 +10,7 @@ import types
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import (
-    MagicMock,
-    patch,
-    Mock,
-)
+from tests.support.mock import MagicMock, patch, Mock
 
 # Import Salt Libs
 import salt.modules.win_dns_client as win_dns_client
@@ -89,8 +85,7 @@ class WinDnsClientTestCase(TestCase, LoaderModuleMockMixin):
         Test if it return a list of the configured DNS servers
         of the specified interface.
         '''
-        with patch('salt.utils', Mockwinapi), \
-                patch('salt.utils.winapi.Com', MagicMock()), \
+        with patch('salt.utils.winapi.Com', MagicMock()), \
                 patch.object(self.WMI, 'Win32_NetworkAdapter',
                              return_value=[Mockwmi()]), \
                 patch.object(self.WMI, 'Win32_NetworkAdapterConfiguration',
