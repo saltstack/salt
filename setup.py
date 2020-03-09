@@ -39,7 +39,7 @@ from setuptools.command.install import install
 from setuptools.command.sdist import sdist
 from setuptools.command.egg_info import egg_info
 # pylint: enable=E0611
-print("ran")
+
 try:
     import zmq
     HAS_ZMQ = True
@@ -192,7 +192,11 @@ def _parse_requirements_file(requirements_file):
     with open(requirements_file) as rfh:
         for line in rfh.readlines():
             line = line.strip()
-            if not line or line.startswith(('#', '-r')):
+            if not line or line.startswith('#'):
+                continue
+            if not line or line.startswith('-r'):
+                file = line.split()[1]
+                parsed_requirements.extend(_parse_requirements_file(os.path.join(os.path.dirname(requirements_file), file)))
                 continue
             if IS_WINDOWS_PLATFORM:
                 if 'libcloud' in line:
