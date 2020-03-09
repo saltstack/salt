@@ -10,6 +10,7 @@ from tests.support.mock import MagicMock, patch
 
 # Import salt module
 import salt.modules.tomcat as tomcat
+from salt.ext.six import string_types
 
 # Import 3rd-party libs
 from io import StringIO, BytesIO
@@ -34,7 +35,7 @@ class TomcatTestCasse(TestCase, LoaderModuleMockMixin):
             with patch('salt.modules.tomcat._urlopen', string_mock):
                 response = tomcat._wget('tomcat.wait', url='http://localhost:8080/nofail')
                 for line in response['msg']:
-                    self.assertTrue((isinstance(line, unicode) or isinstance(line, str)))
+                    self.assertIsInstance(line, string_types)
 
             with patch('salt.modules.tomcat._urlopen', bytes_mock):
                 try:
@@ -46,4 +47,4 @@ class TomcatTestCasse(TestCase, LoaderModuleMockMixin):
                         raise type_error
 
                 for line in response['msg']:
-                    self.assertTrue((isinstance(line, unicode) or isinstance(line, str)))
+                    self.assertIsInstance(line, string_types)
