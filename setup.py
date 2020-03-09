@@ -39,7 +39,7 @@ from setuptools.command.install import install
 from setuptools.command.sdist import sdist
 from setuptools.command.egg_info import egg_info
 # pylint: enable=E0611
-
+print("ran")
 try:
     import zmq
     HAS_ZMQ = True
