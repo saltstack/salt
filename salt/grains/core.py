@@ -2058,6 +2058,7 @@ def os_data():
     else:
         grains['os'] = grains['kernel']
     if grains['kernel'] == 'FreeBSD':
+        grains['osfullname'] = grains['os']
         try:
             grains['osrelease'] = __salt__['cmd.run']('freebsd-version -u').split('-')[0]
         except salt.exceptions.CommandExecutionError:
@@ -2149,7 +2150,7 @@ def locale_info():
             grains['locale_info']['defaultlanguage'],
             grains['locale_info']['defaultencoding']
         ) = locale.getdefaultlocale()
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         # locale.getdefaultlocale can ValueError!! Catch anything else it
         # might do, per #2205
         grains['locale_info']['defaultlanguage'] = 'unknown'
@@ -2869,6 +2870,6 @@ def default_gateway():
                         if via == 'via':
                             grains['ip{0}_gw'.format(ip_version)] = gw_ip
                     break
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             continue
     return grains

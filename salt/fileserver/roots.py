@@ -78,7 +78,7 @@ def find_file(path, saltenv='base', **kwargs):
         '''
         try:
             fnd['stat'] = list(os.stat(fnd['path']))
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             pass
         return fnd
 
@@ -360,7 +360,7 @@ def _file_lists(load, form):
                 try:
                     if not os.listdir(abs_path):
                         ret['empty_dirs'].add(rel_path)
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     # Generic exception because running os.listdir() on a
                     # non-directory path raises an OSError on *NIX and a
                     # WindowsError on Windows.

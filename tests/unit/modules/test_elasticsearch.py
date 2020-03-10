@@ -21,7 +21,7 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError
 NO_ELASTIC = False
 try:
     from elasticsearch import TransportError, NotFoundError
-except Exception:
+except Exception:  # pylint: disable=broad-except
     NO_ELASTIC = True
 
 

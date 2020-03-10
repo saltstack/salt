@@ -978,7 +978,7 @@ def _process_info_installed_output(out, filter_attrs):
             # This is a continuation of the last attr
             if filter_attrs is None or attr in filter_attrs:
                 line = line.strip()
-                if len(attrs[attr]):
+                if attrs[attr]:
                     # If attr is empty, don't add leading newline
                     attrs[attr] += '\n'
                 attrs[attr] += line

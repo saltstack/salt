@@ -24,7 +24,7 @@ import importlib
 from functools import wraps
 
 # Import Salt libs
-from salt.ext import six as six
+from salt.ext import six
 import salt.output
 import salt.utils.platform
 import salt.utils.args
@@ -33,10 +33,10 @@ import salt.utils.args
 try:
     # will try to import NAPALM
     # https://github.com/napalm-automation/napalm
-    # pylint: disable=W0611
+    # pylint: disable=unused-import,no-name-in-module
     import napalm
     import napalm.base as napalm_base
-    # pylint: enable=W0611
+    # pylint: enable=unused-import,no-name-in-module
     HAS_NAPALM = True
     HAS_NAPALM_BASE = False  # doesn't matter anymore, but needed for the logic below
     try:
@@ -178,7 +178,7 @@ def call(napalm_device, method, *args, **kwargs):
         out = getattr(napalm_device.get('DRIVER'), method)(*args, **kwargs)
         # calls the method with the specified parameters
         result = True
-    except Exception as error:
+    except Exception as error:  # pylint: disable=broad-except
         # either not connected
         # either unable to execute the command
         hostname = napalm_device.get('HOSTNAME', '[unspecified hostname]')

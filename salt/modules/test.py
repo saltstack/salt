@@ -588,7 +588,7 @@ def try_(module, return_try_exception=False, **kwargs):
     '''
     try:
         return __salt__[module](**kwargs)
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         if return_try_exception:
             return e
     return None

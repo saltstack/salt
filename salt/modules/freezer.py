@@ -164,7 +164,7 @@ def _add_missing_repositories(frozen_repos, ret, **kwargs):
             __salt__['pkg.mod_repo'](repo, **_tmp_kwargs)
             ret['repos']['add'].append(repo)
             log.info('Added missing repository %s', repo)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             msg = 'Error adding %s repository: %s'
             log.error(msg, repo, e)
             ret['comment'].append(msg % (repo, e))
@@ -179,7 +179,7 @@ def _remove_extra_repositories(frozen_repos, ret, **kwargs):
             __salt__['pkg.del_repo'](repo, **kwargs)
             ret['repos']['remove'].append(repo)
             log.info('Removed extra repository %s', repo)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             msg = 'Error removing %s repository: %s'
             log.error(msg, repo, e)
             ret['comment'].append(msg % (repo, e))
@@ -197,7 +197,7 @@ def _add_missing_packages(frozen_pkgs, ret, **kwargs):
             __salt__['pkg.install'](name=pkg, **kwargs)
             ret['pkgs']['add'].append(pkg)
             log.info('Added missing package %s', pkg)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             msg = 'Error adding %s package: %s'
             log.error(msg, pkg, e)
             ret['comment'].append(msg % (pkg, e))
@@ -212,7 +212,7 @@ def _remove_extra_packages(frozen_pkgs, ret, **kwargs):
             __salt__['pkg.remove'](name=pkg, **kwargs)
             ret['pkgs']['remove'].append(pkg)
             log.info('Removed extra package %s', pkg)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             msg = 'Error removing %s package: %s'
             log.error(msg, pkg, e)
             ret['comment'].append(msg % (pkg, e))
@@ -242,7 +242,7 @@ def restore(name=None, clean=False, **kwargs):
     clean
         If True remove the frozen information YAML from the cache
 
-        .. version-added:: Neon
+        .. versionadded:: 3000
 
     CLI Example:
 

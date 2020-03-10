@@ -223,7 +223,8 @@ def add(name,
                         break
             except OSError:
                 log.debug(
-                    'Error reading ' + defs_file,
+                    'Error reading %s',
+                    defs_file,
                     exc_info_on_loglevel=logging.DEBUG
                 )
         else:

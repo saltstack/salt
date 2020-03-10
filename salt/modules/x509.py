@@ -126,7 +126,7 @@ def _fix_ctx(m2_ctx, issuer=None):
 
 def _new_extension(name, value, critical=0, issuer=None, _pyfree=1):
     '''
-    Create new X509_Extension, This is required because M2Crypto
+    Create new X509_Extension, this is required because M2Crypto
     doesn't support getting the publickeyidentifier from the issuer
     to create the authoritykeyidentifier extension.
     '''
@@ -429,7 +429,7 @@ def _make_regex(pem_type):
         r"(?:(?P<proc_type>Proc-Type: 4,ENCRYPTED)\s*)?"
         r"(?:(?P<dek_info>DEK-Info: (?:DES-[3A-Z\-]+,[0-9A-F]{{16}}|[0-9A-Z\-]+,[0-9A-F]{{32}}))\s*)?"
         r"(?P<pem_body>.+?)\s+(?P<pem_footer>"
-        r"-----END {1}-----)\s*".format(pem_type, pem_type),
+        r"-----END {0}-----)\s*".format(pem_type),
         re.DOTALL
     )
 
@@ -595,7 +595,7 @@ def read_certificate(certificate):
 
 def read_certificates(glob_path):
     '''
-    Returns a dict containing details of a all certificates matching a glob
+    Returns a dict containing details of all certificates matching a glob
 
     glob_path:
         A path to certificates to be read and returned.
@@ -658,8 +658,8 @@ def read_crl(crl):
 
     :depends:   - OpenSSL command line tool
 
-    csl:
-        A path or PEM encoded string containing the CSL to read.
+    crl:
+        A path or PEM encoded string containing the CRL to read.
 
     CLI Example:
 
@@ -754,17 +754,17 @@ def write_pem(text, path, overwrite=True, pem_type=None):
         PEM string input to be written out.
 
     path:
-        Path of the file to write the pem out to.
+        Path of the file to write the PEM out to.
 
     overwrite:
-        If True(default), write_pem will overwrite the entire pem file.
+        If ``True`` (default), write_pem will overwrite the entire PEM file.
         Set False to preserve existing private keys and dh params that may
-        exist in the pem file.
+        exist in the PEM file.
 
     pem_type:
         The PEM type to be saved, for example ``CERTIFICATE`` or
         ``PUBLIC KEY``. Adding this will allow the function to take
-        input that may contain multiple pem types.
+        input that may contain multiple PEM types.
 
     CLI Example:
 
@@ -818,10 +818,10 @@ def create_private_key(path=None,
         Length of the private key in bits. Default 2048
 
     passphrase:
-        Passphrase for encryting the private key
+        Passphrase for encrypting the private key
 
     cipher:
-        Cipher for encrypting the private key. Has no effect if passhprase is None.
+        Cipher for encrypting the private key. Has no effect if passphrase is None.
 
     verbose:
         Provide visual feedback on stdout. Default True
@@ -878,7 +878,7 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
     :depends:   - PyOpenSSL Python module
 
     path:
-        Path to write the crl to.
+        Path to write the CRL to.
 
     text:
         If ``True``, return the PEM text without writing to a file.
@@ -886,14 +886,14 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
 
     signing_private_key:
         A path or string of the private key in PEM format that will be used
-        to sign this crl. This is required.
+        to sign the CRL. This is required.
 
     signing_private_key_passphrase:
         Passphrase to decrypt the private key.
 
     signing_cert:
         A certificate matching the private key that will be used to sign
-        this crl. This is required.
+        the CRL. This is required.
 
     revoked:
         A list of dicts containing all the certificates to revoke. Each dict
@@ -1127,9 +1127,9 @@ def create_certificate(
         Default ``False``.
 
     overwrite:
-        If True(default), create_certificate will overwrite the entire pem
+        If ``True`` (default), create_certificate will overwrite the entire PEM
         file. Set False to preserve existing private keys and dh params that
-        may exist in the pem file.
+        may exist in the PEM file.
 
     kwargs:
         Any of the properties below can be included as additional
@@ -1139,7 +1139,7 @@ def create_certificate(
         Request a remotely signed certificate from ca_server. For this to
         work, a ``signing_policy`` must be specified, and that same policy
         must be configured on the ca_server. See ``signing_policy`` for
-        details. Also the salt master must permit peers to call the
+        details. Also, the salt master must permit peers to call the
         ``sign_remote_certificate`` function.
 
         Example:
@@ -1200,7 +1200,7 @@ def create_certificate(
 
     public_key:
         The public key to be included in this certificate. This can be sourced
-        from a public key, certificate, csr or private key. If a private key
+        from a public key, certificate, CSR or private key. If a private key
         is used, the matching public key from the private key will be
         generated before any processing is done. This means you can request a
         certificate from a remote CA using a private key file as your
@@ -1264,7 +1264,7 @@ def create_certificate(
             X509v3 Subject Alternative Name
 
         crlDistributionPoints:
-            X509v3 CRL distribution points
+            X509v3 CRL Distribution Points
 
         issuingDistributionPoint:
             X509v3 Issuing Distribution Point
@@ -1324,7 +1324,7 @@ def create_certificate(
     signing_policy:
         A signing policy that should be used to create this certificate.
         Signing policies should be defined in the minion configuration, or in
-        a minion pillar. It should be a yaml formatted list of arguments
+        a minion pillar. It should be a YAML formatted list of arguments
         which will override any arguments passed to this function. If the
         ``minions`` key is included in the signing policy, only minions
         matching that pattern (see match.glob and match.compound) will be
@@ -1391,7 +1391,7 @@ def create_certificate(
         for ignore in list(_STATE_INTERNAL_KEYWORDS) + \
                 ['listen_in', 'prerequired', '__prerequired__']:
             kwargs.pop(ignore, None)
-        # TODO: Make timeout configurable in Neon
+        # TODO: Make timeout configurable in 3000
         certs = __salt__['publish.publish'](
             tgt=ca_server,
             fun='x509.sign_remote_certificate',
@@ -1712,7 +1712,7 @@ def verify_private_key(private_key, public_key, passphrase=None):
 
     public_key:
         The public key to verify, can be a string or path to a PEM formatted
-        certificate, csr, or another private key.
+        certificate, CSR, or another private key.
 
     passphrase:
         Passphrase to decrypt the private key.
@@ -1739,7 +1739,7 @@ def verify_signature(certificate, signing_pub_key=None,
 
     signing_pub_key:
         The public key to verify, can be a string or path to a PEM formatted
-        certificate, csr, or private key.
+        certificate, CSR, or private key.
 
     signing_pub_key_passphrase:
         Passphrase to the signing_pub_key if it is an encrypted private key.

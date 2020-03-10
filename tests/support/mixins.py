@@ -750,7 +750,7 @@ def _fetch_events(q, opts):
     while True:
         try:
             events = event.get_event(full=False)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             # This is broad but we'll see all kinds of issues right now
             # if we drop the proc out from under the socket while we're reading
             log.exception("Exception caught while getting events %r", exc)

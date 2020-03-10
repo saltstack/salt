@@ -239,7 +239,7 @@ class BaseCaller(object):
                 try:
                     func_result = all(ret['return'].get(x, True)
                                       for x in ('result', 'success'))
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     # return data is not a dict
                     func_result = True
                 if not func_result:
@@ -283,7 +283,7 @@ class BaseCaller(object):
             try:
                 ret['success'] = True
                 self.minion.returners['{0}.returner'.format(returner)](ret)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 pass
 
         # return the job infos back up to the respective minion's master
@@ -292,7 +292,7 @@ class BaseCaller(object):
                 mret = ret.copy()
                 mret['jid'] = 'req'
                 self.return_pub(mret)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 pass
         elif self.opts['cache_jobs']:
             # Local job cache has been enabled
@@ -305,7 +305,7 @@ class ZeroMQCaller(BaseCaller):
     '''
     Object to wrap the calling of local salt modules for the salt-call command
     '''
-    def __init__(self, opts):
+    def __init__(self, opts):  # pylint: disable=useless-super-delegation
         '''
         Pass in the command line options
         '''

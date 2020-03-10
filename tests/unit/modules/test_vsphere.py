@@ -31,7 +31,7 @@ from tests.support.mock import (
 
 # Import Third Party Libs
 try:
-    from pyVmomi import vim, vmodl  # pylint: disable=unused-import
+    from pyVmomi import vim, vmodl  # pylint: disable=unused-import,no-name-in-module
 
     HAS_PYVMOMI = True
 except ImportError:

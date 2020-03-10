@@ -1186,6 +1186,10 @@ VALID_OPTS = immutabletypes.freeze({
 
     # Thorium top file location
     'thorium_top': six.string_types,
+
+    # Allow raw_shell option when using the ssh
+    # client via the Salt API
+    'netapi_allow_raw_shell': bool,
 })
 
 # default configurations
@@ -1249,6 +1253,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze({
     'state_top_saltenv': None,
     'startup_states': '',
     'sls_list': [],
+    'start_event_grains': [],
     'top_file': '',
     'thoriumenv': None,
     'thorium_top': 'top.sls',
@@ -1798,6 +1803,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze({
     'auth_events': True,
     'minion_data_cache_events': True,
     'enable_ssh_minions': False,
+    'netapi_allow_raw_shell': False,
 })
 
 
@@ -1954,7 +1960,7 @@ def _expand_glob_path(file_roots):
                 unglobbed_path.extend(glob.glob(path))
             else:
                 unglobbed_path.append(path)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             unglobbed_path.append(path)
     return unglobbed_path
 
@@ -4010,7 +4016,7 @@ def apply_master_config(overrides=None, defaults=None):
                 # serialization)
                 re.compile(regex)
                 opts['file_ignore_regex'].append(regex)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 log.warning(
                     'Unable to parse file_ignore_regex. Skipping: %s',
                     regex

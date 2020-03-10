@@ -616,6 +616,19 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                                                       'bridge',
                                                       vport='openvswitch',
                                                       tag=180,
+                                                      ipv4_config={
+                                                        'cidr': '192.168.2.0/24',
+                                                        'dhcp_ranges': [
+                                                            {'start': '192.168.2.10', 'end': '192.168.2.25'},
+                                                            {'start': '192.168.2.110', 'end': '192.168.2.125'},
+                                                        ]
+                                                      },
+                                                      ipv6_config={
+                                                        'cidr': '2001:db8:ca2:2::1/64',
+                                                        'dhcp_ranges': [
+                                                            {'start': '2001:db8:ca2:1::10', 'end': '2001:db8:ca2::1f'},
+                                                        ]
+                                                      },
                                                       autostart=False,
                                                       connection='myconnection',
                                                       username='user',
@@ -627,6 +640,19 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                                            tag=180,
                                            autostart=False,
                                            start=True,
+                                           ipv4_config={
+                                             'cidr': '192.168.2.0/24',
+                                             'dhcp_ranges': [
+                                                 {'start': '192.168.2.10', 'end': '192.168.2.25'},
+                                                 {'start': '192.168.2.110', 'end': '192.168.2.125'},
+                                             ]
+                                           },
+                                           ipv6_config={
+                                             'cidr': '2001:db8:ca2:2::1/64',
+                                             'dhcp_ranges': [
+                                                 {'start': '2001:db8:ca2:1::10', 'end': '2001:db8:ca2::1f'},
+                                             ]
+                                           },
                                            connection='myconnection',
                                            username='user',
                                            password='secret')

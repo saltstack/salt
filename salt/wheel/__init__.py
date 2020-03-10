@@ -126,7 +126,7 @@ class WheelClient(salt.client.mixins.SyncClientMixin,
         fun = low.pop('fun')
         return self.asynchronous(fun, low)
 
-    def cmd(self, fun, arg=None, pub_data=None, kwarg=None, print_event=True, full_return=False):
+    def cmd(self, fun, arg=None, pub_data=None, kwarg=None, print_event=True, full_return=False):  # pylint: disable=useless-super-delegation
         '''
         Execute a function
 

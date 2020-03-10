@@ -157,7 +157,7 @@ class TestSaltCacheLoader(TestCase):
         tmpl_dir = os.path.join(self.template_dir, 'hello_simple')
         self.assertEqual(res[1], tmpl_dir)
         assert res[2](), 'Template up to date?'
-        assert len(loader._file_client.requests)
+        assert loader._file_client.requests
         self.assertEqual(loader._file_client.requests[0]['path'], 'salt://hello_simple')
 
     def get_loader(self, opts=None, saltenv='base'):
@@ -1477,7 +1477,7 @@ class TestDotNotationLookup(ModuleCase):
     '''
     Tests to call Salt functions via Jinja with various lookup syntaxes
     '''
-    def setUp(self, *args, **kwargs):
+    def setUp(self):
         functions = {
             'mocktest.ping': lambda: True,
             'mockgrains.get': lambda x: 'jerry',

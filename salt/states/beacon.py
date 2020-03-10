@@ -31,9 +31,9 @@ Management of the Salt beacons
               - 0.1
               - 1.0
 
-    .. versionadded:: Neon
+    .. versionadded:: 3000
 
-    Beginning in the Neon release, multiple copies of a beacon can be configured
+    Beginning in the 3000 release, multiple copies of a beacon can be configured
     using the ``beacon_module`` parameter.
 
     inotify_infs:

@@ -42,7 +42,7 @@ def absent(name):
                     ret['comment'] = 'Failed to remove index template {0} for unknown reasons'.format(name)
         else:
             ret['comment'] = 'Index template {0} is already absent'.format(name)
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         ret['result'] = False
         ret['comment'] = six.text_type(err)
 
@@ -95,7 +95,7 @@ def present(name, definition):
                     ret['comment'] = 'Cannot create index template {0}, {1}'.format(name, output)
         else:
             ret['comment'] = 'Index template {0} is already present'.format(name)
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         ret['result'] = False
         ret['comment'] = six.text_type(err)
 
