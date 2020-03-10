@@ -319,50 +319,44 @@ class SaltStackVersion(object):
         # Higher than 0.17, lower than first date based
         return 0 < self.major < 2014
 
+    def min_info(self):
+        info = [self.major]
+        if self.new_version(self.major):
+            if self.minor:
+                info.append(self.minor)
+        else:
+            info.extend([self.minor,
+                        self.bugfix,
+                        self.mbugfix])
+        return info
+
     @property
     def info(self):
-        return (
-            self.major,
-            self.minor,
-            self.bugfix,
-            self.mbugfix
-        )
+        return tuple(self.min_info())
 
     @property
     def pre_info(self):
-        return (
-            self.major,
-            self.minor,
-            self.bugfix,
-            self.mbugfix,
-            self.pre_type,
-            self.pre_num
-        )
+        info = self.min_info()
+        info.extend([self.pre_type,
+                     self.pre_num])
+        return tuple(info)
 
     @property
     def noc_info(self):
-        return (
-            self.major,
-            self.minor,
-            self.bugfix,
-            self.mbugfix,
-            self.pre_type,
-            self.pre_num,
-            self.noc
-        )
+        info = self.min_info()
+        info.extend([self.pre_type,
+                     self.pre_num,
+                     self.noc])
+        return tuple(info)
 
     @property
     def full_info(self):
-        return (
-            self.major,
-            self.minor,
-            self.bugfix,
-            self.mbugfix,
-            self.pre_type,
-            self.pre_num,
-            self.noc,
-            self.sha
-        )
+        info = self.min_info()
+        info.extend([self.pre_type,
+                     self.pre_num,
+                     self.noc,
+                     self.sha])
+        return tuple(info)
 
     @property
     def string(self):
@@ -402,6 +396,16 @@ class SaltStackVersion(object):
             version_string += ' ({0})'.format(self.RMATCH[(self.major, self.minor)])
         return version_string
 
+    @property
+    def pre_index(self):
+        if self.new_version(self.major):
+            pre_type = 2
+            if not isinstance(self.minor, int):
+                pre_type = 1
+        else:
+            pre_type = 4
+        return pre_type
+
     def __str__(self):
         return self.string
 
@@ -418,23 +422,29 @@ class SaltStackVersion(object):
                     )
                 )
 
+        pre_type = self.pre_index
+        other_pre_type = other.pre_index
         other_noc_info = list(other.noc_info)
         noc_info = list(self.noc_info)
 
         if self.new_version(self.major):
-            if isinstance(self.minor, int) and not isinstance(other.minor, int):
-                other_noc_info[1] = 0
+            if self.minor and not other.minor:
+                # We have minor information, the other side does not
+                if self.minor > 0:
+                    other_noc_info[1] = 0
 
-            if not isinstance(self.minor, int) and isinstance(other.minor, int):
-                noc_info[1] = 0
+            if not self.minor and other.minor:
+                # The other side has minor information, we don't
+                if other.minor > 0:
+                    noc_info[1] = 0
 
         if self.pre_type and not other.pre_type:
             # We have pre-release information, the other side doesn't
-            other_noc_info[4] = 'zzzzz'
+            other_noc_info[other_pre_type] = 'zzzzz'
 
         if not self.pre_type and other.pre_type:
-            # The other side has pre-release informatio, we don't
-            noc_info[4] = 'zzzzz'
+            # The other side has pre-release information, we don't
+            noc_info[pre_type] = 'zzzzz'
 
         return method(tuple(noc_info), tuple(other_noc_info))
 
