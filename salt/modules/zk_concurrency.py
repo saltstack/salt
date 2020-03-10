@@ -185,7 +185,7 @@ def lock_holders(path,
 
     Example:
 
-    .. code-block: bash
+    .. code-block:: bash
 
         salt minion zk_concurrency.lock_holders /lock/path host1:1234,host2:1234
     '''
@@ -237,7 +237,7 @@ def lock(path,
 
     Example:
 
-    .. code-block: bash
+    .. code-block:: bash
 
         salt minion zk_concurrency.lock /lock/path host1:1234,host2:1234
     '''
@@ -298,7 +298,7 @@ def unlock(path,
 
     Example:
 
-    .. code-block: bash
+    .. code-block:: bash
 
         salt minion zk_concurrency.unlock /lock/path host1:1234,host2:1234
     '''
@@ -348,7 +348,7 @@ def party_members(path,
 
     Example:
 
-    .. code-block: bash
+    .. code-block:: bash
 
         salt minion zk_concurrency.party_members /lock/path host1:1234,host2:1234
         salt minion zk_concurrency.party_members /lock/path host1:1234,host2:1234 min_nodes=3 blocking=True
