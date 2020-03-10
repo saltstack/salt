@@ -1181,12 +1181,21 @@ def get_name(principal):
     try:
         return win32security.LookupAccountSid(None, sid_obj)[0]
     except (pywintypes.error, TypeError) as exc:
-        message = 'Error resolving "{0}"'.format(principal)
-        if type(exc) == pywintypes.error:
-            win_error = win32api.FormatMessage(exc.winerror).rstrip("\n")
-            message = "{0}: {1}".format(message, win_error)
-        log.exception(message)
-        raise CommandExecutionError(message, exc)
+        # Microsoft introduced the concept of Capability SIDs in Windows 8
+        # https://docs.microsoft.com/en-us/windows/security/identity-protection/access-control/security-identifiers#capability-sids
+        # https://support.microsoft.com/en-us/help/4502539/some-sids-do-not-resolve-into-friendly-names
+        # https://support.microsoft.com/en-us/help/243330/well-known-security-identifiers-in-windows-operating-systems
+        # These types of SIDs do not resolve, so we'll just ignore them for this
+        # All capability SIDs begin with `S-1-15-3`, so we'll only throw an
+        # error when the sid does not begin with `S-1-15-3`
+        str_sid = get_sid_string(sid_obj)
+        if not str_sid.startswith('S-1-15-3'):
+            message = 'Error resolving "{0}"'.format(principal)
+            if type(exc) == pywintypes.error:
+                win_error = win32api.FormatMessage(exc.winerror).rstrip('\n')
+                message = '{0}: {1}'.format(message, win_error)
+            log.exception(message)
+            raise CommandExecutionError(message, exc)
 
 
 def get_owner(obj_name, obj_type="file"):

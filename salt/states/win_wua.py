@@ -183,7 +183,7 @@ def installed(name, updates=None):
     wua.install(install)
 
     # Refresh windows update info
-    wua.refresh()
+    wua.load_search()
     post_info = wua.updates().list()
 
     # Verify the installation
@@ -307,7 +307,7 @@ def removed(name, updates=None):
     wua.uninstall(uninstall)
 
     # Refresh windows update info
-    wua.refresh()
+    wua.load_search()
     post_info = wua.updates().list()
 
     # Verify the installation
@@ -482,7 +482,7 @@ def uptodate(
     wua.install(install)
 
     # Refresh windows update info
-    wua.refresh()
+    wua.load_search()
 
     post_info = wua.updates().list()
 
