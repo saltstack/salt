@@ -1405,7 +1405,7 @@ def decrypt(
     return ret
 
 
-@depends(salt.utils.versions.version_cmp(GPG_VERSION, '2.1') >= 0)
+@depends(salt.utils.versions.version_cmp(GPG_VERSION, '2.1') or -1 >= 0)
 def get_fingerprint_from_data(keydata, secret=False):
     '''
     This will return the fingerprint from a GPG key.
