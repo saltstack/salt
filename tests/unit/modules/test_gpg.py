@@ -101,7 +101,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
         cls.secret_key = textwrap.dedent(
             '''\
             -----BEGIN PGP PRIVATE KEY BLOCK-----
-            
+
             lQIGBF1j4XwBBADVcoGjgf3ZGym6GYL6wLztZtMzDvQXUD4OS0qFBVp80d/k4Wdw
             PJAt2xngvHhFgMTe3+8XRI2MgpkSfNzcTntcyGhcCjNQI3d7GlrFpMzu6G3SQkwT
             BqPzELZuGhXJVyj5tSGbDU1hJpcIQ5RRH2HATg7S6xrVatVIDcDrGG6RCwARAQAB
