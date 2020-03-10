@@ -194,7 +194,7 @@ def _parse_requirements_file(requirements_file):
             line = line.strip()
             if not line or line.startswith('#'):
                 continue
-            if not line or line.startswith('-r'):
+            if line.startswith('-r'):
                 file = line.split()[1]
                 ret_requirements = _parse_requirements_file(os.path.join(os.path.dirname(requirements_file), file))
                 parsed_requirements.extend(ret_requirements)
