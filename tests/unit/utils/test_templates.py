@@ -209,8 +209,8 @@ class WrapRenderTestCase(TestCase):
             context=context,
             tmplpath='/tmp/foo/bar/init.sls'
         )
-        assert render.context['slspath'] == 'foo/bar'
-        assert render.context['tpldir'] == 'foo/bar'
+        assert render.context['slspath'] == 'foo/bar', render.context['slspath']
+        assert render.context['tpldir'] == 'foo/bar', render.context['tpldir']
 
     @with_tempdir()
     def test_wrap_issue_56119_b(self, tempdir):
@@ -225,5 +225,5 @@ class WrapRenderTestCase(TestCase):
             context=context,
             tmplpath='/tmp/foo/bar/bang.sls'
         )
-        assert render.context['slspath'] == 'foo/bar'
-        assert render.context['tpldir'] == 'foo/bar'
+        assert render.context['slspath'] == 'foo/bar', render.context['slspath']
+        assert render.context['tpldir'] == 'foo/bar', render.context['tpldir']
