@@ -5,13 +5,16 @@ Unit tests for salt.utils.templates.py
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import os
 import sys
 import logging
+import shutil
 
 # Import Salt libs
 import salt.utils.templates
 
 # Import Salt Testing Libs
+from tests.support.helpers import with_tempdir
 from tests.support.unit import TestCase, skipIf
 
 log = logging.getLogger(__name__)
@@ -181,3 +184,48 @@ class RenderTestCase(TestCase):
         ctx['var'] = 'OK'
         res = salt.utils.templates.render_cheetah_tmpl(tmpl, ctx)
         self.assertEqual(res.strip(), 'OK')
+
+
+class MockRender(object):
+    def __call__(self, tplstr, context, tmplpath=None):
+        self.tplstr = tplstr
+        self.context = context
+        self.tmplpath = tmplpath
+        return tplstr
+
+
+class WrapRenderTestCase(TestCase):
+
+    @with_tempdir()
+    def test_wrap_issue_56119_a(self, tempdir):
+        assert os.path.exists(tempdir)
+        slsfile = os.path.join(tempdir, 'foo')
+        with open(slsfile, 'w') as fp:
+            fp.write('{{ slspath }}')
+        context = {'opts': {}, 'saltenv': 'base', 'sls': 'foo.bar'}
+        render = MockRender()
+        wrapped = salt.utils.templates.wrap_tmpl_func(render)
+        res = wrapped(
+            slsfile,
+            context=context,
+            tmplpath='/tmp/foo/bar/init.sls'
+        )
+        assert render.context['slspath']  == 'foo/bar'
+        assert render.context['tpldir']  == 'foo/bar'
+
+    @with_tempdir()
+    def test_wrap_issue_56119_b(self, tempdir):
+        assert os.path.exists(tempdir)
+        slsfile = os.path.join(tempdir, 'foo')
+        with open(slsfile, 'w') as fp:
+            fp.write('{{ slspath }}')
+        context = {'opts': {}, 'saltenv': 'base', 'sls': 'foo.bar.bang'}
+        render = MockRender()
+        wrapped = salt.utils.templates.wrap_tmpl_func(render)
+        res = wrapped(
+            slsfile,
+            context=context,
+            tmplpath='/tmp/foo/bar/bang.sls'
+        )
+        assert render.context['slspath']  == 'foo/bar'
+        assert render.context['tpldir']  == 'foo/bar'
