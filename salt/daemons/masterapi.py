@@ -617,14 +617,17 @@ class RemoteFuncs(object):
                         if 'allow_tgt' in mine_entry:
                             # Only determine allowed targets if any have been specified.
                             # This prevents having to add a list of all minions as allowed targets.
+                            get_minion = checker.check_minions(
+                                         mine_entry['allow_tgt'],
+                                         mine_entry.get('allow_tgt_type', 'glob'))['minions']
+                            # the minion in allow_tgt does not exist
+                            if not get_minion:
+                                continue
                             salt.utils.dictupdate.set_dict_key_value(
                                 minion_side_acl,
                                 '{}:{}'.format(minion, function),
-                                checker.check_minions(
-                                    mine_entry['allow_tgt'],
-                                    mine_entry.get('allow_tgt_type', 'glob')
-                                )['minions']
-                            )
+                                get_minion
+                           )
                 if salt.utils.mine.minion_side_acl_denied(minion_side_acl, minion, function, load['id']):
                     continue
                 if _ret_dict:
