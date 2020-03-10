@@ -787,29 +787,14 @@ def apply_(mods=None, **kwargs):
 def test(*args, **kwargs):
     '''
     .. versionadded:: Sodium
+    
     Alias for `state.apply` with the kwarg `test` forced to `True`.
 
     This is a nicety to avoid the need to type out `test=True` and the possibility of
     a typo causing changes you do not intend.
     '''
-    try:
-        test_state_before = __opts__["test"]
-    except KeyError:
-        reset_opts_test = False  # track if __opts__["test"] should be set after run
-    else:
-        reset_opts_test = True
-
-    __opts__["test"] = True
-
     kwargs["test"] = True
-
-    try:
-        ret = apply_(*args, **kwargs)
-    finally:
-        if reset_opts_test:
-            __opts__["test"] = test_state_before
-        else:
-            del __opts__["test"]
+    ret = apply_(*args, **kwargs)
 
     return ret
 
