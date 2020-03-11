@@ -2276,13 +2276,15 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         else:
             modulec_path = os.path.join(RUNTIME_VARS.CODE_DIR, 'pip.pyc')
         unzip_path = os.path.join(RUNTIME_VARS.TMP, 'issue-56131.txt')
+
         def clean_paths(paths):
             for path in paths:
                 try:
                     os.remove(path)
                 except OSError:
                     log.warn("Path not found: %s", path)
-        with open(module_path, 'w') as fp:
+
+        with salt.utils.files.fopen(module_path, 'w') as fp:
             fp.write('raise ImportError("No module named pip")')
         self.addCleanup(clean_paths, [unzip_path, module_path, modulec_path])
         assert not os.path.exists(unzip_path)
