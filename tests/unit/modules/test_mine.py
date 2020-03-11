@@ -43,6 +43,9 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
     Test cases for salt.modules.mine
     '''
     def setUp(self):
+        self.kernel_ret = 'Linux!'
+        self.foo_ret = 'baz'
+        self.ip_ret = '2001:db8::1:3'
         self.cache = FakeCache()
 
     def setup_loader_modules(self):
@@ -94,15 +97,16 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests sending an item to the mine in the minion's local cache,
         and then immediately fetching it again (since tests are executed unordered).
-        Also verify that the stored mine cache has the correct structure (with ACL).
+        Also verify that the stored mine cache does not use ACL data structure
+        without allow_tgt passed.
         '''
         with patch.dict(mine.__opts__, {
                     'file_client': 'local',
                     'id': 'webserver',
                 }), \
                 patch.dict(mine.__salt__, {
-                    'network.ip_addrs': MagicMock(return_value='2001:db8::1:3'),
-                    'foo.bar': MagicMock(return_value='baz'),
+                    'network.ip_addrs': MagicMock(return_value=self.ip_ret),
+                    'foo.bar': MagicMock(return_value=self.foo_ret),
                 }):
             ret = mine.send('ip_addr', mine_function='network.ip_addrs')
             mine.send('foo.bar')
@@ -110,14 +114,8 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             self.cache.fetch('minions/webserver', 'mine_cache'),
             {
-                'ip_addr': {
-                    salt.utils.mine.MINE_ITEM_ACL_DATA: '2001:db8::1:3',
-                    salt.utils.mine.MINE_ITEM_ACL_ID: salt.utils.mine.MINE_ITEM_ACL_VERSION,
-                },
-                'foo.bar': {
-                    salt.utils.mine.MINE_ITEM_ACL_DATA: 'baz',
-                    salt.utils.mine.MINE_ITEM_ACL_ID: salt.utils.mine.MINE_ITEM_ACL_VERSION,
-                },
+                'ip_addr': self.ip_ret,
+                'foo.bar': self.foo_ret,
             }
         )
         with patch.dict(mine.__opts__, {
@@ -128,9 +126,9 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
             ret_single_dict = mine.get('*', ['ip_addr'])
             ret_multi = mine.get('*', 'ip_addr,foo.bar')
             ret_multi2 = mine.get('*', ['ip_addr', 'foo.bar'])
-        self.assertEqual(ret_single, {'webserver': '2001:db8::1:3'})
-        self.assertEqual(ret_single_dict, {'ip_addr': {'webserver': '2001:db8::1:3'}})
-        self.assertEqual(ret_multi, {'ip_addr': {'webserver': '2001:db8::1:3'}, 'foo.bar': {'webserver': 'baz'}})
+        self.assertEqual(ret_single, {'webserver': self.ip_ret})
+        self.assertEqual(ret_single_dict, {'ip_addr': {'webserver': self.ip_ret}})
+        self.assertEqual(ret_multi, {'ip_addr': {'webserver': self.ip_ret}, 'foo.bar': {'webserver': self.foo_ret}})
         self.assertEqual(ret_multi, ret_multi2)
 
     def test_send_get_acl_local(self):
@@ -138,15 +136,16 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
         Tests sending an item to the mine in the minion's local cache,
         including ACL information (useless when only working locally, but hey),
         and then immediately fetching it again (since tests are executed unordered).
-        Also verify that the stored mine cache has the correct structure (with ACL).
+        Also verify that the stored mine cache has the correct structure (with ACL)
+        when using allow_tgt and no ACL without allow_tgt.
         '''
         with patch.dict(mine.__opts__, {
                     'file_client': 'local',
                     'id': 'webserver',
                 }), \
                 patch.dict(mine.__salt__, {
-                    'network.ip_addrs': MagicMock(return_value='2001:db8::1:3'),
-                    'foo.bar': MagicMock(return_value='baz'),
+                    'network.ip_addrs': MagicMock(return_value=self.ip_ret),
+                    'foo.bar': MagicMock(return_value=self.foo_ret),
                 }):
             ret = mine.send('ip_addr', mine_function='network.ip_addrs', allow_tgt='web*', allow_tgt_type='glob')
             mine.send('foo.bar')
@@ -155,15 +154,12 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
             self.cache.fetch('minions/webserver', 'mine_cache'),
             {
                 'ip_addr': {
-                    salt.utils.mine.MINE_ITEM_ACL_DATA: '2001:db8::1:3',
+                    salt.utils.mine.MINE_ITEM_ACL_DATA: self.ip_ret,
                     salt.utils.mine.MINE_ITEM_ACL_ID: salt.utils.mine.MINE_ITEM_ACL_VERSION,
                     'allow_tgt': 'web*',
                     'allow_tgt_type': 'glob',
                 },
-                'foo.bar': {
-                    salt.utils.mine.MINE_ITEM_ACL_DATA: 'baz',
-                    salt.utils.mine.MINE_ITEM_ACL_ID: salt.utils.mine.MINE_ITEM_ACL_VERSION,
-                },
+                'foo.bar': self.foo_ret,
             }
         )
         with patch.dict(mine.__opts__, {
@@ -171,7 +167,7 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
                     'id': 'webserver',
                 }):
             ret_single = mine.get('*', 'ip_addr')
-        self.assertEqual(ret_single, {'webserver': '2001:db8::1:3'})
+        self.assertEqual(ret_single, {'webserver': self.ip_ret})
 
     def test_send_master(self):
         '''
@@ -180,7 +176,7 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.object(mine, '_mine_send', MagicMock(side_effect=lambda x, y: x)),\
                 patch.dict(mine.__salt__, {
-                    'foo.bar': MagicMock(return_value='baz'),
+                    'foo.bar': MagicMock(return_value=self.foo_ret),
                 }), \
                 patch.dict(mine.__opts__, {
                     'file_client': 'remote',
@@ -192,12 +188,7 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
             {
                 'id': 'foo',
                 'cmd': '_mine',
-                'data': {
-                    'foo.bar': {
-                        salt.utils.mine.MINE_ITEM_ACL_DATA: 'baz',
-                        salt.utils.mine.MINE_ITEM_ACL_ID: salt.utils.mine.MINE_ITEM_ACL_VERSION,
-                    },
-                },
+                'data': {'foo.bar': self.foo_ret},
                 'clear': False,
             }
         )
@@ -209,7 +200,7 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.object(mine, '_mine_send', MagicMock(side_effect=lambda x, y: x)),\
                 patch.dict(mine.__salt__, {
-                    'foo.bar': MagicMock(return_value='baz'),
+                    'foo.bar': MagicMock(return_value=self.foo_ret),
                 }), \
                 patch.dict(mine.__opts__, {
                     'file_client': 'remote',
@@ -223,7 +214,7 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
                 'cmd': '_mine',
                 'data': {
                     'foo.bar': {
-                        salt.utils.mine.MINE_ITEM_ACL_DATA: 'baz',
+                        salt.utils.mine.MINE_ITEM_ACL_DATA: self.foo_ret,
                         salt.utils.mine.MINE_ITEM_ACL_ID: salt.utils.mine.MINE_ITEM_ACL_VERSION,
                         'allow_tgt': 'roles:web',
                         'allow_tgt_type': 'grains',
@@ -239,7 +230,7 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_load = {
             'tgt_type': 'qux',
-            'tgt': 'baz',
+            'tgt': self.foo_ret,
             'cmd': '_mine_get',
             'fun': 'foo.bar',
             'id': 'foo'
@@ -292,9 +283,9 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
                 }), \
                 patch.dict(mine.__salt__, {
                     'config.merge': MagicMock(return_value=config_mine_functions),
-                    'grains.get': lambda x: 'Linux!',
-                    'network.ip_addrs': MagicMock(return_value='2001:db8::1:3'),
-                    'foo.bar': MagicMock(return_value='baz'),
+                    'grains.get': lambda x: self.kernel_ret,
+                    'network.ip_addrs': MagicMock(return_value=self.ip_ret),
+                    'foo.bar': MagicMock(return_value=self.foo_ret),
                 }):
             ret = mine.update()
         self.assertEqual(ret, 'FakeCache:StoreSuccess!')
@@ -302,22 +293,16 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             self.cache.fetch('minions/webserver', 'mine_cache'),
             {
-                'ip_addr': {
-                    salt.utils.mine.MINE_ITEM_ACL_DATA: '2001:db8::1:3',
-                    salt.utils.mine.MINE_ITEM_ACL_ID: salt.utils.mine.MINE_ITEM_ACL_VERSION,
-                },
-                'network.ip_addrs': {
-                    salt.utils.mine.MINE_ITEM_ACL_DATA: '2001:db8::1:3',
-                    salt.utils.mine.MINE_ITEM_ACL_ID: salt.utils.mine.MINE_ITEM_ACL_VERSION,
-                },
+                'ip_addr': self.ip_ret,
+                'network.ip_addrs': self.ip_ret,
                 'foo.bar': {
-                    salt.utils.mine.MINE_ITEM_ACL_DATA: 'baz',
+                    salt.utils.mine.MINE_ITEM_ACL_DATA: self.foo_ret,
                     salt.utils.mine.MINE_ITEM_ACL_ID: salt.utils.mine.MINE_ITEM_ACL_VERSION,
                     'allow_tgt': 'G@roles:webserver',
                     'allow_tgt_type': 'compound',
                 },
                 'kernel': {
-                    salt.utils.mine.MINE_ITEM_ACL_DATA: 'Linux!',
+                    salt.utils.mine.MINE_ITEM_ACL_DATA: self.kernel_ret,
                     salt.utils.mine.MINE_ITEM_ACL_ID: salt.utils.mine.MINE_ITEM_ACL_VERSION,
                     'allow_tgt': 'web*',
                 },
@@ -343,8 +328,8 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
                 patch.dict(mine.__salt__, {
                     'config.merge': MagicMock(return_value={}),
                     'grains.get': lambda x: 'Linux!!',
-                    'network.ip_addrs': MagicMock(return_value='2001:db8::1:4'),
-                    'foo.bar': MagicMock(return_value='baz'),
+                    'network.ip_addrs': MagicMock(return_value=self.ip_ret),
+                    'foo.bar': MagicMock(return_value=self.foo_ret),
                 }):
             ret = mine.update(mine_functions=manual_mine_functions)
         self.assertEqual(ret, 'FakeCache:StoreSuccess!')
@@ -352,16 +337,10 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             self.cache.fetch('minions/webserver', 'mine_cache'),
             {
-                'ip_addr': {
-                    salt.utils.mine.MINE_ITEM_ACL_DATA: '2001:db8::1:4',
-                    salt.utils.mine.MINE_ITEM_ACL_ID: salt.utils.mine.MINE_ITEM_ACL_VERSION,
-                },
-                'network.ip_addrs': {
-                    salt.utils.mine.MINE_ITEM_ACL_DATA: '2001:db8::1:4',
-                    salt.utils.mine.MINE_ITEM_ACL_ID: salt.utils.mine.MINE_ITEM_ACL_VERSION,
-                },
+                'ip_addr': self.ip_ret,
+                'network.ip_addrs': self.ip_ret,
                 'foo.bar': {
-                    salt.utils.mine.MINE_ITEM_ACL_DATA: 'baz',
+                    salt.utils.mine.MINE_ITEM_ACL_DATA: self.foo_ret,
                     salt.utils.mine.MINE_ITEM_ACL_ID: salt.utils.mine.MINE_ITEM_ACL_VERSION,
                     'allow_tgt': 'G@roles:webserver',
                     'allow_tgt_type': 'compound',
@@ -388,22 +367,10 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
             'id': 'webserver',
             'cmd': '_mine',
             'data': {
-                'ip_addr': {
-                    salt.utils.mine.MINE_ITEM_ACL_DATA: '2001:db8::1:3',
-                    salt.utils.mine.MINE_ITEM_ACL_ID: salt.utils.mine.MINE_ITEM_ACL_VERSION,
-                },
-                'network.ip_addrs': {
-                    salt.utils.mine.MINE_ITEM_ACL_DATA: '2001:db8::1:3',
-                    salt.utils.mine.MINE_ITEM_ACL_ID: salt.utils.mine.MINE_ITEM_ACL_VERSION,
-                },
-                'foo.bar': {
-                    salt.utils.mine.MINE_ITEM_ACL_DATA: 'baz',
-                    salt.utils.mine.MINE_ITEM_ACL_ID: salt.utils.mine.MINE_ITEM_ACL_VERSION,
-                },
-                'kernel': {
-                    salt.utils.mine.MINE_ITEM_ACL_DATA: 'Linux!',
-                    salt.utils.mine.MINE_ITEM_ACL_ID: salt.utils.mine.MINE_ITEM_ACL_VERSION,
-                },
+                'ip_addr': self.ip_ret,
+                'network.ip_addrs': self.ip_ret,
+                'foo.bar': self.foo_ret,
+                'kernel': self.kernel_ret,
             },
             'clear': False,
         }
@@ -415,9 +382,9 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
                 }), \
                 patch.dict(mine.__salt__, {
                     'config.merge': MagicMock(return_value=config_mine_functions),
-                    'grains.get': lambda x: 'Linux!',
-                    'network.ip_addrs': MagicMock(return_value='2001:db8::1:3'),
-                    'foo.bar': MagicMock(return_value='baz'),
+                    'grains.get': lambda x: self.kernel_ret,
+                    'network.ip_addrs': MagicMock(return_value=self.ip_ret),
+                    'foo.bar': MagicMock(return_value=self.foo_ret),
                 }):
             # Verify the correct load
             self.assertEqual(
