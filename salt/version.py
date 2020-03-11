@@ -19,7 +19,7 @@ try:
             warnings.simplefilter("ignore")
             return _deprecated_linux_distribution(**kwargs)
 except ImportError:
-        try:
+    try:
         from distro import linux_distribution
     except ImportError:
         # For Windows
