@@ -15,6 +15,7 @@ Versions are `MAJOR.PATCH`.
 ### Changed
 
 ### Fixed
+- [#56237](https://github.com/saltstack/salt/pull/56237) - Fix alphabetical ordering and remove duplicates across all documentation indexes - [@myii](https://github.com/myii)
 
 ### Added
 
