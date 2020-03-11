@@ -72,3 +72,11 @@ Current active profile: virtual-guest
                  'network-latency', 'network-throughput', 'powersave',
                  'throughput-performance', 'virtual-guest',
                  'virtual-host'])
+
+    def test_none(self):
+        '''
+        '''
+        ret = {'pid': 12345, 'retcode': 1, 'stderr': 'stderr: Cannot talk to Tuned daemon via DBus. Is Tuned daemon running?', 'stdout': 'No current active profile.'}
+        mock_cmd = MagicMock(return_value=ret)
+        with patch.dict(tuned.__salt__, {'cmd.run_all': mock_cmd}):
+            self.assertEqual(tuned.active(), 'none')

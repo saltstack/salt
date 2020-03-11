@@ -15,7 +15,7 @@ Example:
       - ack_mode: on-confirm
       - max_hops: 1
 
-.. versionadded:: Neon
+.. versionadded:: 3000
 '''
 
 # Import python libs
@@ -110,7 +110,7 @@ def present(name,
     :param str queue: The name of the upstream queue. Default is to use the same
         name as the federated queue.
 
-    .. versionadded:: Neon
+    .. versionadded:: 3000
 
     '''
     ret = {'name': name, 'result': False, 'comment': '', 'changes': {}}
@@ -182,7 +182,7 @@ def absent(name, runas=None):
     :param str name: The name of the upstream to remove
     :param str runas: User to run the command
 
-    .. versionadded:: Neon
+    .. versionadded:: 3000
     '''
     ret = {'name': name, 'result': False, 'comment': '', 'changes': {}}
 

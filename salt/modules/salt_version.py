@@ -2,7 +2,7 @@
 '''
 Access Salt's elemental release code-names.
 
-.. versionadded:: Neon
+.. versionadded:: 3000
 
 Salt's feature release schedule is based on the Periodic Table, as described
 in the :ref:`Version Numbers <version-numbers>` documentation.
@@ -78,10 +78,14 @@ def get_release_number(name):
         log.info('Version {} not found.'.format(name))
         return None
 
-    if version[1] == 0:
-        log.info('Version {} found, but no release number has been assigned '
-                 'yet.'.format(name))
-        return 'No version assigned.'
+    try:
+        if version[1] == 0:
+            log.info('Version {} found, but no release number has been assigned '
+                     'yet.'.format(name))
+            return 'No version assigned.'
+    except IndexError:
+        # The new versioning scheme does not include minor version
+        pass
 
     return '.'.join(str(item) for item in version)
 

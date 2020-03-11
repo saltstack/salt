@@ -215,7 +215,7 @@ class WinLgpoTest(ModuleCase):
                 'Users can only point and print to these servers': True,
                 'Enter fully qualified server names separated by semicolons': 'fakeserver1;fakeserver2',
                 'Users can only point and print to machines in their forest': True,
-                'Security Prompts: When installing drivers for a new connection': 'Show warning and elevation prompt',
+                'When installing drivers for a new connection': 'Show warning and elevation prompt',
                 'When updating drivers for an existing connection': 'Show warning only',
             },
             [

@@ -175,15 +175,28 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin
         arg_str = '--config-dir {0} {1}'.format(self.config_dir, arg_str)
         return self.run_script('salt-cp', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
 
-    def run_call(self, arg_str, with_retcode=False, catch_stderr=False, local=False, timeout=15):
+    def run_call(self, arg_str, with_retcode=False, catch_stderr=False,
+            local=False, timeout=15, config_dir=None):
+        if not config_dir:
+            config_dir = self.config_dir
         arg_str = '{0} --config-dir {1} {2}'.format('--local' if local else '',
-                                                    self.config_dir, arg_str)
+                                                    config_dir, arg_str)
 
         return self.run_script('salt-call',
                                arg_str,
                                with_retcode=with_retcode,
                                catch_stderr=catch_stderr,
                                timeout=timeout)
+
+    def assertRunCall(self, arg_str, **kwargs):
+        '''
+        Assert no error code was returned with run_call, give stderr as error message
+        '''
+        stdout, stderr, retcode = self.run_call(arg_str, catch_stderr=True, with_retcode=True, **kwargs)
+        if stderr:
+            log.warning(stderr)
+        self.assertFalse(retcode, stderr)
+        return stdout
 
     def run_cloud(self, arg_str, catch_stderr=False, timeout=None):
         '''
@@ -572,12 +585,14 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
                                timeout=timeout)
 
     def run_call(self, arg_str, with_retcode=False, catch_stderr=False,  # pylint: disable=W0221
-            local=False, timeout=RUN_TIMEOUT):
+            local=False, timeout=RUN_TIMEOUT, config_dir=None):
         '''
         Execute salt-call.
         '''
+        if not config_dir:
+            config_dir = self.config_dir
         arg_str = '{0} --config-dir {1} {2}'.format('--local' if local else '',
-                                                    self.config_dir, arg_str)
+                                                    config_dir, arg_str)
         ret = self.run_script('salt-call',
                               arg_str,
                               with_retcode=with_retcode,
@@ -762,8 +777,6 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
             'ssh.recv_known_host_entries',
             'time.sleep'
         )
-        if minion_tgt == 'sub_minion':
-            known_to_return_none += ('mine.update',)
         if 'f_arg' in kwargs:
             kwargs['arg'] = kwargs.pop('f_arg')
         if 'f_timeout' in kwargs:
