@@ -333,6 +333,7 @@ class WinLGPOGetPolicyADMXTestCase(TestCase, LoaderModuleMockMixin):
                             'Allow Telemetry': 'Not Configured'}}}}}
         self.assertDictEqual(result, expected)
 
+    @destructiveTest
     def test__load_policy_definitions(self):
         '''
         Test that unexpected files in the PolicyDefinitions directory won't
