@@ -19,6 +19,7 @@ import salt.config
 import salt.loader
 import salt.modules.win_lgpo as win_lgpo
 import salt.states.win_lgpo
+import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
 
@@ -352,7 +353,7 @@ class WinLGPOGetPolicyADMXTestCase(TestCase, LoaderModuleMockMixin):
             'lgpo',
             'policy_defs')
         try:
-            with open(bogus_fle, 'w+') as fh:
+            with salt.utils.files.fopen(bogus_fle, 'w+') as fh:
                 fh.write('<junk></junk>')
             # This function doesn't return anything (None), it just loads
             # the XPath structures into __context__. We're just making sure it
