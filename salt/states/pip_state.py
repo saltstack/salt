@@ -51,7 +51,7 @@ def purge_pip():
         return
     pip_related_entries = [
         (k, v) for (k, v) in sys.modules.items()
-        or getattr(v, '__module__', '').startswith('pip.')
+        if getattr(v, '__module__', '').startswith('pip.')
         or (isinstance(v, types.ModuleType) and v.__name__.startswith('pip.'))
     ]
     for name, entry in pip_related_entries:
