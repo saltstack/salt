@@ -11,12 +11,7 @@ import tempfile
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import (
-    MagicMock,
-    patch,
-    NO_MOCK,
-    NO_MOCK_REASON
-)
+from tests.support.mock import MagicMock, patch
 
 # Import Salt Libs
 import salt.modules.debian_ip as debian_ip
@@ -785,7 +780,7 @@ test_interfaces = [
         ]
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
 class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.debian_ip
