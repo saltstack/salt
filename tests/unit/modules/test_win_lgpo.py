@@ -17,6 +17,7 @@ from tests.support.unit import TestCase, skipIf
 import salt.config
 import salt.loader
 import salt.modules.win_lgpo as win_lgpo
+import salt.states.win_lgpo
 import salt.utils.platform
 import salt.utils.stringutils
 
@@ -589,19 +590,6 @@ class WinLGPOGetPointAndPrintENTestCase(TestCase, LoaderModuleMockMixin):
             win_lgpo.set_(computer_policy=computer_policy)
             self.configured = True
 
-    def _convert_to_unicode(self, data):
-        if isinstance(data, six.string_types):
-            data = data.replace('\x00', '')
-            return salt.utils.stringutils.to_unicode(data)
-        elif isinstance(data, dict):
-            return dict((self._convert_to_unicode(k),
-                         self._convert_to_unicode(v))
-                        for k, v in data.items())
-        elif isinstance(data, list):
-            return list(self._convert_to_unicode(v) for v in data)
-        else:
-            return data
-
     def _get_policy_adm_setting(self, policy_name, policy_class,
                                 return_full_policy_names, hierarchical_return):
         '''
@@ -621,7 +609,7 @@ class WinLGPOGetPointAndPrintENTestCase(TestCase, LoaderModuleMockMixin):
                 hierarchical_return=hierarchical_return
             )
             if six.PY2:
-                results = self._convert_to_unicode(results)
+                results = salt.states.win_lgpo._convert_to_unicode(results)
             return results
         return 'Policy Not Found'
 
