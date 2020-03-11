@@ -509,3 +509,12 @@ class CMDModuleTest(ModuleCase):
         '''
         out = self.run_function('cmd.run_all', cmd='echo salt', python_shell=False, shell='powershell')
         self.assertEqual(out['stdout'], 'salt')
+    def test_windows_powershell_script_args(self):
+        '''
+        Ensure that powershell processes inline script in args
+        '''
+        val = 'i like cheese'
+        args = '-SecureString (ConvertTo-SecureString -String "{0}" -AsPlainText -Force) -ErrorAction Stop'.format(val)
+        script = 'salt://issue-56195/test.ps1'
+        ret = self.run_function('cmd.script', [script], args=args, shell='powershell')
+        self.assertEqual(ret['stdout'], val)
