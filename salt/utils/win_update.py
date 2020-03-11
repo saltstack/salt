@@ -983,11 +983,7 @@ class WindowsUpdateAgent(object):
                 log.debug("NeedsReboot: %s", ret["NeedsReboot"])
 
                 # Refresh the Updates Table
-<<<<<<< HEAD
                 self.refresh(online=False)
-=======
-                self.load_search()
->>>>>>> Skip Capability SIDs, don't stack trace
 
                 reboot = {0: "Never Reboot", 1: "Always Reboot", 2: "Poss Reboot"}
 
@@ -1096,5 +1092,3 @@ def needs_reboot():
         # Create an AutoUpdate object
         obj_sys = win32com.client.Dispatch("Microsoft.Update.SystemInfo")
     return salt.utils.data.is_true(obj_sys.RebootRequired)
-
-
