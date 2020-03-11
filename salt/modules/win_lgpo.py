@@ -5658,25 +5658,48 @@ def _getAdmlPresentationRefId(adml_data, ref_id):
     helper function to check for a presentation label for a policy element
     '''
     search_results = adml_data.xpath('//*[@*[local-name() = "refId"] = "{0}"]'.format(ref_id))
-    prepended_text = ''
+    alternate_label = ''
     if search_results:
         for result in search_results:
             the_localname = etree.QName(result.tag).localname
-            if the_localname == 'textBox' \
-                    or the_localname == 'comboBox':
+
+            # We want to prefer result.text as the label, however, if it is none
+            # we will fall back to this method for getting the label
+            # Brings some code back from:
+            # https://github.com/saltstack/salt/pull/55823/files#diff-b2e4dac5ccc17ab548f245371ec5d6faL5658
+            if result.text is None:
+                # Get the label from the text element above the referenced
+                # element. For example:
+                # --- taken from AppPrivacy.adml ---
+                # <text>Force allow these specific apps (use Package Family Names):</text>
+                # <multiTextBox refId="LetAppsSyncWithDevices_ForceAllowTheseApps_List"/>
+                # In this case, the label for the refId is the text element
+                # above it.
+                presentation_element = PRESENTATION_ANCESTOR_XPATH(result)
+                if presentation_element:
+                    presentation_element = presentation_element[0]
+                    if TEXT_ELEMENT_XPATH(presentation_element):
+                        for p_item in presentation_element.getchildren():
+                            if p_item == result:
+                                break
+                            if etree.QName(p_item.tag).localname == 'text':
+                                if getattr(p_item, 'text'):
+                                    alternate_label = getattr(p_item, 'text').rstrip()
+                        if alternate_label.endswith('.'):
+                            alternate_label = ''
+
+            if the_localname in ['textBox', 'comboBox']:
                 label_items = result.xpath('.//*[local-name() = "label"]')
                 for label_item in label_items:
                     if label_item.text:
-                        return (prepended_text + ' ' + label_item.text.rstrip().rstrip(':')).lstrip()
-            elif the_localname == 'decimalTextBox' \
-                    or the_localname == 'longDecimalTextBox' \
-                    or the_localname == 'dropdownList' \
-                    or the_localname == 'listBox' \
-                    or the_localname == 'checkBox' \
-                    or the_localname == 'text' \
-                    or the_localname == 'multiTextBox':
+                        return label_item.text.rstrip().rstrip(':')
+            elif the_localname in ['decimalTextBox', 'longDecimalTextBox',
+                                   'dropdownList', 'listBox', 'checkBox',
+                                   'text', 'multiTextBox']:
                 if result.text:
-                    return (prepended_text + ' ' + result.text.rstrip().rstrip(':')).lstrip()
+                    return result.text.rstrip().rstrip(':')
+                else:
+                    return alternate_label.rstrip(':')
     return None
 
 
@@ -6139,6 +6162,10 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
 
         if standard_element_expected_string and not check_deleted:
             if this_element_value is not None:
+                # Sometimes values come in as strings
+                if isinstance(this_element_value, str):
+                    log.debug('Converting {0} to bytes'.format(this_element_value))
+                    this_element_value = this_element_value.encode('utf-32-le')
                 expected_string = b''.join(['['.encode('utf-16-le'),
                                             reg_key,
                                             encoded_null,
