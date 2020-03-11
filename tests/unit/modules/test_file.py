@@ -119,12 +119,12 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
             self.assertIn("Salticus", salt.utils.stringutils.to_unicode(fp.read()))
 
     def test_replace_idempotency(self):
-        os.utime(self.tfile.name,(1552661253,1552661253))
+        os.utime(self.tfile.name, (1552661253,1552661253))
         mtime = os.stat(self.tfile.name).st_mtime
         filemod.replace(self.tfile.name, r'Etia.', 'Etiam', backup=False)
         nmtime = os.stat(self.tfile.name).st_mtime
 
-        self.assertEqual(mtime,nmtime)
+        self.assertEqual(mtime, nmtime)
 
     def test_replace_append_if_not_found(self):
         """
