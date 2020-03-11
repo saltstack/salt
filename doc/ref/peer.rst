@@ -107,11 +107,11 @@ comes with a number of functions to execute peer communication in different
 ways. Currently there are three functions in the publish module. These examples
 will show how to test the peer system via the salt-call command.
 
-To execute test.ping on all minions:
+To execute test.version on all minions:
 
 .. code-block:: bash
 
-    # salt-call publish.publish \* test.ping
+    # salt-call publish.publish \* test.version
 
 To execute the manage.up runner:
 
@@ -123,7 +123,7 @@ To match minions using other matchers, use ``tgt_type``:
 
 .. code-block:: bash
 
-    # salt-call publish.publish 'webserv* and not G@os:Ubuntu' test.ping tgt_type='compound'
+    # salt-call publish.publish 'webserv* and not G@os:Ubuntu' test.version tgt_type='compound'
 
 .. note::
     In pre-2017.7.0 releases, use ``expr_form`` instead of ``tgt_type``.

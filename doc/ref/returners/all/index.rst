@@ -10,6 +10,7 @@ returner modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    appoptics_return
     carbon_return
     cassandra_cql_return
     cassandra_return
@@ -40,6 +41,7 @@ returner modules
     redis_return
     sentry_return
     slack_returner
+    slack_webhook_return
     sms_return
     smtp_return
     splunk

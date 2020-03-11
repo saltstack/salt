@@ -15,10 +15,10 @@ Function Start_Process_and_test_exitcode {
     Begin { Write-Host "Executing Command: $fun $args" }
 
     Process {
-        $p = Start-Process "$fun" -ArgumentList "$args" -Wait -NoNewWindow -PassThru
-        If ( $($p.ExitCode) -ne 0) {
-            Write-Error "$descr returned exitcode $($p.ExitCode). "
-            exit $($p.ExitCode)
+        $p = Start-Process "$fun" -ArgumentList "$args" -Wait -PassThru
+        If ($p.ExitCode -ne 0) {
+            Write-Error "$descr returned exitcode $p.ExitCode."
+            exit $p.ExitCode
         }
     }
 

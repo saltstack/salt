@@ -322,7 +322,7 @@ the minion. The ``beacon`` function therefore cannot block and should be as
 lightweight as possible. The ``beacon`` also must return a list of dicts, each
 dict in the list will be translated into an event on the master.
 
-Beacons may also choose to implement a ``__validate__`` function which
+Beacons may also choose to implement a ``validate`` function which
 takes the beacon configuration as an argument and ensures that it
 is valid prior to continuing. This function is called automatically
 by the Salt loader when a beacon is loaded.

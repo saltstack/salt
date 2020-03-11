@@ -2,11 +2,11 @@
 '''
 Return salt data via Slack using Incoming Webhooks
 
-:codeauthor: :email:`Carlos D. Álvaro <github@cdalvaro.io>`
+:codeauthor: `Carlos D. Álvaro <github@cdalvaro.io>`
 
 The following fields can be set in the minion conf file:
 
-.. code-block:: yaml
+.. code-block:: none
 
     slack_webhook.webhook (required, the webhook id. Just the part after: 'https://hooks.slack.com/services/')
     slack_webhook.success_title (optional, short title for succeeded states. By default: '{id} | Succeeded')
@@ -18,7 +18,7 @@ Alternative configuration values can be used by prefacing the configuration.
 Any values not found in the alternative configuration will be pulled from
 the default location:
 
-.. code-block:: yaml
+.. code-block:: none
 
     slack_webhook.webhook
     slack_webhook.success_title
@@ -28,7 +28,7 @@ the default location:
 
 Slack settings may also be configured as:
 
-.. code-block:: yaml
+.. code-block:: none
 
     slack_webhook:
         webhook: T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX

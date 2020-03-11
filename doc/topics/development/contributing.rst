@@ -121,7 +121,8 @@ Fork a Repo Guide_>`_ and is well worth reading.
     .. note::
 
         If your change fixes a bug or implements a feature already filed in the
-        `issue tracker <GitHub issue tracker>`_, be sure to reference the issue
+        `issue tracker`_, be sure to
+	`reference the issue <https://help.github.com/en/articles/closing-issues-using-keywords>`_
         number in the commit message body.
 
     .. code-block:: bash
@@ -562,7 +563,7 @@ Script, see the Bootstrap Script's `Contributing Guidelines`_.
 
 .. _`saltstack/salt`: https://github.com/saltstack/salt
 .. _`GitHub Fork a Repo Guide`: https://help.github.com/articles/fork-a-repo
-.. _`GitHub issue tracker`: https://github.com/saltstack/salt/issues
+.. _`issue tracker`: https://github.com/saltstack/salt/issues
 .. _`Fork saltstack/salt`: https://github.com/saltstack/salt/fork
 .. _'Git resources`: https://help.github.com/articles/good-resources-for-learning-git-and-github/
 .. _`Closing issues via commit message`: https://help.github.com/articles/closing-issues-via-commit-messages

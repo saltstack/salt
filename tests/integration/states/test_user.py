@@ -251,11 +251,74 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertEqual('', ret['workphone'])
             self.assertEqual('', ret['homephone'])
 
+    def test_user_present_same_password(self):
+        ret = self.run_state('user.present', name=USER, password='P@ssW0rd')
+        self.assertSaltTrueReturn(ret)
+
+        ret = self.run_state('user.present', name=USER, password='P@ssW0rd')
+        self.assertInSaltComment('up to date', ret)
+
+    def test_user_present_new_password_test_true(self):
+        ret = self.run_state('user.present', name=USER, password='P@ssW0rd')
+        self.assertSaltTrueReturn(ret)
+
+        ret = self.run_state('user.present',
+                             name=USER,
+                             password='P@ssW0rd1!',
+                             test=True)
+        self.assertSaltNoneReturn(ret)
+        self.assertSaltStateChangesEqual(ret, {})
+        self.assertInSaltComment('passwd: XXX-REDACTED-XXX', ret)
+
+    def test_user_present_new_password(self):
+        ret = self.run_state('user.present', name=USER, password='P@ssW0rd')
+        self.assertSaltTrueReturn(ret)
+
+        ret = self.run_state('user.present', name=USER, password='P@ssW0rd1!')
+        self.assertSaltTrueReturn(ret)
+        self.assertSaltStateChangesEqual(ret, {'passwd': 'XXX-REDACTED-XXX'})
+
     def tearDown(self):
         if salt.utils.platform.is_darwin():
             check_user = self.run_function('user.list_users')
             if USER in check_user:
-                del_user = self.run_function('user.delete', [USER], remove=True)
+                self.run_function('user.delete', [USER], remove=True)
         self.assertSaltTrueReturn(
             self.run_state('user.absent', name=self.user_name)
         )
+
+
+@destructiveTest
+@skip_if_not_root
+@skipIf(not salt.utils.platform.is_windows(), 'Windows only tests')
+class WinUserTest(ModuleCase, SaltReturnAssertsMixin):
+    '''
+    test for user absent
+    '''
+    def tearDown(self):
+        self.assertSaltTrueReturn(
+            self.run_state('user.absent', name=USER)
+        )
+
+    def test_user_present_existing(self):
+        ret = self.run_state('user.present',
+                             name=USER,
+                             win_homedrive='U:',
+                             win_profile='C:\\User\\{0}'.format(USER),
+                             win_logonscript='C:\\logon.vbs',
+                             win_description='Test User Account')
+        self.assertSaltTrueReturn(ret)
+        ret = self.run_state('user.present',
+                             name=USER,
+                             win_homedrive='R:',
+                             win_profile='C:\\Users\\{0}'.format(USER),
+                             win_logonscript='C:\\Windows\\logon.vbs',
+                             win_description='Temporary Account')
+        self.assertSaltTrueReturn(ret)
+        self.assertSaltStateChangesEqual(ret, 'R:', keys=['homedrive'])
+        self.assertSaltStateChangesEqual(
+            ret, 'C:\\Users\\{0}'.format(USER), keys=['profile'])
+        self.assertSaltStateChangesEqual(
+            ret, 'C:\\Windows\\logon.vbs', keys=['logonscript'])
+        self.assertSaltStateChangesEqual(
+            ret, 'Temporary Account', keys=['description'])

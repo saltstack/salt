@@ -68,11 +68,11 @@ def __virtual__():
     Load as 'pkg' on FreeBSD 9 when config option
     ``providers:pkg`` is set to 'pkgng'.
     '''
-    if __grains__['kernel'] == 'DragonFly':
+    if __grains__.get('kernel') == 'DragonFly':
         return __virtualname__
-    if __grains__['os'] == 'FreeBSD' and float(__grains__['osrelease']) >= 10:
+    if __grains__.get('os') == 'FreeBSD' and float(__grains__['osrelease']) >= 10:
         return __virtualname__
-    if __grains__['os'] == 'FreeBSD' and int(__grains__['osmajorrelease']) == 9:
+    if __grains__.get('os') == 'FreeBSD' and int(__grains__['osmajorrelease']) == 9:
         providers = {}
         if 'providers' in __opts__:
             providers = __opts__['providers']
@@ -224,7 +224,7 @@ def version(*names, **kwargs):
 info = salt.utils.functools.alias_function(version, 'info')
 
 
-def refresh_db(jail=None, chroot=None, root=None, force=False):
+def refresh_db(jail=None, chroot=None, root=None, force=False, **kwargs):
     '''
     Refresh PACKAGESITE contents
 
@@ -2441,7 +2441,7 @@ def _parse_upgrade(stdout):
     return result
 
 
-def version_cmp(pkg1, pkg2, ignore_epoch=False):
+def version_cmp(pkg1, pkg2, ignore_epoch=False, **kwargs):
     '''
     Do a cmp-style comparison on two packages. Return -1 if pkg1 < pkg2, 0 if
     pkg1 == pkg2, and 1 if pkg1 > pkg2. Return None if there was a problem

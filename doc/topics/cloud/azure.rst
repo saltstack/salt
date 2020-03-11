@@ -108,7 +108,7 @@ it can be verified with Salt:
 
 .. code-block:: bash
 
-    salt newinstance test.ping
+    salt newinstance test.version
 
 
 Profile Options

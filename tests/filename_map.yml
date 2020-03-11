@@ -43,6 +43,9 @@ salt/modules/dockermod.py:
   - integration.states.test_docker_container
   - integration.states.test_docker_network
 
+salt/modules/file.py:
+  - integration.states.test_cron
+
 salt/modules/influxdb08mod.py:
   - unit.states.test_influxdb08_database
   - unit.states.test_influxdb08_user
@@ -193,6 +196,7 @@ salt/output/*:
 
 salt/pillar/__init__.py:
   - integration.minion.test_pillar
+  - integration.pillar.test_pillar_include
 
 salt/(cli/run\.py|runner\.py):
   - integration.shell.test_runner

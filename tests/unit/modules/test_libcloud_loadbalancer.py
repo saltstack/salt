@@ -17,68 +17,77 @@ from tests.support.mock import (
 )
 import salt.modules.libcloud_loadbalancer as libcloud_loadbalancer
 
-from libcloud.loadbalancer.base import BaseDriver, LoadBalancer, Algorithm, Member
+try:
+    from libcloud.loadbalancer.base import BaseDriver, LoadBalancer, Algorithm, Member
+    HAS_LIBCLOUD = True
+except ImportError:
+    HAS_LIBCLOUD = False
+
+if HAS_LIBCLOUD:
+    class MockLBDriver(BaseDriver):
+        def __init__(self):  # pylint: disable=W0231
+            self._TEST_BALANCER = LoadBalancer(
+                id='test_id', name='test_balancer',
+                state=0,  # RUNNING
+                ip='1.2.3.4',
+                port=80, driver=self,
+                extra={})
+            self._TEST_MEMBER = Member(
+                id='member_id', ip='12.3.4.5',
+                port=443, balancer=self._TEST_BALANCER,
+                extra=None)
+
+        def get_balancer(self, balancer_id):
+            assert balancer_id == 'test_id'
+            return self._TEST_BALANCER
+
+        def list_balancers(self):
+            return [self._TEST_BALANCER]
+
+        def list_protocols(self):
+            return ['http', 'https']
+
+        def create_balancer(self, name, port, protocol, algorithm, members):
+            assert name == 'new_test_balancer'
+            assert port == 80
+            assert protocol == 'http'
+            assert isinstance(algorithm, (Algorithm, int))
+            assert isinstance(members, list)
+            return self._TEST_BALANCER
+
+        def destroy_balancer(self, balancer):
+            assert balancer == self._TEST_BALANCER
+            return True
+
+        def balancer_attach_member(self, balancer, member):
+            assert isinstance(balancer, LoadBalancer)
+            assert isinstance(member, Member)
+            assert member.id is None
+            assert balancer.id == 'test_id'
+            return self._TEST_MEMBER
+
+        def balancer_detach_member(self, balancer, member):
+            assert isinstance(balancer, LoadBalancer)
+            assert isinstance(member, Member)
+            assert member.id == 'member_id'
+            assert balancer.id == 'test_id'
+            return True
+
+        def balancer_list_members(self, balancer):
+            assert isinstance(balancer, LoadBalancer)
+            assert balancer.id == 'test_id'
+            return [self._TEST_MEMBER]
 
 
-class MockLBDriver(BaseDriver):
-    def __init__(self):
-        self._TEST_BALANCER = LoadBalancer(
-            id='test_id', name='test_balancer',
-            state=0,  # RUNNING
-            ip='1.2.3.4',
-            port=80, driver=self,
-            extra={})
-        self._TEST_MEMBER = Member(
-            id='member_id', ip='12.3.4.5',
-            port=443, balancer=self._TEST_BALANCER,
-            extra=None)
-
-    def get_balancer(self, balancer_id):
-        assert balancer_id == 'test_id'
-        return self._TEST_BALANCER
-
-    def list_balancers(self):
-        return [self._TEST_BALANCER]
-
-    def list_protocols(self):
-        return ['http', 'https']
-
-    def create_balancer(self, name, port, protocol, algorithm, members):
-        assert name == 'new_test_balancer'
-        assert port == 80
-        assert protocol == 'http'
-        assert isinstance(algorithm, (Algorithm, int))
-        assert isinstance(members, list)
-        return self._TEST_BALANCER
-
-    def destroy_balancer(self, balancer):
-        assert balancer == self._TEST_BALANCER
-        return True
-
-    def balancer_attach_member(self, balancer, member):
-        assert isinstance(balancer, LoadBalancer)
-        assert isinstance(member, Member)
-        assert member.id is None
-        assert balancer.id == 'test_id'
-        return self._TEST_MEMBER
-
-    def balancer_detach_member(self, balancer, member):
-        assert isinstance(balancer, LoadBalancer)
-        assert isinstance(member, Member)
-        assert member.id == 'member_id'
-        assert balancer.id == 'test_id'
-        return True
-
-    def balancer_list_members(self, balancer):
-        assert isinstance(balancer, LoadBalancer)
-        assert balancer.id == 'test_id'
-        return [self._TEST_MEMBER]
+else:
+    MockLBDriver = object
 
 
 def get_mock_driver():
     return MockLBDriver()
 
 
+@skipIf(not HAS_LIBCLOUD, NO_MOCK_REASON)
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.modules.libcloud_loadbalancer._get_driver',
        MagicMock(return_value=MockLBDriver()))
