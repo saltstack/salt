@@ -19,7 +19,11 @@ try:
             warnings.simplefilter("ignore")
             return _deprecated_linux_distribution(**kwargs)
 except ImportError:
-    from distro import linux_distribution
+        try:
+        from distro import linux_distribution
+    except ImportError:
+        # For Windows
+        pass
 
 # pylint: disable=invalid-name,redefined-builtin
 # Import 3rd-party libs
@@ -773,38 +777,39 @@ def versions_report(include_salt_cloud=False):
 
 def msi_conformant_version():
     '''
-    An msi installer uninstalls/replaces a lower "internal version" of itself.
-    "internal version" is ivMAJOR.ivMINOR.ivBUILD with max values 255.255.65535.
-    Using the build nr allows continuous integration of the installer.
-    "Display version" is indipendent and free format: Year.Month.Bugfix as in Salt 2016.11.3.
-    Calculation of the internal version fields:
-        ivMAJOR = 'short year' (2 digits).
-        ivMINOR = 20*(month-1) + Bugfix
-            Combine Month and Bugfix to free ivBUILD for the build number
-            This limits Bugfix < 20.
-            The msi automatically replaces only 19 bugfixes of a month, one must uninstall manually.
-        ivBUILD = git commit count (noc)
-            noc for tags is 0, representing the final word, translates to the highest build number (65535).
+    For upgrades, an msi installer relies on the "internal version".
+    The "internal version" MAJOR.MINOR.BUILD is constrained to 255.255.65535.
+    This contraint can be satisfied for released versions but not so for nightly builds.
+    The nightly builds, therefore, must first be uninstalled.
+
+    The "display version" is free format.
 
     Examples:
-      git checkout    Display version      Internal version    Remark
-      develop         2016.11.0-742        16.200.742          The develop branch has bugfix 0
-      2016.11         2016.11.2-78         16.202.78
-      2016.11         2016.11.9-88         16.209.88
-      2018.8          2018.3.2-1306        18.42.1306
-      v2016.11.0      2016.11.0            16.200.65535        Tags have noc 0
-      v2016.11.2      2016.11.2            16.202.65535
-
+      Git-tag                msi display version         msi internal version
+      v3000                  3000                        30.00.0.0
+      v3001                  3001                        30.01.0.0
+      v3001.1                3000.1                      30.01.1.0
+      v3500                  3500                        35.00.0.0
+      v3800                  3800                        38.00.0.0
+      2018.8                 2018.3.2-1306               18.3.2
+      2016.11                2016.11.2-78                16.11.2
+      2016.11                2016.11.9-88                16.11.9
+      v2016.11.0             2016.11.0                   16.11.0
+      v2016.11.2             2016.11.2                   16.11.2
     '''
-    short_year = int(six.text_type(__saltstack_version__.major)[2:])
-    month = __saltstack_version__.minor
-    bugfix = __saltstack_version__.bugfix
-    if bugfix > 19:
-        bugfix = 19
-    noc = __saltstack_version__.noc
-    if noc == 0:
-        noc = 65535
-    return '{}.{}.{}'.format(short_year, 20*(month-1)+bugfix, noc)
+
+    if __saltstack_version__.major >= 3000:
+        # First and second half of major
+        major1 = six.text_type(__saltstack_version__.major)[:2]
+        major2 = six.text_type(__saltstack_version__.major)[2:]
+        # Mask minor == None as 0
+        minor  = __saltstack_version__.minor or 0
+        return '{}.{}.{}'.format(major1, major2, minor)
+    else:
+        year = int(six.text_type(__saltstack_version__.major)[2:])
+        month = __saltstack_version__.minor
+        bugfix = __saltstack_version__.bugfix or 0
+        return '{}.{}.{}'.format(year, month, bugfix)
 
 
 if __name__ == '__main__':
