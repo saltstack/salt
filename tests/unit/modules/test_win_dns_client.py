@@ -64,7 +64,6 @@ class WinDnsClientTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.win_dns_client
     '''
-
     def setup_loader_modules(self):
         # wmi and pythoncom modules are platform specific...
         mock_pythoncom = types.ModuleType(
@@ -154,3 +153,30 @@ class WinDnsClientTestCase(TestCase, LoaderModuleMockMixin):
                              return_value=[Mockwmi()]), \
                 patch.object(wmi, 'WMI', Mock(return_value=self.WMI)):
             self.assertTrue(win_dns_client.get_dns_config())
+
+    @patch('salt.utils.platform.is_windows')
+    def test___virtual__non_windows(self, mock):
+        mock.return_value = False
+        result = win_dns_client.__virtual__()
+        expected = (False, 'Module win_dns_client: module only works on '
+                           'Windows systems')
+        self.assertEqual(result, expected)
+
+    def test___virtual__(self):
+        result = win_dns_client.__virtual__()
+        expected = 'win_dns_client'
+        self.assertEqual(result, expected)
+
+
+class WinDnsClientTestCaseMissingLibs(TestCase):
+    '''
+    Test cases for salt.modules.win_dns_client. This was the only way I could
+    mock HAS_LIBS = False
+    '''
+    def setUp(self):
+        win_dns_client.HAS_LIBS = False
+
+    def test___virtual__missing_libs(self):
+        result = win_dns_client.__virtual__()
+        expected = (False, 'Module win_dns_client: missing required libraries')
+        self.assertEqual(result, expected)
