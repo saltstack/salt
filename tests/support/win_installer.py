@@ -17,7 +17,7 @@ PREFIX = 'Salt-Minion-'
 REPO = "https://repo.saltstack.com/windows"
 
 
-def latest_installer_name(py_ver='Py3', arch='AMD64'):
+def latest_installer_name(py_ver='Py2', arch='AMD64'):
     '''
     Create an installer file name
     '''
