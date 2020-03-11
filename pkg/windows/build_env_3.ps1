@@ -223,37 +223,28 @@ If ($NoPipDependencies -eq $false) {
 #==============================================================================
 # Cleaning Up PyWin32
 #==============================================================================
-Write-Output " ----------------------------------------------------------------"
-Write-Output " - $script_name :: Cleaning Up PyWin32 . . ."
-Write-Output " ----------------------------------------------------------------"
+If (Test-Path "$($ini['Settings']['SitePkgs3Dir'])\pywin32_system32" -PathType Container ) {
+    Write-Output " ----------------------------------------------------------------"
+    Write-Output " - $script_name :: Cleaning Up PyWin32 . . ."
+    Write-Output " ----------------------------------------------------------------"
 
-# Move DLL's to Python Root
-# The dlls have to be in Python directory and the site-packages\win32 directory
-Write-Output " - $script_name :: Moving PyWin32 DLLs . . ."
-Copy-Item "$($ini['Settings']['SitePkgs3Dir'])\pywin32_system32\*.dll" "$($ini['Settings']['Python3Dir'])" -Force
-Move-Item "$($ini['Settings']['SitePkgs3Dir'])\pywin32_system32\*.dll" "$($ini['Settings']['SitePkgs3Dir'])\win32" -Force
+    # Move DLL's to Python Root
+    # The dlls have to be in Python directory and the site-packages\win32 directory
+    Write-Output " - $script_name :: Moving PyWin32 DLLs . . ."
+    Copy-Item "$( $ini['Settings']['SitePkgs3Dir'] )\pywin32_system32\*.dll" "$( $ini['Settings']['Python3Dir'] )" -Force
+    Move-Item "$( $ini['Settings']['SitePkgs3Dir'] )\pywin32_system32\*.dll" "$( $ini['Settings']['SitePkgs3Dir'] )\win32" -Force
 
-# Create gen_py directory
-Write-Output " - $script_name :: Creating gen_py Directory . . ."
-New-Item -Path "$($ini['Settings']['SitePkgs3Dir'])\win32com\gen_py" -ItemType Directory -Force | Out-Null
+    # Create gen_py directory
+    Write-Output " - $script_name :: Creating gen_py Directory . . ."
+    New-Item -Path "$( $ini['Settings']['SitePkgs3Dir'] )\win32com\gen_py" -ItemType Directory -Force | Out-Null
 
-# Remove pywin32_system32 directory
-Write-Output " - $script_name :: Removing pywin32_system32 Directory . . ."
-Remove-Item "$($ini['Settings']['SitePkgs3Dir'])\pywin32_system32"
+    # Remove pywin32_system32 directory
+    Write-Output " - $script_name :: Removing pywin32_system32 Directory . . ."
+    Remove-Item "$( $ini['Settings']['SitePkgs3Dir'] )\pywin32_system32"
 
-# Remove PyWin32 PostInstall and testall Scripts
-Write-Output " - $script_name :: Removing PyWin32 scripts . . ."
-Remove-Item "$($ini['Settings']['Scripts3Dir'])\pywin32_*" -Force -Recurse
-
-#==============================================================================
-# Fix PyCrypto
-#==============================================================================
-If ($NoPipDependencies -eq $false) {
-  Write-Output " ----------------------------------------------------------------"
-  Write-Output "   - $script_name :: Fixing PyCrypto . . ."
-  Write-Output " ----------------------------------------------------------------"
-  $nt_file = "$($ini['Settings']['Python3Dir'])\Lib\site-packages\Crypto\Random\OSRNG\nt.py"
-  (Get-Content $nt_file) | Foreach-Object {$_ -replace '^import winrandom$', 'from Crypto.Random.OSRNG import winrandom'} | Set-Content $nt_file
+    # Remove PyWin32 PostInstall and testall Scripts
+    Write-Output " - $script_name :: Removing PyWin32 scripts . . ."
+    Remove-Item "$( $ini['Settings']['Scripts3Dir'] )\pywin32_*" -Force -Recurse
 }
 
 #==============================================================================
