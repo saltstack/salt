@@ -15,6 +15,7 @@ Versions are `MAJOR.PATCH`.
 ### Changed
 
 ### Fixed
+- [#56325](https://github.com/saltstack/salt/pull/56325) - Fix hyperlinks to `salt.serializers` and other documentation issues - [@myii](https://github.com/myii)
 
 ### Added
 
