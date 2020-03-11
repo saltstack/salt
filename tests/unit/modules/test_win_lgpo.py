@@ -60,6 +60,88 @@ class WinLGPOTestCase(TestCase):
         expected = '300000 or 5 minutes (recommended)'
         self.assertEqual(result, expected)
 
+    def test__regexSearchKeyValueCombo_enabled(self):
+        '''
+        Make sure
+        '''
+        policy_data = b'[\x00s\x00o\x00f\x00t\x00w\x00a\x00r\x00e\x00\\\x00p' \
+                      b'\x00o\x00l\x00i\x00c\x00i\x00e\x00s\x00\\\x00m\x00i' \
+                      b'\x00c\x00r\x00o\x00s\x00o\x00f\x00t\x00\\\x00w\x00i' \
+                      b'\x00n\x00d\x00o\x00w\x00s\x00\\\x00w\x00i\x00n\x00d' \
+                      b'\x00o\x00w\x00s\x00 \x00e\x00r\x00r\x00o\x00r\x00 ' \
+                      b'\x00r\x00e\x00p\x00o\x00r\x00t\x00i\x00n\x00g\x00\\' \
+                      b'\x00c\x00o\x00n\x00s\x00e\x00n\x00t\x00\x00\x00;\x00D' \
+                      b'\x00e\x00f\x00a\x00u\x00l\x00t\x00C\x00o\x00n\x00s' \
+                      b'\x00e\x00n\x00t\x00\x00\x00;\x00\x01\x00\x00\x00;\x00' \
+                      b'\x04\x00\x00\x00;\x00\x02\x00\x00\x00]\x00'
+        policy_regpath = b'\x00s\x00o\x00f\x00t\x00w\x00a\x00r\x00e\x00\\\x00p' \
+                         b'\x00o\x00l\x00i\x00c\x00i\x00e\x00s\x00\\\x00m\x00i' \
+                         b'\x00c\x00r\x00o\x00s\x00o\x00f\x00t\x00\\\x00w\x00i' \
+                         b'\x00n\x00d\x00o\x00w\x00s\x00\\\x00w\x00i\x00n\x00d' \
+                         b'\x00o\x00w\x00s\x00 \x00e\x00r\x00r\x00o\x00r\x00 ' \
+                         b'\x00r\x00e\x00p\x00o\x00r\x00t\x00i\x00n\x00g\x00\\' \
+                         b'\x00c\x00o\x00n\x00s\x00e\x00n\x00t\x00\x00'
+        policy_regkey = b'\x00D\x00e\x00f\x00a\x00u\x00l\x00t\x00C\x00o\x00n' \
+                        b'\x00s\x00e\x00n\x00t\x00\x00'
+        test = win_lgpo._regexSearchKeyValueCombo(
+            policy_data=policy_data,
+            policy_regpath=policy_regpath,
+            policy_regkey=policy_regkey
+        )
+        self.assertEqual(test, policy_data)
+
+    def test__regexSearchKeyValueCombo_not_configured(self):
+        '''
+        Make sure
+        '''
+        policy_data = b''
+        policy_regpath = b'\x00s\x00o\x00f\x00t\x00w\x00a\x00r\x00e\x00\\\x00p' \
+                         b'\x00o\x00l\x00i\x00c\x00i\x00e\x00s\x00\\\x00m\x00i' \
+                         b'\x00c\x00r\x00o\x00s\x00o\x00f\x00t\x00\\\x00w\x00i' \
+                         b'\x00n\x00d\x00o\x00w\x00s\x00\\\x00w\x00i\x00n\x00d' \
+                         b'\x00o\x00w\x00s\x00 \x00e\x00r\x00r\x00o\x00r\x00 ' \
+                         b'\x00r\x00e\x00p\x00o\x00r\x00t\x00i\x00n\x00g\x00\\' \
+                         b'\x00c\x00o\x00n\x00s\x00e\x00n\x00t\x00\x00'
+        policy_regkey = b'\x00D\x00e\x00f\x00a\x00u\x00l\x00t\x00C\x00o\x00n' \
+                        b'\x00s\x00e\x00n\x00t\x00\x00'
+        test = win_lgpo._regexSearchKeyValueCombo(
+            policy_data=policy_data,
+            policy_regpath=policy_regpath,
+            policy_regkey=policy_regkey
+        )
+        self.assertIsNone(test)
+
+    def test__regexSearchKeyValueCombo_disabled(self):
+        '''
+        Make sure
+        '''
+        policy_data = b'[\x00s\x00o\x00f\x00t\x00w\x00a\x00r\x00e\x00\\\x00p' \
+                      b'\x00o\x00l\x00i\x00c\x00i\x00e\x00s\x00\\\x00m\x00i' \
+                      b'\x00c\x00r\x00o\x00s\x00o\x00f\x00t\x00\\\x00w\x00i' \
+                      b'\x00n\x00d\x00o\x00w\x00s\x00\\\x00w\x00i\x00n\x00d' \
+                      b'\x00o\x00w\x00s\x00 \x00e\x00r\x00r\x00o\x00r\x00 ' \
+                      b'\x00r\x00e\x00p\x00o\x00r\x00t\x00i\x00n\x00g\x00\\' \
+                      b'\x00c\x00o\x00n\x00s\x00e\x00n\x00t\x00\x00\x00;\x00*' \
+                      b'\x00*\x00d\x00e\x00l\x00.\x00D\x00e\x00f\x00a\x00u' \
+                      b'\x00l\x00t\x00C\x00o\x00n\x00s\x00e\x00n\x00t\x00\x00' \
+                      b'\x00;\x00\x01\x00\x00\x00;\x00\x04\x00\x00\x00;\x00 ' \
+                      b'\x00\x00\x00]\x00'
+        policy_regpath = b'\x00s\x00o\x00f\x00t\x00w\x00a\x00r\x00e\x00\\\x00p' \
+                         b'\x00o\x00l\x00i\x00c\x00i\x00e\x00s\x00\\\x00m\x00i' \
+                         b'\x00c\x00r\x00o\x00s\x00o\x00f\x00t\x00\\\x00w\x00i' \
+                         b'\x00n\x00d\x00o\x00w\x00s\x00\\\x00w\x00i\x00n\x00d' \
+                         b'\x00o\x00w\x00s\x00 \x00e\x00r\x00r\x00o\x00r\x00 ' \
+                         b'\x00r\x00e\x00p\x00o\x00r\x00t\x00i\x00n\x00g\x00\\' \
+                         b'\x00c\x00o\x00n\x00s\x00e\x00n\x00t\x00\x00'
+        policy_regkey = b'\x00D\x00e\x00f\x00a\x00u\x00l\x00t\x00C\x00o\x00n' \
+                        b'\x00s\x00e\x00n\x00t\x00\x00'
+        test = win_lgpo._regexSearchKeyValueCombo(
+            policy_data=policy_data,
+            policy_regpath=policy_regpath,
+            policy_regkey=policy_regkey
+        )
+        self.assertEqual(test, policy_data)
+
     def test__encode_string(self):
         '''
         ``_encode_string`` should return a null terminated ``utf-16-le`` encoded
