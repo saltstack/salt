@@ -2275,9 +2275,6 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             modulec_path = os.path.join(RUNTIME_VARS.CODE_DIR, '__pycache__', 'pip.pyc')
         else:
             modulec_path = os.path.join(RUNTIME_VARS.CODE_DIR, 'pip.pyc')
-        print('*' * 80)
-        print(module_path)
-        print('*' * 80)
         unzip_path = os.path.join(RUNTIME_VARS.TMP, 'issue-56131.txt')
         def clean_paths(paths):
             for path in paths:
