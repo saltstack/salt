@@ -803,7 +803,7 @@ def msi_conformant_version():
         major1 = six.text_type(__saltstack_version__.major)[:2]
         major2 = six.text_type(__saltstack_version__.major)[2:]
         # Mask minor == None as 0
-        minor  = __saltstack_version__.minor or 0
+        minor = __saltstack_version__.minor or 0
         return '{}.{}.{}'.format(major1, major2, minor)
     else:
         year = int(six.text_type(__saltstack_version__.major)[2:])
