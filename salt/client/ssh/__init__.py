@@ -132,6 +132,7 @@ SSH_SH_SHIM = \
         [s.strip() for s in r'''/bin/sh << 'EOF'
 set -e
 set -u
+ulimit -n 8192
 DEBUG="{{DEBUG}}"
 if [ -n "$DEBUG" ]
     then set -x
