@@ -163,19 +163,6 @@ class WinLGPOPolicyElementNames(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_lgpo.__opts__, {'test': False}):
             win_lgpo.set_(name='nc_state', computer_policy=computer_policy)
 
-    def _convert_to_unicode(self, data):
-        if isinstance(data, six.string_types):
-            data = data.replace('\x00', '')
-            return salt.utils.stringutils.to_unicode(data)
-        elif isinstance(data, dict):
-            return dict((self._convert_to_unicode(k),
-                         self._convert_to_unicode(v))
-                        for k, v in data.items())
-        elif isinstance(data, list):
-            return list(self._convert_to_unicode(v) for v in data)
-        else:
-            return data
-
     def test_current_element_naming_style(self):
         computer_policy = {
             'Point and Print Restrictions': {
@@ -195,7 +182,7 @@ class WinLGPOPolicyElementNames(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_lgpo.__opts__, {'test': False}):
             result = win_lgpo.set_(name='test_state',
                                    computer_policy=computer_policy)
-            result = self._convert_to_unicode(result)
+            result = win_lgpo._convert_to_unicode(result)
         expected = {
             'Point and Print Restrictions': {
                 'Enter fully qualified server names separated by '
@@ -235,7 +222,7 @@ class WinLGPOPolicyElementNames(TestCase, LoaderModuleMockMixin):
             result = win_lgpo.set_(name='test_state',
                                    computer_policy=computer_policy)
             if six.PY2:
-                result = self._convert_to_unicode(result)
+                result = win_lgpo._convert_to_unicode(result)
         expected = {
             'Point and Print Restrictions': {
                 'Enter fully qualified server names separated by '
