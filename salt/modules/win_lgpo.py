@@ -5526,7 +5526,7 @@ def _write_secedit_data(inf_data):
         # Success
         if retcode == 0:
             # Pop secedit data so it will always be current
-            __context__.pop('lgpo.secedit_data')
+            __context__.pop('lgpo.secedit_data', None)
             return True
         # Failure
         return False
