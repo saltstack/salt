@@ -162,21 +162,13 @@ class WinDnsClientTestCase(TestCase, LoaderModuleMockMixin):
                            'Windows systems')
         self.assertEqual(result, expected)
 
-    def test___virtual__(self):
-        result = win_dns_client.__virtual__()
-        expected = 'win_dns_client'
-        self.assertEqual(result, expected)
-
-
-class WinDnsClientTestCaseMissingLibs(TestCase):
-    '''
-    Test cases for salt.modules.win_dns_client. This was the only way I could
-    mock HAS_LIBS = False
-    '''
-    def setUp(self):
-        win_dns_client.HAS_LIBS = False
-
+    @patch.object(win_dns_client, 'HAS_LIBS', False)
     def test___virtual__missing_libs(self):
         result = win_dns_client.__virtual__()
         expected = (False, 'Module win_dns_client: missing required libraries')
+        self.assertEqual(result, expected)
+
+    def test___virtual__(self):
+        result = win_dns_client.__virtual__()
+        expected = 'win_dns_client'
         self.assertEqual(result, expected)
