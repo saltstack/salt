@@ -6777,13 +6777,16 @@ def _regexSearchKeyValueCombo(policy_data, policy_regpath, policy_regkey):
     for a policy_regpath and policy_regkey combo
     '''
     if policy_data:
-        specialValueRegex = salt.utils.stringutils.to_bytes(r'(\*\*Del\.|\*\*DelVals\.){0,1}')
+        regex_str = [r'(\*', r'\*', 'D', 'e', 'l', r'\.', r'|\*', r'\*', 'D',
+                     'e', 'l', 'V', 'a', 'l', 's', r'\.', '){0,1}']
+        specialValueRegex = '\x00'.join(regex_str)
+        specialValueRegex = salt.utils.stringutils.to_bytes(specialValueRegex)
         _thisSearch = b''.join([salt.utils.stringutils.to_bytes(r'\['),
-                               re.escape(policy_regpath),
-                               b'\00;',
-                               specialValueRegex,
-                               re.escape(policy_regkey),
-                               b'\00;'])
+                                re.escape(policy_regpath),
+                                b'\x00;\x00',
+                                specialValueRegex,
+                                re.escape(policy_regkey.lstrip(b'\x00')),
+                                b'\x00;'])
         match = re.search(_thisSearch, policy_data, re.IGNORECASE)
         if match:
             # add 2 so we get the ']' and the \00
