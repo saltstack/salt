@@ -67,7 +67,7 @@ def ping():
         )
         if 'dict' in response:
             return True
-    except Exception as ex:
+    except Exception as ex:  # pylint: disable=broad-except
         log.error(
             'error pinging chronos with base_url %s: %s',
             CONFIG[CONFIG_BASE_URL],

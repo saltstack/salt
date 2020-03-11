@@ -8,18 +8,15 @@ from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 import tests.support.napalm as napalm_test_support
 import salt.modules.napalm_bgp as napalm_bgp  # NOQA
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class NapalmBgpModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):

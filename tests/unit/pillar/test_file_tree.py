@@ -11,11 +11,11 @@ import tempfile
 import shutil
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
-from tests.support.paths import TMP
-from tests.support.helpers import TestsLoggingHandler
+from tests.support.unit import TestCase
+from tests.support.mock import patch, MagicMock
+from tests.support.helpers import TstSuiteLoggingHandler
 
 # Import Salt Libs
 import salt.utils.files
@@ -46,13 +46,12 @@ FILE_DATA = {
 _CHECK_MINIONS_RETURN = {'minions': [MINION_ID], 'missing': []}
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class FileTreePillarTestCase(TestCase, LoaderModuleMockMixin):
     'test file_tree pillar'
     maxDiff = None
 
     def setup_loader_modules(self):
-        self.tmpdir = tempfile.mkdtemp(dir=TMP)
+        self.tmpdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.addCleanup(shutil.rmtree, self.tmpdir)
         cachedir = os.path.join(self.tmpdir, 'cachedir')
         os.makedirs(os.path.join(cachedir, 'file_tree'))
@@ -127,7 +126,7 @@ class FileTreePillarTestCase(TestCase, LoaderModuleMockMixin):
         'confirm that file_tree yells when pillarenv is missing for a relative path'
         with patch('salt.utils.minions.CkMinions.check_minions', MagicMock(return_value=_CHECK_MINIONS_RETURN)):
             with patch.dict(file_tree.__opts__, {'pillarenv': None}):
-                with TestsLoggingHandler() as handler:
+                with TstSuiteLoggingHandler() as handler:
                     mypillar = file_tree.ext_pillar(MINION_ID, None, '.')
                     self.assertEqual({}, mypillar)
 

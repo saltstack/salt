@@ -12,11 +12,10 @@ from salt.exceptions import SaltInvocationError
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
-from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
+from tests.support.unit import TestCase
+from tests.support.mock import MagicMock, patch
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class AliasesTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.aliases module

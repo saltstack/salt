@@ -141,7 +141,7 @@ def assign(name, value, ignore=False):
     if six.PY3:
         tran_tab = name.translate(''.maketrans('./', '/.'))
     else:
-        if isinstance(name, unicode):  # pylint: disable=incompatible-py3-code
+        if isinstance(name, unicode):  # pylint: disable=incompatible-py3-code,undefined-variable
             trans_args = {ord('/'): u'.', ord('.'): u'/'}
         else:
             trans_args = string.maketrans('./', '/.')

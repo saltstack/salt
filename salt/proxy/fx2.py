@@ -364,7 +364,7 @@ def ping():
         return True
     try:
         return r['dict'].get('ret', False)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return False
 
 

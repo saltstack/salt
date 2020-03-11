@@ -173,7 +173,6 @@ Other community links
 
 - `Salt Stack Inc. <http://www.saltstack.com>`_
 - `Subreddit <http://www.reddit.com/r/saltstack>`_
-- `Google+ <https://plus.google.com/114449193225626631691/posts>`_
 - `YouTube <http://www.youtube.com/user/SaltStack>`_
 - `Facebook <https://www.facebook.com/SaltStack>`_
 - `Twitter <https://twitter.com/SaltStackInc>`_

@@ -96,9 +96,9 @@ def _find_utmp():
     for utmp in '/var/run/utmp', '/run/utmp':
         try:
             result[os.stat(utmp).st_mtime] = utmp
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             pass
-    if len(result):
+    if result:
         return result[sorted(result).pop()]
     else:
         return False
@@ -118,7 +118,7 @@ def _default_runlevel():
                 line = salt.utils.stringutils.to_unicode(line)
                 if line.startswith('env DEFAULT_RUNLEVEL'):
                     runlevel = line.split('=')[-1].strip()
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return '2'
 
     # Look for an optional "legacy" override in /etc/inittab
@@ -128,7 +128,7 @@ def _default_runlevel():
                 line = salt.utils.stringutils.to_unicode(line)
                 if not line.startswith('#') and 'initdefault' in line:
                     runlevel = line.split(':')[1]
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         pass
 
     # The default runlevel can also be set via the kernel command-line.
@@ -143,7 +143,7 @@ def _default_runlevel():
                     if arg in valid_strings:
                         runlevel = arg
                         break
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         pass
 
     return runlevel

@@ -16,10 +16,8 @@ from __future__ import absolute_import
 import os
 import re
 import sys
-import stat
 import logging
 import tempfile
-import textwrap
 
 import salt.utils.path
 
@@ -78,53 +76,6 @@ TMP_SCRIPT_DIR = os.path.join(TMP, 'scripts')
 ENGINES_DIR = os.path.join(FILES, 'engines')
 LOG_HANDLERS_DIR = os.path.join(FILES, 'log_handlers')
 
-SCRIPT_TEMPLATES = {
-    'salt': [
-        'from salt.scripts import salt_main\n',
-        'if __name__ == \'__main__\':\n'
-        '    salt_main()'
-    ],
-    'salt-api': [
-        'import salt.cli\n',
-        'def main():\n',
-        '    sapi = salt.cli.SaltAPI()',
-        '    sapi.start()\n',
-        'if __name__ == \'__main__\':',
-        '    main()'
-    ],
-    'common': [
-        'from salt.scripts import salt_{0}\n',
-        'import salt.utils.platform\n\n',
-        'if __name__ == \'__main__\':\n',
-        '    if salt.utils.platform.is_windows():\n',
-        '        import os.path\n',
-        '        import py_compile\n',
-        '        cfile = os.path.splitext(__file__)[0] + ".pyc"\n',
-        '        if not os.path.exists(cfile):\n',
-        '            py_compile.compile(__file__, cfile)\n',
-        '    salt_{0}()'
-    ],
-    'coverage': textwrap.dedent(
-        '''
-        SITECUSTOMIZE_DIR = os.path.join(CODE_DIR, 'tests', 'support', 'coverage')
-        COVERAGE_FILE = os.path.join(CODE_DIR, '.coverage')
-        COVERAGE_PROCESS_START = os.path.join(CODE_DIR, '.coveragerc')
-        PYTHONPATH = os.environ.get('PYTHONPATH') or None
-        if PYTHONPATH is None:
-            PYTHONPATH_ENV_VAR = SITECUSTOMIZE_DIR
-        else:
-            PYTHON_PATH_ENTRIES = PYTHONPATH.split(os.pathsep)
-            if SITECUSTOMIZE_DIR in PYTHON_PATH_ENTRIES:
-                PYTHON_PATH_ENTRIES.remove(SITECUSTOMIZE_DIR)
-            PYTHON_PATH_ENTRIES.insert(0, SITECUSTOMIZE_DIR)
-            PYTHONPATH_ENV_VAR = os.pathsep.join(PYTHON_PATH_ENTRIES)
-        os.environ['PYTHONPATH'] = PYTHONPATH_ENV_VAR
-        os.environ['COVERAGE_FILE'] = COVERAGE_FILE
-        os.environ['COVERAGE_PROCESS_START'] = COVERAGE_PROCESS_START
-        '''
-    )
-}
-
 
 def list_test_mods():
     '''
@@ -142,62 +93,3 @@ def list_test_mods():
                         mod_name += '.' + parent_mod
                     mod_name += '.' + filename[:-3]
                     yield mod_name
-
-
-class ScriptPathMixin(object):
-
-    def get_script_path(self, script_name):
-        '''
-        Return the path to a testing runtime script
-        '''
-        if not os.path.isdir(TMP_SCRIPT_DIR):
-            os.makedirs(TMP_SCRIPT_DIR)
-
-        script_path = os.path.join(TMP_SCRIPT_DIR,
-                                   'cli_{0}.py'.format(script_name.replace('-', '_')))
-
-        if not os.path.isfile(script_path):
-            log.info('Generating %s', script_path)
-
-            # Late import
-            import salt.utils.files
-
-            with salt.utils.files.fopen(script_path, 'w') as sfh:
-                script_template = SCRIPT_TEMPLATES.get(script_name, None)
-                if script_template is None:
-                    script_template = SCRIPT_TEMPLATES.get('common', None)
-                if script_template is None:
-                    raise RuntimeError(
-                        '{0} does not know how to handle the {1} script'.format(
-                            self.__class__.__name__,
-                            script_name
-                        )
-                    )
-
-                shebang = sys.executable
-                if len(shebang) > 128:
-                    # Too long for a shebang, let's use /usr/bin/env and hope
-                    # the right python is picked up
-                    shebang = '/usr/bin/env python'
-
-                if 'COVERAGE_PROCESS_START' in os.environ:
-                    coverage_snippet = SCRIPT_TEMPLATES['coverage']
-                else:
-                    coverage_snippet = ''
-
-                sfh.write(
-                    '#!{0}\n\n'.format(shebang) +
-                    'from __future__ import absolute_import\n'
-                    'import os\n'
-                    'import sys\n' +
-                    'CODE_DIR = r"{0}"\n'.format(CODE_DIR) +
-                    'if CODE_DIR not in sys.path:\n' +
-                    '    sys.path.insert(0, CODE_DIR)\n' +
-                    coverage_snippet + '\n' +
-                    '\n'.join(script_template).format(script_name.replace('salt-', ''))
-                )
-            fst = os.stat(script_path)
-            os.chmod(script_path, fst.st_mode | stat.S_IEXEC)
-
-        log.info('Returning script path %r', script_path)
-        return script_path

@@ -17,8 +17,8 @@ import time
 import yaml
 from tests.support.case import ModuleCase
 from tests.support.mock import Mock
-from tests.support.paths import CODE_DIR
 from tests.support.unit import skipIf
+from tests.support.runtests import RUNTIME_VARS
 
 from tests.support.helpers import (
     with_system_user,
@@ -33,7 +33,7 @@ try:
     import win32event
     import servicemanager
     import win32api
-    CODE_DIR = win32api.GetLongPathName(CODE_DIR)
+    CODE_DIR = win32api.GetLongPathName(RUNTIME_VARS.CODE_DIR)
     HAS_WIN32 = True
 except ImportError:
     # Mock win32serviceutil object to avoid
@@ -52,8 +52,9 @@ PRIV_STDOUT = (
     'points:\n---------------------------------------------\n\n'
     'INFO: No shared open files found.\n'
 )
-RUNAS_PATH = os.path.abspath(os.path.join(CODE_DIR, 'runas.py'))
-RUNAS_OUT = os.path.abspath(os.path.join(CODE_DIR, 'runas.out'))
+if HAS_WIN32:
+    RUNAS_PATH = os.path.abspath(os.path.join(CODE_DIR, 'runas.py'))
+    RUNAS_OUT = os.path.abspath(os.path.join(CODE_DIR, 'runas.out'))
 
 
 def default_target(service, *args, **kwargs):
@@ -145,7 +146,7 @@ class _ServiceManager(win32serviceutil.ServiceFramework):
         self.log_info("Monitor")
         try:
             self.target(self, *args, **kwargs)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             # TODO: Add traceback info to windows event log objects
             self.log_exception("Exception In Target")
 
@@ -255,11 +256,11 @@ test_service = service_class_factory('test_service', 'test service', target=targ
 if __name__ == '__main__':
     try:
         test_service.stop()
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         logger.debug("stop service failed, this is ok.")
     try:
         test_service.remove()
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         logger.debug("remove service failed, this os ok.")
     test_service.install()
     sys.exit(0)

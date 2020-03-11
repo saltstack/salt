@@ -10,11 +10,10 @@ from __future__ import absolute_import, print_function, unicode_literals
 from salt.cli.batch import Batch
 
 # Import Salt Testing Libs
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
+from tests.support.unit import TestCase
+from tests.support.mock import MagicMock, patch
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class BatchTestCase(TestCase):
     '''
     Unit Tests for the salt.cli.batch module

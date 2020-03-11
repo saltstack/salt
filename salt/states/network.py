@@ -164,7 +164,7 @@ all interfaces are ignored unless specified.
         - max_bonds: 1
         - updelay: 0
         - use_carrier: on
-        - xmit_hash_policy: layer2
+        - hashing-algorithm: layer2
         - mtu: 9000
         - autoneg: on
         - speed: 1000
@@ -470,7 +470,7 @@ def managed(name, type, enabled=True, **kwargs):
                 ret['result'] = __salt__['service.restart']('network')
                 ret['comment'] = "network restarted for change of ranged interfaces"
                 return ret
-            except Exception as error:
+            except Exception as error:  # pylint: disable=broad-except
                 ret['result'] = False
                 ret['comment'] = six.text_type(error)
                 return ret
@@ -507,7 +507,7 @@ def managed(name, type, enabled=True, **kwargs):
                 if interface_status:
                     __salt__['ip.down'](name, type)
                     ret['changes']['status'] = 'Interface {0} down'.format(name)
-    except Exception as error:
+    except Exception as error:  # pylint: disable=broad-except
         ret['result'] = False
         ret['comment'] = six.text_type(error)
         return ret

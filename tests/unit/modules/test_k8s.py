@@ -47,7 +47,7 @@ class TestK8SNamespace(TestCase):
 
     def test_create_namespace(self):
         hash = hashlib.sha1()
-        hash.update(six.text_Type(time.time()))
+        hash.update(six.text_type(time.time()))
         nsname = hash.hexdigest()[:16]
         res = k8s.create_namespace(nsname, apiserver_url="http://127.0.0.1:8080")
         proc = Popen(["kubectl", "get", "namespaces", nsname, "-o", "json"], stdout=PIPE)

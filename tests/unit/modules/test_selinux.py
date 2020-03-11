@@ -3,12 +3,10 @@
 # Import Salt Testing Libs
 from __future__ import absolute_import
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt libs
@@ -16,7 +14,6 @@ from salt.exceptions import SaltInvocationError
 import salt.modules.selinux as selinux
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class SelinuxModuleTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.selinux

@@ -6,10 +6,15 @@
 Version Numbers
 ===============
 
-Salt uses a date based system for version numbers. Version numbers are in the
-format ``YYYY.MM.R``. The year (``YYYY``) and month (``MM``) reflect when the
-release was created. The bugfix release number (``R``) increments within that
-feature release.
+Salt uses a major and patch based systems for version numbers.  Version numbers are
+in the format ``MAJOR.PATCH``.
+
+.. note::
+
+    Prior to the ``3000`` release, Salt used a date based system for version numbers.
+    Version numbers were in the format ``YYYY.MM.R``. The year (``YYYY``) and month
+    (``MM``) reflected when the release was created. The bugfix release number (``R``)
+    increments within that feature release.
 
 .. note::
 
@@ -23,7 +28,7 @@ Code Names
 To distinguish future releases from the current release, code names are used.
 The periodic table is used to derive the next codename. The first release in
 the date based system was code named ``Hydrogen``, each subsequent release will
-go to the next `atomic number <https://en.wikipedia.org/wiki/List_of_elements>`.
+go to the next `atomic number <https://en.wikipedia.org/wiki/List_of_elements>`_.
 
 Assigned codenames:
 
@@ -36,18 +41,19 @@ Assigned codenames:
 - Nitrogen: ``2017.7.0``
 - Oxygen: ``2018.3.0``
 - Fluorine: ``2019.2.0``
-- Neon: ``TBD``
-- Sodium: ``TBD``
+- Neon: ``3000``
+- Sodium: ``3001``
+- Magnesium: ``3002``
+- Aluminium: ``3003``
 
 Example
 -------
 
 An example might help clarify how this all works.
 
-It is the year ``2020`` and the current code name is ``Iodine``. A release is ready
-to be cut and the month is ``June``. This would make the new release number
-``2020.6.0``. After three bug fix releases, the release number would be
-``2020.6.3``.
+The current code name is ``Iodine``. A release is ready to be cut and the previous
+release was ``3053``. This would make the new release number ``3054``. After three
+patch releases, the release number would be ``3054.3``.
 
 After the release is cut, new features would be worked on under the ``Xenon``
 code name and the process repeats itself.
@@ -64,13 +70,11 @@ Example arguments for ``git checkout``:
   +------------+----------------------------------------------------------------------------+
   |  Argument  |                                           Comment                          |
   +============+============================================================================+
-  | develop    | **Develop branch** Actively developed new features                         |
+  | master     | **Master branch** Actively developed bug-fixes and new features            |
   +------------+----------------------------------------------------------------------------+
-  | 2016.11    | **Release branch** Actively developed bug-fixes for 2016.11.* releases     |
+  | v3000      | Tag signaling the commit for 3000 release.                                 |
   +------------+----------------------------------------------------------------------------+
-  | v2016.11   | Tag signaling the commit that the 2016.11.* releases are based on.         |
-  +------------+----------------------------------------------------------------------------+
-  | v2016.11.1 | Tag signaling the commit that the 2016.11.1 release is based on.           |
+  | v3000.1    | Tag signaling the commit for a 3000.1 patch fix.                           |
   +------------+----------------------------------------------------------------------------+
 
 Further reading on `release branch and develop branch
@@ -81,23 +85,21 @@ Influence of the ``git checkout`` argument on ``git describe``:
   +------------+----------------------------+-----------------------------------------------+
   | Checkout   | Describe                   |               Comment                         |
   +============+============================+===============================================+
-  | v2016.11   | v2016.11                   | (tag is fixed point in time)                  |
+  | v3000      | v3000                      | (tag is fixed point in time)                  |
   +------------+----------------------------+-----------------------------------------------+
-  | 2016.11    | v2016.11.1-220-g9a1550d    | Commit of most recent tag in 2016.11          |
+  | v3000.1    | v3000.1                    | (tag is fixed point in time)                  |
   +------------+----------------------------+-----------------------------------------------+
-  | v2016.11.1 | 2016.11.1                  | (tag is fixed point in time)                  |
-  +------------+----------------------------+-----------------------------------------------+
-  | develop    | v2016.11.1-1741-g10d5dec   | Commit of most recent tag in develop          |
+  | master     | v3000.1-9-g10d5dec         | Commit of most recent tag in master           |
   +------------+----------------------------+-----------------------------------------------+
 
-Some details of v2016.11.1-220-g9a1550d (from ``git describe`` after ``git checkout 2016.11``):
+Some details of v3000.1-9-g10d5dec (from ``git describe`` after ``git checkout master``):
 
   +---------------+-------------------------------------------------------------------------+
   |     Part      |                       Comment                                           |
   +===============+=========================================================================+
-  |v2016.11.1     | git describe finds the most recent tag on the 2016.11 branch            |
+  |v3000.1        | git describe finds the most recent tag on the 2016.11 branch            |
   +---------------+-------------------------------------------------------------------------+
-  |220            | Commits on top of the most recent tag, relative to your local git fetch |
+  |9              | Commits on top of the most recent tag, relative to your local git fetch |
   +---------------+-------------------------------------------------------------------------+
   |gf2eb3dc       | 'g' + git SHA ("abbreviated name") of the most recent commit            |
   +---------------+-------------------------------------------------------------------------+

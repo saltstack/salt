@@ -14,8 +14,6 @@ from tests.support.runtests import RUNTIME_VARS
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -24,11 +22,6 @@ import salt.config
 import salt.syspaths
 import salt.utils.parsers
 import salt.utils.platform
-
-try:
-    import pytest
-except ImportError:
-    pytest = None
 
 
 class ErrorMock(object):  # pylint: disable=too-few-public-methods
@@ -558,7 +551,6 @@ class ParserBase(object):
         self.assertDictEqual(nums_1, nums_2)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(salt.utils.platform.is_windows(), 'Windows uses a logging listener')
 class MasterOptionParserTestCase(ParserBase, TestCase):
     '''
@@ -589,7 +581,6 @@ class MasterOptionParserTestCase(ParserBase, TestCase):
             os.unlink(self.log_file)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(salt.utils.platform.is_windows(), 'Windows uses a logging listener')
 class MinionOptionParserTestCase(ParserBase, TestCase):
     '''
@@ -620,7 +611,6 @@ class MinionOptionParserTestCase(ParserBase, TestCase):
             os.unlink(self.log_file)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class ProxyMinionOptionParserTestCase(ParserBase, TestCase):
     '''
     Tests parsing Salt Proxy Minion options
@@ -651,7 +641,6 @@ class ProxyMinionOptionParserTestCase(ParserBase, TestCase):
             os.unlink(self.log_file)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(salt.utils.platform.is_windows(), 'Windows uses a logging listener')
 class SyndicOptionParserTestCase(ParserBase, TestCase):
     '''
@@ -688,7 +677,6 @@ class SyndicOptionParserTestCase(ParserBase, TestCase):
             os.unlink(self.syndic_log_file)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class SaltCMDOptionParserTestCase(ParserBase, TestCase):
     '''
     Tests parsing Salt CLI options
@@ -721,7 +709,6 @@ class SaltCMDOptionParserTestCase(ParserBase, TestCase):
             os.unlink(self.log_file)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class SaltCPOptionParserTestCase(ParserBase, TestCase):
     '''
     Tests parsing salt-cp options
@@ -754,7 +741,6 @@ class SaltCPOptionParserTestCase(ParserBase, TestCase):
             os.unlink(self.log_file)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class SaltKeyOptionParserTestCase(ParserBase, TestCase):
     '''
     Tests parsing salt-key options
@@ -776,7 +762,7 @@ class SaltKeyOptionParserTestCase(ParserBase, TestCase):
         self.log_file = '/tmp/salt_key_parser_test'
         self.key_logfile = '/tmp/key_logfile'
         # Function to patch
-        self.config_func = 'salt.config.master_config'
+        self.config_func = 'salt.config.client_config'
 
         # Mock log setup
         self.setup_log()
@@ -877,7 +863,6 @@ class SaltKeyOptionParserTestCase(ParserBase, TestCase):
             os.unlink(self.key_logfile)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class SaltCallOptionParserTestCase(ParserBase, TestCase):
     '''
     Tests parsing Salt Minion options
@@ -910,7 +895,6 @@ class SaltCallOptionParserTestCase(ParserBase, TestCase):
             os.unlink(self.log_file)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class SaltRunOptionParserTestCase(ParserBase, TestCase):
     '''
     Tests parsing Salt Master options
@@ -943,7 +927,6 @@ class SaltRunOptionParserTestCase(ParserBase, TestCase):
             os.unlink(self.log_file)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class SaltSSHOptionParserTestCase(ParserBase, TestCase):
     '''
     Tests parsing Salt Master options
@@ -982,7 +965,6 @@ class SaltSSHOptionParserTestCase(ParserBase, TestCase):
             os.unlink(self.ssh_log_file)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class SaltCloudParserTestCase(ParserBase, TestCase):
     '''
     Tests parsing Salt Cloud options
@@ -1019,7 +1001,6 @@ class SaltCloudParserTestCase(ParserBase, TestCase):
             os.unlink(self.log_file)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class SPMParserTestCase(ParserBase, TestCase):
     '''
     Tests parsing Salt Cloud options
@@ -1059,7 +1040,6 @@ class SPMParserTestCase(ParserBase, TestCase):
             os.unlink(self.spm_logfile)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class SaltAPIParserTestCase(ParserBase, TestCase):
     '''
     Tests parsing Salt Cloud options
@@ -1099,8 +1079,6 @@ class SaltAPIParserTestCase(ParserBase, TestCase):
             os.unlink(self.api_logfile)
 
 
-@skipIf(not pytest, False)
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class DaemonMixInTestCase(TestCase):
     '''
     Tests the PIDfile deletion in the DaemonMixIn.

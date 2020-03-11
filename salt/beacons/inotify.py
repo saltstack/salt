@@ -252,7 +252,7 @@ def beacon(config):
                             try:
                                 if re.search(_exclude, event.pathname):
                                     _append = False
-                            except Exception:
+                            except Exception:  # pylint: disable=broad-except
                                 log.warning('Failed to compile regex: %s',
                                             _exclude)
                         else:

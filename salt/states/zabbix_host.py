@@ -7,9 +7,9 @@ Management of Zabbix hosts.
 
 '''
 from __future__ import absolute_import, print_function, unicode_literals
-from json import loads, dumps
 from copy import deepcopy
 from salt.ext import six
+import salt.utils.json
 
 
 def __virtual__():
@@ -101,7 +101,7 @@ def present(host, groups, interfaces, **kwargs):
             return list()
 
         interface_attrs = ('ip', 'dns', 'main', 'type', 'useip', 'port')
-        interfaces_json = loads(dumps(interfaces_data))
+        interfaces_json = salt.utils.json.loads(salt.utils.json.dumps(interfaces_data))
         interfaces_dict = dict()
 
         for interface in interfaces_json:
@@ -122,7 +122,7 @@ def present(host, groups, interfaces, **kwargs):
             interface_type = interface_ports[value['type'].lower()][0]
             main = '1' if six.text_type(value.get('main', 'true')).lower() == 'true' else '0'
             useip = '1' if six.text_type(value.get('useip', 'true')).lower() == 'true' else '0'
-            interface_ip = value.get('ip')
+            interface_ip = value.get('ip', '')
             dns = value.get('dns', key)
             port = six.text_type(value.get('port', interface_ports[value['type'].lower()][1]))
 
@@ -133,7 +133,6 @@ def present(host, groups, interfaces, **kwargs):
                                     'dns': dns,
                                     'port': port})
 
-        interfaces_list = interfaces_list
         interfaces_list_sorted = sorted(interfaces_list, key=lambda k: k['main'], reverse=True)
 
         return interfaces_list_sorted
