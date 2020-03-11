@@ -4987,6 +4987,8 @@ def _load_policy_definitions(path='c:\\Windows\\PolicyDefinitions',
         if root == path:
             for t_admx_file in files:
                 admx_file_name, admx_file_ext = os.path.splitext(t_admx_file)
+                # Only process ADMX files, any other file will cause a
+                # stacktrace later on
                 if not admx_file_ext == '.admx':
                     log.debug('{0} is not an ADMX file'.format(t_admx_file))
                     continue
@@ -5005,9 +5007,6 @@ def _load_policy_definitions(path='c:\\Windows\\PolicyDefinitions',
                     namespaces['None'] = namespaces[None]
                     namespaces.pop(None)
                     namespace_string = 'None:'
-                this_prefix = xml_tree.xpath(
-                        '/{0}policyDefinitions/{0}policyNamespaces/{0}target/@prefix'.format(namespace_string),
-                        namespaces=namespaces)[0]
                 this_namespace = xml_tree.xpath(
                         '/{0}policyDefinitions/{0}policyNamespaces/{0}target/@namespace'.format(namespace_string),
                         namespaces=namespaces)[0]
