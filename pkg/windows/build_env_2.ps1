@@ -221,31 +221,32 @@ If ($NoPipDependencies -eq $false) {
   Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python2Dir'])\python.exe -m pip --disable-pip-version-check --no-cache-dir install -r $($script_path)\req.txt" "pip install"
 }
 
-
 #==============================================================================
 # Cleaning Up PyWin32
 #==============================================================================
-Write-Output " ----------------------------------------------------------------"
-Write-Output " - $script_name :: Cleaning Up PyWin32 . . ."
-Write-Output " ----------------------------------------------------------------"
+If ( Test-Path "$($ini['Settings']['SitePkgs2Dir'])\pywin32_system32" -PathType Container ) {
+    Write-Output " ----------------------------------------------------------------"
+    Write-Output " - $script_name :: Cleaning Up PyWin32 . . ."
+    Write-Output " ----------------------------------------------------------------"
 
-# Move DLL's to Python Root
-Write-Output " - $script_name :: Moving PyWin32 DLLs . . ."
-# The dlls have to be in Python directory and the site-packages\win32 directory
-Copy-Item "$($ini['Settings']['SitePkgs2Dir'])\pywin32_system32\*.dll" "$($ini['Settings']['Python2Dir'])" -Force
-Move-Item "$($ini['Settings']['SitePkgs2Dir'])\pywin32_system32\*.dll" "$($ini['Settings']['SitePkgs2Dir'])\win32" -Force
+    # Move DLL's to Python Root
+    Write-Output " - $script_name :: Moving PyWin32 DLLs . . ."
+    # The dlls have to be in Python directory and the site-packages\win32 directory
+    Copy-Item "$( $ini['Settings']['SitePkgs2Dir'] )\pywin32_system32\*.dll" "$( $ini['Settings']['Python2Dir'] )" -Force
+    Move-Item "$( $ini['Settings']['SitePkgs2Dir'] )\pywin32_system32\*.dll" "$( $ini['Settings']['SitePkgs2Dir'] )\win32" -Force
 
-# Create gen_py directory
-Write-Output " - $script_name :: Creating gen_py Directory . . ."
-New-Item -Path "$($ini['Settings']['SitePkgs2Dir'])\win32com\gen_py" -ItemType Directory -Force | Out-Null
+    # Create gen_py directory
+    Write-Output " - $script_name :: Creating gen_py Directory . . ."
+    New-Item -Path "$( $ini['Settings']['SitePkgs2Dir'] )\win32com\gen_py" -ItemType Directory -Force | Out-Null
 
-# Remove pywin32_system32 directory
-Write-Output " - $script_name :: Removing pywin32_system32 Directory . . ."
-Remove-Item "$($ini['Settings']['SitePkgs2Dir'])\pywin32_system32"
+    # Remove pywin32_system32 directory
+    Write-Output " - $script_name :: Removing pywin32_system32 Directory . . ."
+    Remove-Item "$( $ini['Settings']['SitePkgs2Dir'] )\pywin32_system32"
 
-# Remove PyWin32 PostInstall and testall Scripts
-Write-Output " - $script_name :: Removing PyWin32 scripts . . ."
-Remove-Item "$($ini['Settings']['Scripts2Dir'])\pywin32_*" -Force -Recurse
+    # Remove PyWin32 PostInstall and testall Scripts
+    Write-Output " - $script_name :: Removing PyWin32 scripts . . ."
+    Remove-Item "$( $ini['Settings']['Scripts2Dir'] )\pywin32_*" -Force -Recurse
+}
 
 #==============================================================================
 # Copy DLLs to Python Directory
