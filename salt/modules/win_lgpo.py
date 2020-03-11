@@ -4986,6 +4986,12 @@ def _load_policy_definitions(path='c:\\Windows\\PolicyDefinitions',
     for root, dirs, files in salt.utils.path.os_walk(path):
         if root == path:
             for t_admx_file in files:
+                admx_file_name, admx_file_ext = os.path.splitext(t_admx_file)
+                # Only process ADMX files, any other file will cause a
+                # stacktrace later on
+                if not admx_file_ext == '.admx':
+                    log.debug('{0} is not an ADMX file'.format(t_admx_file))
+                    continue
                 admx_file = os.path.join(root, t_admx_file)
                 # Parse xml for the ADMX file
                 try:
@@ -5001,9 +5007,6 @@ def _load_policy_definitions(path='c:\\Windows\\PolicyDefinitions',
                     namespaces['None'] = namespaces[None]
                     namespaces.pop(None)
                     namespace_string = 'None:'
-                this_prefix = xml_tree.xpath(
-                        '/{0}policyDefinitions/{0}policyNamespaces/{0}target/@prefix'.format(namespace_string),
-                        namespaces=namespaces)[0]
                 this_namespace = xml_tree.xpath(
                         '/{0}policyDefinitions/{0}policyNamespaces/{0}target/@namespace'.format(namespace_string),
                         namespaces=namespaces)[0]
@@ -5038,7 +5041,7 @@ def _load_policy_definitions(path='c:\\Windows\\PolicyDefinitions',
                 adml_file = os.path.join(
                     root,
                     language,
-                    os.path.splitext(t_admx_file)[0] + '.adml')
+                    admx_file_name + '.adml')
                 if not __salt__['file.file_exists'](adml_file):
                     log.info('An ADML file in the specified ADML language '
                              '"%s" does not exist for the ADMX "%s", the '
@@ -5048,7 +5051,7 @@ def _load_policy_definitions(path='c:\\Windows\\PolicyDefinitions',
                     adml_file = os.path.join(
                         root,
                         language.split('-')[0],
-                        os.path.splitext(t_admx_file)[0] + '.adml')
+                        admx_file_name + '.adml')
                     if not __salt__['file.file_exists'](adml_file):
                         log.info('An ADML file in the specified ADML language '
                                  'code %s does not exist for the ADMX "%s", '
@@ -5058,7 +5061,7 @@ def _load_policy_definitions(path='c:\\Windows\\PolicyDefinitions',
                         adml_file = os.path.join(
                             root,
                             display_language_fallback,
-                            os.path.splitext(t_admx_file)[0] + '.adml')
+                            admx_file_name + '.adml')
                         if not __salt__['file.file_exists'](adml_file):
                             log.info('An ADML file in the specified ADML '
                                      'fallback language "%s" '
@@ -5070,7 +5073,7 @@ def _load_policy_definitions(path='c:\\Windows\\PolicyDefinitions',
                             adml_file = os.path.join(
                                 root,
                                 display_language_fallback.split('-')[0],
-                                os.path.splitext(t_admx_file)[0] + '.adml')
+                                admx_file_name + '.adml')
                             if not __salt__['file.file_exists'](adml_file):
                                 msg = ('An ADML file in the specified ADML language '
                                        '"{0}" and the fallback language "{1}" do not '

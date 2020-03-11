@@ -5,6 +5,7 @@
 
 # Import Python Libs
 from __future__ import absolute_import, unicode_literals, print_function
+import glob
 import os
 
 # Import Salt Testing Libs
@@ -18,6 +19,7 @@ import salt.config
 import salt.loader
 import salt.modules.win_lgpo as win_lgpo
 import salt.states.win_lgpo
+import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
 
@@ -331,6 +333,39 @@ class WinLGPOGetPolicyADMXTestCase(TestCase, LoaderModuleMockMixin):
                         'Data Collection and Preview Builds': {
                             'Allow Telemetry': 'Not Configured'}}}}}
         self.assertDictEqual(result, expected)
+
+    @destructiveTest
+    def test__load_policy_definitions(self):
+        '''
+        Test that unexpected files in the PolicyDefinitions directory won't
+        cause the _load_policy_definitions function to explode
+        https://gitlab.com/saltstack/enterprise/lock/issues/3826
+        '''
+        # The PolicyDefinitions directory should only contain ADMX files. We
+        # want to make sure the `_load_policy_definitions` function skips non
+        # ADMX files in this directory.
+        # Create a bogus ADML file in PolicyDefinitions directory
+        bogus_fle = os.path.join(
+            'c:\\Windows\\PolicyDefinitions',
+            '_bogus.adml')
+        cache_dir = os.path.join(
+            win_lgpo.__opts__['cachedir'],
+            'lgpo',
+            'policy_defs')
+        try:
+            with salt.utils.files.fopen(bogus_fle, 'w+') as fh:
+                fh.write('<junk></junk>')
+            # This function doesn't return anything (None), it just loads
+            # the XPath structures into __context__. We're just making sure it
+            # doesn't stack trace here
+            self.assertIsNone(win_lgpo._load_policy_definitions())
+        finally:
+            # Remove source file
+            os.remove(bogus_fle)
+            # Remove cached file
+            search_string = '{0}\\_bogus*.adml'.format(cache_dir)
+            for file_name in glob.glob(search_string):
+                os.remove(file_name)
 
 
 @skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
