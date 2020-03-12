@@ -675,15 +675,20 @@ class Pillar(object):
             errors.append('Error encountered while rendering pillar top file.')
         return merged_tops, errors
 
-    def top_matches(self, top):
+    def top_matches(self, top, reload=False):
         '''
         Search through the top high data for matches and return the states
         that this minion needs to execute.
 
         Returns:
         {'saltenv': ['state1', 'state2', ...]}
+
+        reload
+            Reload the matcher loader
         '''
         matches = {}
+        if reload:
+            self.matchers = salt.loader.matchers(self.opts)
         for saltenv, body in six.iteritems(top):
             if self.opts['pillarenv']:
                 if saltenv != self.opts['pillarenv']:
@@ -1028,7 +1033,7 @@ class Pillar(object):
             if self.opts.get('ext_pillar_first', False):
                 self.opts['pillar'], errors = self.ext_pillar(self.pillar_override)
                 self.rend = salt.loader.render(self.opts, self.functions)
-                matches = self.top_matches(top)
+                matches = self.top_matches(top, reload=True)
                 pillar, errors = self.render_pillar(matches, errors=errors)
                 pillar = merge(
                     self.opts['pillar'],

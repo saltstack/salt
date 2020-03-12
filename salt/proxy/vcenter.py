@@ -2,8 +2,8 @@
 '''
 Proxy Minion interface module for managing VMWare vCenters.
 
-:codeauthor: :email:`Rod McKenzie (roderick.mckenzie@morganstanley.com)`
-:codeauthor: :email:`Alexandru Bleotu (alexandru.bleotu@morganstanley.com)`
+:codeauthor: `Rod McKenzie (roderick.mckenzie@morganstanley.com)`
+:codeauthor: `Alexandru Bleotu (alexandru.bleotu@morganstanley.com)`
 
 Dependencies
 ============
@@ -67,7 +67,7 @@ To use this proxy module, please use on of the following configurations:
       principal: <host kerberos principal>
 
 proxytype
-^^^^^^^^^
+---------
 The ``proxytype`` key and value pair is critical, as it tells Salt which
 interface to load from the ``proxy`` directory in Salt's install hierarchy,
 or from ``/srv/salt/_proxy`` on the Salt Master (if you have created your
@@ -75,47 +75,47 @@ own proxy module, for example). To use this Proxy Module, set this to
 ``vcenter``.
 
 vcenter
-^^^^^^^
+-------
 The location of the VMware vCenter server (host of ip). Required
 
 username
-^^^^^^^^
+--------
 The username used to login to the vcenter, such as ``root``.
 Required only for userpass.
 
 mechanism
-^^^^^^^^
+---------
 The mechanism used to connect to the vCenter server. Supported values are
 ``userpass`` and ``sspi``. Required.
 
 passwords
-^^^^^^^^^
+---------
 A list of passwords to be used to try and login to the vCenter server. At least
 one password in this list is required if mechanism is ``userpass``
 
 The proxy integration will try the passwords listed in order.
 
 domain
-^^^^^^
+------
 User domain. Required if mechanism is ``sspi``
 
 principal
-^^^^^^^^
+---------
 Kerberos principal. Rquired if mechanism is ``sspi``
 
 protocol
-^^^^^^^^
+--------
 If the vCenter is not using the default protocol, set this value to an
 alternate protocol. Default is ``https``.
 
 port
-^^^^
+----
 If the ESXi host is not using the default port, set this value to an
 alternate port. Default is ``443``.
 
 
 Salt Proxy
-----------
+==========
 
 After your pillar is in place, you can test the proxy. The proxy can run on
 any machine that has network connectivity to your Salt Master and to the
@@ -173,13 +173,13 @@ It's important to understand how this particular proxy works.
 :mod:`Salt.modules.vsphere </ref/modules/all/salt.modules.vsphere>` is a
 standard Salt execution module.
 
- If you pull up the docs for it you'll see
-that almost every function in the module takes credentials and a targets either
-a vcenter or a host. When credentials and a host aren't passed, Salt runs commands
-through ``pyVmomi`` against the local machine. If you wanted, you could run
-functions from this module on any host where an appropriate version of
-``pyVmomi`` is installed, and that host would reach out over the network
-and communicate with the ESXi host.
+If you pull up the docs for it you'll see that almost every function in the
+module takes credentials and a targets either a vcenter or a host. When
+credentials and a host aren't passed, Salt runs commands through ``pyVmomi``
+against the local machine. If you wanted, you could run functions from this
+module on any host where an appropriate version of ``pyVmomi`` is installed,
+and that host would reach out over the network and communicate with the ESXi
+host.
 '''
 
 # Import Python Libs

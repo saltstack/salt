@@ -356,6 +356,8 @@ State Changes
 - Added new `onfail_all` requisite form to allow for AND logic when adding
   onfail states.
 
+- The :py:func:`pkgrepo <salt.states.pkgrepo>` state now supports VMware Photon.
+
 Module Changes
 ==============
 
@@ -372,6 +374,8 @@ Module Changes
 - Added new :py:func:`boto_ssm <salt.modules.boto_ssm>` module to set and query
   secrets in AWS SSM parameters.
 
+- Added new :py:func:`flatpak <salt.modules.flatpak>` module to work with flatpak packages.
+  
 - The :py:func:`file.set_selinux_context <salt.modules.file.set_selinux_context>`
   module now supports perstant changes with ``persist=True`` by calling the
   :py:func:`selinux.fcontext_add_policy <salt.modules.selinux.fcontext_add_policy>` module.

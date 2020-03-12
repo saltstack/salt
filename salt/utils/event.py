@@ -1217,6 +1217,7 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
 
         self.opts = opts
         self.event_return_queue = self.opts['event_return_queue']
+        self.event_return_queue_max_seconds = self.opts.get('event_return_queue_max_seconds', 0)
         local_minion_opts = self.opts.copy()
         local_minion_opts['file_client'] = 'local'
         self.minion = salt.minion.MasterMinion(local_minion_opts)
@@ -1290,17 +1291,52 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
         events = self.event.iter_events(full=True)
         self.event.fire_event({}, 'salt/event_listen/start')
         try:
+            # events below is a generator, we will iterate until we get the salt/event/exit tag
+            oldestevent = None
             for event in events:
+
                 if event['tag'] == 'salt/event/exit':
+                    # We're done eventing
                     self.stop = True
                 if self._filter(event):
+                    # This event passed the filter, add it to the queue
                     self.event_queue.append(event)
-                if len(self.event_queue) >= self.event_return_queue:
+                too_long_in_queue = False
+
+                # if max_seconds is >0, then we want to make sure we flush the queue
+                # every event_return_queue_max_seconds seconds,  If it's 0, don't
+                # apply any of this logic
+                if self.event_return_queue_max_seconds > 0:
+                    rightnow = datetime.datetime.now()
+                    if not oldestevent:
+                        oldestevent = rightnow
+                    age_in_seconds = (rightnow - oldestevent).seconds
+                    if age_in_seconds > 0:
+                        log.debug('Oldest event in queue is %s seconds old.', age_in_seconds)
+                    if age_in_seconds >= self.event_return_queue_max_seconds:
+                        too_long_in_queue = True
+                        oldestevent = None
+                    else:
+                        too_long_in_queue = False
+
+                    if too_long_in_queue:
+                        log.debug('Oldest event has been in queue too long, will flush queue')
+
+                # If we are over the max queue size or the oldest item in the queue has been there too long
+                # then flush the queue
+                if len(self.event_queue) >= self.event_return_queue or too_long_in_queue:
+                    log.debug('Flushing %s events.', len(self.event_queue))
                     self.flush_events()
+                    oldestevent = None
                 if self.stop:
+                    # We saw the salt/event/exit tag, we can stop eventing
                     break
         finally:  # flush all we have at this moment
+            # No matter what, make sure we flush the queue even when we are exiting
+            # and there will be no more events.
             if self.event_queue:
+                log.debug('Flushing %s events.', len(self.event_queue))
+
                 self.flush_events()
 
     def _filter(self, event):
