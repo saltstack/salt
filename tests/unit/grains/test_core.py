@@ -1485,3 +1485,19 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertIn('osfullname', os_grains)
         self.assertEqual(os_grains.get('osfullname'), 'FreeBSD')
+
+    def test_saltversioninfo(self):
+        '''
+        test saltversioninfo core grain.
+        '''
+        ret = core.saltversioninfo()
+        info = ret['saltversioninfo']
+        assert isinstance(ret, dict)
+        assert isinstance(info, list)
+        try:
+            assert len(info) == 1
+        except AssertionError:
+            # We have a minor version we need to test
+            assert len(info) == 2
+        assert all([x is not None for x in info])
+        assert all([isinstance(x, int) for x in info])
