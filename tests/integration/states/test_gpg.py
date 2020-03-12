@@ -5,6 +5,7 @@ Tests for gpg state.
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import errno
 import tempfile
 import textwrap
 import os
@@ -76,11 +77,19 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
 
     @classmethod
     def tearDownClass(cls):
-        salt.utils.files.rm_rf(cls.gnupghome)
+        try:
+            salt.utils.files.rm_rf(cls.gnupghome)
+        except OSError as exc:
+            # Ignore files already gone when attempting to delete them:
+            # OSError: [Errno 2] No such file or directory: '/tmp/saltgpg_UeafO/S.gpg-agent.extra'
+            if exc.errno != errno.ENOENT:
+                raise
         del cls.gnupghome
         del cls.secret_key
         salt.utils.files.remove(cls.top_pillar)
         salt.utils.files.remove(cls.minion_pillar)
+        del cls.top_pillar
+        del cls.minion_pillar
 
     def test_01_present_from_data(self):
         '''
