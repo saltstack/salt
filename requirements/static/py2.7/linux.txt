@@ -79,7 +79,7 @@ pathlib2==2.3.3           # via importlib-metadata, pytest
 pathtools==0.1.2          # via watchdog
 pluggy==0.13.0            # via pytest
 portend==2.4              # via cherrypy
-psutil==5.6.1
+psutil==5.6.6
 py==1.8.0                 # via pytest
 pyaml==19.4.1             # via moto
 pyasn1-modules==0.2.4     # via google-auth
