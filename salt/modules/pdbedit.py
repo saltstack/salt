@@ -11,6 +11,7 @@ Manage accounts in Samba's passdb using pdbedit
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
+import re
 import logging
 import hashlib
 import binascii
@@ -22,6 +23,7 @@ except ImportError:
 # Import Salt libs
 from salt.ext import six
 import salt.utils.path
+import salt.modules.cmdmod
 
 log = logging.getLogger(__name__)
 
@@ -39,14 +41,21 @@ def __virtual__():
     '''
     Provides pdbedit if available
     '''
-    if salt.utils.path.which('pdbedit'):
-        return __virtualname__
-    return (
-        False,
-        '{0} module can only be loaded when pdbedit is available'.format(
-            __virtualname__
-        )
-    )
+    # NOTE: check for pdbedit command
+    if not salt.utils.path.which('pdbedit'):
+        return (False, 'pdbedit command is not available')
+
+    # NOTE: check version is >= 4.8.x
+    ver = salt.modules.cmdmod.run('pdbedit -V')
+    ver_regex = re.compile(r'^Version\s(\d+)\.(\d+)\.(\d+)$')
+    ver_match = ver_regex.match(ver)
+    if not ver_match:
+        return (False, 'pdbedit -V returned an unknown version format')
+
+    if not (int(ver_match.group(1)) >= 4 and int(ver_match.group(2)) >= 8):
+        return (False, 'pdbedit is to old, 4.8.0 or newer is required')
+
+    return __virtualname__
 
 
 def generate_nt_hash(password):
