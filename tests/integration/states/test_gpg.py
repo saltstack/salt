@@ -26,7 +26,6 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
     @classmethod
     def setUpClass(cls):
         cls.gnupghome = tempfile.mkdtemp(prefix='saltgpg')
-        cls.tempdir = tempfile.mkdtemp(prefix='herbert')
         cls.secret_key = textwrap.dedent(
             '''\
             -----BEGIN PGP PRIVATE KEY BLOCK-----
@@ -52,8 +51,9 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
             -----END PGP PRIVATE KEY BLOCK-----
             '''
         )
-        with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, 'gpg.sls'),
-                                    'w') as fp:
+        cls.top_pillar = os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, 'top.sls')
+        cls.minion_pillar = os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, 'gpg.sls')
+        with salt.utils.files.fopen(cls.minion_pillar, 'w') as fp:
             fp.write(
                 textwrap.dedent(
                     '''
@@ -63,8 +63,7 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
                     '''
                 )
             )
-        with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, 'top.sls'),
-                                    'w') as fp:
+        with salt.utils.files.fopen(cls.top_pillar, 'w') as fp:
             fp.write(
                 textwrap.dedent(
                     '''
@@ -78,7 +77,10 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
     @classmethod
     def tearDownClass(cls):
         salt.utils.files.rm_rf(cls.gnupghome)
-        salt.utils.files.rm_rf(cls.tempdir)
+        del cls.gnupghome
+        del cls.secret_key
+        salt.utils.files.remove(cls.top_pillar)
+        salt.utils.files.remove(cls.minion_pillar)
 
     def test_01_present_from_data(self):
         '''
@@ -138,7 +140,7 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
             ret,
         )
 
-    # Running this test might be considered a DDOS,
+    # Running this test as part of the standard testsuite might be considered a DDOS,
     # also it is not guaranteed to be stable.
     @skipIf(True, 'This test contacts an external service')
     def test_02_present_from_keyserver(self):
@@ -175,9 +177,9 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
         Test encrypting and decrypting with data provided through ``contents``
         argument.
         '''
-        encrypted_file = os.path.join(self.tempdir, 'secret_data.asc')
+        encrypted_file = os.path.join(RUNTIME_VARS.TMP, '03_secret_data.asc')
         self.addCleanup(salt.utils.files.safe_rm, encrypted_file)
-        decrypted_file = os.path.join(self.tempdir, 'decrypted_data.txt')
+        decrypted_file = os.path.join(RUNTIME_VARS.TMP, '03_decrypted_data.txt')
         self.addCleanup(salt.utils.files.safe_rm, decrypted_file)
         # Ensure key is present
         ret = self.run_state(
@@ -261,9 +263,9 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
         Test encrypting and decrypting with data from pillar.
         '''
         self.run_function('saltutil.refresh_pillar')
-        encrypted_file = os.path.join(self.tempdir, 'secret_data.asc')
+        encrypted_file = os.path.join(RUNTIME_VARS.TMP, '04_secret_data.asc')
         self.addCleanup(salt.utils.files.safe_rm, encrypted_file)
-        decrypted_file = os.path.join(self.tempdir, 'decrypted_data.txt')
+        decrypted_file = os.path.join(RUNTIME_VARS.TMP, '04_decrypted_data.txt')
         self.addCleanup(salt.utils.files.safe_rm, decrypted_file)
         # Ensure key is present
         ret = self.run_state(
@@ -332,13 +334,13 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         Test encrypting and decrypting from source argument.
         '''
-        encrypted_file = os.path.join(self.tempdir, 'secret_data.asc')
+        encrypted_file = os.path.join(RUNTIME_VARS.TMP, '05_secret_data.asc')
         self.addCleanup(salt.utils.files.safe_rm, encrypted_file)
-        plaintext_file = os.path.join(self.tempdir, 'plaintext.txt')
+        plaintext_file = os.path.join(RUNTIME_VARS.TMP, '05_plaintext.txt')
         with salt.utils.files.flopen(plaintext_file, 'w') as _fp:
             _fp.write('plaintext data')
         self.addCleanup(salt.utils.files.safe_rm, plaintext_file)
-        decrypted_file = os.path.join(self.tempdir, 'decrypted_data.txt')
+        decrypted_file = os.path.join(RUNTIME_VARS.TMP, '05_decrypted_data.txt')
         self.addCleanup(salt.utils.files.safe_rm, decrypted_file)
         # Test encrypting a file
         ret = self.run_state(
@@ -408,7 +410,7 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         Test signing and verifying data provided through ``contents``.
         '''
-        signed_file = os.path.join(self.tempdir, 'signed_data.asc')
+        signed_file = os.path.join(RUNTIME_VARS.TMP, '06_signed_data.asc')
         self.addCleanup(salt.utils.files.safe_rm, signed_file)
 
         # Test signing
@@ -457,7 +459,7 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         Test signing and verifying data provided through pillar.
         '''
-        signed_file = os.path.join(self.tempdir, 'signed_data.asc')
+        signed_file = os.path.join(RUNTIME_VARS.TMP, '07_signed_data.asc')
         self.addCleanup(salt.utils.files.safe_rm, signed_file)
         # Test signing
         ret = self.run_state(
@@ -504,11 +506,11 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         Test signing and verifying data provided through ``source``.
         '''
-        plaintext_file = os.path.join(self.tempdir, 'plaintext.txt')
+        plaintext_file = os.path.join(RUNTIME_VARS.TMP, '08_plaintext.txt')
         with salt.utils.files.flopen(plaintext_file, 'w') as _fp:
             _fp.write('data to sign')
         self.addCleanup(salt.utils.files.safe_rm, plaintext_file)
-        signed_file = os.path.join(self.tempdir, 'signed_data.asc')
+        signed_file = os.path.join(RUNTIME_VARS.TMP, '08_signed_data.asc')
         self.addCleanup(salt.utils.files.safe_rm, signed_file)
 
         # Test signing
@@ -553,7 +555,7 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
         Test signing and verifying directly provided contents with detached
         (also directly provided) signature.
         '''
-        signature_file = os.path.join(self.tempdir, 'signature.asc')
+        signature_file = os.path.join(RUNTIME_VARS.TMP, '09_signature.asc')
         self.addCleanup(salt.utils.files.safe_rm, signature_file)
 
         # Test signing
@@ -606,7 +608,7 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
         Test signing and verifying pillar-provided contents with detached
         directly provided signature.
         '''
-        signature_file = os.path.join(self.tempdir, 'signature.asc')
+        signature_file = os.path.join(RUNTIME_VARS.TMP, '10_signature.asc')
         self.addCleanup(salt.utils.files.safe_rm, signature_file)
 
         # Test signing
