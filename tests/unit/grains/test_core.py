@@ -669,8 +669,9 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_unicode_error(self):
         raise_unicode_mock = MagicMock(name="raise_unicode_error", side_effect=UnicodeError)
-        with patch('socket.getaddrinfo'):
-            salt.grains.core.ip_fqdn()
+        with patch('salt.grains.core.hostname'):
+            with patch('socket.getaddrinfo', raise_unicode_mock): 
+                salt.grains.core.ip_fqdn()
 
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
     def test_ubuntu_xenial_os_grains(self):
