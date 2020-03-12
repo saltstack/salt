@@ -55,7 +55,6 @@ class GpgTestCase(ModuleCase):
             wfh.write('secret_password: foo')
 
         cls.gnupghome = tempfile.mkdtemp(prefix='saltgpg')
-        cls.tempdir = tempfile.mkdtemp(prefix='herbert')
         cls.secret_key = textwrap.dedent(
             '''\
             -----BEGIN PGP PRIVATE KEY BLOCK-----
@@ -93,14 +92,12 @@ class GpgTestCase(ModuleCase):
 
     @classmethod
     def tearDownClass(cls):
-        shutil.rmtree(cls.gnupghome)
+        salt.utils.files.rm_rf(cls.gnupghome)
         del cls.gnupghome
         del cls.secret_key_spec
         del cls.secret_key
-        if os.path.exists(cls.top_pillar):
-            os.unlink(cls.top_pillar)
-        if os.path.exists(cls.minion_pillar):
-            os.unlink(cls.minion_pillar)
+        salt.utils.files.remove(cls.top_pillar)
+        salt.utils.files.remove(cls.minion_pillar)
 
     def _steps(self):
         for name in dir(self):
@@ -128,6 +125,7 @@ class GpgTestCase(ModuleCase):
         random pool.
         '''
         step_1_gnupghome = tempfile.mkdtemp(prefix='saltgpg')
+        self.addCleanup(salt.utils.files.rm_rf, step_1_gnupghome)
         expected_result = {
             'message': 'GPG key pair successfully generated.', 'result': True,
         }
@@ -140,7 +138,6 @@ class GpgTestCase(ModuleCase):
         self.assertIn('fingerprint', res)
         del res['fingerprint']
         self.assertEqual(res, expected_result)
-        shutil.rmtree(step_1_gnupghome)
 
     def step_02_import_key(self):
         '''
@@ -350,8 +347,8 @@ class GpgTestCase(ModuleCase):
         '''
         Test signing a file.
         '''
-        #plaintext_file = os.path.join(RUNTIME_VARS.TMP, 'file_to_sign.txt')
-        plaintext_file = os.path.join(self.tempdir, 'file_to_sign.txt')
+        plaintext_file = os.path.join(RUNTIME_VARS.TMP, '07h_file_to_sign.txt')
+        self.addCleanup(salt.utils.files.remove, plaintext_file)
         with salt.utils.files.fopen(plaintext_file, 'wb') as fp:
             fp.write(salt.utils.stringutils.to_bytes('Statement of authority.'))
         res = self.run_function(
@@ -406,10 +403,10 @@ class GpgTestCase(ModuleCase):
         Test signing and verifying a test message, outputting the signature to a separate file.
         '''
         # Setup
-        #signature_file = os.path.join(RUNTIME_VARS.TMP, 'signature.asc')
-        #plaintext_file = os.path.join(RUNTIME_VARS.TMP, 'file_to_sign.txt')
-        signature_file = os.path.join(self.tempdir, 'signature.asc')
-        plaintext_file = os.path.join(self.tempdir, 'file_to_sign.txt')
+        signature_file = os.path.join(RUNTIME_VARS.TMP, '07j_signature.asc')
+        self.addCleanup(salt.utils.files.remove, signature_file)
+        plaintext_file = os.path.join(RUNTIME_VARS.TMP, '07j_file_to_sign.txt')
+        self.addCleanup(salt.utils.files.remove, plaintext_file)
         with salt.utils.files.fopen(plaintext_file, 'wb') as fp:
             fp.write(salt.utils.stringutils.to_bytes('Statement of authority.'))
 
@@ -446,10 +443,6 @@ class GpgTestCase(ModuleCase):
                 'trust_level': 'Ultimate'
             }
         )
-
-        # Cleanup
-        #os.unlink(signature_file)
-        #os.unlink(plaintext_file)
 
     def step_08_verify_message(self):
         '''
@@ -548,8 +541,12 @@ class GpgTestCase(ModuleCase):
         '''
         Test encrypting and decrypting a file.
         '''
-        #plaintext_file = os.path.join(RUNTIME_VARS.TMP, 'secret_data.txt')
-        plaintext_file = os.path.join(self.tempdir, 'secret_data.txt')
+        plaintext_file = os.path.join(RUNTIME_VARS.TMP, '09c_secret_data.txt')
+        self.addCleanup(salt.utils.files.remove, plaintext_file)
+        encrypted_file = os.path.join(RUNTIME_VARS.TMP, '09c_secret_data.asc')
+        self.addCleanup(salt.utils.files.remove, encrypted_file)
+        decrypted_file = os.path.join(RUNTIME_VARS.TMP, '09c_decrypted_data.txt')
+        self.addCleanup(salt.utils.files.remove, decrypted_file)
         with salt.utils.files.fopen(plaintext_file, 'wb') as fp:
             fp.write(salt.utils.stringutils.to_bytes('Very big secret! Hush'))
         # Encrypt to returned string
@@ -563,8 +560,6 @@ class GpgTestCase(ModuleCase):
         self.assertTrue(encrypt['message'].startswith('-----BEGIN PGP MESSAGE-----\n\n'))
         self.assertTrue(encrypt['message'].endswith('\n-----END PGP MESSAGE-----\n'))
         # Encrypt to new file
-        #encrypted_file = os.path.join(RUNTIME_VARS.TMP, 'secret_data.asc')
-        encrypted_file = os.path.join(self.tempdir, 'secret_data.asc')
         encrypt = self.run_function(
             'gpg.encrypt',
             filename=plaintext_file,
@@ -586,8 +581,6 @@ class GpgTestCase(ModuleCase):
         self.assertEqual(decrypt['message'], 'Very big secret! Hush')
 
         # Decrypt from file, to file
-        #decrypted_file = os.path.join(RUNTIME_VARS.TMP, 'decrypted_data.txt')
-        decrypted_file = os.path.join(self.tempdir, 'decrypted_data.txt')
         decrypt = self.run_function(
             'gpg.decrypt',
             filename=encrypted_file,
@@ -598,11 +591,6 @@ class GpgTestCase(ModuleCase):
         with salt.utils.files.fopen(decrypted_file, 'rb') as fp:
             decrypted_data = salt.utils.stringutils.to_unicode(fp.read())
         self.assertEqual(decrypted_data, 'Very big secret! Hush')
-
-        # Cleanup
-        #os.unlink(plaintext_file)
-        #os.unlink(encrypted_file)
-        #os.unlink(decrypted_file)
 
     def step_09c_encrypt_and_sign_decrypt_and_verify(self):
         '''
@@ -642,10 +630,12 @@ class GpgTestCase(ModuleCase):
         '''
         Test encrypting and signing, then decrypting and verifying a file.
         '''
-        #plaintext_file = os.path.join(RUNTIME_VARS.TMP, 'secret_data.txt')
-        #encrypted_file = os.path.join(RUNTIME_VARS.TMP, 'encrypted_data.txt')
-        plaintext_file = os.path.join(self.tempdir, 'secret_data.txt')
-        encrypted_file = os.path.join(self.tempdir, 'encrypted_data.txt')
+        plaintext_file = os.path.join(RUNTIME_VARS.TMP, '09d_secret_data.txt')
+        self.addCleanup(salt.utils.files.remove, plaintext_file)
+        encrypted_file = os.path.join(RUNTIME_VARS.TMP, '09d_encrypted_data.txt')
+        self.addCleanup(salt.utils.files.remove, encrypted_file)
+        decrypted_file = os.path.join(RUNTIME_VARS.TMP, '09d_decrypted_data.txt')
+        self.addCleanup(salt.utils.files.remove, decrypted_file)
         with salt.utils.files.fopen(plaintext_file, 'wb') as fp:
             fp.write(salt.utils.stringutils.to_bytes('Also very big secret! Hush'))
         encrypt = self.run_function(
@@ -662,7 +652,6 @@ class GpgTestCase(ModuleCase):
             'Encrypted data has been written to {}'.format(encrypted_file)
         )
 
-        decrypted_file = os.path.join(RUNTIME_VARS.TMP, 'decrypted_data.txt')
         decrypt = self.run_function(
             'gpg.decrypt',
             filename=encrypted_file,
@@ -687,11 +676,6 @@ class GpgTestCase(ModuleCase):
         with salt.utils.files.fopen(decrypted_file, 'rb') as fp:
             decrypted_data = salt.utils.stringutils.to_unicode(fp.read())
         self.assertEqual(decrypted_data, 'Also very big secret! Hush')
-
-        # Cleanup
-        #os.unlink(plaintext_file)
-        #os.unlink(encrypted_file)
-        #os.unlink(decrypted_file)
 
     @skipIf(True, 'This test polls an online server')
     # This test polls an online server (pool) and running this
