@@ -330,15 +330,10 @@ class GpgTestCase(ModuleCase):
             passphrase='foo'
         )
         self.assertTrue(res['result'])
-        self.assertTrue(
-            res['message'].startswith(
-                '-----BEGIN PGP SIGNED MESSAGE-----\n'
-            )
-        )
+        self.assertTrue(res['message'].startswith('-----BEGIN PGP SIGNED MESSAGE-----\n'))
         self.assertTrue(
             'Hash: ' in res['message']
-            and
-            '\n\nsign here\n-----BEGIN PGP SIGNATURE-----\n\n' in res['message']
+            and '\n\nsign here\n-----BEGIN PGP SIGNATURE-----\n\n' in res['message']
         )
         self.assertTrue(res['message'].endswith('\n-----END PGP SIGNATURE-----\n'))
 
@@ -358,15 +353,10 @@ class GpgTestCase(ModuleCase):
             passphrase='foo',
         )
         self.assertTrue(res['result'])
-        self.assertTrue(
-            res['message'].startswith(
-                '-----BEGIN PGP SIGNED MESSAGE-----\n'
-            )
-        )
+        self.assertTrue(res['message'].startswith('-----BEGIN PGP SIGNED MESSAGE-----\n'))
         self.assertTrue(
             'Hash: ' in res['message']
-            and
-            '\n\nStatement of authority.\n-----BEGIN PGP SIGNATURE-----\n\n' in res['message']
+            and '\n\nStatement of authority.\n-----BEGIN PGP SIGNATURE-----\n\n' in res['message']
         )
         self.assertTrue(res['message'].endswith('\n-----END PGP SIGNATURE-----\n'))
 
@@ -385,15 +375,10 @@ class GpgTestCase(ModuleCase):
             passphrase_pillar='secret_password',
         )
         self.assertTrue(res['result'])
-        self.assertTrue(
-            res['message'].startswith(
-                '-----BEGIN PGP SIGNED MESSAGE-----\n'
-            )
-        )
+        self.assertTrue(res['message'].startswith('-----BEGIN PGP SIGNED MESSAGE-----\n'))
         self.assertTrue(
             'Hash: ' in res['message']
-            and
-            '\n\nsign here\n-----BEGIN PGP SIGNATURE-----\n\n' in res['message']
+            and '\n\nsign here\n-----BEGIN PGP SIGNATURE-----\n\n' in res['message']
         )
         self.assertTrue(res['message'].endswith('\n-----END PGP SIGNATURE-----\n'))
 
