@@ -117,8 +117,8 @@ class SaltStackVersion(object):
         'Sodium'        : (MAX_SIZE - 98, 0),
         'Magnesium'     : (MAX_SIZE - 97, 0),
         'Aluminium'     : (MAX_SIZE - 96, 0),
-        'Silicon'      : (MAX_SIZE - 95, 0),
-        'Phosphorus'   : (MAX_SIZE - 94, 0),
+        'Silicon'       : (MAX_SIZE - 95, 0),
+        'Phosphorus'    : (MAX_SIZE - 94, 0),
         # pylint: disable=E8265
         #'Sulfur'       : (MAX_SIZE - 93, 0),
         #'Chlorine'     : (MAX_SIZE - 92, 0),
@@ -236,7 +236,11 @@ class SaltStackVersion(object):
             major = int(major)
 
         if isinstance(minor, string_types):
-            minor = int(minor)
+            if not minor:
+                # Empty string
+                minor = None
+            else:
+                minor = int(minor)
 
         if bugfix is None and not self.new_version(major=major):
             bugfix = 0
