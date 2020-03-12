@@ -1547,15 +1547,27 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 self._clean_module_dirs.append(directory)
 
     def __clean_sys_path(self):
+        invalidate_path_importer_cache = False
         for directory in self._clean_module_dirs:
             if directory in sys.path:
                 sys.path.remove(directory)
+                invalidate_path_importer_cache = True
         self._clean_module_dirs = []
 
         # Be sure that sys.path_importer_cache do not contains any
         # invalid FileFinder references
         if USE_IMPORTLIB:
             importlib.invalidate_caches()
+
+        # Because we are mangling with importlib, we can find from
+        # time to time an invalidation issue with
+        # sys.path_importer_cache, that requires the removal of
+        # FileFinder that remain None for the extra_module_dirs
+        if invalidate_path_importer_cache:
+            for directory in self.extra_module_dirs:
+                if directory in sys.path_importer_cache \
+                   and sys.path_importer_cache[directory] is None:
+                    del sys.path_importer_cache[directory]
 
     def _load_module(self, name):
         mod = None
