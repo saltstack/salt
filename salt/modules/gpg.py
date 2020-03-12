@@ -39,8 +39,9 @@ try:
 
     HAS_GPG_BINDINGS = True
     GPG_VERSION = '.'.join(map(str, gnupg.GPG().version))
-except ImportError:
+except (ImportError, OSError):
     HAS_GPG_BINDINGS = False
+    GPG_VERSION = '-1'
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -1405,7 +1406,7 @@ def decrypt(
     return ret
 
 
-@depends(salt.utils.versions.version_cmp(GPG_VERSION, '2.1') or -1 >= 0)
+@depends(salt.utils.versions.version_cmp(GPG_VERSION or '-1', '2.1') >= 0)
 def get_fingerprint_from_data(keydata, secret=False):
     '''
     This will return the fingerprint from a GPG key.
