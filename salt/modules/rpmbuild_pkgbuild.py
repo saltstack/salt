@@ -38,9 +38,7 @@ from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 HAS_LIBS = False
 
 try:
-    import gnupg  # pylint: disable=unused-import
-    import salt.modules.gpg
-
+    import gnupg    # pylint: disable=unused-import
     HAS_LIBS = True
 except ImportError:
     pass
@@ -60,6 +58,13 @@ def __virtual__():
         if not salt.utils.path.which(named_util):
             missing_util = True
             break
+
+    missing_reqs = []
+    for req in ['gpg.list_keys', 'gpg.import_key']:
+        if req not in __salt__:
+            missing_reqs.append(req)
+    if missing_reqs:
+        return False, ('The required salt module functions were not loaded: {}'.format(missing_reqs))
 
     if HAS_LIBS and not missing_util:
         if __grains__.get("os_family", False) in ("RedHat", "Suse"):

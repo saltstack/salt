@@ -39,9 +39,7 @@ SIGN_PROMPT_RE = re.compile(r"Enter passphrase: ", re.M)
 REPREPRO_SIGN_PROMPT_RE = re.compile(r"Passphrase: ", re.M)
 
 try:
-    import gnupg  # pylint: disable=unused-import
-    import salt.modules.gpg
-
+    import gnupg    # pylint: disable=unused-import
     HAS_LIBS = True
 except ImportError:
     pass
@@ -63,6 +61,12 @@ def __virtual__():
             if not salt.utils.path.which(named_util):
                 missing_util = True
                 break
+        missing_reqs = []
+        for req in ['gpg.list_keys', 'gpg.import_key']:
+            if req not in __salt__:
+                missing_reqs.append(req)
+        if missing_reqs:
+            return False, ('The required salt module functions were not loaded: {}'.format(missing_reqs))
         if HAS_LIBS and not missing_util:
             return __virtualname__
         else:
