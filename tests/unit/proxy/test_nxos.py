@@ -21,16 +21,14 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
-    NO_MOCK,
-    NO_MOCK_REASON,
-    patch
+    patch,
+    create_autospec
 )
 
 from tests.unit.modules.nxos.nxos_show_cmd_output import (
-    n9k_show_ver,
     n9k_show_ver_list)
 from tests.unit.modules.nxos.nxos_grains import (
     n9k_grains)
@@ -38,6 +36,7 @@ from tests.unit.modules.nxos.nxos_grains import (
 from salt.exceptions import CommandExecutionError
 
 import salt.proxy.nxos as nxos_proxy
+import salt.utils.nxos as nxos_utils
 
 
 class NxosNxapiProxyTestCase(TestCase, LoaderModuleMockMixin):
@@ -45,242 +44,203 @@ class NxosNxapiProxyTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {
             nxos_proxy: {
-                '__opts__': {
-                    'proxy': {
-                        'proxytype': 'nxos',
-                        'connection': 'nxapi',
-                        'host': 'dt-n9k5-1.cisco.com',
-                        'username': 'admin',
-                        'password': 'password',
-                        'prompt_name': 'n9k-device',
-                        'ssh_args': '-o PubkeyAuthentication=no',
-                        'key_accept': True,
-                        'transport': 'https', 'port': 443,
-                        'verify': False,
-                        'no_save_config': True
-                    }
-                }
+                'CONNECTION': 'nxapi'
             }
         }
 
-    @staticmethod
-    def test_check_virtual():
+    def test_check_virtual(self):
 
         """ UT: nxos module:check_virtual method - return value """
 
         result = nxos_proxy.__virtual__()
-        assert 'nxos' in result
+        self.assertIn('nxos', result)
 
     def test_init(self):
 
         """ UT: nxos module:init method - nxapi proxy """
 
-        with patch.object(nxos_proxy, '_init_nxapi', MagicMock(return_value=True)):
-
-            # Execute the function under test
-            result = nxos_proxy.init()
-
-            self.assertTrue(result)
+        with patch.object(nxos_proxy, '__opts__', {'proxy': {'connection': 'nxapi'}}):
+            with patch('salt.proxy.nxos._init_nxapi', autospec=True) as init_nxapi:
+                result = nxos_proxy.init()
+                self.assertEqual(result, init_nxapi.return_value)
 
     def test_init_opts_none(self):
 
         """ UT: nxos module:init method - __opts__ connection is None """
 
-        nxos_proxy.__opts__['proxy']['connection'] = None
-        nxos_proxy.CONNECTION = 'nxapi'
-
-        with patch.object(nxos_proxy, '_init_nxapi', MagicMock(return_value=True)):
-
-            # Execute the function under test
-            result = nxos_proxy.init()
-
-            self.assertTrue(result)
+        with patch.object(nxos_proxy, '__opts__', {'proxy': {'connection': None}}):
+            with patch('salt.proxy.nxos._init_nxapi', autospec=True) as init_nxapi:
+                result = nxos_proxy.init()
+                self.assertEqual(result, init_nxapi.return_value)
 
     def test_init_bad_connection_type(self):
 
         """ UT: nxos module:init method - bad CONNECTION type """
-
-        nxos_proxy.__opts__['proxy']['connection'] = 'unknown'
-
-        # Execute the function under test
-        self.assertFalse(nxos_proxy.init())
+        with patch.object(nxos_proxy, '__opts__', {'proxy': {'connection': 'unknown'}}):
+            self.assertFalse(nxos_proxy.init())
 
     def test_initialized(self):
 
         """ UT: nxos module:initialized method - nxapi proxy """
 
-        nxos_proxy.CONNECTION = 'nxapi'
-        with patch.object(nxos_proxy, '_initialized_nxapi', MagicMock(return_value=True)):
-
-            # Execute the function under test
+        with patch('salt.proxy.nxos._initialized_nxapi', autospec=True) as initialized_nxapi:
             result = nxos_proxy.initialized()
-
-            self.assertTrue(result)
+            self.assertEqual(result, initialized_nxapi.return_value)
 
     def test_ping(self):
 
         """ UT: nxos module:ping method - nxapi proxy """
 
-        nxos_proxy.CONNECTION = 'nxapi'
-        with patch.object(nxos_proxy, '_ping_nxapi', MagicMock(return_value=True)):
-
-            # Execute the function under test
+        with patch('salt.proxy.nxos._ping_nxapi', autospec=True) as ping_nxapi:
             result = nxos_proxy.ping()
-
-            self.assertTrue(result)
+            self.assertEqual(result, ping_nxapi.return_value)
 
     def test_grains(self):
 
         """ UT: nxos module:grains method - nxapi grains """
 
-        kwargs = {}
-        nxos_proxy.CONNECTION = 'nxapi'
-        with patch.object(nxos_proxy, 'sendline', MagicMock(return_value=n9k_show_ver_list)):
-
-            # Execute the function under test
-            result = nxos_proxy.grains(**kwargs)
-
+        with patch('salt.proxy.nxos.sendline', autospec=True, return_value=n9k_show_ver_list):
+            result = nxos_proxy.grains()
             self.assertEqual(result, n9k_grains)
 
     def test_grains_cache_set(self):
 
         """ UT: nxos module:grains method - nxapi grains cache set """
 
-        kwargs = {}
-        nxos_proxy.CONNECTION = 'nxapi'
-        nxos_proxy.DEVICE_DETAILS['grains_cache'] = n9k_grains['nxos']
-        with patch.object(nxos_proxy, 'sendline', MagicMock(return_value=n9k_show_ver_list)):
-
-            # Execute the function under test
-            result = nxos_proxy.grains(**kwargs)
-
-            self.assertEqual(result, n9k_grains)
+        with patch('salt.proxy.nxos.DEVICE_DETAILS', {'grains_cache': n9k_grains['nxos']}):
+            with patch('salt.proxy.nxos.sendline', autospec=True, return_value=n9k_show_ver_list):
+                result = nxos_proxy.grains()
+                self.assertEqual(result, n9k_grains)
 
     def test_grains_refresh(self):
 
         """ UT: nxos module:grains_refresh method - nxapi grains """
 
-        kwargs = {}
-        with patch.object(nxos_proxy, 'grains', MagicMock(return_value=n9k_grains)):
+        device_details = {'grains_cache': None}
 
-            # Execute the function under test
-            result = nxos_proxy.grains_refresh(**kwargs)
-
-            self.assertEqual(result, n9k_grains)
+        with patch('salt.proxy.nxos.DEVICE_DETAILS', device_details):
+            with patch('salt.proxy.nxos.grains', autospec=True) as grains:
+                result = nxos_proxy.grains_refresh()
+                self.assertEqual(nxos_proxy.DEVICE_DETAILS['grains_cache'], {})
+                self.assertEqual(result, grains.return_value)
 
     def test_sendline(self):
 
         """ UT: nxos module:sendline method - nxapi """
 
-        kwargs = {}
         command = 'show version'
 
-        with patch.object(nxos_proxy, '_nxapi_request', MagicMock(return_value=n9k_show_ver_list)):
-
-            # Execute the function under test
-            result = nxos_proxy.sendline(command, **kwargs)
-
-            self.assertEqual(result, n9k_show_ver_list)
+        with patch('salt.proxy.nxos._nxapi_request', autospec=True) as nxapi_request:
+            result = nxos_proxy.sendline(command)
+            self.assertEqual(result, nxapi_request.return_value)
 
     def test_proxy_config(self):
 
         """ UT: nxos module:proxy_config method - nxapi success path"""
 
-        kwargs = {}
-        nxos_proxy.DEVICE_DETAILS['no_save_config'] = True
         commands = ['feature bgp', 'router bgp 65535']
 
-        with patch.object(nxos_proxy, '_nxapi_request', MagicMock(return_value=[{}])):
-
-            # Execute the function under test
-            result = nxos_proxy.proxy_config(commands, **kwargs)
-
-            self.assertEqual(result[0], ['feature bgp', 'router bgp 65535'])
-            self.assertEqual(result[1], [{}])
+        with patch('salt.proxy.nxos.DEVICE_DETAILS', {'no_save_config': True}):
+            with patch('salt.proxy.nxos._nxapi_request', autospec=True) as nxapi_request:
+                result = nxos_proxy.proxy_config(commands)
+                self.assertEqual(result, [commands, nxapi_request.return_value])
 
     def test_proxy_config_no_save_config(self):
 
         """ UT: nxos module:proxy_config method - nxapi success path"""
 
-        kwargs = {'no_save_config': False}
-        nxos_proxy.DEVICE_DETAILS['no_save_config'] = None
         commands = ['feature bgp', 'router bgp 65535']
 
-        with patch.object(nxos_proxy, '_nxapi_request', MagicMock(return_value=[{}])):
-            with patch.object(nxos_proxy, '_nxapi_request', MagicMock(return_value=[{}])):
-
-                # Execute the function under test
-                result = nxos_proxy.proxy_config(commands, **kwargs)
-
-                self.assertEqual(result[0], ['feature bgp', 'router bgp 65535'])
-                self.assertEqual(result[1], [{}])
+        with patch('salt.proxy.nxos.DEVICE_DETAILS', {'no_save_config': None}):
+            with patch('salt.proxy.nxos._nxapi_request', autospec=True) as nxapi_request:
+                result = nxos_proxy.proxy_config(commands, no_save_config=False)
+                self.assertEqual(result, [commands, nxapi_request.return_value])
 
     def test__init_nxapi(self):
 
         """ UT: nxos module:_init_nxapi method - successful connectinon """
 
-        opts = nxos_proxy.__opts__
+        opts = {'proxy': {'arg1': None}}
+        nxapi_request = create_autospec(nxos_utils.nxapi_request, return_value='data')
 
-        with patch.dict(nxos_proxy.__utils__, {'nxos.nxapi_request': MagicMock(return_value='data')}):
+        with patch('salt.proxy.nxos.DEVICE_DETAILS', {}) as device_details:
+            with patch('salt.proxy.nxos.__utils__', {'nxos.nxapi_request': nxapi_request}):
+                result = nxos_proxy._init_nxapi(opts)
 
-            result = nxos_proxy._init_nxapi(opts)
+                self.assertTrue(device_details['initialized'])
+                self.assertTrue(device_details['up'])
+                self.assertFalse(device_details['no_save_config'])
+                self.assertTrue(result)
 
-            self.assertTrue(nxos_proxy.DEVICE_DETAILS['initialized'])
-            self.assertTrue(nxos_proxy.DEVICE_DETAILS['up'])
-            self.assertTrue(nxos_proxy.DEVICE_DETAILS['no_save_config'])
-            self.assertTrue(result)
+                nxapi_request.assert_called_with('show clock', **opts['proxy'])
+
+    def test_bad__init_nxapi(self):
+
+        class NXAPIException(Exception):
+            pass
+
+        nxapi_request = create_autospec(nxos_utils.nxapi_request, side_effect=NXAPIException)
+
+        with patch('salt.proxy.nxos.__utils__', {'nxos.nxapi_request': nxapi_request}):
+            with patch('salt.proxy.nxos.log', autospec=True) as log:
+                with self.assertRaises(NXAPIException):
+                    nxos_proxy._init_nxapi({'proxy': {'host': 'HOST'}})
+                log.error.assert_called()
 
     def test__initialized_nxapi(self):
 
         """ UT: nxos module:_initialized_nxapi method """
-        nxos_proxy.DEVICE_DETAILS['initialized'] = True
-        result = nxos_proxy._initialized_nxapi()
-        self.assertTrue(result)
 
-        del nxos_proxy.DEVICE_DETAILS['initialized']
         result = nxos_proxy._initialized_nxapi()
         self.assertFalse(result)
+
+        with patch('salt.proxy.nxos.DEVICE_DETAILS', {'initialized': True}):
+            result = nxos_proxy._initialized_nxapi()
+            self.assertTrue(result)
 
     def test__ping_nxapi(self):
 
         """ UT: nxos module:_ping_nxapi method """
-        nxos_proxy.DEVICE_DETAILS['up'] = True
-        result = nxos_proxy._ping_nxapi()
-        self.assertTrue(result)
 
-        del nxos_proxy.DEVICE_DETAILS['up']
         result = nxos_proxy._ping_nxapi()
         self.assertFalse(result)
+
+        with patch('salt.proxy.nxos.DEVICE_DETAILS', {'up': True}):
+            result = nxos_proxy._ping_nxapi()
+            self.assertTrue(result)
 
     def test__shutdown_nxapi(self):
 
         """ UT: nxos module:_shutdown_nxapi method """
 
         opts = {'id': 'value'}
-        nxos_proxy._shutdown_nxapi(opts)
+
+        with patch('salt.proxy.nxos.log', autospec=True):
+            nxos_proxy._shutdown_nxapi(opts)
+            # nothing to test
 
     def test__nxapi_request_ssh_return(self):
 
         """ UT: nxos module:_nxapi_request method - CONNECTION == 'ssh' """
 
-        nxos_proxy.CONNECTION = 'ssh'
         commands = 'show version'
-        kwargs = {}
 
-        result = nxos_proxy._nxapi_request(commands, **kwargs)
-        self.assertEqual('_nxapi_request is not available for ssh proxy', result)
+        with patch('salt.proxy.nxos.CONNECTION', 'ssh'):
+            result = nxos_proxy._nxapi_request(commands)
+            self.assertEqual('_nxapi_request is not available for ssh proxy', result)
 
     def test__nxapi_request_connect(self):
 
         """ UT: nxos module:_nxapi_request method """
 
-        nxos_proxy.CONNECTION = 'nxapi'
         commands = 'show version'
-        kwargs = {}
+        nxapi_request = create_autospec(nxos_utils.nxapi_request, return_value='data')
 
-        with patch.dict(nxos_proxy.__utils__, {'nxos.nxapi_request': MagicMock(return_value='data')}):
-            result = nxos_proxy._nxapi_request(commands, **kwargs)
-            self.assertEqual('data', result)
+        with patch('salt.proxy.nxos.DEVICE_DETAILS', {'conn_args': {'arg1': None}}):
+            with patch('salt.proxy.nxos.__utils__', {'nxos.nxapi_request': nxapi_request}):
+                result = nxos_proxy._nxapi_request(commands)
+                self.assertEqual('data', result)
+                nxapi_request.assert_called_with(commands, method='cli_conf', arg1=None)
 
 
 class NxosSSHProxyTestCase(TestCase, LoaderModuleMockMixin):
@@ -290,19 +250,12 @@ class NxosSSHProxyTestCase(TestCase, LoaderModuleMockMixin):
             nxos_proxy: {
                 '__opts__': {
                     'proxy': {
-                        'proxytype': 'nxos',
-                        'connection': 'ssh',
                         'host': 'dt-n9k5-1.cisco.com',
                         'username': 'admin',
-                        'password': 'password',
-                        'prompt_name': 'n9k-device',
-                        'ssh_args': '-o PubkeyAuthentication=no',
-                        'key_accept': True,
-                        'transport': 'https', 'port': 443,
-                        'verify': False,
-                        'no_save_config': True
+                        'password': 'password'
                     }
-                }
+                },
+                'CONNECTION': 'ssh'
             }
         }
 
@@ -310,201 +263,144 @@ class NxosSSHProxyTestCase(TestCase, LoaderModuleMockMixin):
 
         """ UT: nxos module:init method - ssh proxy """
 
-        with patch.object(nxos_proxy, '_init_ssh', MagicMock(return_value=True)):
-
-            # Execute the function under test
+        with patch('salt.proxy.nxos._init_ssh', autospec=True) as init_ssh:
             result = nxos_proxy.init()
-
-            self.assertTrue(result)
+            self.assertEqual(result, init_ssh.return_value)
 
     def test_init_opts_none(self):
 
         """ UT: nxos module:init method - __opts__ connection is None """
 
-        nxos_proxy.__opts__['proxy']['connection'] = None
-        nxos_proxy.CONNECTION = 'ssh'
-
-        with patch.object(nxos_proxy, '_init_ssh', MagicMock(return_value=True)):
-
-            # Execute the function under test
-            result = nxos_proxy.init()
-
-            self.assertTrue(result)
+        with patch('salt.proxy.nxos.__opts__', {'proxy': {'connection': None}}):
+            with patch('salt.proxy.nxos._init_ssh', autospec=True) as init_ssh:
+                result = nxos_proxy.init()
+                self.assertEqual(result, init_ssh.return_value)
 
     def test_initialized(self):
 
         """ UT: nxos module:initialized method - ssh proxy """
 
-        nxos_proxy.CONNECTION = 'ssh'
-        with patch.object(nxos_proxy, '_initialized_ssh', MagicMock(return_value=True)):
-
-            # Execute the function under test
+        with patch('salt.proxy.nxos._initialized_ssh', autospec=True) as initialized_ssh:
             result = nxos_proxy.initialized()
-
-            self.assertTrue(result)
+            self.assertEqual(result, initialized_ssh.return_value)
 
     def test_ping(self):
 
         """ UT: nxos module:ping method - ssh proxy """
 
-        nxos_proxy.CONNECTION = 'ssh'
-        with patch.object(nxos_proxy, '_ping_ssh', MagicMock(return_value=True)):
-
-            # Execute the function under test
+        with patch('salt.proxy.nxos._ping_ssh', autospec=True) as ping_ssh:
             result = nxos_proxy.ping()
-
-            self.assertTrue(result)
+            self.assertEqual(result, ping_ssh.return_value)
 
     def test_grains(self):
 
         """ UT: nxos module:grains method - ssh grains """
 
-        kwargs = {}
-        nxos_proxy.CONNECTION = 'ssh'
-        with patch.object(nxos_proxy, 'sendline', MagicMock(return_value=n9k_show_ver_list[0])):
-
-            # Execute the function under test
-            result = nxos_proxy.grains(**kwargs)
-
+        with patch('salt.proxy.nxos.sendline', autospec=True, return_value=n9k_show_ver_list[0]):
+            result = nxos_proxy.grains()
             self.assertEqual(result, n9k_grains)
 
     def test_sendline(self):
 
         """ UT: nxos module:sendline method - nxapi """
 
-        kwargs = {}
         command = 'show version'
 
-        with patch.object(nxos_proxy, '_sendline_ssh', MagicMock(return_value=n9k_show_ver_list[0])):
-
-            # Execute the function under test
-            result = nxos_proxy.sendline(command, **kwargs)
-
-            self.assertEqual(result, n9k_show_ver_list[0])
+        with patch('salt.proxy.nxos._sendline_ssh', autospec=True) as sendline_ssh:
+            result = nxos_proxy.sendline(command)
+            self.assertEqual(result, sendline_ssh.return_value)
 
     def test_proxy_config(self):
 
         """ UT: nxos module:proxy_config method - ssh success path """
 
-        kwargs = {}
-        nxos_proxy.DEVICE_DETAILS['no_save_config'] = True
         commands = ['feature bgp', 'router bgp 65535']
 
-        with patch.object(nxos_proxy, '_sendline_ssh', MagicMock(return_value='')):
-            with patch.object(nxos_proxy, '_sendline_ssh', MagicMock(return_value='')):
-
-                # Execute the function under test
-                result = nxos_proxy.proxy_config(commands, **kwargs)
-
-                self.assertEqual(result[0], ['feature bgp', 'router bgp 65535'])
-                self.assertEqual(result[1], '')
+        with patch('salt.proxy.nxos.DEVICE_DETAILS', {'no_save_config': True}):
+            with patch('salt.proxy.nxos._sendline_ssh', autospec=True) as sendline_ssh:
+                result = nxos_proxy.proxy_config(commands)
+                self.assertEqual(result, [commands, sendline_ssh.return_value])
 
     def test_proxy_config_no_save_config(self):
 
         """ UT: nxos module:proxy_config method - ssh success path """
 
-        kwargs = {'no_save_config': False}
-        nxos_proxy.DEVICE_DETAILS['no_save_config'] = None
         commands = ['feature bgp', 'router bgp 65535']
 
-        with patch.object(nxos_proxy, '_sendline_ssh', MagicMock(return_value='')):
-            with patch.object(nxos_proxy, '_sendline_ssh', MagicMock(return_value='')):
-                with patch.object(nxos_proxy, '_sendline_ssh', MagicMock(return_value='')):
-
-                    # Execute the function under test
-                    result = nxos_proxy.proxy_config(commands, **kwargs)
-
-                    self.assertEqual(result[0], ['feature bgp', 'router bgp 65535'])
-                    self.assertEqual(result[1], '')
+        with patch('salt.proxy.nxos.DEVICE_DETAILS', {'no_save_config': None}):
+            with patch('salt.proxy.nxos._sendline_ssh', autospec=True) as sendline_ssh:
+                result = nxos_proxy.proxy_config(commands, no_save_config=False)
+                self.assertEqual(result, [commands, sendline_ssh.return_value])
 
     def test_proxy_config_error(self):
 
         """ UT: nxos module:proxy_config method - CommandExecutionError """
 
-        kwargs = {'no_save_config': False}
+        with patch('salt.proxy.nxos._sendline_ssh', autospec=True, side_effect=CommandExecutionError):
+            with self.assertRaises(CommandExecutionError):
+                nxos_proxy.proxy_config('show version', no_save_config=False)
 
-        with patch.object(nxos_proxy, '_sendline_ssh', MagicMock(return_value='')) as get_mock:
-            with self.assertRaises(CommandExecutionError) as einfo:
-                get_mock.side_effect = CommandExecutionError
-                nxos_proxy.proxy_config('show version', **kwargs)
+    def test__init_ssh_device_details(self):
+        with patch('salt.proxy.nxos.SSHConnection', autospec=True) as SSHConnection:
+            SSHConnection().sendline.return_value = ['', '']
 
-    def test__init_ssh(self):
+            with patch('salt.proxy.nxos.DEVICE_DETAILS', {}) as device_details:
+                nxos_proxy._init_ssh(None)
+                self.assertIn(nxos_proxy._worker_name(), device_details)
+                self.assertTrue(device_details['initialized'])
+                self.assertFalse(device_details['no_save_config'])
+
+            with patch.dict(nxos_proxy.__opts__['proxy'], {'no_save_config': True}):
+                with patch('salt.proxy.nxos.DEVICE_DETAILS', {}) as device_details:
+                    nxos_proxy._init_ssh(None)
+                    self.assertIn(nxos_proxy._worker_name(), device_details)
+                    self.assertTrue(device_details['initialized'])
+                    self.assertTrue(device_details['no_save_config'])
+
+    def test__init_ssh_opts(self):
 
         """ UT: nxos module:_init_ssh method - successful connectinon """
 
-        opts = None
+        with patch('salt.proxy.nxos.DEVICE_DETAILS', {}):
+            with patch('salt.proxy.nxos.SSHConnection', autospec=True) as SSHConnection:
+                SSHConnection().sendline.return_value = ['', '']
+                nxos_proxy._init_ssh(None)
+                self.assertEqual(nxos_proxy.__opts__['proxy']['host'], SSHConnection.call_args[1]['host'])
 
-        class _worker_name():
-            def __init__(self):
-                self.connected = True
-                self.name = 'Process-1'
+                opts = MagicMock()
+                nxos_proxy._init_ssh(opts)
+                self.assertEqual(opts['proxy']['host'], SSHConnection.call_args[1]['host'])
 
-            def sendline(self, command):
-                return ['', '']
-
-        with patch.object(nxos_proxy, 'SSHConnection', MagicMock(return_value=_worker_name())):
-
-            nxos_proxy._init_ssh(opts)
-
-            self.assertTrue(nxos_proxy.DEVICE_DETAILS['initialized'])
-            self.assertTrue(nxos_proxy.DEVICE_DETAILS['no_save_config'])
-
-    def test__init_ssh_prompt_regex(self):
+    def test__init_ssh_prompt(self):
 
         """ UT: nxos module:_init_ssh method - prompt regex """
 
-        nxos_proxy.__opts__['proxy']['prompt_regex'] = 'n9k.*device'
+        with patch('salt.proxy.nxos.DEVICE_DETAILS', {}):
+            with patch('salt.proxy.nxos.SSHConnection', autospec=True) as SSHConnection:
+                SSHConnection().sendline.return_value = ['', '']
 
-        opts = None
+                with patch.dict(nxos_proxy.__opts__['proxy'], {'prompt_regex': 'n9k.*device'}):
+                    nxos_proxy._init_ssh(None)
+                    self.assertEqual('n9k.*device', SSHConnection.call_args[1]['prompt'])
 
-        class _worker_name():
-            def __init__(self):
-                self.connected = True
-                self.name = 'Process-1'
+                with patch.dict(nxos_proxy.__opts__['proxy'], {'prompt_name': 'n9k-device'}):
+                    nxos_proxy._init_ssh(None)
+                    self.assertEqual('n9k-device.*#', SSHConnection.call_args[1]['prompt'])
 
-            def sendline(self, command):
-                return ['', '']
-
-        with patch.object(nxos_proxy, 'SSHConnection', MagicMock(return_value=_worker_name())):
-
-            nxos_proxy._init_ssh(opts)
-
-            self.assertTrue(nxos_proxy.DEVICE_DETAILS['initialized'])
-            self.assertTrue(nxos_proxy.DEVICE_DETAILS['no_save_config'])
-
-    def test__init_ssh_no_prompt(self):
-
-        """ UT: nxos module:_init_ssh method - prompt regex """
-
-        del nxos_proxy.__opts__['proxy']['prompt_name']
-
-        opts = nxos_proxy.__opts__
-
-        class _worker_name():
-            def __init__(self):
-                self.connected = True
-                self.name = 'Process-1'
-
-            def sendline(self, command):
-                return ['', '']
-
-        with patch.object(nxos_proxy, 'SSHConnection', MagicMock(return_value=_worker_name())):
-
-            nxos_proxy._init_ssh(opts)
-
-            self.assertTrue(nxos_proxy.DEVICE_DETAILS['initialized'])
-            self.assertTrue(nxos_proxy.DEVICE_DETAILS['no_save_config'])
+                nxos_proxy._init_ssh(None)
+                self.assertEqual('.+#$', SSHConnection.call_args[1]['prompt'])
 
     def test__initialized_ssh(self):
 
         """ UT: nxos module:_initialized_ssh method """
-        nxos_proxy.DEVICE_DETAILS['initialized'] = True
-        result = nxos_proxy._initialized_ssh()
-        self.assertTrue(result)
 
-        del nxos_proxy.DEVICE_DETAILS['initialized']
-        result = nxos_proxy._initialized_ssh()
-        self.assertFalse(result)
+        with patch('salt.proxy.nxos.DEVICE_DETAILS', {'initialized': True}):
+            result = nxos_proxy._initialized_ssh()
+            self.assertTrue(result)
+
+        with patch('salt.proxy.nxos.DEVICE_DETAILS', {}):
+            result = nxos_proxy._initialized_ssh()
+            self.assertFalse(result)
 
     def test__parse_output_for_errors(self):
 
@@ -512,58 +408,42 @@ class NxosSSHProxyTestCase(TestCase, LoaderModuleMockMixin):
 
         data = "% Incomplete command at '^' marker."
         command = 'show'
-        kwargs = {'error_pattern': 'Incomplete'}
 
-        with self.assertRaises(CommandExecutionError) as errinfo:
-            nxos_proxy._parse_output_for_errors(data, command, **kwargs)
+        with self.assertRaises(CommandExecutionError):
+            nxos_proxy._parse_output_for_errors(data, command, error_pattern='Incomplete')
 
         data = "% Incomplete command at '^' marker."
         command = 'show'
-        kwargs = {'error_pattern': ['Incomplete', 'marker']}
 
-        with self.assertRaises(CommandExecutionError) as errinfo:
-            nxos_proxy._parse_output_for_errors(data, command, **kwargs)
+        with self.assertRaises(CommandExecutionError):
+            nxos_proxy._parse_output_for_errors(data, command, error_pattern=['Incomplete', 'marker'])
 
         data = "% Invalid command at '^' marker."
         command = 'show bep'
-        kwargs = {}
 
         with self.assertRaises(CommandExecutionError):
-            nxos_proxy._parse_output_for_errors(data, command, **kwargs)
+            nxos_proxy._parse_output_for_errors(data, command)
 
         data = "% Incomplete command at '^' marker."
         command = 'show'
-        kwargs = {}
 
-        nxos_proxy._parse_output_for_errors(data, command, **kwargs)
+        nxos_proxy._parse_output_for_errors(data, command)
 
         data = "% Incomplete command at '^' marker."
         command = 'show'
-        kwargs = {'error_pattern': 'foo'}
 
-        result = nxos_proxy._parse_output_for_errors(data, command, **kwargs)
+        nxos_proxy._parse_output_for_errors(data, command, error_pattern='foo')
 
     def test__init_ssh_raise_exception(self):
 
         """ UT: nxos module:_init_ssh method - raise exception """
 
-        # NOTE: This test causes problems when debuggin with pdb so comment it
-        # out when you need to use pdb.
+        class SSHException(Exception):
+            pass
 
-        del nxos_proxy.__opts__['proxy']['prompt_name']
-
-        opts = None
-
-        class _worker_name():
-            def __init__(self):
-                self.connected = True
-                self.name = 'Process-1'
-
-            def sendline(self, command):
-                return ['', '']
-
-        with patch.object(nxos_proxy, 'SSHConnection', MagicMock(return_value=_worker_name())) as get_mock:
-            with self.assertRaises(SystemExit) as sys_info:
-                with self.assertRaises(Exception) as ex_info:
-                    get_mock.side_effect = Exception
-                    nxos_proxy._init_ssh(opts)
+        with patch('salt.proxy.nxos.SSHConnection', autospec=True) as SSHConnection:
+            with patch('salt.proxy.nxos.log', autospec=True) as log:
+                with self.assertRaises(SSHException):
+                    SSHConnection.side_effect = SSHException
+                    nxos_proxy._init_ssh(None)
+                log.error.assert_called()
