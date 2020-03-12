@@ -96,6 +96,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
+import collections
 
 # Import Salt libs
 import salt.utils.jid
@@ -127,12 +128,20 @@ def _remove_dots(src):
     '''
     Remove the dots from the given data structure
     '''
-    output = {}
-    for key, val in six.iteritems(src):
-        if isinstance(val, dict):
-            val = _remove_dots(val)
-        output[key.replace('.', '-')] = val
-    return output
+    if isinstance(src, (list, tuple)):
+        output = []
+        for item in src:
+            if isinstance(item, (collections.Mapping, list, tuple)):
+                item = _remove_dots(item)
+            output.append(item)
+        return output
+    elif isinstance(src, collections.Mapping):
+        output = {}
+        for key, val in six.iteritems(src):
+            if isinstance(val, (collections.Mapping, list, tuple)):
+                val = _remove_dots(val)
+            output[str(key).replace('.', '-')] = val
+        return output
 
 
 def _get_options(ret=None):
@@ -175,7 +184,7 @@ def _get_conn(ret):
     if uri and PYMONGO_VERSION > _LooseVersion('2.3'):
         if uri and host:
             raise salt.exceptions.SaltConfigurationError(
-                    "Mongo returner expects either uri or host configuration. Both were provided")
+                "Mongo returner expects either uri or host configuration. Both were provided")
         pymongo.uri_parser.parse_uri(uri)
         conn = pymongo.MongoClient(uri)
         mdb = conn.get_database()
@@ -213,18 +222,19 @@ def returner(ret):
     '''
     conn, mdb = _get_conn(ret)
 
-    if isinstance(ret['return'], dict):
+    if isinstance(ret['return'], collections.Mapping):
         back = _remove_dots(ret['return'])
     else:
         back = ret['return']
 
-    if isinstance(ret, dict):
+    if isinstance(ret, collections.Mapping):
         full_ret = _remove_dots(ret)
     else:
         full_ret = ret
 
     log.debug(back)
-    sdata = {'minion': ret['id'], 'jid': ret['jid'], 'return': back, 'fun': ret['fun'], 'full_ret': full_ret}
+    sdata = {'minion': ret['id'], 'jid': ret['jid'],
+             'return': back, 'fun': ret['fun'], 'full_ret': full_ret}
     if 'out' in ret:
         sdata['out'] = ret['out']
 
@@ -235,7 +245,7 @@ def returner(ret):
     # again we run into the issue with deprecated code from previous versions
 
     if PYMONGO_VERSION > _LooseVersion('2.3'):
-        #using .copy() to ensure that the original data is not changed, raising issue with pymongo team
+        # using .copy() to ensure that the original data is not changed, raising issue with pymongo team
         mdb.saltReturns.insert_one(sdata.copy())
     else:
         mdb.saltReturns.insert(sdata.copy())
@@ -262,12 +272,16 @@ def _safe_copy(dat):
         % -> %25
     '''
 
-    if isinstance(dat, dict):
+    if isinstance(dat, collections.Mapping):
         ret = {}
         for k in dat:
-            r = k.replace('%', '%25').replace('\\', '%5c').replace('$', '%24').replace('.', '%2e')
-            if r != k:
-                log.debug('converting dict key from %s to %s for mongodb', k, r)
+            s = str(k)
+            if s != k:
+                log.debug('stringifying bad dict key %s for mongodb', k)
+            r = s.replace('%', '%25').replace('\\', '%5c').replace(
+                '$', '%24').replace('.', '%2e')
+            if r != s:
+                log.debug('converting dict key from %s to %s for mongodb', s, r)
             ret[r] = _safe_copy(dat[k])
         return ret
 
@@ -285,7 +299,7 @@ def save_load(jid, load, minions=None):
     to_save = _safe_copy(load)
 
     if PYMONGO_VERSION > _LooseVersion('2.3'):
-        #using .copy() to ensure original data for load is unchanged
+        # using .copy() to ensure original data for load is unchanged
         mdb.jobs.insert_one(to_save)
     else:
         mdb.jobs.insert(to_save)
@@ -372,10 +386,10 @@ def event_return(events):
     '''
     conn, mdb = _get_conn(ret=None)
 
-    if isinstance(events, list):
+    if isinstance(events, list) and len(events) > 0:
         events = events[0]
 
-    if isinstance(events, dict):
+    if isinstance(events, collections.Mapping):
         log.debug(events)
 
         if PYMONGO_VERSION > _LooseVersion('2.3'):
