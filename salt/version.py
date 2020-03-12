@@ -19,11 +19,7 @@ try:
             warnings.simplefilter("ignore")
             return _deprecated_linux_distribution(**kwargs)
 except ImportError:
-    try:
-        from distro import linux_distribution
-    except ImportError:
-        # For Windows
-        pass
+    from distro import linux_distribution
 
 # pylint: disable=invalid-name,redefined-builtin
 # Import 3rd-party libs
@@ -779,43 +775,5 @@ def versions_report(include_salt_cloud=False):
         yield line
 
 
-def msi_conformant_version():
-    '''
-    For upgrades, an msi installer relies on the "internal version".
-    The "internal version" MAJOR.MINOR.BUILD is constrained to 255.255.65535.
-    This contraint can be satisfied for released versions but not so for nightly builds.
-    The nightly builds, therefore, must first be uninstalled.
-
-    The "display version" is free format.
-
-    Examples:
-      Git-tag                msi display version         msi internal version
-      v3000                  3000                        30.00.0.0
-      v3001                  3001                        30.01.0.0
-      v3001.1                3001.1                      30.01.1.0
-      v3500                  3500                        35.00.0.0
-      v3800                  3800                        38.00.0.0
-      2018.3.2               2018.3.2                    18.3.2
-      v2016.11.2             2016.11.2                   16.11.2
-    '''
-
-    if __saltstack_version__.major >= 3000:
-        # First and second half of major
-        major1 = six.text_type(__saltstack_version__.major)[:2]
-        major2 = six.text_type(__saltstack_version__.major)[2:]
-        # Mask minor == None as 0
-        minor = __saltstack_version__.minor or 0
-        return '{}.{}.{}'.format(major1, major2, minor)
-    else:
-        year = int(six.text_type(__saltstack_version__.major)[2:])
-        month = __saltstack_version__.minor
-        bugfix = __saltstack_version__.bugfix or 0
-        return '{}.{}.{}'.format(year, month, bugfix)
-
-
 if __name__ == '__main__':
-    if len(sys.argv) == 2 and sys.argv[1] == 'msi':
-        # Building the msi requires an msi-conformant version
-        print(msi_conformant_version())
-    else:
-        print(__version__)
+    print(__version__)
