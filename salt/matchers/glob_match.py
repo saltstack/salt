@@ -14,7 +14,7 @@ def match(tgt, opts=None):
     '''
     if not opts:
         opts = __opts__
-    minion_id = opts.get('minion_id', __opts__['id'])
+    minion_id = opts.get('minion_id', opts['id'])
     if not isinstance(tgt, six.string_types):
         return False
 

@@ -1,37 +1,28 @@
-apache-libcloud==1.0.0
+# This is a compilation of requirements installed on salt-jenkins git.salt state run
+#ansible; python_version < '3.0'
+#apache-libcloud==2.0.0
 boto3
 boto>=2.46.0
+croniter>=0.3.0,!=0.3.22
 dmidecode
 dnspython
-docker==2.7.0
-ioflo
+# We require docker < 3.0.0 because after that they also start locking their pywin32 requirement, actually
+# pypiwin32, which after version 223 it just makes pywin32 a dep and installs nothing else
+docker<3.0.0
 jsonschema<=2.6.0
 keyring==5.7.1
 kubernetes<4.0
-mock<1.1.0
+mock>=2.0.0; python_version < '3.6'
 more-itertools==5.0.0
-msgpack-python >= 0.4.2, != 0.5.5
+moto<=1.3.7
 patch
-psutil
-pycryptodomex
-pyopenssl
-python-etcd==0.4.2
-python-gnupg
+pygit2
+pylxd>=2.2.5
+python-etcd>0.4.2
 pyvmomi
 rfc3987
 salttesting==2017.6.1
 sed
-setproctitle
 strict_rfc3339
-supervisor; python_version < '3'
-timelib
-tornado<5.0
+supervisor==3.3.5; python_version < '3'
 virtualenv
-
-# If running under windows, please uncomment the following 2 requirements before running
-#  pip-compile -o requirements/static/windows.txt requirements/zeromq.txt requirements/raet.txt requirements/pytest.txt requirements/static/windows.in
-#
-# On non windows, please copy the following 2 requirements to the generated windows.txt, un-commented
-
-#pywin32==223
-#wmi==1.4.9

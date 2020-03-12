@@ -18,9 +18,10 @@ import salt.minion
 import salt.utils.event as event
 from salt.exceptions import SaltSystemExit, SaltMasterUnresolvableError
 import salt.syspaths
+from tornado.concurrent import Future
+from salt.ext.six.moves import range
 import tornado
 import tornado.testing
-from salt.ext.six.moves import range
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -418,3 +419,53 @@ class MinionAsyncTestCase(TestCase, AdaptedConfigurationTestCaseMixin, tornado.t
             except SaltSystemExit:
                 result = False
         self.assertTrue(result)
+
+    def test_multi_master_uri_list(self):
+        '''
+        master_uri_list is a generated opts attr used to represent ready to feed uri's
+        into salt.utils.event objects to communicate with masters. assert that it works
+        '''
+        _mock = MagicMock()
+        future_stub = Future()
+        future_stub.set_result(None)
+
+        def dns_check(master, *args, **kwargs):
+            return master
+
+        # using context managers gets funky as ioloop callbacks reset it
+        patches = [
+            patch('salt.transport.client.AsyncPubChannel.factory', return_value=_mock),
+            patch('salt.minion.Minion.tune_in', return_value=None),
+            patch('salt.minion.Minion._post_master_init', return_value=future_stub),
+            patch('salt.utils.network.dns_check', new=dns_check),
+        ]
+        for _patch in patches:
+            _patch.start()
+
+        mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+        mock_opts['master'] = ['master1', 'master2', 'master3']
+        mock_opts['__role'] = '__minion'
+
+        minion_manager = salt.minion.MinionManager(mock_opts)
+        minion_manager.io_loop = self.io_loop
+        _mock.connect.return_value = future_stub
+
+        try:
+            minion_manager._spawn_minions()
+
+            # we just need to enter the loop to run cb's added to next iteration
+            def timeout_func():
+                self.io_loop.stop()
+
+            __timeout = self.io_loop.add_timeout(self.io_loop.time() + 1, timeout_func)
+            self.io_loop.start()
+
+            self.assertTrue(len(minion_manager.minions) == 3)
+
+            for minion in minion_manager.minions:
+                self.assertEqual(minion.opts['master_uri_list'], ['tcp://master1:4506', 'tcp://master2:4506', 'tcp://master3:4506'])
+        finally:
+            minion_manager.destroy()
+
+            for _patch in patches:
+                _patch.stop()

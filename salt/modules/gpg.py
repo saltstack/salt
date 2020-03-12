@@ -181,7 +181,7 @@ def _create_gpg(user=None, gnupghome=None):
         gnupghome = _get_user_gnupghome(user)
 
     if GPG_1_3_1:
-        gpg = gnupg.GPG(homedir=gnupghome)
+        gpg = gnupg.GPG(homedir=gnupghome)  # pylint: disable=unexpected-keyword-arg
     else:
         gpg = gnupg.GPG(gnupghome=gnupghome)
 
@@ -1082,7 +1082,7 @@ def verify(text=None,
 
     if trustmodel and trustmodel not in trustmodels:
         msg = 'Invalid trustmodel defined: {}. Use one of: {}'.format(trustmodel, ', '.join(trustmodels))
-        log.warn(msg)
+        log.warning(msg)
         return {'res': False, 'message': msg}
 
     extra_args = []

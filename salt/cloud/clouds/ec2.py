@@ -82,7 +82,6 @@ To use the EC2 cloud module, set up the cloud configuration at
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import os
-import sys
 import stat
 import time
 import uuid
@@ -226,10 +225,7 @@ def _xml_to_dict(xmltree):
     '''
     Convert an XML tree into a dict
     '''
-    if sys.version_info < (2, 7):
-        children_len = len(xmltree.getchildren())
-    else:
-        children_len = len(xmltree)
+    children_len = len(xmltree)
 
     if children_len < 1:
         name = xmltree.tag
@@ -245,10 +241,7 @@ def _xml_to_dict(xmltree):
             comps = name.split('}')
             name = comps[1]
         if name not in xmldict:
-            if sys.version_info < (2, 7):
-                children_len = len(item.getchildren())
-            else:
-                children_len = len(item)
+            children_len = len(item)
 
             if children_len > 0:
                 xmldict[name] = _xml_to_dict(item)
@@ -453,10 +446,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
         items = root
 
     if setname:
-        if sys.version_info < (2, 7):
-            children_len = len(root.getchildren())
-        else:
-            children_len = len(root)
+        children_len = len(root)
 
         for item in range(0, children_len):
             comps = root[item].tag.split('}')
@@ -4906,6 +4896,8 @@ def get_password_data(
         ret[next(six.iterkeys(item))] = next(six.itervalues(item))
 
     if not HAS_M2 and not HAS_PYCRYPTO:
+        if 'key' in kwargs or 'key_file' in kwargs:
+            log.warning("No crypto library is installed, can not decrypt password")
         return ret
 
     if 'key' not in kwargs:

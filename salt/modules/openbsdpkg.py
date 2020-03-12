@@ -48,7 +48,7 @@ def __virtual__():
     '''
     Set the virtual pkg module if the os is OpenBSD
     '''
-    if __grains__['os'] == 'OpenBSD':
+    if __grains__.get('os') == 'OpenBSD':
         return __virtualname__
     return (False, 'The openbsdpkg execution module cannot be loaded: '
             'only available on OpenBSD systems.')

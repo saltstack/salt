@@ -66,6 +66,7 @@ class EC2TestCase(TestCase, LoaderModuleMockMixin):
             self.assertRaises(
                 SaltCloudSystemExit, ec2._validate_key_path_and_mode, 'key_file')
 
+    @skipIf(not ec2.HAS_M2 and not ec2.HAS_PYCRYPTO, 'Needs crypto library')
     @patch('salt.cloud.clouds.ec2._get_node')
     @patch('salt.cloud.clouds.ec2.get_location')
     @patch('salt.cloud.clouds.ec2.get_provider')
