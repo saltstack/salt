@@ -688,6 +688,17 @@ def grain_funcs(opts, proxy=None):
     return ret
 
 
+def _format_cached_grains(cached_grains):
+    """
+    Returns cached grains with fixed types, like tuples.
+    """
+    if cached_grains.get('osrelease_info'):
+        osrelease_info = cached_grains['osrelease_info']
+        if isinstance(osrelease_info, list):
+            cached_grains['osrelease_info'] = tuple(osrelease_info)
+    return cached_grains
+
+
 def _load_cached_grains(opts, cfn):
     '''
     Returns the grains cached in cfn, or None if the cache is too old or is
@@ -720,7 +731,7 @@ def _load_cached_grains(opts, cfn):
             log.debug('Cached grains are empty, cache might be corrupted. Refreshing.')
             return None
 
-        return cached_grains
+        return _format_cached_grains(cached_grains)
     except (IOError, OSError):
         return None
 

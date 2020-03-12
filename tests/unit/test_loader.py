@@ -1353,3 +1353,31 @@ class LazyLoaderOptimizationOrderTest(TestCase):
         basename = os.path.basename(filename)
         expected = 'lazyloadertest.py' if six.PY3 else 'lazyloadertest.pyc'
         assert basename == expected, basename
+
+
+class LoaderLoadCachedGrainsTest(TestCase):
+    '''
+    Test how the loader works with cached grains
+    '''
+
+    @classmethod
+    def setUpClass(cls):
+        cls.opts = salt.config.minion_config(None)
+        if not os.path.isdir(RUNTIME_VARS.TMP):
+            os.makedirs(RUNTIME_VARS.TMP)
+
+    def setUp(self):
+        self.cache_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+        self.addCleanup(shutil.rmtree, self.cache_dir, ignore_errors=True)
+
+        self.opts['cachedir'] = self.cache_dir
+        self.opts['grains_cache'] = True
+        self.opts['grains'] = salt.loader.grains(self.opts)
+
+    def test_osrelease_info_has_correct_type(self):
+        '''
+        Make sure osrelease_info is tuple after caching
+        '''
+        grains = salt.loader.grains(self.opts)
+        osrelease_info = grains['osrelease_info']
+        assert isinstance(osrelease_info, tuple), osrelease_info

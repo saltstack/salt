@@ -10,7 +10,7 @@ Runner to provide F5 Load Balancer functionality
     .. code-block:: yaml
 
         load_balancers:
-          bigip1.example.com
+          bigip1.example.com:
             username: admin
             password: secret
           bigip2.example.com:

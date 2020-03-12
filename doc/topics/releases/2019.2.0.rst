@@ -77,7 +77,7 @@ This test case has also been tested with the ``yaml`` and ``json`` filters succe
     The :jinja_ref:`json_encode_dict` and :jinja_ref:`json_encode_list` filters
     do not actually dump the results to JSON. Since ``tojson`` accomplishes
     what those filters were designed to do, they are now deprecated and will be
-    removed in the Neon release. The ``tojson`` filter should be used in all
+    removed in the 3000 release. The ``tojson`` filter should be used in all
     cases where :jinja_ref:`json_encode_dict` and :jinja_ref:`json_encode_list`
     would have been used.
 

@@ -5,6 +5,7 @@
 
 # Import Python Libs
 from __future__ import absolute_import, unicode_literals, print_function
+import glob
 import os
 
 # Import Salt Testing Libs
@@ -15,31 +16,28 @@ from tests.support.unit import TestCase, skipIf
 
 # Import Salt Libs
 import salt.config
-import salt.modules.cmdmod
-import salt.modules.file
-import salt.modules.win_file as win_file
+import salt.loader
 import salt.modules.win_lgpo as win_lgpo
+import salt.states.win_lgpo
+import salt.utils.files
 import salt.utils.platform
-import salt.utils.win_dacl
-import salt.utils.win_lgpo_auditpol
-import salt.utils.win_reg
+import salt.utils.stringutils
+
+# Import 3rd Party Libs
+import salt.ext.six as six
+
+# We're going to actually use the loader, without grains (slow)
+opts = salt.config.DEFAULT_MINION_OPTS.copy()
+utils = salt.loader.utils(opts)
+modules = salt.loader.minion_mods(opts, utils=utils)
 
 LOADER_DICTS = {
     win_lgpo: {
-        '__salt__': {
-            'file.file_exists': salt.modules.file.file_exists,
-            'file.makedirs': win_file.makedirs_,
-            'file.write': salt.modules.file.write,
-            'file.remove': win_file.remove,
-            'cmd.run': salt.modules.cmdmod.run},
-        '__opts__': salt.config.DEFAULT_MINION_OPTS.copy(),
-        '__utils__': {
-            'reg.read_value': salt.utils.win_reg.read_value,
-            'auditpol.get_auditpol_dump':
-                salt.utils.win_lgpo_auditpol.get_auditpol_dump}},
-    win_file: {
-        '__utils__': {
-            'dacl.set_perms': salt.utils.win_dacl.set_perms}}}
+        '__opts__': opts,
+        '__salt__': modules,
+        '__utils__': utils,
+    }
+}
 
 
 class WinLGPOTestCase(TestCase):
@@ -59,6 +57,88 @@ class WinLGPOTestCase(TestCase):
                                                   display_name=display_name)
         expected = '300000 or 5 minutes (recommended)'
         self.assertEqual(result, expected)
+
+    def test__regexSearchKeyValueCombo_enabled(self):
+        '''
+        Make sure
+        '''
+        policy_data = b'[\x00s\x00o\x00f\x00t\x00w\x00a\x00r\x00e\x00\\\x00p' \
+                      b'\x00o\x00l\x00i\x00c\x00i\x00e\x00s\x00\\\x00m\x00i' \
+                      b'\x00c\x00r\x00o\x00s\x00o\x00f\x00t\x00\\\x00w\x00i' \
+                      b'\x00n\x00d\x00o\x00w\x00s\x00\\\x00w\x00i\x00n\x00d' \
+                      b'\x00o\x00w\x00s\x00 \x00e\x00r\x00r\x00o\x00r\x00 ' \
+                      b'\x00r\x00e\x00p\x00o\x00r\x00t\x00i\x00n\x00g\x00\\' \
+                      b'\x00c\x00o\x00n\x00s\x00e\x00n\x00t\x00\x00\x00;\x00D' \
+                      b'\x00e\x00f\x00a\x00u\x00l\x00t\x00C\x00o\x00n\x00s' \
+                      b'\x00e\x00n\x00t\x00\x00\x00;\x00\x01\x00\x00\x00;\x00' \
+                      b'\x04\x00\x00\x00;\x00\x02\x00\x00\x00]\x00'
+        policy_regpath = b'\x00s\x00o\x00f\x00t\x00w\x00a\x00r\x00e\x00\\\x00p' \
+                         b'\x00o\x00l\x00i\x00c\x00i\x00e\x00s\x00\\\x00m\x00i' \
+                         b'\x00c\x00r\x00o\x00s\x00o\x00f\x00t\x00\\\x00w\x00i' \
+                         b'\x00n\x00d\x00o\x00w\x00s\x00\\\x00w\x00i\x00n\x00d' \
+                         b'\x00o\x00w\x00s\x00 \x00e\x00r\x00r\x00o\x00r\x00 ' \
+                         b'\x00r\x00e\x00p\x00o\x00r\x00t\x00i\x00n\x00g\x00\\' \
+                         b'\x00c\x00o\x00n\x00s\x00e\x00n\x00t\x00\x00'
+        policy_regkey = b'\x00D\x00e\x00f\x00a\x00u\x00l\x00t\x00C\x00o\x00n' \
+                        b'\x00s\x00e\x00n\x00t\x00\x00'
+        test = win_lgpo._regexSearchKeyValueCombo(
+            policy_data=policy_data,
+            policy_regpath=policy_regpath,
+            policy_regkey=policy_regkey
+        )
+        self.assertEqual(test, policy_data)
+
+    def test__regexSearchKeyValueCombo_not_configured(self):
+        '''
+        Make sure
+        '''
+        policy_data = b''
+        policy_regpath = b'\x00s\x00o\x00f\x00t\x00w\x00a\x00r\x00e\x00\\\x00p' \
+                         b'\x00o\x00l\x00i\x00c\x00i\x00e\x00s\x00\\\x00m\x00i' \
+                         b'\x00c\x00r\x00o\x00s\x00o\x00f\x00t\x00\\\x00w\x00i' \
+                         b'\x00n\x00d\x00o\x00w\x00s\x00\\\x00w\x00i\x00n\x00d' \
+                         b'\x00o\x00w\x00s\x00 \x00e\x00r\x00r\x00o\x00r\x00 ' \
+                         b'\x00r\x00e\x00p\x00o\x00r\x00t\x00i\x00n\x00g\x00\\' \
+                         b'\x00c\x00o\x00n\x00s\x00e\x00n\x00t\x00\x00'
+        policy_regkey = b'\x00D\x00e\x00f\x00a\x00u\x00l\x00t\x00C\x00o\x00n' \
+                        b'\x00s\x00e\x00n\x00t\x00\x00'
+        test = win_lgpo._regexSearchKeyValueCombo(
+            policy_data=policy_data,
+            policy_regpath=policy_regpath,
+            policy_regkey=policy_regkey
+        )
+        self.assertIsNone(test)
+
+    def test__regexSearchKeyValueCombo_disabled(self):
+        '''
+        Make sure
+        '''
+        policy_data = b'[\x00s\x00o\x00f\x00t\x00w\x00a\x00r\x00e\x00\\\x00p' \
+                      b'\x00o\x00l\x00i\x00c\x00i\x00e\x00s\x00\\\x00m\x00i' \
+                      b'\x00c\x00r\x00o\x00s\x00o\x00f\x00t\x00\\\x00w\x00i' \
+                      b'\x00n\x00d\x00o\x00w\x00s\x00\\\x00w\x00i\x00n\x00d' \
+                      b'\x00o\x00w\x00s\x00 \x00e\x00r\x00r\x00o\x00r\x00 ' \
+                      b'\x00r\x00e\x00p\x00o\x00r\x00t\x00i\x00n\x00g\x00\\' \
+                      b'\x00c\x00o\x00n\x00s\x00e\x00n\x00t\x00\x00\x00;\x00*' \
+                      b'\x00*\x00d\x00e\x00l\x00.\x00D\x00e\x00f\x00a\x00u' \
+                      b'\x00l\x00t\x00C\x00o\x00n\x00s\x00e\x00n\x00t\x00\x00' \
+                      b'\x00;\x00\x01\x00\x00\x00;\x00\x04\x00\x00\x00;\x00 ' \
+                      b'\x00\x00\x00]\x00'
+        policy_regpath = b'\x00s\x00o\x00f\x00t\x00w\x00a\x00r\x00e\x00\\\x00p' \
+                         b'\x00o\x00l\x00i\x00c\x00i\x00e\x00s\x00\\\x00m\x00i' \
+                         b'\x00c\x00r\x00o\x00s\x00o\x00f\x00t\x00\\\x00w\x00i' \
+                         b'\x00n\x00d\x00o\x00w\x00s\x00\\\x00w\x00i\x00n\x00d' \
+                         b'\x00o\x00w\x00s\x00 \x00e\x00r\x00r\x00o\x00r\x00 ' \
+                         b'\x00r\x00e\x00p\x00o\x00r\x00t\x00i\x00n\x00g\x00\\' \
+                         b'\x00c\x00o\x00n\x00s\x00e\x00n\x00t\x00\x00'
+        policy_regkey = b'\x00D\x00e\x00f\x00a\x00u\x00l\x00t\x00C\x00o\x00n' \
+                        b'\x00s\x00e\x00n\x00t\x00\x00'
+        test = win_lgpo._regexSearchKeyValueCombo(
+            policy_data=policy_data,
+            policy_regpath=policy_regpath,
+            policy_regkey=policy_regkey
+        )
+        self.assertEqual(test, policy_data)
 
     def test__encode_string(self):
         '''
@@ -253,6 +333,39 @@ class WinLGPOGetPolicyADMXTestCase(TestCase, LoaderModuleMockMixin):
                         'Data Collection and Preview Builds': {
                             'Allow Telemetry': 'Not Configured'}}}}}
         self.assertDictEqual(result, expected)
+
+    @destructiveTest
+    def test__load_policy_definitions(self):
+        '''
+        Test that unexpected files in the PolicyDefinitions directory won't
+        cause the _load_policy_definitions function to explode
+        https://gitlab.com/saltstack/enterprise/lock/issues/3826
+        '''
+        # The PolicyDefinitions directory should only contain ADMX files. We
+        # want to make sure the `_load_policy_definitions` function skips non
+        # ADMX files in this directory.
+        # Create a bogus ADML file in PolicyDefinitions directory
+        bogus_fle = os.path.join(
+            'c:\\Windows\\PolicyDefinitions',
+            '_bogus.adml')
+        cache_dir = os.path.join(
+            win_lgpo.__opts__['cachedir'],
+            'lgpo',
+            'policy_defs')
+        try:
+            with salt.utils.files.fopen(bogus_fle, 'w+') as fh:
+                fh.write('<junk></junk>')
+            # This function doesn't return anything (None), it just loads
+            # the XPath structures into __context__. We're just making sure it
+            # doesn't stack trace here
+            self.assertIsNone(win_lgpo._load_policy_definitions())
+        finally:
+            # Remove source file
+            os.remove(bogus_fle)
+            # Remove cached file
+            search_string = '{0}\\_bogus*.adml'.format(cache_dir)
+            for file_name in glob.glob(search_string):
+                os.remove(file_name)
 
 
 @skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
@@ -585,8 +698,7 @@ class WinLGPOGetPointAndPrintENTestCase(TestCase, LoaderModuleMockMixin):
                     'Users can only point and print to machines in their '
                     'forest':
                         True,
-                    'Security Prompts: When installing drivers for a new '
-                    'connection':
+                    'When installing drivers for a new connection':
                         'Show warning and elevation prompt',
                     'When updating drivers for an existing connection':
                         'Show warning only',
@@ -606,13 +718,16 @@ class WinLGPOGetPointAndPrintENTestCase(TestCase, LoaderModuleMockMixin):
             policy_class=policy_class,
             adml_language='en-US')
         if success:
-            return salt.modules.win_lgpo._get_policy_adm_setting(
+            results = salt.modules.win_lgpo._get_policy_adm_setting(
                 admx_policy=policy_obj,
                 policy_class=policy_class,
                 adml_language='en-US',
                 return_full_policy_names=return_full_policy_names,
                 hierarchical_return=hierarchical_return
             )
+            if six.PY2:
+                results = salt.states.win_lgpo._convert_to_unicode(results)
+            return results
         return 'Policy Not Found'
 
     def test_point_and_print_enabled(self):
@@ -632,7 +747,7 @@ class WinLGPOGetPointAndPrintENTestCase(TestCase, LoaderModuleMockMixin):
                     True,
                 'PointAndPrint_TrustedServers_Chk':
                     True,
-                u'PointAndPrint_TrustedServers_Edit':
+                'PointAndPrint_TrustedServers_Edit':
                     'fakeserver1;fakeserver2'}}
         self.assertDictEqual(result, expected)
 
@@ -656,7 +771,7 @@ class WinLGPOGetPointAndPrintENTestCase(TestCase, LoaderModuleMockMixin):
                                 True,
                             'PointAndPrint_TrustedServers_Chk':
                                 True,
-                            u'PointAndPrint_TrustedServers_Edit':
+                            'PointAndPrint_TrustedServers_Edit':
                                 'fakeserver1;fakeserver2'}}}}}
         self.assertDictEqual(result, expected)
 
@@ -671,13 +786,12 @@ class WinLGPOGetPointAndPrintENTestCase(TestCase, LoaderModuleMockMixin):
             'Printers\\Point and Print Restrictions': {
                 'Enter fully qualified server names separated by semicolons':
                     'fakeserver1;fakeserver2',
-                'Security Prompts: When installing drivers for a new '
-                'connection':
+                'When installing drivers for a new connection':
                     'Show warning and elevation prompt',
                 'Users can only point and print to machines in their forest':
                     True,
-                u'Users can only point and print to these servers': True,
-                u'When updating drivers for an existing connection':
+                'Users can only point and print to these servers': True,
+                'When updating drivers for an existing connection':
                     'Show warning only'}}
         self.assertDictEqual(result, expected)
 
@@ -696,14 +810,41 @@ class WinLGPOGetPointAndPrintENTestCase(TestCase, LoaderModuleMockMixin):
                             'Enter fully qualified server names separated by '
                             'semicolons':
                                 'fakeserver1;fakeserver2',
-                            'Security Prompts: When installing drivers for a '
-                            'new connection':
+                            'When installing drivers for a new connection':
                                 'Show warning and elevation prompt',
                             'Users can only point and print to machines in '
                             'their forest':
                                 True,
-                            u'Users can only point and print to these servers':
+                            'Users can only point and print to these servers':
                                 True,
-                            u'When updating drivers for an existing connection':
+                            'When updating drivers for an existing connection':
                                 'Show warning only'}}}}}
         self.assertDictEqual(result, expected)
+
+
+@skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
+class WinLGPOGetPolicyFromPolicyResources(TestCase, LoaderModuleMockMixin):
+    '''
+    Test functions related to policy info gathered from ADMX/ADML files
+    '''
+    adml_data = None
+
+    def setup_loader_modules(self):
+        return LOADER_DICTS
+
+    def setUp(self):
+        if self.adml_data is None:
+            self.adml_data = win_lgpo._get_policy_resources('en-US')
+
+    def test__getAdmlPresentationRefId(self):
+        ref_id = 'LetAppsAccessAccountInfo_Enum'
+        expected = 'Default for all apps'
+        result = win_lgpo._getAdmlPresentationRefId(self.adml_data, ref_id)
+        self.assertEqual(result, expected)
+
+    def test__getAdmlPresentationRefId_result_text_is_none(self):
+        ref_id = 'LetAppsAccessAccountInfo_UserInControlOfTheseApps_List'
+        expected = 'Put user in control of these specific apps (use Package ' \
+                   'Family Names)'
+        result = win_lgpo._getAdmlPresentationRefId(self.adml_data, ref_id)
+        self.assertEqual(result, expected)
