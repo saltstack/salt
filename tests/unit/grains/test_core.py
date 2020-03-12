@@ -667,6 +667,11 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         }
         self._run_os_grains_tests("debian-9", _os_release_map, expectation)
 
+    def test_unicode_error(self):
+        raise_unicode_mock = MagicMock(name="raise_unicode_error", side_effect=UnicodeError)
+        with patch('socket.getaddrinfo'):
+            salt.grains.core.ip_fqdn()
+
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
     def test_ubuntu_xenial_os_grains(self):
         """
