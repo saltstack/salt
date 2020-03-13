@@ -59,7 +59,7 @@ class SvnTest(ModuleCase, SaltReturnAssertsMixin):
             target=self.target,
         )
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(os.path.isdir(os.path.join(self.target, '.svn')))
+        assert os.path.isdir(os.path.join(self.target, '.svn'))
         self.assertSaltStateChangesEqual(
             ret, self.name, keys=['new']
         )
@@ -78,7 +78,7 @@ class SvnTest(ModuleCase, SaltReturnAssertsMixin):
             target=self.target,
         )
         self.assertSaltFalseReturn(ret)
-        self.assertFalse(os.path.isdir(os.path.join(self.target, '.svn')))
+        assert not os.path.isdir(os.path.join(self.target, '.svn'))
 
     def test_latest_empty_dir(self):
         '''
@@ -93,7 +93,7 @@ class SvnTest(ModuleCase, SaltReturnAssertsMixin):
             target=self.target,
         )
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(os.path.isdir(os.path.join(self.target, '.svn')))
+        assert os.path.isdir(os.path.join(self.target, '.svn'))
 
     def no_test_latest_existing_repo(self):
         '''
@@ -119,7 +119,7 @@ class SvnTest(ModuleCase, SaltReturnAssertsMixin):
             '{0} => {1}'.format(current_rev, self.new_rev),
             keys=['revision']
         )
-        self.assertTrue(os.path.isdir(os.path.join(self.target, '.svn')))
+        assert os.path.isdir(os.path.join(self.target, '.svn'))
 
     def no_test_latest_existing_repo_no_rev_change(self):
         '''
@@ -139,4 +139,4 @@ class SvnTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(ret, {})
-        self.assertTrue(os.path.isdir(os.path.join(self.target, '.svn')))
+        assert os.path.isdir(os.path.join(self.target, '.svn'))

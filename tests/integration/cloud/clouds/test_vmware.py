@@ -33,8 +33,8 @@ class VMWareTest(CloudTest):
 
         # check if instance returned with salt installed
         self.assertInstanceExists(ret_val)
-        self.assertIn(disk_datastore_str, ret_val,
-                      msg='Hard Disk 2 did not use the Datastore {0} '.format(disk_datastore))
+        assert disk_datastore_str in ret_val, \
+                      'Hard Disk 2 did not use the Datastore {0} '.format(disk_datastore)
 
         self.assertDestroyInstance()
 
@@ -54,6 +54,6 @@ class VMWareTest(CloudTest):
                                          memdump=True -y'.format(self.instance_name), timeout=TIMEOUT)
         s_ret_str = 'Snapshot created successfully'
 
-        self.assertIn(s_ret_str, six.text_type(create_snapshot))
+        assert s_ret_str in six.text_type(create_snapshot)
 
         self.assertDestroyInstance()

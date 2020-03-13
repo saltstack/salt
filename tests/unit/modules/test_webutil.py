@@ -34,9 +34,9 @@ class HtpasswdTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value={'out': 'Salt'})
         with patch.dict(htpasswd.__salt__, {'cmd.run_all': mock}), \
                 patch('os.path.exists', MagicMock(return_value=True)):
-            self.assertDictEqual(htpasswd.useradd('/etc/httpd/htpasswd',
-                                                  'larry', 'badpassword'),
-                                 {'out': 'Salt'})
+            assert htpasswd.useradd('/etc/httpd/htpasswd',
+                                                  'larry', 'badpassword') == \
+                                 {'out': 'Salt'}
 
     # 'userdel' function tests: 2
 
@@ -47,13 +47,13 @@ class HtpasswdTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value='Salt')
         with patch.dict(htpasswd.__salt__, {'cmd.run': mock}), \
                 patch('os.path.exists', MagicMock(return_value=True)):
-            self.assertEqual(htpasswd.userdel('/etc/httpd/htpasswd',
-                                              'larry'), ['Salt'])
+            assert htpasswd.userdel('/etc/httpd/htpasswd',
+                                              'larry') == ['Salt']
 
     def test_userdel_missing_htpasswd(self):
         '''
         Test if it returns error when no htpasswd file exists
         '''
         with patch('os.path.exists', MagicMock(return_value=False)):
-            self.assertEqual(htpasswd.userdel('/etc/httpd/htpasswd', 'larry'),
-                             'Error: The specified htpasswd file does not exist')
+            assert htpasswd.userdel('/etc/httpd/htpasswd', 'larry') == \
+                             'Error: The specified htpasswd file does not exist'

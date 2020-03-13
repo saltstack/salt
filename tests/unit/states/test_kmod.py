@@ -39,14 +39,14 @@ class KmodTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(kmod.__salt__, {'kmod.mod_list': mock_mod_list}):
             comment = 'Kernel module {0} is already present'.format(name)
             ret.update({'comment': comment})
-            self.assertDictEqual(kmod.present(name), ret)
+            assert kmod.present(name) == ret
 
         mock_mod_list = MagicMock(return_value=[])
         with patch.dict(kmod.__salt__, {'kmod.mod_list': mock_mod_list}):
             with patch.dict(kmod.__opts__, {'test': True}):
                 comment = 'Kernel module {0} is set to be loaded'.format(name)
                 ret.update({'comment': comment, 'result': None})
-                self.assertDictEqual(kmod.present(name), ret)
+                assert kmod.present(name) == ret
 
         mock_mod_list = MagicMock(return_value=[])
         mock_available = MagicMock(return_value=[name])
@@ -59,7 +59,7 @@ class KmodTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update({'comment': comment,
                             'result': True,
                             'changes': {name: 'loaded'}})
-                self.assertDictEqual(kmod.present(name), ret)
+                assert kmod.present(name) == ret
 
     def test_present_multi(self):
         '''
@@ -77,12 +77,12 @@ class KmodTestCase(TestCase, LoaderModuleMockMixin):
 
             # Check comment independently: makes test more stable on PY3
             comment = call_ret.pop('comment')
-            self.assertIn('cheese', comment)
-            self.assertIn('crackers', comment)
-            self.assertIn('are already present', comment)
+            assert 'cheese' in comment
+            assert 'crackers' in comment
+            assert 'are already present' in comment
 
             # Assert against all other dictionary key/values
-            self.assertDictEqual(ret, call_ret)
+            assert ret == call_ret
 
         mock_mod_list = MagicMock(return_value=[])
         with patch.dict(kmod.__salt__, {'kmod.mod_list': mock_mod_list}):
@@ -92,12 +92,12 @@ class KmodTestCase(TestCase, LoaderModuleMockMixin):
 
                 # Check comment independently: makes test more stable on PY3
                 comment = call_ret.pop('comment')
-                self.assertIn('cheese', comment)
-                self.assertIn('crackers', comment)
-                self.assertIn('are set to be loaded', comment)
+                assert 'cheese' in comment
+                assert 'crackers' in comment
+                assert 'are set to be loaded' in comment
 
                 # Assert against all other dictionary key/values
-                self.assertDictEqual(ret, call_ret)
+                assert ret == call_ret
 
         mock_mod_list = MagicMock(return_value=[])
         mock_available = MagicMock(return_value=mods)
@@ -113,12 +113,12 @@ class KmodTestCase(TestCase, LoaderModuleMockMixin):
 
                 # Check comment independently: makes test more stable on PY3
                 comment = call_ret.pop('comment')
-                self.assertIn('cheese', comment)
-                self.assertIn('crackers', comment)
-                self.assertIn('Loaded kernel modules', comment)
+                assert 'cheese' in comment
+                assert 'crackers' in comment
+                assert 'Loaded kernel modules' in comment
 
                 # Assert against all other dictionary key/values
-                self.assertDictEqual(ret, call_ret)
+                assert ret == call_ret
 
     # 'absent' function tests: 2
 
@@ -137,7 +137,7 @@ class KmodTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(kmod.__opts__, {'test': True}):
                 comment = 'Kernel module {0} is set to be removed'.format(name)
                 ret.update({'comment': comment, 'result': None})
-                self.assertDictEqual(kmod.absent(name), ret)
+                assert kmod.absent(name) == ret
 
         mock_mod_list = MagicMock(return_value=[name])
         mock_remove = MagicMock(return_value=[name])
@@ -148,7 +148,7 @@ class KmodTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update({'comment': comment,
                             'result': True,
                             'changes': {name: 'removed'}})
-                self.assertDictEqual(kmod.absent(name), ret)
+                assert kmod.absent(name) == ret
 
         mock_mod_list = MagicMock(return_value=[])
         with patch.dict(kmod.__salt__, {'kmod.mod_list': mock_mod_list}):
@@ -157,7 +157,7 @@ class KmodTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update({'comment': comment,
                             'result': True,
                             'changes': {}})
-                self.assertDictEqual(kmod.absent(name), ret)
+                assert kmod.absent(name) == ret
 
     def test_absent_multi(self):
         '''
@@ -177,12 +177,12 @@ class KmodTestCase(TestCase, LoaderModuleMockMixin):
 
                 # Check comment independently: makes test more stable on PY3
                 comment = call_ret.pop('comment')
-                self.assertIn('cheese', comment)
-                self.assertIn('crackers', comment)
-                self.assertIn('are set to be removed', comment)
+                assert 'cheese' in comment
+                assert 'crackers' in comment
+                assert 'are set to be removed' in comment
 
                 # Assert against all other dictionary key/values
-                self.assertDictEqual(ret, call_ret)
+                assert ret == call_ret
 
         mock_mod_list = MagicMock(return_value=mods)
         mock_remove = MagicMock(return_value=mods)
@@ -196,12 +196,12 @@ class KmodTestCase(TestCase, LoaderModuleMockMixin):
 
                 # Check comment independently: makes test more stable on PY3
                 comment = call_ret.pop('comment')
-                self.assertIn('cheese', comment)
-                self.assertIn('crackers', comment)
-                self.assertIn('Removed kernel modules', comment)
+                assert 'cheese' in comment
+                assert 'crackers' in comment
+                assert 'Removed kernel modules' in comment
 
                 # Assert against all other dictionary key/values
-                self.assertDictEqual(ret, call_ret)
+                assert ret == call_ret
 
         mock_mod_list = MagicMock(return_value=[])
         with patch.dict(kmod.__salt__, {'kmod.mod_list': mock_mod_list}):
@@ -210,4 +210,4 @@ class KmodTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update({'comment': comment,
                             'result': True,
                             'changes': {}})
-                self.assertDictEqual(kmod.absent(name, mods=mods), ret)
+                assert kmod.absent(name, mods=mods) == ret

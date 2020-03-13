@@ -31,16 +31,16 @@ class MemUsageBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         ret = memusage.validate(config)
 
-        self.assertEqual(ret, (False, 'Configuration for memusage beacon must'
-                                      ' be a list.'))
+        assert ret == (False, 'Configuration for memusage beacon must'
+                                      ' be a list.')
 
     def test_empty_config(self):
         config = [{}]
 
         ret = memusage.validate(config)
 
-        self.assertEqual(ret, (False, 'Configuration for memusage beacon '
-                                     'requires percent.'))
+        assert ret == (False, 'Configuration for memusage beacon '
+                                     'requires percent.')
 
     def test_memusage_match(self):
         with patch('psutil.virtual_memory',
@@ -50,10 +50,10 @@ class MemUsageBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
             ret = memusage.validate(config)
 
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             ret = memusage.beacon(config)
-            self.assertEqual(ret, [{'memusage': 40.7}])
+            assert ret == [{'memusage': 40.7}]
 
     def test_memusage_nomatch(self):
         with patch('psutil.virtual_memory',
@@ -63,7 +63,7 @@ class MemUsageBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
             ret = memusage.validate(config)
 
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             ret = memusage.beacon(config)
-            self.assertNotEqual(ret, [{'memusage': 50}])
+            assert ret != [{'memusage': 50}]

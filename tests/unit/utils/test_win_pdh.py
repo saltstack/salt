@@ -17,19 +17,19 @@ class WinPdhTestCase(TestCase):
         known_objects = ['Cache', 'Memory', 'Process', 'Processor', 'System']
         objects = win_pdh.list_objects()
         for item in known_objects:
-            self.assertTrue(item in objects)
+            assert item in objects
 
     def test_list_counters(self):
         counters = win_pdh.list_counters('Processor')
         known_counters = ['% Processor Time', '% User Time', '% DPC Time']
         for item in known_counters:
-            self.assertTrue(item in counters)
+            assert item in counters
 
     def test_list_instances(self):
         instances = win_pdh.list_instances('Processor')
         known_instances = ['0', '_Total']
         for item in known_instances:
-            self.assertTrue(item in instances)
+            assert item in instances
 
     def test_build_counter_list(self):
         counter_list = [
@@ -42,7 +42,7 @@ class WinPdhTestCase(TestCase):
         ]
         resulting_list = win_pdh.build_counter_list(counter_list)
         for counter in resulting_list:
-            self.assertTrue(isinstance(counter, win_pdh.Counter))
+            assert isinstance(counter, win_pdh.Counter)
 
         resulting_paths = []
         for counter in resulting_list:
@@ -55,7 +55,7 @@ class WinPdhTestCase(TestCase):
             '\\Server\\Work Item Shortages',
             '\\Server Work Queues(*)\\Queue Length',
             '\\System\\Context Switches/sec']
-        self.assertEqual(resulting_paths, expected_paths)
+        assert resulting_paths == expected_paths
 
     def test_get_all_counters(self):
         results = win_pdh.get_all_counters('Processor')
@@ -69,7 +69,7 @@ class WinPdhTestCase(TestCase):
             '\\Processor(*)\\Interrupts/sec',
         ]
         for item in known_counters:
-            self.assertTrue(item in results)
+            assert item in results
 
     def test_get_counters(self):
         counter_list = [
@@ -90,8 +90,8 @@ class WinPdhTestCase(TestCase):
             '\\System\\Context Switches/sec'
         ]
         for item in expected_counters:
-            self.assertTrue(item in results)
+            assert item in results
 
     def test_get_counter(self):
         results = win_pdh.get_counter('Processor', '*', '% Processor Time')
-        self.assertTrue('\\Processor(*)\\% Processor Time' in results)
+        assert '\\Processor(*)\\% Processor Time' in results

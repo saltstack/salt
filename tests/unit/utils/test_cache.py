@@ -23,6 +23,7 @@ import salt.payload
 import salt.utils.data
 import salt.utils.files
 import salt.utils.cache as cache
+import pytest
 
 
 class CacheDictTestCase(TestCase):
@@ -32,25 +33,26 @@ class CacheDictTestCase(TestCase):
         Make sure you can instantiate etc.
         '''
         cd = cache.CacheDict(5)
-        self.assertIsInstance(cd, cache.CacheDict)
+        assert isinstance(cd, cache.CacheDict)
 
         # do some tests to make sure it looks like a dict
-        self.assertNotIn('foo', cd)
+        assert 'foo' not in cd
         cd['foo'] = 'bar'
-        self.assertEqual(cd['foo'], 'bar')
+        assert cd['foo'] == 'bar'
         del cd['foo']
-        self.assertNotIn('foo', cd)
+        assert 'foo' not in cd
 
     def test_ttl(self):
         cd = cache.CacheDict(0.1)
         cd['foo'] = 'bar'
-        self.assertIn('foo', cd)
-        self.assertEqual(cd['foo'], 'bar')
+        assert 'foo' in cd
+        assert cd['foo'] == 'bar'
         time.sleep(0.2)
-        self.assertNotIn('foo', cd)
+        assert 'foo' not in cd
 
         # make sure that a get would get a regular old key error
-        self.assertRaises(KeyError, cd.__getitem__, 'foo')
+        with pytest.raises(KeyError):
+            cd.__getitem__('foo')
 
 
 class CacheContextTestCase(TestCase):
@@ -75,7 +77,7 @@ class CacheContextTestCase(TestCase):
 
             ret = context_cache.get_cache_context()
 
-            self.assertDictEqual({'a': 'b'}, ret)
+            assert {'a': 'b'} == ret
 
     def test_context_wrapper(self):
         '''
@@ -94,8 +96,8 @@ class CacheContextTestCase(TestCase):
 
         cache_test_func = ll_['cache_mod.test_context_module']
 
-        self.assertEqual(cache_test_func()['called'], 0)
-        self.assertEqual(cache_test_func()['called'], 1)
+        assert cache_test_func()['called'] == 0
+        assert cache_test_func()['called'] == 1
 
 
 __context__ = {'a': 'b'}
@@ -128,17 +130,17 @@ class ContextCacheTest(TestCase):
         _test_set_cache()
 
         target_cache_file = os.path.join(__opts__['cachedir'], 'context', '{0}.p'.format(__name__))
-        self.assertTrue(os.path.isfile(target_cache_file), 'Context cache did not write cache file')
+        assert os.path.isfile(target_cache_file), 'Context cache did not write cache file'
 
         # Test manual de-serialize
         with salt.utils.files.fopen(target_cache_file, 'rb') as fp_:
             target_cache_data = salt.utils.data.decode(salt.payload.Serial(__opts__).load(fp_))
-        self.assertDictEqual(__context__, target_cache_data)
+        assert __context__ == target_cache_data
 
         # Test cache de-serialize
         cc = cache.ContextCache(__opts__, __name__)
         retrieved_cache = cc.get_cache_context()
-        self.assertDictEqual(retrieved_cache, __context__)
+        assert retrieved_cache == __context__
 
     def test_refill_cache(self):
         '''
@@ -153,7 +155,7 @@ class ContextCacheTest(TestCase):
         # Then try to rehydate a func
         @cache.context_cache
         def _test_refill_cache(comparison_context):
-            self.assertEqual(__context__, comparison_context)
+            assert __context__ == comparison_context
 
         global __context__
         __context__ = {}
@@ -172,26 +174,26 @@ class CacheDiskTestCase(TestCase):
 
             # test instantiation
             cd = cache.CacheDisk(0.1, path)
-            self.assertIsInstance(cd, cache.CacheDisk)
+            assert isinstance(cd, cache.CacheDisk)
 
             # test to make sure it looks like a dict
-            self.assertNotIn('foo', cd)
+            assert 'foo' not in cd
             cd['foo'] = 'bar'
-            self.assertIn('foo', cd)
-            self.assertEqual(cd['foo'], 'bar')
+            assert 'foo' in cd
+            assert cd['foo'] == 'bar'
             del cd['foo']
-            self.assertNotIn('foo', cd)
+            assert 'foo' not in cd
 
             # test persistence
             cd['foo'] = 'bar'
             cd2 = cache.CacheDisk(0.1, path)
-            self.assertIn('foo', cd2)
-            self.assertEqual(cd2['foo'], 'bar')
+            assert 'foo' in cd2
+            assert cd2['foo'] == 'bar'
 
             # test ttl
             time.sleep(0.2)
-            self.assertNotIn('foo', cd)
-            self.assertNotIn('foo', cd2)
+            assert 'foo' not in cd
+            assert 'foo' not in cd2
 
         finally:
             shutil.rmtree(tmpdir, ignore_errors=True)

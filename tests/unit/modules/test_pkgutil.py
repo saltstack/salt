@@ -19,6 +19,7 @@ from tests.support.mock import (
 import salt.modules.pkgutil as pkgutil
 from salt.exceptions import CommandExecutionError, MinionError
 import salt.utils.pkg
+import pytest
 
 
 class PkgutilTestCase(TestCase, LoaderModuleMockMixin):
@@ -37,7 +38,7 @@ class PkgutilTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value=0)
         with patch.dict(pkgutil.__salt__, {'cmd.retcode': mock}):
             with patch.object(salt.utils.pkg, 'clear_rtag', Mock()):
-                self.assertTrue(pkgutil.refresh_db())
+                assert pkgutil.refresh_db()
 
     # 'upgrade_available' function tests: 1
 
@@ -47,13 +48,13 @@ class PkgutilTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='A\n B\n SAME')
         with patch.dict(pkgutil.__salt__, {'cmd.run_stdout': mock}):
-            self.assertEqual(pkgutil.upgrade_available('CSWpython'), '')
+            assert pkgutil.upgrade_available('CSWpython') == ''
 
         mock = MagicMock(side_effect=['A\n B\n SALT', None])
         with patch.dict(pkgutil.__salt__, {'cmd.run_stdout': mock}):
-            self.assertEqual(pkgutil.upgrade_available('CSWpython'), 'SALT')
+            assert pkgutil.upgrade_available('CSWpython') == 'SALT'
 
-            self.assertEqual(pkgutil.upgrade_available('CSWpython'), '')
+            assert pkgutil.upgrade_available('CSWpython') == ''
 
     # 'list_upgrades' function tests: 1
 
@@ -66,7 +67,7 @@ class PkgutilTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pkgutil.__salt__, {'cmd.run_stdout': mock_run,
                                            'cmd.retcode': mock_ret}):
             with patch.object(salt.utils.pkg, 'clear_rtag', Mock()):
-                self.assertDictEqual(pkgutil.list_upgrades(), {'A': ' B'})
+                assert pkgutil.list_upgrades() == {'A': ' B'}
 
     # 'upgrade' function tests: 1
 
@@ -85,7 +86,7 @@ class PkgutilTestCase(TestCase, LoaderModuleMockMixin):
                          'cmd.run_all': mock_ret, 'cmd.run': mock_run}):
             with patch.dict(pkgutil.__context__, {'pkg.list_pkgs': mock_ret}):
                 with patch.object(salt.utils.pkg, 'clear_rtag', Mock()):
-                    self.assertDictEqual(pkgutil.upgrade(), {})
+                    assert pkgutil.upgrade() == {}
 
     # 'list_pkgs' function tests: 1
 
@@ -103,18 +104,18 @@ class PkgutilTestCase(TestCase, LoaderModuleMockMixin):
                          'pkg_resource.sort_pkglist': mock_pkg,
                          'cmd.run': mock_run}):
             with patch.dict(pkgutil.__context__, {'pkg.list_pkgs': mock_ret}):
-                self.assertDictEqual(pkgutil.list_pkgs(versions_as_list=True,
-                                                       removed=True), {})
+                assert pkgutil.list_pkgs(versions_as_list=True,
+                                                       removed=True) == {}
 
-            self.assertDictEqual(pkgutil.list_pkgs(), {})
+            assert pkgutil.list_pkgs() == {}
 
         with patch.dict(pkgutil.__context__, {'pkg.list_pkgs': True}):
-            self.assertTrue(pkgutil.list_pkgs(versions_as_list=True))
+            assert pkgutil.list_pkgs(versions_as_list=True)
 
             mock_pkg = MagicMock(return_value=True)
             with patch.dict(pkgutil.__salt__,
                             {'pkg_resource.stringify': mock_pkg}):
-                self.assertTrue(pkgutil.list_pkgs())
+                assert pkgutil.list_pkgs()
 
     # 'version' function tests: 1
 
@@ -124,7 +125,7 @@ class PkgutilTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_ret = MagicMock(return_value=True)
         with patch.dict(pkgutil.__salt__, {'pkg_resource.version': mock_ret}):
-            self.assertTrue(pkgutil.version('CSWpython'))
+            assert pkgutil.version('CSWpython')
 
     # 'latest_version' function tests: 1
 
@@ -133,7 +134,7 @@ class PkgutilTestCase(TestCase, LoaderModuleMockMixin):
         Test if it return the latest version of the named package
         available for upgrade or installation.
         '''
-        self.assertEqual(pkgutil.latest_version(), '')
+        assert pkgutil.latest_version() == ''
 
         mock_run_all = MagicMock(return_value='A\t B\t SAME')
         mock_run = MagicMock(return_value={'stdout': ''})
@@ -145,10 +146,10 @@ class PkgutilTestCase(TestCase, LoaderModuleMockMixin):
                          'pkg_resource.sort_pkglist': mock_pkg,
                          'cmd.run_all': mock_run, 'cmd.run': mock_run_all}):
             with patch.object(salt.utils.pkg, 'clear_rtag', Mock()):
-                self.assertEqual(pkgutil.latest_version('CSWpython'), '')
+                assert pkgutil.latest_version('CSWpython') == ''
 
-                self.assertDictEqual(pkgutil.latest_version('CSWpython', 'Python'),
-                                     {'Python': '', 'CSWpython': ''})
+                assert pkgutil.latest_version('CSWpython', 'Python') == \
+                                     {'Python': '', 'CSWpython': ''}
 
     # 'install' function tests: 1
 
@@ -159,14 +160,15 @@ class PkgutilTestCase(TestCase, LoaderModuleMockMixin):
         mock_pkg = MagicMock(side_effect=MinionError)
         with patch.dict(pkgutil.__salt__,
                         {'pkg_resource.parse_targets': mock_pkg}):
-            self.assertRaises(CommandExecutionError, pkgutil.install)
+            with pytest.raises(CommandExecutionError):
+                pkgutil.install()
 
         mock_ret = MagicMock(return_value=True)
         mock_pkg = MagicMock(return_value=[''])
         with patch.dict(pkgutil.__salt__,
                         {'pkg_resource.parse_targets': mock_pkg}):
             with patch.dict(pkgutil.__context__, {'pkg.list_pkgs': mock_ret}):
-                self.assertDictEqual(pkgutil.install(), {})
+                assert pkgutil.install() == {}
 
         mock_run = MagicMock(return_value='A\t B\t SAME')
         mock_run_all = MagicMock(return_value={'stdout': ''})
@@ -177,8 +179,7 @@ class PkgutilTestCase(TestCase, LoaderModuleMockMixin):
                          'pkg_resource.sort_pkglist': mock_pkg,
                          'cmd.run_all': mock_run_all, 'cmd.run': mock_run}):
             with patch.dict(pkgutil.__context__, {'pkg.list_pkgs': mock_ret}):
-                self.assertDictEqual(pkgutil.install
-                                     (pkgs='["foo", {"bar": "1.2.3"}]'), {})
+                assert pkgutil.install(pkgs='["foo", {"bar": "1.2.3"}]') == {}
 
     # 'remove' function tests: 1
 
@@ -190,7 +191,8 @@ class PkgutilTestCase(TestCase, LoaderModuleMockMixin):
         mock_pkg = MagicMock(side_effect=MinionError)
         with patch.dict(pkgutil.__salt__,
                         {'pkg_resource.parse_targets': mock_pkg}):
-            self.assertRaises(CommandExecutionError, pkgutil.remove)
+            with pytest.raises(CommandExecutionError):
+                pkgutil.remove()
 
         mock_ret = MagicMock(return_value=True)
         mock_run = MagicMock(return_value='A\t B\t SAME')
@@ -202,7 +204,7 @@ class PkgutilTestCase(TestCase, LoaderModuleMockMixin):
                          'pkg_resource.sort_pkglist': mock_pkg,
                          'cmd.run_all': mock_run_all, 'cmd.run': mock_run}):
             with patch.dict(pkgutil.__context__, {'pkg.list_pkgs': mock_ret}):
-                self.assertDictEqual(pkgutil.remove(), {})
+                assert pkgutil.remove() == {}
 
         mock_pkg = MagicMock(return_value=[{"bar": "1.2.3"}])
         with patch.dict(pkgutil.__salt__,
@@ -213,8 +215,8 @@ class PkgutilTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(pkgutil.__context__, {'pkg.list_pkgs': mock_ret}):
                 with patch.object(pkgutil, 'list_pkgs',
                                   return_value={"bar": "1.2.3"}):
-                    self.assertDictEqual(pkgutil.remove(pkgs='["foo", "bar"]'),
-                                         {})
+                    assert pkgutil.remove(pkgs='["foo", "bar"]') == \
+                                         {}
 
     # 'purge' function tests: 1
 
@@ -226,4 +228,5 @@ class PkgutilTestCase(TestCase, LoaderModuleMockMixin):
         mock_pkg = MagicMock(side_effect=MinionError)
         with patch.dict(pkgutil.__salt__,
                         {'pkg_resource.parse_targets': mock_pkg}):
-            self.assertRaises(CommandExecutionError, pkgutil.purge)
+            with pytest.raises(CommandExecutionError):
+                pkgutil.purge()

@@ -21,17 +21,17 @@ class ManageTest(ShellCase):
         manage.up
         '''
         ret = self.run_run_plus('manage.up', timeout=60)
-        self.assertIn('minion', ret['return'])
-        self.assertIn('sub_minion', ret['return'])
-        self.assertTrue(any('- minion' in out for out in ret['out']))
-        self.assertTrue(any('- sub_minion' in out for out in ret['out']))
+        assert 'minion' in ret['return']
+        assert 'sub_minion' in ret['return']
+        assert any('- minion' in out for out in ret['out'])
+        assert any('- sub_minion' in out for out in ret['out'])
 
     def test_down(self):
         '''
         manage.down
         '''
         ret = self.run_run_plus('manage.down', timeout=60)
-        self.assertNotIn('minion', ret['return'])
-        self.assertNotIn('sub_minion', ret['return'])
-        self.assertNotIn('minion', ret['out'])
-        self.assertNotIn('sub_minion', ret['out'])
+        assert 'minion' not in ret['return']
+        assert 'sub_minion' not in ret['return']
+        assert 'minion' not in ret['out']
+        assert 'sub_minion' not in ret['out']

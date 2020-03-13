@@ -129,4 +129,4 @@ class BotoRoute53TestCase(TestCase, LoaderModuleMockMixin):
         )
         del healthcheck['result']['CreateHealthCheckResponse']['HealthCheck']['CallerReference']
         del healthcheck['result']['CreateHealthCheckResponse']['HealthCheck']['Id']
-        self.assertEqual(healthcheck, expected)
+        assert healthcheck == expected

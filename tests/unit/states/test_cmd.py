@@ -40,36 +40,36 @@ class CmdTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(cmd.__opts__, {'test': True}):
                 ret = {'comment': 'onlyif condition is false', 'result': True,
                        'skip_watch': True}
-                self.assertDictEqual(cmd.mod_run_check(cmd_kwargs, '', '', creates), ret)
+                assert cmd.mod_run_check(cmd_kwargs, '', '', creates) == ret
 
-                self.assertDictEqual(cmd.mod_run_check(cmd_kwargs, {}, '', creates), ret)
+                assert cmd.mod_run_check(cmd_kwargs, {}, '', creates) == ret
 
         mock = MagicMock(return_value=1)
         with patch.dict(cmd.__salt__, {'cmd.retcode': mock}):
             with patch.dict(cmd.__opts__, {'test': True}):
                 ret = {'comment': 'onlyif condition is false: ', 'result': True,
                        'skip_watch': True}
-                self.assertDictEqual(cmd.mod_run_check(cmd_kwargs, [''], '', creates), ret)
+                assert cmd.mod_run_check(cmd_kwargs, [''], '', creates) == ret
 
         mock = MagicMock(return_value=0)
         with patch.dict(cmd.__salt__, {'cmd.retcode': mock}):
             ret = {'comment': 'unless condition is true', 'result': True,
                    'skip_watch': True}
-            self.assertDictEqual(cmd.mod_run_check(cmd_kwargs, None, '', creates), ret)
+            assert cmd.mod_run_check(cmd_kwargs, None, '', creates) == ret
 
-            self.assertDictEqual(cmd.mod_run_check(cmd_kwargs, None, [''], creates), ret)
+            assert cmd.mod_run_check(cmd_kwargs, None, [''], creates) == ret
 
-            self.assertDictEqual(cmd.mod_run_check(cmd_kwargs, None, True, creates), ret)
+            assert cmd.mod_run_check(cmd_kwargs, None, True, creates) == ret
 
         with patch.object(os.path, 'exists',
                           MagicMock(sid_effect=[True, True, False])):
             ret = {'comment': '/tmp exists', 'result': True}
-            self.assertDictEqual(cmd.mod_run_check(cmd_kwargs, None, None, creates), ret)
+            assert cmd.mod_run_check(cmd_kwargs, None, None, creates) == ret
 
             ret = {'comment': 'All files in creates exist', 'result': True}
-            self.assertDictEqual(cmd.mod_run_check(cmd_kwargs, None, None, [creates]), ret)
+            assert cmd.mod_run_check(cmd_kwargs, None, None, [creates]) == ret
 
-            self.assertTrue(cmd.mod_run_check(cmd_kwargs, None, None, {}))
+            assert cmd.mod_run_check(cmd_kwargs, None, None, {})
 
     # 'wait' function tests: 1
 
@@ -84,7 +84,7 @@ class CmdTestCase(TestCase, LoaderModuleMockMixin):
                'changes': {},
                'comment': ''}
 
-        self.assertDictEqual(cmd.wait(name), ret)
+        assert cmd.wait(name) == ret
 
     # 'wait_script' function tests: 1
 
@@ -100,7 +100,7 @@ class CmdTestCase(TestCase, LoaderModuleMockMixin):
                'changes': {},
                'comment': ''}
 
-        self.assertDictEqual(cmd.wait_script(name), ret)
+        assert cmd.wait_script(name) == ret
 
     # 'run' function tests: 1
 
@@ -118,7 +118,7 @@ class CmdTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(cmd.__opts__, {'test': False}):
             comt = ("Invalidly-formatted 'env' parameter. See documentation.")
             ret.update({'comment': comt})
-            self.assertDictEqual(cmd.run(name, env='salt'), ret)
+            assert cmd.run(name, env='salt') == ret
 
         with patch.dict(cmd.__grains__, {'shell': 'shell'}):
             with patch.dict(cmd.__opts__, {'test': False}):
@@ -126,16 +126,16 @@ class CmdTestCase(TestCase, LoaderModuleMockMixin):
                                               {'retcode': 1}])
                 with patch.dict(cmd.__salt__, {'cmd.run_all': mock}):
                     ret.update({'comment': '', 'result': False})
-                    self.assertDictEqual(cmd.run(name), ret)
+                    assert cmd.run(name) == ret
 
                     ret.update({'comment': 'Command "cmd.script" run',
                                 'result': False, 'changes': {'retcode': 1}})
-                    self.assertDictEqual(cmd.run(name), ret)
+                    assert cmd.run(name) == ret
 
             with patch.dict(cmd.__opts__, {'test': True}):
                 comt = ('Command "cmd.script" would have been executed')
                 ret.update({'comment': comt, 'result': None, 'changes': {}})
-                self.assertDictEqual(cmd.run(name), ret)
+                assert cmd.run(name) == ret
 
             mock = MagicMock(return_value=1)
             with patch.dict(cmd.__salt__, {'cmd.retcode': mock}):
@@ -143,7 +143,7 @@ class CmdTestCase(TestCase, LoaderModuleMockMixin):
                     comt = ('onlyif condition is false')
                     ret.update({'comment': comt, 'result': True,
                                 'skip_watch': True})
-                    self.assertDictEqual(cmd.run(name, onlyif=''), ret)
+                    assert cmd.run(name, onlyif='') == ret
 
     def test_run_root(self):
         '''
@@ -162,11 +162,11 @@ class CmdTestCase(TestCase, LoaderModuleMockMixin):
                                               {'retcode': 1}])
                 with patch.dict(cmd.__salt__, {'cmd.run_chroot': mock}):
                     ret.update({'comment': '', 'result': False})
-                    self.assertDictEqual(cmd.run(name, root='/mnt'), ret)
+                    assert cmd.run(name, root='/mnt') == ret
 
                     ret.update({'comment': 'Command "cmd.script" run',
                                 'result': False, 'changes': {'retcode': 1}})
-                    self.assertDictEqual(cmd.run(name, root='/mnt'), ret)
+                    assert cmd.run(name, root='/mnt') == ret
 
     # 'script' function tests: 1
 
@@ -184,24 +184,24 @@ class CmdTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(cmd.__opts__, {'test': False}):
             comt = ("Invalidly-formatted 'env' parameter. See documentation.")
             ret.update({'comment': comt})
-            self.assertDictEqual(cmd.script(name, env='salt'), ret)
+            assert cmd.script(name, env='salt') == ret
 
         with patch.dict(cmd.__grains__, {'shell': 'shell'}):
             with patch.dict(cmd.__opts__, {'test': True}):
                 comt = ("Command 'cmd.script' would have been executed")
                 ret.update({'comment': comt, 'result': None, 'changes': {}})
-                self.assertDictEqual(cmd.script(name), ret)
+                assert cmd.script(name) == ret
 
             with patch.dict(cmd.__opts__, {'test': False}):
                 mock = MagicMock(side_effect=[CommandExecutionError,
                                               {'retcode': 1}])
                 with patch.dict(cmd.__salt__, {'cmd.script': mock}):
                     ret.update({'comment': '', 'result': False})
-                    self.assertDictEqual(cmd.script(name), ret)
+                    assert cmd.script(name) == ret
 
                     ret.update({'comment': "Command 'cmd.script' run",
                                 'result': False, 'changes': {'retcode': 1}})
-                    self.assertDictEqual(cmd.script(name), ret)
+                    assert cmd.script(name) == ret
 
             mock = MagicMock(return_value=1)
             with patch.dict(cmd.__salt__, {'cmd.retcode': mock}):
@@ -209,7 +209,7 @@ class CmdTestCase(TestCase, LoaderModuleMockMixin):
                     comt = ('onlyif condition is false')
                     ret.update({'comment': comt, 'result': True,
                                 'skip_watch': True, 'changes': {}})
-                    self.assertDictEqual(cmd.script(name, onlyif=''), ret)
+                    assert cmd.script(name, onlyif='') == ret
 
     # 'call' function tests: 1
 
@@ -239,13 +239,13 @@ class CmdTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.dict(cmd.__grains__, {'shell': 'shell'}):
             flag = True
-            self.assertDictEqual(cmd.call(name, func), ret)
+            assert cmd.call(name, func) == ret
 
             flag = False
             comt = ('onlyif condition is false')
             ret.update({'comment': '', 'result': False,
                         'changes': {'retval': []}})
-            self.assertDictEqual(cmd.call(name, func), ret)
+            assert cmd.call(name, func) == ret
 
             mock = MagicMock(return_value=1)
             with patch.dict(cmd.__salt__, {'cmd.retcode': mock}):
@@ -253,7 +253,7 @@ class CmdTestCase(TestCase, LoaderModuleMockMixin):
                     comt = ('onlyif condition is false')
                     ret.update({'comment': comt, 'skip_watch': True,
                                 'result': True, 'changes': {}})
-                    self.assertDictEqual(cmd.call(name, func, onlyif=''), ret)
+                    assert cmd.call(name, func, onlyif='') == ret
 
     # 'wait_call' function tests: 1
 
@@ -269,7 +269,7 @@ class CmdTestCase(TestCase, LoaderModuleMockMixin):
                'changes': {},
                'comment': ''}
 
-        self.assertDictEqual(cmd.wait_call(name, func), ret)
+        assert cmd.wait_call(name, func) == ret
 
     # 'mod_watch' function tests: 1
 
@@ -294,34 +294,34 @@ class CmdTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(cmd.__opts__, {'test': False}):
                 mock = MagicMock(return_value={'retcode': 1})
                 with patch.dict(cmd.__salt__, {'cmd.run_all': mock}):
-                    self.assertDictEqual(cmd.mod_watch(name, sfun='wait',
-                                                       stateful=True), ret)
+                    assert cmd.mod_watch(name, sfun='wait',
+                                                       stateful=True) == ret
 
                     comt = ('Command "cmd.script" run')
                     ret.update({'comment': comt, 'changes': {'retcode': 1}})
-                    self.assertDictEqual(cmd.mod_watch(name, sfun='wait',
-                                                       stateful=False), ret)
+                    assert cmd.mod_watch(name, sfun='wait',
+                                                       stateful=False) == ret
 
                 with patch.dict(cmd.__salt__, {'cmd.script': mock}):
                     ret.update({'comment': '', 'changes': {}})
-                    self.assertDictEqual(cmd.mod_watch(name, sfun='script',
-                                                       stateful=True), ret)
+                    assert cmd.mod_watch(name, sfun='script',
+                                                       stateful=True) == ret
 
                     comt = ("Command 'cmd.script' run")
                     ret.update({'comment': comt, 'changes': {'retcode': 1}})
-                    self.assertDictEqual(cmd.mod_watch(name, sfun='script',
-                                                       stateful=False), ret)
+                    assert cmd.mod_watch(name, sfun='script',
+                                                       stateful=False) == ret
 
                 with patch.dict(cmd.__salt__, {'cmd.script': mock}):
                     ret.update({'comment': '', 'changes': {}})
-                    self.assertDictEqual(cmd.mod_watch(name, sfun='call',
-                                                       func=func), ret)
+                    assert cmd.mod_watch(name, sfun='call',
+                                                       func=func) == ret
 
                     comt = ('cmd.call needs a named parameter func')
                     ret.update({'comment': comt})
-                    self.assertDictEqual(cmd.mod_watch(name, sfun='call'), ret)
+                    assert cmd.mod_watch(name, sfun='call') == ret
 
                 comt = ('cmd.salt does not work with the watch requisite,'
                         ' please use cmd.wait or cmd.wait_script')
                 ret.update({'comment': comt})
-                self.assertDictEqual(cmd.mod_watch(name, sfun='salt'), ret)
+                assert cmd.mod_watch(name, sfun='salt') == ret

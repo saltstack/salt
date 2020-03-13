@@ -40,4 +40,4 @@ class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
             _expected = [{'tag': 'salt/beacon/minion/watch_apache/',
                           'data': {'id': u'minion', u'apache2': u'Stopped'},
                           'beacon_name': 'ps'}]
-            self.assertEqual(ret, _expected)
+            assert ret == _expected

@@ -40,7 +40,7 @@ class DatagramLogstashHandlerTest(TestCase):
         # then
         try:
             received_log, addr = self.test_server.recvfrom(12)
-            self.assertEqual(received_log, salt.utils.stringutils.to_bytes(the_log))
+            assert received_log == salt.utils.stringutils.to_bytes(the_log)
         except socket.timeout:
             self.fail("Log message was not received.\n"
                       "Check either pickling failed (and message was not send) or some other error occurred")
@@ -88,5 +88,4 @@ class ZMQLogstashHanderTest(TestCase):
                     continue
                 raise
 
-        self.assertEqual(received_log, salt.utils.stringutils.to_bytes(the_log),
-                         "Check either pickling failed (and message was not send) or some other error occurred")
+        assert received_log == salt.utils.stringutils.to_bytes(the_log), "Check either pickling failed (and message was not send) or some other error occurred"

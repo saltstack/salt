@@ -23,7 +23,7 @@ class SSHMineTest(SSHCase):
         test salt-ssh with mine
         '''
         ret = self.run_function('mine.get', ['localhost test.arg'], wipe=False)
-        self.assertEqual(ret['localhost']['args'], ['itworked'])
+        assert ret['localhost']['args'] == ['itworked']
 
     def tearDown(self):
         '''

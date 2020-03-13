@@ -13,6 +13,7 @@ from tests.support.mock import MagicMock, patch
 import salt.states.jboss7 as jboss7
 from salt.exceptions import CommandExecutionError
 from salt.ext import six
+import pytest
 
 
 class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
@@ -69,8 +70,8 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
             result = jboss7.deployed(name="unchanged", jboss_config=jboss_conf, salt_source=parameters)
 
             # then
-            self.assertFalse(jboss7_undeploy_mock.called)
-            self.assertFalse(jboss7_deploy_mock.called)
+            assert not jboss7_undeploy_mock.called
+            assert not jboss7_deploy_mock.called
 
     def test_should_redeploy_changed(self):
         # given
@@ -103,8 +104,8 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
             result = jboss7.deployed(name="unchanged", jboss_config=jboss_conf, salt_source=parameters)
 
             # then
-            self.assertTrue(jboss7_undeploy_mock.called)
-            self.assertTrue(jboss7_deploy_mock.called)
+            assert jboss7_undeploy_mock.called
+            assert jboss7_deploy_mock.called
 
     def test_should_deploy_different_artifact(self):
         # given
@@ -137,8 +138,8 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
             result = jboss7.deployed(name="unchanged", jboss_config=jboss_conf, salt_source=parameters)
 
             # then
-            self.assertFalse(jboss7_undeploy_mock.called)
-            self.assertTrue(jboss7_deploy_mock.called)
+            assert not jboss7_undeploy_mock.called
+            assert jboss7_deploy_mock.called
 
     def test_should_redploy_undeploy_force(self):
         # given
@@ -171,8 +172,8 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
             result = jboss7.deployed(name="unchanged", jboss_config=jboss_conf, salt_source=parameters)
 
             # then
-            self.assertTrue(jboss7_undeploy_mock.called)
-            self.assertTrue(jboss7_deploy_mock.called)
+            assert jboss7_undeploy_mock.called
+            assert jboss7_deploy_mock.called
 
     def test_should_create_new_datasource_if_not_exists(self):
         # given
@@ -204,8 +205,8 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
             create_mock.assert_called_with(name='appDS', jboss_config={},
                                            datasource_properties=datasource_properties, profile=None)
 
-            self.assertFalse(update_mock.called)
-            self.assertEqual(result['comment'], 'Datasource created.')
+            assert not update_mock.called
+            assert result['comment'] == 'Datasource created.'
 
     def test_should_update_the_datasource_if_exists(self):
         ds_status = {'updated': False}
@@ -233,8 +234,8 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
             update_mock.assert_called_with(name='appDS', jboss_config={},
                                            new_properties={'connection-url': 'jdbc:/new-connection-url'},
                                            profile=None)
-            self.assertTrue(read_mock.called)
-            self.assertEqual(result['comment'], 'Datasource updated.')
+            assert read_mock.called
+            assert result['comment'] == 'Datasource updated.'
 
     def test_should_recreate_the_datasource_if_specified(self):
         read_mock = MagicMock(return_value={'success': True,
@@ -254,8 +255,8 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
             create_mock.assert_called_with(name='appDS', jboss_config={},
                                            datasource_properties={'connection-url': 'jdbc:/same-connection-url'},
                                            profile=None)
-            self.assertEqual(result['changes']['removed'], 'appDS')
-            self.assertEqual(result['changes']['created'], 'appDS')
+            assert result['changes']['removed'] == 'appDS'
+            assert result['changes']['created'] == 'appDS'
 
     def test_should_inform_if_the_datasource_has_not_changed(self):
         read_mock = MagicMock(return_value={'success': True,
@@ -273,8 +274,8 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
 
             update_mock.assert_called_with(name='appDS', jboss_config={},
                                            new_properties={'connection-url': 'jdbc:/old-connection-url'}, profile=None)
-            self.assertFalse(create_mock.called)
-            self.assertEqual(result['comment'], 'Datasource not changed.')
+            assert not create_mock.called
+            assert result['comment'] == 'Datasource not changed.'
 
     def test_should_create_binding_if_not_exists(self):
         # given
@@ -303,9 +304,9 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
 
             # then
             create_mock.assert_called_with(jboss_config={}, binding_name='env', value='DEV', profile=None)
-            self.assertEqual(update_mock.call_count, 0)
-            self.assertEqual(result['changes'], {'added': 'env:DEV\n'})
-            self.assertEqual(result['comment'], 'Bindings changed.')
+            assert update_mock.call_count == 0
+            assert result['changes'] == {'added': 'env:DEV\n'}
+            assert result['comment'] == 'Bindings changed.'
 
     def test_should_update_bindings_if_exists_and_different(self):
         # given
@@ -333,9 +334,9 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
 
             # then
             update_mock.assert_called_with(jboss_config={}, binding_name='env', value='DEV2', profile=None)
-            self.assertEqual(create_mock.call_count, 0)
-            self.assertEqual(result['changes'], {'changed': 'env:DEV->DEV2\n'})
-            self.assertEqual(result['comment'], 'Bindings changed.')
+            assert create_mock.call_count == 0
+            assert result['changes'] == {'changed': 'env:DEV->DEV2\n'}
+            assert result['comment'] == 'Bindings changed.'
 
     def test_should_not_update_bindings_if_same(self):
         # given
@@ -350,10 +351,10 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
             result = jboss7.bindings_exist(name='bindings', jboss_config={}, bindings={'env': 'DEV2'})
 
             # then
-            self.assertEqual(create_mock.call_count, 0)
-            self.assertEqual(update_mock.call_count, 0)
-            self.assertEqual(result['changes'], {})
-            self.assertEqual(result['comment'], 'Bindings not changed.')
+            assert create_mock.call_count == 0
+            assert update_mock.call_count == 0
+            assert result['changes'] == {}
+            assert result['comment'] == 'Bindings not changed.'
 
     def test_should_raise_exception_if_cannot_create_binding(self):
         def read_func(jboss_config, binding_name, profile):
@@ -374,7 +375,7 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
                 jboss7.bindings_exist(name='bindings', jboss_config={}, bindings={'env': 'DEV2'}, profile=None)
                 self.fail('An exception should be thrown')
             except CommandExecutionError as e:
-                self.assertEqual(six.text_type(e), 'Incorrect binding name.')
+                assert six.text_type(e) == 'Incorrect binding name.'
 
     def test_should_raise_exception_if_cannot_update_binding(self):
         def read_func(jboss_config, binding_name, profile):
@@ -398,7 +399,7 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
                                       profile=None)
                 self.fail('An exception should be thrown')
             except CommandExecutionError as e:
-                self.assertEqual(six.text_type(e), 'Incorrect binding name.')
+                assert six.text_type(e) == 'Incorrect binding name.'
 
     def test_datasource_exist_create_datasource_good_code(self):
         jboss_config = {'cli_path': '/home/ch44d/Desktop/wildfly-18.0.0.Final/bin/jboss-cli.sh',
@@ -424,10 +425,10 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
                                           'jboss7.create_datasource': create_datasource}):
             ret = jboss7.datasource_exists("SQL", jboss_config, datasource_properties)
 
-            self.assertTrue('result' in ret)
-            self.assertFalse(ret['result'])
-            self.assertTrue('comment' in ret)
-            self.assertTrue(error_msg in ret['comment'])
+            assert 'result' in ret
+            assert not ret['result']
+            assert 'comment' in ret
+            assert error_msg in ret['comment']
 
             read_datasource.assert_called_once()
             create_datasource.assert_called_once()
@@ -450,9 +451,8 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
                                                   'failure-description': 'Something happened'})
 
         with patch.dict(jboss7.__salt__, {'jboss7.read_datasource': read_datasource}):
-            self.assertRaises(CommandExecutionError,
-                              jboss7.datasource_exists,
-                              'SQL',
+            with pytest.raises(CommandExecutionError):
+                jboss7.datasource_exists('SQL',
                               jboss_config,
                               datasource_properties)
             read_datasource.assert_called_once()

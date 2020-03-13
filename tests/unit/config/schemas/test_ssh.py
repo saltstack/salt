@@ -16,6 +16,7 @@ from salt.config.schemas import ssh as ssh_schemas
 from salt.config.schemas.minion import MinionConfiguration
 import salt.utils.stringutils
 from salt.utils.versions import LooseVersion as _LooseVersion
+import pytest
 
 # Import 3rd-party libs
 try:
@@ -132,8 +133,8 @@ class RosterEntryConfigTest(TestCase):
             'additionalProperties': False
         }
         try:
-            self.assertDictContainsSubset(expected['properties'], config.serialize()['properties'])
-            self.assertDictContainsSubset(expected, config.serialize())
+            assert dict(config.serialize()['properties'], **expected['properties']) == config.serialize()['properties']
+            assert dict(config.serialize(), **expected) == config.serialize()
         except AssertionError:
             import salt.utils.json
             print(salt.utils.json.dumps(config.serialize(), indent=4))
@@ -226,7 +227,7 @@ class RosterEntryConfigTest(TestCase):
         except jsonschema.exceptions.ValidationError as exc:
             self.fail('ValidationError raised: {0}'.format(exc))
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate(
                 {
                     'host': '127.1.0.1',
@@ -236,9 +237,9 @@ class RosterEntryConfigTest(TestCase):
                 ssh_schemas.RosterEntryConfig.serialize(),
                 format_checker=jsonschema.FormatChecker()
             )
-        self.assertIn('is too short', excinfo.exception.message)
+        assert 'is too short' in excinfo.value.message
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate(
                 {
                     'host': '127.1.0.1',
@@ -251,15 +252,14 @@ class RosterEntryConfigTest(TestCase):
                 ssh_schemas.RosterEntryConfig.serialize(),
                 format_checker=jsonschema.FormatChecker()
             )
-        self.assertIn('is not of type', excinfo.exception.message)
+        assert 'is not of type' in excinfo.value.message
 
 
 class RosterItemTest(TestCase):
 
     def test_roster_config(self):
         try:
-            self.assertDictContainsSubset(
-                {
+            assert dict(ssh_schemas.RosterItem.serialize(), **{
                     "$schema": "http://json-schema.org/draft-04/schema#",
                     "title": "Roster Configuration",
                     "description": "Roster entries definition",
@@ -268,9 +268,7 @@ class RosterItemTest(TestCase):
                         r"^([^:]+)$": ssh_schemas.RosterEntryConfig.serialize()
                     },
                     "additionalProperties": False
-                },
-                ssh_schemas.RosterItem.serialize()
-            )
+                }) == ssh_schemas.RosterItem.serialize()
         except AssertionError:
             import salt.utils.json
             print(salt.utils.json.dumps(ssh_schemas.RosterItem.serialize(), indent=4))
@@ -293,7 +291,7 @@ class RosterItemTest(TestCase):
         except jsonschema.exceptions.ValidationError as exc:
             self.fail('ValidationError raised: {0}'.format(exc))
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate(
                 {salt.utils.stringutils.to_str('target-1:1'):
                     {
@@ -306,12 +304,8 @@ class RosterItemTest(TestCase):
                 format_checker=jsonschema.FormatChecker()
             )
         if JSONSCHEMA_VERSION < _LooseVersion('2.6.0'):
-            self.assertIn(
-                'Additional properties are not allowed (\'target-1:1\' was unexpected)',
-                excinfo.exception.message
-            )
+            assert 'Additional properties are not allowed (\'target-1:1\' was unexpected)' in \
+                excinfo.value.message
         else:
-            self.assertIn(
-                '\'target-1:1\' does not match any of the regexes',
-                excinfo.exception.message
-            )
+            assert '\'target-1:1\' does not match any of the regexes' in \
+                excinfo.value.message

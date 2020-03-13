@@ -47,7 +47,7 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_module_creation(self):
         client = libcloud_dns._get_driver('test')
-        self.assertFalse(client is None)
+        assert client is not None
 
     def test_init(self):
         with patch('salt.utils.compat.pack_dunder', return_value=False) as dunder:

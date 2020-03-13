@@ -81,9 +81,9 @@ class KapacitorTestCase(TestCase, LoaderModuleMockMixin):
             database='testdb', retention_policy='default',
             task_type='stream', dbrps=['testdb2.default_rp', 'testdb.default'])
         enable_mock.assert_called_once_with('testname')
-        self.assertIn('TICKscript diff', ret['changes'])
-        self.assertIn('enabled', ret['changes'])
-        self.assertEqual(True, ret['changes']['enabled']['new'])
+        assert 'TICKscript diff' in ret['changes']
+        assert 'enabled' in ret['changes']
+        assert ret['changes']['enabled']['new'] is True
 
     def test_task_present_existing_task_updated_script(self):
         ret, get_mock, define_mock, enable_mock, _ = _present(task=_task(script='oldscript'))
@@ -91,24 +91,24 @@ class KapacitorTestCase(TestCase, LoaderModuleMockMixin):
         define_mock.assert_called_once_with('testname', '/tmp/script.tick',
             database='testdb', retention_policy='default',
             task_type='stream', dbrps=['testdb.default'])
-        self.assertEqual(False, enable_mock.called)
-        self.assertIn('TICKscript diff', ret['changes'])
-        self.assertNotIn('enabled', ret['changes'])
+        assert enable_mock.called is False
+        assert 'TICKscript diff' in ret['changes']
+        assert 'enabled' not in ret['changes']
 
     def test_task_present_existing_task_not_enabled(self):
         ret, get_mock, define_mock, enable_mock, _ = _present(task=_task(enabled=False))
         get_mock.assert_called_once_with('testname')
-        self.assertEqual(False, define_mock.called)
+        assert define_mock.called is False
         enable_mock.assert_called_once_with('testname')
-        self.assertNotIn('diff', ret['changes'])
-        self.assertIn('enabled', ret['changes'])
-        self.assertEqual(True, ret['changes']['enabled']['new'])
+        assert 'diff' not in ret['changes']
+        assert 'enabled' in ret['changes']
+        assert ret['changes']['enabled']['new'] is True
 
     def test_task_present_disable_existing_task(self):
         ret, get_mock, define_mock, _, disable_mock = _present(task=_task(), enable=False)
         get_mock.assert_called_once_with('testname')
-        self.assertEqual(False, define_mock.called)
+        assert define_mock.called is False
         disable_mock.assert_called_once_with('testname')
-        self.assertNotIn('diff', ret['changes'])
-        self.assertIn('enabled', ret['changes'])
-        self.assertEqual(False, ret['changes']['enabled']['new'])
+        assert 'diff' not in ret['changes']
+        assert 'enabled' in ret['changes']
+        assert ret['changes']['enabled']['new'] is False

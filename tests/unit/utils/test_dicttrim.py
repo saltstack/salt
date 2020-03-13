@@ -21,7 +21,7 @@ class DictTrimTestCase(TestCase):
 
     def test_trim_dict(self):
         ret = dicttrimmer.trim_dict(self.old_dict, 1000)
-        self.assertEqual(ret, self.new_dict)
+        assert ret == self.new_dict
 
 
 class RecursiveDictTrimTestCase(TestCase):
@@ -32,4 +32,4 @@ class RecursiveDictTrimTestCase(TestCase):
 
     def test_trim_dict(self):
         ret = dicttrimmer.trim_dict(self.old_dict, 1000)
-        self.assertEqual(ret, self.new_dict)
+        assert ret == self.new_dict

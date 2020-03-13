@@ -48,20 +48,16 @@ class PostgresUserTestCase(TestCase, LoaderModuleMockMixin):
                                                  'postgres.user_create': MagicMock()}):
             with patch.dict(postgres_user.__opts__, {'test': True}):
                 ret = postgres_user.present('foo')
-                self.assertEqual(
-                    ret,
+                assert ret == \
                     {'comment': 'User foo is set to be created',
                      'changes': {}, 'name': 'foo', 'result': None}
-                )
-                self.assertEqual(self.salt_stub['postgres.user_create'].call_count, 0)
+                assert self.salt_stub['postgres.user_create'].call_count == 0
 
             # test=False
             ret = postgres_user.present('foo')
-            self.assertEqual(
-                ret,
+            assert ret == \
                 {'comment': 'The user foo has been created',
                  'changes': {'foo': 'Present'}, 'name': 'foo', 'result': True}
-            )
             self.salt_stub['postgres.user_create'].assert_called_once_with(username='foo',
                                                                            superuser=None,
                                                                            encrypted=True,
@@ -97,20 +93,16 @@ class PostgresUserTestCase(TestCase, LoaderModuleMockMixin):
                                                  'postgres.user_update': MagicMock()}):
             with patch.dict(postgres_user.__opts__, {'test': True}):
                 ret = postgres_user.present('foo', login=True, replication=False)
-                self.assertEqual(
-                    ret,
+                assert ret == \
                     {'comment': 'User foo is set to be updated',
                      'changes': {'foo': {'login': True}}, 'name': 'foo', 'result': None}
-                )
-                self.assertEqual(self.salt_stub['postgres.user_update'].call_count, 0)
+                assert self.salt_stub['postgres.user_update'].call_count == 0
 
             # test=False
             ret = postgres_user.present('foo', login=True, replication=False)
-            self.assertEqual(
-                ret,
+            assert ret == \
                 {'comment': 'The user foo has been updated',
                  'changes': {'foo': {'login': True}}, 'name': 'foo', 'result': True}
-            )
             self.salt_stub['postgres.user_update'].assert_called_once_with(username='foo',
                                                                            superuser=None,
                                                                            encrypted=True,
@@ -146,21 +138,17 @@ class PostgresUserTestCase(TestCase, LoaderModuleMockMixin):
                                                  'postgres.user_update': MagicMock()}):
             with patch.dict(postgres_user.__opts__, {'test': True}):
                 ret = postgres_user.present('foo', login=False, replication=False)
-                self.assertEqual(
-                    ret,
+                assert ret == \
                     {'comment': 'User foo is already present',
                      'changes': {}, 'name': 'foo', 'result': True}
-                )
-                self.assertEqual(self.salt_stub['postgres.user_update'].call_count, 0)
+                assert self.salt_stub['postgres.user_update'].call_count == 0
 
             # test=False
             ret = postgres_user.present('foo', login=False, replication=False)
-            self.assertEqual(
-                ret,
+            assert ret == \
                 {'comment': 'User foo is already present',
                  'changes': {}, 'name': 'foo', 'result': True}
-            )
-            self.assertEqual(self.salt_stub['postgres.user_update'].call_count, 0)
+            assert self.salt_stub['postgres.user_update'].call_count == 0
 
 
 class PostgresGroupTestCase(TestCase, LoaderModuleMockMixin):
@@ -194,20 +182,16 @@ class PostgresGroupTestCase(TestCase, LoaderModuleMockMixin):
                                                   'postgres.group_create': MagicMock()}):
             with patch.dict(postgres_group.__opts__, {'test': True}):
                 ret = postgres_group.present('foo')
-                self.assertEqual(
-                    ret,
+                assert ret == \
                     {'comment': 'Group foo is set to be created',
                      'changes': {}, 'name': 'foo', 'result': None}
-                )
-                self.assertEqual(self.salt_stub['postgres.group_create'].call_count, 0)
+                assert self.salt_stub['postgres.group_create'].call_count == 0
 
             # test=False
             ret = postgres_group.present('foo')
-            self.assertEqual(
-                ret,
+            assert ret == \
                 {'comment': 'The group foo has been created',
                  'changes': {}, 'name': 'foo', 'result': True}
-            )
             self.salt_stub['postgres.group_create'].assert_called_once_with(superuser=None,
                                                                             replication=None,
                                                                             encrypted=True,
@@ -242,20 +226,16 @@ class PostgresGroupTestCase(TestCase, LoaderModuleMockMixin):
                                                  'postgres.group_update': MagicMock()}):
             with patch.dict(postgres_group.__opts__, {'test': True}):
                 ret = postgres_group.present('foo', login=True, replication=False)
-                self.assertEqual(
-                    ret,
+                assert ret == \
                     {'comment': 'Group foo is set to be updated',
                      'changes': {'foo': {'login': True}}, 'name': 'foo', 'result': None}
-                )
-                self.assertEqual(self.salt_stub['postgres.group_update'].call_count, 0)
+                assert self.salt_stub['postgres.group_update'].call_count == 0
 
             # test=False
             ret = postgres_group.present('foo', login=True, replication=False)
-            self.assertEqual(
-                ret,
+            assert ret == \
                 {'comment': 'The group foo has been updated',
                  'changes': {'foo': {'login': True}}, 'name': 'foo', 'result': True}
-            )
             self.salt_stub['postgres.group_update'].assert_called_once_with(superuser=None,
                                                                        replication=False,
                                                                        encrypted=True,
@@ -290,21 +270,17 @@ class PostgresGroupTestCase(TestCase, LoaderModuleMockMixin):
                                                  'postgres.group_update': MagicMock()}):
             with patch.dict(postgres_group.__opts__, {'test': True}):
                 ret = postgres_group.present('foo', login=False, replication=False)
-                self.assertEqual(
-                    ret,
+                assert ret == \
                     {'comment': 'Group foo is already present',
                      'changes': {}, 'name': 'foo', 'result': True}
-                )
-                self.assertEqual(self.salt_stub['postgres.group_update'].call_count, 0)
+                assert self.salt_stub['postgres.group_update'].call_count == 0
 
             # test=False
             ret = postgres_group.present('foo', login=False, replication=False)
-            self.assertEqual(
-                ret,
+            assert ret == \
                 {'comment': 'Group foo is already present',
                  'changes': {}, 'name': 'foo', 'result': True}
-            )
-            self.assertEqual(self.salt_stub['postgres.group_update'].call_count, 0)
+            assert self.salt_stub['postgres.group_update'].call_count == 0
 
 
 class PostgresExtensionTestCase(TestCase, LoaderModuleMockMixin):
@@ -347,17 +323,13 @@ class PostgresExtensionTestCase(TestCase, LoaderModuleMockMixin):
                         False, False,
                     ])}):
             ret = postgres_extension.present('foo')
-            self.assertEqual(
-                ret,
+            assert ret == \
                 {'comment': 'Failed to install extension foo',
-                 'changes': {}, 'name': 'foo', 'result': False},
-            )
+                 'changes': {}, 'name': 'foo', 'result': False}
             ret = postgres_extension.present('foo')
-            self.assertEqual(
-                ret,
+            assert ret == \
                 {'comment': 'Failed to upgrade extension foo',
                  'changes': {}, 'name': 'foo', 'result': False}
-            )
 
     def test_present(self):
         '''
@@ -375,23 +347,17 @@ class PostgresExtensionTestCase(TestCase, LoaderModuleMockMixin):
                         True, True, True,
                     ])}):
             ret = postgres_extension.present('foo')
-            self.assertEqual(
-                ret,
+            assert ret == \
                 {'comment': 'The extension foo has been installed',
                  'changes': {'foo': 'Installed'}, 'name': 'foo', 'result': True}
-            )
             ret = postgres_extension.present('foo')
-            self.assertEqual(
-                ret,
+            assert ret == \
                 {'comment': 'Extension foo is already present',
                  'changes': {}, 'name': 'foo', 'result': True}
-            )
             ret = postgres_extension.present('foo')
-            self.assertEqual(
-                ret,
+            assert ret == \
                 {'comment': 'The extension foo has been upgraded',
                  'changes': {'foo': 'Upgraded'}, 'name': 'foo', 'result': True}
-            )
 
     def test_presenttest(self):
         '''
@@ -410,25 +376,17 @@ class PostgresExtensionTestCase(TestCase, LoaderModuleMockMixin):
                     ])}):
             with patch.dict(postgres_extension.__opts__, {'test': True}):
                 ret = postgres_extension.present('foo')
-                self.assertEqual(
-                    ret,
+                assert ret == \
                     {'comment': 'Extension foo is set to be installed',
                      'changes': {}, 'name': 'foo', 'result': None}
-
-                )
                 ret = postgres_extension.present('foo')
-                self.assertEqual(
-                    ret,
+                assert ret == \
                     {'comment': "Extension foo is already present",
                      'changes': {}, 'name': 'foo', 'result': True}
-
-                )
                 ret = postgres_extension.present('foo')
-                self.assertEqual(
-                    ret,
+                assert ret == \
                     {'comment': "Extension foo is set to be upgraded",
                      'changes': {}, 'name': 'foo', 'result': None}
-                )
 
     def test_absent(self):
         '''
@@ -443,20 +401,15 @@ class PostgresExtensionTestCase(TestCase, LoaderModuleMockMixin):
                         True, True,
                     ])}):
             ret = postgres_extension.absent('foo')
-            self.assertEqual(
-                ret,
+            assert ret == \
                 {'comment': 'Extension foo has been removed',
                  'changes': {'foo': 'Absent'}, 'name': 'foo', 'result': True}
-            )
             ret = postgres_extension.absent('foo')
-            self.assertEqual(
-                ret,
+            assert ret == \
                 {'comment': (
                     'Extension foo is not present, '
                     'so it cannot be removed'),
                  'changes': {}, 'name': 'foo', 'result': True}
-
-            )
 
     def test_absent_failed(self):
         '''
@@ -472,11 +425,9 @@ class PostgresExtensionTestCase(TestCase, LoaderModuleMockMixin):
                             False, False,
                         ])}):
                 ret = postgres_extension.absent('foo')
-                self.assertEqual(
-                    ret,
+                assert ret == \
                     {'comment': 'Extension foo failed to be removed',
                      'changes': {}, 'name': 'foo', 'result': False}
-                )
 
     def test_absent_failedtest(self):
         with patch.dict(postgres_extension.__salt__, {
@@ -488,11 +439,9 @@ class PostgresExtensionTestCase(TestCase, LoaderModuleMockMixin):
                     ])}):
             with patch.dict(postgres_extension.__opts__, {'test': True}):
                 ret = postgres_extension.absent('foo')
-            self.assertEqual(
-                ret,
+            assert ret == \
                 {'comment': 'Extension foo is set to be removed',
                  'changes': {}, 'name': 'foo', 'result': None}
-            )
 
 
 class PostgresSchemaTestCase(TestCase, LoaderModuleMockMixin):
@@ -524,15 +473,13 @@ class PostgresSchemaTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(postgres_schema.__salt__, {'postgres.schema_get': Mock(return_value=None),
                                                    'postgres.schema_create': MagicMock()}):
             ret = postgres_schema.present('dbname', 'foo')
-            self.assertEqual(
-                ret,
+            assert ret == \
                 {'comment': 'Schema foo has been created in database dbname',
                  'changes': {'foo': 'Present'},
                  'dbname': 'dbname',
                  'name': 'foo',
                  'result': True}
-                )
-            self.assertEqual(self.salt_stub['postgres.schema_create'].call_count, 1)
+            assert self.salt_stub['postgres.schema_create'].call_count == 1
 
     def test_present_nocreation(self):
         with patch.dict(postgres_schema.__salt__, {
@@ -542,41 +489,35 @@ class PostgresSchemaTestCase(TestCase, LoaderModuleMockMixin):
                                                                       }),
                             'postgres.schema_create': MagicMock()}):
             ret = postgres_schema.present('dbname', 'foo')
-            self.assertEqual(
-                ret,
+            assert ret == \
                 {'comment': 'Schema foo already exists in database dbname',
                  'changes': {},
                  'dbname': 'dbname',
                  'name': 'foo',
                  'result': True}
-                )
-            self.assertEqual(self.salt_stub['postgres.schema_create'].call_count, 0)
+            assert self.salt_stub['postgres.schema_create'].call_count == 0
 
     def test_absent_remove(self):
         with patch.dict(postgres_schema.__salt__, {'postgres.schema_exists': Mock(return_value=True),
                                                    'postgres.schema_remove': MagicMock()}):
             ret = postgres_schema.absent('dbname', 'foo')
-            self.assertEqual(
-                ret,
+            assert ret == \
                 {'comment': 'Schema foo has been removed from database dbname',
                  'changes': {'foo': 'Absent'},
                  'dbname': 'dbname',
                  'name': 'foo',
                  'result': True}
-                )
-            self.assertEqual(self.salt_stub['postgres.schema_remove'].call_count, 1)
+            assert self.salt_stub['postgres.schema_remove'].call_count == 1
 
     def test_absent_noremove(self):
         with patch.dict(postgres_schema.__salt__, {'postgres.schema_exists': Mock(return_value=False),
                                                    'postgres.schema_remove': MagicMock()}):
             ret = postgres_schema.absent('dbname', 'foo')
-            self.assertEqual(
-                ret,
+            assert ret == \
                 {'comment': 'Schema foo is not present in database dbname,'
                             ' so it cannot be removed',
                  'changes': {},
                  'dbname': 'dbname',
                  'name': 'foo',
                  'result': True}
-                )
-            self.assertEqual(self.salt_stub['postgres.schema_remove'].call_count, 0)
+            assert self.salt_stub['postgres.schema_remove'].call_count == 0

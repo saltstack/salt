@@ -22,7 +22,7 @@ class SSHMasterTestCase(SSHCase):
         Ensure the proxy can ping
         '''
         ret = self.run_function('test.ping')
-        self.assertEqual(ret, True)
+        assert ret is True
 
     @requires_system_grains
     @pytest.mark.skip_if_not_root
@@ -39,29 +39,29 @@ class SSHMasterTestCase(SSHCase):
             if int(os_release.split('.')[1]) >= 13:
                 service = 'com.apple.AirPlayXPCHelper'
         ret = self.run_function('service.get_all')
-        self.assertIn(service, ret)
+        assert service in ret
         self.run_function('service.stop', [service])
         ret = self.run_function('service.status', [service])
-        self.assertFalse(ret)
+        assert not ret
         self.run_function('service.start', [service])
         ret = self.run_function('service.status', [service])
-        self.assertTrue(ret)
+        assert ret
 
     @requires_system_grains
     def test_grains_items(self, grains):
         os_family = grains['os_family']
         ret = self.run_function('grains.items')
         if os_family == 'MacOS':
-            self.assertEqual(ret['kernel'], 'Darwin')
+            assert ret['kernel'] == 'Darwin'
         else:
-            self.assertEqual(ret['kernel'], 'Linux')
+            assert ret['kernel'] == 'Linux'
 
     def test_state_apply(self):
         ret = self.run_function('state.apply', ['core'])
         for key, value in ret.items():
-            self.assertTrue(value['result'])
+            assert value['result']
 
     def test_state_highstate(self):
         ret = self.run_function('state.highstate')
         for key, value in ret.items():
-            self.assertTrue(value['result'])
+            assert value['result']

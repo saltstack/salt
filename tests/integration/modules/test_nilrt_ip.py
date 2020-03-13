@@ -67,10 +67,10 @@ class Nilrt_ipModuleTest(ModuleCase):
         interfaces = self.__interfaces()
         for interface in interfaces:
             result = self.run_function('ip.down', [interface])
-            self.assertTrue(result)
+            assert result
         info = self.run_function('ip.get_interfaces_details')
         for interface in info['interfaces']:
-            self.assertFalse(self.__connected(interface))
+            assert not self.__connected(interface)
 
     @pytest.mark.destructive_test
     def test_up(self):
@@ -81,33 +81,33 @@ class Nilrt_ipModuleTest(ModuleCase):
         # up interfaces
         for interface in interfaces:
             result = self.run_function('ip.up', [interface])
-            self.assertTrue(result)
+            assert result
         info = self.run_function('ip.get_interfaces_details')
         for interface in info['interfaces']:
-            self.assertTrue(self.__connected(interface))
+            assert self.__connected(interface)
 
     @pytest.mark.destructive_test
     def test_set_dhcp_linklocal_all(self):
         interfaces = self.__interfaces()
         for interface in interfaces:
             result = self.run_function('ip.set_dhcp_linklocal_all', [interface])
-            self.assertTrue(result)
+            assert result
         info = self.run_function('ip.get_interfaces_details')
         for interface in info['interfaces']:
-            self.assertEqual(interface['ipv4']['requestmode'], 'dhcp_linklocal')
+            assert interface['ipv4']['requestmode'] == 'dhcp_linklocal'
 
     @pytest.mark.destructive_test
     def test_static_all(self):
         interfaces = self.__interfaces()
         for interface in interfaces:
             result = self.run_function('ip.set_static_all', [interface, '192.168.10.4', '255.255.255.0', '192.168.10.1', '8.8.4.4 8.8.8.8'])
-            self.assertTrue(result)
+            assert result
 
         info = self.run_function('ip.get_interfaces_details')
         for interface in info['interfaces']:
-            self.assertIn('8.8.4.4', interface['ipv4']['dns'])
-            self.assertIn('8.8.8.8', interface['ipv4']['dns'])
-            self.assertEqual(interface['ipv4']['requestmode'], 'static')
-            self.assertEqual(interface['ipv4']['address'], '192.168.10.4')
-            self.assertEqual(interface['ipv4']['netmask'], '255.255.255.0')
-            self.assertEqual(interface['ipv4']['gateway'], '192.168.10.1')
+            assert '8.8.4.4' in interface['ipv4']['dns']
+            assert '8.8.8.8' in interface['ipv4']['dns']
+            assert interface['ipv4']['requestmode'] == 'static'
+            assert interface['ipv4']['address'] == '192.168.10.4'
+            assert interface['ipv4']['netmask'] == '255.255.255.0'
+            assert interface['ipv4']['gateway'] == '192.168.10.1'

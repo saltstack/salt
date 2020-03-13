@@ -70,7 +70,7 @@ class SaltifyTestCase(TestCase, LoaderModuleMockMixin):
                   'driver': 'saltify',
                   'name': 'dummy'
                   }
-            self.assertTrue(saltify.create(vm))
+            assert saltify.create(vm)
 
     def test_create_and_deploy(self):
         '''
@@ -87,7 +87,7 @@ class SaltifyTestCase(TestCase, LoaderModuleMockMixin):
                  }
             result = saltify.create(vm_)
             mock_cmd.assert_called_once_with(vm_, ANY)
-            self.assertTrue(result)
+            assert result
 
     def test_create_wake_on_lan(self):
         '''
@@ -114,28 +114,27 @@ class SaltifyTestCase(TestCase, LoaderModuleMockMixin):
                     # The test suite might call time.sleep, look for any call
                     # that has the expected wait time.
                     mock_sleep.assert_any_call(0.01)
-                    self.assertTrue(result)
+                    assert result
 
     def test_avail_locations(self):
         '''
         Test the avail_locations will always return {}
         '''
-        self.assertEqual(saltify.avail_locations(), {})
+        assert saltify.avail_locations() == {}
 
     def test_avail_sizes(self):
         '''
         Test the avail_sizes will always return {}
         '''
-        self.assertEqual(saltify.avail_sizes(), {})
+        assert saltify.avail_sizes() == {}
 
     def test_avail_images(self):
         '''
         Test the avail_images will return profiles
         '''
         testlist = list(TEST_PROFILE_NAMES)  # copy
-        self.assertEqual(
-            saltify.avail_images()['Profiles'].sort(),
-            testlist.sort())
+        assert saltify.avail_images()['Profiles'].sort() == \
+            testlist.sort()
 
     def test_list_nodes(self):
         '''
@@ -172,9 +171,8 @@ class SaltifyTestCase(TestCase, LoaderModuleMockMixin):
         lcl = salt.client.LocalClient()
         lcl.cmd = mm_cmd
         with patch('salt.client.LocalClient', return_value=lcl):
-            self.assertEqual(
-                saltify.list_nodes(),
-                expected_result)
+            assert saltify.list_nodes() == \
+                expected_result
 
     def test_saltify_reboot(self):
         mm_cmd = MagicMock(return_value=True)
@@ -183,7 +181,7 @@ class SaltifyTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.client.LocalClient', return_value=lcl):
             result = saltify.reboot('nodeS1', 'action')
             mm_cmd.assert_called_with('nodeS1', 'system.reboot')
-            self.assertTrue(result)
+            assert result
 
     def test_saltify_destroy(self):
         # destroy calls local.cmd several times and expects
@@ -209,4 +207,4 @@ class SaltifyTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.client.LocalClient', return_value=lcl):
             result = saltify.destroy('nodeS1', 'action')
             mm_cmd.assert_called_with('nodeS1', 'system.shutdown')
-            self.assertTrue(result)
+            assert result

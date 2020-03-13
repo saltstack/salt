@@ -68,7 +68,7 @@ class Sqlite3TestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests if it return version of pysqlite.
         '''
-        self.assertEqual(sqlite3.version(), '2.6.0')
+        assert sqlite3.version() == '2.6.0'
 
     # 'sqlite_version' function tests: 1
 
@@ -76,7 +76,7 @@ class Sqlite3TestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests if it return version of sqlite.
         '''
-        self.assertEqual(sqlite3.sqlite_version(), '3.8.2')
+        assert sqlite3.sqlite_version() == '3.8.2'
 
     # 'modify' function tests: 1
 
@@ -84,11 +84,10 @@ class Sqlite3TestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests if it issue an SQL query to sqlite3 (with no return data).
         '''
-        self.assertFalse(sqlite3.modify())
+        assert not sqlite3.modify()
 
-        self.assertTrue(sqlite3.modify
-                        ('/root/test.db',
-                         'CREATE TABLE test(id INT, testdata TEXT);'))
+        assert sqlite3.modify('/root/test.db',
+                              'CREATE TABLE test(id INT, testdata TEXT);')
 
     # 'fetch' function tests: 1
 
@@ -97,11 +96,10 @@ class Sqlite3TestCase(TestCase, LoaderModuleMockMixin):
         Tests if it retrieve data from an sqlite3 db
         (returns all rows, be careful!)
         '''
-        self.assertFalse(sqlite3.fetch())
+        assert not sqlite3.fetch()
 
-        self.assertTrue(sqlite3.fetch
-                        ('/root/test.db',
-                         'CREATE TABLE test(id INT, testdata TEXT);'))
+        assert sqlite3.fetch('/root/test.db',
+                             'CREATE TABLE test(id INT, testdata TEXT);')
 
     # 'tables' function tests: 1
 
@@ -109,9 +107,9 @@ class Sqlite3TestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests if it show all tables in the database.
         '''
-        self.assertFalse(sqlite3.tables())
+        assert not sqlite3.tables()
 
-        self.assertTrue(sqlite3.tables('/root/test.db'))
+        assert sqlite3.tables('/root/test.db')
 
     # 'indices' function tests: 1
 
@@ -119,9 +117,9 @@ class Sqlite3TestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests if it show all indices in the database.
         '''
-        self.assertFalse(sqlite3.indices())
+        assert not sqlite3.indices()
 
-        self.assertTrue(sqlite3.indices('/root/test.db'))
+        assert sqlite3.indices('/root/test.db')
 
     # 'indexes' function tests: 1
 
@@ -130,4 +128,4 @@ class Sqlite3TestCase(TestCase, LoaderModuleMockMixin):
         Tests if it show all indices in the database,
         for people with poor spelling skills
         '''
-        self.assertTrue(sqlite3.indexes('/root/test.db'))
+        assert sqlite3.indexes('/root/test.db')

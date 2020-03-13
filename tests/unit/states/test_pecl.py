@@ -43,18 +43,18 @@ class PeclTestCase(TestCase, LoaderModuleMockMixin):
                                         'pecl.install': mock_t}):
             comt = ('Pecl extension {0} is already installed.'.format(name))
             ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(pecl.installed(name), ret)
+            assert pecl.installed(name) == ret
 
             with patch.dict(pecl.__opts__, {'test': True}):
                 comt = ('Pecl extension mongo-1.0.1 would have been installed')
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(pecl.installed(name, version=ver), ret)
+                assert pecl.installed(name, version=ver) == ret
 
             with patch.dict(pecl.__opts__, {'test': False}):
                 comt = ('Pecl extension mongo-1.0.1 was successfully installed')
                 ret.update({'comment': comt, 'result': True,
                             'changes': {'mongo-1.0.1': 'Installed'}})
-                self.assertDictEqual(pecl.installed(name, version=ver), ret)
+                assert pecl.installed(name, version=ver) == ret
 
     # 'removed' function tests: 1
 
@@ -76,15 +76,15 @@ class PeclTestCase(TestCase, LoaderModuleMockMixin):
                                         'pecl.uninstall': mock_t}):
             comt = ('Pecl extension {0} is not installed.'.format(name))
             ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(pecl.removed(name), ret)
+            assert pecl.removed(name) == ret
 
             with patch.dict(pecl.__opts__, {'test': True}):
                 comt = ('Pecl extension mongo would have been removed')
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(pecl.removed(name), ret)
+                assert pecl.removed(name) == ret
 
             with patch.dict(pecl.__opts__, {'test': False}):
                 comt = ('Pecl extension mongo was successfully removed.')
                 ret.update({'comment': comt, 'result': True,
                             'changes': {name: 'Removed'}})
-                self.assertDictEqual(pecl.removed(name), ret)
+                assert pecl.removed(name) == ret

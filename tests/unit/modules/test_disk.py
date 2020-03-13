@@ -63,14 +63,14 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                       MagicMock(return_value=STUB_DISK_USAGE)):
             mock_cmd = MagicMock(return_value=1)
             with patch.dict(disk.__salt__, {'cmd.run': mock_cmd}):
-                self.assertDictEqual(STUB_DISK_USAGE, disk.usage(args=None))
+                assert STUB_DISK_USAGE == disk.usage(args=None)
 
     def test_usage_none(self):
         with patch.dict(disk.__grains__, {'kernel': 'Linux'}), \
                 patch('salt.modules.disk.usage', MagicMock(return_value='')):
             mock_cmd = MagicMock(return_value=1)
             with patch.dict(disk.__salt__, {'cmd.run': mock_cmd}):
-                self.assertEqual('', disk.usage(args=None))
+                assert '' == disk.usage(args=None)
 
     def test_inodeusage(self):
         with patch.dict(disk.__grains__, {'kernel': 'OpenBSD'}), \
@@ -78,7 +78,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                        MagicMock(return_value=STUB_DISK_INODEUSAGE)):
             mock = MagicMock()
             with patch.dict(disk.__salt__, {'cmd.run': mock}):
-                self.assertDictEqual(STUB_DISK_INODEUSAGE, disk.inodeusage(args=None))
+                assert STUB_DISK_INODEUSAGE == disk.inodeusage(args=None)
 
     def test_percent(self):
         with patch.dict(disk.__grains__, {'kernel': 'Linux'}), \
@@ -86,19 +86,19 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                       MagicMock(return_value=STUB_DISK_PERCENT)):
             mock = MagicMock()
             with patch.dict(disk.__salt__, {'cmd.run': mock}):
-                self.assertDictEqual(STUB_DISK_PERCENT, disk.percent(args=None))
+                assert STUB_DISK_PERCENT == disk.percent(args=None)
 
     def test_percent_args(self):
         with patch.dict(disk.__grains__, {'kernel': 'Linux'}), \
                 patch('salt.modules.disk.percent', MagicMock(return_value='/')):
             mock = MagicMock()
             with patch.dict(disk.__salt__, {'cmd.run': mock}):
-                self.assertEqual('/', disk.percent('/'))
+                assert '/' == disk.percent('/')
 
     def test_blkid(self):
         with patch.dict(disk.__salt__, {'cmd.run_stdout': MagicMock(return_value=1)}), \
                 patch('salt.modules.disk.blkid', MagicMock(return_value=STUB_DISK_BLKID)):
-            self.assertDictEqual(STUB_DISK_BLKID, disk.blkid())
+            assert STUB_DISK_BLKID == disk.blkid()
 
     def test_dump(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
@@ -134,13 +134,13 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
 
                 # Assert called once with either 'blockdev --setra 512 --setfra 512 /dev/sda' or
                 # 'blockdev --setfra 512 --setra 512 /dev/sda' and python_shell=False kwarg.
-                self.assertEqual(len(args), 1)
-                self.assertTrue(args[0].startswith('blockdev '))
-                self.assertTrue(args[0].endswith(' /dev/sda'))
-                self.assertIn(' --setra 512 ', args[0])
-                self.assertIn(' --setfra 1024 ', args[0])
-                self.assertEqual(len(args[0].split()), 6)
-                self.assertEqual(kwargs, {'python_shell': False})
+                assert len(args) == 1
+                assert args[0].startswith('blockdev ')
+                assert args[0].endswith(' /dev/sda')
+                assert ' --setra 512 ' in args[0]
+                assert ' --setfra 1024 ' in args[0]
+                assert len(args[0].split()) == 6
+                assert kwargs == {'python_shell': False}
 
     def test_format(self):
         '''
@@ -150,7 +150,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value=0)
         with patch.dict(disk.__salt__, {'cmd.retcode': mock}),\
                patch('salt.utils.path.which', MagicMock(return_value=True)):
-            self.assertEqual(disk.format_(device), True)
+            assert disk.format_(device) is True
 
     def test_fat_format(self):
         '''
@@ -161,7 +161,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value=0)
         with patch.dict(disk.__salt__, {'cmd.retcode': mock}),\
                patch('salt.utils.path.which', MagicMock(return_value=True)):
-            self.assertEqual(disk.format_(device, fs_type='fat', fat=12), True)
+            assert disk.format_(device, fs_type='fat', fat=12) is True
             args, kwargs = mock.call_args_list[0]
             assert expected == args[0]
 
@@ -177,7 +177,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(disk.__grains__, {'kernel': 'Linux'}), \
                 patch.dict(disk.__salt__, {'cmd.run': mock}), \
                 patch('salt.utils.path.which', MagicMock(return_value=True)):
-            self.assertEqual(disk.fstype(device), fs_type)
+            assert disk.fstype(device) == fs_type
 
     def test_resize2fs(self):
         '''

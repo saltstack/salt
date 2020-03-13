@@ -36,7 +36,7 @@ class WinNtpTestCase(TestCase, LoaderModuleMockMixin):
         mock_service = MagicMock(return_value=False)
         with patch.dict(win_ntp.__salt__, {'service.status': mock_service,
                                            'service.start': mock_service}):
-            self.assertFalse(win_ntp.set_servers('pool.ntp.org'))
+            assert not win_ntp.set_servers('pool.ntp.org')
 
         # Windows Time service is running
         # Fail to set NTP servers
@@ -44,7 +44,7 @@ class WinNtpTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(side_effect=['Failure', 'Failure', 'Failure', 'NtpServer: time.windows.com,0x8'])
         with patch.dict(win_ntp.__salt__, {'service.status': mock_service,
                                            'cmd.run': mock_cmd}):
-            self.assertFalse(win_ntp.set_servers('pool.ntp.org'))
+            assert not win_ntp.set_servers('pool.ntp.org')
 
         # Windows Time service is running
         # Successfully set NTP servers
@@ -52,7 +52,7 @@ class WinNtpTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_ntp.__salt__, {'service.status': mock_service,
                                            'service.restart': mock_service,
                                            'cmd.run': mock_cmd}):
-            self.assertTrue(win_ntp.set_servers('pool.ntp.org'))
+            assert win_ntp.set_servers('pool.ntp.org')
 
     # 'get_servers' function tests: 1
 
@@ -62,8 +62,8 @@ class WinNtpTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_cmd = MagicMock(side_effect=['', 'NtpServer: SALT', 'NtpServer'])
         with patch.dict(win_ntp.__salt__, {'cmd.run': mock_cmd}):
-            self.assertFalse(win_ntp.get_servers())
+            assert not win_ntp.get_servers()
 
-            self.assertListEqual(win_ntp.get_servers(), ['SALT'])
+            assert win_ntp.get_servers() == ['SALT']
 
-            self.assertFalse(win_ntp.get_servers())
+            assert not win_ntp.get_servers()

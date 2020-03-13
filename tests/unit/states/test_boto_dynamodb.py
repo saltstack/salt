@@ -50,12 +50,12 @@ class BotoDynamodbTestCase(TestCase, LoaderModuleMockMixin):
                     'DynamoDB table {0} throughput matches,\n'
                     'All global secondary indexes match,\n'.format(name))
             ret.update({'comment': comt})
-            self.assertDictEqual(boto_dynamodb.present(name), ret)
+            assert boto_dynamodb.present(name) == ret
 
             with patch.dict(boto_dynamodb.__opts__, {'test': True}):
                 comt = ('DynamoDB table {0} would be created.'.format(name))
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(boto_dynamodb.present(name), ret)
+                assert boto_dynamodb.present(name) == ret
 
             changes = {'new': {'global_indexes': None,
                                'hash_key': None,
@@ -73,7 +73,7 @@ class BotoDynamodbTestCase(TestCase, LoaderModuleMockMixin):
                         .format(name))
                 ret.update({'comment': comt, 'result': True,
                             'changes': changes})
-                self.assertDictEqual(ret, boto_dynamodb.present(name))
+                assert ret == boto_dynamodb.present(name)
 
     # 'absent' function tests: 1
 
@@ -95,12 +95,12 @@ class BotoDynamodbTestCase(TestCase, LoaderModuleMockMixin):
                          'boto_dynamodb.delete': mock_bool}):
             comt = ('DynamoDB table {0} does not exist'.format(name))
             ret.update({'comment': comt})
-            self.assertDictEqual(boto_dynamodb.absent(name), ret)
+            assert boto_dynamodb.absent(name) == ret
 
             with patch.dict(boto_dynamodb.__opts__, {'test': True}):
                 comt = 'DynamoDB table {0} is set to be deleted'.format(name)
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(boto_dynamodb.absent(name), ret)
+                assert boto_dynamodb.absent(name) == ret
 
             changes = {'new': 'Table new_table deleted',
                        'old': 'Table new_table exists'}
@@ -109,4 +109,4 @@ class BotoDynamodbTestCase(TestCase, LoaderModuleMockMixin):
                 comt = ('Deleted DynamoDB table {0}'.format(name))
                 ret.update({'comment': comt, 'result': True,
                             'changes': changes})
-                self.assertDictEqual(boto_dynamodb.absent(name), ret)
+                assert boto_dynamodb.absent(name) == ret

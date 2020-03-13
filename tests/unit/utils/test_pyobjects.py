@@ -22,6 +22,7 @@ from salt.template import compile_template
 from salt.utils.odict import OrderedDict
 from salt.utils.pyobjects import (StateFactory, State, Registry,
                                   SaltObject, InvalidFunction, DuplicateState)
+import pytest
 
 log = logging.getLogger(__name__)
 
@@ -177,32 +178,27 @@ class StateTests(TestCase):
                   require=File('/usr/local/bin'),
                   **pydmesg_kwargs)
 
-        self.assertEqual(f(), pydmesg_expected)
+        assert f() == pydmesg_expected
 
     def test_factory_serialization(self):
         File.managed('/usr/local/bin/pydmesg',
                      require=File('/usr/local/bin'),
                      **pydmesg_kwargs)
 
-        self.assertEqual(
-            Registry.states['/usr/local/bin/pydmesg'],
+        assert Registry.states['/usr/local/bin/pydmesg'] == \
             pydmesg_expected
-        )
 
     def test_context_manager(self):
         with File('/usr/local/bin'):
             pydmesg = File.managed('/usr/local/bin/pydmesg', **pydmesg_kwargs)
 
-            self.assertEqual(
-                Registry.states['/usr/local/bin/pydmesg'],
+            assert Registry.states['/usr/local/bin/pydmesg'] == \
                 pydmesg_expected
-            )
 
             with pydmesg:
                 File.managed('/tmp/something', owner='root')
 
-                self.assertEqual(
-                    Registry.states['/tmp/something'],
+                assert Registry.states['/tmp/something'] == \
                     {
                         'file.managed': [
                             {'owner': 'root'},
@@ -212,39 +208,32 @@ class StateTests(TestCase):
                             ]},
                         ]
                     }
-                )
 
     def test_salt_data(self):
         File.managed('/usr/local/bin/pydmesg',
                      require=File('/usr/local/bin'),
                      **pydmesg_kwargs)
 
-        self.assertEqual(
-            Registry.states['/usr/local/bin/pydmesg'],
+        assert Registry.states['/usr/local/bin/pydmesg'] == \
             pydmesg_expected
-        )
 
-        self.assertEqual(
-            Registry.salt_data(),
+        assert Registry.salt_data() == \
             pydmesg_salt_expected
-        )
 
-        self.assertEqual(
-            Registry.states,
+        assert Registry.states == \
             OrderedDict()
-        )
 
     def test_duplicates(self):
         def add_dup():
             File.managed('dup', name='/dup')
 
         add_dup()
-        self.assertRaises(DuplicateState, add_dup)
+        with pytest.raises(DuplicateState):
+            add_dup()
 
         Service.running('dup', name='dup-service')
 
-        self.assertEqual(
-            Registry.states,
+        assert Registry.states == \
             OrderedDict([
                 ('dup',
                  OrderedDict([
@@ -256,7 +245,6 @@ class StateTests(TestCase):
                      ])
                  ]))
             ])
-        )
 
 
 class RendererMixin(object):
@@ -323,7 +311,7 @@ class RendererMixin(object):
 class RendererTests(RendererMixin, StateTests, MapBuilder):
     def test_basic(self):
         ret = self.render(basic_template)
-        self.assertEqual(ret, OrderedDict([
+        assert ret == OrderedDict([
             ('/tmp', {
                 'file.directory': [
                     {'group': 'root'},
@@ -331,19 +319,20 @@ class RendererTests(RendererMixin, StateTests, MapBuilder):
                     {'owner': 'root'}
                 ]
             }),
-        ]))
-        self.assertEqual(Registry.states, OrderedDict())
+        ])
+        assert Registry.states == OrderedDict()
 
     def test_invalid_function(self):
         def _test():
             self.render(invalid_template)
-        self.assertRaises(InvalidFunction, _test)
+        with pytest.raises(InvalidFunction):
+            _test()
 
     def test_include(self):
         ret = self.render(include_template)
-        self.assertEqual(ret, OrderedDict([
+        assert ret == OrderedDict([
             ('include', ['http']),
-        ]))
+        ])
 
     def test_extend(self):
         ret = self.render(extend_template,
@@ -351,7 +340,7 @@ class RendererTests(RendererMixin, StateTests, MapBuilder):
                               'os_family': 'Debian',
                               'os': 'Debian'
                           }})
-        self.assertEqual(ret, OrderedDict([
+        assert ret == OrderedDict([
             ('include', ['http']),
             ('extend', OrderedDict([
                 ('apache', {
@@ -360,7 +349,7 @@ class RendererTests(RendererMixin, StateTests, MapBuilder):
                     ]
                 }),
             ])),
-        ]))
+        ])
 
     def test_sls_imports(self):
         def render_and_assert(template):
@@ -370,13 +359,13 @@ class RendererTests(RendererMixin, StateTests, MapBuilder):
                                   'os': 'Debian'
                               }})
 
-            self.assertEqual(ret, OrderedDict([
+            assert ret == OrderedDict([
                 ('samba-imported', {
                     'pkg.removed': [
                         {'names': ['samba', 'samba-client']},
                     ]
                 })
-            ]))
+            ])
 
         self.write_template_file("map.sls", self.build_map())
         render_and_assert(import_template)
@@ -397,7 +386,8 @@ class RendererTests(RendererMixin, StateTests, MapBuilder):
                                   'os': 'Debian'
                               }})
 
-        self.assertRaises(NameError, do_render)
+        with pytest.raises(NameError):
+            do_render()
 
     def test_random_password(self):
         '''Test for https://github.com/saltstack/salt/issues/21796'''
@@ -416,7 +406,7 @@ class RendererTests(RendererMixin, StateTests, MapBuilder):
                               'os': 'Debian'
                           }})
 
-        self.assertEqual(ret, OrderedDict([
+        assert ret == OrderedDict([
             ('pkg', OrderedDict([
                 ('pkg.installed', [])
             ])),
@@ -426,7 +416,7 @@ class RendererTests(RendererMixin, StateTests, MapBuilder):
                     {'watch': [{'file': 'file'}]},
                 ])
             ]))
-        ]))
+        ])
 
 
 class MapTests(RendererMixin, TestCase, MapBuilder):
@@ -444,7 +434,7 @@ class MapTests(RendererMixin, TestCase, MapBuilder):
         return self.render(template, {'grains': grains})
 
     def assert_equal(self, ret, server, client, service):
-        self.assertDictEqual(ret, OrderedDict([
+        assert ret == OrderedDict([
             ('samba', OrderedDict([
                 ('pkg.installed', [
                     {'names': [server, client]}
@@ -454,7 +444,7 @@ class MapTests(RendererMixin, TestCase, MapBuilder):
                     {'require': [{'pkg': 'samba'}]}
                 ])
             ]))
-        ]))
+        ])
 
     def assert_not_equal(self, ret, server, client, service):
         try:
@@ -536,6 +526,7 @@ class SaltObjectTests(TestCase):
 
         Salt = SaltObject(__salt__)
 
-        self.assertRaises(AttributeError, attr_fail)
-        self.assertEqual(Salt.math.times2, times2)
-        self.assertEqual(Salt.math.times2(2), 4)
+        with pytest.raises(AttributeError):
+            attr_fail()
+        assert Salt.math.times2 is times2
+        assert Salt.math.times2(2) == 4

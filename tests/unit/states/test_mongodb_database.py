@@ -45,14 +45,14 @@ class MongodbDatabaseTestCase(TestCase, LoaderModuleMockMixin):
                 comt = ('Database {0} is present and needs to be removed'
                         .format(name))
                 ret.update({'comment': comt})
-                self.assertDictEqual(mongodb_database.absent(name), ret)
+                assert mongodb_database.absent(name) == ret
 
             with patch.dict(mongodb_database.__opts__, {'test': False}):
                 comt = ('Database {0} has been removed'.format(name))
                 ret.update({'comment': comt, 'result': True,
                             'changes': {'mydb': 'Absent'}})
-                self.assertDictEqual(mongodb_database.absent(name), ret)
+                assert mongodb_database.absent(name) == ret
 
                 comt = 'Database {0} is not present'.format(name)
                 ret.update({'comment': comt, 'changes': {}})
-                self.assertDictEqual(mongodb_database.absent(name), ret)
+                assert mongodb_database.absent(name) == ret

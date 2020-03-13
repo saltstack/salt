@@ -60,89 +60,89 @@ class XMLUtilTestCase(TestCase):
     def test_xml_case_a(self):
         xmldata = ET.fromstring(self.cases['a']['xml'])
         defaultdict = xml.to_dict(xmldata)
-        self.assertEqual(defaultdict, self.cases['a']['legacy'])
+        assert defaultdict == self.cases['a']['legacy']
 
     def test_xml_case_a_legacy(self):
         xmldata = ET.fromstring(self.cases['a']['xml'])
         defaultdict = xml.to_dict(xmldata, False)
-        self.assertEqual(defaultdict, self.cases['a']['legacy'])
+        assert defaultdict == self.cases['a']['legacy']
 
     def test_xml_case_a_full(self):
         xmldata = ET.fromstring(self.cases['a']['xml'])
         defaultdict = xml.to_dict(xmldata, True)
-        self.assertEqual(defaultdict, self.cases['a']['full'])
+        assert defaultdict == self.cases['a']['full']
 
     def test_xml_case_b(self):
         xmldata = ET.fromstring(self.cases['b']['xml'])
         defaultdict = xml.to_dict(xmldata)
-        self.assertEqual(defaultdict, self.cases['b']['legacy'])
+        assert defaultdict == self.cases['b']['legacy']
 
     def test_xml_case_b_legacy(self):
         xmldata = ET.fromstring(self.cases['b']['xml'])
         defaultdict = xml.to_dict(xmldata, False)
-        self.assertEqual(defaultdict, self.cases['b']['legacy'])
+        assert defaultdict == self.cases['b']['legacy']
 
     def test_xml_case_b_full(self):
         xmldata = ET.fromstring(self.cases['b']['xml'])
         defaultdict = xml.to_dict(xmldata, True)
-        self.assertEqual(defaultdict, self.cases['b']['full'])
+        assert defaultdict == self.cases['b']['full']
 
     def test_xml_case_c(self):
         xmldata = ET.fromstring(self.cases['c']['xml'])
         defaultdict = xml.to_dict(xmldata)
-        self.assertEqual(defaultdict, self.cases['c']['legacy'])
+        assert defaultdict == self.cases['c']['legacy']
 
     def test_xml_case_c_legacy(self):
         xmldata = ET.fromstring(self.cases['c']['xml'])
         defaultdict = xml.to_dict(xmldata, False)
-        self.assertEqual(defaultdict, self.cases['c']['legacy'])
+        assert defaultdict == self.cases['c']['legacy']
 
     def test_xml_case_c_full(self):
         xmldata = ET.fromstring(self.cases['c']['xml'])
         defaultdict = xml.to_dict(xmldata, True)
-        self.assertEqual(defaultdict, self.cases['c']['full'])
+        assert defaultdict == self.cases['c']['full']
 
     def test_xml_case_d(self):
         xmldata = ET.fromstring(self.cases['d']['xml'])
         defaultdict = xml.to_dict(xmldata)
-        self.assertEqual(defaultdict, self.cases['d']['legacy'])
+        assert defaultdict == self.cases['d']['legacy']
 
     def test_xml_case_d_legacy(self):
         xmldata = ET.fromstring(self.cases['d']['xml'])
         defaultdict = xml.to_dict(xmldata, False)
-        self.assertEqual(defaultdict, self.cases['d']['legacy'])
+        assert defaultdict == self.cases['d']['legacy']
 
     def test_xml_case_d_full(self):
         xmldata = ET.fromstring(self.cases['d']['xml'])
         defaultdict = xml.to_dict(xmldata, True)
-        self.assertEqual(defaultdict, self.cases['d']['full'])
+        assert defaultdict == self.cases['d']['full']
 
     def test_xml_case_e(self):
         xmldata = ET.fromstring(self.cases['e']['xml'])
         defaultdict = xml.to_dict(xmldata)
-        self.assertEqual(defaultdict, self.cases['e']['legacy'])
+        assert defaultdict == self.cases['e']['legacy']
 
     def test_xml_case_e_legacy(self):
         xmldata = ET.fromstring(self.cases['e']['xml'])
         defaultdict = xml.to_dict(xmldata, False)
-        self.assertEqual(defaultdict, self.cases['e']['legacy'])
+        assert defaultdict == self.cases['e']['legacy']
 
     def test_xml_case_e_full(self):
         xmldata = ET.fromstring(self.cases['e']['xml'])
         defaultdict = xml.to_dict(xmldata, True)
-        self.assertEqual(defaultdict, self.cases['e']['full'])
+        assert defaultdict == self.cases['e']['full']
 
     def test_xml_case_f(self):
         xmldata = ET.fromstring(self.cases['f']['xml'])
         defaultdict = xml.to_dict(xmldata)
-        self.assertEqual(defaultdict, self.cases['f']['legacy'])
+        assert defaultdict == self.cases['f']['legacy']
 
     def test_xml_case_f_legacy(self):
         xmldata = ET.fromstring(self.cases['f']['xml'])
         defaultdict = xml.to_dict(xmldata, False)
-        self.assertEqual(defaultdict, self.cases['f']['legacy'])
+        assert defaultdict == self.cases['f']['legacy']
 
     def test_xml_case_f_full(self):
         xmldata = ET.fromstring(self.cases['f']['xml'])
         defaultdict = xml.to_dict(xmldata, True)
-        self.assertEqual(defaultdict, self.cases['f']['full'])
+        assert defaultdict == self.cases['f']['full']

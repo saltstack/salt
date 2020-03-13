@@ -58,14 +58,12 @@ class MandrillModuleTest(TestCase, LoaderModuleMockMixin):
         '''
         mock_cmd = MagicMock(return_value=TEST_SEND)
         with patch.object(mandrill, 'send', mock_cmd) as send:
-            self.assertEqual(
-                send(message={
+            assert send(message={
                         'subject': 'Hi',
                         'from_email': 'test@example.com',
                         'to': [
                             {'email': 'recv@example.com', 'type': 'to'}
                         ]
                     }
-                ),
+                ) == \
                 TEST_SEND
-            )

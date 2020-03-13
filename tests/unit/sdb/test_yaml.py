@@ -27,7 +27,7 @@ class TestYamlRenderer(TestCase):
         '''
         plain = {'foo': 'bar'}
         with patch('salt.sdb.yaml._get_values', MagicMock(return_value=plain)):
-            self.assertEqual(sdb.get('foo'), 'bar')
+            assert sdb.get('foo') == 'bar'
 
     def test_nested(self):
         '''
@@ -35,7 +35,7 @@ class TestYamlRenderer(TestCase):
         '''
         plain = {'foo': {'bar': 'baz'}}
         with patch('salt.sdb.yaml._get_values', MagicMock(return_value=plain)):
-            self.assertEqual(sdb.get('foo:bar'), 'baz')
+            assert sdb.get('foo:bar') == 'baz'
 
     def test_encrypted(self):
         '''
@@ -44,4 +44,4 @@ class TestYamlRenderer(TestCase):
         plain = {'foo': 'bar'}
         with patch('salt.sdb.yaml._decrypt', MagicMock(return_value=plain)):
             with patch('salt.sdb.yaml._get_values', MagicMock(return_value=None)):
-                self.assertEqual(sdb.get('foo', profile={'gpg': True}), 'bar')
+                assert sdb.get('foo', profile={'gpg': True}) == 'bar'

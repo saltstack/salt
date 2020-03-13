@@ -42,14 +42,14 @@ class WinShadowTestCase(TestCase, LoaderModuleMockMixin):
                                                  'password_changed': '',
                                                  'expiration_date': ''})
         with patch.dict(win_shadow.__salt__, {'user.info': mock_user_info}):
-            self.assertDictEqual(win_shadow.info('SALT'), {'name': 'SALT',
+            assert win_shadow.info('SALT') == {'name': 'SALT',
                                                            'passwd': 'Unavailable',
                                                            'lstchg': '',
                                                            'min': '',
                                                            'max': '',
                                                            'warn': '',
                                                            'inact': '',
-                                                           'expire': ''})
+                                                           'expire': ''}
 
     # 'set_password' function tests: 1
 
@@ -63,4 +63,4 @@ class WinShadowTestCase(TestCase, LoaderModuleMockMixin):
                                                  'expiration_date': ''})
         with patch.dict(win_shadow.__salt__, {'cmd.run_all': mock_cmd,
                                               'user.info': mock_user_info}):
-            self.assertTrue(win_shadow.set_password('root', 'mysecretpassword'))
+            assert win_shadow.set_password('root', 'mysecretpassword')

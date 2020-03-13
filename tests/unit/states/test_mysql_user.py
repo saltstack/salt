@@ -50,7 +50,7 @@ class MysqlUserTestCase(TestCase, LoaderModuleMockMixin):
             comt = ('Either password or password_hash must be specified,'
                     ' unless allow_passwordless is True')
             ret.update({'comment': comt})
-            self.assertDictEqual(mysql_user.present(name), ret)
+            assert mysql_user.present(name) == ret
 
         with patch.dict(mysql_user.__salt__, {'mysql.user_exists': mock,
                                               'mysql.user_chpass': mock_t}):
@@ -58,52 +58,48 @@ class MysqlUserTestCase(TestCase, LoaderModuleMockMixin):
                 comt = ('User frank@localhost is already present'
                         ' with passwordless login')
                 ret.update({'comment': comt, 'result': True})
-                self.assertDictEqual(mysql_user.present(name), ret)
+                assert mysql_user.present(name) == ret
 
                 with patch.object(mysql_user, '_get_mysql_error', mock_str):
                     ret.update({'comment': 'salt', 'result': False})
-                    self.assertDictEqual(mysql_user.present(name), ret)
+                    assert mysql_user.present(name) == ret
 
             with patch.object(mysql_user, '_get_mysql_error', mock_str):
                 comt = ('User frank@localhost is already present'
                         ' with the desired password')
                 ret.update({'comment': comt, 'result': True})
-                self.assertDictEqual(mysql_user.present(name,
-                                                        password=password), ret)
+                assert mysql_user.present(name,
+                                                        password=password) == ret
 
                 with patch.object(mysql_user, '_get_mysql_error', mock_str):
                     ret.update({'comment': 'salt', 'result': False})
-                    self.assertDictEqual(mysql_user.present(name,
-                                                            password=password),
-                                         ret)
+                    assert mysql_user.present(name,
+                                                            password=password) == \
+                                         ret
 
                 with patch.object(mysql_user, '_get_mysql_error', mock_none):
                     with patch.dict(mysql_user.__opts__, {'test': True}):
                         comt = ('Password for user frank@localhost'
                                 ' is set to be changed')
                         ret.update({'comment': comt, 'result': None})
-                        self.assertDictEqual(mysql_user.present
-                                             (name, password=password), ret)
+                        assert mysql_user.present(name, password=password) == ret
 
                 with patch.object(mysql_user, '_get_mysql_error', mock_sn):
                     with patch.dict(mysql_user.__opts__, {'test': False}):
                         ret.update({'comment': 'salt', 'result': False})
-                        self.assertDictEqual(mysql_user.present
-                                             (name, password=password), ret)
+                        assert mysql_user.present(name, password=password) == ret
 
                     with patch.dict(mysql_user.__opts__, {'test': True}):
                         comt = ('User frank@localhost is set to be added')
                         ret.update({'comment': comt, 'result': None})
-                        self.assertDictEqual(mysql_user.present
-                                             (name, password=password), ret)
+                        assert mysql_user.present(name, password=password) == ret
 
                     with patch.dict(mysql_user.__opts__, {'test': False}):
                         comt = ('Password for user frank@localhost'
                                 ' has been changed')
                         ret.update({'comment': comt, 'result': True,
                                     'changes': {name: 'Updated'}})
-                        self.assertDictEqual(mysql_user.present
-                                             (name, password=password), ret)
+                        assert mysql_user.present(name, password=password) == ret
 
     # 'absent' function tests: 1
 
@@ -127,27 +123,27 @@ class MysqlUserTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(mysql_user.__opts__, {'test': True}):
                 comt = ('User frank_exampledb@localhost is set to be removed')
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(mysql_user.absent(name), ret)
+                assert mysql_user.absent(name) == ret
 
             with patch.dict(mysql_user.__opts__, {'test': False}):
                 comt = ('User frank_exampledb@localhost has been removed')
                 ret.update({'comment': comt, 'result': True,
                             'changes': {'frank_exampledb': 'Absent'}})
-                self.assertDictEqual(mysql_user.absent(name), ret)
+                assert mysql_user.absent(name) == ret
 
                 with patch.object(mysql_user, '_get_mysql_error', mock_str):
                     comt = ('User frank_exampledb@localhost has been removed')
                     ret.update({'comment': 'salt', 'result': False,
                                 'changes': {}})
-                    self.assertDictEqual(mysql_user.absent(name), ret)
+                    assert mysql_user.absent(name) == ret
 
                     comt = ('User frank_exampledb@localhost has been removed')
                     ret.update({'comment': 'salt'})
-                    self.assertDictEqual(mysql_user.absent(name), ret)
+                    assert mysql_user.absent(name) == ret
 
                 with patch.object(mysql_user, '_get_mysql_error', mock_none):
                     comt = ('User frank_exampledb@localhost is not present,'
                             ' so it cannot be removed')
                     ret.update({'comment': comt, 'result': True,
                                 'changes': {}})
-                    self.assertDictEqual(mysql_user.absent(name), ret)
+                    assert mysql_user.absent(name) == ret

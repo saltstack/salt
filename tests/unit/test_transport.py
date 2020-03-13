@@ -24,10 +24,10 @@ class MessageClientPoolTest(TestCase):
         args = (0,)
         kwargs = {'kwarg': 1}
         message_client_pool = MessageClientPool(self.MockClass, opts, args=args, kwargs=kwargs)
-        self.assertEqual(opts['sock_pool_size'], len(message_client_pool.message_clients))
+        assert opts['sock_pool_size'] == len(message_client_pool.message_clients)
         for message_client in message_client_pool.message_clients:
-            self.assertEqual(message_client.args, args)
-            self.assertEqual(message_client.kwargs, kwargs)
+            assert message_client.args == args
+            assert message_client.kwargs == kwargs
 
     def test_init_without_config(self):
         opts = {}
@@ -35,10 +35,10 @@ class MessageClientPoolTest(TestCase):
         kwargs = {'kwarg': 1}
         message_client_pool = MessageClientPool(self.MockClass, opts, args=args, kwargs=kwargs)
         # The size of pool is set as 1 by the MessageClientPool init method.
-        self.assertEqual(1, len(message_client_pool.message_clients))
+        assert 1 == len(message_client_pool.message_clients)
         for message_client in message_client_pool.message_clients:
-            self.assertEqual(message_client.args, args)
-            self.assertEqual(message_client.kwargs, kwargs)
+            assert message_client.args == args
+            assert message_client.kwargs == kwargs
 
     def test_init_less_than_one(self):
         opts = {'sock_pool_size': -1}
@@ -46,7 +46,7 @@ class MessageClientPoolTest(TestCase):
         kwargs = {'kwarg': 1}
         message_client_pool = MessageClientPool(self.MockClass, opts, args=args, kwargs=kwargs)
         # The size of pool is set as 1 by the MessageClientPool init method.
-        self.assertEqual(1, len(message_client_pool.message_clients))
+        assert 1 == len(message_client_pool.message_clients)
         for message_client in message_client_pool.message_clients:
-            self.assertEqual(message_client.args, args)
-            self.assertEqual(message_client.kwargs, kwargs)
+            assert message_client.args == args
+            assert message_client.kwargs == kwargs

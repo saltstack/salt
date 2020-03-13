@@ -32,7 +32,7 @@ class DebconfmodTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value=[])
         with patch.dict(debconfmod.__salt__, {'cmd.run_stdout': mock}):
             with patch.object(debconfmod, '_unpack_lines', mock):
-                self.assertEqual(debconfmod.get_selections(False), {})
+                assert debconfmod.get_selections(False) == {}
 
     def test_show(self):
         '''
@@ -40,7 +40,7 @@ class DebconfmodTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={})
         with patch.object(debconfmod, 'get_selections', mock):
-            self.assertEqual(debconfmod.show('name'), None)
+            assert debconfmod.show('name') is None
 
     def test_set_(self):
         '''
@@ -51,9 +51,9 @@ class DebconfmodTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(os, 'close', mock):
                 with patch.object(debconfmod, '_set_file', mock):
                     with patch.object(os, 'unlink', mock):
-                        self.assertTrue(debconfmod.set_('package',
+                        assert debconfmod.set_('package',
                                                         'question',
-                                                        'type', 'value'))
+                                                        'type', 'value')
 
     def test_set_template(self):
         '''
@@ -62,11 +62,11 @@ class DebconfmodTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value='A')
         with patch.dict(debconfmod.__salt__, {'cp.get_template': mock}):
             with patch.object(debconfmod, 'set_file', mock):
-                self.assertEqual(debconfmod.set_template('path',
+                assert debconfmod.set_template('path',
                                                          'template',
                                                          'context',
                                                          'defaults',
-                                                         'saltenv'), 'A')
+                                                         'saltenv') == 'A'
 
     def test_set_file(self):
         '''
@@ -76,10 +76,10 @@ class DebconfmodTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(debconfmod.__salt__, {'cp.cache_file': mock}):
             mock = MagicMock(return_value=None)
             with patch.object(debconfmod, '_set_file', mock):
-                self.assertTrue(debconfmod.set_file('path'))
+                assert debconfmod.set_file('path')
 
         mock = MagicMock(return_value=False)
         with patch.dict(debconfmod.__salt__, {'cp.cache_file': mock}):
             mock = MagicMock(return_value=None)
             with patch.object(debconfmod, '_set_file', mock):
-                self.assertFalse(debconfmod.set_file('path'))
+                assert not debconfmod.set_file('path')

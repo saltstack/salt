@@ -37,11 +37,11 @@ class GroupAddTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'retcode': 0})
         with patch.dict(groupadd.__salt__, {'cmd.run_all': mock}):
-            self.assertTrue(groupadd.add('test', 100))
+            assert groupadd.add('test', 100)
 
         with patch.dict(groupadd.__grains__, {'kernel': 'Linux'}):
             with patch.dict(groupadd.__salt__, {'cmd.run_all': mock}):
-                self.assertTrue(groupadd.add('test', 100, True))
+                assert groupadd.add('test', 100, True)
 
     # 'info' function tests: 1
 
@@ -52,7 +52,7 @@ class GroupAddTestCase(TestCase, LoaderModuleMockMixin):
         getgrnam = grp.struct_group(('foo', '*', 20, ['test']))
         with patch('grp.getgrnam', MagicMock(return_value=getgrnam)):
             ret = {'passwd': '*', 'gid': 20, 'name': 'foo', 'members': ['test']}
-            self.assertEqual(groupadd.info('foo'), ret)
+            assert groupadd.info('foo') == ret
 
     # '_format_info' function tests: 1
 
@@ -64,7 +64,7 @@ class GroupAddTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.modules.groupadd._format_info', MagicMock(return_value=group)):
             data = grp.struct_group(('wheel', '*', 0, ['root']))
             ret = {'passwd': '*', 'gid': 0, 'name': 'test', 'members': ['root']}
-            self.assertDictEqual(groupadd._format_info(data), ret)
+            assert groupadd._format_info(data) == ret
 
     # 'getent' function tests: 1
 
@@ -75,7 +75,7 @@ class GroupAddTestCase(TestCase, LoaderModuleMockMixin):
         getgrnam = grp.struct_group(('foo', '*', 20, ['test']))
         with patch('grp.getgrall', MagicMock(return_value=[getgrnam])):
             ret = [{'passwd': '*', 'gid': 20, 'name': 'foo', 'members': ['test']}]
-            self.assertEqual(groupadd.getent(), ret)
+            assert groupadd.getent() == ret
 
     # 'chgid' function tests: 2
 
@@ -85,7 +85,7 @@ class GroupAddTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'gid': 10})
         with patch.object(groupadd, 'info', mock):
-            self.assertTrue(groupadd.chgid('test', 10))
+            assert groupadd.chgid('test', 10)
 
     def test_chgid(self):
         '''
@@ -95,7 +95,7 @@ class GroupAddTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(groupadd.__salt__, {'cmd.run': mock}):
             mock = MagicMock(side_effect=[{'gid': 10}, {'gid': 500}])
             with patch.object(groupadd, 'info', mock):
-                self.assertTrue(groupadd.chgid('test', 500))
+                assert groupadd.chgid('test', 500)
 
     # 'delete' function tests: 1
 
@@ -105,7 +105,7 @@ class GroupAddTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_ret = MagicMock(return_value={'retcode': 0})
         with patch.dict(groupadd.__salt__, {'cmd.run_all': mock_ret}):
-            self.assertTrue(groupadd.delete('test'))
+            assert groupadd.delete('test')
 
     # 'adduser' function tests: 1
 
@@ -131,7 +131,7 @@ class GroupAddTestCase(TestCase, LoaderModuleMockMixin):
             mock = MagicMock(return_value={'retcode': 0})
             with patch.dict(groupadd.__grains__, os_version['grains']):
                 with patch.dict(groupadd.__salt__, {'cmd.retcode': mock}):
-                    self.assertFalse(groupadd.adduser('test', 'root'))
+                    assert not groupadd.adduser('test', 'root')
                     groupadd.__salt__['cmd.retcode'].assert_called_once_with(os_version['cmd'], python_shell=False)
 
     # 'deluser' function tests: 1
@@ -166,7 +166,7 @@ class GroupAddTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.dict(groupadd.__salt__, {'cmd.retcode': mock_retcode,
                                                     'group.info': mock_info,
                                                     'cmd.run_stdout': mock_stdout}):
-                    self.assertTrue(groupadd.deluser('test', 'root'))
+                    assert groupadd.deluser('test', 'root')
                     groupadd.__salt__['cmd.retcode'].assert_called_once_with(os_version['cmd'], python_shell=False)
 
     # 'deluser' function tests: 1
@@ -203,5 +203,5 @@ class GroupAddTestCase(TestCase, LoaderModuleMockMixin):
                                                     'group.info': mock_info,
                                                     'cmd.run_stdout': mock_stdout,
                                                     'cmd.run': mock}):
-                    self.assertFalse(groupadd.members('test', 'foo'))
+                    assert not groupadd.members('test', 'foo')
                     groupadd.__salt__['cmd.retcode'].assert_called_once_with(os_version['cmd'], python_shell=False)

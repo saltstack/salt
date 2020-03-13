@@ -46,17 +46,17 @@ class RdpTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(rdp.__opts__, {'test': True}):
                 comt = ('RDP will be enabled')
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(rdp.enabled(name), ret)
+                assert rdp.enabled(name) == ret
 
             with patch.dict(rdp.__opts__, {'test': False}):
                 ret.update({'comment': '', 'result': False,
                             'changes': {'RDP was enabled': True}})
-                self.assertDictEqual(rdp.enabled(name), ret)
+                assert rdp.enabled(name) == ret
 
                 comt = ('RDP is enabled')
                 ret.update({'comment': comt, 'result': True,
                             'changes': {}})
-                self.assertDictEqual(rdp.enabled(name), ret)
+                assert rdp.enabled(name) == ret
 
     # 'disabled' function tests: 1
 
@@ -79,13 +79,13 @@ class RdpTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(rdp.__opts__, {'test': True}):
                 comt = ('RDP will be disabled')
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(rdp.disabled(name), ret)
+                assert rdp.disabled(name) == ret
 
             with patch.dict(rdp.__opts__, {'test': False}):
                 ret.update({'comment': '', 'result': True,
                             'changes': {'RDP was disabled': True}})
-                self.assertDictEqual(rdp.disabled(name), ret)
+                assert rdp.disabled(name) == ret
 
                 comt = ('RDP is disabled')
                 ret.update({'comment': comt, 'result': True, 'changes': {}})
-                self.assertDictEqual(rdp.disabled(name), ret)
+                assert rdp.disabled(name) == ret

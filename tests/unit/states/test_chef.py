@@ -42,7 +42,7 @@ class ChefTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(chef.__opts__, {'test': True}):
                 comt = ('\nerror')
                 ret.update({'comment': comt})
-                self.assertDictEqual(chef.client(name), ret)
+                assert chef.client(name) == ret
 
     # 'solo' function tests: 1
 
@@ -63,4 +63,4 @@ class ChefTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(chef.__opts__, {'test': True}):
                 comt = ('\nerror')
                 ret.update({'comment': comt})
-                self.assertDictEqual(chef.solo(name), ret)
+                assert chef.solo(name) == ret

@@ -33,16 +33,16 @@ class ExtraMinionDataInPillarTestCase(TestCase, LoaderModuleMockMixin):
     def test_extra_values_none_or_empty(self):
         ret = extra_minion_data_in_pillar.ext_pillar('fake_id', self.pillar,
                                                      'fake_include', None)
-        self.assertEqual(ret, {})
+        assert ret == {}
         ret = extra_minion_data_in_pillar.ext_pillar('fake_id', self.pillar,
                                                      'fake_include', {})
-        self.assertEqual(ret, {})
+        assert ret == {}
 
     def test_include_all(self):
         for include_all in ['*', '<all>']:
             ret = extra_minion_data_in_pillar.ext_pillar(
                 'fake_id', self.pillar, include_all, self.extra_minion_data)
-            self.assertEqual(ret, self.extra_minion_data)
+            assert ret == self.extra_minion_data
 
     def test_include_specific_keys(self):
         # Tests partially existing key, key with and without subkey,
@@ -50,6 +50,6 @@ class ExtraMinionDataInPillarTestCase(TestCase, LoaderModuleMockMixin):
             'fake_id', self.pillar,
             include=['key1:subkey1', 'key2:subkey3', 'key3', 'key4'],
             extra_minion_data=self.extra_minion_data)
-        self.assertEqual(ret, {'key1': {'subkey1': 'value1'},
+        assert ret == {'key1': {'subkey1': 'value1'},
                                'key3': 'value3',
-                               'key4': {'subkey4': 'value4'}})
+                               'key4': {'subkey4': 'value4'}}

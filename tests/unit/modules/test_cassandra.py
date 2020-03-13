@@ -31,7 +31,7 @@ class CassandraTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='A')
         with patch.object(cassandra, '_nodetool', mock):
-            self.assertEqual(cassandra.compactionstats(), 'A')
+            assert cassandra.compactionstats() == 'A'
 
     def test_version(self):
         '''
@@ -39,7 +39,7 @@ class CassandraTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='A')
         with patch.object(cassandra, '_nodetool', mock):
-            self.assertEqual(cassandra.version(), 'A')
+            assert cassandra.version() == 'A'
 
     def test_netstats(self):
         '''
@@ -47,7 +47,7 @@ class CassandraTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='A')
         with patch.object(cassandra, '_nodetool', mock):
-            self.assertEqual(cassandra.netstats(), 'A')
+            assert cassandra.netstats() == 'A'
 
     def test_tpstats(self):
         '''
@@ -55,7 +55,7 @@ class CassandraTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='A')
         with patch.object(cassandra, '_nodetool', mock):
-            self.assertEqual(cassandra.tpstats(), 'A')
+            assert cassandra.tpstats() == 'A'
 
     def test_info(self):
         '''
@@ -63,7 +63,7 @@ class CassandraTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='A')
         with patch.object(cassandra, '_nodetool', mock):
-            self.assertEqual(cassandra.info(), 'A')
+            assert cassandra.info() == 'A'
 
     def test_ring(self):
         '''
@@ -71,7 +71,7 @@ class CassandraTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='A')
         with patch.object(cassandra, '_nodetool', mock):
-            self.assertEqual(cassandra.ring(), 'A')
+            assert cassandra.ring() == 'A'
 
     def test_keyspaces(self):
         '''
@@ -86,7 +86,7 @@ class CassandraTestCase(TestCase, LoaderModuleMockMixin):
         mock_sys_mgr = MagicMock(return_value=MockSystemManager())
 
         with patch.object(cassandra, '_sys_mgr', mock_sys_mgr):
-            self.assertEqual(cassandra.keyspaces(), mock_keyspaces)
+            assert cassandra.keyspaces() == mock_keyspaces
 
     def test_column_families(self):
         '''
@@ -107,21 +107,20 @@ class CassandraTestCase(TestCase, LoaderModuleMockMixin):
         mock_sys_mgr = MagicMock(return_value=MockSystemManager())
 
         with patch.object(cassandra, '_sys_mgr', mock_sys_mgr):
-            self.assertEqual(cassandra.column_families('Z'),
-                             None)
+            assert cassandra.column_families('Z') is None
             if six.PY3:
                 self.assertCountEqual(cassandra.column_families('A'),
                                       ['a', 'b'])
                 self.assertCountEqual(cassandra.column_families(),
                                       {'A': ['a', 'b'], 'B': ['c', 'd']})
             else:
-                self.assertEqual(sorted(cassandra.column_families('A')),
-                                 ['a', 'b'])
+                assert sorted(cassandra.column_families('A')) == \
+                                 ['a', 'b']
                 column_families = cassandra.column_families()
                 for key in ('A', 'B'):
                     column_families[key] = sorted(column_families[key])
-                self.assertEqual(column_families,
-                                 {'A': ['a', 'b'], 'B': ['c', 'd']})
+                assert column_families == \
+                                 {'A': ['a', 'b'], 'B': ['c', 'd']}
 
     def test_column_family_definition(self):
         '''
@@ -138,5 +137,5 @@ class CassandraTestCase(TestCase, LoaderModuleMockMixin):
         mock_sys_mgr = MagicMock(return_value=MockSystemManager())
 
         with patch.object(cassandra, '_sys_mgr', mock_sys_mgr):
-            self.assertEqual(cassandra.column_family_definition('A', 'a'), vars(object))
-            self.assertEqual(cassandra.column_family_definition('B', 'a'), None)
+            assert cassandra.column_family_definition('A', 'a') == vars(object)
+            assert cassandra.column_family_definition('B', 'a') is None

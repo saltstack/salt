@@ -14,6 +14,7 @@ from tests.support.mock import MagicMock, patch
 # Import Salt Libs
 import salt.modules.bower as bower
 from salt.exceptions import CommandExecutionError
+import pytest
 
 
 class BowerTestCase(TestCase, LoaderModuleMockMixin):
@@ -29,10 +30,8 @@ class BowerTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'retcode': 1, 'stderr': 'error'})
         with patch.dict(bower.__salt__, {'cmd.run_all': mock}):
-            self.assertRaises(
-                CommandExecutionError,
-                bower.install,
-                '/path/to/project',
+            with pytest.raises(CommandExecutionError):
+                bower.install('/path/to/project',
                 'underscore')
 
     def test_install_new_package(self):
@@ -42,7 +41,7 @@ class BowerTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value={'retcode': 0,
                                        'stdout': '{"underscore":{}}'})
         with patch.dict(bower.__salt__, {'cmd.run_all': mock}):
-            self.assertTrue(bower.install('/path/to/project', 'underscore'))
+            assert bower.install('/path/to/project', 'underscore')
 
     def test_install_existing_package(self):
         '''
@@ -51,7 +50,7 @@ class BowerTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value={'retcode': 0,
                                        'stdout': '{}'})
         with patch.dict(bower.__salt__, {'cmd.run_all': mock}):
-            self.assertFalse(bower.install('/path/to/project', 'underscore'))
+            assert not bower.install('/path/to/project', 'underscore')
 
     def test_uninstall_with_error(self):
         '''
@@ -59,10 +58,8 @@ class BowerTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'retcode': 1, 'stderr': 'error'})
         with patch.dict(bower.__salt__, {'cmd.run_all': mock}):
-            self.assertRaises(
-                CommandExecutionError,
-                bower.uninstall,
-                '/path/to/project',
+            with pytest.raises(CommandExecutionError):
+                bower.uninstall('/path/to/project',
                 'underscore')
 
     def test_uninstall_existing_package(self):
@@ -72,7 +69,7 @@ class BowerTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value={'retcode': 0,
                                        'stdout': '{"underscore": {}}'})
         with patch.dict(bower.__salt__, {'cmd.run_all': mock}):
-            self.assertTrue(bower.uninstall('/path/to/project', 'underscore'))
+            assert bower.uninstall('/path/to/project', 'underscore')
 
     def test_uninstall_missing_package(self):
         '''
@@ -81,7 +78,7 @@ class BowerTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value={'retcode': 0,
                                        'stdout': '{}'})
         with patch.dict(bower.__salt__, {'cmd.run_all': mock}):
-            self.assertFalse(bower.uninstall('/path/to/project', 'underscore'))
+            assert not bower.uninstall('/path/to/project', 'underscore')
 
     def test_list_packages_with_error(self):
         '''
@@ -89,10 +86,8 @@ class BowerTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'retcode': 1, 'stderr': 'error'})
         with patch.dict(bower.__salt__, {'cmd.run_all': mock}):
-            self.assertRaises(
-                CommandExecutionError,
-                bower.list_,
-                '/path/to/project')
+            with pytest.raises(CommandExecutionError):
+                bower.list_('/path/to/project')
 
     def test_list_packages_success(self):
         '''
@@ -101,5 +96,5 @@ class BowerTestCase(TestCase, LoaderModuleMockMixin):
         output = '{"dependencies": {"underscore": {}, "jquery":{}}}'
         mock = MagicMock(return_value={'retcode': 0, 'stdout': output})
         with patch.dict(bower.__salt__, {'cmd.run_all': mock}):
-            self.assertEqual(bower.list_('/path/to/project'),
-                             {'underscore': {}, 'jquery': {}})
+            assert bower.list_('/path/to/project') == \
+                             {'underscore': {}, 'jquery': {}}

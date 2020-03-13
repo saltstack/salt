@@ -201,4 +201,4 @@ class MapConfTest(TestCase):
             # - profile data is overriden by map data
             # ie, the provider->profile->map inheritance works as expected
             map_data = cloud_map.map_data()
-            self.assertEqual(map_data, merged_profile)
+            assert map_data == merged_profile

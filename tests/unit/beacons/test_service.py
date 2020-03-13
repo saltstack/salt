@@ -35,16 +35,16 @@ class ServiceBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         ret = service_beacon.validate(config)
 
-        self.assertEqual(ret, (False, 'Configuration for service beacon must'
-                                      ' be a list.'))
+        assert ret == (False, 'Configuration for service beacon must'
+                                      ' be a list.')
 
     def test_empty_config(self):
         config = [{}]
 
         ret = service_beacon.validate(config)
 
-        self.assertEqual(ret, (False, 'Configuration for service '
-                                      'beacon requires services.'))
+        assert ret == (False, 'Configuration for service '
+                                      'beacon requires services.')
 
     def test_service_running(self):
         with patch.dict(service_beacon.__salt__,
@@ -53,12 +53,12 @@ class ServiceBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
             ret = service_beacon.validate(config)
 
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             ret = service_beacon.beacon(config)
-            self.assertEqual(ret, [{'service_name': 'salt-master',
+            assert ret == [{'service_name': 'salt-master',
                                     'tag': 'salt-master',
-                                    'salt-master': {'running': True}}])
+                                    'salt-master': {'running': True}}]
 
     def test_service_not_running(self):
         with patch.dict(service_beacon.__salt__,
@@ -67,9 +67,9 @@ class ServiceBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
             ret = service_beacon.validate(config)
 
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             ret = service_beacon.beacon(config)
-            self.assertEqual(ret, [{'service_name': 'salt-master',
+            assert ret == [{'service_name': 'salt-master',
                                     'tag': 'salt-master',
-                                    'salt-master': {'running': False}}])
+                                    'salt-master': {'running': False}}]

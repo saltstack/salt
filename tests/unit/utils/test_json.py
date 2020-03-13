@@ -17,6 +17,7 @@ import salt.utils.json
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.ext import six
+import pytest
 
 
 class JSONTestCase(TestCase):
@@ -85,15 +86,16 @@ class JSONTestCase(TestCase):
 
         # First test the valid JSON
         ret = salt.utils.json.find_json(test_sample_json)
-        self.assertDictEqual(ret, expected_ret)
+        assert ret == expected_ret
 
         # Now pre-pend some garbage and re-test
         garbage_prepend_json = '{0}{1}'.format(LOREM_IPSUM, test_sample_json)
         ret = salt.utils.json.find_json(garbage_prepend_json)
-        self.assertDictEqual(ret, expected_ret)
+        assert ret == expected_ret
 
         # Test to see if a ValueError is raised if no JSON is passed in
-        self.assertRaises(ValueError, salt.utils.json.find_json, LOREM_IPSUM)
+        with pytest.raises(ValueError):
+            salt.utils.json.find_json(LOREM_IPSUM)
 
     @skipIf(salt.utils.platform.is_windows(), 'skip until we figure out what to do about decoding unicode on windows')
     @skipIf(not six.PY2, 'Test only needed on Python 2')
@@ -107,7 +109,7 @@ class JSONTestCase(TestCase):
 
         with patch.object(salt.utils.json, '__split', mock_split):
             ret = salt.utils.json.find_json(raw)
-            self.assertEqual(ret, {'foo': 'öäü'})
+            assert ret == {'foo': 'öäü'}
 
     def test_dumps_loads(self):
         '''
@@ -116,9 +118,9 @@ class JSONTestCase(TestCase):
         # Dump with no indentation
         ret = salt.utils.json.dumps(self.data, sort_keys=True)
         # Make sure the result is as expected
-        self.assertEqual(ret, self.serialized)
+        assert ret == self.serialized
         # Loading it should be equal to the original data
-        self.assertEqual(salt.utils.json.loads(ret), self.data)
+        assert salt.utils.json.loads(ret) == self.data
 
         # Dump with 4 spaces of indentation
         ret = salt.utils.json.dumps(self.data, sort_keys=True, indent=4)
@@ -127,9 +129,9 @@ class JSONTestCase(TestCase):
         # proper comparison, we will have to run rstrip on each line of the
         # return and then stitch it back together.
         ret = str('\n').join([x.rstrip() for x in ret.splitlines()])  # future lint: disable=blacklisted-function
-        self.assertEqual(ret, self.serialized_indent4)
+        assert ret == self.serialized_indent4
         # Loading it should be equal to the original data
-        self.assertEqual(salt.utils.json.loads(ret), self.data)
+        assert salt.utils.json.loads(ret) == self.data
 
     @with_tempfile()
     def test_dump_load(self, json_out):
@@ -141,4 +143,4 @@ class JSONTestCase(TestCase):
         with salt.utils.files.fopen(json_out, 'rb') as fp_:
             ret = salt.utils.json.loads(salt.utils.stringutils.to_unicode(fp_.read()))
             # Loading should be equal to the original data
-            self.assertEqual(ret, self.data)
+            assert ret == self.data

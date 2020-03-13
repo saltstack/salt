@@ -44,7 +44,7 @@ class OpenvswitchPortTestCase(TestCase, LoaderModuleMockMixin):
                                                     }):
             comt = 'Port salt already exists.'
             ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(openvswitch_port.present(name, bridge), ret)
+            assert openvswitch_port.present(name, bridge) == ret
 
         with patch.dict(openvswitch_port.__salt__, {'openvswitch.bridge_exists': mock,
                                                     'openvswitch.interface_get_type': MagicMock(return_value='""'),
@@ -59,7 +59,7 @@ class OpenvswitchPortTestCase(TestCase, LoaderModuleMockMixin):
                       },
                  }
                         })
-            self.assertDictEqual(openvswitch_port.present(name, bridge), ret)
+            assert openvswitch_port.present(name, bridge) == ret
         with patch.dict(openvswitch_port.__salt__, {'openvswitch.bridge_exists': mock,
                                                     'openvswitch.port_list': mock_n,
                                                     'openvswitch.port_add': mock,
@@ -80,4 +80,4 @@ class OpenvswitchPortTestCase(TestCase, LoaderModuleMockMixin):
                                 },
                             }
                         })
-            self.assertDictEqual(openvswitch_port.present(name, bridge, tunnel_type="gre", id=1, remote="10.0.0.1"), ret)
+            assert openvswitch_port.present(name, bridge, tunnel_type="gre", id=1, remote="10.0.0.1") == ret

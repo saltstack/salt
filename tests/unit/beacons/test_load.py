@@ -34,16 +34,16 @@ class LoadBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         ret = load.validate(config)
 
-        self.assertEqual(ret, (False, 'Configuration for load beacon must'
-                                      ' be a list.'))
+        assert ret == (False, 'Configuration for load beacon must'
+                                      ' be a list.')
 
     def test_empty_config(self):
         config = [{}]
 
         ret = load.validate(config)
 
-        self.assertEqual(ret, (False, 'Averages configuration is required'
-                                      ' for load beacon.'))
+        assert ret == (False, 'Averages configuration is required'
+                                      ' for load beacon.')
 
     @skipIf(salt.utils.platform.is_windows(),
             'os.getloadavg not available on Windows')
@@ -58,8 +58,8 @@ class LoadBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
             ret = load.validate(config)
 
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             _expected_return = [{'1m': 1.82, '5m': 1.84, '15m': 1.56}]
             ret = load.beacon(config)
-            self.assertEqual(ret, _expected_return)
+            assert ret == _expected_return

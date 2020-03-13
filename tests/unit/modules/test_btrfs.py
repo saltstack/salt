@@ -40,7 +40,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
                                        'stderr': '',
                                        'stdout': 'Salt'})
         with patch.dict(btrfs.__salt__, {'cmd.run_all': mock}):
-            self.assertDictEqual(btrfs.version(), {'version': 'Salt'})
+            assert btrfs.version() == {'version': 'Salt'}
 
     # 'info' function tests: 1
 
@@ -55,8 +55,8 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(btrfs.__salt__, {'cmd.run_all': mock}):
                 mock = MagicMock(return_value={'Salt': 'salt'})
                 with patch.object(btrfs, '_parse_btrfs_info', mock):
-                    self.assertDictEqual(btrfs.info('/dev/sda1'),
-                                         {'Salt': 'salt'})
+                    assert btrfs.info('/dev/sda1') == \
+                                         {'Salt': 'salt'}
 
     # 'devices' function tests: 1
 
@@ -70,7 +70,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
                                            'stderr': '',
                                            'stdout': 'Salt'})
             with patch.dict(btrfs.__salt__, {'cmd.run_all': mock}):
-                self.assertEqual(btrfs.devices(), 'Salt')
+                assert btrfs.devices() == 'Salt'
 
     # 'defragment' function tests: 2
 
@@ -89,7 +89,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.dict(btrfs.__salt__, {'cmd.run_all': mock_run}):
                     mock_file = mock_open(read_data='/dev/sda1 / ext4 rw,data=ordered 0 0')
                     with patch.object(salt.utils.files, 'fopen', mock_file):
-                        self.assertListEqual(btrfs.defragment('/dev/sda1'), ret)
+                        assert btrfs.defragment('/dev/sda1') == ret
 
     def test_defragment_error(self):
         '''
@@ -102,8 +102,8 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(btrfs.__salt__, {'cmd.run_all': mock_run}):
                 mock_file = mock_open(read_data='/dev/sda1 / ext4 rw,data=ordered 0 0')
                 with patch.object(salt.utils.files, 'fopen', mock_file):
-                    self.assertRaises(CommandExecutionError, btrfs.defragment,
-                                      '/dev/sda1')
+                    with pytest.raises(CommandExecutionError):
+                        btrfs.defragment('/dev/sda1')
 
     # 'features' function tests: 1
 
@@ -116,7 +116,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
                                            'stderr': '',
                                            'stdout': 'Salt'})
             with patch.dict(btrfs.__salt__, {'cmd.run_all': mock}):
-                self.assertDictEqual(btrfs.features(), {})
+                assert btrfs.features() == {}
 
     # 'usage' function tests: 1
 
@@ -131,8 +131,8 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(btrfs.__salt__, {'cmd.run_all': mock}):
                 mock = MagicMock(return_value={'Salt': 'salt'})
                 with patch.object(btrfs, '_usage_specific', mock):
-                    self.assertDictEqual(btrfs.usage('/dev/sda1'),
-                                         {'Salt': 'salt'})
+                    assert btrfs.usage('/dev/sda1') == \
+                                         {'Salt': 'salt'}
 
             mock = MagicMock(return_value={'retcode': 1,
                                            'stderr': '',
@@ -140,8 +140,8 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(btrfs.__salt__, {'cmd.run_all': mock}):
                 mock = MagicMock(return_value={'/dev/sda1': True})
                 with patch.object(btrfs, '_usage_unallocated', mock):
-                    self.assertDictEqual(btrfs.usage('/dev/sda1'),
-                                         {'unallocated': {'/dev/sda1': True}})
+                    assert btrfs.usage('/dev/sda1') == \
+                                         {'unallocated': {'/dev/sda1': True}}
 
             mock = MagicMock(return_value={'retcode': 1,
                                            'stderr': '',
@@ -149,8 +149,8 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(btrfs.__salt__, {'cmd.run_all': mock}):
                 mock = MagicMock(return_value={'/dev/sda1': True})
                 with patch.object(btrfs, '_usage_overall', mock):
-                    self.assertDictEqual(btrfs.usage('/dev/sda1'),
-                                         {'overall': {'/dev/sda1': True}})
+                    assert btrfs.usage('/dev/sda1') == \
+                                         {'overall': {'/dev/sda1': True}}
 
     # 'mkfs' function tests: 3
 
@@ -166,13 +166,14 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
                                          'btrfs.info': mock_info}):
             mock_file = mock_open(read_data='/dev/sda1 / ext4 rw,data=ordered 0 0')
             with patch.object(salt.utils.files, 'fopen', mock_file):
-                self.assertDictEqual(btrfs.mkfs('/dev/sda1'), {'log': 'Salt'})
+                assert btrfs.mkfs('/dev/sda1') == {'log': 'Salt'}
 
     def test_mkfs_error(self):
         '''
         Test if it No devices specified error
         '''
-        self.assertRaises(CommandExecutionError, btrfs.mkfs)
+        with pytest.raises(CommandExecutionError):
+            btrfs.mkfs()
 
     def test_mkfs_mount_error(self):
         '''
@@ -180,7 +181,8 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'/dev/sda1': True})
         with patch.object(salt.utils.fsutils, '_get_mounts', mock):
-            self.assertRaises(CommandExecutionError, btrfs.mkfs, '/dev/sda1')
+            with pytest.raises(CommandExecutionError):
+                btrfs.mkfs('/dev/sda1')
 
     # 'resize' function tests: 4
 
@@ -197,8 +199,8 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
                                              'btrfs.info': mock_info}):
                 mock = MagicMock(return_value={'/dev/sda1': True})
                 with patch.object(salt.utils.fsutils, '_get_mounts', mock):
-                    self.assertDictEqual(btrfs.resize('/dev/sda1', 'max'),
-                                         {'log': 'Salt'})
+                    assert btrfs.resize('/dev/sda1', 'max') == \
+                                         {'log': 'Salt'}
 
     def test_resize_valid_error(self):
         '''
@@ -209,8 +211,8 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
                                            'stderr': '',
                                            'stdout': 'Salt'})
             with patch.dict(btrfs.__salt__, {'cmd.run_all': mock}):
-                self.assertRaises(CommandExecutionError, btrfs.resize,
-                                  '/dev/sda1', 'max')
+                with pytest.raises(CommandExecutionError):
+                    btrfs.resize('/dev/sda1', 'max')
 
     def test_resize_mount_error(self):
         '''
@@ -219,15 +221,15 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.utils.fsutils._is_device', MagicMock(return_value=True)):
             mock = MagicMock(return_value={'/dev/sda1': False})
             with patch.object(salt.utils.fsutils, '_get_mounts', mock):
-                self.assertRaises(CommandExecutionError, btrfs.resize,
-                                  '/dev/sda1', 'max')
+                with pytest.raises(CommandExecutionError):
+                    btrfs.resize('/dev/sda1', 'max')
 
     def test_resize_size_error(self):
         '''
         Test if it gives unknown size error
         '''
-        self.assertRaises(CommandExecutionError, btrfs.resize,
-                          '/dev/sda1', '250m')
+        with pytest.raises(CommandExecutionError):
+            btrfs.resize('/dev/sda1', '250m')
 
     # 'convert' function tests: 5
 
@@ -253,8 +255,8 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(salt.utils.fsutils, '_blkid_output', mock):
                     mock = MagicMock(return_value={'/dev/sda3': [{'mount_point': None}]})
                     with patch.object(salt.utils.fsutils, '_get_mounts', mock):
-                        self.assertDictEqual(btrfs.convert('/dev/sda3', permanent=True),
-                                            ret)
+                        assert btrfs.convert('/dev/sda3', permanent=True) == \
+                                            ret
 
     def test_convert_device_error(self):
         '''
@@ -266,8 +268,8 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(btrfs.__salt__, {'cmd.run_all': mock}):
             mock = MagicMock(return_value={'/dev/sda1': False})
             with patch.object(salt.utils.fsutils, '_blkid_output', mock):
-                self.assertRaises(CommandExecutionError, btrfs.convert,
-                                  '/dev/sda1')
+                with pytest.raises(CommandExecutionError):
+                    btrfs.convert('/dev/sda1')
 
     def test_convert_filesystem_error(self):
         '''
@@ -280,8 +282,8 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(btrfs.__salt__, {'cmd.run_all': mock}):
                 mock = MagicMock(return_value={'/dev/sda1': {'type': 'ext'}})
                 with patch.object(salt.utils.fsutils, '_blkid_output', mock):
-                    self.assertRaises(CommandExecutionError, btrfs.convert,
-                                      '/dev/sda1')
+                    with pytest.raises(CommandExecutionError):
+                        btrfs.convert('/dev/sda1')
 
     def test_convert_error(self):
         '''
@@ -298,8 +300,8 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
                     mock = MagicMock(return_value={'/dev/sda1':
                                                    [{'mount_point': '/'}]})
                     with patch.object(salt.utils.fsutils, '_get_mounts', mock):
-                        self.assertRaises(CommandExecutionError, btrfs.convert,
-                                          '/dev/sda1')
+                        with pytest.raises(CommandExecutionError):
+                            btrfs.convert('/dev/sda1')
 
     def test_convert_migration_error(self):
         '''
@@ -314,8 +316,8 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(salt.utils.fsutils, '_blkid_output', mock_blk):
                     mock_file = mock_open(read_data='/dev/sda1 / ext4 rw,data=ordered 0 0')
                     with patch.object(salt.utils.files, 'fopen', mock_file):
-                        self.assertRaises(CommandExecutionError, btrfs.convert,
-                                          '/dev/sda1')
+                        with pytest.raises(CommandExecutionError):
+                            btrfs.convert('/dev/sda1')
 
     # 'add' function tests: 1
 
@@ -324,7 +326,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
         Test if it add a devices to a BTRFS filesystem.
         '''
         with patch('salt.modules.btrfs._restripe', MagicMock(return_value={})):
-            self.assertDictEqual(btrfs.add('/mountpoint', '/dev/sda1', '/dev/sda2'), {})
+            assert btrfs.add('/mountpoint', '/dev/sda1', '/dev/sda2') == {}
 
     # 'delete' function tests: 1
 
@@ -333,8 +335,8 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
         Test if it delete a devices to a BTRFS filesystem.
         '''
         with patch('salt.modules.btrfs._restripe', MagicMock(return_value={})):
-            self.assertDictEqual(btrfs.delete('/mountpoint', '/dev/sda1',
-                                              '/dev/sda2'), {})
+            assert btrfs.delete('/mountpoint', '/dev/sda1',
+                                              '/dev/sda2') == {}
 
     # 'properties' function tests: 1
 
@@ -347,21 +349,21 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
                                            'stderr': '',
                                            'stdout': 'Salt'})
             with patch.dict(btrfs.__salt__, {'cmd.run_all': mock}):
-                self.assertDictEqual(btrfs.properties('/dev/sda1', 'subvol'), {})
+                assert btrfs.properties('/dev/sda1', 'subvol') == {}
 
     def test_properties_unknown_error(self):
         '''
         Test if it gives unknown property error
         '''
-        self.assertRaises(CommandExecutionError, btrfs.properties,
-                          '/dev/sda1', 'a')
+        with pytest.raises(CommandExecutionError):
+            btrfs.properties('/dev/sda1', 'a')
 
     def test_properties_error(self):
         '''
         Test if it gives exception error
         '''
-        self.assertRaises(CommandExecutionError, btrfs.properties,
-                          '/dev/sda1', 'subvol', True)
+        with pytest.raises(CommandExecutionError):
+            btrfs.properties('/dev/sda1', 'subvol', True)
 
     def test_subvolume_exists(self):
         '''

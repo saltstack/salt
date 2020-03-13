@@ -16,6 +16,7 @@ from tests.support.mock import (
 
 # Import Salt Libs
 from salt.cloud.clouds import proxmox
+import pytest
 
 
 class ProxmoxTest(TestCase, LoaderModuleMockMixin):
@@ -55,24 +56,26 @@ class ProxmoxTest(TestCase, LoaderModuleMockMixin):
 
     def test__stringlist_to_dictionary(self):
         result = proxmox._stringlist_to_dictionary('')
-        self.assertEqual(result, {})
+        assert result == {}
 
         result = proxmox._stringlist_to_dictionary('foo=bar, ignored_space=bar,internal space=bar')
-        self.assertEqual(result, {'foo': 'bar', 'ignored_space': 'bar', 'internal space': 'bar'})
+        assert result == {'foo': 'bar', 'ignored_space': 'bar', 'internal space': 'bar'}
 
         # Negative cases
-        self.assertRaises(ValueError, proxmox._stringlist_to_dictionary, 'foo=bar,foo')
-        self.assertRaises(ValueError, proxmox._stringlist_to_dictionary, 'foo=bar,totally=invalid=assignment')
+        with pytest.raises(ValueError):
+            proxmox._stringlist_to_dictionary('foo=bar,foo')
+        with pytest.raises(ValueError):
+            proxmox._stringlist_to_dictionary('foo=bar,totally=invalid=assignment')
 
     def test__dictionary_to_stringlist(self):
         result = proxmox._dictionary_to_stringlist({})
-        self.assertEqual(result, '')
+        assert result == ''
 
         result = proxmox._dictionary_to_stringlist({'a': 'a'})
-        self.assertEqual(result, 'a=a')
+        assert result == 'a=a'
 
         result = proxmox._dictionary_to_stringlist({'a': 'a', 'b': 'b'})
-        self.assertEqual(result, 'a=a,b=b')
+        assert result == 'a=a,b=b'
 
     def test__reconfigure_clone(self):
         # The return_value is for the net reconfigure assertions, it is irrelevant for the rest

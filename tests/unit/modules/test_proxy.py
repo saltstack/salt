@@ -38,7 +38,7 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(proxy.__salt__, {'cmd.run': mock}):
             out = proxy.get_http_proxy()
             mock.assert_called_once_with('networksetup -getwebproxy Ethernet')
-            self.assertEqual(expected, out)
+            assert expected == out
 
     def test_get_https_proxy_macos(self):
         '''
@@ -55,7 +55,7 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(proxy.__salt__, {'cmd.run': mock}):
             out = proxy.get_https_proxy()
             mock.assert_called_once_with('networksetup -getsecurewebproxy Ethernet')
-            self.assertEqual(expected, out)
+            assert expected == out
 
     def test_get_ftp_proxy_macos(self):
         '''
@@ -72,7 +72,7 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(proxy.__salt__, {'cmd.run': mock}):
             out = proxy.get_ftp_proxy()
             mock.assert_called_once_with('networksetup -getftpproxy Ethernet')
-            self.assertEqual(expected, out)
+            assert expected == out
 
     def test_get_http_proxy_macos_none(self):
         '''
@@ -83,7 +83,7 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(proxy.__salt__, {'cmd.run': mock}):
             out = proxy.get_http_proxy()
             mock.assert_called_once_with('networksetup -getwebproxy Ethernet')
-            self.assertEqual({}, out)
+            assert {} == out
 
     def test_set_http_proxy_macos(self):
         '''
@@ -95,7 +95,7 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(proxy.__salt__, {'cmd.run': mock}):
             out = proxy.set_http_proxy('192.168.0.1', 3128, 'frank', 'badpassw0rd', bypass_hosts='.moo.com,.salt.com')
             mock.assert_called_once_with('networksetup -setwebproxy Ethernet 192.168.0.1 3128 On frank badpassw0rd')
-            self.assertTrue(out)
+            assert out
 
     def test_set_https_proxy_macos(self):
         '''
@@ -107,7 +107,7 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(proxy.__salt__, {'cmd.run': mock}):
             out = proxy.set_https_proxy('192.168.0.1', 3128, 'frank', 'passw0rd', bypass_hosts='.moo.com,.salt.com')
             mock.assert_called_once_with('networksetup -setsecurewebproxy Ethernet 192.168.0.1 3128 On frank passw0rd')
-            self.assertTrue(out)
+            assert out
 
     def test_set_ftp_proxy_macos(self):
         '''
@@ -119,7 +119,7 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(proxy.__salt__, {'cmd.run': mock}):
             out = proxy.set_ftp_proxy('192.168.0.1', 3128, 'frank', 'badpassw0rd', bypass_hosts='.moo.com,.salt.com')
             mock.assert_called_once_with('networksetup -setftpproxy Ethernet 192.168.0.1 3128 On frank badpassw0rd')
-            self.assertTrue(out)
+            assert out
 
     def test_get_http_proxy_windows(self):
         '''
@@ -137,7 +137,7 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
                     hive='HKEY_CURRENT_USER',
                     key='SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings',
                     vname='ProxyServer')
-                self.assertEqual(expected, out)
+                assert expected == out
 
     def test_get_https_proxy_windows(self):
         '''
@@ -155,7 +155,7 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
                     hive='HKEY_CURRENT_USER',
                     key='SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings',
                     vname='ProxyServer')
-                self.assertEqual(expected, out)
+                assert expected == out
 
     def test_get_ftp_proxy_windows(self):
         '''
@@ -173,14 +173,14 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
                     hive='HKEY_CURRENT_USER',
                     key='SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings',
                     vname='ProxyServer')
-                self.assertEqual(expected, out)
+                assert expected == out
 
     def test_get_all_proxies_macos_fails(self):
         mock = MagicMock()
         with patch.dict(proxy.__salt__, {'reg.read_value': mock}):
             out = proxy.get_proxy_win()
             assert not mock.called
-            self.assertEqual(out, None)
+            assert out is None
 
     def test_get_all_proxies_windows(self):
         '''
@@ -208,7 +208,7 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(proxy.__salt__, {'reg.read_value': mock}):
                 out = proxy.get_proxy_win()
                 mock.assert_has_calls(calls)
-                self.assertEqual(expected, out)
+                assert expected == out
 
     def test_set_http_proxy_windows(self):
         '''
@@ -238,7 +238,7 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
                                            bypass_hosts=['.moo.com', '.salt.com'])
                 mock_reg.assert_has_calls(calls)
                 mock_cmd.assert_called_once_with('netsh winhttp import proxy source=ie')
-                self.assertTrue(out)
+                assert out
 
     def test_set_https_proxy_windows(self):
         '''
@@ -268,7 +268,7 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
                                             bypass_hosts=['.moo.com', '.salt.com'])
                 mock_reg.assert_has_calls(calls)
                 mock_cmd.assert_called_once_with('netsh winhttp import proxy source=ie')
-                self.assertTrue(out)
+                assert out
 
     def test_set_ftp_proxy_windows(self):
         '''
@@ -298,7 +298,7 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
                                           bypass_hosts=['.moo.com', '.salt.com'])
                 mock_reg.assert_has_calls(calls)
                 mock_cmd.assert_called_once_with('netsh winhttp import proxy source=ie')
-                self.assertTrue(out)
+                assert out
 
     def test_set_proxy_windows(self):
         '''
@@ -328,7 +328,7 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
                                           bypass_hosts=['.moo.com', '.salt.com'])
                 mock_reg.assert_has_calls(calls)
                 mock_cmd.assert_called_once_with('netsh winhttp import proxy source=ie')
-                self.assertTrue(out)
+                assert out
 
     def test_set_proxy_windows_no_ftp(self):
         '''
@@ -359,4 +359,4 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
                                           bypass_hosts=['.moo.com', '.salt.com'])
                 mock_reg.assert_has_calls(calls)
                 mock_cmd.assert_called_once_with('netsh winhttp import proxy source=ie')
-                self.assertTrue(out)
+                assert out

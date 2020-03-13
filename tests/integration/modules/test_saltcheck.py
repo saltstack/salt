@@ -22,7 +22,7 @@ class SaltcheckModuleTest(ModuleCase):
                         "expected_return": "This works!",
                         "args": ["This works!"]}
         ret = self.run_function('saltcheck.run_test', test=saltcheck_test)
-        self.assertDictContainsSubset({'status': 'Pass'}, ret)
+        assert dict(ret, **{'status': 'Pass'}) == ret
 
     def test_saltcheck_state(self):
         '''
@@ -30,7 +30,7 @@ class SaltcheckModuleTest(ModuleCase):
         '''
         saltcheck_test = 'validate-saltcheck'
         ret = self.run_function('saltcheck.run_state_tests', [saltcheck_test])
-        self.assertDictContainsSubset({'status': 'Pass'}, ret[0]['validate-saltcheck']['echo_test_hello'])
+        assert dict(ret[0]['validate-saltcheck']['echo_test_hello'], **{'status': 'Pass'}) == ret[0]['validate-saltcheck']['echo_test_hello']
 
     def test_topfile_validation(self):
         '''
@@ -40,7 +40,7 @@ class SaltcheckModuleTest(ModuleCase):
         expected_top_states.append('TEST RESULTS')
         ret = self.run_function('saltcheck.run_highstate_tests')
         for top_state_dict in ret:
-            self.assertIn(list(top_state_dict)[0], expected_top_states)
+            assert list(top_state_dict)[0] in expected_top_states
 
     def test_saltcheck_checkall(self):
         '''
@@ -50,8 +50,8 @@ class SaltcheckModuleTest(ModuleCase):
         '''
         saltcheck_test = 'validate-saltcheck'
         ret = self.run_function('saltcheck.run_state_tests', [saltcheck_test], check_all=True)
-        self.assertDictContainsSubset({'status': 'Pass'}, ret[0]['validate-saltcheck']['echo_test_hello'])
-        self.assertDictContainsSubset({'status': 'Pass'}, ret[0]['validate-saltcheck']['check_all_validate'])
+        assert dict(ret[0]['validate-saltcheck']['echo_test_hello'], **{'status': 'Pass'}) == ret[0]['validate-saltcheck']['echo_test_hello']
+        assert dict(ret[0]['validate-saltcheck']['check_all_validate'], **{'status': 'Pass'}) == ret[0]['validate-saltcheck']['check_all_validate']
 
     def test_saltcheck_checkall_saltenv(self):
         '''
@@ -61,5 +61,5 @@ class SaltcheckModuleTest(ModuleCase):
         '''
         saltcheck_test = 'validate-saltcheck'
         ret = self.run_function('saltcheck.run_state_tests', [saltcheck_test], saltenv='prod', check_all=True)
-        self.assertDictContainsSubset({'status': 'Pass'}, ret[0]['validate-saltcheck']['echo_test_prod_env'])
-        self.assertDictContainsSubset({'status': 'Pass'}, ret[0]['validate-saltcheck']['check_all_validate_prod'])
+        assert dict(ret[0]['validate-saltcheck']['echo_test_prod_env'], **{'status': 'Pass'}) == ret[0]['validate-saltcheck']['echo_test_prod_env']
+        assert dict(ret[0]['validate-saltcheck']['check_all_validate_prod'], **{'status': 'Pass'}) == ret[0]['validate-saltcheck']['check_all_validate_prod']

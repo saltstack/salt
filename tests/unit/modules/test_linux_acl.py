@@ -11,6 +11,7 @@ from tests.support.mock import MagicMock, patch
 # Import salt libs
 import salt.modules.linux_acl as linux_acl
 from salt.exceptions import CommandExecutionError
+import pytest
 
 
 class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
@@ -48,7 +49,8 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
         pass
 
     def test_getfacl_wo_args(self):
-        self.assertRaises(CommandExecutionError, linux_acl.getfacl)
+        with pytest.raises(CommandExecutionError):
+            linux_acl.getfacl()
 
     def test_getfacl_w_single_arg(self):
         linux_acl.getfacl(self.file)
@@ -76,10 +78,11 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
             },
             'octal': 0,
         }
-        self.assertEqual(linux_acl._parse_acl(line, user, group), expected)
+        assert linux_acl._parse_acl(line, user, group) == expected
 
     def test_wipefacls_wo_args(self):
-        self.assertRaises(CommandExecutionError, linux_acl.wipefacls)
+        with pytest.raises(CommandExecutionError):
+            linux_acl.wipefacls()
 
     def test_wipefacls_w_single_arg(self):
         linux_acl.wipefacls(self.file)
@@ -95,7 +98,8 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_modfacl_wo_args(self):
         for acl in [self.u_acl, self.user_acl, self.g_acl, self.group_acl]:
-            self.assertRaises(CommandExecutionError, linux_acl.modfacl, *acl)
+            with pytest.raises(CommandExecutionError):
+                linux_acl.modfacl(*acl)
 
     def test_modfacl__u_w_single_arg(self):
         linux_acl.modfacl(*(self.u_acl + [self.file]))
@@ -160,13 +164,14 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
     def test_modfacl_raise_err(self):
         mock = MagicMock(side_effect=CommandExecutionError('Custom err'))
         with patch.dict(linux_acl.__salt__, {'cmd.run': mock}):
-            with self.assertRaises(CommandExecutionError) as excinfo:
+            with pytest.raises(CommandExecutionError) as excinfo:
                 linux_acl.modfacl(*(self.user_acl + self.files), raise_err=True)
-            self.assertEqual(excinfo.exception.strerror, 'Custom err')
+            assert excinfo.value.strerror == 'Custom err'
 
     def test_delfacl_wo_args(self):
         for acl in [self.u_acl, self.user_acl, self.g_acl, self.group_acl]:
-            self.assertRaises(CommandExecutionError, linux_acl.delfacl, *acl[:-1])
+            with pytest.raises(CommandExecutionError):
+                linux_acl.delfacl(*acl[:-1])
 
     def test_delfacl__u_w_single_arg(self):
         linux_acl.delfacl(*(self.u_acl[:-1] + [self.file]))

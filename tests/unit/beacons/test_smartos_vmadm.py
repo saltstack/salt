@@ -73,7 +73,7 @@ class SmartOSImgAdmBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         ret = vmadm.validate(config)
 
-        self.assertEqual(ret, (False, 'Configuration for vmadm beacon must be a list!'))
+        assert ret == (False, 'Configuration for vmadm beacon must be a list!')
 
     def test_created_startup(self):
         '''
@@ -86,7 +86,7 @@ class SmartOSImgAdmBeaconTestCase(TestCase, LoaderModuleMockMixin):
             config = [{'startup_create_event': True}]
 
             ret = vmadm.validate(config)
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             ret = vmadm.beacon(config)
             res = [{'alias': 'vm1',
@@ -97,7 +97,7 @@ class SmartOSImgAdmBeaconTestCase(TestCase, LoaderModuleMockMixin):
                     'tag': 'running/00000000-0000-0000-0000-000000000001',
                     'hostname': 'vm1',
                     'dns_domain': 'example.org'}]
-            self.assertEqual(ret, res)
+            assert ret == res
 
     def test_created_nostartup(self):
         '''
@@ -110,7 +110,7 @@ class SmartOSImgAdmBeaconTestCase(TestCase, LoaderModuleMockMixin):
             config = []
 
             ret = vmadm.validate(config)
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             ret = vmadm.beacon(config)
             res = [{'alias': 'vm1',
@@ -118,7 +118,7 @@ class SmartOSImgAdmBeaconTestCase(TestCase, LoaderModuleMockMixin):
                     'hostname': 'vm1',
                     'dns_domain': 'example.org'}]
 
-            self.assertEqual(ret, res)
+            assert ret == res
 
     def test_created(self):
         '''
@@ -131,7 +131,7 @@ class SmartOSImgAdmBeaconTestCase(TestCase, LoaderModuleMockMixin):
             config = []
 
             ret = vmadm.validate(config)
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             # Initial pass (Initialized state and do not yield created events at startup)
             ret = vmadm.beacon(config)
@@ -147,7 +147,7 @@ class SmartOSImgAdmBeaconTestCase(TestCase, LoaderModuleMockMixin):
                     'hostname': 'vm2',
                     'dns_domain': 'example.org'}]
 
-            self.assertEqual(ret, res)
+            assert ret == res
 
     def test_deleted(self):
         '''
@@ -160,7 +160,7 @@ class SmartOSImgAdmBeaconTestCase(TestCase, LoaderModuleMockMixin):
             config = []
 
             ret = vmadm.validate(config)
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             # Initial pass (Initialized state and do not yield created vms at startup)
             ret = vmadm.beacon(config)
@@ -172,7 +172,7 @@ class SmartOSImgAdmBeaconTestCase(TestCase, LoaderModuleMockMixin):
                     'hostname': 'vm2',
                     'dns_domain': 'example.org'}]
 
-            self.assertEqual(ret, res)
+            assert ret == res
 
     def test_complex(self):
         '''
@@ -185,7 +185,7 @@ class SmartOSImgAdmBeaconTestCase(TestCase, LoaderModuleMockMixin):
             config = []
 
             ret = vmadm.validate(config)
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             # Initial pass (Initialized state and do not yield created events at startup)
             ret = vmadm.beacon(config)
@@ -197,7 +197,7 @@ class SmartOSImgAdmBeaconTestCase(TestCase, LoaderModuleMockMixin):
                     'hostname': 'vm2',
                     'dns_domain': 'example.org'}]
 
-            self.assertEqual(ret, res)
+            assert ret == res
 
             # Third pass (Delete one vm)
             ret = vmadm.beacon(config)
@@ -206,4 +206,4 @@ class SmartOSImgAdmBeaconTestCase(TestCase, LoaderModuleMockMixin):
                     'hostname': 'vm2',
                     'dns_domain': 'example.org'}]
 
-            self.assertEqual(ret, res)
+            assert ret == res

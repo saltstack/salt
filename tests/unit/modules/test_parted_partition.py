@@ -19,6 +19,7 @@ from tests.support.mock import MagicMock, patch
 # Import Salt libs
 from salt.exceptions import CommandExecutionError
 import salt.modules.parted_partition as parted
+import pytest
 
 
 class PartedTestCase(TestCase, LoaderModuleMockMixin):
@@ -46,7 +47,7 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.utils.platform.is_windows', lambda: True):
             ret = parted.__virtual__()
             err = (False, 'The parted execution module failed to load Windows systems are not supported.')
-            self.assertEqual(err, ret)
+            assert err == ret
 
     def test_virtual_bails_without_parted(self):
         '''
@@ -56,7 +57,7 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
                 patch('salt.utils.platform.is_windows', return_value=False):
             ret = parted.__virtual__()
             err = (False, 'The parted execution module failed to load parted binary is not in the path.')
-            self.assertEqual(err, ret)
+            assert err == ret
 
     def test_virtual_bails_without_lsblk(self):
         '''
@@ -66,7 +67,7 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
                 patch('salt.utils.platform.is_windows', return_value=False):
             ret = parted.__virtual__()
             err = (False, 'The parted execution module failed to load lsblk binary is not in the path.')
-            self.assertEqual(err, ret)
+            assert err == ret
 
     def test_virtual_bails_without_partprobe(self):
         '''
@@ -76,7 +77,7 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
                 patch('salt.utils.platform.is_windows', return_value=False):
             ret = parted.__virtual__()
             err = (False, 'The parted execution module failed to load partprobe binary is not in the path.')
-            self.assertEqual(err, ret)
+            assert err == ret
 
     def test_virtual(self):
         '''
@@ -86,7 +87,7 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
                 patch('salt.utils.path.which', lambda exe: exe in ('parted', 'lsblk', 'partprobe')):
             ret = parted.__virtual__()
             expect = 'partition'
-            self.assertEqual(ret, expect)
+            assert ret == expect
 
     # Test probe function
 
@@ -150,7 +151,8 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
         return output[k]
 
     def test_list__without_device(self):
-        self.assertRaises(TypeError, parted.list_)
+        with pytest.raises(TypeError):
+            parted.list_()  # pylint: disable=no-value-for-parameter
 
     def test_list__empty_cmd_output(self):
         with patch('salt.modules.parted_partition._validate_device', MagicMock()):
@@ -158,7 +160,7 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
             output = parted.list_('/dev/sda')
             self.cmdrun_stdout.assert_called_once_with('parted -m -s /dev/sda print')
             expected = {'info': {}, 'partitions': {}}
-            self.assertEqual(output, expected)
+            assert output == expected
 
     def test_list__valid_unit_empty_cmd_output(self):
         with patch('salt.modules.parted_partition._validate_device', MagicMock()):
@@ -166,29 +168,33 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
             output = parted.list_('/dev/sda', unit='s')
             self.cmdrun_stdout.assert_called_once_with('parted -m -s /dev/sda unit s print')
             expected = {'info': {}, 'partitions': {}}
-            self.assertEqual(output, expected)
+            assert output == expected
 
     def test_list__invalid_unit(self):
-        self.assertRaises(CommandExecutionError, parted.list_, '/dev/sda',
+        with pytest.raises(CommandExecutionError):
+            parted.list_('/dev/sda',
                           unit='badbadbad')
-        self.assertFalse(self.cmdrun.called)
+        assert not self.cmdrun.called
 
     def test_list__bad_header(self):
         with patch('salt.modules.parted_partition._validate_device', MagicMock()):
             self.cmdrun_stdout.return_value = self.parted_print_output('bad_header')
-            self.assertRaises(CommandExecutionError, parted.list_, '/dev/sda')
+            with pytest.raises(CommandExecutionError):
+                parted.list_('/dev/sda')
             self.cmdrun_stdout.assert_called_once_with('parted -m -s /dev/sda print')
 
     def test_list__bad_label_info(self):
         with patch('salt.modules.parted_partition._validate_device', MagicMock()):
             self.cmdrun_stdout.return_value = self.parted_print_output('bad_label_info')
-            self.assertRaises(CommandExecutionError, parted.list_, '/dev/sda')
+            with pytest.raises(CommandExecutionError):
+                parted.list_('/dev/sda')
             self.cmdrun_stdout.assert_called_once_with('parted -m -s /dev/sda print')
 
     def test_list__bad_partition(self):
         with patch('salt.modules.parted_partition._validate_device', MagicMock()):
             self.cmdrun_stdout.return_value = self.parted_print_output('bad_partition')
-            self.assertRaises(CommandExecutionError, parted.list_, '/dev/sda')
+            with pytest.raises(CommandExecutionError):
+                parted.list_('/dev/sda')
             self.cmdrun_stdout.assert_called_once_with('parted -m -s /dev/sda print')
 
     def test_list__valid_cmd_output(self):
@@ -227,7 +233,7 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
                     }
                 }
             }
-            self.assertEqual(output, expected)
+            assert output == expected
 
     def test_list__valid_unit_valid_cmd_output(self):
         with patch('salt.modules.parted_partition._validate_device', MagicMock()):
@@ -265,7 +271,7 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
                     }
                 }
             }
-            self.assertEqual(output, expected)
+            assert output == expected
 
     def test_list__valid_unit_chs_valid_cmd_output(self):
         with patch('salt.modules.parted_partition._validate_device', MagicMock()):
@@ -300,7 +306,7 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
                         'name': ''}
                 }
             }
-            self.assertEqual(output, expected)
+            assert output == expected
 
     def test_list__valid_legacy_cmd_output(self):
         with patch('salt.modules.parted_partition._validate_device', MagicMock()):
@@ -337,7 +343,7 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
                     }
                 }
             }
-            self.assertEqual(output, expected)
+            assert output == expected
 
     def test_list__valid_unit_valid_legacy_cmd_output(self):
         with patch('salt.modules.parted_partition._validate_device', MagicMock()):
@@ -374,7 +380,7 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
                     }
                 }
             }
-            self.assertEqual(output, expected)
+            assert output == expected
 
     def test_disk_set(self):
         with patch('salt.modules.parted_partition._validate_device', MagicMock()):

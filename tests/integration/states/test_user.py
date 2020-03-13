@@ -119,15 +119,15 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
             group_name = grp.getgrgid(ret['gid']).gr_name
 
         if not salt.utils.platform.is_darwin() and not salt.utils.platform.is_windows():
-            self.assertTrue(os.path.isdir(self.user_home))
+            assert os.path.isdir(self.user_home)
         if grains['os_family'] in ('Suse',):
-            self.assertEqual(group_name, 'users')
+            assert group_name == 'users'
         elif grains['os_family'] == 'MacOS':
-            self.assertEqual(group_name, 'staff')
+            assert group_name == 'staff'
         elif salt.utils.platform.is_windows():
-            self.assertEqual([], group_name)
+            assert [] == group_name
         else:
-            self.assertEqual(group_name, self.user_name)
+            assert group_name == self.user_name
 
     @skipIf(salt.utils.platform.is_windows(), 'windows minion does not support gid_from_name')
     @requires_system_grains
@@ -149,20 +149,20 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         if gid_from_name:
             self.assertSaltFalseReturn(ret_user_present)
             ret_user_present = ret_user_present[next(iter(ret_user_present))]
-            self.assertTrue('is not present' in ret_user_present['comment'])
+            assert 'is not present' in ret_user_present['comment']
         else:
             self.assertSaltTrueReturn(ret_user_present)
             ret_user_info = self.run_function('user.info', [self.user_name])
             self.assertReturnNonEmptySaltType(ret_user_info)
             group_name = grp.getgrgid(ret_user_info['gid']).gr_name
             if not salt.utils.platform.is_darwin():
-                self.assertTrue(os.path.isdir(self.user_home))
+                assert os.path.isdir(self.user_home)
             if grains['os_family'] in ('Suse',):
-                self.assertEqual(group_name, 'users')
+                assert group_name == 'users'
             elif grains['os_family'] == 'MacOS':
-                self.assertEqual(group_name, 'staff')
+                assert group_name == 'staff'
             else:
-                self.assertEqual(group_name, self.user_name)
+                assert group_name == self.user_name
 
     @skipIf(salt.utils.platform.is_windows(), 'windows minion does not support gid_from_name')
     def test_user_present_gid_from_name(self):
@@ -182,8 +182,8 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         group_name = grp.getgrgid(ret['gid']).gr_name
 
         if not salt.utils.platform.is_darwin():
-            self.assertTrue(os.path.isdir(self.user_home))
-        self.assertEqual(group_name, self.user_name)
+            assert os.path.isdir(self.user_home)
+        assert group_name == self.user_name
         ret = self.run_state('user.absent', name=self.user_name)
         self.assertSaltTrueReturn(ret)
         ret = self.run_state('group.absent', name=self.user_name)
@@ -257,12 +257,12 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
 
         ret = self.run_function('user.info', [self.user_name])
         self.assertReturnNonEmptySaltType(ret)
-        self.assertEqual('', ret['fullname'])
+        assert '' == ret['fullname']
         # MacOS does not supply the following GECOS fields
         if not salt.utils.platform.is_darwin():
-            self.assertEqual('', ret['roomnumber'])
-            self.assertEqual('', ret['workphone'])
-            self.assertEqual('', ret['homephone'])
+            assert '' == ret['roomnumber']
+            assert '' == ret['workphone']
+            assert '' == ret['homephone']
 
     def tearDown(self):
         if salt.utils.platform.is_darwin():

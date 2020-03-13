@@ -50,7 +50,7 @@ class SSHCustomModuleTest(SSHCase):
         '''
         expected = 'hello'
         cmd = self.run_function('test.echo', arg=['hello'])
-        self.assertEqual(expected, cmd)
+        assert expected == cmd
 
     def test_ssh_custom_module(self):
         '''
@@ -58,7 +58,7 @@ class SSHCustomModuleTest(SSHCase):
         '''
         expected = 'hello'[::-1]
         cmd = self.run_function('test.recho', arg=['hello'])
-        self.assertEqual(expected, cmd)
+        assert expected == cmd
 
     def test_ssh_sls_with_custom_module(self):
         '''
@@ -75,4 +75,4 @@ class SSHCustomModuleTest(SSHCase):
             elif not cmd[key]['result']:
                 raise AssertionError(cmd[key]['comment'])
             cmd_ret = cmd[key]['changes'].get('ret', None)
-            self.assertEqual(cmd_ret, expected[key])
+            assert cmd_ret == expected[key]

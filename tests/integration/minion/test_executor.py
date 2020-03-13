@@ -21,4 +21,4 @@ class ExecutorTest(ModuleCase, ShellCase):
         test that dunders are set
         '''
         data = self.run_call('test.arg --module-executors=arg')
-        self.assertIn('test.arg fired', "".join(data))
+        assert 'test.arg fired' in "".join(data)

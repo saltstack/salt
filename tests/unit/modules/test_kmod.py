@@ -31,7 +31,7 @@ class KmodTestCase(TestCase, LoaderModuleMockMixin):
         Tests return a list of all available kernel modules
         '''
         with patch('salt.modules.kmod.available', MagicMock(return_value=['kvm'])):
-            self.assertEqual(['kvm'], kmod.available())
+            assert ['kvm'] == kmod.available()
 
     # 'check_available' function tests: 1
 
@@ -40,7 +40,7 @@ class KmodTestCase(TestCase, LoaderModuleMockMixin):
         Tests if the specified kernel module is available
         '''
         with patch('salt.modules.kmod.available', MagicMock(return_value=['kvm'])):
-            self.assertTrue(kmod.check_available('kvm'))
+            assert kmod.check_available('kvm')
 
     # 'lsmod' function tests: 1
 
@@ -52,7 +52,7 @@ class KmodTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.modules.kmod.lsmod', MagicMock(return_value=mock_ret)):
             mock_cmd = MagicMock(return_value=1)
             with patch.dict(kmod.__salt__, {'cmd.run': mock_cmd}):
-                self.assertListEqual(mock_ret, kmod.lsmod())
+                assert mock_ret == kmod.lsmod()
 
     # 'mod_list' function tests: 1
 
@@ -65,11 +65,11 @@ class KmodTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value='/etc/modules')):
             with patch('salt.modules.kmod._strip_module_name',
                        MagicMock(return_value='lp')):
-                self.assertListEqual(['lp'], kmod.mod_list(True))
+                assert ['lp'] == kmod.mod_list(True)
 
         mock_ret = [{'size': 100, 'module': None, 'depcount': 10, 'deps': None}]
         with patch('salt.modules.kmod.lsmod', MagicMock(return_value=mock_ret)):
-            self.assertListEqual([None], kmod.mod_list(False))
+            assert [None] == kmod.mod_list(False)
 
     # 'load' function tests: 1
 
@@ -91,11 +91,11 @@ class KmodTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.modules.kmod._set_persistent_module', mock_persist):
             with patch('salt.modules.kmod.lsmod', mock_lsmod):
                 with patch.dict(kmod.__salt__, {'cmd.run_all': mock_run_all_0}):
-                    self.assertEqual([mod], kmod.load(mod, True))
+                    assert [mod] == kmod.load(mod, True)
 
                 with patch.dict(kmod.__salt__, {'cmd.run_all': mock_run_all_1}):
-                    self.assertEqual('Error loading module {0}: {1}'.format(mod, err_msg),
-                                     kmod.load(mod))
+                    assert 'Error loading module {0}: {1}'.format(mod, err_msg) == \
+                                     kmod.load(mod)
 
     # 'is_loaded' function tests: 1
 
@@ -104,7 +104,7 @@ class KmodTestCase(TestCase, LoaderModuleMockMixin):
         Tests if specified kernel module is loaded.
         '''
         with patch('salt.modules.kmod.mod_list', MagicMock(return_value=set(['lp']))):
-            self.assertTrue(kmod.is_loaded('lp'))
+            assert kmod.is_loaded('lp')
 
     # 'remove' function tests: 1
 
@@ -126,10 +126,10 @@ class KmodTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.modules.kmod._remove_persistent_module', mock_persist):
             with patch('salt.modules.kmod.lsmod', mock_lsmod):
                 with patch.dict(kmod.__salt__, {'cmd.run_all': mock_run_all_0}):
-                    self.assertEqual([mod], kmod.remove(mod, True))
+                    assert [mod] == kmod.remove(mod, True)
 
-                    self.assertEqual([], kmod.remove(mod))
+                    assert [] == kmod.remove(mod)
 
                 with patch.dict(kmod.__salt__, {'cmd.run_all': mock_run_all_1}):
-                    self.assertEqual('Error removing module {0}: {1}'.format(mod, err_msg),
-                                     kmod.remove(mod, True))
+                    assert 'Error removing module {0}: {1}'.format(mod, err_msg) == \
+                                     kmod.remove(mod, True)

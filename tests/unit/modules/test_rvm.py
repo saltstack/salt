@@ -77,7 +77,7 @@ class TestRvmModule(TestCase, LoaderModuleMockMixin):
         ]
         with patch.dict(rvm.__salt__, {'cmd.run_all': mock}):
             rvm.install_ruby('2.0.0', runas='rvm')
-            self.assertEqual(mock.call_args_list, expected)
+            assert mock.call_args_list == expected
 
     def test_install_with_env(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': 'stdout'})
@@ -92,7 +92,7 @@ class TestRvmModule(TestCase, LoaderModuleMockMixin):
         ]
         with patch.dict(rvm.__salt__, {'cmd.run_all': mock}):
             rvm.install_ruby('2.0.0', env=[{'RUBY_CONFIGURE_OPTS': '--foobar'}])
-            self.assertEqual(mock.call_args_list, expected)
+            assert mock.call_args_list == expected
 
     def test_install_with_opts(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': 'stdout'})
@@ -112,7 +112,7 @@ class TestRvmModule(TestCase, LoaderModuleMockMixin):
                     '-C --enable-shared,--with-readline-dir=$HOME/.rvm/usr',
                     '--patch /path/to/awesome.patch'
                 ])
-            self.assertEqual(mock.call_args_list, expected)
+            assert mock.call_args_list == expected
 
     def test_list(self):
         list_output = '''
@@ -133,15 +133,14 @@ rvm rubies
 '''
         with patch.object(rvm, '_rvm') as mock_method:
             mock_method.return_value = list_output
-            self.assertEqual(
-                [['jruby', '1.6.5.1', False],
+            assert [['jruby', '1.6.5.1', False],
                  ['ree', '1.8.7-2011.03', False],
                  ['ree', '1.8.7-2011.12', False],
                  ['ree', '1.8.7-2012.02', True],
                  ['ruby', '1.9.2-p180', False],
                  ['ruby', '1.9.3-p125', False],
-                 ['ruby', 'head', False]],
-                rvm.list_())
+                 ['ruby', 'head', False]] == \
+                rvm.list_()
 
     def test_gemset_list(self):
         output = '''
@@ -153,9 +152,8 @@ gemsets for ree-1.8.7-2012.02 (found in /usr/local/rvm/gems/ree-1.8.7-2012.02)
 '''
         with patch.object(rvm, '_rvm_do') as mock_method:
             mock_method.return_value = output
-            self.assertEqual(
-                ['global', 'bar', 'foo'],
-                rvm.gemset_list())
+            assert ['global', 'bar', 'foo'] == \
+                rvm.gemset_list()
 
     def test_gemset_list_all(self):
         output = '''
@@ -185,9 +183,8 @@ gemsets for ruby-1.9.2-p180 (found in /usr/local/rvm/gems/ruby-1.9.2-p180)
 '''
         with patch.object(rvm, '_rvm_do') as mock_method:
             mock_method.return_value = output
-            self.assertEqual(
-                {'jruby-1.6.5.1': ['global', 'jbar', 'jfoo'],
+            assert {'jruby-1.6.5.1': ['global', 'jbar', 'jfoo'],
                  'ruby-1.9.2-p180': ['global'],
                  'ruby-1.9.3-p125': ['9bar', '9foo', 'global'],
-                 'ruby-head': ['global', 'headbar', 'headfoo']},
-                rvm.gemset_list_all())
+                 'ruby-head': ['global', 'headbar', 'headfoo']} == \
+                rvm.gemset_list_all()

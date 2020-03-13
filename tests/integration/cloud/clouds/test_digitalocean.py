@@ -30,30 +30,24 @@ class DigitalOceanTest(CloudTest):
         Tests the return of running the --list-images command for digitalocean
         '''
         image_list = self.run_cloud('--list-images {0}'.format(self.PROVIDER))
-        self.assertIn(
-            '14.04.5 x64',
+        assert '14.04.5 x64' in \
             [i.strip() for i in image_list]
-        )
 
     def test_list_locations(self):
         '''
         Tests the return of running the --list-locations command for digitalocean
         '''
         _list_locations = self.run_cloud('--list-locations {0}'.format(self.PROVIDER))
-        self.assertIn(
-            'San Francisco 2',
+        assert 'San Francisco 2' in \
             [i.strip() for i in _list_locations]
-        )
 
     def test_list_sizes(self):
         '''
         Tests the return of running the --list-sizes command for digitalocean
         '''
         _list_sizes = self.run_cloud('--list-sizes {0}'.format(self.PROVIDER))
-        self.assertIn(
-            '16gb',
+        assert '16gb' in \
             [i.strip() for i in _list_sizes]
-        )
 
     def test_key_management(self):
         '''
@@ -81,32 +75,26 @@ class DigitalOceanTest(CloudTest):
                                                                                          do_key_name, pub))
 
             # Upload public key
-            self.assertIn(
-                finger_print,
+            assert finger_print in \
                 [i.strip() for i in _key]
-            )
 
             # List all keys
             list_keypairs = self.run_cloud('-f list_keypairs {0}'.format(self.PROVIDER))
 
-            self.assertIn(
-                finger_print,
+            assert finger_print in \
                 [i.strip() for i in list_keypairs]
-            )
 
             # List key
             show_keypair = self.run_cloud('-f show_keypair {0} keyname={1}'.format(self.PROVIDER, do_key_name))
-            self.assertIn(
-                finger_print,
+            assert finger_print in \
                 [i.strip() for i in show_keypair]
-            )
         except AssertionError:
             # Delete the public key if the above assertions fail
             self.run_cloud('-f remove_key {0} id={1}'.format(self.PROVIDER, finger_print))
             raise
         finally:
             # Delete public key
-            self.assertTrue(self.run_cloud('-f remove_key {0} id={1}'.format(self.PROVIDER, finger_print)))
+            assert self.run_cloud('-f remove_key {0} id={1}'.format(self.PROVIDER, finger_print))
 
     def test_instance(self):
         '''

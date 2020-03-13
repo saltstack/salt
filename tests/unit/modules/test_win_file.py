@@ -21,6 +21,7 @@ import salt.utils.win_dacl as win_dacl
 import salt.utils.win_functions
 import salt.modules.cmdmod as cmdmod
 from salt.exceptions import CommandExecutionError
+import pytest
 
 try:
     WIN_VER = sys.getwindowsversion().major
@@ -65,9 +66,8 @@ class WinFileTestCase(TestCase, LoaderModuleMockMixin):
         exist
         '''
         with patch('os.path.exists', return_value=False):
-            self.assertRaises(CommandExecutionError,
-                              win_file.stats,
-                              self.FAKE_PATH)
+            with pytest.raises(CommandExecutionError):
+                win_file.stats(self.FAKE_PATH)
 
     def test_issue_43328_check_perms_no_ret(self):
         '''
@@ -75,8 +75,8 @@ class WinFileTestCase(TestCase, LoaderModuleMockMixin):
         exist
         '''
         with patch('os.path.exists', return_value=False):
-            self.assertRaises(
-                CommandExecutionError, win_file.check_perms, self.FAKE_PATH)
+            with pytest.raises(CommandExecutionError):
+                win_file.check_perms(self.FAKE_PATH)
 
     @skipIf(not salt.utils.platform.is_windows(), 'Skip on Non-Windows systems')
     @skipIf(WIN_VER < 6, 'Symlinks not supported on Vista an lower')
@@ -89,16 +89,16 @@ class WinFileTestCase(TestCase, LoaderModuleMockMixin):
         symlink = os.path.join(base, 'child 2', 'link')
         try:
             # Create environment
-            self.assertFalse(win_file.directory_exists(target))
-            self.assertFalse(win_file.directory_exists(symlink))
-            self.assertTrue(win_file.makedirs_(target))
-            self.assertTrue(win_file.makedirs_(symlink))
-            self.assertTrue(win_file.symlink(target, symlink))
-            self.assertTrue(win_file.directory_exists(symlink))
-            self.assertTrue(win_file.is_link(symlink))
+            assert not win_file.directory_exists(target)
+            assert not win_file.directory_exists(symlink)
+            assert win_file.makedirs_(target)
+            assert win_file.makedirs_(symlink)
+            assert win_file.symlink(target, symlink)
+            assert win_file.directory_exists(symlink)
+            assert win_file.is_link(symlink)
             # Test removal of directory containing symlink
-            self.assertTrue(win_file.remove(base))
-            self.assertFalse(win_file.directory_exists(base))
+            assert win_file.remove(base)
+            assert not win_file.directory_exists(base)
         finally:
             if os.path.exists(base):
                 win_file.remove(base)
@@ -130,9 +130,8 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
                                       principal=self.current_user)
         win_dacl.set_inheritance(obj_name=self.temp_file,
                                             enabled=True)
-        self.assertEqual(
-            win_dacl.get_owner(obj_name=self.temp_file),
-            self.current_user)
+        assert win_dacl.get_owner(obj_name=self.temp_file) == \
+            self.current_user
 
     def tearDown(self):
         os.remove(self.temp_file)
@@ -149,7 +148,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
             ret = win_file.check_perms(path=self.temp_file,
                                        owner='Administrators',
                                        inheritance=None)
-            self.assertDictEqual(expected, ret)
+            assert expected == ret
 
     def test_check_perms_set_owner(self):
         '''
@@ -162,7 +161,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
         ret = win_file.check_perms(path=self.temp_file,
                                    owner='Administrators',
                                    inheritance=None)
-        self.assertDictEqual(expected, ret)
+        assert expected == ret
 
     def test_check_perms_deny_test_true(self):
         '''
@@ -177,7 +176,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
                 path=self.temp_file,
                 deny_perms={'Users': {'perms': 'read_execute'}},
                 inheritance=None)
-            self.assertDictEqual(expected, ret)
+            assert expected == ret
 
     def test_check_perms_deny(self):
         '''
@@ -192,7 +191,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
             path=self.temp_file,
             deny_perms={'Users': {'perms': 'read_execute'}},
             inheritance=None)
-        self.assertDictEqual(expected, ret)
+        assert expected == ret
 
     def test_check_perms_grant_test_true(self):
         '''
@@ -207,7 +206,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
                 path=self.temp_file,
                 grant_perms={'Users': {'perms': 'read_execute'}},
                 inheritance=None)
-            self.assertDictEqual(expected, ret)
+            assert expected == ret
 
     def test_check_perms_grant(self):
         '''
@@ -222,7 +221,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
             path=self.temp_file,
             grant_perms={'Users': {'perms': 'read_execute'}},
             inheritance=None)
-        self.assertDictEqual(expected, ret)
+        assert expected == ret
 
     def test_check_perms_inheritance_false_test_true(self):
         '''
@@ -235,7 +234,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_dacl.__opts__, {'test': True}):
             ret = win_file.check_perms(path=self.temp_file,
                                        inheritance=False)
-            self.assertDictEqual(expected, ret)
+            assert expected == ret
 
     def test_check_perms_inheritance_false(self):
         '''
@@ -247,7 +246,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
                     'result': True}
         ret = win_file.check_perms(path=self.temp_file,
                                    inheritance=False)
-        self.assertDictEqual(expected, ret)
+        assert expected == ret
 
     def test_check_perms_inheritance_true(self):
         '''
@@ -259,7 +258,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
                     'result': True}
         ret = win_file.check_perms(path=self.temp_file,
                                    inheritance=True)
-        self.assertDictEqual(expected, ret)
+        assert expected == ret
 
     def test_check_perms_reset_test_true(self):
         '''
@@ -291,7 +290,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
                              'Administrators': {'perms': 'full_control'}},
                 inheritance=False,
                 reset=True)
-            self.assertDictEqual(expected, ret)
+            assert expected == ret
 
     def test_check_perms_reset(self):
         '''
@@ -322,7 +321,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
                          'Administrators': {'perms': 'full_control'}},
             inheritance=False,
             reset=True)
-        self.assertDictEqual(expected, ret)
+        assert expected == ret
 
     def test_stat(self):
         with patch('os.path.exists', MagicMock(return_value=True)), \
@@ -333,5 +332,5 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
                 patch('salt.modules.win_file.gid_to_group', MagicMock(return_value='dummy')), \
                 patch('os.stat', MagicMock(return_value=DummyStat())):
             ret = win_file.stats('dummy', None, True)
-            self.assertEqual(ret['mode'], '0644')
-            self.assertEqual(ret['type'], 'file')
+            assert ret['mode'] == '0644'
+            assert ret['type'] == 'file'

@@ -57,22 +57,20 @@ class MacPkgutilModuleTest(ModuleCase):
         '''
         Test pkgutil.list
         '''
-        self.assertIsInstance(self.run_function('pkgutil.list'), list)
-        self.assertIn(self.pkg_name,
-                      self.run_function('pkgutil.list'))
+        assert isinstance(self.run_function('pkgutil.list'), list)
+        assert self.pkg_name in \
+                      self.run_function('pkgutil.list')
 
     def test_is_installed(self):
         '''
         Test pkgutil.is_installed
         '''
         # Test Package is installed
-        self.assertTrue(
-            self.run_function('pkgutil.is_installed',
-                              [self.pkg_name]))
+        assert self.run_function('pkgutil.is_installed',
+                              [self.pkg_name])
 
         # Test Package is not installed
-        self.assertFalse(
-            self.run_function('pkgutil.is_installed', ['spongebob']))
+        assert not self.run_function('pkgutil.is_installed', ['spongebob'])
 
     @pytest.mark.destructive_test
     def test_install_forget(self):
@@ -81,18 +79,15 @@ class MacPkgutilModuleTest(ModuleCase):
         Test pkgutil.forget
         '''
         # Test if installed
-        self.assertFalse(
-            self.run_function('pkgutil.is_installed', [TEST_PKG_NAME]))
+        assert not self.run_function('pkgutil.is_installed', [TEST_PKG_NAME])
 
         # Download the package
         self.run_function('cp.get_url', [TEST_PKG_URL, self.test_pkg])
 
         # Test install
-        self.assertTrue(
-            self.run_function('pkgutil.install', [self.test_pkg, TEST_PKG_NAME]))
-        self.assertIn(
-            'Unsupported scheme',
-            self.run_function('pkgutil.install', ['ftp://test', 'spongebob']))
+        assert self.run_function('pkgutil.install', [self.test_pkg, TEST_PKG_NAME])
+        assert 'Unsupported scheme' in \
+            self.run_function('pkgutil.install', ['ftp://test', 'spongebob'])
 
         # Test forget
-        self.assertTrue(self.run_function('pkgutil.forget', [TEST_PKG_NAME]))
+        assert self.run_function('pkgutil.forget', [TEST_PKG_NAME])

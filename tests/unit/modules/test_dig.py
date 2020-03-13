@@ -57,28 +57,22 @@ class DigTestCase(TestCase, LoaderModuleMockMixin):
         return {dig: {}}
 
     def test_check_ip(self):
-        self.assertTrue(dig.check_ip('127.0.0.1'), msg='Not a valid ip address')
+        assert dig.check_ip('127.0.0.1'), 'Not a valid ip address'
 
     def test_check_ip_ipv6(self):
-        self.assertTrue(
-            dig.check_ip('1111:2222:3333:4444:5555:6666:7777:8888'),
-            msg='Not a valid ip address'
-        )
+        assert dig.check_ip('1111:2222:3333:4444:5555:6666:7777:8888'), \
+            'Not a valid ip address'
 
     def test_check_ip_ipv6_valid(self):
-        self.assertTrue(dig.check_ip('2607:fa18:0:3::4'))
+        assert dig.check_ip('2607:fa18:0:3::4')
 
     def test_check_ip_neg(self):
-        self.assertFalse(
-            dig.check_ip('-127.0.0.1'),
-            msg="Did not detect negative value as invalid"
-        )
+        assert not dig.check_ip('-127.0.0.1'), \
+            "Did not detect negative value as invalid"
 
     def test_check_ip_empty(self):
-        self.assertFalse(
-            dig.check_ip(''),
-            msg="Did not detect empty value as invalid"
-        )
+        assert not dig.check_ip(''), \
+            "Did not detect empty value as invalid"
 
     def test_a(self):
         dig_mock = MagicMock(
@@ -95,15 +89,13 @@ class DigTestCase(TestCase, LoaderModuleMockMixin):
             }
         )
         with patch.dict(dig.__salt__, {'cmd.run_all': dig_mock}):
-            self.assertEqual(
-                dig.A('www.google.com'),
+            assert dig.A('www.google.com') == \
                 ['74.125.193.104',
                  '74.125.193.105',
                  '74.125.193.99',
                  '74.125.193.106',
                  '74.125.193.103',
                  '74.125.193.147']
-            )
 
     def test_aaaa(self):
         dig_mock = MagicMock(
@@ -115,10 +107,8 @@ class DigTestCase(TestCase, LoaderModuleMockMixin):
             }
         )
         with patch.dict(dig.__salt__, {'cmd.run_all': dig_mock}):
-            self.assertEqual(
-                dig.AAAA('www.google.com'),
+            assert dig.AAAA('www.google.com') == \
                 ['2607:f8b0:400f:801::1014']
-            )
 
     def test_ns(self):
         with patch('salt.modules.dig.A', MagicMock(return_value=['ns4.google.com.'])):
@@ -131,15 +121,13 @@ class DigTestCase(TestCase, LoaderModuleMockMixin):
                 }
             )
             with patch.dict(dig.__salt__, {'cmd.run_all': dig_mock}):
-                self.assertEqual(dig.NS('google.com'), ['ns4.google.com.'])
+                assert dig.NS('google.com') == ['ns4.google.com.']
 
     def test_spf(self):
         dig_mock = MagicMock(side_effect=_spf_side_effect)
         with patch.dict(dig.__salt__, {'cmd.run_all': dig_mock}):
-            self.assertEqual(
-                dig.SPF('foo.com'),
+            assert dig.SPF('foo.com') == \
                 ['216.73.93.70/31', '216.73.93.72/31']
-            )
 
     def test_spf_redir(self):
         '''
@@ -148,10 +136,8 @@ class DigTestCase(TestCase, LoaderModuleMockMixin):
         '''
         dig_mock = MagicMock(side_effect=_spf_side_effect)
         with patch.dict(dig.__salt__, {'cmd.run_all': dig_mock}):
-            self.assertEqual(
-                dig.SPF('xmission-redirect.com'),
+            assert dig.SPF('xmission-redirect.com') == \
                 ['198.60.22.0/24', '166.70.13.0/24']
-            )
 
     def test_spf_include(self):
         '''
@@ -160,10 +146,8 @@ class DigTestCase(TestCase, LoaderModuleMockMixin):
         '''
         dig_mock = MagicMock(side_effect=_spf_side_effect)
         with patch.dict(dig.__salt__, {'cmd.run_all': dig_mock}):
-            self.assertEqual(
-                dig.SPF('xmission.com'),
+            assert dig.SPF('xmission.com') == \
                 ['198.60.22.0/24', '166.70.13.0/24']
-            )
 
     def test_mx(self):
         dig_mock = MagicMock(
@@ -179,11 +163,9 @@ class DigTestCase(TestCase, LoaderModuleMockMixin):
             }
         )
         with patch.dict(dig.__salt__, {'cmd.run_all': dig_mock}):
-            self.assertEqual(
-                dig.MX('google.com'),
+            assert dig.MX('google.com') == \
                 [['10', 'aspmx.l.google.com.'],
                  ['20', 'alt1.aspmx.l.google.com.'],
                  ['40', 'alt3.aspmx.l.google.com.'],
                  ['50', 'alt4.aspmx.l.google.com.'],
                  ['30', 'alt2.aspmx.l.google.com.']]
-            )

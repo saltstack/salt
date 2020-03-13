@@ -19,7 +19,7 @@ class ProxyMinionSimpleTestCase(ModuleCase):
         Ensure the proxy can ping
         '''
         ret = self.run_function('test.ping', minion_tgt='proxytest')
-        self.assertEqual(ret, True)
+        assert ret is True
 
     def test_list_pkgs(self):
         '''
@@ -27,9 +27,9 @@ class ProxyMinionSimpleTestCase(ModuleCase):
         is working OK.
         '''
         ret = self.run_function('pkg.list_pkgs', minion_tgt='proxytest')
-        self.assertIn('coreutils', ret)
-        self.assertIn('apache', ret)
-        self.assertIn('redbull', ret)
+        assert 'coreutils' in ret
+        assert 'apache' in ret
+        assert 'redbull' in ret
 
     def test_install_pkgs(self):
         '''
@@ -37,53 +37,53 @@ class ProxyMinionSimpleTestCase(ModuleCase):
         is working OK.
         '''
         ret = self.run_function('pkg.install', ['thispkg'], minion_tgt='proxytest')
-        self.assertEqual(ret['thispkg'], '1.0')
+        assert ret['thispkg'] == '1.0'
 
         ret = self.run_function('pkg.list_pkgs', minion_tgt='proxytest')
 
-        self.assertEqual(ret['apache'], '2.4')
-        self.assertEqual(ret['redbull'], '999.99')
-        self.assertEqual(ret['thispkg'], '1.0')
+        assert ret['apache'] == '2.4'
+        assert ret['redbull'] == '999.99'
+        assert ret['thispkg'] == '1.0'
 
     def test_remove_pkgs(self):
         ret = self.run_function('pkg.remove', ['apache'], minion_tgt='proxytest')
-        self.assertNotIn('apache', ret)
+        assert 'apache' not in ret
 
     def test_upgrade(self):
         ret = self.run_function('pkg.upgrade', minion_tgt='proxytest')
-        self.assertEqual(ret['coreutils']['new'], '2.0')
-        self.assertEqual(ret['redbull']['new'], '1000.99')
+        assert ret['coreutils']['new'] == '2.0'
+        assert ret['redbull']['new'] == '1000.99'
 
     def test_service_list(self):
         ret = self.run_function('service.list', minion_tgt='proxytest')
-        self.assertIn('ntp', ret)
+        assert 'ntp' in ret
 
     def test_service_stop(self):
         ret = self.run_function('service.stop', ['ntp'], minion_tgt='proxytest')
         ret = self.run_function('service.status', ['ntp'], minion_tgt='proxytest')
-        self.assertFalse(ret)
+        assert not ret
 
     def test_service_start(self):
         ret = self.run_function('service.start', ['samba'], minion_tgt='proxytest')
         ret = self.run_function('service.status', ['samba'], minion_tgt='proxytest')
-        self.assertTrue(ret)
+        assert ret
 
     def test_service_get_all(self):
         ret = self.run_function('service.get_all', minion_tgt='proxytest')
-        self.assertTrue(ret)
-        self.assertIn('samba', ' '.join(ret))
+        assert ret
+        assert 'samba' in ' '.join(ret)
 
     def test_grains_items(self):
         ret = self.run_function('grains.items', minion_tgt='proxytest')
-        self.assertEqual(ret['kernel'], 'proxy')
-        self.assertEqual(ret['kernelrelease'], 'proxy')
+        assert ret['kernel'] == 'proxy'
+        assert ret['kernelrelease'] == 'proxy'
 
     def test_state_apply(self):
         ret = self.run_function('state.apply', ['core'], minion_tgt='proxytest')
         for key, value in ret.items():
-            self.assertTrue(value['result'])
+            assert value['result']
 
     def test_state_highstate(self):
         ret = self.run_function('state.highstate', minion_tgt='proxytest')
         for key, value in ret.items():
-            self.assertTrue(value['result'])
+            assert value['result']

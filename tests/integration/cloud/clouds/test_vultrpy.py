@@ -25,27 +25,23 @@ class VultrTest(CloudTest):
         '''
         image_list = self.run_cloud('--list-images {0}'.format(self.PROVIDER))
 
-        self.assertIn(
-            'Debian 10 x64 (buster)',
+        assert 'Debian 10 x64 (buster)' in \
             [i.strip() for i in image_list]
-        )
 
     def test_list_locations(self):
         '''
         Tests the return of running the --list-locations command for Vultr
         '''
         location_list = self.run_cloud('--list-locations {0}'.format(self.PROVIDER))
-        self.assertIn(
-            'New Jersey',
+        assert 'New Jersey' in \
             [i.strip() for i in location_list]
-        )
 
     def test_list_sizes(self):
         '''
         Tests the return of running the --list-sizes command for Vultr
         '''
         size_list = self.run_cloud('--list-sizes {0}'.format(self.PROVIDER))
-        self.assertIn('2048 MB RAM,64 GB SSD,2.00 TB BW', [i.strip() for i in size_list])
+        assert '2048 MB RAM,64 GB SSD,2.00 TB BW' in [i.strip() for i in size_list]
 
     # Commented for now, Vultr driver does not yet support key management
     #    def test_key_management(self):

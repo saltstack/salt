@@ -24,10 +24,8 @@ class ArgumentTestCase(ModuleCase):
         checks for invalid kwargs is located in salt/minion.py, within the
         'load_args_and_kwargs' function.
         '''
-        self.assertIn(
-            ("ERROR executing 'test.ping': The following keyword arguments"),
+        assert "ERROR executing 'test.ping': The following keyword arguments" in \
             self.run_function('test.ping', foo='bar')
-        )
 
     def test_kwarg_name_containing_dashes(self):
         '''
@@ -38,12 +36,10 @@ class ArgumentTestCase(ModuleCase):
         # We need to use parse_input here because run_function now requires
         # kwargs to be passed in as *actual* kwargs, and dashes are not valid
         # characters in Python kwargs.
-        self.assertEqual(
-            self.run_function(
+        assert self.run_function(
                 'test.arg', salt.utils.args.parse_input(['foo-bar=baz'])
-            ).get('kwargs', {}).get('foo-bar'),
+            ).get('kwargs', {}).get('foo-bar') == \
             'baz'
-        )
 
     def test_argument_containing_pound_sign(self):
         '''
@@ -52,7 +48,5 @@ class ArgumentTestCase(ModuleCase):
         See https://github.com/saltstack/salt/issues/8585 for more info.
         '''
         arg = 'foo bar #baz'
-        self.assertEqual(
-            self.run_function('test.echo', [arg]),
+        assert self.run_function('test.echo', [arg]) == \
             arg
-        )

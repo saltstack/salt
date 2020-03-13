@@ -35,31 +35,31 @@ class PdbeditTestCase(TestCase, LoaderModuleMockMixin):
         # NOTE: no pdbedit installed
         with patch('salt.utils.path.which', MagicMock(return_value=None)):
             ret = pdbedit.__virtual__()
-            self.assertEqual(ret, (False, 'pdbedit command is not available'))
+            assert ret == (False, 'pdbedit command is not available')
 
         # NOTE: pdbedit is not returning a valid version
         with patch('salt.utils.path.which', MagicMock(return_value='/opt/local/bin/pdbedit')), \
             patch('salt.modules.cmdmod.run', mock_bad_ver):
             ret = pdbedit.__virtual__()
-            self.assertEqual(ret, (False, 'pdbedit -V returned an unknown version format'))
+            assert ret == (False, 'pdbedit -V returned an unknown version format')
 
         # NOTE: pdbedit is too old
         with patch('salt.utils.path.which', MagicMock(return_value='/opt/local/bin/pdbedit')), \
             patch('salt.modules.cmdmod.run', mock_old_ver):
             ret = pdbedit.__virtual__()
-            self.assertEqual(ret, (False, 'pdbedit is to old, 4.8.0 or newer is required'))
+            assert ret == (False, 'pdbedit is to old, 4.8.0 or newer is required')
 
         # NOTE: pdbedit is exactly 4.8.0
         with patch('salt.utils.path.which', MagicMock(return_value='/opt/local/bin/pdbedit')), \
             patch('salt.modules.cmdmod.run', mock_exa_ver):
             ret = pdbedit.__virtual__()
-            self.assertEqual(ret, 'pdbedit')
+            assert ret == 'pdbedit'
 
         # NOTE: pdbedit is newer than 4.8.0
         with patch('salt.utils.path.which', MagicMock(return_value='/opt/local/bin/pdbedit')), \
             patch('salt.modules.cmdmod.run', mock_new_ver):
             ret = pdbedit.__virtual__()
-            self.assertEqual(ret, 'pdbedit')
+            assert ret == 'pdbedit'
 
     def test_generate_nt_hash(self):
         '''

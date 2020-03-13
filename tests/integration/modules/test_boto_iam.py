@@ -9,6 +9,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
+import re
 
 # Import 3rd-party libs
 try:
@@ -34,4 +35,4 @@ class BotoIAMTest(ModuleCase):
         ret = self.run_function('boto_iam.get_account_id')
         # The AWS account ID is a 12-digit number.
         # http://docs.aws.amazon.com/general/latest/gr/acct-identifiers.html
-        self.assertRegex(ret, r'^\d{12}$')
+        assert re.search(r'^\d{12}$', ret)

@@ -39,22 +39,24 @@ class SaltUtilModuleTest(ModuleCase):
         # Wait for the pillar refresh to kick in, so that grains are ready to go
         time.sleep(3)
         ret = self.run_function('saltutil.wheel', ['minions.connected'])
-        self.assertIn('minion', ret['return'])
-        self.assertIn('sub_minion', ret['return'])
+        assert 'minion' in ret['return']
+        assert 'sub_minion' in ret['return']
 
     def test_wheel_with_arg(self):
         '''
         Tests using the saltutil.wheel function when passing a function and an arg.
         '''
         ret = self.run_function('saltutil.wheel', ['key.list', 'minion'])
-        self.assertEqual(ret['return'], {})
+        assert ret['return'] == {}
 
+    @pytest.mark.skip('Test needs to be rewritten')
     def test_wheel_no_arg_raise_error(self):
         '''
         Tests using the saltutil.wheel function when passing a function that requires
         an arg, but one isn't supplied.
         '''
-        self.assertRaises(TypeError, 'saltutil.wheel', ['key.list'])
+        with pytest.raises(TypeError):
+            self.run_function('saltutil.wheel', ['key.list'])
 
     def test_wheel_with_kwarg(self):
         '''
@@ -63,15 +65,15 @@ class SaltUtilModuleTest(ModuleCase):
         just need this for testing purposes.
         '''
         ret = self.run_function('saltutil.wheel', ['key.gen'], keysize=1024)
-        self.assertIn('pub', ret['return'])
-        self.assertIn('priv', ret['return'])
+        assert 'pub' in ret['return']
+        assert 'priv' in ret['return']
 
 
 @pytest.mark.windows_whitelisted
 class SyncGrainsTest(ModuleCase):
     def test_sync_grains(self):
         ret = self.run_function('saltutil.sync_grains')
-        self.assertEqual(ret, [])
+        assert ret == []
 
 
 @pytest.mark.windows_whitelisted
@@ -116,7 +118,7 @@ class SaltUtilSyncModuleTest(ModuleCase):
                            'thorium': [],
                            'serializers': []}
         ret = self.run_function('saltutil.sync_all')
-        self.assertEqual(ret, expected_return)
+        assert ret == expected_return
 
     def test_sync_all_whitelist(self):
         '''
@@ -140,7 +142,7 @@ class SaltUtilSyncModuleTest(ModuleCase):
                            'thorium': [],
                            'serializers': []}
         ret = self.run_function('saltutil.sync_all', extmod_whitelist={'modules': ['salttest']})
-        self.assertEqual(ret, expected_return)
+        assert ret == expected_return
 
     def test_sync_all_blacklist(self):
         '''
@@ -167,7 +169,7 @@ class SaltUtilSyncModuleTest(ModuleCase):
                            'thorium': [],
                            'serializers': []}
         ret = self.run_function('saltutil.sync_all', extmod_blacklist={'modules': ['runtests_decorators', 'depends_versioned', 'depends_versionless']})
-        self.assertEqual(ret, expected_return)
+        assert ret == expected_return
 
     def test_sync_all_blacklist_and_whitelist(self):
         '''
@@ -192,7 +194,7 @@ class SaltUtilSyncModuleTest(ModuleCase):
                            'serializers': []}
         ret = self.run_function('saltutil.sync_all', extmod_whitelist={'modules': ['runtests_decorators']},
                                 extmod_blacklist={'modules': ['runtests_decorators']})
-        self.assertEqual(ret, expected_return)
+        assert ret == expected_return
 
 
 @skipIf(True, 'Pillar refresh test is flaky. Skipping for now.')
@@ -210,7 +212,7 @@ class SaltUtilSyncPillarTest(ModuleCase):
         pillar_key = 'itworked'
 
         pre_pillar = self.run_function('pillar.raw')
-        self.assertNotIn(pillar_key, pre_pillar.get(pillar_key, 'didnotwork'))
+        assert pillar_key not in pre_pillar.get(pillar_key, 'didnotwork')
 
         with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, 'add_pillar.sls'), 'w') as fp:
             fp.write(salt.utils.stringutils.to_str(
@@ -231,15 +233,15 @@ class SaltUtilSyncPillarTest(ModuleCase):
         while not pillar:
             post_pillar = self.run_function('pillar.raw')
             try:
-                self.assertIn(pillar_key, post_pillar.get(pillar_key, 'didnotwork'))
+                assert pillar_key in post_pillar.get(pillar_key, 'didnotwork')
                 pillar = True
             except AssertionError:
                 if time.time() > timeout:
-                    self.assertIn(pillar_key, post_pillar.get(pillar_key, 'didnotwork'))
+                    assert pillar_key in post_pillar.get(pillar_key, 'didnotwork')
                 continue
 
         post_pillar = self.run_function('pillar.raw')
-        self.assertIn(pillar_key, post_pillar.get(pillar_key, 'didnotwork'))
+        assert pillar_key in post_pillar.get(pillar_key, 'didnotwork')
 
     def tearDown(self):
         for filename in os.listdir(RUNTIME_VARS.TMP_PILLAR_TREE):

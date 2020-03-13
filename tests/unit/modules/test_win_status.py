@@ -57,10 +57,10 @@ class TestProcsCount(TestProcsBase):
         self.call_procs()
 
     def test_process_count(self):
-        self.assertEqual(len(self.result), 2)
+        assert len(self.result) == 2
 
     def test_process_key_is_pid(self):
-        self.assertSetEqual(set(self.result.keys()), set([100, 101]))
+        assert set(self.result.keys()) == set([100, 101])
 
 
 class TestProcsAttributes(TestProcsBase):
@@ -80,16 +80,16 @@ class TestProcsAttributes(TestProcsBase):
         self.proc = self.result[pid]
 
     def test_process_cmd_is_set(self):
-        self.assertEqual(self.proc['cmd'], self._expected_cmd)
+        assert self.proc['cmd'] == self._expected_cmd
 
     def test_process_name_is_set(self):
-        self.assertEqual(self.proc['name'], self._expected_name)
+        assert self.proc['name'] == self._expected_name
 
     def test_process_user_is_set(self):
-        self.assertEqual(self.proc['user'], self._expected_user)
+        assert self.proc['user'] == self._expected_user
 
     def test_process_user_domain_is_set(self):
-        self.assertEqual(self.proc['user_domain'], self._expected_domain)
+        assert self.proc['user_domain'] == self._expected_domain
 
 
 @skipIf(sys.stdin.encoding != 'UTF-8', 'UTF-8 encoding required for this test is not supported')
@@ -108,16 +108,16 @@ class TestProcsUnicodeAttributes(TestProcsBase):
         self.proc = self.result[pid]
 
     def test_process_cmd_is_utf8(self):
-        self.assertEqual(self.proc['cmd'], self.ustr)
+        assert self.proc['cmd'] == self.ustr
 
     def test_process_name_is_utf8(self):
-        self.assertEqual(self.proc['name'], self.ustr)
+        assert self.proc['name'] == self.ustr
 
     def test_process_user_is_utf8(self):
-        self.assertEqual(self.proc['user'], self.ustr)
+        assert self.proc['user'] == self.ustr
 
     def test_process_user_domain_is_utf8(self):
-        self.assertEqual(self.proc['user_domain'], self.ustr)
+        assert self.proc['user_domain'] == self.ustr
 
 
 class TestProcsWMIGetOwnerAccessDeniedWorkaround(TestProcsBase):
@@ -129,12 +129,12 @@ class TestProcsWMIGetOwnerAccessDeniedWorkaround(TestProcsBase):
         self.call_procs()
 
     def test_user_is_set(self):
-        self.assertEqual(self.result[0]['user'], self.expected_user)
-        self.assertEqual(self.result[4]['user'], self.expected_user)
+        assert self.result[0]['user'] == self.expected_user
+        assert self.result[4]['user'] == self.expected_user
 
     def test_process_user_domain_is_set(self):
-        self.assertEqual(self.result[0]['user_domain'], self.expected_domain)
-        self.assertEqual(self.result[4]['user_domain'], self.expected_domain)
+        assert self.result[0]['user_domain'] == self.expected_domain
+        assert self.result[4]['user_domain'] == self.expected_domain
 
 
 class TestProcsWMIGetOwnerErrorsAreLogged(TestProcsBase):
@@ -157,7 +157,7 @@ class TestEmptyCommandLine(TestProcsBase):
         self.proc = self.result[pid]
 
     def test_cmd_is_empty_string(self):
-        self.assertEqual(self.proc['cmd'], '')
+        assert self.proc['cmd'] == ''
 
 
 #class TestProcsComInitialization(TestProcsBase):

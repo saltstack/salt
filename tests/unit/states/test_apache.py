@@ -46,7 +46,7 @@ class ApacheTestCase(TestCase, LoaderModuleMockMixin):
                 mock_config = MagicMock(return_value=config)
                 with patch.dict(apache.__salt__, {'apache.config': mock_config}):
                     ret.update({'comment': 'Configuration is up to date.'})
-                    self.assertDictEqual(apache.configfile(name, config), ret)
+                    assert apache.configfile(name, config) == ret
 
             with patch.object(salt.utils.files, 'fopen', mock_open(read_data=config)):
                 mock_config = MagicMock(return_value=new_config)
@@ -56,7 +56,7 @@ class ApacheTestCase(TestCase, LoaderModuleMockMixin):
                                             'old': config},
                                 'result': None})
                     with patch.dict(apache.__opts__, {'test': True}):
-                        self.assertDictEqual(apache.configfile(name, new_config), ret)
+                        assert apache.configfile(name, new_config) == ret
 
             with patch.object(salt.utils.files, 'fopen', mock_open(read_data=config)):
                 mock_config = MagicMock(return_value=new_config)
@@ -64,4 +64,4 @@ class ApacheTestCase(TestCase, LoaderModuleMockMixin):
                     ret.update({'comment': 'Successfully created configuration.',
                                 'result': True})
                     with patch.dict(apache.__opts__, {'test': False}):
-                        self.assertDictEqual(apache.configfile(name, config), ret)
+                        assert apache.configfile(name, config) == ret

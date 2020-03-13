@@ -8,6 +8,7 @@ from tests.support.unit import TestCase
 
 # Import Salt libs
 import salt.utils.hashutils
+import pytest
 
 
 class HashutilsTestCase(TestCase):
@@ -41,28 +42,20 @@ class HashutilsTestCase(TestCase):
         attempting to encode, avoiding a UnicodeEncodeError on Python 2 and a
         TypeError on Python 3.
         '''
-        self.assertEqual(
-            salt.utils.hashutils.base64_b64encode(self.str),
+        assert salt.utils.hashutils.base64_b64encode(self.str) == \
             self.str_b64encode_result
-        )
-        self.assertEqual(
-            salt.utils.hashutils.base64_b64encode(self.bytes),
+        assert salt.utils.hashutils.base64_b64encode(self.bytes) == \
             self.bytes_b64encode_result
-        )
 
     def test_base64_b64decode(self):
         '''
         Ensure that this function converts the value passed to a unicode type
         (if possible) on Python 2, and a str type (if possible) on Python 3.
         '''
-        self.assertEqual(
-            salt.utils.hashutils.base64_b64decode(self.str_b64encode_result),
+        assert salt.utils.hashutils.base64_b64decode(self.str_b64encode_result) == \
             self.str
-        )
-        self.assertEqual(
-            salt.utils.hashutils.base64_b64decode(self.bytes_b64encode_result),
+        assert salt.utils.hashutils.base64_b64decode(self.bytes_b64encode_result) == \
             self.bytes
-        )
 
     def test_base64_encodestring(self):
         '''
@@ -70,28 +63,20 @@ class HashutilsTestCase(TestCase):
         attempting to encode, avoiding a UnicodeEncodeError on Python 2 and a
         TypeError on Python 3.
         '''
-        self.assertEqual(
-            salt.utils.hashutils.base64_encodestring(self.str),
+        assert salt.utils.hashutils.base64_encodestring(self.str) == \
             self.str_encodestring_result
-        )
-        self.assertEqual(
-            salt.utils.hashutils.base64_encodestring(self.bytes),
+        assert salt.utils.hashutils.base64_encodestring(self.bytes) == \
             self.bytes_encodestring_result
-        )
 
     def test_base64_decodestring(self):
         '''
         Ensure that this function converts the value passed to a unicode type
         (if possible) on Python 2, and a str type (if possible) on Python 3.
         '''
-        self.assertEqual(
-            salt.utils.hashutils.base64_decodestring(self.str_encodestring_result),
+        assert salt.utils.hashutils.base64_decodestring(self.str_encodestring_result) == \
             self.str
-        )
-        self.assertEqual(
-            salt.utils.hashutils.base64_decodestring(self.bytes_encodestring_result),
+        assert salt.utils.hashutils.base64_decodestring(self.bytes_encodestring_result) == \
             self.bytes
-        )
 
     def test_md5_digest(self):
         '''
@@ -99,14 +84,10 @@ class HashutilsTestCase(TestCase):
         attempting to encode, avoiding a UnicodeEncodeError on Python 2 and a
         TypeError on Python 3.
         '''
-        self.assertEqual(
-            salt.utils.hashutils.md5_digest(self.str),
+        assert salt.utils.hashutils.md5_digest(self.str) == \
             self.str_md5
-        )
-        self.assertEqual(
-            salt.utils.hashutils.md5_digest(self.bytes),
+        assert salt.utils.hashutils.md5_digest(self.bytes) == \
             self.bytes_md5
-        )
 
     def test_sha256_digest(self):
         '''
@@ -114,14 +95,10 @@ class HashutilsTestCase(TestCase):
         attempting to encode, avoiding a UnicodeEncodeError on Python 2 and a
         TypeError on Python 3.
         '''
-        self.assertEqual(
-            salt.utils.hashutils.sha256_digest(self.str),
+        assert salt.utils.hashutils.sha256_digest(self.str) == \
             self.str_sha256
-        )
-        self.assertEqual(
-            salt.utils.hashutils.sha256_digest(self.bytes),
+        assert salt.utils.hashutils.sha256_digest(self.bytes) == \
             self.bytes_sha256
-        )
 
     def test_sha512_digest(self):
         '''
@@ -129,14 +106,10 @@ class HashutilsTestCase(TestCase):
         attempting to encode, avoiding a UnicodeEncodeError on Python 2 and a
         TypeError on Python 3.
         '''
-        self.assertEqual(
-            salt.utils.hashutils.sha512_digest(self.str),
+        assert salt.utils.hashutils.sha512_digest(self.str) == \
             self.str_sha512
-        )
-        self.assertEqual(
-            salt.utils.hashutils.sha512_digest(self.bytes),
+        assert salt.utils.hashutils.sha512_digest(self.bytes) == \
             self.bytes_sha512
-        )
 
     def test_hmac_signature(self):
         '''
@@ -144,20 +117,16 @@ class HashutilsTestCase(TestCase):
         attempting to validate the hmac challenge, avoiding a
         UnicodeEncodeError on Python 2 and a TypeError on Python 3.
         '''
-        self.assertTrue(
-            salt.utils.hashutils.hmac_signature(
+        assert salt.utils.hashutils.hmac_signature(
                 self.str,
                 self.hmac_secret,
                 self.str_hmac_challenge
             )
-        )
-        self.assertTrue(
-            salt.utils.hashutils.hmac_signature(
+        assert salt.utils.hashutils.hmac_signature(
                 self.bytes,
                 self.hmac_secret,
                 self.bytes_hmac_challenge
             )
-        )
 
     def test_hmac_compute(self):
         '''
@@ -165,18 +134,12 @@ class HashutilsTestCase(TestCase):
         attempting to encode, avoiding a UnicodeEncodeError on Python 2 and a
         TypeError on Python 3.
         '''
-        self.assertEqual(
-            salt.utils.hashutils.hmac_compute(self.str, self.hmac_secret),
+        assert salt.utils.hashutils.hmac_compute(self.str, self.hmac_secret) == \
             self.str_hmac_compute
-        )
-        self.assertEqual(
-            salt.utils.hashutils.hmac_compute(self.bytes, self.hmac_secret),
+        assert salt.utils.hashutils.hmac_compute(self.bytes, self.hmac_secret) == \
             self.bytes_hmac_compute
-        )
 
     def test_get_hash_exception(self):
-        self.assertRaises(
-            ValueError,
-            salt.utils.hashutils.get_hash,
-            '/tmp/foo/',
+        with pytest.raises(ValueError):
+            salt.utils.hashutils.get_hash('/tmp/foo/',
             form='INVALID')

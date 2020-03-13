@@ -16,6 +16,7 @@ from tests.support.mock import (
 import salt.modules.augeas_cfg as augeas_cfg
 from salt.exceptions import SaltInvocationError
 from salt.ext import six
+import pytest
 # Make sure augeas python interface is installed
 if augeas_cfg.HAS_AUGEAS:
     from augeas import Augeas as _Augeas
@@ -32,14 +33,14 @@ class AugeasCfgTestCase(TestCase):
         '''
         Test if it execute Augeas commands
         '''
-        self.assertEqual(augeas_cfg.execute(), {'retval': True})
+        assert augeas_cfg.execute() == {'retval': True}
 
     def test_execute_io_error(self):
         '''
         Test if it execute Augeas commands
         '''
         ret = {'error': 'Command  is not supported (yet)', 'retval': False}
-        self.assertEqual(augeas_cfg.execute(None, None, [" "]), ret)
+        assert augeas_cfg.execute(None, None, [" "]) == ret
 
     def test_execute_value_error(self):
         '''
@@ -48,7 +49,7 @@ class AugeasCfgTestCase(TestCase):
         ret = {'retval': False,
                'error':
         'Invalid formatted command, see debug log for details: '}
-        self.assertEqual(augeas_cfg.execute(None, None, ["set "]), ret)
+        assert augeas_cfg.execute(None, None, ["set "]) == ret
 
     # 'get' function tests: 1
 
@@ -58,13 +59,13 @@ class AugeasCfgTestCase(TestCase):
         '''
         mock = MagicMock(side_effect=RuntimeError('error'))
         with patch.object(_Augeas, 'match', mock):
-            self.assertEqual(augeas_cfg.get('/etc/hosts'),
-                             {'error': 'error'})
+            assert augeas_cfg.get('/etc/hosts') == \
+                             {'error': 'error'}
 
         mock = MagicMock(return_value=True)
         with patch.object(_Augeas, 'match', mock):
-            self.assertEqual(augeas_cfg.get('/etc/hosts'),
-                             {'/etc/hosts': None})
+            assert augeas_cfg.get('/etc/hosts') == \
+                             {'/etc/hosts': None}
 
     # 'setvalue' function tests: 4
 
@@ -72,8 +73,8 @@ class AugeasCfgTestCase(TestCase):
         '''
         Test if it set a value for a specific augeas path
         '''
-        self.assertEqual(augeas_cfg.setvalue('prefix=/etc/hosts'),
-                         {'retval': True})
+        assert augeas_cfg.setvalue('prefix=/etc/hosts') == \
+                         {'retval': True}
 
     def test_setvalue_io_error(self):
         '''
@@ -81,8 +82,8 @@ class AugeasCfgTestCase(TestCase):
         '''
         mock = MagicMock(side_effect=IOError(''))
         with patch.object(_Augeas, 'save', mock):
-            self.assertEqual(augeas_cfg.setvalue('prefix=/files/etc/'),
-                             {'retval': False, 'error': ''})
+            assert augeas_cfg.setvalue('prefix=/files/etc/') == \
+                             {'retval': False, 'error': ''}
 
     def test_setvalue_uneven_path(self):
         '''
@@ -90,15 +91,15 @@ class AugeasCfgTestCase(TestCase):
         '''
         mock = MagicMock(side_effect=RuntimeError('error'))
         with patch.object(_Augeas, 'match', mock):
-            self.assertRaises(SaltInvocationError, augeas_cfg.setvalue,
-                              ['/files/etc/hosts/1/canonical', 'localhost'])
+            with pytest.raises(SaltInvocationError):
+                augeas_cfg.setvalue(['/files/etc/hosts/1/canonical', 'localhost'])
 
     def test_setvalue_one_prefix(self):
         '''
         Test if it set a value for a specific augeas path
         '''
-        self.assertRaises(SaltInvocationError, augeas_cfg.setvalue,
-                          'prefix=/files', '10.18.1.1', 'prefix=/etc', 'test')
+        with pytest.raises(SaltInvocationError):
+            augeas_cfg.setvalue('prefix=/files', '10.18.1.1', 'prefix=/etc', 'test')
 
     # 'match' function tests: 2
 
@@ -106,7 +107,7 @@ class AugeasCfgTestCase(TestCase):
         '''
         Test if it matches for path expression
         '''
-        self.assertEqual(augeas_cfg.match('/etc/service', 'ssh'), {})
+        assert augeas_cfg.match('/etc/service', 'ssh') == {}
 
     def test_match_runtime_error(self):
         '''
@@ -114,7 +115,7 @@ class AugeasCfgTestCase(TestCase):
         '''
         mock = MagicMock(side_effect=RuntimeError('error'))
         with patch.object(_Augeas, 'match', mock):
-            self.assertEqual(augeas_cfg.match('/etc/service-name', 'ssh'), {})
+            assert augeas_cfg.match('/etc/service-name', 'ssh') == {}
 
     # 'remove' function tests: 2
 
@@ -122,8 +123,8 @@ class AugeasCfgTestCase(TestCase):
         '''
         Test if it removes for path expression
         '''
-        self.assertEqual(augeas_cfg.remove('/etc/service'),
-                         {'count': 0, 'retval': True})
+        assert augeas_cfg.remove('/etc/service') == \
+                         {'count': 0, 'retval': True}
 
     def test_remove_io_runtime_error(self):
         '''
@@ -131,8 +132,8 @@ class AugeasCfgTestCase(TestCase):
         '''
         mock = MagicMock(side_effect=RuntimeError('error'))
         with patch.object(_Augeas, 'save', mock):
-            self.assertEqual(augeas_cfg.remove('/etc/service-name'),
-                             {'count': 0, 'error': 'error', 'retval': False})
+            assert augeas_cfg.remove('/etc/service-name') == \
+                             {'count': 0, 'error': 'error', 'retval': False}
 
     # 'ls' function tests: 1
 
@@ -140,7 +141,7 @@ class AugeasCfgTestCase(TestCase):
         '''
         Test if it list the direct children of a node
         '''
-        self.assertEqual(augeas_cfg.ls('/etc/passwd'), {})
+        assert augeas_cfg.ls('/etc/passwd') == {}
 
     # 'tree' function tests: 1
 
@@ -148,4 +149,4 @@ class AugeasCfgTestCase(TestCase):
         '''
         Test if it returns recursively the complete tree of a node
         '''
-        self.assertEqual(augeas_cfg.tree('/etc/'), {'/etc': None})
+        assert augeas_cfg.tree('/etc/') == {'/etc': None}

@@ -92,21 +92,19 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
             hour='1',
             identifier='1',
             user='root')
-        self.assertMultiLineEqual(
-            get_crontab(),
-            '# Lines below here are managed by Salt, do not edit\n'
-            '# SALT_CRON_IDENTIFIER:1\n'
-            '* 1 * * * foo')
+        assert get_crontab() == \
+            '# Lines below here are managed by Salt, do not edit\n' \
+            '# SALT_CRON_IDENTIFIER:1\n' \
+            '* 1 * * * foo'
         cron.present(
             name='foo',
             hour='2',
             identifier='1',
             user='root')
-        self.assertMultiLineEqual(
-            get_crontab(),
-            '# Lines below here are managed by Salt, do not edit\n'
-            '# SALT_CRON_IDENTIFIER:1\n'
-            '* 2 * * * foo')
+        assert get_crontab() == \
+            '# Lines below here are managed by Salt, do not edit\n' \
+            '# SALT_CRON_IDENTIFIER:1\n' \
+            '* 2 * * * foo'
         cron.present(
             name='cmd1',
             minute='0',
@@ -114,43 +112,40 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
             commented=True,
             identifier='commented_1',
             user='root')
-        self.assertMultiLineEqual(
-            get_crontab(),
-            '# Lines below here are managed by Salt, do not edit\n'
-            '# SALT_CRON_IDENTIFIER:1\n'
-            '* 2 * * * foo\n'
-            '# Commented cron job SALT_CRON_IDENTIFIER:commented_1\n'
-            '#DISABLED#0 * * * * cmd1')
+        assert get_crontab() == \
+            '# Lines below here are managed by Salt, do not edit\n' \
+            '# SALT_CRON_IDENTIFIER:1\n' \
+            '* 2 * * * foo\n' \
+            '# Commented cron job SALT_CRON_IDENTIFIER:commented_1\n' \
+            '#DISABLED#0 * * * * cmd1'
         cron.present(
             name='foo',
             hour='2',
             identifier='2',
             user='root')
-        self.assertMultiLineEqual(
-            get_crontab(),
-            '# Lines below here are managed by Salt, do not edit\n'
-            '# SALT_CRON_IDENTIFIER:1\n'
-            '* 2 * * * foo\n'
-            '# Commented cron job SALT_CRON_IDENTIFIER:commented_1\n'
-            '#DISABLED#0 * * * * cmd1\n'
-            '# SALT_CRON_IDENTIFIER:2\n'
-            '* 2 * * * foo')
+        assert get_crontab() == \
+            '# Lines below here are managed by Salt, do not edit\n' \
+            '# SALT_CRON_IDENTIFIER:1\n' \
+            '* 2 * * * foo\n' \
+            '# Commented cron job SALT_CRON_IDENTIFIER:commented_1\n' \
+            '#DISABLED#0 * * * * cmd1\n' \
+            '# SALT_CRON_IDENTIFIER:2\n' \
+            '* 2 * * * foo'
         cron.present(
             name='cmd2',
             commented=True,
             identifier='commented_2',
             user='root')
-        self.assertMultiLineEqual(
-            get_crontab(),
-            '# Lines below here are managed by Salt, do not edit\n'
-            '# SALT_CRON_IDENTIFIER:1\n'
-            '* 2 * * * foo\n'
-            '# Commented cron job SALT_CRON_IDENTIFIER:commented_1\n'
-            '#DISABLED#0 * * * * cmd1\n'
-            '# SALT_CRON_IDENTIFIER:2\n'
-            '* 2 * * * foo\n'
-            '# SALT_CRON_IDENTIFIER:commented_2\n'
-            '#DISABLED#* * * * * cmd2')
+        assert get_crontab() == \
+            '# Lines below here are managed by Salt, do not edit\n' \
+            '# SALT_CRON_IDENTIFIER:1\n' \
+            '* 2 * * * foo\n' \
+            '# Commented cron job SALT_CRON_IDENTIFIER:commented_1\n' \
+            '#DISABLED#0 * * * * cmd1\n' \
+            '# SALT_CRON_IDENTIFIER:2\n' \
+            '* 2 * * * foo\n' \
+            '# SALT_CRON_IDENTIFIER:commented_2\n' \
+            '#DISABLED#* * * * * cmd2'
         set_crontab(
             '# Lines below here are managed by Salt, do not edit\n'
             '# SALT_CRON_IDENTIFIER:1\n'
@@ -164,14 +159,13 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
             hour='2',
             user='root',
             identifier=None)
-        self.assertEqual(
-            get_crontab(),
+        assert get_crontab() == \
             ('# Lines below here are managed by Salt, do not edit\n'
              '# SALT_CRON_IDENTIFIER:1\n'
              '* 2 * * * foo\n'
              '# SALT_CRON_IDENTIFIER:2\n'
              '* 2 * * * foo\n'
-             '* 2 * * * foo'))
+             '* 2 * * * foo')
 
     def test_remove(self):
         with patch.dict(cron.__opts__, {'test': True}):
@@ -180,56 +174,45 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                 '# SALT_CRON_IDENTIFIER:1\n'
                 '* 1 * * * foo')
             result = cron.absent(name='bar', identifier='1')
-            self.assertEqual(
-                result,
+            assert result == \
                 {'changes': {},
                  'comment': 'Cron bar is set to be removed',
                  'name': 'bar',
                  'result': None}
-            )
-            self.assertEqual(
-                get_crontab(),
-                '# Lines below here are managed by Salt, do not edit\n'
-                '# SALT_CRON_IDENTIFIER:1\n'
-                '* 1 * * * foo')
+            assert get_crontab() == \
+                '# Lines below here are managed by Salt, do not edit\n' \
+                '# SALT_CRON_IDENTIFIER:1\n' \
+                '* 1 * * * foo'
         with patch.dict(cron.__opts__, {'test': False}):
             set_crontab(
                 '# Lines below here are managed by Salt, do not edit\n'
                 '# SALT_CRON_IDENTIFIER:1\n'
                 '* 1 * * * foo')
             cron.absent(name='bar', identifier='1')
-            self.assertEqual(
-                get_crontab(),
+            assert get_crontab() == \
                 '# Lines below here are managed by Salt, do not edit'
-            )
             set_crontab(
                 '# Lines below here are managed by Salt, do not edit\n'
                 '* * * * * foo')
             cron.absent(name='bar', identifier='1')
-            self.assertEqual(
-                get_crontab(),
-                '# Lines below here are managed by Salt, do not edit\n'
+            assert get_crontab() == \
+                '# Lines below here are managed by Salt, do not edit\n' \
                 '* * * * * foo'
-            )
             # old behavior, do not remove with identifier set and
             # even if command match !
             set_crontab(
                 '# Lines below here are managed by Salt, do not edit\n'
                 '* * * * * foo')
             cron.absent(name='foo', identifier='1')
-            self.assertEqual(
-                get_crontab(),
+            assert get_crontab() == \
                 '# Lines below here are managed by Salt, do not edit'
-            )
             # old behavior, remove if no identifier and command match
             set_crontab(
                 '# Lines below here are managed by Salt, do not edit\n'
                 '* * * * * foo')
             cron.absent(name='foo')
-            self.assertEqual(
-                get_crontab(),
+            assert get_crontab() == \
                 '# Lines below here are managed by Salt, do not edit'
-            )
 
     def test_multiline_comments_are_updated(self):
         set_crontab(
@@ -255,17 +238,16 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
             comment='Second crontab\nmulti-line comment\n',
             identifier='2',
             user='root')
-        self.assertEqual(
-            get_crontab(),
-            '# Lines below here are managed by Salt, do not edit\n'
-            '# First crontab\n'
-            '# second multi-line comment\n'
-            '#  SALT_CRON_IDENTIFIER:1\n'
-            '* 1 * * * foo\n'
-            '# Second crontab\n'
-            '# multi-line comment\n'
-            '#  SALT_CRON_IDENTIFIER:2\n'
-            '* 1 * * * foo')
+        assert get_crontab() == \
+            '# Lines below here are managed by Salt, do not edit\n' \
+            '# First crontab\n' \
+            '# second multi-line comment\n' \
+            '#  SALT_CRON_IDENTIFIER:1\n' \
+            '* 1 * * * foo\n' \
+            '# Second crontab\n' \
+            '# multi-line comment\n' \
+            '#  SALT_CRON_IDENTIFIER:2\n' \
+            '* 1 * * * foo'
 
     def test_existing_unmanaged_jobs_are_made_managed(self):
         set_crontab(
@@ -273,18 +255,17 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
             '0 2 * * * foo'
         )
         ret = cron._check_cron('root', 'foo', hour='2', minute='0')
-        self.assertEqual(ret, 'present')
+        assert ret == 'present'
         ret = cron.present('foo', 'root', minute='0', hour='2')
-        self.assertEqual(ret['changes'], {'root': 'foo'})
-        self.assertEqual(ret['comment'], 'Cron foo updated')
-        self.assertEqual(
-            get_crontab(),
-            '# Lines below here are managed by Salt, do not edit\n'
-            '# SALT_CRON_IDENTIFIER:foo\n'
-            '0 2 * * * foo')
+        assert ret['changes'] == {'root': 'foo'}
+        assert ret['comment'] == 'Cron foo updated'
+        assert get_crontab() == \
+            '# Lines below here are managed by Salt, do not edit\n' \
+            '# SALT_CRON_IDENTIFIER:foo\n' \
+            '0 2 * * * foo'
         ret = cron.present('foo', 'root', minute='0', hour='2')
-        self.assertEqual(ret['changes'], {})
-        self.assertEqual(ret['comment'], 'Cron foo already present')
+        assert ret['changes'] == {}
+        assert ret['comment'] == 'Cron foo already present'
 
     def test_existing_noid_jobs_are_updated_with_identifier(self):
         set_crontab(
@@ -293,15 +274,14 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
             '1 * * * * foo'
         )
         ret = cron._check_cron('root', 'foo', minute=1)
-        self.assertEqual(ret, 'present')
+        assert ret == 'present'
         ret = cron.present('foo', 'root', minute=1)
-        self.assertEqual(ret['changes'], {'root': 'foo'})
-        self.assertEqual(ret['comment'], 'Cron foo updated')
-        self.assertEqual(
-            get_crontab(),
-            '# Lines below here are managed by Salt, do not edit\n'
-            '# SALT_CRON_IDENTIFIER:foo\n'
-            '1 * * * * foo')
+        assert ret['changes'] == {'root': 'foo'}
+        assert ret['comment'] == 'Cron foo updated'
+        assert get_crontab() == \
+            '# Lines below here are managed by Salt, do not edit\n' \
+            '# SALT_CRON_IDENTIFIER:foo\n' \
+            '1 * * * * foo'
 
     def test_existing_duplicate_unmanaged_jobs_are_merged_and_given_id(self):
         set_crontab(
@@ -310,15 +290,14 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
             '0 2 * * * foo'
         )
         ret = cron._check_cron('root', 'foo', hour='2', minute='0')
-        self.assertEqual(ret, 'present')
+        assert ret == 'present'
         ret = cron.present('foo', 'root', minute='0', hour='2')
-        self.assertEqual(ret['changes'], {'root': 'foo'})
-        self.assertEqual(ret['comment'], 'Cron foo updated')
-        self.assertEqual(
-            get_crontab(),
-            '# Lines below here are managed by Salt, do not edit\n'
-            '# SALT_CRON_IDENTIFIER:foo\n'
-            '0 2 * * * foo')
+        assert ret['changes'] == {'root': 'foo'}
+        assert ret['comment'] == 'Cron foo updated'
+        assert get_crontab() == \
+            '# Lines below here are managed by Salt, do not edit\n' \
+            '# SALT_CRON_IDENTIFIER:foo\n' \
+            '0 2 * * * foo'
         ret = cron.present('foo', 'root', minute='0', hour='2')
-        self.assertEqual(ret['changes'], {})
-        self.assertEqual(ret['comment'], 'Cron foo already present')
+        assert ret['changes'] == {}
+        assert ret['comment'] == 'Cron foo already present'

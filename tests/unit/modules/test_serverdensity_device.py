@@ -18,6 +18,7 @@ from tests.support.mock import (
 import salt.utils.json
 import salt.modules.serverdensity_device as serverdensity_device
 from salt.exceptions import CommandExecutionError
+import pytest
 
 
 class MockRequests(object):
@@ -95,15 +96,15 @@ class ServerdensityDeviceTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(serverdensity_device.__pillar__, {'serverdensity':
                                                           False}):
-            self.assertRaises(CommandExecutionError,
-                              serverdensity_device.get_sd_auth, '1')
+            with pytest.raises(CommandExecutionError):
+                serverdensity_device.get_sd_auth('1')
 
         with patch.dict(serverdensity_device.__pillar__, {'serverdensity':
                                                           {'1': 'salt'}}):
-            self.assertEqual(serverdensity_device.get_sd_auth('1'), 'salt')
+            assert serverdensity_device.get_sd_auth('1') == 'salt'
 
-            self.assertRaises(CommandExecutionError,
-                              serverdensity_device.get_sd_auth, '2')
+            with pytest.raises(CommandExecutionError):
+                serverdensity_device.get_sd_auth('2')
 
     # 'create' function tests: 1
 
@@ -113,17 +114,17 @@ class ServerdensityDeviceTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(serverdensity_device.__pillar__,
                         {'serverdensity': {'api_token': 'salt'}}):
-            self.assertTrue(serverdensity_device.create('rich_lama',
-                                                        group='lama_band'))
+            assert serverdensity_device.create('rich_lama',
+                                                        group='lama_band')
 
             with patch.object(salt.utils.json, 'loads', self.mock_json_loads):
-                self.assertRaises(CommandExecutionError,
-                                  serverdensity_device.create, 'rich_lama',
+                with pytest.raises(CommandExecutionError):
+                    serverdensity_device.create('rich_lama',
                                   group='lama_band')
 
             MockRequests.flag = 1
-            self.assertIsNone(serverdensity_device.create('rich_lama',
-                                                          group='lama_band'))
+            assert serverdensity_device.create('rich_lama',
+                                                          group='lama_band') is None
 
     # 'delete' function tests: 1
 
@@ -134,14 +135,14 @@ class ServerdensityDeviceTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(serverdensity_device.__pillar__,
                         {'serverdensity': {'api_token': 'salt'}}):
             MockRequests.flag = 0
-            self.assertTrue(serverdensity_device.delete('51f7eaf'))
+            assert serverdensity_device.delete('51f7eaf')
 
             with patch.object(salt.utils.json, 'loads', self.mock_json_loads):
-                self.assertRaises(CommandExecutionError,
-                                  serverdensity_device.delete, '51f7eaf')
+                with pytest.raises(CommandExecutionError):
+                    serverdensity_device.delete('51f7eaf')
 
             MockRequests.flag = 1
-            self.assertIsNone(serverdensity_device.delete('51f7eaf'))
+            assert serverdensity_device.delete('51f7eaf') is None
 
     # 'ls' function tests: 1
 
@@ -152,14 +153,14 @@ class ServerdensityDeviceTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(serverdensity_device.__pillar__,
                         {'serverdensity': {'api_token': 'salt'}}):
             MockRequests.flag = 0
-            self.assertTrue(serverdensity_device.ls(name='lama'))
+            assert serverdensity_device.ls(name='lama')
 
             with patch.object(salt.utils.json, 'loads', self.mock_json_loads):
-                self.assertRaises(CommandExecutionError,
-                                  serverdensity_device.ls, name='lama')
+                with pytest.raises(CommandExecutionError):
+                    serverdensity_device.ls(name='lama')
 
             MockRequests.flag = 1
-            self.assertIsNone(serverdensity_device.ls(name='lama'))
+            assert serverdensity_device.ls(name='lama') is None
 
     # 'update' function tests: 1
 
@@ -170,16 +171,16 @@ class ServerdensityDeviceTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(serverdensity_device.__pillar__,
                         {'serverdensity': {'api_token': 'salt'}}):
             MockRequests.flag = 0
-            self.assertTrue(serverdensity_device.update('51f7eaf', name='lama'))
+            assert serverdensity_device.update('51f7eaf', name='lama')
 
             with patch.object(salt.utils.json, 'loads', self.mock_json_loads):
-                self.assertRaises(CommandExecutionError,
-                                  serverdensity_device.update, '51f7eaf',
+                with pytest.raises(CommandExecutionError):
+                    serverdensity_device.update('51f7eaf',
                                   name='lama')
 
             MockRequests.flag = 1
-            self.assertIsNone(serverdensity_device.update('51f7eaf',
-                                                          name='lama'))
+            assert serverdensity_device.update('51f7eaf',
+                                                          name='lama') is None
 
     # 'install_agent' function tests: 1
 
@@ -194,7 +195,7 @@ class ServerdensityDeviceTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(serverdensity_device.__salt__, {'cmd.run': mock}):
                 with patch.dict(serverdensity_device.__opts__,
                                 {'cachedir': '/'}):
-                    self.assertTrue(serverdensity_device.install_agent('51f7e'))
+                    assert serverdensity_device.install_agent('51f7e')
 
     # 'install_agent_v2' function tests: 1
 
@@ -209,6 +210,5 @@ class ServerdensityDeviceTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(serverdensity_device.__salt__, {'cmd.run': mock}):
                 with patch.dict(serverdensity_device.__opts__,
                                 {'cachedir': '/'}):
-                    self.assertTrue(
-                        serverdensity_device.install_agent(
-                            '51f7e', agent_version=2))
+                    assert serverdensity_device.install_agent(
+                            '51f7e', agent_version=2)

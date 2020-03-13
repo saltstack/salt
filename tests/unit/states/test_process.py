@@ -43,8 +43,8 @@ class ProcessTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(process.__opts__, {'test': True}):
                 comt = ('No matching processes running')
                 ret.update({'comment': comt})
-                self.assertDictEqual(process.absent(name), ret)
+                assert process.absent(name) == ret
 
             with patch.dict(process.__opts__, {'test': False}):
                 ret.update({'result': True})
-                self.assertDictEqual(process.absent(name), ret)
+                assert process.absent(name) == ret

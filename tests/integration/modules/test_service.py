@@ -74,7 +74,7 @@ class ServiceModuleTest(ModuleCase):
         '''
         self.run_function('service.start', [self.service_name])
         check_service = self.run_function('service.status', [self.service_name])
-        self.assertTrue(check_service)
+        assert check_service
 
     def test_service_status_dead(self):
         '''
@@ -83,36 +83,36 @@ class ServiceModuleTest(ModuleCase):
         '''
         self.run_function('service.stop', [self.service_name])
         check_service = self.run_function('service.status', [self.service_name])
-        self.assertFalse(check_service)
+        assert not check_service
 
     def test_service_restart(self):
         '''
         test service.restart
         '''
-        self.assertTrue(self.run_function('service.restart', [self.service_name]))
+        assert self.run_function('service.restart', [self.service_name])
 
     def test_service_enable(self):
         '''
         test service.get_enabled and service.enable module
         '''
         # disable service before test
-        self.assertTrue(self.run_function('service.disable', [self.service_name]))
+        assert self.run_function('service.disable', [self.service_name])
 
-        self.assertTrue(self.run_function('service.enable', [self.service_name]))
-        self.assertIn(self.service_name, self.run_function('service.get_enabled'))
+        assert self.run_function('service.enable', [self.service_name])
+        assert self.service_name in self.run_function('service.get_enabled')
 
     def test_service_disable(self):
         '''
         test service.get_disabled and service.disable module
         '''
         # enable service before test
-        self.assertTrue(self.run_function('service.enable', [self.service_name]))
+        assert self.run_function('service.enable', [self.service_name])
 
-        self.assertTrue(self.run_function('service.disable', [self.service_name]))
+        assert self.run_function('service.disable', [self.service_name])
         if salt.utils.platform.is_darwin():
-            self.assertTrue(self.run_function('service.disabled', [self.service_name]))
+            assert self.run_function('service.disabled', [self.service_name])
         else:
-            self.assertIn(self.service_name, self.run_function('service.get_disabled'))
+            assert self.service_name in self.run_function('service.get_disabled')
 
     def test_service_disable_doesnot_exist(self):
         '''
@@ -126,30 +126,30 @@ class ServiceModuleTest(ModuleCase):
 
         # check service was not enabled
         try:
-            self.assertFalse(enable)
+            assert not enable
         except AssertionError:
-            self.assertIn('ERROR', enable)
+            assert 'ERROR' in enable
 
         # check service was not disabled
         if tuple(self.run_function('grains.item', ['osrelease_info'])['osrelease_info']) == (14, 0o4) and not systemd:
             # currently upstart does not have a mechanism to report if disabling a service fails if does not exist
-            self.assertTrue(self.run_function('service.disable', [srv_name]))
+            assert self.run_function('service.disable', [srv_name])
         elif self.run_function('grains.item', ['os'])['os'] == 'Debian' and \
              self.run_function('grains.item', ['osmajorrelease'])['osmajorrelease'] < 9 and systemd:
             # currently disabling a service via systemd that does not exist
             # on Debian 8 results in a True return code
-            self.assertTrue(self.run_function('service.disable', [srv_name]))
+            assert self.run_function('service.disable', [srv_name])
         else:
             try:
                 disable = self.run_function('service.disable', [srv_name])
-                self.assertFalse(disable)
+                assert not disable
             except AssertionError:
-                self.assertTrue('error' in disable.lower())
+                assert 'error' in disable.lower()
 
         if salt.utils.platform.is_darwin():
-            self.assertFalse(self.run_function('service.disabled', [srv_name]))
+            assert not self.run_function('service.disabled', [srv_name])
         else:
-            self.assertNotIn(srv_name, self.run_function('service.get_disabled'))
+            assert srv_name not in self.run_function('service.get_disabled')
 
     @skipIf(not salt.utils.platform.is_windows(), 'Windows Only Test')
     def test_service_get_service_name(self):
@@ -157,4 +157,4 @@ class ServiceModuleTest(ModuleCase):
         test service.get_service_name
         '''
         ret = self.run_function('service.get_service_name')
-        self.assertIn(self.service_name, ret.values())
+        assert self.service_name in ret.values()

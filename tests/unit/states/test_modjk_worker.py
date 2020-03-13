@@ -42,7 +42,7 @@ class ModjkWorkerTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value=False)
         with patch.dict(modjk_worker.__salt__, {'publish.publish': mock}):
             ret.update({'comment': comt})
-            self.assertDictEqual(modjk_worker.stop(name, lbn, target), ret)
+            assert modjk_worker.stop(name, lbn, target) == ret
 
     # 'activate' function tests: 1
 
@@ -64,7 +64,7 @@ class ModjkWorkerTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value=False)
         with patch.dict(modjk_worker.__salt__, {'publish.publish': mock}):
             ret.update({'comment': comt})
-            self.assertDictEqual(modjk_worker.activate(name, lbn, target), ret)
+            assert modjk_worker.activate(name, lbn, target) == ret
 
     # 'disable' function tests: 1
 
@@ -86,4 +86,4 @@ class ModjkWorkerTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value=False)
         with patch.dict(modjk_worker.__salt__, {'publish.publish': mock}):
             ret.update({'comment': comt})
-            self.assertDictEqual(modjk_worker.disable(name, lbn, target), ret)
+            assert modjk_worker.disable(name, lbn, target) == ret

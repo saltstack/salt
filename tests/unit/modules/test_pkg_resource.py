@@ -39,11 +39,11 @@ class PkgresTestCase(TestCase, LoaderModuleMockMixin):
                           MagicMock(side_effect=yaml.parser.ParserError('f'))):
             with patch.dict(pkg_resource.__salt__,
                             {'pkg.normalize_name': MagicMock()}):
-                self.assertDictEqual(pkg_resource.pack_sources('sources'), {})
+                assert pkg_resource.pack_sources('sources') == {}
 
-                self.assertDictEqual(pkg_resource.pack_sources(['A', 'a']), {})
+                assert pkg_resource.pack_sources(['A', 'a']) == {}
 
-                self.assertTrue(pkg_resource.pack_sources([{'A': 'a'}]))
+                assert pkg_resource.pack_sources([{'A': 'a'}])
 
     def test_parse_targets(self):
         '''
@@ -53,44 +53,44 @@ class PkgresTestCase(TestCase, LoaderModuleMockMixin):
             packages are to come from a repository or a binary package.
         '''
         with patch.dict(pkg_resource.__grains__, {'os': 'A'}):
-            self.assertEqual(pkg_resource.parse_targets(pkgs='a',
-                                                        sources='a'),
-                             (None, None))
+            assert pkg_resource.parse_targets(pkgs='a',
+                                                        sources='a') == \
+                             (None, None)
 
             with patch.object(pkg_resource, '_repack_pkgs',
                               return_value=False):
-                self.assertEqual(pkg_resource.parse_targets(pkgs='a'),
-                                 (None, None))
+                assert pkg_resource.parse_targets(pkgs='a') == \
+                                 (None, None)
 
             with patch.object(pkg_resource, '_repack_pkgs',
                               return_value='A'):
-                self.assertEqual(pkg_resource.parse_targets(pkgs='a'),
-                                 ('A', 'repository'))
+                assert pkg_resource.parse_targets(pkgs='a') == \
+                                 ('A', 'repository')
 
         with patch.dict(pkg_resource.__grains__, {'os': 'MacOS1'}):
             with patch.object(pkg_resource, 'pack_sources',
                               return_value=False):
-                self.assertEqual(pkg_resource.parse_targets(sources='s'),
-                                 (None, None))
+                assert pkg_resource.parse_targets(sources='s') == \
+                                 (None, None)
 
             with patch.object(pkg_resource, 'pack_sources',
                               return_value={'A': '/a'}):
                 with patch.dict(pkg_resource.__salt__,
                                 {'config.valid_fileproto':
                                  MagicMock(return_value=False)}):
-                    self.assertEqual(pkg_resource.parse_targets(sources='s'),
-                                     (['/a'], 'file'))
+                    assert pkg_resource.parse_targets(sources='s') == \
+                                     (['/a'], 'file')
 
             with patch.object(pkg_resource, 'pack_sources',
                               return_value={'A': 'a'}):
                 with patch.dict(pkg_resource.__salt__,
                                 {'config.valid_fileproto':
                                  MagicMock(return_value=False)}):
-                    self.assertEqual(pkg_resource.parse_targets(name='n'),
-                                     ({'n': None}, 'repository'))
+                    assert pkg_resource.parse_targets(name='n') == \
+                                     ({'n': None}, 'repository')
 
-                    self.assertEqual(pkg_resource.parse_targets(),
-                                     (None, None))
+                    assert pkg_resource.parse_targets() == \
+                                     (None, None)
 
     def test_version(self):
         '''
@@ -101,21 +101,21 @@ class PkgresTestCase(TestCase, LoaderModuleMockMixin):
             mock = MagicMock(return_value={'A': 'B'})
             with patch.dict(pkg_resource.__salt__,
                             {'pkg.list_pkgs': mock}):
-                self.assertEqual(pkg_resource.version('A'), 'B')
+                assert pkg_resource.version('A') == 'B'
 
-                self.assertDictEqual(pkg_resource.version(), {})
+                assert pkg_resource.version() == {}
 
             mock = MagicMock(return_value={})
             with patch.dict(pkg_resource.__salt__, {'pkg.list_pkgs': mock}):
                 with patch('builtins.next' if six.PY3 else '__builtin__.next') as mock_next:
                     mock_next.side_effect = StopIteration()
-                    self.assertEqual(pkg_resource.version('A'), '')
+                    assert pkg_resource.version('A') == ''
 
     def test_add_pkg(self):
         '''
             Test to add a package to a dict of installed packages.
         '''
-        self.assertIsNone(pkg_resource.add_pkg({'pkgs': []}, 'name', 'version'))
+        assert pkg_resource.add_pkg({'pkgs': []}, 'name', 'version') is None
 
     def test_sort_pkglist(self):
         '''
@@ -124,7 +124,7 @@ class PkgresTestCase(TestCase, LoaderModuleMockMixin):
             versions installed, so that two package lists can be compared
             to one another.
         '''
-        self.assertIsNone(pkg_resource.sort_pkglist({}))
+        assert pkg_resource.sort_pkglist({}) is None
 
     def test_format_pkg_list_no_attr(self):
         '''
@@ -248,7 +248,7 @@ class PkgresTestCase(TestCase, LoaderModuleMockMixin):
             and joins each list of
             installed versions into a string.
         '''
-        self.assertIsNone(pkg_resource.stringify({}))
+        assert pkg_resource.stringify({}) is None
 
     def test_version_clean(self):
         '''
@@ -256,9 +256,9 @@ class PkgresTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(pkg_resource.__salt__, {'pkg.version_clean':
                                                 MagicMock(return_value='A')}):
-            self.assertEqual(pkg_resource.version_clean('version'), 'A')
+            assert pkg_resource.version_clean('version') == 'A'
 
-        self.assertEqual(pkg_resource.version_clean('v'), 'v')
+        assert pkg_resource.version_clean('v') == 'v'
 
     def test_check_extra_requirements(self):
         '''
@@ -267,7 +267,7 @@ class PkgresTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(pkg_resource.__salt__, {'pkg.check_extra_requirements':
                                                 MagicMock(return_value='A')}):
-            self.assertEqual(pkg_resource.check_extra_requirements('a', 'b'),
-                             'A')
+            assert pkg_resource.check_extra_requirements('a', 'b') == \
+                             'A'
 
-        self.assertTrue(pkg_resource.check_extra_requirements('a', False))
+        assert pkg_resource.check_extra_requirements('a', False)

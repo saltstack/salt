@@ -45,30 +45,30 @@ class PostgresDatabaseTestCase(TestCase, LoaderModuleMockMixin):
                          'postgres.db_alter': mock_t}):
             comt = ('Database {0} is already present'.format(name))
             ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(postgres_database.present(name), ret)
+            assert postgres_database.present(name) == ret
 
             comt = ("Database frank has wrong parameters "
                     "which couldn't be changed on fly.")
             ret.update({'comment': comt, 'result': False})
-            self.assertDictEqual(postgres_database.present(name, tablespace='A',
-                                                           lc_collate=True),
-                                 ret)
+            assert postgres_database.present(name, tablespace='A',
+                                                           lc_collate=True) == \
+                                 ret
 
             with patch.dict(postgres_database.__opts__, {'test': True}):
                 comt = ('Database frank exists, '
                         'but parameters need to be changed')
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(postgres_database.present(name,
-                                                               tablespace='A'),
-                                     ret)
+                assert postgres_database.present(name,
+                                                               tablespace='A') == \
+                                     ret
 
             with patch.dict(postgres_database.__opts__, {'test': False}):
                 comt = ('Parameters for database frank have been changed')
                 ret.update({'comment': comt, 'result': True,
                             'changes': {name: 'Parameters changed'}})
-                self.assertDictEqual(postgres_database.present(name,
-                                                               tablespace='A'),
-                                     ret)
+                assert postgres_database.present(name,
+                                                               tablespace='A') == \
+                                     ret
 
     # 'absent' function tests: 1
 
@@ -91,15 +91,15 @@ class PostgresDatabaseTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(postgres_database.__opts__, {'test': True}):
                 comt = ('Database {0} is set to be removed'.format(name))
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(postgres_database.absent(name), ret)
+                assert postgres_database.absent(name) == ret
 
             with patch.dict(postgres_database.__opts__, {'test': False}):
                 comt = ('Database {0} has been removed'.format(name))
                 ret.update({'comment': comt, 'result': True,
                             'changes': {name: 'Absent'}})
-                self.assertDictEqual(postgres_database.absent(name), ret)
+                assert postgres_database.absent(name) == ret
 
                 comt = ('Database {0} is not present, so it cannot be removed'
                         .format(name))
                 ret.update({'comment': comt, 'result': True, 'changes': {}})
-                self.assertDictEqual(postgres_database.absent(name), ret)
+                assert postgres_database.absent(name) == ret

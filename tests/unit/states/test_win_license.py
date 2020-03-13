@@ -48,7 +48,7 @@ class LicenseTestCase(TestCase, LoaderModuleMockMixin):
             info_mock.assert_called_once_with()
             install_mock.assert_called_once_with('AAAAA-AAAAA-AAAAA-AAAA-AAAAA-ABCDE')
             activate_mock.assert_called_once_with()
-            self.assertEqual(out, expected)
+            assert out == expected
 
     def test_installed_not_activated(self):
         '''
@@ -78,7 +78,7 @@ class LicenseTestCase(TestCase, LoaderModuleMockMixin):
             info_mock.assert_called_once_with()
             assert not install_mock.called
             activate_mock.assert_called_once_with()
-            self.assertEqual(out, expected)
+            assert out == expected
 
     def test_installed_activated(self):
         '''
@@ -108,7 +108,7 @@ class LicenseTestCase(TestCase, LoaderModuleMockMixin):
             info_mock.assert_called_once_with()
             assert not install_mock.called
             assert not activate_mock.called
-            self.assertEqual(out, expected)
+            assert out == expected
 
     def test_installed_install_fail(self):
         '''
@@ -138,7 +138,7 @@ class LicenseTestCase(TestCase, LoaderModuleMockMixin):
             info_mock.assert_called_once_with()
             install_mock.assert_called_once_with('AAAAA-AAAAA-AAAAA-AAAA-AAAAA-ABCDE')
             assert not activate_mock.called
-            self.assertEqual(out, expected)
+            assert out == expected
 
     def test_installed_activate_fail(self):
         '''
@@ -168,4 +168,4 @@ class LicenseTestCase(TestCase, LoaderModuleMockMixin):
             info_mock.assert_called_once_with()
             assert not install_mock.called
             activate_mock.assert_called_once_with()
-            self.assertEqual(out, expected)
+            assert out == expected

@@ -32,20 +32,16 @@ class TestModulesGrains(ModuleCase):
         grains.items
         '''
         opts = self.minion_opts
-        self.assertEqual(
-            self.run_function('grains.items')['test_grain'],
+        assert self.run_function('grains.items')['test_grain'] == \
             opts['grains']['test_grain']
-        )
 
     def test_item(self):
         '''
         grains.item
         '''
         opts = self.minion_opts
-        self.assertEqual(
-            self.run_function('grains.item', ['test_grain'])['test_grain'],
+        assert self.run_function('grains.item', ['test_grain'])['test_grain'] == \
             opts['grains']['test_grain']
-        )
 
     def test_ls(self):
         '''
@@ -85,7 +81,7 @@ class TestModulesGrains(ModuleCase):
         for grain in check_for:
             if os == 'Windows' and grain in ['cpu_flags', 'gid', 'groupname', 'uid']:
                 continue
-            self.assertTrue(grain in lsgrains)
+            assert grain in lsgrains
 
     @skipIf(os.environ.get('TRAVIS_PYTHON_VERSION', None) is not None,
             'Travis environment can\'t keep up with salt refresh')
@@ -93,28 +89,26 @@ class TestModulesGrains(ModuleCase):
         '''
         test grains.set_val
         '''
-        self.assertEqual(
-                self.run_function(
+        assert self.run_function(
                     'grains.setval',
-                    ['setgrain', 'grainval']),
-                {'setgrain': 'grainval'})
+                    ['setgrain', 'grainval']) == \
+                {'setgrain': 'grainval'}
         time.sleep(5)
         ret = self.run_function('grains.item', ['setgrain'])
         if not ret:
             # Sleep longer, sometimes test systems get bogged down
             time.sleep(20)
             ret = self.run_function('grains.item', ['setgrain'])
-        self.assertTrue(ret)
+        assert ret
 
     def test_get(self):
         '''
         test grains.get
         '''
-        self.assertEqual(
-                self.run_function(
+        assert self.run_function(
                     'grains.get',
-                    ['level1:level2']),
-                'foo')
+                    ['level1:level2']) == \
+                'foo'
 
     def test_get_core_grains(self):
         '''
@@ -127,13 +121,13 @@ class TestModulesGrains(ModuleCase):
             get_grain = self.run_function('grains.get', [grain])
             log.debug('Value of \'%s\' grain: \'%s\'', grain, get_grain)
             if os == 'Arch' and grain in ['osmajorrelease']:
-                self.assertEqual(get_grain, '')
+                assert get_grain == ''
                 continue
             if os == 'Windows' and grain in ['osmajorrelease']:
-                self.assertEqual(get_grain, '')
+                assert get_grain == ''
                 continue
 
-            self.assertTrue(get_grain)
+            assert get_grain
 
     def test_get_grains_int(self):
         '''
@@ -145,10 +139,9 @@ class TestModulesGrains(ModuleCase):
         for grain in grains:
             get_grain = self.run_function('grains.get', [grain])
             if os == 'Windows' and grain in ['uid']:
-                self.assertEqual(get_grain, '')
+                assert get_grain == ''
                 continue
-            self.assertIsInstance(
-                get_grain, int, msg='grain: {0} is not an int or empty'.format(grain))
+            assert isinstance(get_grain, int), 'grain: {0} is not an int or empty'.format(grain)
 
 
 @pytest.mark.windows_whitelisted
@@ -176,7 +169,7 @@ class GrainsAppendTestCase(ModuleCase):
         Tests the return of a simple grains.append call.
         '''
         ret = self.run_function('grains.append', [self.GRAIN_KEY, self.GRAIN_VAL])
-        self.assertEqual(ret[self.GRAIN_KEY], [self.GRAIN_VAL])
+        assert ret[self.GRAIN_KEY] == [self.GRAIN_VAL]
 
     def test_grains_append_val_already_present(self):
         '''
@@ -188,11 +181,11 @@ class GrainsAppendTestCase(ModuleCase):
 
         # First, make sure the test grain is present
         ret = self.run_function('grains.append', [self.GRAIN_KEY, self.GRAIN_VAL])
-        self.assertEqual(ret[self.GRAIN_KEY], [self.GRAIN_VAL])
+        assert ret[self.GRAIN_KEY] == [self.GRAIN_VAL]
 
         # Now try to append again
         ret = self.run_function('grains.append', [self.GRAIN_KEY, self.GRAIN_VAL])
-        self.assertTrue(self.wait_for_grain(self.GRAIN_KEY, [self.GRAIN_VAL]))
+        assert self.wait_for_grain(self.GRAIN_KEY, [self.GRAIN_VAL])
         if not ret or isinstance(ret, dict):
             # Sleep for a bit, sometimes the second "append" runs too quickly
             time.sleep(5)
@@ -209,7 +202,7 @@ class GrainsAppendTestCase(ModuleCase):
         self.run_function('grains.setval', [self.GRAIN_KEY, []])
         second_grain = self.GRAIN_VAL + '-2'
         ret = self.run_function('grains.append', [self.GRAIN_KEY, [self.GRAIN_VAL, second_grain]])
-        self.assertEqual(ret[self.GRAIN_KEY], [self.GRAIN_VAL, second_grain])
+        assert ret[self.GRAIN_KEY] == [self.GRAIN_VAL, second_grain]
 
     def test_grains_append_call_twice(self):
         '''
@@ -231,16 +224,14 @@ class GrainsAppendTestCase(ModuleCase):
                 count += 1
 
         # We should only have hit the grain key once.
-        self.assertEqual(
-            count,
-            1,
-            msg='Count did not match({}!=1) while looking for key \'{}\'.\nFirst append return:\n{}\nSecond append return:\n{}'.format(
+        assert count == \
+            1, \
+            'Count did not match({}!=1) while looking for key \'{}\'.\nFirst append return:\n{}\nSecond append return:\n{}'.format(
                 count,
                 self.GRAIN_KEY,
                 pprint.pformat(append_1),
                 pprint.pformat(append_2)
             )
-        )
 
     def wait_for_grain(self, key, val, timeout=60, sleep=.3):
         start = time.time()
@@ -254,19 +245,19 @@ class GrainsAppendTestCase(ModuleCase):
     def test_grains_remove_add(self):
         second_grain = self.GRAIN_VAL + '-2'
         ret = self.run_function('grains.get', [self.GRAIN_KEY])
-        self.assertEqual(ret, [])
+        assert ret == []
 
         for i in range(10):
             ret = self.run_function('grains.setval', [self.GRAIN_KEY, []])
-            self.assertEqual(ret[self.GRAIN_KEY], [])
+            assert ret[self.GRAIN_KEY] == []
             self.wait_for_grain(self.GRAIN_KEY, [])
             ret = self.run_function('grains.append', [self.GRAIN_KEY, self.GRAIN_VAL])
-            self.assertEqual(ret[self.GRAIN_KEY], [self.GRAIN_VAL])
-            self.assertEqual(ret[self.GRAIN_KEY], [self.GRAIN_VAL])
+            assert ret[self.GRAIN_KEY] == [self.GRAIN_VAL]
+            assert ret[self.GRAIN_KEY] == [self.GRAIN_VAL]
 
             ret = self.run_function('grains.setval', [self.GRAIN_KEY, []])
             self.wait_for_grain(self.GRAIN_KEY, [])
-            self.assertTrue(self.wait_for_grain(self.GRAIN_KEY, []))
+            assert self.wait_for_grain(self.GRAIN_KEY, [])
             ret = self.run_function('grains.append', [self.GRAIN_KEY, [self.GRAIN_VAL, second_grain]])
-            self.assertEqual(ret[self.GRAIN_KEY], [self.GRAIN_VAL, second_grain])
-            self.assertEqual(ret[self.GRAIN_KEY], [self.GRAIN_VAL, second_grain])
+            assert ret[self.GRAIN_KEY] == [self.GRAIN_VAL, second_grain]
+            assert ret[self.GRAIN_KEY] == [self.GRAIN_VAL, second_grain]

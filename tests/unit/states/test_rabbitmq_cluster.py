@@ -39,16 +39,16 @@ class RabbitmqClusterTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(rabbitmq_cluster.__salt__,
                         {"rabbitmq.cluster_status": mock}):
             ret.update({'comment': 'Already in cluster'})
-            self.assertDictEqual(rabbitmq_cluster.joined('salt', 'salt',
-                                                         'rahulha'), ret)
+            assert rabbitmq_cluster.joined('salt', 'salt',
+                                                         'rahulha') == ret
 
             with patch.dict(rabbitmq_cluster.__opts__, {"test": True}):
                 ret.update({'result': None,
                             'comment': 'Node is set to join '
                             'cluster rahulha@salt',
                             'changes': {'new': 'rahulha@salt', 'old': ''}})
-                self.assertDictEqual(rabbitmq_cluster.joined('salt', 'salt',
-                                                             'rahulha'), ret)
+                assert rabbitmq_cluster.joined('salt', 'salt',
+                                                             'rahulha') == ret
 
             with patch.dict(rabbitmq_cluster.__opts__, {"test": False}):
                 mock = MagicMock(return_value={'Error': 'ERR'})
@@ -57,7 +57,7 @@ class RabbitmqClusterTestCase(TestCase, LoaderModuleMockMixin):
                     ret.update({'result': False,
                                 'comment': 'ERR',
                                 'changes': {}})
-                    self.assertDictEqual(rabbitmq_cluster.joined('salt',
+                    assert rabbitmq_cluster.joined('salt',
                                                                  'salt',
-                                                                 'rahulha'),
-                                         ret)
+                                                                 'rahulha') == \
+                                         ret

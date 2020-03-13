@@ -48,18 +48,18 @@ class SshAuthTestCase(TestCase, LoaderModuleMockMixin):
                 comt = ('The authorized host key sshkeys is already '
                         'present for user root')
                 ret.update({'comment': comt})
-                self.assertDictEqual(ssh_auth.present(name, user, source), ret)
+                assert ssh_auth.present(name, user, source) == ret
 
             with patch.dict(ssh_auth.__opts__, {'test': False}):
                 comt = ('The authorized host key sshkeys '
                         'for user root was updated')
                 ret.update({'comment': comt, 'changes': {name: 'Updated'}})
-                self.assertDictEqual(ssh_auth.present(name, user, source), ret)
+                assert ssh_auth.present(name, user, source) == ret
 
                 comt = ('The authorized host key sshkeys '
                         'for user root was added')
                 ret.update({'comment': comt, 'changes': {name: 'New'}})
-                self.assertDictEqual(ssh_auth.present(name, user, source), ret)
+                assert ssh_auth.present(name, user, source) == ret
 
     # 'absent' function tests: 1
 
@@ -84,21 +84,21 @@ class SshAuthTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(ssh_auth.__opts__, {'test': True}):
                 comt = ('Key sshkeys for user root is set for removal')
                 ret.update({'comment': comt})
-                self.assertDictEqual(ssh_auth.absent(name, user, source), ret)
+                assert ssh_auth.absent(name, user, source) == ret
 
                 comt = ('Key is already absent')
                 ret.update({'comment': comt, 'result': True})
-                self.assertDictEqual(ssh_auth.absent(name, user, source), ret)
+                assert ssh_auth.absent(name, user, source) == ret
 
             with patch.dict(ssh_auth.__opts__, {'test': False}):
                 comt = ('User authorized keys file not present')
                 ret.update({'comment': comt, 'result': False})
-                self.assertDictEqual(ssh_auth.absent(name, user, source), ret)
+                assert ssh_auth.absent(name, user, source) == ret
 
                 comt = ('Key removed')
                 ret.update({'comment': comt, 'result': True,
                             'changes': {name: 'Removed'}})
-                self.assertDictEqual(ssh_auth.absent(name, user, source), ret)
+                assert ssh_auth.absent(name, user, source) == ret
 
     def test_manage(self):
         '''
@@ -131,12 +131,12 @@ class SshAuthTestCase(TestCase, LoaderModuleMockMixin):
                 call_mocked_present.return_value = mock_present
                 with patch.dict(ssh_auth.__opts__, {'test': True}):
                     # test: expected keys found. No chanages
-                    self.assertDictEqual(ssh_auth.manage('sshid', ['somekey'], user), ret)
+                    assert ssh_auth.manage('sshid', ['somekey'], user) == ret
 
                     comt = ('somekey Key set for removal')
                     ret.update({'comment': comt})
                     # test: unexpected sshkey found. Should be removed.
-                    self.assertDictEqual(ssh_auth.manage('sshid', [], user), ret)
+                    assert ssh_auth.manage('sshid', [], user) == ret
 
             with patch('salt.states.ssh_auth.present') as call_mocked_present:
                 mock_present = {'comment': '',
@@ -150,7 +150,7 @@ class SshAuthTestCase(TestCase, LoaderModuleMockMixin):
                            'changes': {},
                            'result': True,
                            'comment': ''}
-                    self.assertDictEqual(ssh_auth.manage('sshid', ['somekey'], user), ret)
+                    assert ssh_auth.manage('sshid', ['somekey'], user) == ret
 
                     with patch('salt.states.ssh_auth.absent') as call_mocked_absent:
                         mock_absent = {'comment': 'Key removed'}
@@ -158,7 +158,7 @@ class SshAuthTestCase(TestCase, LoaderModuleMockMixin):
                         ret.update({'comment': '', 'result': True,
                                     'changes': {'somekey': 'Key removed'}})
                         # unexpected sshkey found. Was removed.
-                        self.assertDictEqual(ssh_auth.manage('sshid', ['addkey'], user), ret)
+                        assert ssh_auth.manage('sshid', ['addkey'], user) == ret
 
             # add a key
             with patch('salt.states.ssh_auth.present') as call_mocked_present:
@@ -173,4 +173,4 @@ class SshAuthTestCase(TestCase, LoaderModuleMockMixin):
                            'changes': {'newkey': 'New'},
                            'result': True,
                            'comment': ''}
-                    self.assertDictEqual(ssh_auth.manage('sshid', ['newkey', 'somekey'], user), ret)
+                    assert ssh_auth.manage('sshid', ['newkey', 'somekey'], user) == ret

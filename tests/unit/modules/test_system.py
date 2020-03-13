@@ -29,7 +29,7 @@ class SystemTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(system.__salt__,
                         {'cmd.run': MagicMock(return_value='A')}):
-            self.assertEqual(system.halt(), 'A')
+            assert system.halt() == 'A'
 
     def test_init(self):
         '''
@@ -37,7 +37,7 @@ class SystemTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(system.__salt__,
                         {'cmd.run': MagicMock(return_value='A')}):
-            self.assertEqual(system.init('r'), 'A')
+            assert system.init('r') == 'A'
 
     def test_poweroff(self):
         '''
@@ -45,7 +45,7 @@ class SystemTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(system.__salt__,
                         {'cmd.run': MagicMock(return_value='A')}):
-            self.assertEqual(system.poweroff(), 'A')
+            assert system.poweroff() == 'A'
 
     def test_reboot(self):
         '''
@@ -53,7 +53,7 @@ class SystemTestCase(TestCase, LoaderModuleMockMixin):
         '''
         cmd_mock = MagicMock(return_value='A')
         with patch.dict(system.__salt__, {'cmd.run': cmd_mock}):
-            self.assertEqual(system.reboot(), 'A')
+            assert system.reboot() == 'A'
         cmd_mock.assert_called_with(['shutdown', '-r', 'now'], python_shell=False)
 
     def test_reboot_with_delay(self):
@@ -62,7 +62,7 @@ class SystemTestCase(TestCase, LoaderModuleMockMixin):
         '''
         cmd_mock = MagicMock(return_value='A')
         with patch.dict(system.__salt__, {'cmd.run': cmd_mock}):
-            self.assertEqual(system.reboot(at_time=5), 'A')
+            assert system.reboot(at_time=5) == 'A'
         cmd_mock.assert_called_with(['shutdown', '-r', '5'], python_shell=False)
 
     def test_shutdown(self):
@@ -74,7 +74,7 @@ class SystemTestCase(TestCase, LoaderModuleMockMixin):
                 patch('salt.utils.platform.is_freebsd', MagicMock(return_value=False)), \
                 patch('salt.utils.platform.is_netbsd', MagicMock(return_value=False)), \
                 patch('salt.utils.platform.is_openbsd', MagicMock(return_value=False)):
-            self.assertEqual(system.shutdown(), 'A')
+            assert system.shutdown() == 'A'
         cmd_mock.assert_called_with(['shutdown', '-h', 'now'], python_shell=False)
 
     def test_shutdown_freebsd(self):
@@ -86,7 +86,7 @@ class SystemTestCase(TestCase, LoaderModuleMockMixin):
                 patch('salt.utils.platform.is_freebsd', MagicMock(return_value=True)), \
                 patch('salt.utils.platform.is_netbsd', MagicMock(return_value=False)), \
                 patch('salt.utils.platform.is_openbsd', MagicMock(return_value=False)):
-            self.assertEqual(system.shutdown(), 'A')
+            assert system.shutdown() == 'A'
         cmd_mock.assert_called_with(['shutdown', '-p', 'now'], python_shell=False)
 
     def test_shutdown_netbsd(self):
@@ -98,7 +98,7 @@ class SystemTestCase(TestCase, LoaderModuleMockMixin):
                 patch('salt.utils.platform.is_freebsd', MagicMock(return_value=False)), \
                 patch('salt.utils.platform.is_netbsd', MagicMock(return_value=True)), \
                 patch('salt.utils.platform.is_openbsd', MagicMock(return_value=False)):
-            self.assertEqual(system.shutdown(), 'A')
+            assert system.shutdown() == 'A'
         cmd_mock.assert_called_with(['shutdown', '-p', 'now'], python_shell=False)
 
     def test_shutdown_openbsd(self):
@@ -110,5 +110,5 @@ class SystemTestCase(TestCase, LoaderModuleMockMixin):
                 patch('salt.utils.platform.is_freebsd', MagicMock(return_value=False)), \
                 patch('salt.utils.platform.is_netbsd', MagicMock(return_value=False)), \
                 patch('salt.utils.platform.is_openbsd', MagicMock(return_value=True)):
-            self.assertEqual(system.shutdown(), 'A')
+            assert system.shutdown() == 'A'
         cmd_mock.assert_called_with(['shutdown', '-p', 'now'], python_shell=False)

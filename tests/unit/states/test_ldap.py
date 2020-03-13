@@ -228,8 +228,8 @@ class LDAPTestCase(TestCase, LoaderModuleMockMixin):
                          {'delete_others': delete_others}]}
                    for dn, attrs in six.iteritems(replace)]
         actual = salt.states.ldap.managed(name, entries)
-        self.assertDictEqual(expected_ret, actual)
-        self.assertDictEqual(expected_db, db)
+        assert expected_ret == actual
+        assert expected_db == db
 
     def _test_helper_success(self, init_db, replace, delete_others=False):
         self._test_helper(init_db, {}, replace, delete_others)
@@ -251,7 +251,7 @@ class LDAPTestCase(TestCase, LoaderModuleMockMixin):
             'comment': 'LDAP entries already set',
         }
         actual = salt.states.ldap.managed(name, {})
-        self.assertDictEqual(expected, actual)
+        assert expected == actual
 
     def test_managed_add_entry(self):
         self._test_helper_success(

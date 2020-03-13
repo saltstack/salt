@@ -38,8 +38,8 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.hosts._list_hosts',
                    MagicMock(return_value={'10.10.10.10': ['Salt1', 'Salt2']})):
-            self.assertDictEqual({'10.10.10.10': ['Salt1', 'Salt2']},
-                                 hosts.list_hosts())
+            assert {'10.10.10.10': ['Salt1', 'Salt2']} == \
+                                 hosts.list_hosts()
 
     # 'get_ip' function tests: 3
 
@@ -49,16 +49,16 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.hosts._list_hosts',
                    MagicMock(return_value={'10.10.10.10': ['Salt1', 'Salt2']})):
-            self.assertEqual('10.10.10.10', hosts.get_ip('Salt1'))
+            assert '10.10.10.10' == hosts.get_ip('Salt1')
 
-            self.assertEqual('', hosts.get_ip('Salt3'))
+            assert '' == hosts.get_ip('Salt3')
 
     def test_get_ip_none(self):
         '''
         Tests return ip associated with the named host
         '''
         with patch('salt.modules.hosts._list_hosts', MagicMock(return_value='')):
-            self.assertEqual('', hosts.get_ip('Salt1'))
+            assert '' == hosts.get_ip('Salt1')
 
     # 'get_alias' function tests: 2
 
@@ -68,7 +68,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.hosts._list_hosts',
                    MagicMock(return_value={'10.10.10.10': ['Salt1', 'Salt2']})):
-            self.assertListEqual(['Salt1', 'Salt2'], hosts.get_alias('10.10.10.10'))
+            assert ['Salt1', 'Salt2'] == hosts.get_alias('10.10.10.10')
 
     def test_get_alias_none(self):
         '''
@@ -76,7 +76,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.hosts._list_hosts',
                    MagicMock(return_value={'10.10.10.10': ['Salt1', 'Salt2']})):
-            self.assertListEqual([], hosts.get_alias('10.10.10.11'))
+            assert [] == hosts.get_alias('10.10.10.11')
 
     # 'has_pair' function tests: 1
 
@@ -86,9 +86,9 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.hosts._list_hosts',
                    MagicMock(return_value={'10.10.10.10': ['Salt1', 'Salt2']})):
-            self.assertTrue(hosts.has_pair('10.10.10.10', 'Salt1'))
+            assert hosts.has_pair('10.10.10.10', 'Salt1')
 
-            self.assertFalse(hosts.has_pair('10.10.10.10', 'Salt3'))
+            assert not hosts.has_pair('10.10.10.10', 'Salt3')
 
     # 'set_host' function tests: 3
 
@@ -105,7 +105,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
                 patch('os.path.isfile', MagicMock(return_value=False)), \
                     patch.dict(hosts.__salt__,
                                {'config.option': MagicMock(return_value=None)}):
-            self.assertFalse(hosts.set_host('10.10.10.10', 'Salt1'))
+            assert not hosts.set_host('10.10.10.10', 'Salt1')
 
     def test_set_host_true(self):
         '''
@@ -117,7 +117,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
                     patch('salt.utils.files.fopen', mock_open(b'')):
             mock_opt = MagicMock(return_value=None)
             with patch.dict(hosts.__salt__, {'config.option': mock_opt}):
-                self.assertTrue(hosts.set_host('10.10.10.10', 'Salt1'))
+                assert hosts.set_host('10.10.10.10', 'Salt1')
 
     def test_set_host_true_remove(self):
         '''
@@ -202,9 +202,9 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
             with patch('salt.utils.files.fopen', TmpStringIO):
                 mock_opt = MagicMock(return_value=None)
                 with patch.dict(hosts.__salt__, {'config.option': mock_opt}):
-                    self.assertTrue(hosts.set_host('1.1.1.1', ' '))
+                    assert hosts.set_host('1.1.1.1', ' ')
 
-            self.assertEqual(data[0], expected)
+            assert data[0] == expected
 
     # 'rm_host' function tests: 2
 
@@ -220,14 +220,14 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
                 patch('os.path.isfile', MagicMock(return_value=True)):
             mock_opt = MagicMock(return_value=None)
             with patch.dict(hosts.__salt__, {'config.option': mock_opt}):
-                self.assertTrue(hosts.rm_host('10.10.10.10', 'Salt1'))
+                assert hosts.rm_host('10.10.10.10', 'Salt1')
 
     def test_rm_host_false(self):
         '''
         Tests if specified host entry gets removed from the hosts file
         '''
         with patch('salt.modules.hosts.has_pair', MagicMock(return_value=False)):
-            self.assertTrue(hosts.rm_host('10.10.10.10', 'Salt1'))
+            assert hosts.rm_host('10.10.10.10', 'Salt1')
 
     # 'add_host' function tests: 3
 
@@ -244,7 +244,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
                       MagicMock(return_value=hosts_file)):
             mock_opt = MagicMock(return_value=None)
             with patch.dict(hosts.__salt__, {'config.option': mock_opt}):
-                self.assertTrue(hosts.add_host('10.10.10.10', 'Salt1'))
+                assert hosts.add_host('10.10.10.10', 'Salt1')
 
     def test_add_host_no_file(self):
         '''
@@ -254,7 +254,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
                 patch('os.path.isfile', MagicMock(return_value=False)):
             mock_opt = MagicMock(return_value=None)
             with patch.dict(hosts.__salt__, {'config.option': mock_opt}):
-                self.assertFalse(hosts.add_host('10.10.10.10', 'Salt1'))
+                assert not hosts.add_host('10.10.10.10', 'Salt1')
 
     def test_add_host_create_entry(self):
         '''
@@ -264,4 +264,4 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
                 patch('os.path.isfile', MagicMock(return_value=True)):
             mock_opt = MagicMock(return_value=None)
             with patch.dict(hosts.__salt__, {'config.option': mock_opt}):
-                self.assertTrue(hosts.add_host('10.10.10.10', 'Salt1'))
+                assert hosts.add_host('10.10.10.10', 'Salt1')

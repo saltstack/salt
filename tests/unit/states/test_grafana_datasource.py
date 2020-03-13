@@ -40,8 +40,8 @@ class GrafanaDatasourceTestCase(TestCase, LoaderModuleMockMixin):
                     headers={'Authorization': 'Bearer token', 'Accept': 'application/json'},
                     timeout=3
                 )
-                self.assertTrue(ret['result'])
-                self.assertEqual(ret['comment'], 'New data source test added')
+                assert ret['result']
+                assert ret['comment'] == 'New data source test added'
 
         data = grafana_datasource._get_json_data('test', 'type', 'url')
         data.update({'id': 1, 'orgId': 1})
@@ -54,9 +54,9 @@ class GrafanaDatasourceTestCase(TestCase, LoaderModuleMockMixin):
                     headers={'Authorization': 'Bearer token', 'Accept': 'application/json'},
                     timeout=3
                 )
-                self.assertTrue(ret['result'])
-                self.assertEqual(ret['comment'], 'Data source test already up-to-date')
-                self.assertEqual(ret['changes'], {})
+                assert ret['result']
+                assert ret['comment'] == 'Data source test already up-to-date'
+                assert ret['changes'] == {}
 
             with patch('requests.put') as rput:
                 ret = grafana_datasource.present('test', 'type', 'newurl', profile=profile)
@@ -66,17 +66,17 @@ class GrafanaDatasourceTestCase(TestCase, LoaderModuleMockMixin):
                     headers={'Authorization': 'Bearer token', 'Accept': 'application/json'},
                     timeout=3
                 )
-                self.assertTrue(ret['result'])
-                self.assertEqual(ret['comment'], 'Data source test updated')
-                self.assertEqual(ret['changes'], {'old': {'url': 'url'}, 'new': {'url': 'newurl'}})
+                assert ret['result']
+                assert ret['comment'] == 'Data source test updated'
+                assert ret['changes'] == {'old': {'url': 'url'}, 'new': {'url': 'newurl'}}
 
     def test_absent(self):
         with patch('requests.get', mock_json_response([])):
             with patch('requests.delete') as rdelete:
                 ret = grafana_datasource.absent('test', profile=profile)
-                self.assertTrue(rdelete.call_count == 0)
-                self.assertTrue(ret['result'])
-                self.assertEqual(ret['comment'], 'Data source test already absent')
+                assert rdelete.call_count == 0
+                assert ret['result']
+                assert ret['comment'] == 'Data source test already absent'
 
         with patch('requests.get', mock_json_response([{'name': 'test', 'id': 1}])):
             with patch('requests.delete') as rdelete:
@@ -86,5 +86,5 @@ class GrafanaDatasourceTestCase(TestCase, LoaderModuleMockMixin):
                     headers={'Authorization': 'Bearer token', 'Accept': 'application/json'},
                     timeout=3
                 )
-                self.assertTrue(ret['result'])
-                self.assertEqual(ret['comment'], 'Data source test was deleted')
+                assert ret['result']
+                assert ret['comment'] == 'Data source test was deleted'

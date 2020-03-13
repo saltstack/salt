@@ -38,7 +38,7 @@ class nexusTestCase(TestCase, LoaderModuleMockMixin):
                                                 group_id='com.company.sampleapp.web-module',
                                                 artifact_id='web',
                                                 headers={})
-            self.assertEqual(metadata['latest_version'], '0.1.0')
+            assert metadata['latest_version'] == '0.1.0'
 
     def test_snapshot_version_get_metadata(self):
         with patch('salt.modules.nexus._get_snapshot_version_metadata_xml', MagicMock(return_value='''<?xml version="1.0" encoding="UTF-8"?>
@@ -74,7 +74,7 @@ class nexusTestCase(TestCase, LoaderModuleMockMixin):
                                                                  artifact_id='web',
                                                                  version='0.0.2-SNAPSHOT',
                                                                  headers={})
-            self.assertEqual(metadata['snapshot_versions']['dist'], '0.0.2-20170920.212353-3')
+            assert metadata['snapshot_versions']['dist'] == '0.0.2-20170920.212353-3'
 
     def test_artifact_metadata_url(self):
         metadata_url = nexus._get_artifact_metadata_url(nexus_url='http://nexus.example.com/repository',
@@ -82,7 +82,7 @@ class nexusTestCase(TestCase, LoaderModuleMockMixin):
                                                              group_id='com.company.sampleapp.web-module',
                                                              artifact_id='web')
 
-        self.assertEqual(metadata_url, "http://nexus.example.com/repository/libs-releases/com/company/sampleapp/web-module/web/maven-metadata.xml")
+        assert metadata_url == "http://nexus.example.com/repository/libs-releases/com/company/sampleapp/web-module/web/maven-metadata.xml"
 
     def test_snapshot_version_metadata_url(self):
         metadata_url = nexus._get_snapshot_version_metadata_url(nexus_url='http://nexus.example.com/repository',
@@ -91,7 +91,7 @@ class nexusTestCase(TestCase, LoaderModuleMockMixin):
                                                              artifact_id='web',
                                                              version='0.0.2-SNAPSHOT')
 
-        self.assertEqual(metadata_url, "http://nexus.example.com/repository/libs-snapshots/com/company/sampleapp/web-module/web/0.0.2-SNAPSHOT/maven-metadata.xml")
+        assert metadata_url == "http://nexus.example.com/repository/libs-snapshots/com/company/sampleapp/web-module/web/0.0.2-SNAPSHOT/maven-metadata.xml"
 
     def test_construct_url_for_released_version(self):
         artifact_url, file_name = nexus._get_release_url(repository='libs-releases',
@@ -101,8 +101,8 @@ class nexusTestCase(TestCase, LoaderModuleMockMixin):
                                       nexus_url='http://nexus.example.com/repository',
                                       version='0.1.0')
 
-        self.assertEqual(artifact_url, "http://nexus.example.com/repository/libs-releases/com/company/sampleapp/web-module/web/0.1.0/web-0.1.0.zip")
-        self.assertEqual(file_name, "web-0.1.0.zip")
+        assert artifact_url == "http://nexus.example.com/repository/libs-releases/com/company/sampleapp/web-module/web/0.1.0/web-0.1.0.zip"
+        assert file_name == "web-0.1.0.zip"
 
     def test_construct_url_for_snapshot_version(self):
         with patch('salt.modules.nexus._get_snapshot_version_metadata', MagicMock(return_value={'snapshot_versions': {'zip': '0.0.2-20170920.212353-3'}})):
@@ -115,5 +115,5 @@ class nexusTestCase(TestCase, LoaderModuleMockMixin):
                                                    packaging='zip',
                                                    headers={})
 
-            self.assertEqual(artifact_url, "http://nexus.example.com/repository/libs-snapshots/com/company/sampleapp/web-module/web/0.2.0-SNAPSHOT/web-0.0.2-20170920.212353-3.zip")
-            self.assertEqual(file_name, "web-0.0.2-20170920.212353-3.zip")
+            assert artifact_url == "http://nexus.example.com/repository/libs-snapshots/com/company/sampleapp/web-module/web/0.2.0-SNAPSHOT/web-0.0.2-20170920.212353-3.zip"
+            assert file_name == "web-0.0.2-20170920.212353-3.zip"

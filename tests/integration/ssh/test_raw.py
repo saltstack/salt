@@ -22,4 +22,4 @@ class SSHRawTest(SSHCase):
         '''
         msg = 'running raw msg'
         ret = self.run_function('echo {0}'.format(msg), raw=True)
-        self.assertEqual(ret['stdout'], msg + '\n')
+        assert ret['stdout'] == msg + '\n'

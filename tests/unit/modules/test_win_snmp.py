@@ -20,6 +20,7 @@ from tests.support.mock import (
     MagicMock,
     patch,
 )
+import pytest
 
 COMMUNITY_NAMES = {'TestCommunity': 'Read Create'}
 
@@ -36,14 +37,14 @@ class WinSnmpTestCase(TestCase, LoaderModuleMockMixin):
         Test - Get the sysServices types that can be configured.
         '''
         with patch.dict(win_snmp.__salt__):
-            self.assertIsInstance(win_snmp.get_agent_service_types(), list)
+            assert isinstance(win_snmp.get_agent_service_types(), list)
 
     def test_get_permission_types(self):
         '''
         Test - Get the permission types that can be configured for communities.
         '''
         with patch.dict(win_snmp.__salt__):
-            self.assertIsInstance(win_snmp.get_permission_types(), list)
+            assert isinstance(win_snmp.get_permission_types(), list)
 
     def test_get_auth_traps_enabled(self):
         '''
@@ -51,7 +52,7 @@ class WinSnmpTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_value = MagicMock(return_value={'vdata': 1})
         with patch.dict(win_snmp.__salt__, {'reg.read_value': mock_value}):
-            self.assertTrue(win_snmp.get_auth_traps_enabled())
+            assert win_snmp.get_auth_traps_enabled()
 
     def test_set_auth_traps_enabled(self):
         '''
@@ -62,7 +63,7 @@ class WinSnmpTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_snmp.__salt__, {'reg.set_value': mock_value}), \
                 patch('salt.modules.win_snmp.get_auth_traps_enabled',
                       MagicMock(return_value=True)):
-            self.assertTrue(win_snmp.set_auth_traps_enabled(**kwargs))
+            assert win_snmp.set_auth_traps_enabled(**kwargs)
 
     def test_get_community_names(self):
         '''
@@ -73,8 +74,8 @@ class WinSnmpTestCase(TestCase, LoaderModuleMockMixin):
         mock_false = MagicMock(return_value=False)
         with patch.dict(win_snmp.__salt__, {'reg.list_values': mock_ret,
                                             'reg.key_exists': mock_false}):
-            self.assertEqual(win_snmp.get_community_names(),
-                             COMMUNITY_NAMES)
+            assert win_snmp.get_community_names() == \
+                             COMMUNITY_NAMES
 
     def test_get_community_names_gpo(self):
         '''
@@ -85,8 +86,8 @@ class WinSnmpTestCase(TestCase, LoaderModuleMockMixin):
         mock_false = MagicMock(return_value=True)
         with patch.dict(win_snmp.__salt__, {'reg.list_values': mock_ret,
                                             'reg.key_exists': mock_false}):
-            self.assertEqual(win_snmp.get_community_names(),
-                             {'TestCommunity': 'Managed by GPO'})
+            assert win_snmp.get_community_names() == \
+                             {'TestCommunity': 'Managed by GPO'}
 
     def test_set_community_names(self):
         '''
@@ -99,7 +100,7 @@ class WinSnmpTestCase(TestCase, LoaderModuleMockMixin):
                                             'reg.key_exists': mock_false}), \
                 patch('salt.modules.win_snmp.get_community_names',
                       MagicMock(return_value=COMMUNITY_NAMES)):
-            self.assertTrue(win_snmp.set_community_names(**kwargs))
+            assert win_snmp.set_community_names(**kwargs)
 
     def test_set_community_names_gpo(self):
         '''
@@ -111,4 +112,5 @@ class WinSnmpTestCase(TestCase, LoaderModuleMockMixin):
                                             'reg.key_exists': mock_true}), \
              patch('salt.modules.win_snmp.get_community_names',
                    MagicMock(return_value=COMMUNITY_NAMES)):
-            self.assertRaises(CommandExecutionError, win_snmp.set_community_names, **kwargs)
+            with pytest.raises(CommandExecutionError):
+                win_snmp.set_community_names(**kwargs)

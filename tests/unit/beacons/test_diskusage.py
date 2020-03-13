@@ -61,15 +61,15 @@ class DiskUsageBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         ret = diskusage.validate(config)
 
-        self.assertEqual(ret, (False, 'Configuration for diskusage beacon must'
-                                      ' be a list.'))
+        assert ret == (False, 'Configuration for diskusage beacon must'
+                                      ' be a list.')
 
     def test_empty_config(self):
         config = [{}]
 
         ret = diskusage.validate(config)
 
-        self.assertEqual(ret, (True, 'Valid beacon configuration'))
+        assert ret == (True, 'Valid beacon configuration')
 
     def test_diskusage_match(self):
         disk_usage_mock = Mock(side_effect=STUB_DISK_USAGE)
@@ -82,10 +82,10 @@ class DiskUsageBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
             ret = diskusage.validate(config)
 
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             ret = diskusage.beacon(config)
-            self.assertEqual(ret, [{'diskusage': 50, 'mount': '/'}])
+            assert ret == [{'diskusage': 50, 'mount': '/'}]
 
     def test_diskusage_nomatch(self):
         disk_usage_mock = Mock(side_effect=STUB_DISK_USAGE)
@@ -98,10 +98,10 @@ class DiskUsageBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
             ret = diskusage.validate(config)
 
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             ret = diskusage.beacon(config)
-            self.assertNotEqual(ret, [{'diskusage': 50, 'mount': '/'}])
+            assert ret != [{'diskusage': 50, 'mount': '/'}]
 
     def test_diskusage_match_regex(self):
         disk_usage_mock = Mock(side_effect=STUB_DISK_USAGE)
@@ -114,10 +114,10 @@ class DiskUsageBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
             ret = diskusage.validate(config)
 
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             ret = diskusage.beacon(config)
-            self.assertEqual(ret, [{'diskusage': 50, 'mount': '/'}])
+            assert ret == [{'diskusage': 50, 'mount': '/'}]
 
     def test_diskusage_windows_single_slash(self):
         r'''
@@ -133,10 +133,10 @@ class DiskUsageBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
                 ret = diskusage.validate(config)
 
-                self.assertEqual(ret, (True, 'Valid beacon configuration'))
+                assert ret == (True, 'Valid beacon configuration')
 
                 ret = diskusage.beacon(config)
-                self.assertEqual(ret, [{'diskusage': 50, 'mount': 'C:\\'}])
+                assert ret == [{'diskusage': 50, 'mount': 'C:\\'}]
 
     def test_diskusage_windows_double_slash(self):
         '''
@@ -152,10 +152,10 @@ class DiskUsageBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
                 ret = diskusage.validate(config)
 
-                self.assertEqual(ret, (True, 'Valid beacon configuration'))
+                assert ret == (True, 'Valid beacon configuration')
 
                 ret = diskusage.beacon(config)
-                self.assertEqual(ret, [{'diskusage': 50, 'mount': 'C:\\'}])
+                assert ret == [{'diskusage': 50, 'mount': 'C:\\'}]
 
     def test_diskusage_windows_lowercase(self):
         r'''
@@ -171,10 +171,10 @@ class DiskUsageBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
                 ret = diskusage.validate(config)
 
-                self.assertEqual(ret, (True, 'Valid beacon configuration'))
+                assert ret == (True, 'Valid beacon configuration')
 
                 ret = diskusage.beacon(config)
-                self.assertEqual(ret, [{'diskusage': 50, 'mount': 'C:\\'}])
+                assert ret == [{'diskusage': 50, 'mount': 'C:\\'}]
 
     def test_diskusage_windows_match_regex(self):
         disk_usage_mock = Mock(return_value=WINDOWS_STUB_DISK_USAGE)
@@ -187,9 +187,9 @@ class DiskUsageBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
                 ret = diskusage.validate(config)
 
-                self.assertEqual(ret, (True, 'Valid beacon configuration'))
+                assert ret == (True, 'Valid beacon configuration')
 
                 ret = diskusage.beacon(config)
                 _expected = [{u'diskusage': 50, u'mount': 'C:\\'},
                              {u'diskusage': 50, u'mount': 'D:\\'}]
-                self.assertEqual(ret, _expected)
+                assert ret == _expected

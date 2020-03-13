@@ -112,7 +112,7 @@ class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test list_servers
         '''
-        self.assertTrue(haproxyconn.list_servers('mysql'))
+        assert haproxyconn.list_servers('mysql')
 
     # 'enable_server' function tests: 1
 
@@ -120,7 +120,7 @@ class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test enable_server
         '''
-        self.assertTrue(haproxyconn.enable_server('web1.salt.com', 'www'))
+        assert haproxyconn.enable_server('web1.salt.com', 'www')
 
     # 'disable_server' function tests: 1
 
@@ -128,7 +128,7 @@ class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test disable_server
         '''
-        self.assertTrue(haproxyconn.disable_server('db1.salt.com', 'mysql'))
+        assert haproxyconn.disable_server('db1.salt.com', 'mysql')
 
     # 'get_weight' function tests: 1
 
@@ -136,7 +136,7 @@ class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test get the weight of a server
         '''
-        self.assertTrue(haproxyconn.get_weight('db1.salt.com', 'mysql'))
+        assert haproxyconn.get_weight('db1.salt.com', 'mysql')
 
     # 'set_weight' function tests: 1
 
@@ -144,8 +144,8 @@ class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test setting the weight of a given server
         '''
-        self.assertTrue(haproxyconn.set_weight('db1.salt.com', 'mysql',
-                                               weight=11))
+        assert haproxyconn.set_weight('db1.salt.com', 'mysql',
+                                               weight=11)
 
     # 'show_frontends' function tests: 1
 
@@ -153,16 +153,14 @@ class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test print all frontends received from the HAProxy socket
         '''
-        self.assertTrue(haproxyconn.show_frontends())
+        assert haproxyconn.show_frontends()
 
     def test_list_frontends(self):
         '''
         Test listing all frontends
         '''
-        self.assertEqual(
-            sorted(haproxyconn.list_frontends()),
+        assert sorted(haproxyconn.list_frontends()) == \
             sorted(['frontend-alpha', 'frontend-beta', 'frontend-gamma'])
-        )
 
     # 'show_backends' function tests: 1
 
@@ -170,16 +168,14 @@ class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test print all backends received from the HAProxy socket
         '''
-        self.assertTrue(haproxyconn.show_backends())
+        assert haproxyconn.show_backends()
 
     def test_list_backends(self):
         '''
         Test listing of all backends
         '''
-        self.assertEqual(
-            sorted(haproxyconn.list_backends()),
+        assert sorted(haproxyconn.list_backends()) == \
             sorted(['backend-alpha', 'backend-beta', 'backend-gamma'])
-        )
 
     def test_get_backend(self):
         '''
@@ -199,16 +195,16 @@ class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
                 'bout': 0
             }
         }
-        self.assertDictEqual(haproxyconn.get_backend('test'), expected_data)
+        assert haproxyconn.get_backend('test') == expected_data
 
     def test_wait_state_true(self):
         '''
         Test a successful wait for state
         '''
-        self.assertTrue(haproxyconn.wait_state('test', 'server01'))
+        assert haproxyconn.wait_state('test', 'server01')
 
     def test_wait_state_false(self):
         '''
         Test a failed wait for state, with a timeout of 0
         '''
-        self.assertFalse(haproxyconn.wait_state('test', 'server02', 'up', 0))
+        assert not haproxyconn.wait_state('test', 'server02', 'up', 0)

@@ -91,13 +91,11 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
             )
             c1 = get_crontab()
             set_crontab(L + '* * * * * ls\n')
-            self.assertEqual(
-                c1,
-                '# Lines below here are managed by Salt, do not edit\n'
-                '# SALT_CRON_IDENTIFIER:booh\n'
-                '* * * * * ls\n'
+            assert c1 == \
+                '# Lines below here are managed by Salt, do not edit\n' \
+                '# SALT_CRON_IDENTIFIER:booh\n' \
+                '* * * * * ls\n' \
                 '* * * * * ls'
-            )
             # whenever we have an identifier, hourray even without comment
             # we can match and edit the crontab in place
             # without cluttering the crontab with new cmds
@@ -117,12 +115,10 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
             )
             c5 = get_crontab()
             set_crontab(L + '* * * * * ls\n')
-            self.assertEqual(
-                c5,
-                '# Lines below here are managed by Salt, do not edit\n'
-                '# SALT_CRON_IDENTIFIER:bar\n'
+            assert c5 == \
+                '# Lines below here are managed by Salt, do not edit\n' \
+                '# SALT_CRON_IDENTIFIER:bar\n' \
                 '* * * * * ls\n'
-            )
             # we can even change the other parameters as well
             # thx to the id
             set_crontab(
@@ -139,20 +135,18 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                 identifier='bar',
             )
             c6 = get_crontab()
-            self.assertEqual(
-                c6,
-                '# Lines below here are managed by Salt, do not edit\n'
-                '# moo SALT_CRON_IDENTIFIER:bar\n'
+            assert c6 == \
+                '# Lines below here are managed by Salt, do not edit\n' \
+                '# moo SALT_CRON_IDENTIFIER:bar\n' \
                 '1 2 3 4 5 foo'
-            )
 
     def test__unicode_match(self):
         with patch.object(builtins, '__salt_system_encoding__', 'utf-8'):
-            self.assertTrue(cron._cron_matched({'identifier': '1'}, 'foo', 1))
-            self.assertTrue(cron._cron_matched({'identifier': 'é'}, 'foo', 'é'))
-            self.assertTrue(cron._cron_matched({'identifier': u'é'}, 'foo', 'é'))
-            self.assertTrue(cron._cron_matched({'identifier': 'é'}, 'foo', u'é'))
-            self.assertTrue(cron._cron_matched({'identifier': u'é'}, 'foo', u'é'))
+            assert cron._cron_matched({'identifier': '1'}, 'foo', 1)
+            assert cron._cron_matched({'identifier': 'é'}, 'foo', 'é')
+            assert cron._cron_matched({'identifier': u'é'}, 'foo', 'é')
+            assert cron._cron_matched({'identifier': 'é'}, 'foo', u'é')
+            assert cron._cron_matched({'identifier': u'é'}, 'foo', u'é')
 
     def test__need_changes_old(self):
         '''
@@ -180,12 +174,10 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
             )
             c1 = get_crontab()
             set_crontab(L + '* * * * * ls\n')
-            self.assertEqual(
-                c1,
-                '# Lines below here are managed by Salt, do not edit\n'
-                '* * * * * ls\n'
+            assert c1 == \
+                '# Lines below here are managed by Salt, do not edit\n' \
+                '* * * * * ls\n' \
                 '\n'
-            )
             cron.set_job(
                 user='root',
                 minute='*',
@@ -198,11 +190,9 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                 identifier=cron.SALT_CRON_NO_IDENTIFIER,
             )
             c2 = get_crontab()
-            self.assertEqual(
-                c2,
-                '# Lines below here are managed by Salt, do not edit\n'
+            assert c2 == \
+                '# Lines below here are managed by Salt, do not edit\n' \
                 '# foo\n* * * * * ls'
-            )
             set_crontab(L + '* * * * * ls\n')
             cron.set_job(
                 user='root',
@@ -216,13 +206,11 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                 identifier='bar',
             )
             c3 = get_crontab()
-            self.assertEqual(
-                c3,
-                '# Lines below here are managed by Salt, do not edit\n'
-                '* * * * * ls\n'
-                '# foo SALT_CRON_IDENTIFIER:bar\n'
+            assert c3 == \
+                '# Lines below here are managed by Salt, do not edit\n' \
+                '* * * * * ls\n' \
+                '# foo SALT_CRON_IDENTIFIER:bar\n' \
                 '* * * * * lsa'
-            )
             set_crontab(L + '* * * * * ls\n')
             cron.set_job(
                 user='root',
@@ -236,13 +224,11 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                 identifier='bar',
             )
             c4 = get_crontab()
-            self.assertEqual(
-                c4,
-                '# Lines below here are managed by Salt, do not edit\n'
-                '* * * * * ls\n'
-                '# foo SALT_CRON_IDENTIFIER:bar\n'
+            assert c4 == \
+                '# Lines below here are managed by Salt, do not edit\n' \
+                '* * * * * ls\n' \
+                '# foo SALT_CRON_IDENTIFIER:bar\n' \
                 '* * * * * foo'
-            )
             set_crontab(L + '* * * * * ls\n')
             cron.set_job(
                 user='root',
@@ -256,12 +242,10 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                 identifier='bbar',
             )
             c4 = get_crontab()
-            self.assertEqual(
-                c4,
-                '# Lines below here are managed by Salt, do not edit\n'
-                '# foo SALT_CRON_IDENTIFIER:bbar\n'
+            assert c4 == \
+                '# Lines below here are managed by Salt, do not edit\n' \
+                '# foo SALT_CRON_IDENTIFIER:bbar\n' \
                 '* * * * * ls'
-            )
 
     def test__issue10959(self):
         '''
@@ -297,7 +281,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
             # the filtering is done on save, we reflect in listing
             # the same that we have in a file, no matter what we
             # have
-            self.assertEqual(crons1, {
+            assert crons1 == {
                 'crons': [
                     {'cmd': 'ls', 'comment': 'uoo', 'daymonth': '*',
                      'dayweek': '*', 'hour': '*', 'identifier': 'NO ID SET',
@@ -348,7 +332,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                 ],
                 'env': [],
                 'pre': [],
-                'special': []})
+                'special': []}
             # so yood so far, no problem for now, trying to save the
             # multilines without id crons now
             inc_tests = [
@@ -480,13 +464,12 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
             set_crontab('')
             for idx, cr in enumerate(crons1['crons']):
                 cron.set_job('root', **cr)
-                self.assertEqual(
-                    get_crontab(),
+                assert get_crontab() == \
                     inc_tests[idx], (
                         "idx {0}\n'{1}'\n != \n'{2}'\n\n\n"
                         "\'{1}\' != \'{2}\'"
                     ).format(
-                        idx, get_crontab(), inc_tests[idx]))
+                        idx, get_crontab(), inc_tests[idx])
 
     def test_list_tab_commented_cron_jobs(self):
         '''
@@ -508,7 +491,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                 '# cron_4 SALT_CRON_IDENTIFIER:cron_4\n0 * * * * my_cmd_4\n'
             )
             crons1 = cron.list_tab('root')
-            self.assertEqual(crons1, {
+            assert crons1 == {
                 'crons': [
                     {'cmd': 'my_cmd_1', 'comment': 'cron_1', 'daymonth': '*',
                      'dayweek': '*', 'hour': '*', 'identifier': 'cron_1',
@@ -526,7 +509,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                 ],
                 'env': [],
                 'pre': ['# An unmanaged commented cron job', '#0 * * * * /bin/true'],
-                'special': []})
+                'special': []}
 
     def test_cron_extra_spaces(self):
         '''
@@ -548,7 +531,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                     'env': [{'name': 'TEST_VAR', 'value': '"a string with plenty of spaces"'}],
                     'pre': [''],
                     'special': []}
-            self.assertEqual(eret, ret)
+            assert eret == ret
 
     def test_cron_at_sign(self):
         with patch.dict(cron.__grains__, {'os': None}), \
@@ -563,7 +546,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                                  u'commented': False,
                                  u'identifier': u'echo "cron with @ sign"',
                                  u'spec': u'@daily'}]}
-            self.assertDictEqual(eret, ret)
+            assert eret == ret
 
     def test__load_tab(self):
         with patch.dict(cron.__grains__, {'os_family': 'Solaris'}), \
@@ -583,11 +566,9 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
             crons3 = cron.list_tab('root')
             crons4 = cron.list_tab('root')
             crons5 = cron.list_tab('root')
-            self.assertEqual(
-                crons1,
-                {'pre': [], 'crons': [], 'env': [], 'special': []})
-            self.assertEqual(
-                crons2['crons'][0],
+            assert crons1 == \
+                {'pre': [], 'crons': [], 'env': [], 'special': []}
+            assert crons2['crons'][0] == \
                 {'comment': None,
                  'commented': False,
                  'dayweek': '*',
@@ -596,9 +577,8 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                  'cmd': 'ls',
                  'daymonth': '*',
                  'minute': '*',
-                 'month': '*'})
-            self.assertEqual(
-                crons3['crons'][0],
+                 'month': '*'}
+            assert crons3['crons'][0] == \
                 {'comment': 'commented',
                  'commented': True,
                  'dayweek': '*',
@@ -607,9 +587,8 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                  'cmd': 'ls',
                  'daymonth': '*',
                  'minute': '*',
-                 'month': '*'})
-            self.assertEqual(
-                crons4['crons'][0],
+                 'month': '*'}
+            assert crons4['crons'][0] == \
                 {'comment': 'foo',
                  'commented': False,
                  'dayweek': '*',
@@ -618,9 +597,8 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                  'cmd': 'ls',
                  'daymonth': '*',
                  'minute': '*',
-                 'month': '*'})
-            self.assertEqual(
-                crons5['crons'][0],
+                 'month': '*'}
+            assert crons5['crons'][0] == \
                 {'comment': 'foo',
                  'commented': False,
                  'dayweek': '*',
@@ -629,7 +607,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                  'cmd': 'ls',
                  'daymonth': '*',
                  'minute': '*',
-                 'month': '*'})
+                 'month': '*'}
 
     def test_write_cron_file_root_rh(self):
         '''
@@ -883,42 +861,42 @@ class PsTestCase(TestCase, LoaderModuleMockMixin):
         return {cron: {}}
 
     def test__needs_change(self):
-        self.assertTrue(cron._needs_change(True, False))
+        assert cron._needs_change(True, False)
 
     def test__needs_change_random(self):
         '''
         Assert that if the new var is 'random' and old is '* that we return True
         '''
-        self.assertTrue(cron._needs_change('*', 'random'))
+        assert cron._needs_change('*', 'random')
 
     ## Still trying to figure this one out.
     # def test__render_tab(self):
     #     pass
     def test__get_cron_cmdstr(self):
-        self.assertEqual('crontab /tmp', cron._get_cron_cmdstr(STUB_PATH))
+        assert 'crontab /tmp' == cron._get_cron_cmdstr(STUB_PATH)
 
     # Test get_cron_cmdstr() when user is added
     def test__get_cron_cmdstr_user(self):
         '''
         Passes if a user is added to crontab command
         '''
-        self.assertEqual('crontab -u root /tmp', cron._get_cron_cmdstr(STUB_PATH, STUB_USER))
+        assert 'crontab -u root /tmp' == cron._get_cron_cmdstr(STUB_PATH, STUB_USER)
 
     def test__date_time_match(self):
         '''
         Passes if a match is found on all elements. Note the conversions to strings here!
         :return:
         '''
-        self.assertTrue(cron._date_time_match(STUB_CRON_TIMESTAMP,
+        assert cron._date_time_match(STUB_CRON_TIMESTAMP,
                                     minute=STUB_CRON_TIMESTAMP['minute'],
                                     hour=STUB_CRON_TIMESTAMP['hour'],
                                     daymonth=STUB_CRON_TIMESTAMP['daymonth'],
                                     dayweek=STUB_CRON_TIMESTAMP['dayweek']
-                                    ))
+                                    )
 
     def test_list_tab(self):
         with patch('salt.modules.cron.raw_cron', new=MagicMock(return_value=STUB_SIMPLE_RAW_CRON)):
-            self.assertDictEqual(STUB_SIMPLE_CRON_DICT, cron.list_tab('DUMMY_USER'))
+            assert STUB_SIMPLE_CRON_DICT == cron.list_tab('DUMMY_USER')
 
     def test_set_special(self):
         with patch('salt.modules.cron._write_cron_lines') as write_cron_lines_mock, \
@@ -936,7 +914,7 @@ class PsTestCase(TestCase, LoaderModuleMockMixin):
                                     daymonth=STUB_CRON_TIMESTAMP['daymonth'],
                                     dayweek=STUB_CRON_TIMESTAMP['dayweek'],
                                     month=STUB_CRON_TIMESTAMP['month'])
-        self.assertDictEqual(ret, STUB_CRON_TIMESTAMP)
+        assert ret == STUB_CRON_TIMESTAMP
 
     def test__get_cron_date_time_daymonth_max(self):
         ret = cron._get_cron_date_time(minute='random',
@@ -944,11 +922,11 @@ class PsTestCase(TestCase, LoaderModuleMockMixin):
                                        daymonth='random',
                                        dayweek='random',
                                        month='random')
-        self.assertTrue(int(ret['minute']) in range(0, 60))
-        self.assertTrue(int(ret['hour']) in range(0, 24))
-        self.assertTrue(int(ret['daymonth']) in range(1, 32))
-        self.assertTrue(int(ret['dayweek']) in range(0, 8))
-        self.assertTrue(int(ret['month']) in range(1, 13))
+        assert int(ret['minute']) in range(0, 60)
+        assert int(ret['hour']) in range(0, 24)
+        assert int(ret['daymonth']) in range(1, 32)
+        assert int(ret['dayweek']) in range(0, 8)
+        assert int(ret['month']) in range(1, 13)
 
     def test_set_job(self):
         with patch.dict(cron.__grains__, {'os': None}), \
@@ -973,7 +951,7 @@ class PsTestCase(TestCase, LoaderModuleMockMixin):
                               patch('salt.modules.cron.raw_cron',
                                     new=MagicMock(return_value=STUB_AT_SIGN)):
             ret = cron.rm_special('root', 'echo "cron with @ sign"', special='@daily', identifier='echo "cron with @ sign"')
-            self.assertEqual('removed', ret)
+            assert 'removed' == ret
 
     def test_rm_special_default_special(self):
         with patch.dict(cron.__grains__, {'os': None}), \
@@ -982,7 +960,7 @@ class PsTestCase(TestCase, LoaderModuleMockMixin):
                               patch('salt.modules.cron.raw_cron',
                                     new=MagicMock(return_value=STUB_AT_SIGN)):
             ret = cron.rm_special('root', 'echo "cron with @ sign"', identifier='echo "cron with @ sign"')
-            self.assertEqual('removed', ret)
+            assert 'removed' == ret
 
     def test_rm_special_absent(self):
         with patch.dict(cron.__grains__, {'os': None}), \
@@ -991,7 +969,7 @@ class PsTestCase(TestCase, LoaderModuleMockMixin):
                               patch('salt.modules.cron.raw_cron',
                                     new=MagicMock(return_value=STUB_AT_SIGN)):
             ret = cron.rm_special('root', 'echo "there is no job"', identifier='echo "there is no job"')
-            self.assertEqual('absent', ret)
+            assert 'absent' == ret
 
     def test_rm_job_is_absent(self):
         with patch.dict(cron.__grains__, {'os': None}), \
@@ -1000,4 +978,4 @@ class PsTestCase(TestCase, LoaderModuleMockMixin):
                               patch('salt.modules.cron.raw_cron',
                                     new=MagicMock(return_value=STUB_SIMPLE_RAW_CRON)):
             ret = cron.rm_job('DUMMY_USER', '/bin/echo NOT A DROID', 1, 2, 3, 4, 5)
-            self.assertEqual('absent', ret)
+            assert 'absent' == ret

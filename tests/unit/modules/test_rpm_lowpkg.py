@@ -33,7 +33,7 @@ class RpmTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='')
         with patch.dict(rpm.__salt__, {'cmd.run': mock}):
-            self.assertDictEqual(rpm.list_pkgs(), {})
+            assert rpm.list_pkgs() == {}
 
     # 'verify' function tests: 1
 
@@ -47,7 +47,7 @@ class RpmTestCase(TestCase, LoaderModuleMockMixin):
                                        'retcode': 0,
                                        'pid': 12345})
         with patch.dict(rpm.__salt__, {'cmd.run_all': mock}):
-            self.assertDictEqual(rpm.verify('httpd'), {})
+            assert rpm.verify('httpd') == {}
 
     # 'file_list' function tests: 1
 
@@ -57,8 +57,8 @@ class RpmTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='')
         with patch.dict(rpm.__salt__, {'cmd.run': mock}):
-            self.assertDictEqual(rpm.file_list('httpd'),
-                                 {'errors': [], 'files': []})
+            assert rpm.file_list('httpd') == \
+                                 {'errors': [], 'files': []}
 
     # 'file_dict' function tests: 1
 
@@ -68,8 +68,8 @@ class RpmTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='')
         with patch.dict(rpm.__salt__, {'cmd.run': mock}):
-            self.assertDictEqual(rpm.file_dict('httpd'),
-                                 {'errors': [], 'packages': {}})
+            assert rpm.file_dict('httpd') == \
+                                 {'errors': [], 'packages': {}}
 
     # 'owner' function tests: 1
 
@@ -77,20 +77,20 @@ class RpmTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it return the name of the package that owns the file.
         '''
-        self.assertEqual(rpm.owner(), '')
+        assert rpm.owner() == ''
 
         ret = 'file /usr/bin/salt-jenkins-build is not owned by any package'
         mock = MagicMock(return_value=ret)
         with patch.dict(rpm.__salt__, {'cmd.run_stdout': mock}):
-            self.assertEqual(rpm.owner('/usr/bin/salt-jenkins-build'), '')
+            assert rpm.owner('/usr/bin/salt-jenkins-build') == ''
 
         ret = {'/usr/bin/vim': 'vim-enhanced-7.4.160-1.e17.x86_64',
                '/usr/bin/python': 'python-2.7.5-16.e17.x86_64'}
         mock = MagicMock(side_effect=['python-2.7.5-16.e17.x86_64',
                                       'vim-enhanced-7.4.160-1.e17.x86_64'])
         with patch.dict(rpm.__salt__, {'cmd.run_stdout': mock}):
-            self.assertDictEqual(rpm.owner('/usr/bin/python', '/usr/bin/vim'),
-                                 ret)
+            assert rpm.owner('/usr/bin/python', '/usr/bin/vim') == \
+                                 ret
 
     # 'checksum' function tests: 1
 
@@ -106,7 +106,7 @@ class RpmTestCase(TestCase, LoaderModuleMockMixin):
 
         mock = MagicMock(side_effect=[True, 0, True, 1, False, 0])
         with patch.dict(rpm.__salt__, {'file.file_exists': mock, 'cmd.retcode': mock}):
-            self.assertDictEqual(rpm.checksum("file1.rpm", "file2.rpm", "file3.rpm"), ret)
+            assert rpm.checksum("file1.rpm", "file2.rpm", "file3.rpm") == ret
 
     def test_version_cmp_rpm(self):
         '''
@@ -116,7 +116,7 @@ class RpmTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.rpm_lowpkg.rpm.labelCompare', MagicMock(return_value=0)), \
                 patch('salt.modules.rpm_lowpkg.HAS_RPM', True):
-            self.assertEqual(0, rpm.version_cmp('1', '2'))  # mock returns 0, which means RPM was called
+            assert 0 == rpm.version_cmp('1', '2')  # mock returns 0, which means RPM was called
 
     def test_version_cmp_fallback(self):
         '''
@@ -126,4 +126,4 @@ class RpmTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.rpm_lowpkg.rpm.labelCompare', MagicMock(return_value=0)), \
                 patch('salt.modules.rpm_lowpkg.HAS_RPM', False):
-            self.assertEqual(-1, rpm.version_cmp('1', '2'))  # mock returns -1, a python implementation was called
+            assert -1 == rpm.version_cmp('1', '2')  # mock returns -1, a python implementation was called

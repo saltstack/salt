@@ -43,7 +43,7 @@ class SaltVersionTestCase(TestCase):
 
         with patch('salt.version.SaltStackVersion.LNAMES', {'neon': (2019, 8)}):
             sv = salt.version.SaltStackVersion.from_name('Neon')
-            self.assertEqual(sv.string, '2019.8.0')
+            assert sv.string == '2019.8.0'
 
     # get_release_number tests: 3
 

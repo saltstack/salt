@@ -89,7 +89,7 @@ class JBoss7CliTestCase(TestCase, LoaderModuleMockMixin):
     def test_controller_authentication(self):
         jboss7_cli.run_operation(self.jboss_config, 'some cli operation')
 
-        self.assertEqual(self.cmd.get_last_command(), '/opt/jboss/jboss-eap-6.0.1/bin/jboss-cli.sh --connect --controller="123.234.345.456:9999" --user="jbossadm" --password="jbossadm" --command="some cli operation"')
+        assert self.cmd.get_last_command() == '/opt/jboss/jboss-eap-6.0.1/bin/jboss-cli.sh --connect --controller="123.234.345.456:9999" --user="jbossadm" --password="jbossadm" --command="some cli operation"'
 
     def test_controller_without_authentication(self):
         jboss_config = {
@@ -98,13 +98,13 @@ class JBoss7CliTestCase(TestCase, LoaderModuleMockMixin):
         }
         jboss7_cli.run_operation(jboss_config, 'some cli operation')
 
-        self.assertEqual(self.cmd.get_last_command(), '/opt/jboss/jboss-eap-6.0.1/bin/jboss-cli.sh --connect --controller="123.234.345.456:9999" --command="some cli operation"')
+        assert self.cmd.get_last_command() == '/opt/jboss/jboss-eap-6.0.1/bin/jboss-cli.sh --connect --controller="123.234.345.456:9999" --command="some cli operation"'
 
     def test_operation_execution(self):
         operation = r'sample_operation'
         jboss7_cli.run_operation(self.jboss_config, operation)
 
-        self.assertEqual(self.cmd.get_last_command(), r'/opt/jboss/jboss-eap-6.0.1/bin/jboss-cli.sh --connect --controller="123.234.345.456:9999" --user="jbossadm" --password="jbossadm" --command="sample_operation"')
+        assert self.cmd.get_last_command() == r'/opt/jboss/jboss-eap-6.0.1/bin/jboss-cli.sh --connect --controller="123.234.345.456:9999" --user="jbossadm" --password="jbossadm" --command="sample_operation"'
 
     def test_handling_jboss_error(self):
         def command_response(command):
@@ -124,8 +124,8 @@ class JBoss7CliTestCase(TestCase, LoaderModuleMockMixin):
 
         result = jboss7_cli.run_operation(self.jboss_config, 'some cli command')
 
-        self.assertFalse(result['success'])
-        self.assertEqual(result['err_code'], 'JBAS014807')
+        assert not result['success']
+        assert result['err_code'] == 'JBAS014807'
 
     def test_handling_cmd_not_exists(self):
         def command_response(command):
@@ -139,7 +139,7 @@ class JBoss7CliTestCase(TestCase, LoaderModuleMockMixin):
             # should throw an exception
             assert False
         except CommandExecutionError as err:
-            self.assertTrue(six.text_type(err).startswith('Could not execute jboss-cli.sh script'))
+            assert six.text_type(err).startswith('Could not execute jboss-cli.sh script')
 
     def test_handling_other_cmd_error(self):
         def command_response(command):
@@ -153,7 +153,7 @@ class JBoss7CliTestCase(TestCase, LoaderModuleMockMixin):
             # should throw an exception
             self.fail('An exception should be thrown')
         except CommandExecutionError as err:
-            self.assertTrue(six.text_type(err).startswith('Command execution failed'))
+            assert six.text_type(err).startswith('Command execution failed')
 
     def test_matches_cli_output(self):
         text = '''{
@@ -162,12 +162,12 @@ class JBoss7CliTestCase(TestCase, LoaderModuleMockMixin):
             }
             '''
 
-        self.assertTrue(jboss7_cli._is_cli_output(text))
+        assert jboss7_cli._is_cli_output(text)
 
     def test_not_matches_cli_output(self):
         text = '''Some error '''
 
-        self.assertFalse(jboss7_cli._is_cli_output(text))
+        assert not jboss7_cli._is_cli_output(text)
 
     def test_parse_flat_dictionary(self):
         text = '''{
@@ -177,9 +177,9 @@ class JBoss7CliTestCase(TestCase, LoaderModuleMockMixin):
 
         result = jboss7_cli._parse(text)
 
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result['key1'], 'value1')
-        self.assertEqual(result['key2'], 'value2')
+        assert len(result) == 2
+        assert result['key1'] == 'value1'
+        assert result['key2'] == 'value2'
 
     def test_parse_nested_dictionary(self):
         text = '''{
@@ -191,10 +191,10 @@ class JBoss7CliTestCase(TestCase, LoaderModuleMockMixin):
 
         result = jboss7_cli._parse(text)
 
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result['key1'], 'value1')
-        self.assertEqual(len(result['key2']), 1)
-        self.assertEqual(result['key2']['nested_key1'], 'nested_value1')
+        assert len(result) == 2
+        assert result['key1'] == 'value1'
+        assert len(result['key2']) == 1
+        assert result['key2']['nested_key1'] == 'nested_value1'
 
     def test_parse_string_after_dict(self):
         text = '''{
@@ -206,8 +206,8 @@ class JBoss7CliTestCase(TestCase, LoaderModuleMockMixin):
 
         result = jboss7_cli._parse(text)
 
-        self.assertTrue(result['result']['jta'])
-        self.assertEqual(result['response-headers']['process-state'], 'reload-required')
+        assert result['result']['jta']
+        assert result['response-headers']['process-state'] == 'reload-required'
 
     def test_parse_all_datatypes(self):
         text = '''{
@@ -224,13 +224,13 @@ class JBoss7CliTestCase(TestCase, LoaderModuleMockMixin):
 
         result = jboss7_cli._parse(text)
 
-        self.assertEqual(result['outcome'], 'success')
-        self.assertIsNone(result['result']['allocation-retry'])
-        self.assertEqual(result['result']['connection-url'], 'jdbc:mysql://localhost:3306/appdb')
-        self.assertEqual(result['result']['driver-name'], 'mysql')
-        self.assertEqual(result['result']['enabled'], False)
-        self.assertTrue(result['result']['jta'])
-        self.assertEqual(result['response-headers']['process-state'], 'reload-required')
+        assert result['outcome'] == 'success'
+        assert result['result']['allocation-retry'] is None
+        assert result['result']['connection-url'] == 'jdbc:mysql://localhost:3306/appdb'
+        assert result['result']['driver-name'] == 'mysql'
+        assert result['result']['enabled'] is False
+        assert result['result']['jta']
+        assert result['response-headers']['process-state'] == 'reload-required'
 
     def test_multiline_strings_with_escaped_quotes(self):
         text = r'''{
@@ -245,13 +245,13 @@ class JBoss7CliTestCase(TestCase, LoaderModuleMockMixin):
 
         result = jboss7_cli._parse(text)
 
-        self.assertEqual(result['outcome'], 'failed')
-        self.assertTrue(result['rolled-back'])
-        self.assertEqual(result['response-headers']['process-state'], 'reload-required')
-        self.assertEqual(result['failure-description'], r'''JBAS014807: Management resource '[
+        assert result['outcome'] == 'failed'
+        assert result['rolled-back']
+        assert result['response-headers']['process-state'] == 'reload-required'
+        assert result['failure-description'] == r'''JBAS014807: Management resource '[
             (\"subsystem\" => \"datasources\"),
             (\"data-source\" => \"asc\")
-        ]' not found''')
+        ]' not found'''
 
     def test_handling_double_backslash_in_return_values(self):
         text = r'''{
@@ -264,9 +264,9 @@ class JBoss7CliTestCase(TestCase, LoaderModuleMockMixin):
 
         result = jboss7_cli._parse(text)
 
-        self.assertEqual(result['outcome'], 'success')
-        self.assertEqual(result['result']['binding-type'], 'simple')
-        self.assertEqual(result['result']['value'], r'DOMAIN\foo')
+        assert result['outcome'] == 'success'
+        assert result['result']['binding-type'] == 'simple'
+        assert result['result']['value'] == r'DOMAIN\foo'
 
     def test_numbers_without_quotes(self):
         text = r'''{
@@ -279,9 +279,9 @@ class JBoss7CliTestCase(TestCase, LoaderModuleMockMixin):
 
         result = jboss7_cli._parse(text)
 
-        self.assertEqual(result['outcome'], 'success')
-        self.assertEqual(result['result']['min-pool-size'], 1233)
-        self.assertIsNone(result['result']['new-connection-sql'])
+        assert result['outcome'] == 'success'
+        assert result['result']['min-pool-size'] == 1233
+        assert result['result']['new-connection-sql'] is None
 
     def test_all_datasource_properties(self):
         text = r'''{
@@ -344,11 +344,11 @@ class JBoss7CliTestCase(TestCase, LoaderModuleMockMixin):
 
         result = jboss7_cli._parse(text)
 
-        self.assertEqual(result['outcome'], 'success')
-        self.assertEqual(result['result']['max-pool-size'], 20)
-        self.assertIsNone(result['result']['new-connection-sql'])
-        self.assertIsNone(result['result']['url-delimiter'])
-        self.assertFalse(result['result']['validate-on-match'])
+        assert result['outcome'] == 'success'
+        assert result['result']['max-pool-size'] == 20
+        assert result['result']['new-connection-sql'] is None
+        assert result['result']['url-delimiter'] is None
+        assert not result['result']['validate-on-match']
 
     def test_datasource_resource_one_attribute_description(self):
         cli_output = '''{
@@ -376,17 +376,17 @@ class JBoss7CliTestCase(TestCase, LoaderModuleMockMixin):
         '''
         result = jboss7_cli._parse(cli_output)
 
-        self.assertEqual(result['outcome'], 'success')
+        assert result['outcome'] == 'success'
         conn_url_attributes = result['result']['attributes']['connection-url']
-        self.assertEqual(conn_url_attributes['type'], 'STRING')
-        self.assertEqual(conn_url_attributes['description'], 'The JDBC driver connection URL')
-        self.assertTrue(conn_url_attributes['expressions-allowed'])
-        self.assertFalse(conn_url_attributes['nillable'])
-        self.assertEqual(conn_url_attributes['min-length'], 1)
-        self.assertEqual(conn_url_attributes['max-length'], 2147483647)
-        self.assertEqual(conn_url_attributes['access-type'], 'read-write')
-        self.assertEqual(conn_url_attributes['storage'], 'configuration')
-        self.assertEqual(conn_url_attributes['restart-required'], 'no-services')
+        assert conn_url_attributes['type'] == 'STRING'
+        assert conn_url_attributes['description'] == 'The JDBC driver connection URL'
+        assert conn_url_attributes['expressions-allowed']
+        assert not conn_url_attributes['nillable']
+        assert conn_url_attributes['min-length'] == 1
+        assert conn_url_attributes['max-length'] == 2147483647
+        assert conn_url_attributes['access-type'] == 'read-write'
+        assert conn_url_attributes['storage'] == 'configuration'
+        assert conn_url_attributes['restart-required'] == 'no-services'
 
     def test_datasource_complete_resource_description(self):
         cli_output = '''{
@@ -415,34 +415,34 @@ class JBoss7CliTestCase(TestCase, LoaderModuleMockMixin):
 
         result = jboss7_cli._parse(cli_output)
 
-        self.assertEqual(result['outcome'], 'success')
+        assert result['outcome'] == 'success'
         conn_url_attributes = result['result']['attributes']['connection-url']
-        self.assertEqual(conn_url_attributes['type'], 'STRING')
-        self.assertEqual(conn_url_attributes['description'], 'The JDBC driver connection URL')
-        self.assertTrue(conn_url_attributes['expressions-allowed'])
-        self.assertFalse(conn_url_attributes['nillable'])
-        self.assertEqual(conn_url_attributes['min-length'], 1)
-        self.assertEqual(conn_url_attributes['max-length'], 2147483647)
-        self.assertEqual(conn_url_attributes['access-type'], 'read-write')
-        self.assertEqual(conn_url_attributes['storage'], 'configuration')
-        self.assertEqual(conn_url_attributes['restart-required'], 'no-services')
+        assert conn_url_attributes['type'] == 'STRING'
+        assert conn_url_attributes['description'] == 'The JDBC driver connection URL'
+        assert conn_url_attributes['expressions-allowed']
+        assert not conn_url_attributes['nillable']
+        assert conn_url_attributes['min-length'] == 1
+        assert conn_url_attributes['max-length'] == 2147483647
+        assert conn_url_attributes['access-type'] == 'read-write'
+        assert conn_url_attributes['storage'] == 'configuration'
+        assert conn_url_attributes['restart-required'] == 'no-services'
 
     def test_escaping_operation_with_backslashes_and_quotes(self):
         operation = r'/subsystem=naming/binding="java:/sampleapp/web-module/ldap/username":add(binding-type=simple, value="DOMAIN\\\\user")'
         jboss7_cli.run_operation(self.jboss_config, operation)
 
-        self.assertEqual(self.cmd.get_last_command(), r'/opt/jboss/jboss-eap-6.0.1/bin/jboss-cli.sh --connect --controller="123.234.345.456:9999" --user="jbossadm" --password="jbossadm" --command="/subsystem=naming/binding=\"java:/sampleapp/web-module/ldap/username\":add(binding-type=simple, value=\"DOMAIN\\\\\\\\user\")"')
+        assert self.cmd.get_last_command() == r'/opt/jboss/jboss-eap-6.0.1/bin/jboss-cli.sh --connect --controller="123.234.345.456:9999" --user="jbossadm" --password="jbossadm" --command="/subsystem=naming/binding=\"java:/sampleapp/web-module/ldap/username\":add(binding-type=simple, value=\"DOMAIN\\\\\\\\user\")"'
 
     def test_run_operation_wflyctl_error(self):
         call_cli_ret = {'retcode': 1,
                         'stdout': '{"failure-description" => "WFLYCTL0234523: ops"}'}
         with patch('salt.modules.jboss7_cli._call_cli', return_value=call_cli_ret) as _call_cli:
             ret = jboss7_cli.run_operation(None, "ls", False)
-            self.assertEqual(ret['err_code'], "WFLYCTL0234523")
+            assert ret['err_code'] == "WFLYCTL0234523"
 
     def test_run_operation_no_code_error(self):
         call_cli_ret = {'retcode': 1,
                         'stdout': '{"failure-description" => "ERROR234523: ops"}'}
         with patch('salt.modules.jboss7_cli._call_cli', return_value=call_cli_ret) as _call_cli:
             ret = jboss7_cli.run_operation(None, "ls", False)
-            self.assertEqual(ret['err_code'], "-1")
+            assert ret['err_code'] == "-1"

@@ -81,7 +81,7 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
         assert ret.get('result') is True, ret
         with salt.utils.files.fopen(pemfile) as fp:
             result = fp.readlines()
-        self.assertEqual(self.x509_cert_text.splitlines(True), result)
+        assert self.x509_cert_text.splitlines(True) == result
 
     @with_tempfile(suffix='.crt', create=False)
     @with_tempfile(suffix='.key', create=False)

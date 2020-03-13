@@ -63,7 +63,7 @@ class ConsulPillarTestCase(TestCase, LoaderModuleMockMixin):
                 pillar_data = consul_pillar.ext_pillar('testminion', {}, 'consul_config root=test-shared/')
                 consul_pillar.consul_fetch.assert_called_once_with('consul_connection', 'test-shared')
                 assert sorted(pillar_data) == ['sites', 'user']
-                self.assertNotIn('blankvalue', pillar_data['user'])
+                assert 'blankvalue' not in pillar_data['user']
 
     def test_blank_root(self):
         with patch.dict(consul_pillar.__salt__, {'grains.get': MagicMock(return_value=({}))}):
@@ -79,7 +79,7 @@ class ConsulPillarTestCase(TestCase, LoaderModuleMockMixin):
                     'testminion', {}, 'consul_config pillar_root=nested-key/ root=test-shared/ '
                 )
                 assert sorted(pillar_data['nested-key']) == ['sites', 'user']
-                self.assertNotIn('blankvalue', pillar_data['nested-key']['user'])
+                assert 'blankvalue' not in pillar_data['nested-key']['user']
 
     def test_value_parsing(self):
         with patch.dict(consul_pillar.__salt__, {'grains.get': MagicMock(return_value=({}))}):
@@ -98,7 +98,7 @@ class ConsulPillarTestCase(TestCase, LoaderModuleMockMixin):
     def test_dict_merge(self):
         test_dict = {}
         with patch.dict(test_dict, SIMPLE_DICT):
-            self.assertDictEqual(consul_pillar.dict_merge(test_dict, SIMPLE_DICT), SIMPLE_DICT)
+            assert consul_pillar.dict_merge(test_dict, SIMPLE_DICT) == SIMPLE_DICT
         with patch.dict(test_dict, {'key1': {'key3': {'key4': 'value'}}}):
-            self.assertDictEqual(consul_pillar.dict_merge(test_dict, SIMPLE_DICT),
-                                 {'key1': {'key2': 'val1', 'key3': {'key4': 'value'}}})
+            assert consul_pillar.dict_merge(test_dict, SIMPLE_DICT) == \
+                                 {'key1': {'key2': 'val1', 'key3': {'key4': 'value'}}}

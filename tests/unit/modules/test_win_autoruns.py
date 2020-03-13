@@ -41,4 +41,4 @@ class WinAutorunsTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(win_autoruns.__grains__, {'osfullname': mock}):
                 mock = MagicMock(return_value='SALT')
                 with patch.dict(win_autoruns.__salt__, {'cmd.run': mock}):
-                    self.assertDictEqual(win_autoruns.list_(), ret)
+                    assert win_autoruns.list_() == ret

@@ -36,18 +36,18 @@ class DebconfmodTestCase(TestCase, LoaderModuleMockMixin):
 
         comt = ('Context must be formed as a dict')
         ret.update({'comment': comt})
-        self.assertDictEqual(debconfmod.set_file(name, source, context='salt'),
-                             ret)
+        assert debconfmod.set_file(name, source, context='salt') == \
+                             ret
 
         comt = ('Defaults must be formed as a dict')
         ret.update({'comment': comt})
-        self.assertDictEqual(debconfmod.set_file(name, source, defaults='salt'),
-                             ret)
+        assert debconfmod.set_file(name, source, defaults='salt') == \
+                             ret
 
         with patch.dict(debconfmod.__opts__, {'test': True}):
             comt = ('Debconf selections would have been set.')
             ret.update({'comment': comt, 'result': None})
-            self.assertDictEqual(debconfmod.set_file(name, source), ret)
+            assert debconfmod.set_file(name, source) == ret
 
             with patch.dict(debconfmod.__opts__, {'test': False}):
                 mock = MagicMock(return_value=True)
@@ -55,8 +55,8 @@ class DebconfmodTestCase(TestCase, LoaderModuleMockMixin):
                                 {'debconf.set_file': mock}):
                     comt = ('Debconf selections were set.')
                     ret.update({'comment': comt, 'result': True})
-                    self.assertDictEqual(debconfmod.set_file(name, source),
-                                         ret)
+                    assert debconfmod.set_file(name, source) == \
+                                         ret
 
     # 'set' function tests: 1
 
@@ -79,4 +79,4 @@ class DebconfmodTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(debconfmod.__salt__, {'debconf.show': mock}):
             with patch.dict(debconfmod.__opts__, {'test': True}):
                 ret.update({'changes': changes})
-                self.assertDictEqual(debconfmod.set(name, data), ret)
+                assert debconfmod.set(name, data) == ret

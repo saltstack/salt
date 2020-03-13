@@ -60,7 +60,7 @@ class EngineSlackTestCase(TestCase, LoaderModuleMockMixin):
                                                                 loaded_groups,
                                                                 trigger_string)
 
-        self.assertEqual(target_commandline, _expected)
+        assert target_commandline == _expected
 
         # Check aliases result in correct cmdline
         text = '!whoami'
@@ -69,7 +69,7 @@ class EngineSlackTestCase(TestCase, LoaderModuleMockMixin):
                                                                 loaded_groups,
                                                                 trigger_string)
 
-        self.assertEqual(target_commandline, _expected)
+        assert target_commandline == _expected
 
         # Check pillar is overrided
         _expected = (True,
@@ -81,7 +81,7 @@ class EngineSlackTestCase(TestCase, LoaderModuleMockMixin):
                                                                 loaded_groups,
                                                                 trigger_string)
 
-        self.assertEqual(target_commandline, _expected)
+        assert target_commandline == _expected
 
         # Check target is overrided
         _expected = (True,
@@ -93,4 +93,4 @@ class EngineSlackTestCase(TestCase, LoaderModuleMockMixin):
                                                                 loaded_groups,
                                                                 trigger_string)
 
-        self.assertEqual(target_commandline, _expected)
+        assert target_commandline == _expected

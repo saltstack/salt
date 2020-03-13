@@ -127,12 +127,12 @@ class MinionBlackoutTestCase(ModuleCase):
         try:
             self.begin_blackout()
             blackout_ret = self.run_function('test.ping')
-            self.assertIn('Minion in blackout mode.', blackout_ret)
+            assert 'Minion in blackout mode.' in blackout_ret
         finally:
             self.end_blackout()
 
         ret = self.run_function('test.ping')
-        self.assertEqual(ret, True)
+        assert ret is True
 
     def test_blackout_whitelist(self):
         '''
@@ -146,11 +146,11 @@ class MinionBlackoutTestCase(ModuleCase):
             '''))
 
         ping_ret = self.run_function('test.ping')
-        self.assertEqual(ping_ret, True)
+        assert ping_ret is True
 
         fib_ret = self.run_function('test.fib', [7])
-        self.assertTrue(isinstance(fib_ret, list))
-        self.assertEqual(fib_ret[0], 13)
+        assert isinstance(fib_ret, list)
+        assert fib_ret[0] == 13
 
     def test_blackout_nonwhitelist(self):
         '''
@@ -165,7 +165,7 @@ class MinionBlackoutTestCase(ModuleCase):
             '''))
 
         state_ret = self.run_function('state.apply')
-        self.assertIn('Minion in blackout mode.', state_ret)
+        assert 'Minion in blackout mode.' in state_ret
 
         cloud_ret = self.run_function('cloud.query', ['list_nodes_full'])
-        self.assertIn('Minion in blackout mode.', cloud_ret)
+        assert 'Minion in blackout mode.' in cloud_ret

@@ -75,24 +75,22 @@ class MacTimezoneModuleTest(ModuleCase):
         Test timezone.set_date
         '''
         # Correct Functionality
-        self.assertTrue(self.run_function('timezone.set_date', ['2/20/2011']))
-        self.assertEqual(self.run_function('timezone.get_date'), '2/20/2011')
+        assert self.run_function('timezone.set_date', ['2/20/2011'])
+        assert self.run_function('timezone.get_date') == '2/20/2011'
 
         # Test bad date format
-        self.assertEqual(
-            self.run_function('timezone.set_date', ['13/12/2014']),
-            'ERROR executing \'timezone.set_date\': '
+        assert self.run_function('timezone.set_date', ['13/12/2014']) == \
+            'ERROR executing \'timezone.set_date\': ' \
             'Invalid Date/Time Format: 13/12/2014'
-        )
 
     def test_get_time(self):
         '''
         Test timezone.get_time
         '''
         text_time = self.run_function('timezone.get_time')
-        self.assertNotEqual(text_time, 'Invalid Timestamp')
+        assert text_time != 'Invalid Timestamp'
         obj_date = datetime.datetime.strptime(text_time, '%H:%M:%S')
-        self.assertIsInstance(obj_date, datetime.date)
+        assert isinstance(obj_date, datetime.date)
 
     @skipIf(True, 'Skip until we can figure out why modifying the system clock causes ZMQ errors')
     @pytest.mark.destructive_test
@@ -101,13 +99,12 @@ class MacTimezoneModuleTest(ModuleCase):
         Test timezone.set_time
         '''
         # Correct Functionality
-        self.assertTrue(self.run_function('timezone.set_time', ['3:14']))
+        assert self.run_function('timezone.set_time', ['3:14'])
 
         # Test bad time format
-        self.assertEqual(
-            self.run_function('timezone.set_time', ['3:71']),
-            'ERROR executing \'timezone.set_time\': '
-            'Invalid Date/Time Format: 3:71')
+        assert self.run_function('timezone.set_time', ['3:71']) == \
+            'ERROR executing \'timezone.set_time\': ' \
+            'Invalid Date/Time Format: 3:71'
 
     @skipIf(True, 'Skip until we can figure out why modifying the system clock causes ZMQ errors')
     @pytest.mark.destructive_test
@@ -117,16 +114,13 @@ class MacTimezoneModuleTest(ModuleCase):
         Test timezone.set_zone
         '''
         # Correct Functionality
-        self.assertTrue(
-            self.run_function('timezone.set_zone', ['Pacific/Wake']))
-        self.assertEqual(
-            self.run_function('timezone.get_zone'), 'Pacific/Wake')
+        assert self.run_function('timezone.set_zone', ['Pacific/Wake'])
+        assert self.run_function('timezone.get_zone') == 'Pacific/Wake'
 
         # Test bad time zone
-        self.assertEqual(
-            self.run_function('timezone.set_zone', ['spongebob']),
-            'ERROR executing \'timezone.set_zone\': '
-            'Invalid Timezone: spongebob')
+        assert self.run_function('timezone.set_zone', ['spongebob']) == \
+            'ERROR executing \'timezone.set_zone\': ' \
+            'Invalid Timezone: spongebob'
 
     @skipIf(True, 'Skip until we can figure out why modifying the system clock causes ZMQ errors')
     @pytest.mark.destructive_test
@@ -134,17 +128,13 @@ class MacTimezoneModuleTest(ModuleCase):
         '''
         Test timezone.get_offset
         '''
-        self.assertTrue(
-            self.run_function('timezone.set_zone', ['Pacific/Wake']))
-        self.assertIsInstance(self.run_function('timezone.get_offset'),
-                              six.string_types)
-        self.assertEqual(self.run_function('timezone.get_offset'), '+1200')
+        assert self.run_function('timezone.set_zone', ['Pacific/Wake'])
+        assert isinstance(self.run_function('timezone.get_offset'), six.string_types)
+        assert self.run_function('timezone.get_offset') == '+1200'
 
-        self.assertTrue(
-            self.run_function('timezone.set_zone', ['America/Los_Angeles']))
-        self.assertIsInstance(self.run_function('timezone.get_offset'),
-                              six.string_types)
-        self.assertEqual(self.run_function('timezone.get_offset'), '-0700')
+        assert self.run_function('timezone.set_zone', ['America/Los_Angeles'])
+        assert isinstance(self.run_function('timezone.get_offset'), six.string_types)
+        assert self.run_function('timezone.get_offset') == '-0700'
 
     @skipIf(True, 'Skip until we can figure out why modifying the system clock causes ZMQ errors')
     @pytest.mark.destructive_test
@@ -153,30 +143,24 @@ class MacTimezoneModuleTest(ModuleCase):
         Test timezone.get_zonecode
         Test timezone.set_zonecode
         '''
-        self.assertTrue(
-            self.run_function('timezone.set_zone', ['America/Los_Angeles']))
-        self.assertIsInstance(self.run_function('timezone.get_zonecode'),
-                              six.string_types)
-        self.assertEqual(self.run_function('timezone.get_zonecode'), 'PDT')
+        assert self.run_function('timezone.set_zone', ['America/Los_Angeles'])
+        assert isinstance(self.run_function('timezone.get_zonecode'), six.string_types)
+        assert self.run_function('timezone.get_zonecode') == 'PDT'
 
-        self.assertTrue(
-            self.run_function('timezone.set_zone', ['Pacific/Wake']))
-        self.assertIsInstance(self.run_function('timezone.get_zonecode'),
-                              six.string_types)
-        self.assertEqual(self.run_function('timezone.get_zonecode'), 'WAKT')
+        assert self.run_function('timezone.set_zone', ['Pacific/Wake'])
+        assert isinstance(self.run_function('timezone.get_zonecode'), six.string_types)
+        assert self.run_function('timezone.get_zonecode') == 'WAKT'
 
     def test_list_zones(self):
         '''
         Test timezone.list_zones
         '''
         zones = self.run_function('timezone.list_zones')
-        self.assertIsInstance(self.run_function('timezone.list_zones'), list)
-        self.assertIn(
-            'America/Denver',
-            self.run_function('timezone.list_zones'))
-        self.assertIn(
-            'America/Los_Angeles',
-            self.run_function('timezone.list_zones'))
+        assert isinstance(self.run_function('timezone.list_zones'), list)
+        assert 'America/Denver' in \
+            self.run_function('timezone.list_zones')
+        assert 'America/Los_Angeles' in \
+            self.run_function('timezone.list_zones')
 
     @skipIf(True, 'Skip until we can figure out why modifying the system clock causes ZMQ errors')
     @pytest.mark.destructive_test
@@ -184,12 +168,9 @@ class MacTimezoneModuleTest(ModuleCase):
         '''
         Test timezone.zone_compare
         '''
-        self.assertTrue(
-            self.run_function('timezone.set_zone', ['America/Denver']))
-        self.assertTrue(
-            self.run_function('timezone.zone_compare', ['America/Denver']))
-        self.assertFalse(
-            self.run_function('timezone.zone_compare', ['Pacific/Wake']))
+        assert self.run_function('timezone.set_zone', ['America/Denver'])
+        assert self.run_function('timezone.zone_compare', ['America/Denver'])
+        assert not self.run_function('timezone.zone_compare', ['Pacific/Wake'])
 
     @skipIf(True, 'Skip until we can figure out why modifying the system clock causes ZMQ errors')
     @pytest.mark.destructive_test
@@ -198,13 +179,11 @@ class MacTimezoneModuleTest(ModuleCase):
         Test timezone.get_using_network_time
         Test timezone.set_using_network_time
         '''
-        self.assertTrue(
-            self.run_function('timezone.set_using_network_time', [True]))
-        self.assertTrue(self.run_function('timezone.get_using_network_time'))
+        assert self.run_function('timezone.set_using_network_time', [True])
+        assert self.run_function('timezone.get_using_network_time')
 
-        self.assertTrue(
-            self.run_function('timezone.set_using_network_time', [False]))
-        self.assertFalse(self.run_function('timezone.get_using_network_time'))
+        assert self.run_function('timezone.set_using_network_time', [False])
+        assert not self.run_function('timezone.get_using_network_time')
 
     @skipIf(True, 'Skip until we can figure out why modifying the system clock causes ZMQ errors')
     @pytest.mark.destructive_test
@@ -213,7 +192,5 @@ class MacTimezoneModuleTest(ModuleCase):
         Test timezone.get_time_server
         Test timezone.set_time_server
         '''
-        self.assertTrue(
-            self.run_function('timezone.set_time_server', ['spongebob.com']))
-        self.assertEqual(
-            self.run_function('timezone.get_time_server'), 'spongebob.com')
+        assert self.run_function('timezone.set_time_server', ['spongebob.com'])
+        assert self.run_function('timezone.get_time_server') == 'spongebob.com'

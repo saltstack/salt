@@ -336,8 +336,8 @@ class BotoS3BucketTestCase(BotoS3BucketStateTestCaseBase, BotoS3BucketTestCaseMi
                          **config_in
                      )
 
-        self.assertTrue(result['result'])
-        self.assertEqual(result['changes']['new']['bucket']['Location'], config_ret['get_bucket_location'])
+        assert result['result']
+        assert result['changes']['new']['bucket']['Location'] == config_ret['get_bucket_location']
 
     def test_present_when_bucket_exists_no_mods(self):
         self.conn.list_buckets.return_value = deepcopy(list_ret)
@@ -350,8 +350,8 @@ class BotoS3BucketTestCase(BotoS3BucketStateTestCaseBase, BotoS3BucketTestCaseMi
                          **config_in
                      )
 
-        self.assertTrue(result['result'])
-        self.assertEqual(result['changes'], {})
+        assert result['result']
+        assert result['changes'] == {}
 
     def test_present_when_bucket_exists_all_mods(self):
         self.conn.list_buckets.return_value = deepcopy(list_ret)
@@ -364,8 +364,8 @@ class BotoS3BucketTestCase(BotoS3BucketStateTestCaseBase, BotoS3BucketTestCaseMi
                          LocationConstraint=config_in['LocationConstraint']
                      )
 
-        self.assertTrue(result['result'])
-        self.assertNotEqual(result['changes'], {})
+        assert result['result']
+        assert result['changes'] != {}
 
     def test_present_with_failure(self):
         self.conn.head_bucket.side_effect = [not_found_error, None]
@@ -377,8 +377,8 @@ class BotoS3BucketTestCase(BotoS3BucketStateTestCaseBase, BotoS3BucketTestCaseMi
                          Bucket='testbucket',
                          **config_in
                      )
-        self.assertFalse(result['result'])
-        self.assertTrue('Failed to create bucket' in result['comment'])
+        assert not result['result']
+        assert 'Failed to create bucket' in result['comment']
 
     def test_absent_when_bucket_does_not_exist(self):
         '''
@@ -386,16 +386,16 @@ class BotoS3BucketTestCase(BotoS3BucketStateTestCaseBase, BotoS3BucketTestCaseMi
         '''
         self.conn.head_bucket.side_effect = [not_found_error, None]
         result = self.salt_states['boto_s3_bucket.absent']('test', 'mybucket')
-        self.assertTrue(result['result'])
-        self.assertEqual(result['changes'], {})
+        assert result['result']
+        assert result['changes'] == {}
 
     def test_absent_when_bucket_exists(self):
         result = self.salt_states['boto_s3_bucket.absent']('test', 'testbucket')
-        self.assertTrue(result['result'])
-        self.assertEqual(result['changes']['new']['bucket'], None)
+        assert result['result']
+        assert result['changes']['new']['bucket'] is None
 
     def test_absent_with_failure(self):
         self.conn.delete_bucket.side_effect = ClientError(error_content, 'delete_bucket')
         result = self.salt_states['boto_s3_bucket.absent']('test', 'testbucket')
-        self.assertFalse(result['result'])
-        self.assertTrue('Failed to delete bucket' in result['comment'])
+        assert not result['result']
+        assert 'Failed to delete bucket' in result['comment']

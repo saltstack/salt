@@ -45,16 +45,14 @@ class LoaderOverridesTest(ModuleCase):
 
         # We placed a test module under _modules.
         # The previous functions should also still exist.
-        self.assertIn('test.ping', funcs)
+        assert 'test.ping' in funcs
 
         # A non existing function should, of course, not exist
-        self.assertNotIn('brain.left_hemisphere', funcs)
+        assert 'brain.left_hemisphere' not in funcs
 
         # There should be a new function for the test module, recho
-        self.assertIn('test.recho', funcs)
+        assert 'test.recho' in funcs
 
         text = 'foo bar baz quo qux'
-        self.assertEqual(
-            self.run_function('test.echo', arg=[text])[::-1],
-            self.run_function('test.recho', arg=[text]),
-        )
+        assert self.run_function('test.echo', arg=[text])[::-1] == \
+            self.run_function('test.recho', arg=[text])

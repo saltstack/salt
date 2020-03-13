@@ -90,7 +90,7 @@ class NestedOutputterTestCase(TestCase, LoaderModuleMockMixin):
             '                \x1b[0;32mhello\x1b[0;0m'
         )
         ret = nested.output(self.data)
-        self.assertEqual(ret, expected_output_str)
+        assert ret == expected_output_str
 
     def test_output_with_retcode(self):
         # Non-zero retcode should change the colors
@@ -111,7 +111,7 @@ class NestedOutputterTestCase(TestCase, LoaderModuleMockMixin):
         # You can notice that in test_output_with_colors the color code is \x1b[0;36m, i.e., GREEN,
         # while here the color code is \x1b[0;31m, i.e., RED (failure)
         ret = nested.output(self.data, _retcode=1)
-        self.assertEqual(ret, expected_output_str)
+        assert ret == expected_output_str
 
     def test_output_with_indent(self):
         # Everything must be indented by exactly two spaces
@@ -131,4 +131,4 @@ class NestedOutputterTestCase(TestCase, LoaderModuleMockMixin):
            '                  \x1b[0;32mhello\x1b[0;0m'
         )
         ret = nested.output(self.data, nested_indent=2)
-        self.assertEqual(ret, expected_output_str)
+        assert ret == expected_output_str

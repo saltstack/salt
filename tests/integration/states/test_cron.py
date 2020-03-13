@@ -50,6 +50,6 @@ class CronTest(ModuleCase):
             user='test_cron_user'
         )
         _expected = '--- \n+++ \n@@ -1 +1,2 @@\n-\n+# Lines below here are managed by Salt, do not edit\n+@hourly touch /tmp/test-file\n'
-        self.assertIn('changes', ret['cron_|-salt://issue-46881/cron_|-salt://issue-46881/cron_|-file'])
-        self.assertIn('diff', ret['cron_|-salt://issue-46881/cron_|-salt://issue-46881/cron_|-file']['changes'])
-        self.assertEqual(_expected, ret['cron_|-salt://issue-46881/cron_|-salt://issue-46881/cron_|-file']['changes']['diff'])
+        assert 'changes' in ret['cron_|-salt://issue-46881/cron_|-salt://issue-46881/cron_|-file']
+        assert 'diff' in ret['cron_|-salt://issue-46881/cron_|-salt://issue-46881/cron_|-file']['changes']
+        assert _expected == ret['cron_|-salt://issue-46881/cron_|-salt://issue-46881/cron_|-file']['changes']['diff']

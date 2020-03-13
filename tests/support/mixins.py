@@ -50,6 +50,7 @@ from salt._compat import ElementTree as etree
 from salt.ext import six
 from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
 from salt.ext.six.moves.queue import Empty  # pylint: disable=import-error,no-name-in-module
+import re
 
 log = logging.getLogger(__name__)
 
@@ -74,7 +75,7 @@ class CheckShellBinaryNameAndVersionMixin(object):
         out = '\n'.join(self.run_script(self._call_binary_, '--version'))
         # Assert that the binary name is in the output
         try:
-            self.assertIn(self._call_binary_, out)
+            assert self._call_binary_ in out
         except AssertionError:
             # We might have generated the CLI scripts in which case we replace '-' with '_'
             alternate_binary_name = self._call_binary_.replace('-', '_')
@@ -83,10 +84,10 @@ class CheckShellBinaryNameAndVersionMixin(object):
                 alternate_binary_name,
                 out
             )
-            self.assertIn(alternate_binary_name, out, msg=errmsg)
+            assert alternate_binary_name in out, errmsg
 
         # Assert that the version is in the output
-        self.assertIn(self._call_binary_expected_version_, out)
+        assert self._call_binary_expected_version_ in out
 
 
 class AdaptedConfigurationTestCaseMixin(object):
@@ -261,6 +262,8 @@ class SaltClientTestCaseMixin(AdaptedConfigurationTestCaseMixin):
 
     .. code-block:: python
 
+        import pytest
+
         class LocalClientTestCase(TestCase, SaltClientTestCaseMixin):
 
             def test_check_pub_data(self):
@@ -268,16 +271,13 @@ class SaltClientTestCaseMixin(AdaptedConfigurationTestCaseMixin):
                 jid_no_minions = {'jid': '1234', 'minions': []}
                 valid_pub_data = {'minions': ['m1', 'm2'], 'jid': '1234'}
 
-                self.assertRaises(EauthAuthenticationError,
-                                  self.client._check_pub_data, None)
-                self.assertDictEqual({},
-                    self.client._check_pub_data(just_minions),
-                    'Did not handle lack of jid correctly')
+                pytest.raises(EauthAuthenticationError,
+                              self.client._check_pub_data, None)
+                assert self.client._check_pub_data(just_minions) == {}, \
+                        'Did not handle lack of jid correctly'
 
-                self.assertDictEqual(
-                    {},
-                    self.client._check_pub_data({'jid': '0'}),
-                    'Passing JID of zero is not handled gracefully')
+                assert self.client._check_pub_data({'jid': '0'}) == {}, \
+                        'Passing JID of zero is not handled gracefully'
     '''
     _salt_client_config_file_name_ = 'master'
 
@@ -298,6 +298,8 @@ class SaltMultimasterClientTestCaseMixin(AdaptedConfigurationTestCaseMixin):
 
     .. code-block:: python
 
+        import pytest
+
         class LocalClientTestCase(TestCase, SaltMultimasterClientTestCaseMixin):
 
             def test_check_pub_data(self):
@@ -306,16 +308,13 @@ class SaltMultimasterClientTestCaseMixin(AdaptedConfigurationTestCaseMixin):
                 valid_pub_data = {'minions': ['m1', 'm2'], 'jid': '1234'}
 
                 for client in self.clients:
-                    self.assertRaises(EauthAuthenticationError,
-                                      client._check_pub_data, None)
-                    self.assertDictEqual({},
-                        client._check_pub_data(just_minions),
-                        'Did not handle lack of jid correctly')
+                    pytest.raises(EauthAuthenticationError,
+                                  client._check_pub_data, None)
+                    assert client._check_pub_data(just_minions) == {}, \
+                            'Did not handle lack of jid correctly'
 
-                    self.assertDictEqual(
-                        {},
-                        client._check_pub_data({'jid': '0'}),
-                        'Passing JID of zero is not handled gracefully')
+                    assert client._check_pub_data({'jid': '0'}) == {}, \
+                            'Passing JID of zero is not handled gracefully'
     '''
     _salt_client_config_file_name_ = 'master'
 
@@ -392,7 +391,7 @@ class ShellCaseCommonTestsMixin(CheckShellBinaryNameAndVersionMixin):
                 'string WILL NOT include the git hash.'
             )
         out = '\n'.join(self.run_script(self._call_binary_, '--version'))
-        self.assertIn(parsed_version.string, out)
+        assert parsed_version.string in out
 
 
 class _FixLoaderModuleMockMixinMroOrder(type):
@@ -577,7 +576,7 @@ class SaltReturnAssertsMixin(object):
 
     def assertReturnSaltType(self, ret):
         try:
-            self.assertTrue(isinstance(ret, dict))
+            assert isinstance(ret, dict)
         except AssertionError:
             raise AssertionError(
                 '{0} is not dict. Salt returned: {1}'.format(
@@ -588,7 +587,7 @@ class SaltReturnAssertsMixin(object):
     def assertReturnNonEmptySaltType(self, ret):
         self.assertReturnSaltType(ret)
         try:
-            self.assertNotEqual(ret, {})
+            assert ret != {}
         except AssertionError:
             raise AssertionError(
                 '{} is equal to {}. Salt returned an empty dictionary.'
@@ -635,7 +634,7 @@ class SaltReturnAssertsMixin(object):
     def assertSaltTrueReturn(self, ret):
         try:
             for saltret in self.__getWithinSaltReturn(ret, 'result'):
-                self.assertTrue(saltret)
+                assert saltret
         except AssertionError:
             log.info('Salt Full Return:\n{0}'.format(pprint.pformat(ret)))
             try:
@@ -654,7 +653,7 @@ class SaltReturnAssertsMixin(object):
     def assertSaltFalseReturn(self, ret):
         try:
             for saltret in self.__getWithinSaltReturn(ret, 'result'):
-                self.assertFalse(saltret)
+                assert not saltret
         except AssertionError:
             log.info('Salt Full Return:\n{0}'.format(pprint.pformat(ret)))
             try:
@@ -671,7 +670,7 @@ class SaltReturnAssertsMixin(object):
     def assertSaltNoneReturn(self, ret):
         try:
             for saltret in self.__getWithinSaltReturn(ret, 'result'):
-                self.assertIsNone(saltret)
+                assert saltret is None
         except AssertionError:
             log.info('Salt Full Return:\n{0}'.format(pprint.pformat(ret)))
             try:
@@ -687,44 +686,44 @@ class SaltReturnAssertsMixin(object):
 
     def assertInSaltComment(self, in_comment, ret):
         for saltret in self.__getWithinSaltReturn(ret, 'comment'):
-            self.assertIn(in_comment, saltret)
+            assert in_comment in saltret
 
     def assertNotInSaltComment(self, not_in_comment, ret):
         for saltret in self.__getWithinSaltReturn(ret, 'comment'):
-            self.assertNotIn(not_in_comment, saltret)
+            assert not_in_comment not in saltret
 
     def assertSaltCommentRegexpMatches(self, ret, pattern):
         return self.assertInSaltReturnRegexpMatches(ret, pattern, 'comment')
 
     def assertInSaltStateWarning(self, in_comment, ret):
         for saltret in self.__getWithinSaltReturn(ret, 'warnings'):
-            self.assertIn(in_comment, saltret)
+            assert in_comment in saltret
 
     def assertNotInSaltStateWarning(self, not_in_comment, ret):
         for saltret in self.__getWithinSaltReturn(ret, 'warnings'):
-            self.assertNotIn(not_in_comment, saltret)
+            assert not_in_comment not in saltret
 
     def assertInSaltReturn(self, item_to_check, ret, keys):
         for saltret in self.__getWithinSaltReturn(ret, keys):
-            self.assertIn(item_to_check, saltret)
+            assert item_to_check in saltret
 
     def assertNotInSaltReturn(self, item_to_check, ret, keys):
         for saltret in self.__getWithinSaltReturn(ret, keys):
-            self.assertNotIn(item_to_check, saltret)
+            assert item_to_check not in saltret
 
     def assertInSaltReturnRegexpMatches(self, ret, pattern, keys=()):
         for saltret in self.__getWithinSaltReturn(ret, keys):
-            self.assertRegex(saltret, pattern)
+            assert re.search(pattern, saltret)
 
     def assertSaltStateChangesEqual(self, ret, comparison, keys=()):
         keys = ['changes'] + self.__return_valid_keys(keys)
         for saltret in self.__getWithinSaltReturn(ret, keys):
-            self.assertEqual(saltret, comparison)
+            assert saltret == comparison
 
     def assertSaltStateChangesNotEqual(self, ret, comparison, keys=()):
         keys = ['changes'] + self.__return_valid_keys(keys)
         for saltret in self.__getWithinSaltReturn(ret, keys):
-            self.assertNotEqual(saltret, comparison)
+            assert saltret != comparison
 
 
 def _fetch_events(q, opts):

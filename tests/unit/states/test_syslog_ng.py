@@ -336,8 +336,8 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(syslog_ng.__salt__, _SALT_VAR_WITH_MODULE_METHODS):
             got = syslog_ng.config(id, config=parsed_yaml_config, write=False)
             config = got["changes"]["new"]
-            self.assertEqual(remove_whitespaces(expected), remove_whitespaces(config))
-            self.assertEqual(False, got["result"])
+            assert remove_whitespaces(expected) == remove_whitespaces(config)
+            assert got["result"] is False
 
     def test_write_config(self):
         yaml_inputs = (
@@ -367,7 +367,7 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
             config_without_whitespaces = remove_whitespaces(written_config)
             for i in expected_outputs:
                 without_whitespaces = remove_whitespaces(i)
-                self.assertIn(without_whitespaces, config_without_whitespaces)
+                assert without_whitespaces in config_without_whitespaces
 
             syslog_ng_module.set_config_file("")
             os.remove(config_file_name)
@@ -379,5 +379,4 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(syslog_ng_module.__salt__, {'cmd.run_all': mock_func}):
                 got = syslog_ng.started(user="joe", group="users", enable_core=True)
                 command = got["changes"]["new"]
-                self.assertTrue(
-                    command.endswith("syslog-ng --user=joe --group=users --enable-core --cfgfile=/etc/syslog-ng.conf"))
+                assert command.endswith("syslog-ng --user=joe --group=users --enable-core --cfgfile=/etc/syslog-ng.conf")

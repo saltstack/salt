@@ -46,7 +46,7 @@ class PostgresSchemaTestCase(TestCase, LoaderModuleMockMixin):
                 comt = ('Schema {0} already exists in database {1}'.format(name,
                                                                            dbname))
                 ret.update({'comment': comt})
-                self.assertDictEqual(postgres_schema.present(dbname, name), ret)
+                assert postgres_schema.present(dbname, name) == ret
 
     # 'absent' function tests: 1
 
@@ -72,20 +72,20 @@ class PostgresSchemaTestCase(TestCase, LoaderModuleMockMixin):
                 comt = ('Schema {0} is set to be removed from database {1}'.
                         format(name, dbname))
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(postgres_schema.absent(dbname, name), ret)
+                assert postgres_schema.absent(dbname, name) == ret
 
             with patch.dict(postgres_schema.__opts__, {'test': False}):
                 comt = ('Schema {0} has been removed from database {1}'.
                         format(name, dbname))
                 ret.update({'comment': comt, 'result': True,
                             'changes': {name: 'Absent'}})
-                self.assertDictEqual(postgres_schema.absent(dbname, name), ret)
+                assert postgres_schema.absent(dbname, name) == ret
 
                 comt = ('Schema {0} failed to be removed'.format(name))
                 ret.update({'comment': comt, 'result': False, 'changes': {}})
-                self.assertDictEqual(postgres_schema.absent(dbname, name), ret)
+                assert postgres_schema.absent(dbname, name) == ret
 
             comt = ('Schema {0} is not present in database {1},'
                     ' so it cannot be removed'.format(name, dbname))
             ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(postgres_schema.absent(dbname, name), ret)
+            assert postgres_schema.absent(dbname, name) == ret

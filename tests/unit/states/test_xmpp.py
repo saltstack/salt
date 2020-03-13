@@ -35,8 +35,8 @@ class XmppTestCase(TestCase, LoaderModuleMockMixin):
                'comment': ''}
         with patch.dict(xmpp.__opts__, {"test": True}):
             ret.update({'comment': 'Need to send message to myaccount: salt'})
-            self.assertDictEqual(xmpp.send_msg('salt', 'myaccount',
-                                               'salt@saltstack.com'), ret)
+            assert xmpp.send_msg('salt', 'myaccount',
+                                               'salt@saltstack.com') == ret
 
         with patch.dict(xmpp.__opts__, {"test": False}):
             mock = MagicMock(return_value=True)
@@ -44,5 +44,5 @@ class XmppTestCase(TestCase, LoaderModuleMockMixin):
                                             'xmpp.send_msg_multi': mock}):
                 ret.update({'result': True,
                             'comment': 'Sent message to myaccount: salt'})
-                self.assertDictEqual(xmpp.send_msg('salt', 'myaccount',
-                                                   'salt@saltstack.com'), ret)
+                assert xmpp.send_msg('salt', 'myaccount',
+                                                   'salt@saltstack.com') == ret

@@ -12,6 +12,7 @@ from tests.support.mock import (
 # Import Salt libs
 from salt.exceptions import SaltInvocationError
 import salt.modules.selinux as selinux
+import pytest
 
 
 class SelinuxModuleTestCase(TestCase, LoaderModuleMockMixin):
@@ -77,12 +78,12 @@ class SelinuxModuleTestCase(TestCase, LoaderModuleMockMixin):
         for case in cases:
             with patch.dict(selinux.__salt__, {'cmd.shell': MagicMock(return_value=case['semanage_out'])}):
                 ret = selinux.fcontext_get_policy(case['name'])
-                self.assertEqual(ret['filespec'], case['name'])
-                self.assertEqual(ret['filetype'], case['filetype'])
-                self.assertEqual(ret['sel_user'], case['sel_user'])
-                self.assertEqual(ret['sel_role'], case['sel_role'])
-                self.assertEqual(ret['sel_type'], case['sel_type'])
-                self.assertEqual(ret['sel_level'], case['sel_level'])
+                assert ret['filespec'] == case['name']
+                assert ret['filetype'] == case['filetype']
+                assert ret['sel_user'] == case['sel_user']
+                assert ret['sel_role'] == case['sel_role']
+                assert ret['sel_type'] == case['sel_type']
+                assert ret['sel_level'] == case['sel_level']
 
     def test_parse_protocol_port_positive(self):
         '''
@@ -117,7 +118,7 @@ class SelinuxModuleTestCase(TestCase, LoaderModuleMockMixin):
 
         for case in cases:
             ret = selinux._parse_protocol_port(case['name'], case['protocol'], case['port'])
-            self.assertTupleEqual(ret, case['expected'])
+            assert ret == case['expected']
 
     def test_parse_protocol_port_negative(self):
         '''
@@ -152,7 +153,8 @@ class SelinuxModuleTestCase(TestCase, LoaderModuleMockMixin):
         ]
 
         for case in cases:
-            self.assertRaises(SaltInvocationError, selinux._parse_protocol_port, case['name'], case['protocol'],
+            with pytest.raises(SaltInvocationError):
+                selinux._parse_protocol_port(case['name'], case['protocol'],
                               case['port'])
 
     def test_port_get_policy_parsing(self):
@@ -195,4 +197,4 @@ class SelinuxModuleTestCase(TestCase, LoaderModuleMockMixin):
         for case in cases:
             with patch.dict(selinux.__salt__, {'cmd.shell': MagicMock(return_value=case['semanage_out'])}):
                 ret = selinux.port_get_policy(case['name'])
-                self.assertDictEqual(ret, case['expected'])
+                assert ret == case['expected']

@@ -34,7 +34,7 @@ class RbenvTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(rbenv, '_install_ruby_build',
                                   return_value=True):
                     with patch.object(os.path, 'expanduser', return_value='A'):
-                        self.assertTrue(rbenv.install())
+                        assert rbenv.install()
 
     def test_update(self):
         '''
@@ -45,7 +45,7 @@ class RbenvTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(rbenv, '_update_ruby_build',
                                   return_value=True):
                     with patch.object(os.path, 'expanduser', return_value='A'):
-                        self.assertTrue(rbenv.update())
+                        assert rbenv.update()
 
     def test_is_installed(self):
         '''
@@ -54,7 +54,7 @@ class RbenvTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(rbenv, '_rbenv_bin', return_value='A'):
             with patch.dict(rbenv.__salt__,
                             {'cmd.has_exec': MagicMock(return_value=True)}):
-                self.assertTrue(rbenv.is_installed())
+                assert rbenv.is_installed()
 
     def test_install_ruby(self):
         '''
@@ -67,28 +67,28 @@ class RbenvTestCase(TestCase, LoaderModuleMockMixin):
                                   return_value={'retcode': 0,
                                                 'stderr': 'stderr'}):
                     with patch.object(rbenv, 'rehash', return_value=None):
-                        self.assertEqual(rbenv.install_ruby('ruby'), 'stderr')
+                        assert rbenv.install_ruby('ruby') == 'stderr'
 
                 with patch.object(rbenv, '_rbenv_exec',
                                   return_value={'retcode': 1,
                                                 'stderr': 'stderr'}):
                     with patch.object(rbenv, 'uninstall_ruby',
                                       return_value=None):
-                        self.assertFalse(rbenv.install_ruby('ruby'))
+                        assert not rbenv.install_ruby('ruby')
 
     def test_uninstall_ruby(self):
         '''
         Test for uninstall a ruby implementation.
         '''
         with patch.object(rbenv, '_rbenv_exec', return_value=None):
-            self.assertTrue(rbenv.uninstall_ruby('ruby', 'runas'))
+            assert rbenv.uninstall_ruby('ruby', 'runas')
 
     def test_versions(self):
         '''
         Test for list the installed versions of ruby.
         '''
         with patch.object(rbenv, '_rbenv_exec', return_value='A\nBC\nD'):
-            self.assertListEqual(rbenv.versions(), ['A', 'BC', 'D'])
+            assert rbenv.versions() == ['A', 'BC', 'D']
 
     def test_default(self):
         '''
@@ -96,23 +96,23 @@ class RbenvTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.object(rbenv, '_rbenv_exec',
                           MagicMock(side_effect=[None, False])):
-            self.assertTrue(rbenv.default('ruby', 'runas'))
+            assert rbenv.default('ruby', 'runas')
 
-            self.assertEqual(rbenv.default(), '')
+            assert rbenv.default() == ''
 
     def test_list_(self):
         '''
         Test for list the installable versions of ruby.
         '''
         with patch.object(rbenv, '_rbenv_exec', return_value='A\nB\nCD\n'):
-            self.assertListEqual(rbenv.list_(), ['A', 'B', 'CD'])
+            assert rbenv.list_() == ['A', 'B', 'CD']
 
     def test_rehash(self):
         '''
         Test for run rbenv rehash to update the installed shims.
         '''
         with patch.object(rbenv, '_rbenv_exec', return_value=None):
-            self.assertTrue(rbenv.rehash())
+            assert rbenv.rehash()
 
     def test_do_with_ruby(self):
         '''
@@ -120,4 +120,4 @@ class RbenvTestCase(TestCase, LoaderModuleMockMixin):
         specific ruby version.
         '''
         with patch.object(rbenv, 'do', return_value='A'):
-            self.assertEqual(rbenv.do_with_ruby('ruby', 'cmdline'), 'A')
+            assert rbenv.do_with_ruby('ruby', 'cmdline') == 'A'

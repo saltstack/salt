@@ -35,8 +35,8 @@ class MuninTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(munin.__salt__, {'cmd.run': mock}), \
                     patch('salt.modules.munin.list_plugins',
                           MagicMock(return_value=['uptime'])):
-            self.assertDictEqual(munin.run('uptime'),
-                                 {'uptime': {'uptime': 0.01}})
+            assert munin.run('uptime') == \
+                                 {'uptime': {'uptime': 0.01}}
 
     # 'run_all' function tests: 1
 
@@ -48,7 +48,7 @@ class MuninTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(munin.__salt__, {'cmd.run': mock}), \
                 patch('salt.modules.munin.list_plugins',
                       MagicMock(return_value=['uptime'])):
-            self.assertDictEqual(munin.run_all(), {'uptime': {'uptime': 0.01}})
+            assert munin.run_all() == {'uptime': {'uptime': 0.01}}
 
     # 'list_plugins' function tests: 1
 
@@ -58,4 +58,4 @@ class MuninTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.munin.list_plugins',
                    MagicMock(return_value=['uptime'])):
-            self.assertListEqual(munin.list_plugins(), ['uptime'])
+            assert munin.list_plugins() == ['uptime']

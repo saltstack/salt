@@ -58,7 +58,7 @@ class TestModulesConfig(TestCase, LoaderModuleMockMixin):
         with patch.dict(config.DEFAULTS, DEFAULTS):
             opt_name = 'test.option'
             opt = config.option(opt_name)
-            self.assertEqual(opt, config.DEFAULTS[opt_name])
+            assert opt == config.DEFAULTS[opt_name]
 
     def test_no_match(self):
         '''

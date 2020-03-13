@@ -48,25 +48,15 @@ class WinLGPOComparePoliciesTestCase(TestCase):
         '''
         compare_string = 'Salty test'
         # Same
-        self.assertTrue(
-            win_lgpo._compare_policies(compare_string, compare_string)
-        )
+        assert win_lgpo._compare_policies(compare_string, compare_string)
         # Different
-        self.assertFalse(
-            win_lgpo._compare_policies(compare_string, 'Not the same')
-        )
+        assert not win_lgpo._compare_policies(compare_string, 'Not the same')
         # List
-        self.assertFalse(
-            win_lgpo._compare_policies(compare_string, ['item1', 'item2'])
-        )
+        assert not win_lgpo._compare_policies(compare_string, ['item1', 'item2'])
         # Dict
-        self.assertFalse(
-            win_lgpo._compare_policies(compare_string, {'key': 'value'})
-        )
+        assert not win_lgpo._compare_policies(compare_string, {'key': 'value'})
         # None
-        self.assertFalse(
-            win_lgpo._compare_policies(compare_string, None)
-        )
+        assert not win_lgpo._compare_policies(compare_string, None)
 
     def test__compare_policies_list(self):
         '''
@@ -75,25 +65,15 @@ class WinLGPOComparePoliciesTestCase(TestCase):
         '''
         compare_list = ['Salty', 'test']
         # Same
-        self.assertTrue(
-            win_lgpo._compare_policies(compare_list, compare_list)
-        )
+        assert win_lgpo._compare_policies(compare_list, compare_list)
         # Different
-        self.assertFalse(
-            win_lgpo._compare_policies(compare_list, ['Not', 'the', 'same'])
-        )
+        assert not win_lgpo._compare_policies(compare_list, ['Not', 'the', 'same'])
         # String
-        self.assertFalse(
-            win_lgpo._compare_policies(compare_list, 'Not a list')
-        )
+        assert not win_lgpo._compare_policies(compare_list, 'Not a list')
         # Dict
-        self.assertFalse(
-            win_lgpo._compare_policies(compare_list, {'key': 'value'})
-        )
+        assert not win_lgpo._compare_policies(compare_list, {'key': 'value'})
         # None
-        self.assertFalse(
-            win_lgpo._compare_policies(compare_list, None)
-        )
+        assert not win_lgpo._compare_policies(compare_list, None)
 
     def test__compare_policies_dict(self):
         '''
@@ -102,25 +82,15 @@ class WinLGPOComparePoliciesTestCase(TestCase):
         '''
         compare_dict = {'Salty': 'test'}
         # Same
-        self.assertTrue(
-            win_lgpo._compare_policies(compare_dict, compare_dict)
-        )
+        assert win_lgpo._compare_policies(compare_dict, compare_dict)
         # Different
-        self.assertFalse(
-            win_lgpo._compare_policies(compare_dict, {'key': 'value'})
-        )
+        assert not win_lgpo._compare_policies(compare_dict, {'key': 'value'})
         # String
-        self.assertFalse(
-            win_lgpo._compare_policies(compare_dict, 'Not a dict')
-        )
+        assert not win_lgpo._compare_policies(compare_dict, 'Not a dict')
         # List
-        self.assertFalse(
-            win_lgpo._compare_policies(compare_dict, ['Not', 'a', 'dict'])
-        )
+        assert not win_lgpo._compare_policies(compare_dict, ['Not', 'a', 'dict'])
         # None
-        self.assertFalse(
-            win_lgpo._compare_policies(compare_dict, None)
-        )
+        assert not win_lgpo._compare_policies(compare_dict, None)
 
     def test__compare_policies_integer(self):
         '''
@@ -129,25 +99,15 @@ class WinLGPOComparePoliciesTestCase(TestCase):
         '''
         compare_integer = 1
         # Same
-        self.assertTrue(
-            win_lgpo._compare_policies(compare_integer, compare_integer)
-        )
+        assert win_lgpo._compare_policies(compare_integer, compare_integer)
         # Different
-        self.assertFalse(
-            win_lgpo._compare_policies(compare_integer, 0)
-        )
+        assert not win_lgpo._compare_policies(compare_integer, 0)
         # List
-        self.assertFalse(
-            win_lgpo._compare_policies(compare_integer, ['item1', 'item2'])
-        )
+        assert not win_lgpo._compare_policies(compare_integer, ['item1', 'item2'])
         # Dict
-        self.assertFalse(
-            win_lgpo._compare_policies(compare_integer, {'key': 'value'})
-        )
+        assert not win_lgpo._compare_policies(compare_integer, {'key': 'value'})
         # None
-        self.assertFalse(
-            win_lgpo._compare_policies(compare_integer, None)
-        )
+        assert not win_lgpo._compare_policies(compare_integer, None)
 
 
 @pytest.mark.destructive_test
@@ -199,8 +159,7 @@ class WinLGPOPolicyElementNames(TestCase, LoaderModuleMockMixin):
                     True,
                 'When updating drivers for an existing connection':
                     'Show warning only'}}
-        self.assertDictEqual(
-            result['changes']['new']['Computer Configuration'], expected)
+        assert result['changes']['new']['Computer Configuration'] == expected
 
     def test_old_element_naming_style(self):
         computer_policy = {
@@ -239,14 +198,13 @@ class WinLGPOPolicyElementNames(TestCase, LoaderModuleMockMixin):
                     True,
                 'When updating drivers for an existing connection':
                     'Show warning only'}}
-        self.assertDictEqual(
-            result['changes']['new']['Computer Configuration'], expected)
+        assert result['changes']['new']['Computer Configuration'] == expected
         expected = 'The LGPO module changed the way it gets policy element names.\n' \
                    '"Security Prompts: When installing drivers for a new connection" is no longer valid.\n' \
                    'Please use "When installing drivers for a new connection" instead.\n' \
                    'The following policies changed:\n' \
                    'Point and Print Restrictions'
-        self.assertEqual(result['comment'], expected)
+        assert result['comment'] == expected
 
     def test_invalid_elements(self):
         computer_policy = {
@@ -263,10 +221,10 @@ class WinLGPOPolicyElementNames(TestCase, LoaderModuleMockMixin):
                        'Invalid element name: Invalid element spongebob',
             'name': 'test_state',
             'result': False}
-        self.assertDictEqual(result['changes'], expected['changes'])
-        self.assertIn('Invalid element squidward', result['comment'])
-        self.assertIn('Invalid element spongebob', result['comment'])
-        self.assertFalse(expected['result'])
+        assert result['changes'] == expected['changes']
+        assert 'Invalid element squidward' in result['comment']
+        assert 'Invalid element spongebob' in result['comment']
+        assert not expected['result']
 
 
 @pytest.mark.destructive_test
@@ -324,9 +282,9 @@ class WinLGPOPolicyElementNamesTestTrue(TestCase, LoaderModuleMockMixin):
         expected = {
             'changes': {},
             'comment': 'All specified policies are properly configured'}
-        self.assertDictEqual(result['changes'], expected['changes'])
-        self.assertTrue(result['result'])
-        self.assertEqual(result['comment'], expected['comment'])
+        assert result['changes'] == expected['changes']
+        assert result['result']
+        assert result['comment'] == expected['comment']
 
     def test_old_element_naming_style(self):
         computer_policy = {
@@ -354,9 +312,9 @@ class WinLGPOPolicyElementNamesTestTrue(TestCase, LoaderModuleMockMixin):
                        '"Security Prompts: When installing drivers for a new connection" is no longer valid.\n'
                        'Please use "When installing drivers for a new connection" instead.\n'
                        'All specified policies are properly configured'}
-        self.assertDictEqual(result['changes'], expected['changes'])
-        self.assertTrue(result['result'])
-        self.assertEqual(result['comment'], expected['comment'])
+        assert result['changes'] == expected['changes']
+        assert result['result']
+        assert result['comment'] == expected['comment']
 
     def test_invalid_elements(self):
         computer_policy = {
@@ -373,7 +331,7 @@ class WinLGPOPolicyElementNamesTestTrue(TestCase, LoaderModuleMockMixin):
                        'Invalid element name: Invalid element spongebob',
             'name': 'test_state',
             'result': False}
-        self.assertDictEqual(result['changes'], expected['changes'])
-        self.assertIn('Invalid element squidward', result['comment'])
-        self.assertIn('Invalid element spongebob', result['comment'])
-        self.assertFalse(expected['result'])
+        assert result['changes'] == expected['changes']
+        assert 'Invalid element squidward' in result['comment']
+        assert 'Invalid element spongebob' in result['comment']
+        assert not expected['result']

@@ -41,11 +41,11 @@ class SmtpTestCase(TestCase, LoaderModuleMockMixin):
                'comment': comt}
 
         with patch.dict(smtp.__opts__, {'test': True}):
-            self.assertDictEqual(smtp.send_msg(name,
+            assert smtp.send_msg(name,
                                                'admin@example.com',
                                                'Message from Salt',
                                                'admin@example.com',
-                                               'my-smtp-account'), ret)
+                                               'my-smtp-account') == ret
 
         comt = ('Sent message to admin@example.com: '
                 'This is a salt states module')
@@ -55,8 +55,8 @@ class SmtpTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(smtp.__salt__, {'smtp.send_msg': mock}):
                 ret['comment'] = comt
                 ret['result'] = True
-                self.assertDictEqual(smtp.send_msg(name,
+                assert smtp.send_msg(name,
                                                    'admin@example.com',
                                                    'Message from Salt',
                                                    'admin@example.com',
-                                                   'my-smtp-account'), ret)
+                                                   'my-smtp-account') == ret

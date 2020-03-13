@@ -75,16 +75,16 @@ class RhServiceTestCase(TestCase, LoaderModuleMockMixin):
             mock_run = MagicMock(return_value={'retcode': 0,
                                                'stdout': chkconfig_out})
             with patch.dict(rh_service.__salt__, {'cmd.run_all': mock_run}):
-                self.assertTrue(rh_service._chkconfig_is_enabled(name))
-                self.assertFalse(rh_service._chkconfig_is_enabled(name, 2))
-                self.assertTrue(rh_service._chkconfig_is_enabled(name, 3))
+                assert rh_service._chkconfig_is_enabled(name)
+                assert not rh_service._chkconfig_is_enabled(name, 2)
+                assert rh_service._chkconfig_is_enabled(name, 3)
 
             mock_run = MagicMock(return_value={'retcode': 0,
                                                'stdout': xinetd_out})
             with patch.dict(rh_service.__salt__, {'cmd.run_all': mock_run}):
-                self.assertTrue(rh_service._chkconfig_is_enabled(name))
-                self.assertTrue(rh_service._chkconfig_is_enabled(name, 2))
-                self.assertTrue(rh_service._chkconfig_is_enabled(name, 3))
+                assert rh_service._chkconfig_is_enabled(name)
+                assert rh_service._chkconfig_is_enabled(name, 2)
+                assert rh_service._chkconfig_is_enabled(name, 3)
 
     # 'get_enabled' function tests: 1
 
@@ -95,19 +95,19 @@ class RhServiceTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.object(rh_service, '_upstart_services', self._m_ret()):
             with patch.object(rh_service, '_upstart_is_enabled', MagicMock(return_value=False)):
-                self.assertListEqual(rh_service.get_enabled('upstart'), [])
+                assert rh_service.get_enabled('upstart') == []
 
         mock_run = MagicMock(return_value='salt stack')
         with patch.dict(rh_service.__salt__, {'cmd.run': mock_run}):
             with patch.object(rh_service, '_sysv_services', self._m_ret()):
                 with patch.object(rh_service, '_sysv_is_enabled',
                                   self._m_bool()):
-                    self.assertListEqual(rh_service.get_enabled('sysvinit'),
-                                         RET)
+                    assert rh_service.get_enabled('sysvinit') == \
+                                         RET
 
                     with patch.object(rh_service, '_upstart_services', self._m_lst()):
                         with patch.object(rh_service, '_upstart_is_enabled', MagicMock(return_value=True)):
-                            self.assertListEqual(rh_service.get_enabled(), RET)
+                            assert rh_service.get_enabled() == RET
 
     # 'get_disabled' function tests: 1
 
@@ -118,20 +118,20 @@ class RhServiceTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.object(rh_service, '_upstart_services', self._m_ret()):
             with patch.object(rh_service, '_upstart_is_enabled', MagicMock(return_value=False)):
-                self.assertListEqual(rh_service.get_disabled('upstart'), RET)
+                assert rh_service.get_disabled('upstart') == RET
 
         mock_run = MagicMock(return_value='salt stack')
         with patch.dict(rh_service.__salt__, {'cmd.run': mock_run}):
             with patch.object(rh_service, '_sysv_services', self._m_ret()):
                 with patch.object(rh_service, '_sysv_is_enabled',
                                   self._m_bool(False)):
-                    self.assertListEqual(rh_service.get_disabled('sysvinit'),
-                                         RET)
+                    assert rh_service.get_disabled('sysvinit') == \
+                                         RET
 
                     with patch.object(rh_service, '_upstart_services',
                                       self._m_lst()):
                         with patch.object(rh_service, '_upstart_is_enabled', MagicMock(return_value=False)):
-                            self.assertListEqual(rh_service.get_disabled(), RET)
+                            assert rh_service.get_disabled() == RET
 
     # 'get_all' function tests: 1
 
@@ -141,13 +141,13 @@ class RhServiceTestCase(TestCase, LoaderModuleMockMixin):
         param to restrict results to services of that type.
         '''
         with patch.object(rh_service, '_upstart_services', self._m_ret()):
-            self.assertListEqual(rh_service.get_all('upstart'), RET)
+            assert rh_service.get_all('upstart') == RET
 
         with patch.object(rh_service, '_sysv_services', self._m_ret()):
-            self.assertListEqual(rh_service.get_all('sysvinit'), RET)
+            assert rh_service.get_all('sysvinit') == RET
 
             with patch.object(rh_service, '_upstart_services', self._m_lst()):
-                self.assertListEqual(rh_service.get_all(), RET)
+                assert rh_service.get_all() == RET
 
     # 'available' function tests: 1
 
@@ -156,14 +156,14 @@ class RhServiceTestCase(TestCase, LoaderModuleMockMixin):
         Test if it return True if the named service is available.
         '''
         with patch.object(rh_service, '_service_is_upstart', self._m_bool()):
-            self.assertTrue(rh_service.available('salt-api', 'upstart'))
+            assert rh_service.available('salt-api', 'upstart')
 
         with patch.object(rh_service, '_service_is_sysv', self._m_bool()):
-            self.assertTrue(rh_service.available('salt-api', 'sysvinit'))
+            assert rh_service.available('salt-api', 'sysvinit')
 
             with patch.object(rh_service, '_service_is_upstart',
                               self._m_bool()):
-                self.assertTrue(rh_service.available('salt-api'))
+                assert rh_service.available('salt-api')
 
     # 'missing' function tests: 1
 
@@ -173,18 +173,18 @@ class RhServiceTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.object(rh_service, '_service_is_upstart',
                           self._m_bool(False)):
-            self.assertTrue(rh_service.missing('sshd', 'upstart'))
+            assert rh_service.missing('sshd', 'upstart')
 
             with patch.object(rh_service, '_service_is_sysv',
                               self._m_bool(False)):
-                self.assertTrue(rh_service.missing('sshd'))
+                assert rh_service.missing('sshd')
 
         with patch.object(rh_service, '_service_is_sysv', self._m_bool()):
-            self.assertFalse(rh_service.missing('sshd', 'sysvinit'))
+            assert not rh_service.missing('sshd', 'sysvinit')
 
             with patch.object(rh_service, '_service_is_upstart',
                               self._m_bool()):
-                self.assertFalse(rh_service.missing('sshd'))
+                assert not rh_service.missing('sshd')
 
     # 'start' function tests: 1
 
@@ -195,7 +195,7 @@ class RhServiceTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(rh_service, '_service_is_upstart', self._m_bool()):
             with patch.dict(rh_service.__salt__, {'cmd.retcode':
                                                   self._m_bool(False)}):
-                self.assertTrue(rh_service.start('salt-api'))
+                assert rh_service.start('salt-api')
 
     # 'stop' function tests: 1
 
@@ -206,7 +206,7 @@ class RhServiceTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(rh_service, '_service_is_upstart', self._m_bool()):
             with patch.dict(rh_service.__salt__, {'cmd.retcode':
                                                   self._m_bool(False)}):
-                self.assertTrue(rh_service.stop('salt-api'))
+                assert rh_service.stop('salt-api')
 
     # 'restart' function tests: 1
 
@@ -217,7 +217,7 @@ class RhServiceTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(rh_service, '_service_is_upstart', self._m_bool()):
             with patch.dict(rh_service.__salt__, {'cmd.retcode':
                                                   self._m_bool(False)}):
-                self.assertTrue(rh_service.restart('salt-api'))
+                assert rh_service.restart('salt-api')
 
     # 'reload_' function tests: 1
 
@@ -228,7 +228,7 @@ class RhServiceTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(rh_service, '_service_is_upstart', self._m_bool()):
             with patch.dict(rh_service.__salt__, {'cmd.retcode':
                                                   self._m_bool(False)}):
-                self.assertTrue(rh_service.reload_('salt-api'))
+                assert rh_service.reload_('salt-api')
 
     # 'status' function tests: 1
 
@@ -240,17 +240,17 @@ class RhServiceTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(rh_service, '_service_is_upstart', self._m_bool()):
             mock_run = MagicMock(return_value='start/running')
             with patch.dict(rh_service.__salt__, {'cmd.run': mock_run}):
-                self.assertTrue(rh_service.status('salt-api'))
+                assert rh_service.status('salt-api')
 
         with patch.object(rh_service, '_service_is_upstart',
                           self._m_bool(False)):
             with patch.dict(rh_service.__salt__, {'status.pid':
                                                   self._m_bool()}):
-                self.assertTrue(rh_service.status('salt-api', sig=True))
+                assert rh_service.status('salt-api', sig=True)
 
             mock_ret = MagicMock(return_value=0)
             with patch.dict(rh_service.__salt__, {'cmd.retcode': mock_ret}):
-                self.assertTrue(rh_service.status('salt-api'))
+                assert rh_service.status('salt-api')
 
     # 'enable' function tests: 1
 
@@ -262,12 +262,12 @@ class RhServiceTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(rh_service, '_service_is_upstart', mock_bool):
             with patch.object(rh_service, '_upstart_is_enabled', MagicMock(return_value=True)):
                 with patch.object(rh_service, '_upstart_enable', MagicMock(return_value=False)):
-                    self.assertFalse(rh_service.enable('salt-api'))
+                    assert not rh_service.enable('salt-api')
                 with patch.object(rh_service, '_upstart_enable', MagicMock(return_value=True)):
-                    self.assertTrue(rh_service.enable('salt-api'))
+                    assert rh_service.enable('salt-api')
 
             with patch.object(rh_service, '_sysv_enable', self._m_bool()):
-                self.assertTrue(rh_service.enable('salt-api'))
+                assert rh_service.enable('salt-api')
 
     # 'disable' function tests: 1
 
@@ -279,12 +279,12 @@ class RhServiceTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(rh_service, '_service_is_upstart', mock_bool):
             with patch.object(rh_service, '_upstart_is_enabled', MagicMock(return_value=True)):
                 with patch.object(rh_service, '_upstart_disable', MagicMock(return_value=False)):
-                    self.assertFalse(rh_service.disable('salt-api'))
+                    assert not rh_service.disable('salt-api')
                 with patch.object(rh_service, '_upstart_disable', MagicMock(return_value=True)):
-                    self.assertTrue(rh_service.disable('salt-api'))
+                    assert rh_service.disable('salt-api')
 
             with patch.object(rh_service, '_sysv_disable', self._m_bool()):
-                self.assertTrue(rh_service.disable('salt-api'))
+                assert rh_service.disable('salt-api')
 
     # 'enabled' function tests: 1
 
@@ -296,10 +296,10 @@ class RhServiceTestCase(TestCase, LoaderModuleMockMixin):
         mock_bool = MagicMock(side_effect=[True, False])
         with patch.object(rh_service, '_service_is_upstart', mock_bool):
             with patch.object(rh_service, '_upstart_is_enabled', MagicMock(return_value=False)):
-                self.assertFalse(rh_service.enabled('salt-api'))
+                assert not rh_service.enabled('salt-api')
 
             with patch.object(rh_service, '_sysv_is_enabled', self._m_bool()):
-                self.assertTrue(rh_service.enabled('salt-api'))
+                assert rh_service.enabled('salt-api')
 
     # 'disabled' function tests: 1
 
@@ -311,8 +311,8 @@ class RhServiceTestCase(TestCase, LoaderModuleMockMixin):
         mock_bool = MagicMock(side_effect=[True, False])
         with patch.object(rh_service, '_service_is_upstart', mock_bool):
             with patch.object(rh_service, '_upstart_is_enabled', MagicMock(return_value=False)):
-                self.assertTrue(rh_service.disabled('salt-api'))
+                assert rh_service.disabled('salt-api')
 
             with patch.object(rh_service, '_sysv_is_enabled',
                               self._m_bool(False)):
-                self.assertTrue(rh_service.disabled('salt-api'))
+                assert rh_service.disabled('salt-api')

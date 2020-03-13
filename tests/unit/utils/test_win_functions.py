@@ -10,6 +10,7 @@ from tests.support.mock import patch, MagicMock
 # Import Salt Libs
 import salt.utils.platform
 import salt.utils.win_functions as win_functions
+import pytest
 
 # Import 3rd Party Libs
 try:
@@ -34,7 +35,7 @@ class WinFunctionsTestCase(TestCase):
         '''
         encoded = win_functions.escape_argument('simple')
 
-        self.assertEqual(encoded, 'simple')
+        assert encoded == 'simple'
 
     def test_escape_argument_with_space(self):
         '''
@@ -42,7 +43,7 @@ class WinFunctionsTestCase(TestCase):
         '''
         encoded = win_functions.escape_argument('with space')
 
-        self.assertEqual(encoded, '^"with space^"')
+        assert encoded == '^"with space^"'
 
     def test_escape_argument_simple_path(self):
         '''
@@ -50,7 +51,7 @@ class WinFunctionsTestCase(TestCase):
         '''
         encoded = win_functions.escape_argument('C:\\some\\path')
 
-        self.assertEqual(encoded, 'C:\\some\\path')
+        assert encoded == 'C:\\some\\path'
 
     def test_escape_argument_path_with_space(self):
         '''
@@ -58,7 +59,7 @@ class WinFunctionsTestCase(TestCase):
         '''
         encoded = win_functions.escape_argument('C:\\Some Path\\With Spaces')
 
-        self.assertEqual(encoded, '^"C:\\Some Path\\With Spaces^"')
+        assert encoded == '^"C:\\Some Path\\With Spaces^"'
 
     @skipIf(not salt.utils.platform.is_windows(),
             'WinDLL only available on Windows')
@@ -66,7 +67,7 @@ class WinFunctionsTestCase(TestCase):
         '''
             Test to rehash the Environment variables
         '''
-        self.assertTrue(win_functions.broadcast_setting_change())
+        assert win_functions.broadcast_setting_change()
 
     @skipIf(not salt.utils.platform.is_windows(),
             'WinDLL only available on Windows')
@@ -74,7 +75,7 @@ class WinFunctionsTestCase(TestCase):
         groups = ['Administrators', 'Users']
         with patch('win32net.NetUserGetLocalGroups', return_value=groups):
             ret = win_functions.get_user_groups('Administrator')
-            self.assertListEqual(groups, ret)
+            assert groups == ret
 
     @skipIf(not salt.utils.platform.is_windows(),
             'WinDLL only available on Windows')
@@ -83,7 +84,7 @@ class WinFunctionsTestCase(TestCase):
         expected = ['S-1-5-32-544', 'S-1-5-32-545']
         with patch('win32net.NetUserGetLocalGroups', return_value=groups):
             ret = win_functions.get_user_groups('Administrator', sid=True)
-            self.assertListEqual(expected, ret)
+            assert expected == ret
 
     @skipIf(not salt.utils.platform.is_windows(),
             'WinDLL only available on Windows')
@@ -91,7 +92,7 @@ class WinFunctionsTestCase(TestCase):
         groups = ['SYSTEM']
         with patch('win32net.NetUserGetLocalGroups', return_value=groups):
             ret = win_functions.get_user_groups('SYSTEM')
-            self.assertListEqual(groups, ret)
+            assert groups == ret
 
     @skipIf(not salt.utils.platform.is_windows(),
             'WinDLL only available on Windows')
@@ -103,7 +104,7 @@ class WinFunctionsTestCase(TestCase):
         effect = [win_error, groups]
         with patch('win32net.NetUserGetLocalGroups', side_effect=effect):
             ret = win_functions.get_user_groups('Administrator')
-            self.assertListEqual(groups, ret)
+            assert groups == ret
 
     @skipIf(not salt.utils.platform.is_windows(),
             'WinDLL only available on Windows')
@@ -115,7 +116,7 @@ class WinFunctionsTestCase(TestCase):
         effect = [win_error, groups]
         with patch('win32net.NetUserGetLocalGroups', side_effect=effect):
             ret = win_functions.get_user_groups('Administrator')
-            self.assertListEqual(groups, ret)
+            assert groups == ret
 
     @skipIf(not salt.utils.platform.is_windows(),
             'WinDLL only available on Windows')
@@ -127,7 +128,7 @@ class WinFunctionsTestCase(TestCase):
         effect = [win_error, groups]
         with patch('win32net.NetUserGetLocalGroups', side_effect=effect):
             ret = win_functions.get_user_groups('Administrator')
-            self.assertListEqual(groups, ret)
+            assert groups == ret
 
     @skipIf(not salt.utils.platform.is_windows(),
             'WinDLL only available on Windows')
@@ -137,5 +138,5 @@ class WinFunctionsTestCase(TestCase):
         win_error.winerror = 1927
         mock_error = MagicMock(side_effect=win_error)
         with patch('win32net.NetUserGetLocalGroups', side_effect=mock_error):
-            with self.assertRaises(WinError):
+            with pytest.raises(WinError):
                 win_functions.get_user_groups('Administrator')

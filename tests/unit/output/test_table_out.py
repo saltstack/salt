@@ -36,8 +36,7 @@ class TableTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_output(self):
         ret = table_out.output(self.data)
-        self.assertEqual(
-            ret,
+        assert ret == \
             ('    -----------------------------------------\n'
              '    |              Food             | Price |\n'
              '    -----------------------------------------\n'
@@ -45,4 +44,3 @@ class TableTestCase(TestCase, LoaderModuleMockMixin):
              '    -----------------------------------------\n'
              '    | спам, спам, спам, яйца и спам |  3.99 |\n'
              '    -----------------------------------------')
-        )

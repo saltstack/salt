@@ -28,6 +28,7 @@ import zmq
 from salt.ext import six
 
 import logging
+import pytest
 
 log = logging.getLogger(__name__)
 
@@ -51,7 +52,7 @@ class PayloadTestCase(TestCase):
         idata = {'pillar': [OrderedDict(environment='dev')]}
         odata = payload.loads(payload.dumps(idata.copy()))
         self.assertNoOrderedDict(odata)
-        self.assertEqual(idata, odata)
+        assert idata == odata
 
     def test_datetime_dump_load(self):
         '''
@@ -62,10 +63,9 @@ class PayloadTestCase(TestCase):
         idata = {dtvalue: dtvalue}
         sdata = payload.dumps(idata.copy())
         odata = payload.loads(sdata)
-        self.assertEqual(
-                sdata,
-                b'\x81\xc7\x18N20010203T04:05:06.000007\xc7\x18N20010203T04:05:06.000007')
-        self.assertEqual(idata, odata)
+        assert sdata == \
+                b'\x81\xc7\x18N20010203T04:05:06.000007\xc7\x18N20010203T04:05:06.000007'
+        assert idata == odata
 
     def test_verylong_dump_load(self):
         '''
@@ -76,7 +76,7 @@ class PayloadTestCase(TestCase):
         sdata = payload.dumps(idata.copy())
         odata = payload.loads(sdata)
         idata['jid'] = '{0}'.format(idata['jid'])
-        self.assertEqual(idata, odata)
+        assert idata == odata
 
     def test_immutable_dict_dump_load(self):
         '''
@@ -86,7 +86,7 @@ class PayloadTestCase(TestCase):
         idata = {'dict': {'key': 'value'}}
         sdata = payload.dumps({'dict': immutabletypes.ImmutableDict(idata['dict'])})
         odata = payload.loads(sdata)
-        self.assertEqual(idata, odata)
+        assert idata == odata
 
     def test_immutable_list_dump_load(self):
         '''
@@ -96,7 +96,7 @@ class PayloadTestCase(TestCase):
         idata = {'list': [1, 2, 3]}
         sdata = payload.dumps({'list': immutabletypes.ImmutableList(idata['list'])})
         odata = payload.loads(sdata)
-        self.assertEqual(idata, odata)
+        assert idata == odata
 
     def test_immutable_set_dump_load(self):
         '''
@@ -106,7 +106,7 @@ class PayloadTestCase(TestCase):
         idata = {'set': ['red', 'green', 'blue']}
         sdata = payload.dumps({'set': immutabletypes.ImmutableSet(idata['set'])})
         odata = payload.loads(sdata)
-        self.assertEqual(idata, odata)
+        assert idata == odata
 
     def test_odict_dump_load(self):
         '''
@@ -120,7 +120,7 @@ class PayloadTestCase(TestCase):
         data['w'] = 'x'
         sdata = payload.dumps({'set': data})
         odata = payload.loads(sdata)
-        self.assertEqual({'set': dict(data)}, odata)
+        assert {'set': dict(data)} == odata
 
     def test_mixed_dump_load(self):
         '''
@@ -149,7 +149,7 @@ class PayloadTestCase(TestCase):
                  }
         sdata = payload.dumps(idata)
         odata = payload.loads(sdata)
-        self.assertEqual(edata, odata)
+        assert edata == odata
 
     def test_recursive_dump_load(self):
         '''
@@ -160,7 +160,7 @@ class PayloadTestCase(TestCase):
         data['data'] = data  # Data all the things!
         sdata = payload.dumps(data)
         odata = payload.loads(sdata)
-        self.assertTrue('recursion' in odata['data'].lower())
+        assert 'recursion' in odata['data'].lower()
 
 
 class SREQTestCase(TestCase):
@@ -250,14 +250,14 @@ class SREQTestCase(TestCase):
         # server-side timeout
         log.info('Sending tries=1, timeout=1')
         start = time.time()
-        with self.assertRaises(salt.exceptions.SaltReqTimeoutError):
+        with pytest.raises(salt.exceptions.SaltReqTimeoutError):
             sreq.send('clear', {'sleep': 2}, tries=1, timeout=1)
         assert time.time() - start >= 1  # ensure we actually tried once (1s)
 
         # server-side timeout with retries
         log.info('Sending tries=2, timeout=1')
         start = time.time()
-        with self.assertRaises(salt.exceptions.SaltReqTimeoutError):
+        with pytest.raises(salt.exceptions.SaltReqTimeoutError):
             sreq.send('clear', {'sleep': 2}, tries=2, timeout=1)
         assert time.time() - start >= 2  # ensure we actually tried twice (2s)
 

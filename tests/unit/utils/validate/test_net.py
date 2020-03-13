@@ -38,10 +38,10 @@ class ValidateNetTestCase(TestCase):
         ]
 
         for addr in true_addrs:
-            self.assertTrue(net.ipv4_addr(addr))
+            assert net.ipv4_addr(addr)
 
         for addr in false_addrs:
-            self.assertFalse(net.ipv4_addr(addr))
+            assert not net.ipv4_addr(addr)
 
     def test_ipv6_addr(self):
         '''
@@ -66,7 +66,7 @@ class ValidateNetTestCase(TestCase):
         ]
 
         for addr in true_addrs:
-            self.assertTrue(net.ipv6_addr(addr))
+            assert net.ipv6_addr(addr)
 
         for addr in false_addrs:
-            self.assertFalse(net.ipv6_addr(addr))
+            assert not net.ipv6_addr(addr)

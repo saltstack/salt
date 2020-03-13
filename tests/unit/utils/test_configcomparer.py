@@ -40,8 +40,8 @@ class UtilConfigcomparerTestCase(TestCase):
             to_update,
             changes,
         )
-        self.assertEqual({}, changes)
-        self.assertEqual(self.base_config, to_update)
+        assert {} == changes
+        assert self.base_config == to_update
 
         # simple, new value
         to_update = copy.deepcopy(self.base_config)
@@ -53,17 +53,15 @@ class UtilConfigcomparerTestCase(TestCase):
             to_update,
             changes,
         )
-        self.assertEqual(
-            {
+        assert {
                 'attrx': {
                     'new': 'value1',
                     'old': None,
                 },
-            },
-            changes,
-        )
-        self.assertEqual('value1', to_update['attrx'])
-        self.assertEqual('value1', to_update['attr1'])
+            } == \
+            changes
+        assert 'value1' == to_update['attrx']
+        assert 'value1' == to_update['attr1']
 # simple value
         to_update = copy.deepcopy(self.base_config)
         changes = {}
@@ -74,18 +72,15 @@ class UtilConfigcomparerTestCase(TestCase):
             to_update,
             changes,
         )
-        self.assertEqual(
-            {
+        assert {
                 'attr1': {
                     'new': 'value2',
                     'old': 'value1',
                 },
-            },
-            changes,
-        )
-        self.assertEqual('value2', to_update['attr1'])
-        self.assertEqual(
-            {
+            } == \
+            changes
+        assert 'value2' == to_update['attr1']
+        assert {
                 'attr1': 'value2',
                 'attr2': [
                     'item1',
@@ -100,9 +95,8 @@ class UtilConfigcomparerTestCase(TestCase):
                         'item1',
                     ],
                 },
-            },
-            to_update,
-        )
+            } == \
+            to_update
 
         # empty list
         to_update = copy.deepcopy(self.base_config)
@@ -114,8 +108,8 @@ class UtilConfigcomparerTestCase(TestCase):
             to_update,
             changes,
         )
-        self.assertEqual({}, changes)
-        self.assertEqual(self.base_config, to_update)
+        assert {} == changes
+        assert self.base_config == to_update
 
         # list value (add)
         to_update = copy.deepcopy(self.base_config)
@@ -132,17 +126,14 @@ class UtilConfigcomparerTestCase(TestCase):
             to_update,
             changes,
         )
-        self.assertEqual(
-            {
+        assert {
                 'attr2[3]': {
                     'new': 'item4',
                     'old': None,
                 },
-            },
-            changes,
-        )
-        self.assertEqual(
-            {
+            } == \
+            changes
+        assert {
                 'attr1': 'value1',
                 'attr2': [
                     'item1',
@@ -158,9 +149,8 @@ class UtilConfigcomparerTestCase(TestCase):
                         'item1',
                     ],
                 },
-            },
-            to_update,
-        )
+            } == \
+            to_update
 
         # list value (remove and modify)
         to_update = copy.deepcopy(self.base_config)
@@ -175,8 +165,7 @@ class UtilConfigcomparerTestCase(TestCase):
             to_update,
             changes,
         )
-        self.assertEqual(
-            {
+        assert {
                 'attr2[0]': {
                     'new': 'itemx',
                     'old': 'item1',
@@ -185,11 +174,9 @@ class UtilConfigcomparerTestCase(TestCase):
                     'new': None,
                     'old': 'item3',
                 },
-            },
-            changes,
-        )
-        self.assertEqual(
-            {
+            } == \
+            changes
+        assert {
                 'attr1': 'value1',
                 'attr2': [
                     'itemx',
@@ -203,9 +190,8 @@ class UtilConfigcomparerTestCase(TestCase):
                         'item1',
                     ],
                 },
-            },
-            to_update,
-        )
+            } == \
+            to_update
 
         # empty dict
         to_update = copy.deepcopy(self.base_config)
@@ -217,8 +203,8 @@ class UtilConfigcomparerTestCase(TestCase):
             to_update,
             changes,
         )
-        self.assertEqual({}, changes)
-        self.assertEqual(self.base_config, to_update)
+        assert {} == changes
+        assert self.base_config == to_update
 
         # dict value (add)
         to_update = copy.deepcopy(self.base_config)
@@ -232,17 +218,14 @@ class UtilConfigcomparerTestCase(TestCase):
             to_update,
             changes,
         )
-        self.assertEqual(
-            {
+        assert {
                 'attr5.subattr3': {
                     'new': 'value1',
                     'old': None,
                 },
-            },
-            changes,
-        )
-        self.assertEqual(
-            {
+            } == \
+            changes
+        assert {
                 'attr1': 'value1',
                 'attr2': [
                     'item1',
@@ -258,9 +241,8 @@ class UtilConfigcomparerTestCase(TestCase):
                     ],
                     'subattr3': 'value1',
                 },
-            },
-            to_update,
-        )
+            } == \
+            to_update
 
         # dict value (remove and modify)
         to_update = copy.deepcopy(self.base_config)
@@ -278,8 +260,7 @@ class UtilConfigcomparerTestCase(TestCase):
             to_update,
             changes,
         )
-        self.assertEqual(
-            {
+        assert {
                 'attr5.subattr1': {
                     'new': 'value2',
                     'old': 'value1',
@@ -288,11 +269,9 @@ class UtilConfigcomparerTestCase(TestCase):
                     'new': 'item2',
                     'old': None,
                 },
-            },
-            changes,
-        )
-        self.assertEqual(
-            {
+            } == \
+            changes
+        assert {
                 'attr1': 'value1',
                 'attr2': [
                     'item1',
@@ -308,6 +287,5 @@ class UtilConfigcomparerTestCase(TestCase):
                         'item2',
                     ],
                 },
-            },
-            to_update,
-        )
+            } == \
+            to_update

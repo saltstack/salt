@@ -46,7 +46,7 @@ class ExtNodesTestCase(TestCase, LoaderModuleMockMixin):
         communicate_mock = MagicMock(return_value=(stdout, None))
         with patch.object(subprocess.Popen, 'communicate', communicate_mock):
             ret = ext_nodes.top(opts={'id': 'foo'})
-        self.assertEqual(ret, {'base': ['one', 'two']})
+        assert ret == {'base': ['one', 'two']}
 
     def test_ext_nodes_with_environment(self):
         '''
@@ -61,4 +61,4 @@ class ExtNodesTestCase(TestCase, LoaderModuleMockMixin):
         communicate_mock = MagicMock(return_value=(stdout, None))
         with patch.object(subprocess.Popen, 'communicate', communicate_mock):
             ret = ext_nodes.top(opts={'id': 'foo'})
-        self.assertEqual(ret, {'dev': ['one', 'two']})
+        assert ret == {'dev': ['one', 'two']}

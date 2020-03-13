@@ -17,6 +17,7 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.modules.openstack_config as openstack_config
 from salt.exceptions import CommandExecutionError
+import pytest
 
 
 class OpenstackConfigTestCase(TestCase, LoaderModuleMockMixin):
@@ -38,15 +39,15 @@ class OpenstackConfigTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value={'retcode': 0, 'stderr': 'error',
                                        'stdout': 'salt'})
         with patch.dict(openstack_config.__salt__, {'cmd.run_all': mock}):
-            self.assertEqual(openstack_config.set_('/etc/keystone/keys.conf',
-                                                   'sql', 'connection', 'foo'),
-                             'salt')
+            assert openstack_config.set_('/etc/keystone/keys.conf',
+                                                   'sql', 'connection', 'foo') == \
+                             'salt'
 
         mock = MagicMock(return_value={'retcode': 1, 'stderr': 'error',
                                        'stdout': 'salt'})
         with patch.dict(openstack_config.__salt__, {'cmd.run_all': mock}):
-            self.assertRaises(CommandExecutionError, openstack_config.set_,
-                              '/etc/keystone/keystone.conf', 'sql',
+            with pytest.raises(CommandExecutionError):
+                openstack_config.set_('/etc/keystone/keystone.conf', 'sql',
                               'connection', 'foo')
 
     # 'get' function tests: 1
@@ -58,14 +59,14 @@ class OpenstackConfigTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value={'retcode': 0, 'stderr': 'error',
                                        'stdout': 'salt'})
         with patch.dict(openstack_config.__salt__, {'cmd.run_all': mock}):
-            self.assertEqual(openstack_config.get('/etc/keystone/keys.conf',
-                                                  'sql', 'connection'), 'salt')
+            assert openstack_config.get('/etc/keystone/keys.conf',
+                                                  'sql', 'connection') == 'salt'
 
         mock = MagicMock(return_value={'retcode': 1, 'stderr': 'error',
                                        'stdout': 'salt'})
         with patch.dict(openstack_config.__salt__, {'cmd.run_all': mock}):
-            self.assertRaises(CommandExecutionError, openstack_config.get,
-                              '/etc/key/keystone.conf', 'sql', 'connection')
+            with pytest.raises(CommandExecutionError):
+                openstack_config.get('/etc/key/keystone.conf', 'sql', 'connection')
 
     # 'delete' function tests: 1
 
@@ -76,12 +77,12 @@ class OpenstackConfigTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value={'retcode': 0, 'stderr': 'error',
                                        'stdout': 'salt'})
         with patch.dict(openstack_config.__salt__, {'cmd.run_all': mock}):
-            self.assertEqual(openstack_config.delete('/etc/keystone/keys.conf',
-                                                     'sql', 'connection'),
-                             'salt')
+            assert openstack_config.delete('/etc/keystone/keys.conf',
+                                                     'sql', 'connection') == \
+                             'salt'
 
         mock = MagicMock(return_value={'retcode': 1, 'stderr': 'error',
                                        'stdout': 'salt'})
         with patch.dict(openstack_config.__salt__, {'cmd.run_all': mock}):
-            self.assertRaises(CommandExecutionError, openstack_config.delete,
-                              '/etc/key/keystone.conf', 'sql', 'connection')
+            with pytest.raises(CommandExecutionError):
+                openstack_config.delete('/etc/key/keystone.conf', 'sql', 'connection')

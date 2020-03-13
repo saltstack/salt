@@ -230,7 +230,7 @@ class BotoSNSTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltStateChangesEqual(ret, {})
         ret = self.run_function('boto_sns.exists', name=self.topic_name)
-        self.assertFalse(ret)
+        assert not ret
 
     def test_present_test_mode_with_subscriptions(self):
         self.run_state('boto_sns.present', name=self.topic_name)
@@ -255,7 +255,7 @@ class BotoSNSTest(ModuleCase, SaltReturnAssertsMixin):
             'boto_sns.get_all_subscriptions_by_topic',
             name=self.topic_name
         )
-        self.assertEqual([], ret)
+        assert [] == ret
 
     def test_absent_not_exist(self):
         ret = self.run_state('boto_sns.absent',
@@ -295,7 +295,7 @@ class BotoSNSTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltStateChangesEqual(ret, {})
         ret = self.run_function('boto_sns.exists', name=self.topic_name)
-        self.assertTrue(ret)
+        assert ret
 
     def assertSubscriptionInTopic(self, subscription, topic_name):
         ret = self.run_function(
@@ -304,7 +304,7 @@ class BotoSNSTest(ModuleCase, SaltReturnAssertsMixin):
         )
         for _subscription in ret:
             try:
-                self.assertDictContainsSubset(subscription, _subscription)
+                assert dict(_subscription, **subscription) == _subscription
                 return True
             except AssertionError:
                 continue

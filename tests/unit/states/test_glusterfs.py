@@ -57,15 +57,15 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
                  patch.object(salt.utils.network, 'host_to_ips', mock_host_ips):
                 comt = 'Peering with localhost is not needed'
                 ret.update({'comment': comt})
-                self.assertDictEqual(glusterfs.peered(name), ret)
+                assert glusterfs.peered(name) == ret
 
                 mock_host_ips.return_value = ['2001:db8::1']
-                self.assertDictEqual(glusterfs.peered(name), ret)
+                assert glusterfs.peered(name) == ret
 
                 mock_host_ips.return_value = ['1.2.3.42']
                 comt = ('Host {0} already peered'.format(name))
                 ret.update({'comment': comt})
-                self.assertDictEqual(glusterfs.peered(name), ret)
+                assert glusterfs.peered(name) == ret
 
                 with patch.dict(glusterfs.__opts__, {'test': False}):
                     old = {'uuid1': {'hostnames': ['other1']}}
@@ -75,7 +75,7 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
                     comt = 'Host {0} successfully peered'.format(name)
                     ret.update({'comment': comt,
                                 'changes': {'old': old, 'new': new}})
-                    self.assertDictEqual(glusterfs.peered(name), ret)
+                    assert glusterfs.peered(name) == ret
                     mock_status.side_effect = None
 
                     mock_status.return_value = {
@@ -88,17 +88,17 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
                     comt = ('Failed to peer with {0},'
                             + ' please check logs for errors').format(name)
                     ret.update({'comment': comt, 'changes': {}})
-                    self.assertDictEqual(glusterfs.peered(name), ret)
+                    assert glusterfs.peered(name) == ret
 
                     comt = ('Invalid characters in peer name.')
                     ret.update({'comment': comt, 'name': ':/'})
-                    self.assertDictEqual(glusterfs.peered(':/'), ret)
+                    assert glusterfs.peered(':/') == ret
                     ret.update({'name': name})
 
                 with patch.dict(glusterfs.__opts__, {'test': True}):
                     comt = ('Peer {0} will be added.'.format(name))
                     ret.update({'comment': comt, 'result': None})
-                    self.assertDictEqual(glusterfs.peered(name), ret)
+                    assert glusterfs.peered(name) == ret
 
     # 'volume_present' function tests: 1
 
@@ -131,43 +131,43 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
                 mock_info.return_value = started_info
                 comt = ('Volume {0} already exists and is started'.format(name))
                 ret.update({'comment': comt})
-                self.assertDictEqual(glusterfs.volume_present(name, bricks,
-                                                              start=True), ret)
+                assert glusterfs.volume_present(name, bricks,
+                                                              start=True) == ret
 
                 mock_info.return_value = stopped_info
                 comt = ('Volume {0} already exists and is now started'.format(name))
                 ret.update({'comment': comt,
                             'changes': {'old': 'stopped', 'new': 'started'}})
-                self.assertDictEqual(glusterfs.volume_present(name, bricks,
-                                                              start=True), ret)
+                assert glusterfs.volume_present(name, bricks,
+                                                              start=True) == ret
 
                 comt = ('Volume {0} already exists'.format(name))
                 ret.update({'comment': comt, 'changes': {}})
-                self.assertDictEqual(glusterfs.volume_present(name, bricks,
-                                                              start=False), ret)
+                assert glusterfs.volume_present(name, bricks,
+                                                              start=False) == ret
             with patch.dict(glusterfs.__opts__, {'test': True}):
                 comt = ('Volume {0} already exists'.format(name))
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(glusterfs.volume_present(name, bricks,
-                                                              start=False), ret)
+                assert glusterfs.volume_present(name, bricks,
+                                                              start=False) == ret
 
                 comt = ('Volume {0} already exists'
                         + ' and will be started').format(name)
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(glusterfs.volume_present(name, bricks,
-                                                              start=True), ret)
+                assert glusterfs.volume_present(name, bricks,
+                                                              start=True) == ret
 
                 mock_list.return_value = []
                 comt = ('Volume {0} will be created'.format(name))
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(glusterfs.volume_present(name, bricks,
-                                                              start=False), ret)
+                assert glusterfs.volume_present(name, bricks,
+                                                              start=False) == ret
 
                 comt = ('Volume {0} will be created'
                         + ' and started').format(name)
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(glusterfs.volume_present(name, bricks,
-                                                              start=True), ret)
+                assert glusterfs.volume_present(name, bricks,
+                                                              start=True) == ret
 
             with patch.dict(glusterfs.__opts__, {'test': False}):
                 mock_list.side_effect = [[], [name]]
@@ -175,29 +175,29 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update({'comment': comt,
                             'result': True,
                             'changes': {'old': [], 'new': [name]}})
-                self.assertDictEqual(glusterfs.volume_present(name, bricks,
-                                                              start=False), ret)
+                assert glusterfs.volume_present(name, bricks,
+                                                              start=False) == ret
 
                 mock_list.side_effect = [[], [name]]
                 comt = ('Volume {0} is created and is now started'.format(name))
                 ret.update({'comment': comt, 'result': True})
-                self.assertDictEqual(glusterfs.volume_present(name, bricks,
-                                                              start=True), ret)
+                assert glusterfs.volume_present(name, bricks,
+                                                              start=True) == ret
 
                 mock_list.side_effect = None
                 mock_list.return_value = []
                 mock_create.return_value = False
                 comt = 'Creation of volume {0} failed'.format(name)
                 ret.update({'comment': comt, 'result': False, 'changes': {}})
-                self.assertDictEqual(glusterfs.volume_present(name, bricks),
-                                     ret)
+                assert glusterfs.volume_present(name, bricks) == \
+                                     ret
 
             with patch.object(salt.utils.cloud, 'check_name',
                               MagicMock(return_value=True)):
                 comt = ('Invalid characters in volume name.')
                 ret.update({'comment': comt, 'result': False})
-                self.assertDictEqual(glusterfs.volume_present(name, bricks),
-                                     ret)
+                assert glusterfs.volume_present(name, bricks) == \
+                                     ret
 
     # 'started' function tests: 1
 
@@ -222,24 +222,24 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
                          'glusterfs.start_volume': mock_start}):
             comt = ('Volume {0} does not exist'.format(name))
             ret.update({'comment': comt})
-            self.assertDictEqual(glusterfs.started(name), ret)
+            assert glusterfs.started(name) == ret
 
             mock_info.return_value = started_info
             comt = ('Volume {0} is already started'.format(name))
             ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(glusterfs.started(name), ret)
+            assert glusterfs.started(name) == ret
 
             with patch.dict(glusterfs.__opts__, {'test': True}):
                 mock_info.return_value = stopped_info
                 comt = ('Volume {0} will be started'.format(name))
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(glusterfs.started(name), ret)
+                assert glusterfs.started(name) == ret
 
             with patch.dict(glusterfs.__opts__, {'test': False}):
                 comt = 'Volume {0} is started'.format(name)
                 ret.update({'comment': comt, 'result': True,
                             'change': {'new': 'started', 'old': 'stopped'}})
-                self.assertDictEqual(glusterfs.started(name), ret)
+                assert glusterfs.started(name) == ret
 
     # 'add_volume_bricks' function tests: 1
 
@@ -280,20 +280,20 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
                         {'glusterfs.info': mock_info,
                          'glusterfs.add_volume_bricks': mock_add}):
             ret.update({'comment': 'Volume salt does not exist'})
-            self.assertDictEqual(glusterfs.add_volume_bricks(name, bricks), ret)
+            assert glusterfs.add_volume_bricks(name, bricks) == ret
 
             mock_info.return_value = stopped_volinfo
             ret.update({'comment': 'Volume salt is not started'})
-            self.assertDictEqual(glusterfs.add_volume_bricks(name, bricks), ret)
+            assert glusterfs.add_volume_bricks(name, bricks) == ret
 
             mock_info.return_value = volinfo
             ret.update({'comment': 'Adding bricks to volume salt failed'})
-            self.assertDictEqual(glusterfs.add_volume_bricks(name, bricks), ret)
+            assert glusterfs.add_volume_bricks(name, bricks) == ret
 
             ret.update({'result': True})
             ret.update({'comment': 'Bricks already added in volume salt'})
-            self.assertDictEqual(glusterfs.add_volume_bricks(name, old_bricks),
-                                 ret)
+            assert glusterfs.add_volume_bricks(name, old_bricks) == \
+                                 ret
 
             mock_info.side_effect = [volinfo, new_volinfo]
             ret.update({'comment': 'Bricks successfully added to volume salt',
@@ -304,7 +304,7 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
             result = glusterfs.add_volume_bricks(name, bricks)
             ret['changes']['new'] = sorted(ret['changes']['new'])
             result['changes']['new'] = sorted(result['changes']['new'])
-            self.assertDictEqual(result, ret)
+            assert result == ret
 
     # 'op_version' function tests: 1
 
@@ -330,31 +330,31 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
             mock_get_version.return_value = [False, 'some error message']
             ret.update({'result': False})
             ret.update({'comment': 'some error message'})
-            self.assertDictEqual(glusterfs.op_version(name, current), ret)
+            assert glusterfs.op_version(name, current) == ret
 
             mock_get_version.return_value = current
             ret.update({'result': True})
             ret.update({'comment': 'Glusterfs cluster.op-version for {0} already set to {1}'.format(name, current)})
-            self.assertDictEqual(glusterfs.op_version(name, current), ret)
+            assert glusterfs.op_version(name, current) == ret
 
             with patch.dict(glusterfs.__opts__, {'test': True}):
                 mock_set_version.return_value = [False, 'Failed to set version']
                 ret.update({'result': None})
                 ret.update({'comment': 'An attempt would be made to set the cluster.op-version for {0} to {1}.'.
                            format(name, new)})
-                self.assertDictEqual(glusterfs.op_version(name, new), ret)
+                assert glusterfs.op_version(name, new) == ret
 
             with patch.dict(glusterfs.__opts__, {'test': False}):
                 mock_set_version.return_value = [False, 'Failed to set version']
                 ret.update({'result': False})
                 ret.update({'comment': 'Failed to set version'})
-                self.assertDictEqual(glusterfs.op_version(name, new), ret)
+                assert glusterfs.op_version(name, new) == ret
 
                 mock_set_version.return_value = 'some success message'
                 ret.update({'comment': 'some success message'})
                 ret.update({'changes': {'old': current, 'new': new}})
                 ret.update({'result': True})
-                self.assertDictEqual(glusterfs.op_version(name, new), ret)
+                assert glusterfs.op_version(name, new) == ret
 
     # 'max_op_version' function tests: 1
 
@@ -382,36 +382,36 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
             mock_get_version.return_value = [False, 'some error message']
             ret.update({'result': False})
             ret.update({'comment': 'some error message'})
-            self.assertDictEqual(glusterfs.max_op_version(name), ret)
+            assert glusterfs.max_op_version(name) == ret
 
             mock_get_version.return_value = current
             mock_get_max_op_version.return_value = [False, 'some error message']
             ret.update({'result': False})
             ret.update({'comment': 'some error message'})
-            self.assertDictEqual(glusterfs.max_op_version(name), ret)
+            assert glusterfs.max_op_version(name) == ret
 
             mock_get_version.return_value = current
             mock_get_max_op_version.return_value = current
             ret.update({'result': True})
             ret.update({'comment': 'The cluster.op-version is already set to the cluster.max-op-version of {0}'.
                        format(current)})
-            self.assertDictEqual(glusterfs.max_op_version(name), ret)
+            assert glusterfs.max_op_version(name) == ret
 
             with patch.dict(glusterfs.__opts__, {'test': True}):
                 mock_get_max_op_version.return_value = new
                 ret.update({'result': None})
                 ret.update({'comment': 'An attempt would be made to set the cluster.op-version to {0}.'.
                            format(new)})
-                self.assertDictEqual(glusterfs.max_op_version(name), ret)
+                assert glusterfs.max_op_version(name) == ret
 
             with patch.dict(glusterfs.__opts__, {'test': False}):
                 mock_set_version.return_value = [False, 'Failed to set version']
                 ret.update({'result': False})
                 ret.update({'comment': 'Failed to set version'})
-                self.assertDictEqual(glusterfs.max_op_version(name), ret)
+                assert glusterfs.max_op_version(name) == ret
 
                 mock_set_version.return_value = 'some success message'
                 ret.update({'comment': 'some success message'})
                 ret.update({'changes': {'old': current, 'new': new}})
                 ret.update({'result': True})
-                self.assertDictEqual(glusterfs.max_op_version(name), ret)
+                assert glusterfs.max_op_version(name) == ret

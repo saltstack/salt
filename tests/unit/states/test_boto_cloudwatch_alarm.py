@@ -46,15 +46,15 @@ class BotoCloudwatchAlarmTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(boto_cloudwatch_alarm.__opts__, {'test': True}):
                 comt = ('alarm my test alarm is to be created/updated.')
                 ret.update({'comment': comt})
-                self.assertDictEqual(boto_cloudwatch_alarm.present(name,
-                                                                   attributes),
-                                     ret)
+                assert boto_cloudwatch_alarm.present(name,
+                                                                   attributes) == \
+                                     ret
 
                 comt = ('alarm my test alarm is to be created/updated.')
                 ret.update({'comment': comt})
-                self.assertDictEqual(boto_cloudwatch_alarm.present(name,
-                                                                   attributes),
-                                     ret)
+                assert boto_cloudwatch_alarm.present(name,
+                                                                   attributes) == \
+                                     ret
 
             with patch.dict(boto_cloudwatch_alarm.__opts__, {'test': False}):
                 changes = {'new':
@@ -62,9 +62,9 @@ class BotoCloudwatchAlarmTestCase(TestCase, LoaderModuleMockMixin):
                             'namespace': 'AWS/SQS'}}
                 comt = ('alarm my test alarm is to be created/updated.')
                 ret.update({'changes': changes, 'comment': '', 'result': True})
-                self.assertDictEqual(boto_cloudwatch_alarm.present(name,
-                                                                   attributes),
-                                     ret)
+                assert boto_cloudwatch_alarm.present(name,
+                                                                   attributes) == \
+                                     ret
 
     # 'absent' function tests: 1
 
@@ -85,8 +85,8 @@ class BotoCloudwatchAlarmTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(boto_cloudwatch_alarm.__opts__, {'test': True}):
                 comt = ('alarm {0} is set to be removed.'.format(name))
                 ret.update({'comment': comt})
-                self.assertDictEqual(boto_cloudwatch_alarm.absent(name), ret)
+                assert boto_cloudwatch_alarm.absent(name) == ret
 
                 comt = ('my test alarm does not exist in None.')
                 ret.update({'comment': comt, 'result': True})
-                self.assertDictEqual(boto_cloudwatch_alarm.absent(name), ret)
+                assert boto_cloudwatch_alarm.absent(name) == ret

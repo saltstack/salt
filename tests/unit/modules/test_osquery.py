@@ -47,7 +47,7 @@ class OSQueryTestCase(TestCase, LoaderModuleMockMixin):
                           MagicMock(return_value=_table_attrs_results)):
             with patch.object(osquery, '_osquery',
                               MagicMock(return_value=_os_query_results)):
-                self.assertEqual(osquery.version(), '2.6.1')
+                assert osquery.version() == '2.6.1'
 
     def test_deb_packages(self):
         '''
@@ -70,7 +70,7 @@ class OSQueryTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(osquery, '_osquery',
                           MagicMock(return_value=_os_query_results)):
             with patch.dict(osquery.__grains__, {'os_family': 'Debian'}):
-                self.assertEqual(osquery.deb_packages(), _os_query_results)
+                assert osquery.deb_packages() == _os_query_results
 
     def test_deb_packages_with_attrs(self):
         '''
@@ -96,9 +96,9 @@ class OSQueryTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(osquery, '_osquery',
                               MagicMock(return_value=_os_query_results)):
                 with patch.dict(osquery.__grains__, {'os_family': 'Debian'}):
-                    self.assertEqual(osquery.deb_packages(attrs=['name',
-                                                                 'version']),
-                                     _os_query_results)
+                    assert osquery.deb_packages(attrs=['name',
+                                                                 'version']) == \
+                                     _os_query_results
 
     def test_kernel_modules(self):
         '''
@@ -116,8 +116,8 @@ class OSQueryTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(osquery, '_osquery',
                           MagicMock(return_value=_os_query_results)):
             with patch.dict(osquery.__grains__, {'os_family': 'Debian'}):
-                self.assertEqual(osquery.kernel_modules(),
-                                 _os_query_results)
+                assert osquery.kernel_modules() == \
+                                 _os_query_results
 
     def test_kernel_modules_with_attrs(self):
         '''
@@ -141,9 +141,9 @@ class OSQueryTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(osquery, '_osquery',
                               MagicMock(return_value=_os_query_results)):
                 with patch.dict(osquery.__grains__, {'os_family': 'Debian'}):
-                    self.assertEqual(osquery.kernel_modules(attrs=['name',
-                                                                   'status']),
-                                     _os_query_results)
+                    assert osquery.kernel_modules(attrs=['name',
+                                                                   'status']) == \
+                                     _os_query_results
 
     def test_osquery_info(self):
         '''
@@ -180,8 +180,8 @@ class OSQueryTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(osquery, '_osquery',
                               MagicMock(return_value=_os_query_results)):
                 with patch.dict(osquery.__grains__, {'os_family': 'Debian'}):
-                    self.assertEqual(osquery.osquery_info(),
-                                     _os_query_results)
+                    assert osquery.osquery_info() == \
+                                     _os_query_results
 
     def test_osquery_info_with_attrs(self):
         '''
@@ -209,5 +209,5 @@ class OSQueryTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(osquery, '_osquery',
                               MagicMock(return_value=_os_query_results)):
                 with patch.dict(osquery.__grains__, {'os_family': 'Debian'}):
-                    self.assertEqual(osquery.osquery_info(attrs=['build_platform', 'start_time']),
-                                     _os_query_results)
+                    assert osquery.osquery_info(attrs=['build_platform', 'start_time']) == \
+                                     _os_query_results

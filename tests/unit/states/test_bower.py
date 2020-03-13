@@ -39,7 +39,7 @@ class BowerTestCase(TestCase, LoaderModuleMockMixin):
                         'result': True,
                         'comment': 'Package \'jquery\' is not installed',
                         'changes': {}}
-            self.assertEqual(ret, expected)
+            assert ret == expected
 
     def test_removed_with_error(self):
         '''
@@ -54,7 +54,7 @@ class BowerTestCase(TestCase, LoaderModuleMockMixin):
                         'result': False,
                         'comment': 'Error removing \'underscore\': ',
                         'changes': {}}
-            self.assertEqual(ret, expected)
+            assert ret == expected
 
     def test_removed_existing(self):
         '''
@@ -73,7 +73,7 @@ class BowerTestCase(TestCase, LoaderModuleMockMixin):
                         'comment':
                             'Package \'underscore\' was successfully removed',
                         'changes': {'underscore': 'Removed'}}
-            self.assertEqual(ret, expected)
+            assert ret == expected
 
     def test_removed_existing_with_error(self):
         '''
@@ -92,7 +92,7 @@ class BowerTestCase(TestCase, LoaderModuleMockMixin):
                         'comment':
                             'Error removing \'underscore\': ',
                         'changes': {}}
-            self.assertEqual(ret, expected)
+            assert ret == expected
 
     def test_bootstrap_with_error(self):
         '''
@@ -108,7 +108,7 @@ class BowerTestCase(TestCase, LoaderModuleMockMixin):
                         'comment':
                             'Error bootstrapping \'/path/to/project\': ',
                         'changes': {}}
-            self.assertEqual(ret, expected)
+            assert ret == expected
 
     def test_bootstrap_not_needed(self):
         '''
@@ -124,7 +124,7 @@ class BowerTestCase(TestCase, LoaderModuleMockMixin):
                         'comment':
                             'Directory is already bootstrapped',
                         'changes': {}}
-            self.assertEqual(ret, expected)
+            assert ret == expected
 
     def test_bootstrap_success(self):
         '''
@@ -140,7 +140,7 @@ class BowerTestCase(TestCase, LoaderModuleMockMixin):
                         'comment':
                             'Directory was successfully bootstrapped',
                         'changes': {'/path/to/project': 'Bootstrapped'}}
-            self.assertEqual(ret, expected)
+            assert ret == expected
 
     def test_installed_with_error(self):
         '''
@@ -155,7 +155,7 @@ class BowerTestCase(TestCase, LoaderModuleMockMixin):
                         'result': False,
                         'comment': 'Error looking up \'underscore\': ',
                         'changes': {}}
-            self.assertEqual(ret, expected)
+            assert ret == expected
 
     def test_installed_not_needed(self):
         '''
@@ -177,7 +177,7 @@ class BowerTestCase(TestCase, LoaderModuleMockMixin):
                             ('Package(s) \'underscore, jquery#2.0.0\''
                              ' satisfied by underscore#1.7.0, jquery#2.0.0'),
                         'changes': {}}
-            self.assertEqual(ret, expected)
+            assert ret == expected
 
     def test_installed_new_with_exc(self):
         '''
@@ -194,7 +194,7 @@ class BowerTestCase(TestCase, LoaderModuleMockMixin):
                         'result': False,
                         'comment': 'Error installing \'underscore\': ',
                         'changes': {}}
-            self.assertEqual(ret, expected)
+            assert ret == expected
 
     def test_installed_new_with_error(self):
         '''
@@ -212,7 +212,7 @@ class BowerTestCase(TestCase, LoaderModuleMockMixin):
                         'comment':
                             'Could not install package(s) \'underscore\'',
                         'changes': {}}
-            self.assertEqual(ret, expected)
+            assert ret == expected
 
     def test_installed_success(self):
         '''
@@ -230,4 +230,4 @@ class BowerTestCase(TestCase, LoaderModuleMockMixin):
                         'comment':
                             'Package(s) \'underscore\' successfully installed',
                         'changes': {'new': ['underscore'], 'old': []}}
-            self.assertEqual(ret, expected)
+            assert ret == expected

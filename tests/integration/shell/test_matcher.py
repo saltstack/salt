@@ -36,12 +36,12 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
         '''
         data = self.run_salt('-L minion test.ping')
         data = '\n'.join(data)
-        self.assertIn('minion', data)
-        self.assertNotIn('sub_minion', data)
+        assert 'minion' in data
+        assert 'sub_minion' not in data
         data = self.run_salt('-L minion,sub_minion test.ping')
         data = '\n'.join(data)
-        self.assertIn('minion', data)
-        self.assertIn('sub_minion', data)
+        assert 'minion' in data
+        assert 'sub_minion' in data
 
     # compound matcher tests: 11
 
@@ -106,8 +106,8 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
     @pytest.mark.flaky(max_runs=4)
     def test_coumpound_pillar_pcre(self):
         data = self.run_salt("-C 'J%@knights%^(Lancelot|Galahad)$' test.ping")
-        self.assertTrue(minion_in_returns('minion', data))
-        self.assertTrue(minion_in_returns('sub_minion', data))
+        assert minion_in_returns('minion', data)
+        assert minion_in_returns('sub_minion', data)
         # The multiline nodegroup tests are failing in develop.
         # This needs to be fixed for Fluorine. @skipIf wasn't used, because
         # the rest of the assertions above pass just fine, so we don't want
@@ -129,48 +129,48 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
         test salt nodegroup matcher
         '''
         data = self.run_salt('-N min test.ping')
-        self.assertTrue(minion_in_returns('minion', data))
-        self.assertFalse(minion_in_returns('sub_minion', data))
+        assert minion_in_returns('minion', data)
+        assert not minion_in_returns('sub_minion', data)
         time.sleep(2)
         data = self.run_salt('-N sub_min test.ping')
-        self.assertFalse(minion_in_returns('minion', data))
-        self.assertTrue(minion_in_returns('sub_minion', data))
+        assert not minion_in_returns('minion', data)
+        assert minion_in_returns('sub_minion', data)
         time.sleep(2)
         data = self.run_salt('-N mins test.ping')
-        self.assertTrue(minion_in_returns('minion', data))
-        self.assertTrue(minion_in_returns('sub_minion', data))
+        assert minion_in_returns('minion', data)
+        assert minion_in_returns('sub_minion', data)
         time.sleep(2)
         data = self.run_salt('-N unknown_nodegroup test.ping')
-        self.assertFalse(minion_in_returns('minion', data))
-        self.assertFalse(minion_in_returns('sub_minion', data))
+        assert not minion_in_returns('minion', data)
+        assert not minion_in_returns('sub_minion', data)
         time.sleep(2)
         data = self.run_salt('-N redundant_minions test.ping')
-        self.assertTrue(minion_in_returns('minion', data))
-        self.assertTrue(minion_in_returns('sub_minion', data))
+        assert minion_in_returns('minion', data)
+        assert minion_in_returns('sub_minion', data)
         time.sleep(2)
         data = '\n'.join(self.run_salt('-N nodegroup_loop_a test.ping'))
-        self.assertIn('No minions matched', data)
+        assert 'No minions matched' in data
         time.sleep(2)
         data = self.run_salt("-N multiline_nodegroup test.ping")
-        self.assertTrue(minion_in_returns('minion', data))
-        self.assertTrue(minion_in_returns('sub_minion', data))
+        assert minion_in_returns('minion', data)
+        assert minion_in_returns('sub_minion', data)
 
     def test_nodegroup_list(self):
         data = self.run_salt('-N list_group test.ping')
-        self.assertTrue(minion_in_returns('minion', data))
-        self.assertTrue(minion_in_returns('sub_minion', data))
+        assert minion_in_returns('minion', data)
+        assert minion_in_returns('sub_minion', data)
 
         data = self.run_salt('-N list_group2 test.ping')
-        self.assertTrue(minion_in_returns('minion', data))
-        self.assertTrue(minion_in_returns('sub_minion', data))
+        assert minion_in_returns('minion', data)
+        assert minion_in_returns('sub_minion', data)
 
         data = self.run_salt('-N one_list_group test.ping')
-        self.assertTrue(minion_in_returns('minion', data))
-        self.assertFalse(minion_in_returns('sub_minion', data))
+        assert minion_in_returns('minion', data)
+        assert not minion_in_returns('sub_minion', data)
 
         data = self.run_salt('-N one_minion_list test.ping')
-        self.assertTrue(minion_in_returns('minion', data))
-        self.assertFalse(minion_in_returns('sub_minion', data))
+        assert minion_in_returns('minion', data)
+        assert not minion_in_returns('sub_minion', data)
 
     def test_glob(self):
         '''
@@ -178,12 +178,12 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
         '''
         data = self.run_salt('minion test.ping')
         data = '\n'.join(data)
-        self.assertIn('minion', data)
-        self.assertNotIn('sub_minion', data)
+        assert 'minion' in data
+        assert 'sub_minion' not in data
         data = self.run_salt('"*" test.ping')
         data = '\n'.join(data)
-        self.assertIn('minion', data)
-        self.assertIn('sub_minion', data)
+        assert 'minion' in data
+        assert 'sub_minion' in data
 
     def test_regex(self):
         '''
@@ -191,12 +191,12 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
         '''
         data = self.run_salt('-E "^minion$" test.ping')
         data = '\n'.join(data)
-        self.assertIn('minion', data)
-        self.assertNotIn('sub_minion', data)
+        assert 'minion' in data
+        assert 'sub_minion' not in data
         data = self.run_salt('-E ".*" test.ping')
         data = '\n'.join(data)
-        self.assertIn('minion', data)
-        self.assertIn('sub_minion', data)
+        assert 'minion' in data
+        assert 'sub_minion' in data
 
     def test_grain(self):
         '''
@@ -207,26 +207,26 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
         # First-level grain (string value)
         data = self.run_salt('-t 1 -G "test_grain:cheese" test.ping')
         data = '\n'.join(data)
-        self.assertIn('minion', data)
-        self.assertNotIn('sub_minion', data)
+        assert 'minion' in data
+        assert 'sub_minion' not in data
         data = self.run_salt('-G "test_grain:spam" test.ping')
         data = '\n'.join(data)
-        self.assertIn('sub_minion', data)
-        self.assertNotIn('minion', data.replace('sub_minion', 'stub'))
+        assert 'sub_minion' in data
+        assert 'minion' not in data.replace('sub_minion', 'stub')
         # Custom grain
         data = self.run_salt('-t 1 -G "match:maker" test.ping')
         data = '\n'.join(data)
-        self.assertIn('minion', data)
-        self.assertIn('sub_minion', data)
+        assert 'minion' in data
+        assert 'sub_minion' in data
         # First-level grain (list member)
         data = self.run_salt('-t 1 -G "planets:earth" test.ping')
         data = '\n'.join(data)
-        self.assertIn('minion', data)
-        self.assertNotIn('sub_minion', data)
+        assert 'minion' in data
+        assert 'sub_minion' not in data
         data = self.run_salt('-G "planets:saturn" test.ping')
         data = '\n'.join(data)
-        self.assertIn('sub_minion', data)
-        self.assertNotIn('minion', data.replace('sub_minion', 'stub'))
+        assert 'sub_minion' in data
+        assert 'minion' not in data.replace('sub_minion', 'stub')
         data = self.run_salt('-G "planets:pluto" test.ping')
         expect = None
         if self.master_opts['transport'] in ('zeromq', 'tcp'):
@@ -235,43 +235,41 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
                 'No command was sent, no jid was '
                 'assigned.'
             )
-        self.assertEqual(
-            ''.join(data),
+        assert ''.join(data) == \
             expect
-        )
         # Nested grain (string value)
         data = self.run_salt('-t 1 -G "level1:level2:foo" test.ping')
         data = '\n'.join(data)
-        self.assertIn('minion', data)
-        self.assertNotIn('sub_minion', data)
+        assert 'minion' in data
+        assert 'sub_minion' not in data
         data = self.run_salt('-G "level1:level2:bar" test.ping')
         data = '\n'.join(data)
-        self.assertIn('sub_minion', data)
-        self.assertNotIn('minion', data.replace('sub_minion', 'stub'))
+        assert 'sub_minion' in data
+        assert 'minion' not in data.replace('sub_minion', 'stub')
         # Nested grain (list member)
         data = self.run_salt('-t 1 -G "companions:one:ian" test.ping')
         data = '\n'.join(data)
-        self.assertIn('minion', data)
-        self.assertNotIn('sub_minion', data)
+        assert 'minion' in data
+        assert 'sub_minion' not in data
         data = self.run_salt('-G "companions:two:jamie" test.ping')
         data = '\n'.join(data)
-        self.assertIn('sub_minion', data)
-        self.assertNotIn('minion', data.replace('sub_minion', 'stub'))
+        assert 'sub_minion' in data
+        assert 'minion' not in data.replace('sub_minion', 'stub')
         # Test for issue: https://github.com/saltstack/salt/issues/19651
         data = self.run_salt('-G "companions:*:susan" test.ping')
         data = '\n'.join(data)
-        self.assertIn('minion:', data)
-        self.assertNotIn('sub_minion', data)
+        assert 'minion:' in data
+        assert 'sub_minion' not in data
         # Test to ensure wildcard at end works correctly
         data = self.run_salt('-G "companions:one:*" test.ping')
         data = '\n'.join(data)
-        self.assertIn('minion:', data)
-        self.assertNotIn('sub_minion', data)
+        assert 'minion:' in data
+        assert 'sub_minion' not in data
         # Test to ensure multiple wildcards works correctly
         data = self.run_salt('-G "companions:*:*" test.ping')
         data = '\n'.join(data)
-        self.assertIn('minion:', data)
-        self.assertIn('sub_minion', data)
+        assert 'minion:' in data
+        assert 'sub_minion' in data
 
     def test_regrain(self):
         '''
@@ -281,12 +279,12 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
             '-t 1 --grain-pcre "test_grain:^cheese$" test.ping'
         )
         data = '\n'.join(data)
-        self.assertIn('minion', data)
-        self.assertNotIn('sub_minion', data)
+        assert 'minion' in data
+        assert 'sub_minion' not in data
         data = self.run_salt('--grain-pcre "test_grain:.*am$" test.ping')
         data = '\n'.join(data)
-        self.assertIn('sub_minion', data)
-        self.assertNotIn('minion', data.replace('sub_minion', 'stub'))
+        assert 'sub_minion' in data
+        assert 'minion' not in data.replace('sub_minion', 'stub')
 
     def test_pillar(self):
         '''
@@ -295,28 +293,28 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
         # First-level pillar (string value)
         data = self.run_salt('-I "monty:python" test.ping')
         data = '\n'.join(data)
-        self.assertIn('minion', data)
-        self.assertIn('sub_minion', data)
+        assert 'minion' in data
+        assert 'sub_minion' in data
         # First-level pillar (string value, only in sub_minion)
         data = self.run_salt('-I "sub:sub_minion" test.ping')
         data = '\n'.join(data)
-        self.assertIn('sub_minion', data)
-        self.assertNotIn('minion', data.replace('sub_minion', 'stub'))
+        assert 'sub_minion' in data
+        assert 'minion' not in data.replace('sub_minion', 'stub')
         # First-level pillar (list member)
         data = self.run_salt('-I "knights:Bedevere" test.ping')
         data = '\n'.join(data)
-        self.assertIn('minion', data)
-        self.assertIn('sub_minion', data)
+        assert 'minion' in data
+        assert 'sub_minion' in data
         # Nested pillar (string value)
         data = self.run_salt('-I "level1:level2:foo" test.ping')
         data = '\n'.join(data)
-        self.assertIn('minion', data)
-        self.assertIn('sub_minion', data)
+        assert 'minion' in data
+        assert 'sub_minion' in data
         # Nested pillar (list member)
         data = self.run_salt('-I "companions:three:sarah jane" test.ping')
         data = '\n'.join(data)
-        self.assertIn('minion', data)
-        self.assertIn('sub_minion', data)
+        assert 'minion' in data
+        assert 'sub_minion' in data
 
     def test_repillar(self):
         '''
@@ -324,12 +322,12 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
         '''
         data = self.run_salt('-J "monty:^(python|hall)$" test.ping')
         data = '\n'.join(data)
-        self.assertIn('minion', data)
-        self.assertIn('sub_minion', data)
+        assert 'minion' in data
+        assert 'sub_minion' in data
         data = self.run_salt('--pillar-pcre "knights:^(Robin|Lancelot)$" test.ping')
         data = '\n'.join(data)
-        self.assertIn('sub_minion', data)
-        self.assertIn('minion', data.replace('sub_minion', 'stub'))
+        assert 'sub_minion' in data
+        assert 'minion' in data.replace('sub_minion', 'stub')
 
     def test_ipcidr(self):
         subnets_data = self.run_salt('--out yaml "*" network.subnets')
@@ -340,8 +338,8 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
 
         data = self.run_salt('-S {0} test.ping'.format(subnet))
         data = '\n'.join(data)
-        self.assertIn('minion', data)
-        self.assertIn('sub_minion', data)
+        assert 'minion' in data
+        assert 'sub_minion' in data
 
     def test_static(self):
         '''
@@ -349,7 +347,7 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
         '''
         data = self.run_salt('minion test.ping --static')
         data = '\n'.join(data)
-        self.assertIn('minion', data)
+        assert 'minion' in data
 
     def test_salt_documentation(self):
         '''
@@ -371,11 +369,11 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
                    expected=expect_to_find,
                    stdout='\n'.join(stdout).strip(),
                    stderr='\n'.join(stderr).strip()))
-        self.assertIn(expect_to_find, stdout, msg=error_msg)
+        assert expect_to_find in stdout, error_msg
 
     def test_salt_documentation_too_many_arguments(self):
         '''
         Test to see if passing additional arguments shows an error
         '''
         data = self.run_salt('-d minion salt ldap.search "filter=ou=People"', catch_stderr=True)
-        self.assertIn('You can only get documentation for one method at one time', '\n'.join(data[1]))
+        assert 'You can only get documentation for one method at one time' in '\n'.join(data[1])

@@ -22,30 +22,24 @@ class DimensionDataTest(CloudTest):
         Tests the return of running the --list-images command for the dimensiondata cloud provider
         '''
         image_list = self.run_cloud('--list-images {0}'.format(self.PROVIDER))
-        self.assertIn(
-            'Ubuntu 14.04 2 CPU',
+        assert 'Ubuntu 14.04 2 CPU' in \
             [i.strip() for i in image_list]
-        )
 
     def test_list_locations(self):
         '''
         Tests the return of running the --list-locations command for the dimensiondata cloud provider
         '''
         _list_locations = self.run_cloud('--list-locations {0}'.format(self.PROVIDER))
-        self.assertIn(
-            'Australia - Melbourne MCP2',
+        assert 'Australia - Melbourne MCP2' in \
             [i.strip() for i in _list_locations]
-        )
 
     def test_list_sizes(self):
         '''
         Tests the return of running the --list-sizes command for the dimensiondata cloud provider
         '''
         _list_sizes = self.run_cloud('--list-sizes {0}'.format(self.PROVIDER))
-        self.assertIn(
-            'default',
+        assert 'default' in \
             [i.strip() for i in _list_sizes]
-        )
 
     def test_instance(self):
         '''

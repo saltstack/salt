@@ -46,6 +46,6 @@ class ZyppPluginsTestCase(TestCase):
         bogus_io = BogusIO()
         with patch(BUILTINS_OPEN, bogus_io):
             drift.PLUGINEND(None, None)
-        self.assertEqual(str(bogus_io), 'deadbeef 123\n')
-        self.assertEqual(bogus_io.mode, 'w')
-        self.assertEqual(bogus_io.path, '/var/cache/salt/minion/rpmdb.cookie')
+        assert str(bogus_io) == 'deadbeef 123\n'
+        assert bogus_io.mode == 'w'
+        assert bogus_io.path == '/var/cache/salt/minion/rpmdb.cookie'

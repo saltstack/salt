@@ -32,13 +32,13 @@ class PycryptoTestCase(TestCase):
         if salt.utils.platform.is_darwin():
             id = ''
         ret = salt.utils.pycrypto.gen_hash(password=passwd)
-        self.assertTrue(ret.startswith('$6{0}'.format(id)))
+        assert ret.startswith('$6{0}'.format(id))
 
         ret = salt.utils.pycrypto.gen_hash(password=passwd, algorithm='md5')
-        self.assertTrue(ret.startswith('$1{0}'.format(id)))
+        assert ret.startswith('$1{0}'.format(id))
 
         ret = salt.utils.pycrypto.gen_hash(password=passwd, algorithm='sha256')
-        self.assertTrue(ret.startswith('$5{0}'.format(id)))
+        assert ret.startswith('$5{0}'.format(id))
 
     def test_secure_password(self):
         '''

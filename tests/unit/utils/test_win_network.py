@@ -158,7 +158,7 @@ class WinNetworkTestCase(TestCase):
             # ret = win_network._get_base_properties()
             results = win_network.get_interface_info_dot_net()
 
-        self.assertDictEqual(expected, results)
+        assert expected == results
 
     def test_get_network_info(self):
         expected = {
@@ -185,7 +185,7 @@ class WinNetworkTestCase(TestCase):
             # ret = win_network._get_base_properties()
             results = win_network.get_interface_info()
 
-        self.assertDictEqual(expected, results)
+        assert expected == results
 
     def test__get_base_properties_tap_adapter(self):
         '''
@@ -212,7 +212,7 @@ class WinNetworkTestCase(TestCase):
             'status': 'Up',
             'type': 'TAPAdapter'}
         results = win_network._get_base_properties(i_face=i_face)
-        self.assertDictEqual(expected, results)
+        assert expected == results
 
     def test__get_base_properties_undefined_adapter(self):
         '''
@@ -237,4 +237,4 @@ class WinNetworkTestCase(TestCase):
             'status': 'Up',
             'type': 'Undefined Adapter'}
         results = win_network._get_base_properties(i_face=i_face)
-        self.assertDictEqual(expected, results)
+        assert expected == results

@@ -16,6 +16,7 @@ from tests.support.mock import (
 # Import Salt libs
 import salt.renderers.gpg as gpg
 from salt.exceptions import SaltRenderError
+import pytest
 
 
 class GPGTestCase(TestCase, LoaderModuleMockMixin):
@@ -32,10 +33,11 @@ class GPGTestCase(TestCase, LoaderModuleMockMixin):
         gpg_exec = '/bin/gpg'
 
         with patch('salt.utils.path.which', MagicMock(return_value=gpg_exec)):
-            self.assertEqual(gpg._get_gpg_exec(), gpg_exec)
+            assert gpg._get_gpg_exec() == gpg_exec
 
         with patch('salt.utils.path.which', MagicMock(return_value=False)):
-            self.assertRaises(SaltRenderError, gpg._get_gpg_exec)
+            with pytest.raises(SaltRenderError):
+                gpg._get_gpg_exec()
 
     def test__decrypt_ciphertext(self):
         '''
@@ -59,13 +61,11 @@ class GPGTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.renderers.gpg._get_key_dir', MagicMock(return_value=key_dir)), \
                 patch('salt.utils.path.which', MagicMock()):
             with patch('salt.renderers.gpg.Popen', MagicMock(return_value=GPGDecrypt())):
-                self.assertEqual(gpg._decrypt_ciphertexts(crypted), secret)
-                self.assertEqual(
-                    gpg._decrypt_ciphertexts(multicrypted), multisecret)
+                assert gpg._decrypt_ciphertexts(crypted) == secret
+                assert gpg._decrypt_ciphertexts(multicrypted) == multisecret
             with patch('salt.renderers.gpg.Popen', MagicMock(return_value=GPGNotDecrypt())):
-                self.assertEqual(gpg._decrypt_ciphertexts(crypted), crypted)
-                self.assertEqual(
-                    gpg._decrypt_ciphertexts(multicrypted), multicrypted)
+                assert gpg._decrypt_ciphertexts(crypted) == crypted
+                assert gpg._decrypt_ciphertexts(multicrypted) == multicrypted
 
     def test__decrypt_object(self):
         '''
@@ -81,11 +81,11 @@ class GPGTestCase(TestCase, LoaderModuleMockMixin):
         crypted_list = [crypted]
 
         with patch('salt.renderers.gpg._decrypt_ciphertext', MagicMock(return_value=secret)):
-            self.assertEqual(gpg._decrypt_object(secret), secret)
-            self.assertEqual(gpg._decrypt_object(crypted), secret)
-            self.assertEqual(gpg._decrypt_object(crypted_map), secret_map)
-            self.assertEqual(gpg._decrypt_object(crypted_list), secret_list)
-            self.assertEqual(gpg._decrypt_object(None), None)
+            assert gpg._decrypt_object(secret) == secret
+            assert gpg._decrypt_object(crypted) == secret
+            assert gpg._decrypt_object(crypted_map) == secret_map
+            assert gpg._decrypt_object(crypted_list) == secret_list
+            assert gpg._decrypt_object(None) is None
 
     def test_render(self):
         '''
@@ -98,7 +98,7 @@ class GPGTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.renderers.gpg._get_gpg_exec', MagicMock(return_value=True)):
             with patch('salt.renderers.gpg._get_key_dir', MagicMock(return_value=key_dir)):
                 with patch('salt.renderers.gpg._decrypt_object', MagicMock(return_value=secret)):
-                    self.assertEqual(gpg.render(crypted), secret)
+                    assert gpg.render(crypted) == secret
 
     def test_multi_render(self):
         key_dir = '/etc/salt/gpgkeys'
@@ -119,7 +119,7 @@ class GPGTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.renderers.gpg._get_gpg_exec', MagicMock(return_value=True)):
             with patch('salt.renderers.gpg._get_key_dir', MagicMock(return_value=key_dir)):
                 with patch('salt.renderers.gpg._decrypt_ciphertext', MagicMock(return_value=secret)):
-                    self.assertEqual(gpg.render(crypted), expected)
+                    assert gpg.render(crypted) == expected
 
     def test_render_with_binary_data_should_return_binary_data(self):
         key_dir = '/etc/salt/gpgkeys'
@@ -140,7 +140,7 @@ class GPGTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.renderers.gpg._get_gpg_exec', MagicMock(return_value=True)):
             with patch('salt.renderers.gpg._get_key_dir', MagicMock(return_value=key_dir)):
                 with patch('salt.renderers.gpg._decrypt_ciphertext', MagicMock(return_value=secret)):
-                    self.assertEqual(gpg.render(crypted, encoding='utf-8'), expected)
+                    assert gpg.render(crypted, encoding='utf-8') == expected
 
     def test_render_with_translate_newlines_should_translate_newlines(self):
         key_dir = '/etc/salt/gpgkeys'
@@ -161,7 +161,5 @@ class GPGTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.renderers.gpg._get_gpg_exec', MagicMock(return_value=True)):
             with patch('salt.renderers.gpg._get_key_dir', MagicMock(return_value=key_dir)):
                 with patch('salt.renderers.gpg._decrypt_ciphertext', MagicMock(return_value=secret)):
-                    self.assertEqual(
-                        gpg.render(crypted, translate_newlines=True, encoding='utf-8'),
-                        expected,
-                    )
+                    assert gpg.render(crypted, translate_newlines=True, encoding='utf-8') == \
+                        expected

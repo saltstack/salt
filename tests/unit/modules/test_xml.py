@@ -46,7 +46,7 @@ class XmlTestCase(TestCase, LoaderModuleMockMixin):
             xml_file.flush()
 
         xml_result = xml.get_value(xml_file.name, ".//actor[@id='2']")
-        self.assertEqual(xml_result, "Liam Neeson")
+        assert xml_result == "Liam Neeson"
 
         os.remove(xml_file.name)
 
@@ -62,7 +62,7 @@ class XmlTestCase(TestCase, LoaderModuleMockMixin):
         assert xml_result is True
 
         xml_result = xml.get_value(xml_file.name, ".//actor[@id='2']")
-        self.assertEqual(xml_result, "Patrick Stewart")
+        assert xml_result == "Patrick Stewart"
 
         os.remove(xml_file.name)
 
@@ -75,7 +75,7 @@ class XmlTestCase(TestCase, LoaderModuleMockMixin):
             xml_file.flush()
 
         xml_result = xml.get_attribute(xml_file.name, ".//actor[@id='3']")
-        self.assertEqual(xml_result, {"id": "3"})
+        assert xml_result == {"id": "3"}
 
         os.remove(xml_file.name)
 
@@ -91,6 +91,6 @@ class XmlTestCase(TestCase, LoaderModuleMockMixin):
         assert xml_result is True
 
         xml_result = xml.get_attribute(xml_file.name, ".//actor[@id='3']")
-        self.assertEqual(xml_result, {'edited': 'uh-huh', 'id': '3'})
+        assert xml_result == {'edited': 'uh-huh', 'id': '3'}
 
         os.remove(xml_file.name)

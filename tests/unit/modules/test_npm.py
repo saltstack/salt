@@ -19,6 +19,7 @@ from tests.support.mock import (
 import salt.utils.json
 import salt.modules.npm as npm
 from salt.exceptions import CommandExecutionError
+import pytest
 
 
 class NpmTestCase(TestCase, LoaderModuleMockMixin):
@@ -40,8 +41,8 @@ class NpmTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'retcode': 1, 'stderr': 'error'})
         with patch.dict(npm.__salt__, {'cmd.run_all': mock}):
-            self.assertRaises(CommandExecutionError, npm.install,
-                              'coffee-script')
+            with pytest.raises(CommandExecutionError):
+                npm.install('coffee-script')
 
         # This is at least somewhat closer to the actual output format.
         mock_json_out = textwrap.dedent('''\
@@ -55,8 +56,8 @@ class NpmTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value={'retcode': 0, 'stderr': '',
                                        'stdout': mock_json_out})
         with patch.dict(npm.__salt__, {'cmd.run_all': mock}):
-            self.assertEqual(npm.install('coffee-script'),
-                             [{u'salt': u'SALT'}])
+            assert npm.install('coffee-script') == \
+                             [{u'salt': u'SALT'}]
 
         mock_json_out_extra = textwrap.dedent('''\
         Compilation output here
@@ -91,7 +92,7 @@ class NpmTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value={'retcode': 0, 'stderr': '',
                                        'stdout': mock_json_out_extra})
         with patch.dict(npm.__salt__, {'cmd.run_all': mock}):
-            self.assertEqual(npm.install('coffee-script'), extra_expected)
+            assert npm.install('coffee-script') == extra_expected
 
         # Successful run, unexpected output format
         mock = MagicMock(return_value={'retcode': 0, 'stderr': '',
@@ -100,7 +101,7 @@ class NpmTestCase(TestCase, LoaderModuleMockMixin):
             mock_err = MagicMock(side_effect=ValueError())
             # When JSON isn't successfully parsed, return should equal input
             with patch.object(salt.utils.json, 'loads', mock_err):
-                self.assertEqual(npm.install('coffee-script'), 'SALT')
+                assert npm.install('coffee-script') == 'SALT'
 
     # 'uninstall' function tests: 1
 
@@ -110,11 +111,11 @@ class NpmTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'retcode': 1, 'stderr': 'error'})
         with patch.dict(npm.__salt__, {'cmd.run_all': mock}):
-            self.assertFalse(npm.uninstall('coffee-script'))
+            assert not npm.uninstall('coffee-script')
 
         mock = MagicMock(return_value={'retcode': 0, 'stderr': ''})
         with patch.dict(npm.__salt__, {'cmd.run_all': mock}):
-            self.assertTrue(npm.uninstall('coffee-script'))
+            assert npm.uninstall('coffee-script')
 
     # 'list_' function tests: 1
 
@@ -124,14 +125,15 @@ class NpmTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'retcode': 1, 'stderr': 'error'})
         with patch.dict(npm.__salt__, {'cmd.run_all': mock}):
-            self.assertRaises(CommandExecutionError, npm.list_, 'coffee-script')
+            with pytest.raises(CommandExecutionError):
+                npm.list_('coffee-script')
 
         mock = MagicMock(return_value={'retcode': 0, 'stderr': 'error',
                                        'stdout': '{"salt": ["SALT"]}'})
         with patch.dict(npm.__salt__, {'cmd.run_all': mock}):
             mock_err = MagicMock(return_value={'dependencies': 'SALT'})
             with patch.object(salt.utils.json, 'loads', mock_err):
-                self.assertEqual(npm.list_('coffee-script'), 'SALT')
+                assert npm.list_('coffee-script') == 'SALT'
 
     # 'cache_clean' function tests: 1
 
@@ -141,15 +143,15 @@ class NpmTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'retcode': 1, 'stderr': 'error'})
         with patch.dict(npm.__salt__, {'cmd.run_all': mock}):
-            self.assertFalse(npm.cache_clean())
+            assert not npm.cache_clean()
 
         mock = MagicMock(return_value={'retcode': 0})
         with patch.dict(npm.__salt__, {'cmd.run_all': mock}):
-            self.assertTrue(npm.cache_clean())
+            assert npm.cache_clean()
 
         mock = MagicMock(return_value={'retcode': 0})
         with patch.dict(npm.__salt__, {'cmd.run_all': mock}):
-            self.assertTrue(npm.cache_clean('coffee-script'))
+            assert npm.cache_clean('coffee-script')
 
     # 'cache_list' function tests: 1
 
@@ -159,17 +161,18 @@ class NpmTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'retcode': 1, 'stderr': 'error'})
         with patch.dict(npm.__salt__, {'cmd.run_all': mock}):
-            self.assertRaises(CommandExecutionError, npm.cache_list)
+            with pytest.raises(CommandExecutionError):
+                npm.cache_list()
 
         mock = MagicMock(return_value={'retcode': 0, 'stderr': 'error',
                                        'stdout': ['~/.npm']})
         with patch.dict(npm.__salt__, {'cmd.run_all': mock}):
-            self.assertEqual(npm.cache_list(), ['~/.npm'])
+            assert npm.cache_list() == ['~/.npm']
 
         mock = MagicMock(return_value={'retcode': 0, 'stderr': 'error',
                                        'stdout': ''})
         with patch.dict(npm.__salt__, {'cmd.run_all': mock}):
-            self.assertEqual(npm.cache_list('coffee-script'), '')
+            assert npm.cache_list('coffee-script') == ''
 
     # 'cache_path' function tests: 1
 
@@ -179,9 +182,9 @@ class NpmTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'retcode': 1, 'stderr': 'error'})
         with patch.dict(npm.__salt__, {'cmd.run_all': mock}):
-            self.assertEqual(npm.cache_path(), 'error')
+            assert npm.cache_path() == 'error'
 
         mock = MagicMock(return_value={'retcode': 0, 'stderr': 'error',
                                        'stdout': '/User/salt/.npm'})
         with patch.dict(npm.__salt__, {'cmd.run_all': mock}):
-            self.assertEqual(npm.cache_path(), '/User/salt/.npm')
+            assert npm.cache_path() == '/User/salt/.npm'

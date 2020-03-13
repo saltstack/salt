@@ -28,7 +28,7 @@ class FilesTestCase(TestCase):
     def test_safe_rm(self):
         with patch('os.remove') as os_remove_mock:
             salt.utils.files.safe_rm('dummy_tgt')
-            self.assertTrue(os_remove_mock.called)
+            assert os_remove_mock.called
 
     @skipIf(os.path.exists('/tmp/no_way_this_is_a_file_nope.sh'), 'Test file exists! Skipping safe_rm_exceptions test!')
     def test_safe_rm_exceptions(self):
@@ -37,7 +37,7 @@ class FilesTestCase(TestCase):
             salt.utils.files.safe_rm('/tmp/no_way_this_is_a_file_nope.sh')
         except (IOError, OSError):
             error = True
-        self.assertFalse(error, 'salt.utils.files.safe_rm raised exception when it should not have')
+        assert not error, 'salt.utils.files.safe_rm raised exception when it should not have'
 
     @with_tempdir()
     def test_safe_walk_symlink_recursion(self, tmp):

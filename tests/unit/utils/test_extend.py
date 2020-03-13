@@ -42,9 +42,9 @@ class ExtendTestCase(TestCase):
             out = salt.utils.extend.run('test', 'test', 'this description', RUNTIME_VARS.CODE_DIR, False)
             self.out = out
             year = date.today().strftime('%Y')
-            self.assertTrue(os.path.exists(out))
-            self.assertFalse(os.path.exists(os.path.join(out, 'template.yml')))
-            self.assertTrue(os.path.exists(os.path.join(out, 'directory')))
-            self.assertTrue(os.path.exists(os.path.join(out, 'directory', 'test.py')))
+            assert os.path.exists(out)
+            assert not os.path.exists(os.path.join(out, 'template.yml'))
+            assert os.path.exists(os.path.join(out, 'directory'))
+            assert os.path.exists(os.path.join(out, 'directory', 'test.py'))
             with salt.utils.files.fopen(os.path.join(out, 'directory', 'test.py'), 'r') as test_f:
-                self.assertEqual(test_f.read(), year)
+                assert test_f.read() == year

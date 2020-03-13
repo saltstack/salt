@@ -34,7 +34,7 @@ class DebianServicesTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.object(debian_service, '_get_runlevel', mock_runlevel):
             with patch.object(debian_service.glob, 'glob', mock_glob):
-                self.assertEqual(debian_service.get_enabled()[0], 'name')
+                assert debian_service.get_enabled()[0] == 'name'
 
     def test_get_disabled(self):
         '''
@@ -44,7 +44,7 @@ class DebianServicesTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(debian_service, 'get_all', mock):
             mock = MagicMock(return_value=['B'])
             with patch.object(debian_service, 'get_enabled', mock):
-                self.assertEqual(debian_service.get_disabled(), ['A'])
+                assert debian_service.get_disabled() == ['A']
 
     def test_available(self):
         '''
@@ -54,7 +54,7 @@ class DebianServicesTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=['A'])
         with patch.object(debian_service, 'get_all', mock):
-            self.assertFalse(debian_service.available('name'))
+            assert not debian_service.available('name')
 
     def test_missing(self):
         '''
@@ -62,7 +62,7 @@ class DebianServicesTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=['A'])
         with patch.object(debian_service, 'get_all', mock):
-            self.assertTrue(debian_service.missing('name'))
+            assert debian_service.missing('name')
 
     def test_getall(self):
         '''
@@ -70,7 +70,7 @@ class DebianServicesTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=('A'))
         with patch.object(debian_service, 'get_enabled', mock):
-            self.assertEqual(debian_service.get_all()[0], 'A')
+            assert debian_service.get_all()[0] == 'A'
 
     def test_start(self):
         '''
@@ -79,7 +79,7 @@ class DebianServicesTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value=True)
         with patch.object(debian_service, '_service_cmd', mock):
             with patch.dict(debian_service.__salt__, {'cmd.retcode': mock}):
-                self.assertFalse(debian_service.start('name'))
+                assert not debian_service.start('name')
 
     def test_stop(self):
         '''
@@ -88,7 +88,7 @@ class DebianServicesTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value=True)
         with patch.object(debian_service, '_service_cmd', mock):
             with patch.dict(debian_service.__salt__, {'cmd.retcode': mock}):
-                self.assertFalse(debian_service.stop('name'))
+                assert not debian_service.stop('name')
 
     def test_restart(self):
         '''
@@ -97,7 +97,7 @@ class DebianServicesTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value=True)
         with patch.object(debian_service, '_service_cmd', mock):
             with patch.dict(debian_service.__salt__, {'cmd.retcode': mock}):
-                self.assertFalse(debian_service.restart('name'))
+                assert not debian_service.restart('name')
 
     def test_reload_(self):
         '''
@@ -106,7 +106,7 @@ class DebianServicesTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value=True)
         with patch.object(debian_service, '_service_cmd', mock):
             with patch.dict(debian_service.__salt__, {'cmd.retcode': mock}):
-                self.assertFalse(debian_service.reload_('name'))
+                assert not debian_service.reload_('name')
 
     def test_force_reload(self):
         '''
@@ -115,7 +115,7 @@ class DebianServicesTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value=True)
         with patch.object(debian_service, '_service_cmd', mock):
             with patch.dict(debian_service.__salt__, {'cmd.retcode': mock}):
-                self.assertFalse(debian_service.force_reload('name'))
+                assert not debian_service.force_reload('name')
 
     def test_status(self):
         '''
@@ -123,13 +123,13 @@ class DebianServicesTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=True)
         with patch.dict(debian_service.__salt__, {'status.pid': mock}):
-            self.assertTrue(debian_service.status('name', 1))
+            assert debian_service.status('name', 1)
 
         mock = MagicMock(return_value='A')
         with patch.object(debian_service, '_service_cmd', mock):
             mock = MagicMock(return_value=True)
             with patch.dict(debian_service.__salt__, {'cmd.retcode': mock}):
-                self.assertFalse(debian_service.status('name'))
+                assert not debian_service.status('name')
 
     def test_enable(self):
         '''
@@ -142,7 +142,7 @@ class DebianServicesTestCase(TestCase, LoaderModuleMockMixin):
                 mock = MagicMock(return_value=True)
                 with patch.dict(debian_service.__salt__,
                                 {'cmd.retcode': mock}):
-                    self.assertFalse(debian_service.enable('name'))
+                    assert not debian_service.enable('name')
 
     def test_disable(self):
         '''
@@ -152,7 +152,7 @@ class DebianServicesTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(debian_service, '_osrel', mock):
             mock = MagicMock(return_value=True)
             with patch.dict(debian_service.__salt__, {'cmd.retcode': mock}):
-                self.assertFalse(debian_service.disable('name'))
+                assert not debian_service.disable('name')
 
     def test_enabled(self):
         '''
@@ -160,7 +160,7 @@ class DebianServicesTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=['A'])
         with patch.object(debian_service, 'get_enabled', mock):
-            self.assertFalse(debian_service.enabled('name'))
+            assert not debian_service.enabled('name')
 
     def test_disabled(self):
         '''
@@ -168,4 +168,4 @@ class DebianServicesTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=['A'])
         with patch.object(debian_service, 'get_enabled', mock):
-            self.assertFalse(debian_service.disabled('name'))
+            assert not debian_service.disabled('name')

@@ -45,10 +45,10 @@ class nexusTestCase(TestCase, LoaderModuleMockMixin):
         mck = MagicMock(return_value={'status': False, 'changes': {},
                                       'comment': ''})
         with patch.dict(nexus.__salt__, {'nexus.get_release': mck}):
-            self.assertDictEqual(nexus.downloaded(name, artifact), ret)
+            assert nexus.downloaded(name, artifact) == ret
 
         with patch.object(nexus, '__fetch_from_nexus',
                           MagicMock(side_effect=Exception('error'))):
             ret = nexus.downloaded(name, artifact)
-            self.assertEqual(ret['result'], False)
-            self.assertEqual(ret['comment'], 'error')
+            assert ret['result'] is False
+            assert ret['comment'] == 'error'

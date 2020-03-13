@@ -59,7 +59,7 @@ class TestVerify(TestCase):
         Refs #8259
         '''
         opts = {'pki_dir': '/tmp/whatever'}
-        self.assertFalse(valid_id(opts, None))
+        assert not valid_id(opts, None)
 
     def test_valid_id_pathsep(self):
         '''
@@ -69,18 +69,18 @@ class TestVerify(TestCase):
         # We have to test both path separators because os.path.normpath will
         # convert forward slashes to backslashes on Windows.
         for pathsep in ('/', '\\'):
-            self.assertFalse(valid_id(opts, pathsep.join(('..', 'foobar'))))
+            assert not valid_id(opts, pathsep.join(('..', 'foobar')))
 
     def test_zmq_verify(self):
-        self.assertTrue(zmq_version())
+        assert zmq_version()
 
     def test_zmq_verify_insufficient(self):
         import zmq
         with patch.object(zmq, '__version__', '2.1.0'):
-            self.assertFalse(zmq_version())
+            assert not zmq_version()
 
     def test_user(self):
-        self.assertTrue(check_user(getpass.getuser()))
+        assert check_user(getpass.getuser())
 
     def test_no_user(self):
         # Catch sys.stderr here since no logging is configured and
@@ -96,9 +96,9 @@ class TestVerify(TestCase):
         sys.stderr = writer
         # Now run the test
         if sys.platform.startswith('win'):
-            self.assertTrue(check_user('nouser'))
+            assert check_user('nouser')
         else:
-            self.assertFalse(check_user('nouser'))
+            assert not check_user('nouser')
         # Restore sys.stderr
         sys.stderr = stderr
         if writer.output != 'CRITICAL: User not found: "nouser"\n':
@@ -111,21 +111,21 @@ class TestVerify(TestCase):
         var_dir = os.path.join(root_dir, 'var', 'log', 'salt')
         key_dir = os.path.join(root_dir, 'key_dir')
         verify_env([var_dir], getpass.getuser(), root_dir=root_dir)
-        self.assertTrue(os.path.exists(var_dir))
+        assert os.path.exists(var_dir)
         dir_stat = os.stat(var_dir)
-        self.assertEqual(dir_stat.st_uid, os.getuid())
-        self.assertEqual(dir_stat.st_mode & stat.S_IRWXU, stat.S_IRWXU)
-        self.assertEqual(dir_stat.st_mode & stat.S_IRWXG, 40)
-        self.assertEqual(dir_stat.st_mode & stat.S_IRWXO, 5)
+        assert dir_stat.st_uid == os.getuid()
+        assert dir_stat.st_mode & stat.S_IRWXU == stat.S_IRWXU
+        assert dir_stat.st_mode & stat.S_IRWXG == 40
+        assert dir_stat.st_mode & stat.S_IRWXO == 5
 
     @pytest.mark.requires_network(only_local_network=True)
     def test_verify_socket(self):
-        self.assertTrue(verify_socket('', 18000, 18001))
+        assert verify_socket('', 18000, 18001)
         if socket.has_ipv6:
             # Only run if Python is built with IPv6 support; otherwise
             # this will just fail.
             try:
-                self.assertTrue(verify_socket('::', 18000, 18001))
+                assert verify_socket('::', 18000, 18001)
             except socket.error as serr:
                 # Python has IPv6 enabled, but the system cannot create
                 # IPv6 sockets (otherwise the test would return a bool)
@@ -201,22 +201,16 @@ class TestVerify(TestCase):
                     if level is None:
                         # No log message is triggered, only the DEBUG one which
                         # tells us how many minion keys were accepted.
-                        self.assertEqual(
-                            [logmsg_dbg.format(newmax)], handler.messages
-                        )
+                        assert [logmsg_dbg.format(newmax)] == handler.messages
                     else:
-                        self.assertIn(
-                            logmsg_dbg.format(newmax), handler.messages
-                        )
-                        self.assertIn(
-                            logmsg_chk.format(
+                        assert logmsg_dbg.format(newmax) in handler.messages
+                        assert logmsg_chk.format(
                                 level,
                                 newmax,
                                 mof_test,
                                 mof_test - newmax if sys.platform.startswith('win') else mof_h - newmax,
-                            ),
+                            ) in \
                             handler.messages
-                        )
                     handler.clear()
                     prev = newmax
 
@@ -232,16 +226,14 @@ class TestVerify(TestCase):
                 }
 
                 check_max_open_files(opts)
-                self.assertIn(logmsg_dbg.format(newmax), handler.messages)
-                self.assertIn(
-                    logmsg_crash.format(
+                assert logmsg_dbg.format(newmax) in handler.messages
+                assert logmsg_crash.format(
                         'CRITICAL',
                         newmax,
                         mof_test,
                         mof_test - newmax if sys.platform.startswith('win') else mof_h - newmax,
-                    ),
+                    ) in \
                     handler.messages
-                )
                 handler.clear()
             except IOError as err:
                 if err.errno == 24:
@@ -279,7 +271,7 @@ class TestVerify(TestCase):
         mock_info = MagicMock()
         with patch.object(log, 'warning', mock_info):
             verify_log({'log_level': 'info'})
-            self.assertTrue(mock_info.call_count == 0)
+            assert mock_info.call_count == 0
 
 
 class TestVerifyLog(TestCase):
@@ -298,21 +290,21 @@ class TestVerifyLog(TestCase):
     @skipIf(salt.utils.platform.is_windows(), 'Not applicable on Windows')
     def test_verify_log_files_udp_scheme(self):
         verify_log_files(['udp://foo'], getpass.getuser())
-        self.assertFalse(os.path.isdir(os.path.join(os.getcwd(), 'udp:')))
+        assert not os.path.isdir(os.path.join(os.getcwd(), 'udp:'))
 
     @skipIf(salt.utils.platform.is_windows(), 'Not applicable on Windows')
     def test_verify_log_files_tcp_scheme(self):
         verify_log_files(['udp://foo'], getpass.getuser())
-        self.assertFalse(os.path.isdir(os.path.join(os.getcwd(), 'tcp:')))
+        assert not os.path.isdir(os.path.join(os.getcwd(), 'tcp:'))
 
     @skipIf(salt.utils.platform.is_windows(), 'Not applicable on Windows')
     def test_verify_log_files_file_scheme(self):
         verify_log_files(['file://{}'], getpass.getuser())
-        self.assertFalse(os.path.isdir(os.path.join(os.getcwd(), 'file:')))
+        assert not os.path.isdir(os.path.join(os.getcwd(), 'file:'))
 
     @skipIf(salt.utils.platform.is_windows(), 'Not applicable on Windows')
     def test_verify_log_files(self):
         path = os.path.join(self.tmpdir, 'foo', 'bar.log')
-        self.assertFalse(os.path.exists(path))
+        assert not os.path.exists(path)
         verify_log_files([path], getpass.getuser())
-        self.assertTrue(os.path.exists(path))
+        assert os.path.exists(path)

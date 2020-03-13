@@ -20,7 +20,7 @@ class SSHTest(SSHCase):
         Test a simple ping
         '''
         ret = self.run_function('test.ping')
-        self.assertTrue(ret, 'Ping did not return true')
+        assert ret, 'Ping did not return true'
 
     def test_thin_dir(self):
         '''

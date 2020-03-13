@@ -47,26 +47,26 @@ class StatusBeaconTestCase(TestCase, LoaderModuleMockMixin):
         config = []
 
         ret = status.validate(config)
-        self.assertEqual(ret, (True, 'Valid beacon configuration'))
+        assert ret == (True, 'Valid beacon configuration')
 
         ret = status.beacon(config)
         expected = sorted(['loadavg', 'meminfo', 'cpustats', 'vmstats', 'time'])
 
-        self.assertEqual(sorted(list(ret[0]['data'])), expected)
+        assert sorted(list(ret[0]['data'])) == expected
 
     def test_deprecated_dict_config(self):
         config = {'time': ['all']}
 
         ret = status.validate(config)
-        self.assertEqual(ret, (False, 'Configuration for status beacon must be a list.'))
+        assert ret == (False, 'Configuration for status beacon must be a list.')
 
     def test_list_config(self):
         config = [{'time': ['all']}]
 
         ret = status.validate(config)
-        self.assertEqual(ret, (True, 'Valid beacon configuration'))
+        assert ret == (True, 'Valid beacon configuration')
 
         ret = status.beacon(config)
         expected = ['time']
 
-        self.assertEqual(list(ret[0]['data']), expected)
+        assert list(ret[0]['data']) == expected

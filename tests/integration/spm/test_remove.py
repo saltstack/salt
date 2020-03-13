@@ -33,15 +33,15 @@ class SPMRemoveTest(SPMCase):
 
         sls = os.path.join(self.config['formula_path'], 'apache', 'apache.sls')
 
-        self.assertTrue(os.path.exists(sls))
+        assert os.path.exists(sls)
 
         #now remove an make sure file is removed
         remove = self.run_spm('remove', self.config, 'apache')
         sls = os.path.join(self.config['formula_path'], 'apache', 'apache.sls')
 
-        self.assertFalse(os.path.exists(sls))
+        assert not os.path.exists(sls)
 
-        self.assertIn('... removing apache', remove)
+        assert '... removing apache' in remove
 
     def tearDown(self):
         shutil.rmtree(self._tmp_spm)

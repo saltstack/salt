@@ -79,15 +79,13 @@ class SSHModuleTest(ModuleCase):
         if salt.utils.platform.is_windows():
             user = 'Administrator'
         ret = self.run_function('ssh.auth_keys', [user, self.authorized_keys])
-        self.assertEqual(len(list(ret.items())), 1)  # exactly one key is found
+        assert len(list(ret.items())) == 1  # exactly one key is found
         key_data = list(ret.items())[0][1]
         try:
-            self.assertEqual(key_data['comment'], 'github.com')
-            self.assertEqual(key_data['enc'], 'ssh-rsa')
-            self.assertEqual(
-                key_data['options'], ['command="/usr/local/lib/ssh-helper"']
-            )
-            self.assertEqual(key_data['fingerprint'], GITHUB_FINGERPRINT)
+            assert key_data['comment'] == 'github.com'
+            assert key_data['enc'] == 'ssh-rsa'
+            assert key_data['options'] == ['command="/usr/local/lib/ssh-helper"']
+            assert key_data['fingerprint'] == GITHUB_FINGERPRINT
         except AssertionError as exc:
             raise AssertionError(
                 'AssertionError: {0}. Function returned: {1}'.format(
@@ -110,7 +108,7 @@ class SSHModuleTest(ModuleCase):
         # auth_keys should skip any keys with invalid encodings.  Internally
         # the minion will throw a CommandExecutionError so the
         # user will get an indicator of what went wrong.
-        self.assertEqual(len(list(ret.items())), 0)  # Zero keys found
+        assert len(list(ret.items())) == 0  # Zero keys found
 
     def test_get_known_host_entries(self):
         '''
@@ -123,9 +121,9 @@ class SSHModuleTest(ModuleCase):
         kwargs = {'config': self.known_hosts}
         ret = self.run_function('ssh.get_known_host_entries', arg, **kwargs)[0]
         try:
-            self.assertEqual(ret['enc'], 'ssh-rsa')
-            self.assertEqual(ret['key'], self.key)
-            self.assertEqual(ret['fingerprint'], GITHUB_FINGERPRINT)
+            assert ret['enc'] == 'ssh-rsa'
+            assert ret['key'] == self.key
+            assert ret['fingerprint'] == GITHUB_FINGERPRINT
         except AssertionError as exc:
             raise AssertionError(
                 'AssertionError: {0}. Function returned: {1}'.format(
@@ -139,10 +137,10 @@ class SSHModuleTest(ModuleCase):
         '''
         ret = self.run_function('ssh.recv_known_host_entries', ['github.com'])
         try:
-            self.assertNotEqual(ret, None)
-            self.assertEqual(ret[0]['enc'], 'ssh-rsa')
-            self.assertEqual(ret[0]['key'], self.key)
-            self.assertEqual(ret[0]['fingerprint'], GITHUB_FINGERPRINT)
+            assert ret is not None
+            assert ret[0]['enc'] == 'ssh-rsa'
+            assert ret[0]['key'] == self.key
+            assert ret[0]['fingerprint'] == GITHUB_FINGERPRINT
         except AssertionError as exc:
             raise AssertionError(
                 'AssertionError: {0}. Function returned: {1}'.format(
@@ -157,7 +155,7 @@ class SSHModuleTest(ModuleCase):
         arg = ['root', 'github.com']
         kwargs = {'fingerprint': GITHUB_FINGERPRINT, 'config': self.known_hosts}
         ret = self.run_function('ssh.check_known_host', arg, **kwargs)
-        self.assertEqual(ret, 'add')
+        assert ret == 'add'
 
     def test_check_known_host_update(self):
         '''
@@ -171,11 +169,11 @@ class SSHModuleTest(ModuleCase):
         # wrong fingerprint
         ret = self.run_function('ssh.check_known_host', arg,
                                 **dict(kwargs, fingerprint='aa:bb:cc:dd'))
-        self.assertEqual(ret, 'update')
+        assert ret == 'update'
         # wrong keyfile
         ret = self.run_function('ssh.check_known_host', arg,
                                 **dict(kwargs, key='YQ=='))
-        self.assertEqual(ret, 'update')
+        assert ret == 'update'
 
     def test_check_known_host_exists(self):
         '''
@@ -189,11 +187,11 @@ class SSHModuleTest(ModuleCase):
         # wrong fingerprint
         ret = self.run_function('ssh.check_known_host', arg,
                                 **dict(kwargs, fingerprint=GITHUB_FINGERPRINT))
-        self.assertEqual(ret, 'exists')
+        assert ret == 'exists'
         # wrong keyfile
         ret = self.run_function('ssh.check_known_host', arg,
                                 **dict(kwargs, key=self.key))
-        self.assertEqual(ret, 'exists')
+        assert ret == 'exists'
 
     def test_rm_known_host(self):
         '''
@@ -206,12 +204,12 @@ class SSHModuleTest(ModuleCase):
         kwargs = {'config': self.known_hosts, 'key': self.key}
         # before removal
         ret = self.run_function('ssh.check_known_host', arg, **kwargs)
-        self.assertEqual(ret, 'exists')
+        assert ret == 'exists'
         # remove
         self.run_function('ssh.rm_known_host', arg, config=self.known_hosts)
         # after removal
         ret = self.run_function('ssh.check_known_host', arg, **kwargs)
-        self.assertEqual(ret, 'add')
+        assert ret == 'add'
 
     def test_set_known_host(self):
         '''
@@ -221,9 +219,9 @@ class SSHModuleTest(ModuleCase):
         ret = self.run_function('ssh.set_known_host', ['root', 'github.com'],
                                 config=self.known_hosts)
         try:
-            self.assertEqual(ret['status'], 'updated')
-            self.assertEqual(ret['old'], None)
-            self.assertEqual(ret['new'][0]['fingerprint'], GITHUB_FINGERPRINT)
+            assert ret['status'] == 'updated'
+            assert ret['old'] is None
+            assert ret['new'][0]['fingerprint'] == GITHUB_FINGERPRINT
         except AssertionError as exc:
             raise AssertionError(
                 'AssertionError: {0}. Function returned: {1}'.format(
@@ -234,7 +232,7 @@ class SSHModuleTest(ModuleCase):
         ret = self.run_function('ssh.get_known_host_entries', ['root', 'github.com'],
                                 config=self.known_hosts)[0]
         try:
-            self.assertEqual(ret['fingerprint'], GITHUB_FINGERPRINT)
+            assert ret['fingerprint'] == GITHUB_FINGERPRINT
         except AssertionError as exc:
             raise AssertionError(
                 'AssertionError: {0}. Function returned: {1}'.format(
@@ -245,7 +243,7 @@ class SSHModuleTest(ModuleCase):
         ret = self.run_function('ssh.set_known_host', ['root', 'github.com'],
                                 config=self.known_hosts)
         try:
-            self.assertEqual(ret['status'], 'exists')
+            assert ret['status'] == 'exists'
         except AssertionError as exc:
             raise AssertionError(
                 'AssertionError: {0}. Function returned: {1}'.format(

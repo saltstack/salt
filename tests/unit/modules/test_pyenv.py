@@ -35,7 +35,7 @@ class PyenvTestCase(TestCase, LoaderModuleMockMixin):
         mock_ret = MagicMock(return_value=0)
         with patch.dict(pyenv.__salt__, {'config.option': mock_opt,
                                          'cmd.retcode': mock_ret}):
-            self.assertTrue(pyenv.install())
+            assert pyenv.install()
 
     # 'update' function tests: 1
 
@@ -45,7 +45,7 @@ class PyenvTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_opt = MagicMock(return_value='salt stack')
         with patch.dict(pyenv.__salt__, {'config.option': mock_opt}):
-            self.assertFalse(pyenv.update())
+            assert not pyenv.update()
 
     # 'is_installed' function tests: 1
 
@@ -57,7 +57,7 @@ class PyenvTestCase(TestCase, LoaderModuleMockMixin):
         mock_opt = MagicMock(return_value='salt stack')
         with patch.dict(pyenv.__salt__, {'config.option': mock_opt,
                                          'cmd.has_exec': mock_cmd}):
-            self.assertTrue(pyenv.is_installed())
+            assert pyenv.is_installed()
 
     # 'install_python' function tests: 1
 
@@ -75,7 +75,7 @@ class PyenvTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(pyenv.__salt__, {'config.option': mock_opt,
                                              'cmd.has_exec': mock_cmd,
                                              'cmd.run_all': mock_all}):
-                self.assertEqual(pyenv.install_python('2.0.0-p0'), 'error')
+                assert pyenv.install_python('2.0.0-p0') == 'error'
 
             mock_all = MagicMock(return_value={'retcode': True,
                                                'stdout': 'salt',
@@ -83,7 +83,7 @@ class PyenvTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(pyenv.__salt__, {'config.option': mock_opt,
                                              'cmd.has_exec': mock_cmd,
                                              'cmd.run_all': mock_all}):
-                self.assertFalse(pyenv.install_python('2.0.0-p0'))
+                assert not pyenv.install_python('2.0.0-p0')
 
     # 'uninstall_python' function tests: 1
 
@@ -99,7 +99,7 @@ class PyenvTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pyenv.__salt__, {'cmd.has_exec': mock_cmd,
                                          'config.option': mock_opt,
                                          'cmd.run_all': mock_all}):
-            self.assertTrue(pyenv.uninstall_python('2.0.0-p0'))
+            assert pyenv.uninstall_python('2.0.0-p0')
 
     # 'versions' function tests: 1
 
@@ -115,7 +115,7 @@ class PyenvTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pyenv.__salt__, {'cmd.has_exec': mock_cmd,
                                          'config.option': mock_opt,
                                          'cmd.run_all': mock_all}):
-            self.assertListEqual(pyenv.versions(), [])
+            assert pyenv.versions() == []
 
     # 'default' function tests: 1
 
@@ -131,8 +131,8 @@ class PyenvTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pyenv.__salt__, {'cmd.has_exec': mock_cmd,
                                          'config.option': mock_opt,
                                          'cmd.run_all': mock_all}):
-            self.assertEqual(pyenv.default(), '')
-            self.assertTrue(pyenv.default('2.0.0-p0'))
+            assert pyenv.default() == ''
+            assert pyenv.default('2.0.0-p0')
 
     # 'list_' function tests: 1
 
@@ -148,7 +148,7 @@ class PyenvTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pyenv.__salt__, {'cmd.has_exec': mock_cmd,
                                          'config.option': mock_opt,
                                          'cmd.run_all': mock_all}):
-            self.assertListEqual(pyenv.list_(), [])
+            assert pyenv.list_() == []
 
     # 'rehash' function tests: 1
 
@@ -164,7 +164,7 @@ class PyenvTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pyenv.__salt__, {'cmd.has_exec': mock_cmd,
                                          'config.option': mock_opt,
                                          'cmd.run_all': mock_all}):
-            self.assertTrue(pyenv.rehash())
+            assert pyenv.rehash()
 
     # 'do' function tests: 1
 
@@ -180,14 +180,14 @@ class PyenvTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pyenv.__salt__, {'cmd.has_exec': mock_cmd,
                                          'config.option': mock_opt,
                                          'cmd.run_all': mock_all}):
-            self.assertFalse(pyenv.do('gem list bundler'))
+            assert not pyenv.do('gem list bundler')
 
         mock_all = MagicMock(return_value={'retcode': 0, 'stdout': 'salt',
                                            'stderr': 'error'})
         with patch.dict(pyenv.__salt__, {'config.option': mock_opt,
                                          'cmd.has_exec': mock_cmd,
                                          'cmd.run_all': mock_all}):
-            self.assertEqual(pyenv.do('gem list bundler'), 'salt')
+            assert pyenv.do('gem list bundler') == 'salt'
 
     # 'do_with_python' function tests: 1
 
@@ -203,5 +203,5 @@ class PyenvTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pyenv.__salt__, {'cmd.has_exec': mock_cmd,
                                          'config.option': mock_opt,
                                          'cmd.run_all': mock_all}):
-            self.assertFalse(pyenv.do_with_python('2.0.0-p0',
-                                                  'gem list bundler'))
+            assert not pyenv.do_with_python('2.0.0-p0',
+                                                  'gem list bundler')

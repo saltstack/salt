@@ -55,4 +55,4 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         with salt.utils.files.fopen(self.hosts_file) as fp_:
             output = salt.utils.stringutils.to_unicode(fp_.read())
-            self.assertIn('{0}\t\t{1}'.format(ip, name), output)
+            assert '{0}\t\t{1}'.format(ip, name) in output

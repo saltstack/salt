@@ -156,8 +156,8 @@ class BotoElasticsearchDomainTestCase(BotoElasticsearchDomainStateTestCaseBase, 
                          'domain present',
                          **domain_ret)
 
-        self.assertTrue(result['result'])
-        self.assertEqual(result['changes']['new']['domain']['ElasticsearchClusterConfig'], None)
+        assert result['result']
+        assert result['changes']['new']['domain']['ElasticsearchClusterConfig'] is None
 
     def test_present_when_domain_exists(self):
         self.conn.describe_elasticsearch_domain.return_value = {'DomainStatus': domain_ret}
@@ -170,8 +170,8 @@ class BotoElasticsearchDomainTestCase(BotoElasticsearchDomainStateTestCaseBase, 
         result = self.salt_states['boto_elasticsearch_domain.present'](
                          'domain present',
                          **domain_ret)
-        self.assertTrue(result['result'])
-        self.assertEqual(result['changes'], {'new': {'AccessPolicies': {}}, 'old': {'AccessPolicies': {'a': 'b'}}})
+        assert result['result']
+        assert result['changes'] == {'new': {'AccessPolicies': {}}, 'old': {'AccessPolicies': {'a': 'b'}}}
 
     def test_present_with_failure(self):
         self.conn.describe_elasticsearch_domain.side_effect = not_found_error
@@ -180,8 +180,8 @@ class BotoElasticsearchDomainTestCase(BotoElasticsearchDomainStateTestCaseBase, 
         result = self.salt_states['boto_elasticsearch_domain.present'](
                          'domain present',
                          **domain_ret)
-        self.assertFalse(result['result'])
-        self.assertTrue('An error occurred' in result['comment'])
+        assert not result['result']
+        assert 'An error occurred' in result['comment']
 
     def test_absent_when_domain_does_not_exist(self):
         '''
@@ -189,20 +189,20 @@ class BotoElasticsearchDomainTestCase(BotoElasticsearchDomainStateTestCaseBase, 
         '''
         self.conn.describe_elasticsearch_domain.side_effect = not_found_error
         result = self.salt_states['boto_elasticsearch_domain.absent']('test', 'mydomain')
-        self.assertTrue(result['result'])
-        self.assertEqual(result['changes'], {})
+        assert result['result']
+        assert result['changes'] == {}
 
     def test_absent_when_domain_exists(self):
         self.conn.describe_elasticsearch_domain.return_value = {'DomainStatus': domain_ret}
         self.conn.describe_elasticsearch_domain_config.return_value = {'DomainConfig': domain_ret}
         result = self.salt_states['boto_elasticsearch_domain.absent']('test', domain_ret['DomainName'])
-        self.assertTrue(result['result'])
-        self.assertEqual(result['changes']['new']['domain'], None)
+        assert result['result']
+        assert result['changes']['new']['domain'] is None
 
     def test_absent_with_failure(self):
         self.conn.describe_elasticsearch_domain.return_value = {'DomainStatus': domain_ret}
         self.conn.describe_elasticsearch_domain_config.return_value = {'DomainConfig': domain_ret}
         self.conn.delete_elasticsearch_domain.side_effect = ClientError(error_content, 'delete_domain')
         result = self.salt_states['boto_elasticsearch_domain.absent']('test', domain_ret['DomainName'])
-        self.assertFalse(result['result'])
-        self.assertTrue('An error occurred' in result['comment'])
+        assert not result['result']
+        assert 'An error occurred' in result['comment']

@@ -18,6 +18,7 @@ from tests.support.mock import MagicMock, patch
 # Import Salt Libs
 import salt.modules.mac_user as mac_user
 from salt.exceptions import SaltInvocationError, CommandExecutionError
+import pytest
 
 
 @skipIf(not HAS_PWD, "Missing required library 'pwd'")
@@ -64,18 +65,18 @@ class MacUserTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(mac_user.__grains__,
                             {'kernel': 'Darwin', 'osrelease': '10.9.1',
                              'osrelease_info': (10, 9, 1)}):
-                self.assertEqual(mac_user._dscl(['username', 'UniqueID', 501]),
+                assert mac_user._dscl(['username', 'UniqueID', 501]) == \
                                  {'pid': 4948,
                                   'retcode': 0,
                                   'stderr': '',
-                                  'stdout': ''})
+                                  'stdout': ''}
 
     def test_first_avail_uid(self):
         '''
         Tests the availability of the next uid
         '''
         with patch('pwd.getpwall', MagicMock(return_value=self.mock_pwall)):
-            self.assertEqual(mac_user._first_avail_uid(), 501)
+            assert mac_user._first_avail_uid() == 501
 
     # 'add' function tests: 4
     # Only tested error handling
@@ -86,28 +87,32 @@ class MacUserTestCase(TestCase, LoaderModuleMockMixin):
         Tests if the user exists or not
         '''
         with patch('salt.modules.mac_user.info', MagicMock(return_value=self.mock_info_ret)):
-            self.assertRaises(CommandExecutionError, mac_user.add, 'test')
+            with pytest.raises(CommandExecutionError):
+                mac_user.add('test')
 
     def test_add_whitespace(self):
         '''
         Tests if there is whitespace in the user name
         '''
         with patch('salt.modules.mac_user.info', MagicMock(return_value={})):
-            self.assertRaises(SaltInvocationError, mac_user.add, 'foo bar')
+            with pytest.raises(SaltInvocationError):
+                mac_user.add('foo bar')
 
     def test_add_uid_int(self):
         '''
         Tests if the uid is an int
         '''
         with patch('salt.modules.mac_user.info', MagicMock(return_value={})):
-            self.assertRaises(SaltInvocationError, mac_user.add, 'foo', 'foo')
+            with pytest.raises(SaltInvocationError):
+                mac_user.add('foo', 'foo')
 
     def test_add_gid_int(self):
         '''
         Tests if the gid is an int
         '''
         with patch('salt.modules.mac_user.info', MagicMock(return_value={})):
-            self.assertRaises(SaltInvocationError, mac_user.add, 'foo', 20, 'foo')
+            with pytest.raises(SaltInvocationError):
+                mac_user.add('foo', 20, 'foo')
 
     # 'delete' function tests: 2
     # Only tested pure logic of function
@@ -117,14 +122,15 @@ class MacUserTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests if there is whitespace in the user name
         '''
-        self.assertRaises(SaltInvocationError, mac_user.delete, 'foo bar')
+        with pytest.raises(SaltInvocationError):
+            mac_user.delete('foo bar')
 
     def test_delete_user_exists(self):
         '''
         Tests if the user exists or not
         '''
         with patch('salt.modules.mac_user.info', MagicMock(return_value={})):
-            self.assertTrue(mac_user.delete('foo'))
+            assert mac_user.delete('foo')
 
     def test_getent(self):
         '''
@@ -142,7 +148,7 @@ class MacUserTestCase(TestCase, LoaderModuleMockMixin):
                    {'shell': '/usr/bin/false', 'name': '_appowner', 'gid': 87,
                     'groups': ['TEST_GROUP'], 'home': '/var/empty',
                     'fullname': 'Application Owner', 'uid': 87}]
-            self.assertEqual(mac_user.getent(), ret)
+            assert mac_user.getent() == ret
 
     # 'chuid' function tests: 3
     # Only tested pure logic of function
@@ -152,21 +158,23 @@ class MacUserTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests if the uid is an int
         '''
-        self.assertRaises(SaltInvocationError, mac_user.chuid, 'foo', 'foo')
+        with pytest.raises(SaltInvocationError):
+            mac_user.chuid('foo', 'foo')
 
     def test_chuid_user_exists(self):
         '''
         Tests if the user exists or not
         '''
         with patch('salt.modules.mac_user.info', MagicMock(return_value={})):
-            self.assertRaises(CommandExecutionError, mac_user.chuid, 'foo', 4376)
+            with pytest.raises(CommandExecutionError):
+                mac_user.chuid('foo', 4376)
 
     def test_chuid_same_uid(self):
         '''
         Tests if the user's uid is the same as as the argument
         '''
         with patch('salt.modules.mac_user.info', MagicMock(return_value=self.mock_info_ret)):
-            self.assertTrue(mac_user.chuid('foo', 4376))
+            assert mac_user.chuid('foo', 4376)
 
     # 'chgid' function tests: 3
     # Only tested pure logic of function
@@ -176,21 +184,23 @@ class MacUserTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests if the gid is an int
         '''
-        self.assertRaises(SaltInvocationError, mac_user.chgid, 'foo', 'foo')
+        with pytest.raises(SaltInvocationError):
+            mac_user.chgid('foo', 'foo')
 
     def test_chgid_user_exists(self):
         '''
         Tests if the user exists or not
         '''
         with patch('salt.modules.mac_user.info', MagicMock(return_value={})):
-            self.assertRaises(CommandExecutionError, mac_user.chgid, 'foo', 4376)
+            with pytest.raises(CommandExecutionError):
+                mac_user.chgid('foo', 4376)
 
     def test_chgid_same_gid(self):
         '''
         Tests if the user's gid is the same as as the argument
         '''
         with patch('salt.modules.mac_user.info', MagicMock(return_value=self.mock_info_ret)):
-            self.assertTrue(mac_user.chgid('foo', 4376))
+            assert mac_user.chgid('foo', 4376)
 
     # 'chshell' function tests: 2
     # Only tested pure logic of function
@@ -201,15 +211,15 @@ class MacUserTestCase(TestCase, LoaderModuleMockMixin):
         Tests if the user exists or not
         '''
         with patch('salt.modules.mac_user.info', MagicMock(return_value={})):
-            self.assertRaises(CommandExecutionError, mac_user.chshell,
-                              'foo', '/bin/bash')
+            with pytest.raises(CommandExecutionError):
+                mac_user.chshell('foo', '/bin/bash')
 
     def test_chshell_same_shell(self):
         '''
         Tests if the user's shell is the same as the argument
         '''
         with patch('salt.modules.mac_user.info', MagicMock(return_value=self.mock_info_ret)):
-            self.assertTrue(mac_user.chshell('foo', '/bin/bash'))
+            assert mac_user.chshell('foo', '/bin/bash')
 
     # 'chhome' function tests: 2
     # Only tested pure logic of function
@@ -220,15 +230,15 @@ class MacUserTestCase(TestCase, LoaderModuleMockMixin):
         Test if the user exists or not
         '''
         with patch('salt.modules.mac_user.info', MagicMock(return_value={})):
-            self.assertRaises(CommandExecutionError, mac_user.chhome,
-                              'foo', '/Users/foo')
+            with pytest.raises(CommandExecutionError):
+                mac_user.chhome('foo', '/Users/foo')
 
     def test_chhome_same_home(self):
         '''
         Tests if the user's home is the same as the argument
         '''
         with patch('salt.modules.mac_user.info', MagicMock(return_value=self.mock_info_ret)):
-            self.assertTrue(mac_user.chhome('foo', '/Users/foo'))
+            assert mac_user.chhome('foo', '/Users/foo')
 
     # 'chfullname' function tests: 2
     # Only tested pure logic of function
@@ -239,15 +249,15 @@ class MacUserTestCase(TestCase, LoaderModuleMockMixin):
         Tests if the user exists or not
         '''
         with patch('salt.modules.mac_user.info', MagicMock(return_value={})):
-            self.assertRaises(CommandExecutionError, mac_user.chfullname,
-                              'test', 'TEST USER')
+            with pytest.raises(CommandExecutionError):
+                mac_user.chfullname('test', 'TEST USER')
 
     def test_chfullname_same_name(self):
         '''
         Tests if the user's full name is the same as the argument
         '''
         with patch('salt.modules.mac_user.info', MagicMock(return_value=self.mock_info_ret)):
-            self.assertTrue(mac_user.chfullname('test', 'TEST USER'))
+            assert mac_user.chfullname('test', 'TEST USER')
 
     # 'chgroups' function tests: 3
     # Only tested pure logic of function
@@ -258,16 +268,16 @@ class MacUserTestCase(TestCase, LoaderModuleMockMixin):
         Tests if the user exists or not
         '''
         with patch('salt.modules.mac_user.info', MagicMock(return_value={})):
-            self.assertRaises(CommandExecutionError, mac_user.chgroups,
-                              'foo', 'wheel,root')
+            with pytest.raises(CommandExecutionError):
+                mac_user.chgroups('foo', 'wheel,root')
 
     def test_chgroups_bad_groups(self):
         '''
         Test if there is white space in groups argument
         '''
         with patch('salt.modules.mac_user.info', MagicMock(return_value=self.mock_info_ret)):
-            self.assertRaises(SaltInvocationError, mac_user.chgroups,
-                              'test', 'bad group')
+            with pytest.raises(SaltInvocationError):
+                mac_user.chgroups('test', 'bad group')
 
     def test_chgroups_same_desired(self):
         '''
@@ -278,7 +288,7 @@ class MacUserTestCase(TestCase, LoaderModuleMockMixin):
                 patch('salt.modules.mac_user.info', MagicMock(return_value=self.mock_info_ret)), \
                 patch('salt.modules.mac_user.list_groups',
                       MagicMock(return_value=('wheel', 'root'))):
-            self.assertTrue(mac_user.chgroups('test', 'wheel,root'))
+            assert mac_user.chgroups('test', 'wheel,root')
 
     def test_info(self):
         '''
@@ -292,7 +302,7 @@ class MacUserTestCase(TestCase, LoaderModuleMockMixin):
         with patch('pwd.getpwnam', MagicMock(return_value=mock_pwnam)), \
                 patch('salt.modules.mac_user.list_groups',
                       MagicMock(return_value=['_TEST_GROUP'])):
-            self.assertEqual(mac_user.info('root'), ret)
+            assert mac_user.info('root') == ret
 
     def test_format_info(self):
         '''
@@ -305,7 +315,7 @@ class MacUserTestCase(TestCase, LoaderModuleMockMixin):
                      'fullname': 'AMaViS Daemon', 'uid': 83}
         with patch('salt.modules.mac_user.list_groups',
                    MagicMock(return_value=['_TEST_GROUP'])):
-            self.assertEqual(mac_user._format_info(data), ret)
+            assert mac_user._format_info(data) == ret
 
     def test_list_users(self):
         '''
@@ -318,4 +328,4 @@ class MacUserTestCase(TestCase, LoaderModuleMockMixin):
                                            'stdout': '\n'.join(expected)})
         with patch.dict(mac_user.__grains__, {'osrelease_info': (10, 9, 1)}), \
                 patch.dict(mac_user.__salt__, {'cmd.run_all': mock_run}):
-            self.assertEqual(mac_user.list_users(), expected)
+            assert mac_user.list_users() == expected

@@ -101,17 +101,11 @@ class DockerUnitTestCase(TestCase, LoaderModuleMockMixin):
             docker_mod.sls(container_name, pillar=extra_pillar_data)
             # TODO: It would be fine if we could make this test require less magic numbers -W. Werner, 2019-08-27
             actual_sls_opts = fake_trans_tar.call_args[0][1]
-            self.assertDictContainsSubset(
-                expected_grains,
-                actual_sls_opts['grains'],
-                'Docker container grains not provided to thin client creation',
-            )
+            assert dict(actual_sls_opts['grains'], **expected_grains) == actual_sls_opts['grains'], \
+                'Docker container grains not provided to thin client creation'
             expected_pillars.update(extra_pillar_data)
-            self.assertDictContainsSubset(
-                expected_pillars,
-                actual_sls_opts['pillar'],
-                'Docker container pillar not provided to thin client creation',
-            )
+            assert dict(actual_sls_opts['pillar'], **expected_pillars) == actual_sls_opts['pillar'], \
+                'Docker container pillar not provided to thin client creation'
 
 
 @skipIf(docker_mod.HAS_DOCKER_PY is False, 'docker-py must be installed to run these tests. Skipping.')
@@ -161,8 +155,8 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
                 }
                 with patch.dict(docker_mod.__salt__, dunder_salt):
                     ret = docker_mod.login('portus.example.com:5000')
-                    self.assertIn('retcode', ret)
-                    self.assertNotEqual(ret['retcode'], 0)
+                    assert 'retcode' in ret
+                    assert ret['retcode'] != 0
 
     def test_ps_with_host_true(self):
         '''
@@ -178,8 +172,8 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
                         {'network.interfaces': network_interfaces}):
             with patch.object(docker_mod, '_get_client', get_client_mock):
                 ret = docker_mod.ps_(host=True)
-                self.assertEqual(ret,
-                                 {'host': {'interfaces': {'mocked': None}}})
+                assert ret == \
+                                 {'host': {'interfaces': {'mocked': None}}}
 
     def test_ps_with_filters(self):
         '''
@@ -562,10 +556,10 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(docker_mod, '_get_client', get_client_mock):
                 docker_mod._clear_context()
                 result = docker_mod.wait('foo')
-        self.assertEqual(result, {'result': True,
+        assert result == {'result': True,
                                   'exit_status': 0,
                                   'state': {'new': 'stopped',
-                                            'old': 'running'}})
+                                            'old': 'running'}}
 
     def test_wait_fails_already_stopped(self):
         client = Mock()
@@ -582,11 +576,11 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(docker_mod, '_get_client', get_client_mock):
                 docker_mod._clear_context()
                 result = docker_mod.wait('foo')
-        self.assertEqual(result, {'result': False,
+        assert result == {'result': False,
                                   'comment': "Container 'foo' already stopped",
                                   'exit_status': 0,
                                   'state': {'new': 'stopped',
-                                            'old': 'stopped'}})
+                                            'old': 'stopped'}}
 
     def test_wait_success_already_stopped(self):
         client = Mock()
@@ -603,11 +597,11 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(docker_mod, '_get_client', get_client_mock):
                 docker_mod._clear_context()
                 result = docker_mod.wait('foo', ignore_already_stopped=True)
-        self.assertEqual(result, {'result': True,
+        assert result == {'result': True,
                                   'comment': "Container 'foo' already stopped",
                                   'exit_status': 0,
                                   'state': {'new': 'stopped',
-                                            'old': 'stopped'}})
+                                            'old': 'stopped'}}
 
     def test_wait_success_absent_container(self):
         client = Mock()
@@ -620,8 +614,8 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(docker_mod, '_get_client', get_client_mock):
                 docker_mod._clear_context()
                 result = docker_mod.wait('foo', ignore_already_stopped=True)
-        self.assertEqual(result, {'result': True,
-                                  'comment': "Container 'foo' absent"})
+        assert result == {'result': True,
+                                  'comment': "Container 'foo' absent"}
 
     def test_wait_fails_on_exit_status(self):
         client = Mock()
@@ -637,10 +631,10 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(docker_mod, '_get_client', get_client_mock):
                 docker_mod._clear_context()
                 result = docker_mod.wait('foo', fail_on_exit_status=True)
-        self.assertEqual(result, {'result': False,
+        assert result == {'result': False,
                                   'exit_status': 1,
                                   'state': {'new': 'stopped',
-                                            'old': 'running'}})
+                                            'old': 'running'}}
 
     def test_wait_fails_on_exit_status_and_already_stopped(self):
         client = Mock()
@@ -658,11 +652,11 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
                 result = docker_mod.wait('foo',
                                            ignore_already_stopped=True,
                                            fail_on_exit_status=True)
-        self.assertEqual(result, {'result': False,
+        assert result == {'result': False,
                                   'comment': "Container 'foo' already stopped",
                                   'exit_status': 1,
                                   'state': {'new': 'stopped',
-                                            'old': 'stopped'}})
+                                            'old': 'stopped'}}
 
     def test_sls_build(self, *args):
         '''
@@ -717,8 +711,7 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         docker_stop_mock.assert_called_once_with('ID')
         docker_rm_mock.assert_called_once_with('ID')
         docker_commit_mock.assert_called_once_with('ID', 'foo', tag='latest')
-        self.assertEqual(
-            {'Id': 'ID2', 'Image': 'foo', 'Time_Elapsed': 42}, ret)
+        assert {'Id': 'ID2', 'Image': 'foo', 'Time_Elapsed': 42} == ret
 
     def test_sls_build_dryrun(self, *args):
         '''
@@ -770,8 +763,7 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         docker_sls_mock.assert_called_once_with('ID', 'foo')
         docker_stop_mock.assert_called_once_with('ID')
         docker_rm_mock.assert_called_once_with('ID')
-        self.assertEqual(
-                {
+        assert {
                 "file_|-/etc/test.sh_|-/etc/test.sh_|-managed": {
                     "comment": "File /etc/test.sh is in the correct state",
                     "name": "/etc/test.sh",
@@ -790,8 +782,8 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
                     "__run_num__": 1,
                     "changes": {}
                 }
-                },
-                ret)
+                } == \
+                ret
 
     def test_call_success(self):
         '''
@@ -831,29 +823,29 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         # Check that the directory is different each time
         # [ call(name, [args]), ...
         self.maxDiff = None
-        self.assertIn('mkdir', docker_run_all_mock.mock_calls[0][1][1])
-        self.assertIn('mkdir', docker_run_all_mock.mock_calls[4][1][1])
-        self.assertNotEqual(docker_run_all_mock.mock_calls[0][1][1],
-                            docker_run_all_mock.mock_calls[4][1][1])
+        assert 'mkdir' in docker_run_all_mock.mock_calls[0][1][1]
+        assert 'mkdir' in docker_run_all_mock.mock_calls[4][1][1]
+        assert docker_run_all_mock.mock_calls[0][1][1] != \
+                            docker_run_all_mock.mock_calls[4][1][1]
 
-        self.assertIn('salt-call', docker_run_all_mock.mock_calls[2][1][1])
-        self.assertIn('salt-call', docker_run_all_mock.mock_calls[6][1][1])
-        self.assertNotEqual(docker_run_all_mock.mock_calls[2][1][1],
-                            docker_run_all_mock.mock_calls[6][1][1])
+        assert 'salt-call' in docker_run_all_mock.mock_calls[2][1][1]
+        assert 'salt-call' in docker_run_all_mock.mock_calls[6][1][1]
+        assert docker_run_all_mock.mock_calls[2][1][1] != \
+                            docker_run_all_mock.mock_calls[6][1][1]
 
         # check thin untar
-        self.assertIn('tarfile', docker_run_all_mock.mock_calls[1][1][1])
-        self.assertIn('tarfile', docker_run_all_mock.mock_calls[5][1][1])
-        self.assertNotEqual(docker_run_all_mock.mock_calls[1][1][1],
-                            docker_run_all_mock.mock_calls[5][1][1])
+        assert 'tarfile' in docker_run_all_mock.mock_calls[1][1][1]
+        assert 'tarfile' in docker_run_all_mock.mock_calls[5][1][1]
+        assert docker_run_all_mock.mock_calls[1][1][1] != \
+                            docker_run_all_mock.mock_calls[5][1][1]
 
         # check directory cleanup
-        self.assertIn('rm -rf', docker_run_all_mock.mock_calls[3][1][1])
-        self.assertIn('rm -rf', docker_run_all_mock.mock_calls[7][1][1])
-        self.assertNotEqual(docker_run_all_mock.mock_calls[3][1][1],
-                            docker_run_all_mock.mock_calls[7][1][1])
+        assert 'rm -rf' in docker_run_all_mock.mock_calls[3][1][1]
+        assert 'rm -rf' in docker_run_all_mock.mock_calls[7][1][1]
+        assert docker_run_all_mock.mock_calls[3][1][1] != \
+                            docker_run_all_mock.mock_calls[7][1][1]
 
-        self.assertEqual({"retcode": 0, "comment": "container cmd"}, ret)
+        assert {"retcode": 0, "comment": "container cmd"} == ret
 
     def test_images_with_empty_tags(self):
         '''
@@ -872,8 +864,8 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(docker_mod, '_get_client', get_client_mock):
             docker_mod._clear_context()
             result = docker_mod.images()
-        self.assertEqual(result,
-                         {'sha256:abcdefg': {'RepoTags': ['image:latest']}})
+        assert result == \
+                         {'sha256:abcdefg': {'RepoTags': ['image:latest']}}
 
     def test_compare_container_image_id_resolution(self):
         '''
@@ -900,7 +892,7 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(docker_mod, 'inspect_container', inspect_container_mock):
             with patch.object(docker_mod, 'inspect_image', inspect_image_mock):
                 ret = docker_mod.compare_containers('container1', 'container2')
-                self.assertEqual(ret, {})
+                assert ret == {}
 
     def test_compare_container_ulimits_order(self):
         '''
@@ -929,7 +921,7 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.object(docker_mod, 'inspect_container', inspect_container_mock):
             ret = docker_mod.compare_container('container1', 'container2')  # pylint: disable=not-callable
-            self.assertEqual(ret, {})
+            assert ret == {}
 
     def test_compare_container_env_order(self):
         '''
@@ -958,7 +950,7 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.object(docker_mod, 'inspect_container', inspect_container_mock):
             ret = docker_mod.compare_container('container1', 'container2')  # pylint: disable=not-callable
-            self.assertEqual(ret, {})
+            assert ret == {}
 
     def test_resolve_tag(self):
         '''
@@ -973,20 +965,20 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         mock_not_found = MagicMock(side_effect=CommandExecutionError())
 
         with patch.object(docker_mod, 'inspect_image', mock_tagged):
-            self.assertEqual(docker_mod.resolve_tag('foo'), tags[0])
-            self.assertEqual(docker_mod.resolve_tag('foo', all=True), tags)
+            assert docker_mod.resolve_tag('foo') == tags[0]
+            assert docker_mod.resolve_tag('foo', all=True) == tags
 
         with patch.object(docker_mod, 'inspect_image', mock_untagged):
-            self.assertEqual(docker_mod.resolve_tag('foo'), id_)
-            self.assertEqual(docker_mod.resolve_tag('foo', all=True), [id_])
+            assert docker_mod.resolve_tag('foo') == id_
+            assert docker_mod.resolve_tag('foo', all=True) == [id_]
 
         with patch.object(docker_mod, 'inspect_image', mock_unexpected):
-            self.assertEqual(docker_mod.resolve_tag('foo'), id_)
-            self.assertEqual(docker_mod.resolve_tag('foo', all=True), [id_])
+            assert docker_mod.resolve_tag('foo') == id_
+            assert docker_mod.resolve_tag('foo', all=True) == [id_]
 
         with patch.object(docker_mod, 'inspect_image', mock_not_found):
-            self.assertIs(docker_mod.resolve_tag('foo'), False)
-            self.assertIs(docker_mod.resolve_tag('foo', all=True), False)
+            assert docker_mod.resolve_tag('foo') is False
+            assert docker_mod.resolve_tag('foo', all=True) is False
 
     def test_prune(self):
         '''
@@ -1057,38 +1049,32 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
 
         # Containers and images, no filters
         client = _run(containers=True, images=True)
-        self.assertEqual(
-            client.call_args_list,
+        assert client.call_args_list == \
             [
                 call('prune_containers', filters={}),
                 call('prune_images', filters={}),
             ]
-        )
 
         # Containers and images, with filters
         client = _run(containers=True, images=True,
                       until='24h', label='foo,bar=baz')
-        self.assertEqual(
-            client.call_args_list,
+        assert client.call_args_list == \
             [
                 call('prune_containers',
                      filters={'until': ['24h'], 'label': ['foo', 'bar=baz']}),
                 call('prune_images',
                      filters={'until': ['24h'], 'label': ['foo', 'bar=baz']}),
             ]
-        )
 
         # System, no volumes, no filters, assuming prune_build in docker-py
         client = _run(system=True)
-        self.assertEqual(
-            client.call_args_list,
+        assert client.call_args_list == \
             [
                 call('prune_containers', filters={}),
                 call('prune_images', filters={}),
                 call('prune_networks', filters={}),
                 call('prune_build', filters={}),
             ]
-        )
 
         # System, no volumes, no filters, assuming prune_build not in docker-py
         client = _run(
@@ -1096,8 +1082,7 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
             side_effect=[None, None, None, SaltInvocationError(),
                          None, None, None]
         )
-        self.assertEqual(
-            client.call_args_list,
+        assert client.call_args_list == \
             [
                 call('prune_containers', filters={}),
                 call('prune_images', filters={}),
@@ -1107,19 +1092,16 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
                 call('_post', None),
                 call('_result', None, True),
             ]
-        )
 
         # System, no volumes, with filters, assuming prune_build in docker-py
         client = _run(system=True, label='foo,bar=baz')
-        self.assertEqual(
-            client.call_args_list,
+        assert client.call_args_list == \
             [
                 call('prune_containers', filters={'label': ['foo', 'bar=baz']}),
                 call('prune_images', filters={'label': ['foo', 'bar=baz']}),
                 call('prune_networks', filters={'label': ['foo', 'bar=baz']}),
                 call('prune_build', filters={'label': ['foo', 'bar=baz']}),
             ]
-        )
 
         # System, no volumes, with filters, assuming prune_build not in docker-py
         client = _run(
@@ -1128,8 +1110,7 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
             side_effect=[None, None, None, SaltInvocationError(),
                          None, None, None]
         )
-        self.assertEqual(
-            client.call_args_list,
+        assert client.call_args_list == \
             [
                 call('prune_containers', filters={'label': ['foo', 'bar=baz']}),
                 call('prune_images', filters={'label': ['foo', 'bar=baz']}),
@@ -1139,12 +1120,10 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
                 call('_post', None),
                 call('_result', None, True),
             ]
-        )
 
         # System and volumes, no filters, assuming prune_build in docker-py
         client = _run(system=True, volumes=True)
-        self.assertEqual(
-            client.call_args_list,
+        assert client.call_args_list == \
             [
                 call('prune_containers', filters={}),
                 call('prune_images', filters={}),
@@ -1152,7 +1131,6 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
                 call('prune_build', filters={}),
                 call('prune_volumes', filters={}),
             ]
-        )
 
         # System and volumes, no filters, assuming prune_build not in docker-py
         client = _run(
@@ -1161,8 +1139,7 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
             side_effect=[None, None, None, SaltInvocationError(),
                          None, None, None, None]
         )
-        self.assertEqual(
-            client.call_args_list,
+        assert client.call_args_list == \
             [
                 call('prune_containers', filters={}),
                 call('prune_images', filters={}),
@@ -1173,12 +1150,10 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
                 call('_result', None, True),
                 call('prune_volumes', filters={}),
             ]
-        )
 
         # System and volumes with filters, assuming prune_build in docker-py
         client = _run(system=True, volumes=True, label='foo,bar=baz')
-        self.assertEqual(
-            client.call_args_list,
+        assert client.call_args_list == \
             [
                 call('prune_containers', filters={'label': ['foo', 'bar=baz']}),
                 call('prune_images', filters={'label': ['foo', 'bar=baz']}),
@@ -1186,7 +1161,6 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
                 call('prune_build', filters={'label': ['foo', 'bar=baz']}),
                 call('prune_volumes', filters={'label': ['foo', 'bar=baz']}),
             ]
-        )
 
         # System and volumes, with filters, assuming prune_build not in docker-py
         client = _run(
@@ -1196,8 +1170,7 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
             side_effect=[None, None, None, SaltInvocationError(),
                          None, None, None, None]
         )
-        self.assertEqual(
-            client.call_args_list,
+        assert client.call_args_list == \
             [
                 call('prune_containers', filters={'label': ['foo', 'bar=baz']}),
                 call('prune_images', filters={'label': ['foo', 'bar=baz']}),
@@ -1208,7 +1181,6 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
                 call('_result', None, True),
                 call('prune_volumes', filters={'label': ['foo', 'bar=baz']}),
             ]
-        )
 
     def test_port(self):
         '''
@@ -1257,56 +1229,44 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
 
             # Test with specific container name
             ret = docker_mod.port('foo')
-            self.assertEqual(ret, ports['foo'])
+            assert ret == ports['foo']
 
             # Test with specific container name and filtering on port
             ret = docker_mod.port('foo', private_port='5555/tcp')
-            self.assertEqual(ret, {'5555/tcp': ports['foo']['5555/tcp']})
+            assert ret == {'5555/tcp': ports['foo']['5555/tcp']}
 
             # Test using pattern expression
             ret = docker_mod.port('ba*')
-            self.assertEqual(ret, {'bar': ports['bar'], 'baz': ports['baz']})
+            assert ret == {'bar': ports['bar'], 'baz': ports['baz']}
             ret = docker_mod.port('ba?')
-            self.assertEqual(ret, {'bar': ports['bar'], 'baz': ports['baz']})
+            assert ret == {'bar': ports['bar'], 'baz': ports['baz']}
             ret = docker_mod.port('ba[rz]')
-            self.assertEqual(ret, {'bar': ports['bar'], 'baz': ports['baz']})
+            assert ret == {'bar': ports['bar'], 'baz': ports['baz']}
 
             # Test using pattern expression and port filtering
             ret = docker_mod.port('ba*', private_port='6666/tcp')
-            self.assertEqual(
-                ret,
+            assert ret == \
                 {'bar': {'6666/tcp': ports['bar']['6666/tcp']}, 'baz': {}}
-            )
             ret = docker_mod.port('ba?', private_port='6666/tcp')
-            self.assertEqual(
-                ret,
+            assert ret == \
                 {'bar': {'6666/tcp': ports['bar']['6666/tcp']}, 'baz': {}}
-            )
             ret = docker_mod.port('ba[rz]', private_port='6666/tcp')
-            self.assertEqual(
-                ret,
+            assert ret == \
                 {'bar': {'6666/tcp': ports['bar']['6666/tcp']}, 'baz': {}}
-            )
             ret = docker_mod.port('*')
-            self.assertEqual(ret, ports)
+            assert ret == ports
             ret = docker_mod.port('*', private_port='5555/tcp')
-            self.assertEqual(
-                ret,
+            assert ret == \
                 {'foo': {'5555/tcp': ports['foo']['5555/tcp']},
                  'bar': {'5555/tcp': ports['bar']['5555/tcp']},
                  'baz': {'5555/tcp': ports['baz']['5555/tcp']}}
-            )
             ret = docker_mod.port('*', private_port=6666)
-            self.assertEqual(
-                ret,
+            assert ret == \
                 {'foo': {'6666/tcp': ports['foo']['6666/tcp']},
                  'bar': {'6666/tcp': ports['bar']['6666/tcp']},
                  'baz': {'6666/udp': ports['baz']['6666/udp']}}
-            )
             ret = docker_mod.port('*', private_port='6666/tcp')
-            self.assertEqual(
-                ret,
+            assert ret == \
                 {'foo': {'6666/tcp': ports['foo']['6666/tcp']},
                  'bar': {'6666/tcp': ports['bar']['6666/tcp']},
                  'baz': {}}
-            )

@@ -20,6 +20,7 @@ from tests.support.mock import (
 import salt.utils.files
 import salt.utils.odict
 import salt.modules.seed as seed
+import pytest
 
 
 class SeedTestCase(TestCase, LoaderModuleMockMixin):
@@ -38,7 +39,7 @@ class SeedTestCase(TestCase, LoaderModuleMockMixin):
             data = seed.mkconfig(ddd, approve_key=False)
             with salt.utils.files.fopen(data['config']) as fic:
                 fdata = fic.read()
-                self.assertEqual(fdata, 'b: b\na: b\nmaster: foo\n')
+                assert fdata == 'b: b\na: b\nmaster: foo\n'
 
     def test_prep_bootstrap(self):
         '''
@@ -52,11 +53,11 @@ class SeedTestCase(TestCase, LoaderModuleMockMixin):
 
             expect = (os.path.join('MPT', 'tmp', 'UUID', 'BS'),
                       os.sep + os.path.join('tmp', 'UUID'))
-            self.assertEqual(seed.prep_bootstrap('MPT'), expect)
+            assert seed.prep_bootstrap('MPT') == expect
 
             expect = (os.sep + os.path.join('MPT', 'tmp', 'UUID', 'BS'),
                       os.sep + os.path.join('tmp', 'UUID'))
-            self.assertEqual(seed.prep_bootstrap(os.sep + 'MPT'), expect)
+            assert seed.prep_bootstrap(os.sep + 'MPT') == expect
 
     def test_apply_(self):
         '''
@@ -69,11 +70,11 @@ class SeedTestCase(TestCase, LoaderModuleMockMixin):
                                       {'type': 'type', 'target': 'target'},
                                       {'type': 'type', 'target': 'target'}])
         with patch.dict(seed.__salt__, {'file.stats': mock}):
-            self.assertEqual(seed.apply_('path'), 'path does not exist')
+            assert seed.apply_('path') == 'path does not exist'
 
             with patch.object(seed, '_mount', return_value=False):
-                self.assertEqual(seed.apply_('path'),
-                                 'target could not be mounted')
+                assert seed.apply_('path') == \
+                                 'target could not be mounted'
 
             with patch.object(seed, '_mount', return_value=True):
                 with patch.object(os.path, 'join', return_value='A'):
@@ -81,7 +82,8 @@ class SeedTestCase(TestCase, LoaderModuleMockMixin):
                                       MagicMock(side_effect=OSError('f'))):
                         with patch.object(os.path, 'isdir',
                                           return_value=False):
-                            self.assertRaises(OSError, seed.apply_, 'p')
+                            with pytest.raises(OSError):
+                                seed.apply_('p')
 
                     with patch.object(os, 'makedirs', MagicMock()):
                         with patch.object(seed, 'mkconfig', return_value='A'):
@@ -89,5 +91,5 @@ class SeedTestCase(TestCase, LoaderModuleMockMixin):
                                               return_value=False):
                                 with patch.object(seed, '_umount',
                                                   return_value=None):
-                                    self.assertFalse(seed.apply_('path',
-                                                                 install=False))
+                                    assert not seed.apply_('path',
+                                                                 install=False)

@@ -44,7 +44,7 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd_run = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(ilo.__salt__, {'cmd.run_all': mock_cmd_run}):
             ret = ilo.global_settings()
-            self.assertEqual(ret, True)
+            assert ret is True
 
     # 'global_settings' function tests: 1
 
@@ -54,7 +54,7 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.ilo.__execute_cmd',
                    MagicMock(return_value={'Global Settings': {}})):
-            self.assertDictEqual(ilo.global_settings(), {'Global Settings': {}})
+            assert ilo.global_settings() == {'Global Settings': {}}
 
     # 'set_http_port' function tests: 1
 
@@ -65,15 +65,15 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(ilo, 'global_settings',
                           return_value={'Global Settings': {'HTTP_PORT':
                                                             {'VALUE': 80}}}):
-            self.assertTrue(ilo.set_http_port())
+            assert ilo.set_http_port()
 
         with patch.object(ilo, 'global_settings',
                           return_value={'Global Settings': {'HTTP_PORT':
                                                             {'VALUE': 40}}}):
             with patch.object(ilo, '__execute_cmd',
                               return_value={'Set HTTP Port': {}}):
-                self.assertDictEqual(ilo.set_http_port(),
-                                     {'Set HTTP Port': {}})
+                assert ilo.set_http_port() == \
+                                     {'Set HTTP Port': {}}
 
     # 'set_https_port' function tests: 1
 
@@ -84,15 +84,15 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(ilo, 'global_settings',
                           return_value={'Global Settings': {'HTTP_PORT':
                                                             {'VALUE': 443}}}):
-            self.assertTrue(ilo.set_https_port())
+            assert ilo.set_https_port()
 
         with patch.object(ilo, 'global_settings',
                           return_value={'Global Settings': {'HTTP_PORT':
                                                             {'VALUE': 80}}}):
             with patch.object(ilo, '__execute_cmd',
                               return_value={'Set HTTPS Port': {}}):
-                self.assertDictEqual(ilo.set_https_port(),
-                                     {'Set HTTPS Port': {}})
+                assert ilo.set_https_port() == \
+                                     {'Set HTTPS Port': {}}
 
     # 'enable_ssh' function tests: 1
 
@@ -103,14 +103,14 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(ilo, 'global_settings',
                           return_value={'Global Settings': {'SSH_STATUS':
                                                             {'VALUE': 'Y'}}}):
-            self.assertTrue(ilo.enable_ssh())
+            assert ilo.enable_ssh()
 
         with patch.object(ilo, 'global_settings',
                           return_value={'Global Settings': {'SSH_STATUS':
                                                             {'VALUE': 'N'}}}):
             with patch.object(ilo, '__execute_cmd',
                               return_value={'Enable SSH': {}}):
-                self.assertDictEqual(ilo.enable_ssh(), {'Enable SSH': {}})
+                assert ilo.enable_ssh() == {'Enable SSH': {}}
 
     # 'disable_ssh' function tests: 1
 
@@ -121,14 +121,14 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(ilo, 'global_settings',
                           return_value={'Global Settings': {'SSH_STATUS':
                                                             {'VALUE': 'N'}}}):
-            self.assertTrue(ilo.disable_ssh())
+            assert ilo.disable_ssh()
 
         with patch.object(ilo, 'global_settings',
                           return_value={'Global Settings': {'SSH_STATUS':
                                                             {'VALUE': 'Y'}}}):
             with patch.object(ilo, '__execute_cmd',
                               return_value={'Disable SSH': {}}):
-                self.assertDictEqual(ilo.disable_ssh(), {'Disable SSH': {}})
+                assert ilo.disable_ssh() == {'Disable SSH': {}}
 
     # 'set_ssh_port' function tests: 1
 
@@ -139,15 +139,15 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(ilo, 'global_settings',
                           return_value={'Global Settings': {'SSH_PORT':
                                                             {'VALUE': 22}}}):
-            self.assertTrue(ilo.set_ssh_port())
+            assert ilo.set_ssh_port()
 
         with patch.object(ilo, 'global_settings',
                           return_value={'Global Settings': {'SSH_PORT':
                                                             {'VALUE': 20}}}):
             with patch.object(ilo, '__execute_cmd',
                               return_value={'Configure SSH Port': {}}):
-                self.assertDictEqual(ilo.set_ssh_port(),
-                                     {'Configure SSH Port': {}})
+                assert ilo.set_ssh_port() == \
+                                     {'Configure SSH Port': {}}
 
     # 'set_ssh_key' function tests: 1
 
@@ -157,8 +157,8 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.ilo.__execute_cmd',
                    MagicMock(return_value={'Import SSH Publickey': {}})):
-            self.assertDictEqual(ilo.set_ssh_key('ssh-rsa AAAAB3Nza Salt'),
-                                 {'Import SSH Publickey': {}})
+            assert ilo.set_ssh_key('ssh-rsa AAAAB3Nza Salt') == \
+                                 {'Import SSH Publickey': {}}
 
     # 'delete_ssh_key' function tests: 1
 
@@ -168,8 +168,8 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.ilo.__execute_cmd',
                    MagicMock(return_value={'Delete user SSH key': {}})):
-            self.assertDictEqual(ilo.delete_ssh_key('Salt'),
-                                 {'Delete user SSH key': {}})
+            assert ilo.delete_ssh_key('Salt') == \
+                                 {'Delete user SSH key': {}}
 
     # 'list_users' function tests: 1
 
@@ -179,7 +179,7 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.ilo.__execute_cmd',
                    MagicMock(return_value={'All users': {}})):
-            self.assertDictEqual(ilo.list_users(), {'All users': {}})
+            assert ilo.list_users() == {'All users': {}}
 
     # 'list_users_info' function tests: 1
 
@@ -189,7 +189,7 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.ilo.__execute_cmd',
                    MagicMock(return_value={'All users info': {}})):
-            self.assertDictEqual(ilo.list_users_info(), {'All users info': {}})
+            assert ilo.list_users_info() == {'All users info': {}}
 
     # 'create_user' function tests: 1
 
@@ -199,9 +199,9 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.ilo.__execute_cmd',
                    MagicMock(return_value={'Create user': {}})):
-            self.assertDictEqual(ilo.create_user('Salt', 'secretagent',
-                                                 'VIRTUAL_MEDIA_PRIV'),
-                                 {'Create user': {}})
+            assert ilo.create_user('Salt', 'secretagent',
+                                                 'VIRTUAL_MEDIA_PRIV') == \
+                                 {'Create user': {}}
 
     # 'delete_user' function tests: 1
 
@@ -211,7 +211,7 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.ilo.__execute_cmd',
                    MagicMock(return_value={'Delete user': {}})):
-            self.assertDictEqual(ilo.delete_user('Salt'), {'Delete user': {}})
+            assert ilo.delete_user('Salt') == {'Delete user': {}}
 
     # 'get_user' function tests: 1
 
@@ -221,7 +221,7 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.ilo.__execute_cmd',
                    MagicMock(return_value={'User Info': {}})):
-            self.assertDictEqual(ilo.get_user('Salt'), {'User Info': {}})
+            assert ilo.get_user('Salt') == {'User Info': {}}
 
     # 'change_username' function tests: 1
 
@@ -231,8 +231,8 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.ilo.__execute_cmd',
                    MagicMock(return_value={'Change username': {}})):
-            self.assertDictEqual(ilo.change_username('Salt', 'SALT'),
-                                 {'Change username': {}})
+            assert ilo.change_username('Salt', 'SALT') == \
+                                 {'Change username': {}}
 
     # 'change_password' function tests: 1
 
@@ -242,8 +242,8 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.ilo.__execute_cmd',
                    MagicMock(return_value={'Change password': {}})):
-            self.assertDictEqual(ilo.change_password('Salt', 'saltpasswd'),
-                                 {'Change password': {}})
+            assert ilo.change_password('Salt', 'saltpasswd') == \
+                                 {'Change password': {}}
 
     # 'network' function tests: 1
 
@@ -253,7 +253,7 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.ilo.__execute_cmd',
                    MagicMock(return_value={'Network Settings': {}})):
-            self.assertDictEqual(ilo.network(), {'Network Settings': {}})
+            assert ilo.network() == {'Network Settings': {}}
 
     # 'configure_network' function tests: 1
 
@@ -268,16 +268,16 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
                     'SUBNET_MASK': {'VALUE': '255.255.255.0'},
                     'GATEWAY_IP_ADDRESS': {'VALUE': '10.0.0.1'}}}
             with patch.object(ilo, 'network', return_value=ret):
-                self.assertTrue(ilo.configure_network('10.0.0.10',
-                                                      '255.255.255.0', '10.0.0.1'))
+                assert ilo.configure_network('10.0.0.10',
+                                                      '255.255.255.0', '10.0.0.1')
 
             with patch.object(ilo, 'network', return_value=ret):
                 with patch.object(ilo, '__execute_cmd',
                                   return_value={'Network Settings': {}}):
-                    self.assertDictEqual(ilo.configure_network('10.0.0.100',
+                    assert ilo.configure_network('10.0.0.100',
                                                                '255.255.255.10',
-                                                               '10.0.0.10'),
-                                         {'Network Settings': {}})
+                                                               '10.0.0.10') == \
+                                         {'Network Settings': {}}
 
     # 'enable_dhcp' function tests: 1
 
@@ -288,14 +288,14 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(ilo, 'network',
                           return_value={'Network Settings': {'DHCP_ENABLE':
                                                              {'VALUE': 'Y'}}}):
-            self.assertTrue(ilo.enable_dhcp())
+            assert ilo.enable_dhcp()
 
         with patch.object(ilo, 'network',
                           return_value={'Network Settings': {'DHCP_ENABLE':
                                                              {'VALUE': 'N'}}}):
             with patch.object(ilo, '__execute_cmd',
                               return_value={'Enable DHCP': {}}):
-                self.assertDictEqual(ilo.enable_dhcp(), {'Enable DHCP': {}})
+                assert ilo.enable_dhcp() == {'Enable DHCP': {}}
 
     # 'disable_dhcp' function tests: 1
 
@@ -306,14 +306,14 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(ilo, 'network',
                           return_value={'Network Settings': {'DHCP_ENABLE':
                                                              {'VALUE': 'N'}}}):
-            self.assertTrue(ilo.disable_dhcp())
+            assert ilo.disable_dhcp()
 
         with patch.object(ilo, 'network',
                           return_value={'Network Settings': {'DHCP_ENABLE':
                                                              {'VALUE': 'Y'}}}):
             with patch.object(ilo, '__execute_cmd',
                               return_value={'Disable DHCP': {}}):
-                self.assertDictEqual(ilo.disable_dhcp(), {'Disable DHCP': {}})
+                assert ilo.disable_dhcp() == {'Disable DHCP': {}}
 
     # 'configure_snmp' function tests: 1
 
@@ -323,4 +323,4 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.ilo.__execute_cmd',
                    MagicMock(return_value={'Configure SNMP': {}})):
-            self.assertDictEqual(ilo.configure_snmp('Salt'), {'Configure SNMP': {}})
+            assert ilo.configure_snmp('Salt') == {'Configure SNMP': {}}

@@ -34,7 +34,7 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
                'result': False,
                'comment': 'dns_proto must be one of the following: static, dhcp\n'
                           'ip_proto must be one of the following: static, dhcp'}
-        self.assertDictEqual(win_network.managed('salt'), ret)
+        assert win_network.managed('salt') == ret
 
     def test_managed_static_enabled_false(self):
         ret = {'name': 'salt',
@@ -43,10 +43,9 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
                'comment': 'Interface \'salt\' is up to date (already disabled)'}
         mock_false = MagicMock(return_value=False)
         with patch.dict(win_network.__salt__, {"ip.is_enabled": mock_false}):
-            self.assertDictEqual(
-                win_network.managed(
-                    'salt', dns_proto='static', ip_proto='static', enabled=False),
-                ret)
+            assert win_network.managed(
+                    'salt', dns_proto='static', ip_proto='static', enabled=False) == \
+                ret
 
     def test_managed_test_true(self):
         ret = {'name': 'salt',
@@ -57,10 +56,9 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_network.__salt__, {"ip.is_enabled": mock_false,
                                                "ip.enable": mock_false}), \
                 patch.dict(win_network.__opts__, {"test": False}):
-            self.assertDictEqual(
-                win_network.managed(
-                    'salt', dns_proto='static', ip_proto='static'),
-                ret)
+            assert win_network.managed(
+                    'salt', dns_proto='static', ip_proto='static') == \
+                ret
 
     def test_managed_validate_errors(self):
         ret = {'name': 'salt',
@@ -74,10 +72,9 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
         mock_validate = MagicMock(return_value=['First Error', 'Second Error'])
         with patch.dict(win_network.__salt__, {"ip.is_enabled": mock_true}),\
                 patch.object(win_network, '_validate', mock_validate):
-            self.assertDictEqual(
-                win_network.managed(
-                    'salt', dns_proto='static', ip_proto='static'),
-                ret)
+            assert win_network.managed(
+                    'salt', dns_proto='static', ip_proto='static') == \
+                ret
 
     def test_managed_get_current_config_failed(self):
         ret = {'name': 'salt',
@@ -92,9 +89,8 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
                                                'ip.get_interface': mock_false}), \
                 patch.object(win_network, '_validate', mock_validate):
 
-            self.assertDictEqual(
-                win_network.managed('salt', dns_proto='dhcp', ip_proto='dhcp'),
-                ret)
+            assert win_network.managed('salt', dns_proto='dhcp', ip_proto='dhcp') == \
+                ret
 
     def test_managed_test_true_no_changes(self):
         ret = {'name': 'salt',
@@ -110,9 +106,8 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
                                                'ip.get_interface': mock_get_int}), \
                 patch.dict(win_network.__opts__, {"test": True}), \
                 patch.object(win_network, '_validate', mock_validate):
-            self.assertDictEqual(
-                win_network.managed('salt', dns_proto='dhcp', ip_proto='dhcp'),
-                ret)
+            assert win_network.managed('salt', dns_proto='dhcp', ip_proto='dhcp') == \
+                ret
 
     def test_managed_test_true_changes(self):
         ret = {'name': 'salt',
@@ -131,9 +126,8 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
                 patch.dict(win_network.__opts__, {"test": True}), \
                 patch.object(win_network, '_validate', mock_validate):
 
-            self.assertDictEqual(
-                win_network.managed('salt', dns_proto='dhcp', ip_proto='dhcp'),
-                ret)
+            assert win_network.managed('salt', dns_proto='dhcp', ip_proto='dhcp') == \
+                ret
 
     def test_managed_failed(self):
         ret = {'name': 'salt',
@@ -152,9 +146,8 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
                                                'ip.set_dhcp_ip': mock_true}), \
                 patch.dict(win_network.__opts__, {"test": False}), \
                 patch.object(win_network, '_validate', mock_validate):
-            self.assertDictEqual(
-                win_network.managed('salt', dns_proto='dhcp', ip_proto='dhcp'),
-                ret)
+            assert win_network.managed('salt', dns_proto='dhcp', ip_proto='dhcp') == \
+                ret
 
     def test_managed(self):
         ret = {'name': 'salt',
@@ -185,9 +178,8 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
                                                'ip.set_dhcp_ip': mock_true}), \
              patch.dict(win_network.__opts__, {"test": False}), \
              patch.object(win_network, '_validate', mock_validate):
-            self.assertDictEqual(
-                win_network.managed('salt', dns_proto='dhcp', ip_proto='dhcp'),
-                ret)
+            assert win_network.managed('salt', dns_proto='dhcp', ip_proto='dhcp') == \
+                ret
 
     def test_managed_static_dns_clear(self):
         expected = {'name': 'salt',
@@ -213,7 +205,7 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
                 patch.object(win_network, '_validate', mock_validate):
             ret = win_network.managed(
                 'salt', dns_proto='static', dns_servers=[], ip_proto='dhcp')
-            self.assertDictEqual(ret, expected)
+            assert ret == expected
 
     def test_managed_static_dns(self):
         expected = {'name': 'salt',
@@ -239,7 +231,7 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
                 patch.object(win_network, '_validate', mock_validate):
             ret = win_network.managed(
                 'salt', dns_proto='static', dns_servers=['192.168.0.10'], ip_proto='dhcp')
-            self.assertDictEqual(ret, expected)
+            assert ret == expected
 
     def test_managed_static_dns_no_action(self):
         expected = {'name': 'salt',
@@ -259,8 +251,8 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
                 patch.object(win_network, '_validate', mock_validate):
             # Don't pass dns_servers
             ret = win_network.managed('salt', dns_proto='static', ip_proto='dhcp')
-            self.assertDictEqual(ret, expected)
+            assert ret == expected
             # Pass dns_servers=None
             ret = win_network.managed(
                 'salt', dns_proto='static', dns_servers=None, ip_proto='dhcp')
-            self.assertDictEqual(ret, expected)
+            assert ret == expected

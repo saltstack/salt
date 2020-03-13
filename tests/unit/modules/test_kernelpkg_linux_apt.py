@@ -10,6 +10,7 @@
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 import re
+import pytest
 
 try:
     # Import Salt Testing Libs
@@ -69,7 +70,7 @@ class AptKernelPkgTestCase(KernelPkgTestCase, TestCase, LoaderModuleMockMixin):
 
         mock = MagicMock(return_value=PACKAGE_LIST)
         with patch.dict(self._kernelpkg.__salt__, {'pkg.list_pkgs': mock}):
-            self.assertListEqual(self._kernelpkg.list_installed(), self.KERNEL_LIST)
+            assert self._kernelpkg.list_installed() == self.KERNEL_LIST
 
     def test_list_installed_none(self):
         '''
@@ -77,7 +78,7 @@ class AptKernelPkgTestCase(KernelPkgTestCase, TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=None)
         with patch.dict(self._kernelpkg.__salt__, {'pkg.list_pkgs': mock}):
-            self.assertListEqual(self._kernelpkg.list_installed(), [])
+            assert self._kernelpkg.list_installed() == []
 
     def test_remove_success(self):
         '''
@@ -86,9 +87,9 @@ class AptKernelPkgTestCase(KernelPkgTestCase, TestCase, LoaderModuleMockMixin):
         with patch.object(self._kernelpkg, 'active', return_value=self.KERNEL_LIST[-1]):
             with patch.object(self._kernelpkg, 'list_installed', return_value=self.KERNEL_LIST):
                 result = self._kernelpkg.remove(release=self.KERNEL_LIST[0])
-                self.assertIn('removed', result)
+                assert 'removed' in result
                 target = '{0}-{1}'.format(self._kernelpkg._package_prefix(), self.KERNEL_LIST[0])  # pylint: disable=protected-access
-                self.assertListEqual(result['removed'], [target])
+                assert result['removed'] == [target]
 
     def test_remove_error(self):
         '''
@@ -98,4 +99,5 @@ class AptKernelPkgTestCase(KernelPkgTestCase, TestCase, LoaderModuleMockMixin):
         with patch.dict(self._kernelpkg.__salt__, {'pkg.purge': mock}):
             with patch.object(self._kernelpkg, 'active', return_value=self.KERNEL_LIST[-1]):
                 with patch.object(self._kernelpkg, 'list_installed', return_value=self.KERNEL_LIST):
-                    self.assertRaises(CommandExecutionError, self._kernelpkg.remove, release=self.KERNEL_LIST[0])
+                    with pytest.raises(CommandExecutionError):
+                        self._kernelpkg.remove(release=self.KERNEL_LIST[0])

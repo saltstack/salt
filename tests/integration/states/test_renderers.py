@@ -30,7 +30,7 @@ class TestJinjaRenderer(ModuleCase):
         '''
         ret = self.run_function('state.sls', ['jinja_dot_notation'])
         for state_ret in ret.values():
-            self.assertTrue(state_ret['result'])
+            assert state_ret['result']
 
     @pytest.mark.flaky(max_runs=4)
     @skipIf(salt.utils.platform.is_darwin() and six.PY2, 'This test hangs on OS X on Py2')
@@ -41,4 +41,4 @@ class TestJinjaRenderer(ModuleCase):
         '''
         ret = self.run_function('state.sls', ['jinja_salt_contains_function'])
         for state_ret in ret.values():
-            self.assertTrue(state_ret['result'])
+            assert state_ret['result']

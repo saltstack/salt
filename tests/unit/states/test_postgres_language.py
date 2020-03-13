@@ -52,8 +52,7 @@ class PostgresLanguageTestCase(TestCase, LoaderModuleMockMixin):
                 {'postgres.language_list': self.mock_language_list}):
             comt = 'Language {0} is already installed'.format(self.name)
             self.ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(
-                postgres_language.present(self.name, 'testdb'), self.ret)
+            assert postgres_language.present(self.name, 'testdb') == self.ret
 
     def test_present_non_existing_pass(self):
         '''
@@ -65,16 +64,14 @@ class PostgresLanguageTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(postgres_language.__opts__, {'test': True}):
                 comt = 'Language {0} is set to be installed'.format(self.name)
                 self.ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(
-                    postgres_language.present(self.name, 'testdb'), self.ret)
+                assert postgres_language.present(self.name, 'testdb') == self.ret
 
             with patch.dict(postgres_language.__opts__, {'test': False}):
                 comt = 'Language {0} has been installed'.format(self.name)
                 self.ret.update({'comment': comt,
                             'result': True,
                             'changes': {'plpgsql': 'Present'}})
-                self.assertDictEqual(
-                    postgres_language.present(self.name, 'testdb'), self.ret)
+                assert postgres_language.present(self.name, 'testdb') == self.ret
 
     def test_present_non_existing_fail(self):
         '''
@@ -86,14 +83,12 @@ class PostgresLanguageTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(postgres_language.__opts__, {'test': True}):
                 comt = 'Language {0} is set to be installed'.format(self.name)
                 self.ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(
-                    postgres_language.present(self.name, 'testdb'), self.ret)
+                assert postgres_language.present(self.name, 'testdb') == self.ret
 
             with patch.dict(postgres_language.__opts__, {'test': False}):
                 comt = 'Failed to install language {0}'.format(self.name)
                 self.ret.update({'comment': comt, 'result': False})
-                self.assertDictEqual(
-                    postgres_language.present(self.name, 'testdb'), self.ret)
+                assert postgres_language.present(self.name, 'testdb') == self.ret
 
     def test_absent_existing(self):
         '''
@@ -105,16 +100,14 @@ class PostgresLanguageTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(postgres_language.__opts__, {'test': True}):
                 comt = 'Language {0} is set to be removed'.format(self.name)
                 self.ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(
-                    postgres_language.absent(self.name, 'testdb'), self.ret)
+                assert postgres_language.absent(self.name, 'testdb') == self.ret
 
             with patch.dict(postgres_language.__opts__, {'test': False}):
                 comt = 'Language {0} has been removed'.format(self.name)
                 self.ret.update({'comment': comt,
                                 'result': True,
                                 'changes': {'plpgsql': 'Absent'}})
-                self.assertDictEqual(
-                    postgres_language.absent(self.name, 'testdb'), self.ret)
+                assert postgres_language.absent(self.name, 'testdb') == self.ret
 
     def test_absent_non_existing(self):
         '''
@@ -126,5 +119,4 @@ class PostgresLanguageTestCase(TestCase, LoaderModuleMockMixin):
                 comt = 'Language {0} is not present so ' \
                     'it cannot be removed'.format(self.name)
                 self.ret.update({'comment': comt, 'result': True})
-                self.assertDictEqual(
-                    postgres_language.absent(self.name, 'testdb'), self.ret)
+                assert postgres_language.absent(self.name, 'testdb') == self.ret

@@ -113,23 +113,23 @@ class TwilioNotifyTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=MockTwilioRestClient())
         with patch.object(twilio_notify, '_get_twilio', mock):
-            self.assertDictEqual(twilio_notify.send_sms('twilio-account',
+            assert twilio_notify.send_sms('twilio-account',
                                                         'SALTSTACK',
                                                         '+18019999999',
-                                                        '+18011111111'),
+                                                        '+18011111111') == \
                                  {'message': {'status': 'Sent',
                                               'num_segments': '2',
                                               'price': '200',
                                               'body': 'SALTSTACK', 'sid': '011',
                                               'date_sent': '01-01-2015',
                                               'date_created': '01-01-2015',
-                                              'price_unit': '1'}})
+                                              'price_unit': '1'}}
 
             MockMessages.flag = 1
-            self.assertDictEqual(twilio_notify.send_sms('twilio-account',
+            assert twilio_notify.send_sms('twilio-account',
                                                         'SALTSTACK',
                                                         '+18019999999',
-                                                        '+18011111111'),
+                                                        '+18011111111') == \
                                  {'message': {'sid': None}, '_error':
                                   {'msg': 'Exception error',
-                                   'status': 'Not send', 'code': 'error code'}})
+                                   'status': 'Not send', 'code': 'error code'}}

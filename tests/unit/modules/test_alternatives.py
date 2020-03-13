@@ -30,7 +30,7 @@ class AlternativesTestCase(TestCase, LoaderModuleMockMixin):
             mock = MagicMock(return_value={'retcode': 0, 'stdout': 'salt'})
             with patch.dict(alternatives.__salt__, {'cmd.run_all': mock}):
                 solution = alternatives.display('better-world')
-                self.assertEqual('salt', solution)
+                assert 'salt' == solution
                 mock.assert_called_once_with(
                     ['alternatives', '--display', 'better-world'],
                     python_shell=False
@@ -42,7 +42,7 @@ class AlternativesTestCase(TestCase, LoaderModuleMockMixin):
             )
             with patch.dict(alternatives.__salt__, {'cmd.run_all': mock}):
                 solution = alternatives.display('better-world')
-                self.assertEqual('undoubtedly-salt', solution)
+                assert 'undoubtedly-salt' == solution
                 mock.assert_called_once_with(
                     ['update-alternatives', '--display', 'better-world'],
                     python_shell=False
@@ -58,7 +58,7 @@ class AlternativesTestCase(TestCase, LoaderModuleMockMixin):
             )
             with patch.dict(alternatives.__salt__, {'cmd.run_all': mock}):
                 solution = alternatives.display('better-world')
-                self.assertEqual('salt-err', solution)
+                assert 'salt-err' == solution
                 mock.assert_called_once_with(
                     ['alternatives', '--display', 'better-world'],
                     python_shell=False
@@ -68,30 +68,26 @@ class AlternativesTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value='/etc/alternatives/salt')
         with patch('salt.utils.path.readlink', mock):
             ret = alternatives.show_current('better-world')
-            self.assertEqual('/etc/alternatives/salt', ret)
+            assert '/etc/alternatives/salt' == ret
             mock.assert_called_once_with('/etc/alternatives/better-world')
 
             with TstSuiteLoggingHandler() as handler:
                 mock.side_effect = OSError('Hell was not found!!!')
-                self.assertFalse(alternatives.show_current('hell'))
+                assert not alternatives.show_current('hell')
                 mock.assert_called_with('/etc/alternatives/hell')
-                self.assertIn('ERROR:alternative: hell does not exist',
-                              handler.messages)
+                assert 'ERROR:alternative: hell does not exist' in \
+                              handler.messages
 
     def test_check_installed(self):
         mock = MagicMock(return_value='/etc/alternatives/salt')
         with patch('salt.utils.path.readlink', mock):
-            self.assertTrue(
-                alternatives.check_installed(
+            assert alternatives.check_installed(
                     'better-world', '/etc/alternatives/salt'
                 )
-            )
             mock.return_value = False
-            self.assertFalse(
-                alternatives.check_installed(
+            assert not alternatives.check_installed(
                     'help', '/etc/alternatives/salt'
                 )
-            )
 
     def test_install(self):
         with patch.dict(alternatives.__grains__, {'os_family': 'RedHat'}):
@@ -103,7 +99,7 @@ class AlternativesTestCase(TestCase, LoaderModuleMockMixin):
                     '/usr/bin/salt',
                     100
                 )
-                self.assertEqual('salt', solution)
+                assert 'salt' == solution
                 mock.assert_called_once_with(
                     ['alternatives', '--install', '/usr/bin/better-world',
                      'better-world', '/usr/bin/salt', '100'],
@@ -119,7 +115,7 @@ class AlternativesTestCase(TestCase, LoaderModuleMockMixin):
                     '/usr/bin/salt',
                     100
                 )
-                self.assertEqual('salt', solution)
+                assert 'salt' == solution
                 mock.assert_called_once_with(
                     ['update-alternatives', '--install', '/usr/bin/better-world',
                      'better-world', '/usr/bin/salt', '100'],
@@ -141,7 +137,7 @@ class AlternativesTestCase(TestCase, LoaderModuleMockMixin):
                     '/usr/bin/salt',
                     100
                 )
-                self.assertEqual('salt-err', ret)
+                assert 'salt-err' == ret
                 mock.assert_called_once_with(
                     ['alternatives', '--install', '/usr/bin/better-world',
                      'better-world', '/usr/bin/salt', '100'],
@@ -156,7 +152,7 @@ class AlternativesTestCase(TestCase, LoaderModuleMockMixin):
                     'better-world',
                     '/usr/bin/better-world',
                 )
-                self.assertEqual('salt', solution)
+                assert 'salt' == solution
                 mock.assert_called_once_with(
                     ['alternatives', '--remove', 'better-world',
                      '/usr/bin/better-world'], python_shell=False
@@ -169,7 +165,7 @@ class AlternativesTestCase(TestCase, LoaderModuleMockMixin):
                     'better-world',
                     '/usr/bin/better-world',
                 )
-                self.assertEqual('salt', solution)
+                assert 'salt' == solution
                 mock.assert_called_once_with(
                     ['update-alternatives', '--remove', 'better-world',
                      '/usr/bin/better-world'], python_shell=False
@@ -188,7 +184,7 @@ class AlternativesTestCase(TestCase, LoaderModuleMockMixin):
                     'better-world',
                     '/usr/bin/better-world',
                 )
-                self.assertEqual('salt-err', solution)
+                assert 'salt-err' == solution
                 mock.assert_called_once_with(
                     ['alternatives', '--remove', 'better-world',
                      '/usr/bin/better-world'], python_shell=False

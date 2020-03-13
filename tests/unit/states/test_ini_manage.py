@@ -41,7 +41,7 @@ class IniManageTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(ini_manage.__opts__, {'test': True}):
             comt = ''
             ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(ini_manage.options_present(name), ret)
+            assert ini_manage.options_present(name) == ret
 
         changes = {'first': 'who is on',
                    'second': 'what is on',
@@ -50,7 +50,7 @@ class IniManageTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(ini_manage.__opts__, {'test': False}):
                 comt = ('Changes take effect')
                 ret.update({'comment': comt, 'result': True, 'changes': changes})
-                self.assertDictEqual(ini_manage.options_present(name), ret)
+                assert ini_manage.options_present(name) == ret
 
         original = {'mysection': {'first': 'who is on',
                                   'second': 'what is on',
@@ -67,7 +67,7 @@ class IniManageTestCase(TestCase, LoaderModuleMockMixin):
                         with patch.dict(ini_manage.__opts__, {'test': False}):
                             comt = ('Changes take effect')
                             ret.update({'comment': comt, 'result': True, 'changes': changes})
-                            self.assertDictEqual(ini_manage.options_present(name, desired, strict=True), ret)
+                            assert ini_manage.options_present(name, desired, strict=True) == ret
 
     # 'options_absent' function tests: 1
 
@@ -85,12 +85,12 @@ class IniManageTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(ini_manage.__opts__, {'test': True}):
             comt = 'No changes detected.'
             ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(ini_manage.options_absent(name), ret)
+            assert ini_manage.options_absent(name) == ret
 
         with patch.dict(ini_manage.__opts__, {'test': False}):
             comt = ('No anomaly detected')
             ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(ini_manage.options_absent(name), ret)
+            assert ini_manage.options_absent(name) == ret
 
     # 'sections_present' function tests: 1
 
@@ -109,7 +109,7 @@ class IniManageTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(ini_manage.__salt__, {'ini.get_ini': MagicMock(return_value=None)}):
                 comt = 'No changes detected.'
                 ret.update({'comment': comt, 'result': True})
-                self.assertDictEqual(ini_manage.sections_present(name), ret)
+                assert ini_manage.sections_present(name) == ret
 
         changes = {'first': 'who is on',
                    'second': 'what is on',
@@ -118,7 +118,7 @@ class IniManageTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(ini_manage.__opts__, {'test': False}):
                 comt = ('Changes take effect')
                 ret.update({'comment': comt, 'result': True, 'changes': changes})
-                self.assertDictEqual(ini_manage.sections_present(name), ret)
+                assert ini_manage.sections_present(name) == ret
 
     # 'sections_absent' function tests: 1
 
@@ -137,9 +137,9 @@ class IniManageTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(ini_manage.__salt__, {'ini.get_ini': MagicMock(return_value=None)}):
                 comt = 'No changes detected.'
                 ret.update({'comment': comt, 'result': True})
-                self.assertDictEqual(ini_manage.sections_absent(name), ret)
+                assert ini_manage.sections_absent(name) == ret
 
         with patch.dict(ini_manage.__opts__, {'test': False}):
             comt = ('No anomaly detected')
             ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(ini_manage.sections_absent(name), ret)
+            assert ini_manage.sections_absent(name) == ret

@@ -59,26 +59,26 @@ class IWatchdogBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
     def assertValid(self, config):
         ret = watchdog.validate(config)
-        self.assertEqual(ret, (True, 'Valid beacon configuration'))
+        assert ret == (True, 'Valid beacon configuration')
 
     def test_empty_config(self):
         config = [{}]
         ret = watchdog.beacon(config)
-        self.assertEqual(ret, [])
+        assert ret == []
 
     def test_file_create(self):
         path = os.path.join(self.tmpdir, 'tmpfile')
 
         config = [{'directories': {self.tmpdir: {'mask': ['create']}}}]
         self.assertValid(config)
-        self.assertEqual(watchdog.beacon(config), [])
+        assert watchdog.beacon(config) == []
 
         create(path)
 
         ret = check_events(config)
-        self.assertEqual(len(ret), 1)
-        self.assertEqual(ret[0]['path'], path)
-        self.assertEqual(ret[0]['change'], 'created')
+        assert len(ret) == 1
+        assert ret[0]['path'] == path
+        assert ret[0]['change'] == 'created'
 
     def test_file_modified(self):
         path = os.path.join(self.tmpdir, 'tmpfile')
@@ -88,7 +88,7 @@ class IWatchdogBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         config = [{'directories': {self.tmpdir: {'mask': ['modify']}}}]
         self.assertValid(config)
-        self.assertEqual(watchdog.beacon(config), [])
+        assert watchdog.beacon(config) == []
 
         create(path, 'some content')
 
@@ -108,7 +108,7 @@ class IWatchdogBeaconTestCase(TestCase, LoaderModuleMockMixin):
                     modified = True
 
         # Check results of the for loop to validate modified
-        self.assertTrue(modified)
+        assert modified
 
     def test_file_deleted(self):
         path = os.path.join(self.tmpdir, 'tmpfile')
@@ -116,14 +116,14 @@ class IWatchdogBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         config = [{'directories': {self.tmpdir: {'mask': ['delete']}}}]
         self.assertValid(config)
-        self.assertEqual(watchdog.beacon(config), [])
+        assert watchdog.beacon(config) == []
 
         os.remove(path)
 
         ret = check_events(config)
-        self.assertEqual(len(ret), 1)
-        self.assertEqual(ret[0]['path'], path)
-        self.assertEqual(ret[0]['change'], 'deleted')
+        assert len(ret) == 1
+        assert ret[0]['path'] == path
+        assert ret[0]['change'] == 'deleted'
 
     def test_file_moved(self):
         path = os.path.join(self.tmpdir, 'tmpfile')
@@ -131,27 +131,27 @@ class IWatchdogBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         config = [{'directories': {self.tmpdir: {'mask': ['move']}}}]
         self.assertValid(config)
-        self.assertEqual(watchdog.beacon(config), [])
+        assert watchdog.beacon(config) == []
 
         os.rename(path, path + '_moved')
 
         ret = check_events(config)
-        self.assertEqual(len(ret), 1)
-        self.assertEqual(ret[0]['path'], path)
-        self.assertEqual(ret[0]['change'], 'moved')
+        assert len(ret) == 1
+        assert ret[0]['path'] == path
+        assert ret[0]['change'] == 'moved'
 
     def test_file_create_in_directory(self):
         config = [{'directories': {self.tmpdir: {'mask': ['create']}}}]
         self.assertValid(config)
-        self.assertEqual(watchdog.beacon(config), [])
+        assert watchdog.beacon(config) == []
 
         path = os.path.join(self.tmpdir, 'tmpfile')
         create(path)
 
         ret = check_events(config)
-        self.assertEqual(len(ret), 1)
-        self.assertEqual(ret[0]['path'], path)
-        self.assertEqual(ret[0]['change'], 'created')
+        assert len(ret) == 1
+        assert ret[0]['path'] == path
+        assert ret[0]['change'] == 'created'
 
     def test_trigger_all_possible_events(self):
         path = os.path.join(self.tmpdir, 'tmpfile')
@@ -161,7 +161,7 @@ class IWatchdogBeaconTestCase(TestCase, LoaderModuleMockMixin):
             self.tmpdir: {},
         }}]
         self.assertValid(config)
-        self.assertEqual(watchdog.beacon(config), [])
+        assert watchdog.beacon(config) == []
 
         # create
         create(path)
@@ -183,13 +183,13 @@ class IWatchdogBeaconTestCase(TestCase, LoaderModuleMockMixin):
         modified = False
         for event in ret:
             if event['change'] == 'created':
-                self.assertEqual(event['path'], path)
+                assert event['path'] == path
                 events.pop('created', '')
             if event['change'] == 'moved':
-                self.assertEqual(event['path'], path)
+                assert event['path'] == path
                 events.pop('moved', '')
             if event['change'] == 'deleted':
-                self.assertEqual(event['path'], moved)
+                assert event['path'] == moved
                 events.pop('deleted', '')
             # "modified" requires special handling
             # All events [created, moved, deleted] also trigger a "modified"
@@ -204,7 +204,7 @@ class IWatchdogBeaconTestCase(TestCase, LoaderModuleMockMixin):
                     modified = True
 
         # Check results of the for loop to validate modified
-        self.assertTrue(modified)
+        assert modified
 
         # Make sure all events were checked
-        self.assertDictEqual(events, {})
+        assert events == {}

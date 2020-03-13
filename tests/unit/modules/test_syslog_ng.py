@@ -70,18 +70,18 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
     def test_statement_without_options(self):
         s = syslog_ng.Statement("source", "s_local", options=[])
         b = s.build()
-        self.assertEqual(dedent(
+        assert dedent(
             """\
             source s_local {
             };
-            """), b)
+            """) == b
 
     def test_non_empty_statement(self):
         o1 = syslog_ng.Option("file")
         o2 = syslog_ng.Option("tcp")
         s = syslog_ng.Statement("source", "s_local", options=[o1, o2])
         b = s.build()
-        self.assertEqual(dedent(
+        assert dedent(
             """\
             source s_local {
                 file(
@@ -89,7 +89,7 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
                 tcp(
                 );
             };
-            """), b)
+            """) == b
 
     def test_option_with_parameters(self):
         o1 = syslog_ng.Option("file")
@@ -102,7 +102,7 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
         o1.add_parameter(p2)
         o1.add_parameter(p3)
         b = o1.build()
-        self.assertEqual(dedent(
+        assert dedent(
             """\
             file(
                 "/var/log/messages",
@@ -110,7 +110,7 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
                 tls(
                 )
             );
-            """), b)
+            """) == b
 
     def test_parameter_with_values(self):
         p = syslog_ng.TypedParameter()
@@ -125,14 +125,14 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
         p.add_value(v2)
 
         b = p.build()
-        self.assertEqual(dedent(
+        assert dedent(
             """\
             tls(
                 key_file(
                 ),
                 cert_file(
                 )
-            )"""), b)
+            )""") == b
 
     def test_value_with_arguments(self):
         t = syslog_ng.TypedParameterValue()
@@ -145,12 +145,12 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
         t.add_argument(a2)
 
         b = t.build()
-        self.assertEqual(dedent(
+        assert dedent(
             '''\
             key_file(
                 "/opt/syslog-ng/etc/syslog-ng/key.d/syslog-ng.key"
                 "/opt/syslog-ng/etc/syslog-ng/key.d/syslog-ng.key"
-            )'''), b)
+            )''') == b
 
     def test_end_to_end_statement_generation(self):
         s = syslog_ng.Statement('source', 's_tls')
@@ -179,7 +179,7 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
 
         s.add_child(o)
         b = s.build()
-        self.assertEqual(dedent(
+        assert dedent(
             '''\
             source s_tls {
                 tcp(
@@ -202,7 +202,7 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
                     )
                 );
             };
-            '''), b)
+            ''') == b
 
     @skipIf(salt.utils.platform.is_windows(), 'Module not available on Windows')
     def test_version(self):
@@ -214,7 +214,7 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(syslog_ng.__salt__, {'cmd.run_all': cmd_mock}), \
                 patch.dict(os.environ, self.orig_env):
             result = syslog_ng.version()
-            self.assertEqual(result, expected_output)
+            assert result == expected_output
             cmd_mock.assert_called_once_with(
                 cmd_args,
                 env=None,
@@ -225,7 +225,7 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(syslog_ng.__salt__, {'cmd.run_all': cmd_mock}), \
                 patch.dict(os.environ, self.orig_env):
             result = syslog_ng.version(syslog_ng_sbin_dir=self.bin_dir)
-            self.assertEqual(result, expected_output)
+            assert result == expected_output
             cmd_mock.assert_called_once_with(
                 cmd_args,
                 env=self.mocked_env,
@@ -241,7 +241,7 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(syslog_ng.__salt__, {'cmd.run_all': cmd_mock}), \
                 patch.dict(os.environ, self.orig_env):
             result = syslog_ng.stats()
-            self.assertEqual(result, cmd_ret)
+            assert result == cmd_ret
             cmd_mock.assert_called_once_with(
                 cmd_args,
                 env=None,
@@ -252,7 +252,7 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(syslog_ng.__salt__, {'cmd.run_all': cmd_mock}), \
                 patch.dict(os.environ, self.orig_env):
             result = syslog_ng.stats(syslog_ng_sbin_dir=self.bin_dir)
-            self.assertEqual(result, cmd_ret)
+            assert result == cmd_ret
             cmd_mock.assert_called_once_with(
                 cmd_args,
                 env=self.mocked_env,
@@ -269,7 +269,7 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(syslog_ng.__salt__, {'cmd.run_all': cmd_mock}), \
                 patch.dict(os.environ, self.orig_env):
             result = syslog_ng.modules()
-            self.assertEqual(result, expected_output)
+            assert result == expected_output
             cmd_mock.assert_called_once_with(
                 cmd_args,
                 env=None,
@@ -280,7 +280,7 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(syslog_ng.__salt__, {'cmd.run_all': cmd_mock}), \
                 patch.dict(os.environ, self.orig_env):
             result = syslog_ng.modules(syslog_ng_sbin_dir=self.bin_dir)
-            self.assertEqual(result, expected_output)
+            assert result == expected_output
             cmd_mock.assert_called_once_with(
                 cmd_args,
                 env=self.mocked_env,
@@ -296,7 +296,7 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(syslog_ng.__salt__, {'cmd.run_all': cmd_mock}), \
                 patch.dict(os.environ, self.orig_env):
             result = syslog_ng.config_test()
-            self.assertEqual(result, cmd_ret)
+            assert result == cmd_ret
             cmd_mock.assert_called_once_with(
                 cmd_args,
                 env=None,
@@ -307,7 +307,7 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(syslog_ng.__salt__, {'cmd.run_all': cmd_mock}), \
                 patch.dict(os.environ, self.orig_env):
             result = syslog_ng.config_test(syslog_ng_sbin_dir=self.bin_dir)
-            self.assertEqual(result, cmd_ret)
+            assert result == cmd_ret
             cmd_mock.assert_called_once_with(
                 cmd_args,
                 env=self.mocked_env,
@@ -324,7 +324,7 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
         cmd_mock = MagicMock(return_value=cmd_ret)
         with patch.dict(syslog_ng.__salt__, {'cmd.run_all': cmd_mock}), \
                 patch.dict(os.environ, self.orig_env):
-            self.assertEqual(syslog_ng.config_test(cfgfile=cfgfile), cmd_ret)
+            assert syslog_ng.config_test(cfgfile=cfgfile) == cmd_ret
             cmd_mock.assert_called_once_with(
                 cmd_args,
                 env=None,
@@ -334,13 +334,11 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
         cmd_mock = MagicMock(return_value=cmd_ret)
         with patch.dict(syslog_ng.__salt__, {'cmd.run_all': cmd_mock}), \
                 patch.dict(os.environ, self.orig_env):
-            self.assertEqual(
-                syslog_ng.config_test(
+            assert syslog_ng.config_test(
                     syslog_ng_sbin_dir=self.bin_dir,
                     cfgfile=cfgfile
-                ),
+                ) == \
                 cmd_ret
-            )
             cmd_mock.assert_called_once_with(
                 cmd_args,
                 env=self.mocked_env,

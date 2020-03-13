@@ -28,7 +28,7 @@ class LicenseTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_license.__salt__, {'cmd.run': mock}):
             out = win_license.installed('AAAAA-AAAAA-AAAAA-AAAA-AAAAA-ABCDE')
             mock.assert_called_once_with(r'cscript C:\Windows\System32\slmgr.vbs /dli')
-            self.assertTrue(out)
+            assert out
 
     def test_installed_diff(self):
         '''
@@ -38,7 +38,7 @@ class LicenseTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_license.__salt__, {'cmd.run': mock}):
             out = win_license.installed('AAAAA-AAAAA-AAAAA-AAAA-AAAAA-ABCDE')
             mock.assert_called_once_with(r'cscript C:\Windows\System32\slmgr.vbs /dli')
-            self.assertFalse(out)
+            assert not out
 
     def test_install(self):
         '''
@@ -93,4 +93,4 @@ class LicenseTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_license.__salt__, {'cmd.run': mock}):
             out = win_license.info()
             mock.assert_called_once_with(r'cscript C:\Windows\System32\slmgr.vbs /dli')
-            self.assertEqual(out, expected)
+            assert out == expected

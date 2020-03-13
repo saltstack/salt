@@ -123,7 +123,7 @@ class SlackWebhookReturnerTestCase(TestCase, LoaderModuleMockMixin):
         Test returner stops if no webhook is defined
         '''
         with patch.dict(slack_webhook.__opts__, {'slack_webhook.webhook': ''}):
-            self.assertEqual(slack_webhook.returner(self._RET), None)
+            assert slack_webhook.returner(self._RET) is None
 
     def test_returner(self):
         '''
@@ -131,7 +131,7 @@ class SlackWebhookReturnerTestCase(TestCase, LoaderModuleMockMixin):
         '''
         query_ret = {'body': 'ok', 'status': 200}
         with patch('salt.utils.http.query', return_value=query_ret):
-            self.assertTrue(slack_webhook.returner(self._RET))
+            assert slack_webhook.returner(self._RET)
 
     def test_generate_payload(self):
         '''
@@ -149,4 +149,4 @@ class SlackWebhookReturnerTestCase(TestCase, LoaderModuleMockMixin):
             test_payload = slack_webhook._generate_payload(
                 self._AUTHOR_ICON, test_title, test_report)
 
-        self.assertDictEqual(test_payload, self._EXPECTED_PAYLOAD)
+        assert test_payload == self._EXPECTED_PAYLOAD

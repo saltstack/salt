@@ -99,28 +99,28 @@ class FileTreePillarTestCase(TestCase, LoaderModuleMockMixin):
         absolute_path = os.path.join(self.pillar_path, 'base')
         with patch('salt.utils.minions.CkMinions.check_minions', MagicMock(return_value=_CHECK_MINIONS_RETURN)):
             mypillar = file_tree.ext_pillar(MINION_ID, None, absolute_path)
-            self.assertEqual(BASE_PILLAR_CONTENT, mypillar)
+            assert BASE_PILLAR_CONTENT == mypillar
 
             with patch.dict(file_tree.__opts__, {'pillarenv': 'dev'}):
                 mypillar = file_tree.ext_pillar(MINION_ID, None, absolute_path)
-                self.assertEqual(BASE_PILLAR_CONTENT, mypillar)
+                assert BASE_PILLAR_CONTENT == mypillar
 
     def test_relative_path(self):
         'check file tree is imported correctly with a relative path'
         with patch('salt.utils.minions.CkMinions.check_minions', MagicMock(return_value=_CHECK_MINIONS_RETURN)):
             mypillar = file_tree.ext_pillar(MINION_ID, None, '.')
-            self.assertEqual(BASE_PILLAR_CONTENT, mypillar)
+            assert BASE_PILLAR_CONTENT == mypillar
 
             with patch.dict(file_tree.__opts__, {'pillarenv': 'dev'}):
                 mypillar = file_tree.ext_pillar(MINION_ID, None, '.')
-                self.assertEqual(DEV_PILLAR_CONTENT, mypillar)
+                assert DEV_PILLAR_CONTENT == mypillar
 
     def test_parent_path(self):
         'check if file tree is merged correctly with a .. path'
         with patch('salt.utils.minions.CkMinions.check_minions', MagicMock(return_value=_CHECK_MINIONS_RETURN)):
             with patch.dict(file_tree.__opts__, {'pillarenv': 'parent'}):
                 mypillar = file_tree.ext_pillar(MINION_ID, None, '..')
-                self.assertEqual(PARENT_PILLAR_CONTENT, mypillar)
+                assert PARENT_PILLAR_CONTENT == mypillar
 
     def test_no_pillarenv(self):
         'confirm that file_tree yells when pillarenv is missing for a relative path'
@@ -128,7 +128,7 @@ class FileTreePillarTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(file_tree.__opts__, {'pillarenv': None}):
                 with TstSuiteLoggingHandler() as handler:
                     mypillar = file_tree.ext_pillar(MINION_ID, None, '.')
-                    self.assertEqual({}, mypillar)
+                    assert {} == mypillar
 
                     for message in handler.messages:
                         if message.startswith('ERROR:') and 'pillarenv is not set' in message:

@@ -51,7 +51,7 @@ class PwUserModuleTest(ModuleCase):
 
         try:
             uinfo = self.run_function('user.info', [uname])
-            self.assertIn(uname, uinfo['groups'])
+            assert uname in uinfo['groups']
 
             # This uid is available, store it
             uid = uinfo['uid']
@@ -73,7 +73,7 @@ class PwUserModuleTest(ModuleCase):
                 self.skipTest('Failed to create user')
 
             uinfo = self.run_function('user.info', [uname])
-            self.assertIn(gname, uinfo['groups'])
+            assert gname in uinfo['groups']
 
         except AssertionError:
             self.run_function('user.delete', [uname, True, True])

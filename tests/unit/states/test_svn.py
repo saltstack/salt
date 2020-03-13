@@ -32,20 +32,20 @@ class SvnTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=True)
         with patch.object(svn, '_fail', mock):
-            self.assertTrue(svn.latest("salt"))
+            assert svn.latest("salt")
 
         mock = MagicMock(side_effect=[True, False, False, False])
         with patch.object(os.path, 'exists', mock):
             mock = MagicMock(return_value=False)
             with patch.object(os.path, 'isdir', mock):
                 with patch.object(svn, '_fail', mock):
-                    self.assertFalse(svn.latest("salt", "c://salt"))
+                    assert not svn.latest("salt", "c://salt")
 
             with patch.dict(svn.__opts__, {'test': True}):
                 mock = MagicMock(return_value=["salt"])
                 with patch.object(svn, '_neutral_test', mock):
-                    self.assertListEqual(svn.latest("salt", "c://salt"),
-                                         ['salt'])
+                    assert svn.latest("salt", "c://salt") == \
+                                         ['salt']
 
                 mock = MagicMock(side_effect=[False, True])
                 with patch.object(os.path, 'exists', mock):
@@ -54,18 +54,18 @@ class SvnTestCase(TestCase, LoaderModuleMockMixin):
                     with patch.dict(svn.__salt__, {'svn.diff': mock, 'svn.info': info_mock}):
                         mock = MagicMock(return_value=["Dude"])
                         with patch.object(svn, '_neutral_test', mock):
-                            self.assertListEqual(svn.latest("salt",
-                                                            "c://salt"),
-                                                 ['Dude'])
+                            assert svn.latest("salt",
+                                                            "c://salt") == \
+                                                 ['Dude']
 
             with patch.dict(svn.__opts__, {'test': False}):
                 mock = MagicMock(return_value=[{'Revision': 'a'}])
                 with patch.dict(svn.__salt__, {'svn.info': mock}):
                     mock = MagicMock(return_value=True)
                     with patch.dict(svn.__salt__, {'svn.update': mock}):
-                        self.assertDictEqual(svn.latest("salt", "c://salt"),
+                        assert svn.latest("salt", "c://salt") == \
                                              {'changes': {}, 'comment': True,
-                                              'name': 'salt', 'result': True})
+                                              'name': 'salt', 'result': True}
 
     def test_export(self):
         '''
@@ -73,20 +73,20 @@ class SvnTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=True)
         with patch.object(svn, '_fail', mock):
-            self.assertTrue(svn.export("salt"))
+            assert svn.export("salt")
 
         mock = MagicMock(side_effect=[True, False, False, False])
         with patch.object(os.path, 'exists', mock):
             mock = MagicMock(return_value=False)
             with patch.object(os.path, 'isdir', mock):
                 with patch.object(svn, '_fail', mock):
-                    self.assertFalse(svn.export("salt", "c://salt"))
+                    assert not svn.export("salt", "c://salt")
 
             with patch.dict(svn.__opts__, {'test': True}):
                 mock = MagicMock(return_value=["salt"])
                 with patch.object(svn, '_neutral_test', mock):
-                    self.assertListEqual(svn.export("salt", "c://salt"),
-                                         ['salt'])
+                    assert svn.export("salt", "c://salt") == \
+                                         ['salt']
 
                 mock = MagicMock(side_effect=[False, True])
                 with patch.object(os.path, 'exists', mock):
@@ -94,15 +94,14 @@ class SvnTestCase(TestCase, LoaderModuleMockMixin):
                     with patch.dict(svn.__salt__, {'svn.list': mock}):
                         mock = MagicMock(return_value=["Dude"])
                         with patch.object(svn, '_neutral_test', mock):
-                            self.assertListEqual(svn.export("salt",
-                                                            "c://salt"),
-                                                 ['Dude'])
+                            assert svn.export("salt",
+                                                            "c://salt") == \
+                                                 ['Dude']
 
             with patch.dict(svn.__opts__, {'test': False}):
                 mock = MagicMock(return_value=True)
                 with patch.dict(svn.__salt__, {'svn.export': mock}):
-                    self.assertDictEqual(
-                        svn.export("salt", "c://salt"),
+                    assert svn.export("salt", "c://salt") == \
                         {
                             'changes': {
                                 'new': 'salt',
@@ -112,7 +111,6 @@ class SvnTestCase(TestCase, LoaderModuleMockMixin):
                             'name': 'salt',
                             'result': True,
                         }
-                    )
 
     def test_dirty(self):
         '''
@@ -120,4 +118,4 @@ class SvnTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=True)
         with patch.object(svn, '_fail', mock):
-            self.assertTrue(svn.dirty("salt", "c://salt"))
+            assert svn.dirty("salt", "c://salt")

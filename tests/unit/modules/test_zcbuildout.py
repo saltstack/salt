@@ -163,11 +163,11 @@ class BuildoutTestCase(Base):
     def test_onlyif_unless(self):
         b_dir = os.path.join(self.tdir, 'b')
         ret = buildout.buildout(b_dir, onlyif=RUNTIME_VARS.SHELL_FALSE_PATH)
-        self.assertTrue(ret['comment'] == 'onlyif condition is false')
-        self.assertTrue(ret['status'] is True)
+        assert ret['comment'] == 'onlyif condition is false'
+        assert ret['status'] is True
         ret = buildout.buildout(b_dir, unless=RUNTIME_VARS.SHELL_TRUE_PATH)
-        self.assertTrue(ret['comment'] == 'unless condition is true')
-        self.assertTrue(ret['status'] is True)
+        assert ret['comment'] == 'unless condition is true'
+        assert ret['status'] is True
 
     @pytest.mark.requires_network
     def test_salt_callback(self):
@@ -214,16 +214,14 @@ class BuildoutTestCase(Base):
         #self.assertTrue('by level' in ret1['outlog_by_level'])
         #self.assertEqual(ret1['out'], 'foo')
         ret2 = buildout._salt_callback(callback2)(2, b=6)
-        self.assertEqual(ret2['status'], False)
-        self.assertTrue(
-            ret2['logs_by_level']['error'][0].startswith('Traceback'))
-        self.assertTrue(
-            'We did not get any '
-            'expectable answer '
-            'from buildout' in ret2['comment'])
-        self.assertEqual(ret2['out'], None)
+        assert ret2['status'] is False
+        assert ret2['logs_by_level']['error'][0].startswith('Traceback')
+        assert 'We did not get any ' \
+            'expectable answer ' \
+            'from buildout' in ret2['comment']
+        assert ret2['out'] is None
         for l in buildout.LOG.levels:
-            self.assertTrue(0 == len(buildout.LOG.by_level[l]))
+            assert 0 == len(buildout.LOG.by_level[l])
         # pylint: enable=invalid-sequence-index
 
     @pytest.mark.requires_network
@@ -231,69 +229,62 @@ class BuildoutTestCase(Base):
         for path in [os.path.join(self.tdir, 'var/ver/1/dumppicked'),
                      os.path.join(self.tdir, 'var/ver/1/bootstrap'),
                      os.path.join(self.tdir, 'var/ver/1/versions')]:
-            self.assertEqual(buildout._URL_VERSIONS[1],
-                             buildout._get_bootstrap_url(path),
-                             "b1 url for {0}".format(path))
+            assert buildout._URL_VERSIONS[1] == \
+                             buildout._get_bootstrap_url(path), \
+                             "b1 url for {0}".format(path)
         for path in [
             os.path.join(self.tdir, '/non/existing'),
             os.path.join(self.tdir, 'var/ver/2/versions'),
             os.path.join(self.tdir, 'var/ver/2/bootstrap'),
             os.path.join(self.tdir, 'var/ver/2/default'),
         ]:
-            self.assertEqual(buildout._URL_VERSIONS[2],
-                             buildout._get_bootstrap_url(path),
-                             "b2 url for {0}".format(path))
+            assert buildout._URL_VERSIONS[2] == \
+                             buildout._get_bootstrap_url(path), \
+                             "b2 url for {0}".format(path)
 
     @pytest.mark.requires_network
     def test_get_buildout_ver(self):
         for path in [os.path.join(self.tdir, 'var/ver/1/dumppicked'),
                      os.path.join(self.tdir, 'var/ver/1/bootstrap'),
                      os.path.join(self.tdir, 'var/ver/1/versions')]:
-            self.assertEqual(1,
-                             buildout._get_buildout_ver(path),
-                             "1 for {0}".format(path))
+            assert 1 == \
+                             buildout._get_buildout_ver(path), \
+                             "1 for {0}".format(path)
         for path in [os.path.join(self.tdir, '/non/existing'),
                      os.path.join(self.tdir, 'var/ver/2/versions'),
                      os.path.join(self.tdir, 'var/ver/2/bootstrap'),
                      os.path.join(self.tdir, 'var/ver/2/default')]:
-            self.assertEqual(2,
-                             buildout._get_buildout_ver(path),
-                             "2 for {0}".format(path))
+            assert 2 == \
+                             buildout._get_buildout_ver(path), \
+                             "2 for {0}".format(path)
 
     @pytest.mark.requires_network
     def test_get_bootstrap_content(self):
-        self.assertEqual(
-            '',
+        assert '' == \
             buildout._get_bootstrap_content(
                 os.path.join(self.tdir, 'non', 'existing'))
-        )
-        self.assertEqual(
-            '',
+        assert '' == \
             buildout._get_bootstrap_content(
-                os.path.join(self.tdir, 'var', 'tb', '1')))
-        self.assertEqual(
-            'foo{0}'.format(os.linesep),
+                os.path.join(self.tdir, 'var', 'tb', '1'))
+        assert 'foo{0}'.format(os.linesep) == \
             buildout._get_bootstrap_content(
-                os.path.join(self.tdir, 'var', 'tb', '2')))
+                os.path.join(self.tdir, 'var', 'tb', '2'))
 
     @pytest.mark.requires_network
     def test_logger_clean(self):
         buildout.LOG.clear()
         # nothing in there
-        self.assertTrue(
-            True not in
+        assert True not in \
             [len(buildout.LOG.by_level[a]) > 0
-             for a in buildout.LOG.by_level])
+             for a in buildout.LOG.by_level]
         buildout.LOG.info('foo')
-        self.assertTrue(
-            True in
+        assert True in \
             [len(buildout.LOG.by_level[a]) > 0
-             for a in buildout.LOG.by_level])
+             for a in buildout.LOG.by_level]
         buildout.LOG.clear()
-        self.assertTrue(
-            True not in
+        assert True not in \
             [len(buildout.LOG.by_level[a]) > 0
-             for a in buildout.LOG.by_level])
+             for a in buildout.LOG.by_level]
 
     @pytest.mark.requires_network
     def test_logger_loggers(self):
@@ -303,9 +294,9 @@ class BuildoutTestCase(Base):
             getattr(buildout.LOG, i)('foo')
             getattr(buildout.LOG, i)('bar')
             getattr(buildout.LOG, i)('moo')
-            self.assertTrue(len(buildout.LOG.by_level[i]) == 3)
-            self.assertEqual(buildout.LOG.by_level[i][0], 'foo')
-            self.assertEqual(buildout.LOG.by_level[i][-1], 'moo')
+            assert len(buildout.LOG.by_level[i]) == 3
+            assert buildout.LOG.by_level[i][0] == 'foo'
+            assert buildout.LOG.by_level[i][-1] == 'moo'
 
     @pytest.mark.requires_network
     def test__find_cfgs(self):
@@ -320,7 +311,7 @@ class BuildoutTestCase(Base):
              os.path.join(os.sep, 'b', 'bdistribute', 'buildout.cfg'),
              os.path.join(os.sep, 'b', 'b2', 'buildout.cfg'),
              os.path.join(os.sep, 'foo', 'buildout.cfg')])
-        self.assertEqual(result, assertlist)
+        assert result == assertlist
 
     @pytest.mark.requires_network
     def skip_test_upgrade_bootstrap(self):
@@ -330,20 +321,20 @@ class BuildoutTestCase(Base):
         time1 = os.stat(bpy).st_mtime
         with salt.utils.files.fopen(bpy) as fic:
             data = fic.read()
-        self.assertTrue('setdefaulttimeout(2)' in data)
+        assert 'setdefaulttimeout(2)' in data
         flag = os.path.join(b_dir, '.buildout', '2.updated_bootstrap')
-        self.assertTrue(os.path.exists(flag))
+        assert os.path.exists(flag)
         buildout.upgrade_bootstrap(b_dir, buildout_ver=1)
         time2 = os.stat(bpy).st_mtime
         with salt.utils.files.fopen(bpy) as fic:
             data = fic.read()
-        self.assertTrue('setdefaulttimeout(2)' in data)
+        assert 'setdefaulttimeout(2)' in data
         flag = os.path.join(b_dir, '.buildout', '1.updated_bootstrap')
-        self.assertTrue(os.path.exists(flag))
+        assert os.path.exists(flag)
         buildout.upgrade_bootstrap(b_dir, buildout_ver=1)
         time3 = os.stat(bpy).st_mtime
-        self.assertNotEqual(time2, time1)
-        self.assertEqual(time2, time3)
+        assert time2 != time1
+        assert time2 == time3
 
 
 @skipIf(salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
@@ -416,55 +407,47 @@ class BuildoutOnlineTestCase(Base):
         b_dir = os.path.join(self.tdir, 'b')
         bd_dir = os.path.join(self.tdir, 'b', 'bdistribute')
         b2_dir = os.path.join(self.tdir, 'b', 'b2')
-        self.assertTrue(buildout._has_old_distribute(self.py_dis))
+        assert buildout._has_old_distribute(self.py_dis)
         # this is too hard to check as on debian & other where old
         # packages are present (virtualenv), we can't have
         # a clean site-packages
         # self.assertFalse(buildout._has_old_distribute(self.py_blank))
-        self.assertFalse(buildout._has_old_distribute(self.py_st))
-        self.assertFalse(buildout._has_setuptools7(self.py_dis))
-        self.assertTrue(buildout._has_setuptools7(self.py_st))
-        self.assertFalse(buildout._has_setuptools7(self.py_blank))
+        assert not buildout._has_old_distribute(self.py_st)
+        assert not buildout._has_setuptools7(self.py_dis)
+        assert buildout._has_setuptools7(self.py_st)
+        assert not buildout._has_setuptools7(self.py_blank)
 
         ret = buildout.bootstrap(
             bd_dir, buildout_ver=1, python=self.py_dis)
         comment = ret['outlog']
-        self.assertTrue('--distribute' in comment)
-        self.assertTrue('Generated script' in comment)
+        assert '--distribute' in comment
+        assert 'Generated script' in comment
 
         ret = buildout.bootstrap(b_dir, buildout_ver=1, python=self.py_blank)
         comment = ret['outlog']
         # as we may have old packages, this test the two
         # behaviors (failure with old setuptools/distribute)
-        self.assertTrue(
-            ('Got ' in comment
-             and 'Generated script' in comment)
+        assert ('Got ' in comment
+             and 'Generated script' in comment) \
             or ('setuptools>=0.7' in comment)
-        )
 
         ret = buildout.bootstrap(b_dir, buildout_ver=2, python=self.py_blank)
         comment = ret['outlog']
-        self.assertTrue(
-            ('setuptools' in comment
-             and 'Generated script' in comment)
+        assert ('setuptools' in comment
+             and 'Generated script' in comment) \
             or ('setuptools>=0.7' in comment)
-        )
 
         ret = buildout.bootstrap(b_dir, buildout_ver=2, python=self.py_st)
         comment = ret['outlog']
-        self.assertTrue(
-            ('setuptools' in comment
-             and 'Generated script' in comment)
+        assert ('setuptools' in comment
+             and 'Generated script' in comment) \
             or ('setuptools>=0.7' in comment)
-        )
 
         ret = buildout.bootstrap(b2_dir, buildout_ver=2, python=self.py_st)
         comment = ret['outlog']
-        self.assertTrue(
-            ('setuptools' in comment
-             and 'Creating directory' in comment)
+        assert ('setuptools' in comment
+             and 'Creating directory' in comment) \
             or ('setuptools>=0.7' in comment)
-        )
 
     @pytest.mark.requires_network
     def test_run_buildout(self):
@@ -473,12 +456,12 @@ class BuildoutOnlineTestCase(Base):
 
         b_dir = os.path.join(self.tdir, 'b')
         ret = buildout.bootstrap(b_dir, buildout_ver=2, python=self.py_st)
-        self.assertTrue(ret['status'])
+        assert ret['status']
         ret = buildout.run_buildout(b_dir,
                                     parts=['a', 'b'])
         out = ret['out']
-        self.assertTrue('Installing a' in out)
-        self.assertTrue('Installing b' in out)
+        assert 'Installing a' in out
+        assert 'Installing b' in out
 
     @pytest.mark.requires_network
     def test_buildout(self):
@@ -487,14 +470,14 @@ class BuildoutOnlineTestCase(Base):
 
         b_dir = os.path.join(self.tdir, 'b')
         ret = buildout.buildout(b_dir, buildout_ver=2, python=self.py_st)
-        self.assertTrue(ret['status'])
+        assert ret['status']
         out = ret['out']
         comment = ret['comment']
-        self.assertTrue(ret['status'])
-        self.assertTrue('Creating directory' in out)
-        self.assertTrue('Installing a.' in out)
-        self.assertTrue('{0} bootstrap.py'.format(self.py_st) in comment)
-        self.assertTrue('buildout -c buildout.cfg' in comment)
+        assert ret['status']
+        assert 'Creating directory' in out
+        assert 'Installing a.' in out
+        assert '{0} bootstrap.py'.format(self.py_st) in comment
+        assert 'buildout -c buildout.cfg' in comment
         ret = buildout.buildout(b_dir,
                                 parts=['a', 'b', 'c'],
                                 buildout_ver=2,
@@ -502,10 +485,10 @@ class BuildoutOnlineTestCase(Base):
         outlog = ret['outlog']
         out = ret['out']
         comment = ret['comment']
-        self.assertTrue('Installing single part: a' in outlog)
-        self.assertTrue('buildout -c buildout.cfg -N install a' in comment)
-        self.assertTrue('Installing b.' in out)
-        self.assertTrue('Installing c.' in out)
+        assert 'Installing single part: a' in outlog
+        assert 'buildout -c buildout.cfg -N install a' in comment
+        assert 'Installing b.' in out
+        assert 'Installing c.' in out
         ret = buildout.buildout(b_dir,
                                 parts=['a', 'b', 'c'],
                                 buildout_ver=2,
@@ -514,7 +497,7 @@ class BuildoutOnlineTestCase(Base):
         outlog = ret['outlog']
         out = ret['out']
         comment = ret['comment']
-        self.assertTrue('buildout -c buildout.cfg -n install a' in comment)
+        assert 'buildout -c buildout.cfg -n install a' in comment
 
 
 # TODO: Is this test even still needed?
@@ -542,8 +525,8 @@ class BuildoutAPITestCase(TestCase):
                 out = ret['out'].decode('utf-8')
 
         for out in ['àé', 'ççàé']:
-            self.assertTrue(out in uretm['logs_by_level']['info'])
-            self.assertTrue(out in uretm['outlog_by_level'])
+            assert out in uretm['logs_by_level']['info']
+            assert out in uretm['outlog_by_level']
 
     def test_setup(self):
         buildout.LOG.clear()
@@ -553,5 +536,5 @@ class BuildoutAPITestCase(TestCase):
         buildout.LOG.error(u'àé')
         ret = buildout._set_status({}, out='éà')
         uret = buildout._set_status({}, out=u'éà')
-        self.assertTrue(ret['outlog'] == uret['outlog'])
-        self.assertTrue('àé' in uret['outlog_by_level'])
+        assert ret['outlog'] == uret['outlog']
+        assert 'àé' in uret['outlog_by_level']

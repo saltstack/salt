@@ -40,7 +40,7 @@ class RedismodTestCase(TestCase, LoaderModuleMockMixin):
 
         mock = MagicMock(return_value=value)
         with patch.dict(redismod.__salt__, {'redis.get_key': mock}):
-            self.assertDictEqual(redismod.string(name, value), ret)
+            assert redismod.string(name, value) == ret
 
     # 'absent' function tests: 1
 
@@ -62,17 +62,17 @@ class RedismodTestCase(TestCase, LoaderModuleMockMixin):
                          'redis.delete': mock_t}):
             comt = ('`keys` not formed as a list type')
             ret.update({'comment': comt, 'result': False})
-            self.assertDictEqual(redismod.absent(name, 'key'), ret)
+            assert redismod.absent(name, 'key') == ret
 
             comt = ('Key(s) specified already absent')
             ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(redismod.absent(name, ['key']), ret)
+            assert redismod.absent(name, ['key']) == ret
 
             comt = ('Keys deleted')
             ret.update({'comment': comt, 'changes': {'deleted': ['key']}})
-            self.assertDictEqual(redismod.absent(name, ['key']), ret)
+            assert redismod.absent(name, ['key']) == ret
 
             comt = ('Key deleted')
             ret.update({'comment': comt,
                         'changes': {'deleted': ['key_in_redis']}})
-            self.assertDictEqual(redismod.absent(name), ret)
+            assert redismod.absent(name) == ret

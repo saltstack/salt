@@ -175,7 +175,7 @@ class GitModuleTest(ModuleCase):
         res = '\n'.join(sorted(['add \'{0}\''.format(x) for x in files_relpath]))
         if salt.utils.platform.is_windows():
             res = res.replace('\\', '/')
-        self.assertEqual(ret, res)
+        assert ret == res
 
     def test_add_file(self):
         '''
@@ -188,7 +188,7 @@ class GitModuleTest(ModuleCase):
                 'This is a test file named {0}.\n'.format(filename)
             ))
         ret = self.run_function('git.add', [self.repo, filename])
-        self.assertEqual(ret, 'add \'{0}\''.format(filename))
+        assert ret == 'add \'{0}\''.format(filename)
 
     def test_archive(self):
         '''
@@ -196,24 +196,20 @@ class GitModuleTest(ModuleCase):
         '''
         tar_archive = os.path.join(RUNTIME_VARS.TMP, 'test_archive.tar.gz')
         try:
-            self.assertTrue(
-                self.run_function(
+            assert self.run_function(
                     'git.archive',
                     [self.repo, tar_archive],
                     prefix='foo/'
                 )
-            )
-            self.assertTrue(tarfile.is_tarfile(tar_archive))
+            assert tarfile.is_tarfile(tar_archive)
             self.run_function('cmd.run', ['cp ' + tar_archive + ' /root/'])
             with closing(tarfile.open(tar_archive, 'r')) as tar_obj:
-                self.assertEqual(
-                    sorted(salt.utils.data.decode(tar_obj.getnames())),
+                assert sorted(salt.utils.data.decode(tar_obj.getnames())) == \
                     sorted([
                         'foo', 'foo/bar', 'foo/baz', 'foo/foo', 'foo/питон',
                         'foo/qux', 'foo/qux/bar', 'foo/qux/baz', 'foo/qux/foo',
                         'foo/qux/питон'
                     ])
-                )
         finally:
             try:
                 os.unlink(tar_archive)
@@ -227,19 +223,15 @@ class GitModuleTest(ModuleCase):
         '''
         tar_archive = os.path.join(RUNTIME_VARS.TMP, 'test_archive.tar.gz')
         try:
-            self.assertTrue(
-                self.run_function(
+            assert self.run_function(
                     'git.archive',
                     [os.path.join(self.repo, 'qux'), tar_archive],
                     prefix='foo/'
                 )
-            )
-            self.assertTrue(tarfile.is_tarfile(tar_archive))
+            assert tarfile.is_tarfile(tar_archive)
             with closing(tarfile.open(tar_archive, 'r')) as tar_obj:
-                self.assertEqual(
-                    sorted(salt.utils.data.decode(tar_obj.getnames())),
+                assert sorted(salt.utils.data.decode(tar_obj.getnames())) == \
                     sorted(['foo', 'foo/bar', 'foo/baz', 'foo/foo', 'foo/питон'])
-                )
         finally:
             try:
                 os.unlink(tar_archive)
@@ -251,66 +243,50 @@ class GitModuleTest(ModuleCase):
         Test creating, renaming, and deleting a branch using git.branch
         '''
         renamed_branch = 'ihavebeenrenamed'
-        self.assertTrue(
-            self.run_function('git.branch', [self.repo, self.branches[1]])
-        )
-        self.assertTrue(
-            self.run_function(
+        assert self.run_function('git.branch', [self.repo, self.branches[1]])
+        assert self.run_function(
                 'git.branch',
                 [self.repo, renamed_branch],
                 opts='-m ' + self.branches[1]
             )
-        )
-        self.assertTrue(
-            self.run_function(
+        assert self.run_function(
                 'git.branch',
                 [self.repo, renamed_branch],
                 opts='-D'
             )
-        )
 
     def test_checkout(self):
         '''
         Test checking out a new branch and then checking out master again
         '''
         new_branch = 'iamanothernewbranch'
-        self.assertEqual(
-            self.run_function(
+        assert self.run_function(
                 'git.checkout',
                 [self.repo, 'HEAD'],
                 opts='-b ' + new_branch
-            ),
+            ) == \
             'Switched to a new branch \'' + new_branch + '\''
-        )
-        self.assertTrue(
-            'Switched to branch \'master\'' in
-            self.run_function('git.checkout', [self.repo, 'master']),
-        )
+        assert 'Switched to branch \'master\'' in \
+            self.run_function('git.checkout', [self.repo, 'master'])
 
     def test_checkout_no_rev(self):
         '''
         Test git.checkout without a rev, both with -b in opts and without
         '''
         new_branch = 'iamanothernewbranch'
-        self.assertEqual(
-            self.run_function(
+        assert self.run_function(
                 'git.checkout', [self.repo], rev=None, opts='-b ' + new_branch
-            ),
+            ) == \
             'Switched to a new branch \'' + new_branch + '\''
-        )
-        self.assertTrue(
-            '\'rev\' argument is required unless -b or -B in opts' in
+        assert '\'rev\' argument is required unless -b or -B in opts' in \
             self.run_function('git.checkout', [self.repo])
-        )
 
     def test_clone(self):
         '''
         Test cloning an existing repo
         '''
         clone_parent_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
-        self.assertTrue(
-            self.run_function('git.clone', [clone_parent_dir, self.repo])
-        )
+        assert self.run_function('git.clone', [clone_parent_dir, self.repo])
         # Cleanup after yourself
         shutil.rmtree(clone_parent_dir, True)
 
@@ -321,13 +297,11 @@ class GitModuleTest(ModuleCase):
         clone_parent_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         clone_name = os.path.basename(self.repo)
         # Change to newly-created temp dir
-        self.assertTrue(
-            self.run_function(
+        assert self.run_function(
                 'git.clone',
                 [clone_parent_dir, self.repo],
                 name=clone_name
             )
-        )
         # Cleanup after yourself
         shutil.rmtree(clone_parent_dir, True)
 
@@ -348,7 +322,7 @@ class GitModuleTest(ModuleCase):
         commit_msg = 'Add a line to ' + filename
         ret = self.run_function('git.commit', [self.repo, commit_msg])
         # Make sure the expected line is in the output
-        self.assertTrue(bool(re.search(commit_re_prefix + commit_msg, ret)))
+        assert bool(re.search(commit_re_prefix + commit_msg, ret))
         # Add another line
         with salt.utils.files.fopen(os.path.join(self.repo, filename), 'a') as fp_:
             fp_.write('Added another line\n')
@@ -359,7 +333,7 @@ class GitModuleTest(ModuleCase):
             [self.repo, commit_msg],
             filename=filename
         )
-        self.assertTrue(bool(re.search(commit_re_prefix + commit_msg, ret)))
+        assert bool(re.search(commit_re_prefix + commit_msg, ret))
 
     def test_config(self):
         '''
@@ -394,8 +368,7 @@ class GitModuleTest(ModuleCase):
             log.debug(
                 'Try to specify both single and multivar (should raise error)'
             )
-            self.assertTrue(
-                'Only one of \'value\' and \'multivar\' is permitted' in
+            assert 'Only one of \'value\' and \'multivar\' is permitted' in \
                 self.run_function(
                     'git.config_set',
                     ['foo.single'],
@@ -403,191 +376,152 @@ class GitModuleTest(ModuleCase):
                     multivar=cfg_local['foo.multi'],
                     cwd=self.repo
                 )
-            )
             log.debug(
                 'Try to set single local value without cwd (should raise '
                 'error)'
             )
-            self.assertTrue(
-                '\'cwd\' argument required unless global=True' in
+            assert '\'cwd\' argument required unless global=True' in \
                 self.run_function(
                     'git.config_set',
                     ['foo.single'],
                     value=cfg_local['foo.single'][0],
                 )
-            )
             log.debug('Set single local value')
-            self.assertEqual(
-                self.run_function(
+            assert self.run_function(
                     'git.config_set',
                     ['foo.single'],
                     value=cfg_local['foo.single'][0],
                     cwd=self.repo
-                ),
+                ) == \
                 cfg_local['foo.single']
-            )
             log.debug('Set single global value')
-            self.assertEqual(
-                self.run_function(
+            assert self.run_function(
                     'git.config_set',
                     ['foo.single'],
                     value=cfg_global['foo.single'][0],
                     **{'global': True}
-                ),
+                ) == \
                 cfg_global['foo.single']
-            )
             log.debug('Set local multivar')
-            self.assertEqual(
-                self.run_function(
+            assert self.run_function(
                     'git.config_set',
                     ['foo.multi'],
                     multivar=cfg_local['foo.multi'],
                     cwd=self.repo
-                ),
+                ) == \
                 cfg_local['foo.multi']
-            )
             log.debug('Set global multivar')
-            self.assertEqual(
-                self.run_function(
+            assert self.run_function(
                     'git.config_set',
                     ['foo.multi'],
                     multivar=cfg_global['foo.multi'],
                     **{'global': True}
-                ),
+                ) == \
                 cfg_global['foo.multi']
-            )
             log.debug('Get single local value')
-            self.assertEqual(
-                self.run_function(
+            assert self.run_function(
                     'git.config_get',
                     ['foo.single'],
                     cwd=self.repo
-                ),
+                ) == \
                 cfg_local['foo.single'][0]
-            )
             log.debug('Get single value from local multivar')
-            self.assertEqual(
-                self.run_function(
+            assert self.run_function(
                     'git.config_get',
                     ['foo.multi'],
                     cwd=self.repo
-                ),
+                ) == \
                 cfg_local['foo.multi'][-1]
-            )
             log.debug('Get all values from multivar (includes globals)')
-            self.assertEqual(
-                self.run_function(
+            assert self.run_function(
                     'git.config_get',
                     ['foo.multi'],
                     cwd=self.repo,
                     **{'all': True}
-                ),
+                ) == \
                 cfg_local['foo.multi']
-            )
             log.debug('Get single global value')
-            self.assertEqual(
-                self.run_function(
+            assert self.run_function(
                     'git.config_get',
                     ['foo.single'],
                     **{'global': True}
-                ),
+                ) == \
                 cfg_global['foo.single'][0]
-            )
             log.debug('Get single value from global multivar')
-            self.assertEqual(
-                self.run_function(
+            assert self.run_function(
                     'git.config_get',
                     ['foo.multi'],
                     **{'global': True}
-                ),
+                ) == \
                 cfg_global['foo.multi'][-1]
-            )
             log.debug('Get all values from global multivar')
-            self.assertEqual(
-                self.run_function(
+            assert self.run_function(
                     'git.config_get',
                     ['foo.multi'],
                     **{'all': True, 'global': True}
-                ),
+                ) == \
                 cfg_global['foo.multi']
-            )
             log.debug('Get all local keys/values using regex')
-            self.assertEqual(
-                self.run_function(
+            assert self.run_function(
                     'git.config_get_regexp',
                     ['foo.(single|multi)'],
                     cwd=self.repo
-                ),
+                ) == \
                 cfg_local
-            )
             log.debug('Get all global keys/values using regex')
-            self.assertEqual(
-                self.run_function(
+            assert self.run_function(
                     'git.config_get_regexp',
                     ['foo.(single|multi)'],
                     cwd=self.repo,
                     **{'global': True}
-                ),
+                ) == \
                 cfg_global
-            )
             log.debug('Get just the local foo.multi values containing \'a\'')
-            self.assertEqual(
-                self.run_function(
+            assert self.run_function(
                     'git.config_get_regexp',
                     ['foo.multi'],
                     value_regex='a',
                     cwd=self.repo
-                ),
+                ) == \
                 {'foo.multi': [x for x in cfg_local['foo.multi'] if 'a' in x]}
-            )
             log.debug('Get just the global foo.multi values containing \'a\'')
-            self.assertEqual(
-                self.run_function(
+            assert self.run_function(
                     'git.config_get_regexp',
                     ['foo.multi'],
                     value_regex='a',
                     cwd=self.repo,
                     **{'global': True}
-                ),
+                ) == \
                 {'foo.multi': [x for x in cfg_global['foo.multi'] if 'a' in x]}
-            )
 
             # TODO: More robust unset testing, try to trigger all the
             # exceptions raised.
 
             log.debug('Unset a single local value')
-            self.assertTrue(
-                self.run_function(
+            assert self.run_function(
                     'git.config_unset',
                     ['foo.single'],
                     cwd=self.repo,
                 )
-            )
             log.debug('Unset an entire local multivar')
-            self.assertTrue(
-                self.run_function(
+            assert self.run_function(
                     'git.config_unset',
                     ['foo.multi'],
                     cwd=self.repo,
                     **{'all': True}
                 )
-            )
             log.debug('Unset a single global value')
-            self.assertTrue(
-                self.run_function(
+            assert self.run_function(
                     'git.config_unset',
                     ['foo.single'],
                     **{'global': True}
                 )
-            )
             log.debug('Unset an entire local multivar')
-            self.assertTrue(
-                self.run_function(
+            assert self.run_function(
                     'git.config_unset',
                     ['foo.multi'],
                     **{'all': True, 'global': True}
                 )
-            )
         finally:
             _clear_config()
 
@@ -595,19 +529,15 @@ class GitModuleTest(ModuleCase):
         '''
         Test git.current_branch
         '''
-        self.assertEqual(
-            self.run_function('git.current_branch', [self.repo]),
+        assert self.run_function('git.current_branch', [self.repo]) == \
             'master'
-        )
 
     def test_describe(self):
         '''
         Test git.describe
         '''
-        self.assertEqual(
-            self.run_function('git.describe', [self.repo]),
+        assert self.run_function('git.describe', [self.repo]) == \
             self.tags[0]
-        )
 
     # Test for git.fetch would be unreliable on Jenkins, skipping for now
     # The test should go into test_remotes when ready
@@ -634,15 +564,12 @@ class GitModuleTest(ModuleCase):
             # Get git output
             git_ret = self.run_function('git.init', [new_repo]).lower()
 
-            self.assertIn(
-                'Initialized empty Git repository in'.lower(), git_ret)
-            self.assertIn(tmp_dir, git_ret)
+            assert 'Initialized empty Git repository in'.lower() in git_ret
+            assert tmp_dir in git_ret
 
         else:
-            self.assertEqual(
-                self.run_function('git.init', [new_repo]).lower(),
+            assert self.run_function('git.init', [new_repo]).lower() == \
                 'Initialized empty Git repository in {0}/.git/'.format(new_repo).lower()
-            )
 
         shutil.rmtree(new_repo)
 
@@ -650,19 +577,15 @@ class GitModuleTest(ModuleCase):
         '''
         Test git.list_branches
         '''
-        self.assertEqual(
-            self.run_function('git.list_branches', [self.repo]),
+        assert self.run_function('git.list_branches', [self.repo]) == \
             sorted(self.branches)
-        )
 
     def test_list_tags(self):
         '''
         Test git.list_tags
         '''
-        self.assertEqual(
-            self.run_function('git.list_tags', [self.repo]),
+        assert self.run_function('git.list_tags', [self.repo]) == \
             sorted(self.tags)
-        )
 
     # Test for git.ls_remote will need to wait for now, while I think of how to
     # properly mock it.
@@ -680,7 +603,7 @@ class GitModuleTest(ModuleCase):
             rev=self.branches[1]
         )
         # Merge should be a fast-forward
-        self.assertTrue('Fast-forward' in ret.splitlines())
+        assert 'Fast-forward' in ret.splitlines()
 
     def test_merge_base_and_tree(self):
         '''
@@ -691,7 +614,7 @@ class GitModuleTest(ModuleCase):
         # Get the SHA1 of current HEAD
         head_rev = self.run_function('git.revision', [self.repo], rev='HEAD')
         # Make sure revision is a 40-char string
-        self.assertTrue(len(head_rev) == 40)
+        assert len(head_rev) == 40
         # Get the second branch's SHA1
         second_rev = self.run_function(
             'git.revision',
@@ -700,25 +623,23 @@ class GitModuleTest(ModuleCase):
             timeout=120
         )
         # Make sure revision is a 40-char string
-        self.assertTrue(len(second_rev) == 40)
+        assert len(second_rev) == 40
         # self.branches[1] should be just one commit ahead, so the merge base
         # for master and self.branches[1] should be the same as the current
         # HEAD.
-        self.assertEqual(
-            self.run_function(
+        assert self.run_function(
                 'git.merge_base',
                 [self.repo],
                 refs=','.join((head_rev, second_rev))
-            ),
+            ) == \
             head_rev
-        )
         # There should be no conflict here, so the return should be an empty
         # string.
         ret = self.run_function(
             'git.merge_tree',
             [self.repo, head_rev, second_rev]
         ).splitlines()
-        self.assertTrue(len([x for x in ret if x.startswith('@@')]) == 1)
+        assert len([x for x in ret if x.startswith('@@')]) == 1
 
     # Test for git.pull would be unreliable on Jenkins, skipping for now
 
@@ -733,29 +654,23 @@ class GitModuleTest(ModuleCase):
         with salt.utils.files.fopen(file_path, 'a') as fp_:
             fp_.write('Added a line\n')
         # Commit the change
-        self.assertTrue(
-            'ERROR' not in self.run_function(
+        assert 'ERROR' not in self.run_function(
                 'git.commit',
                 [self.repo, 'Added a line to ' + self.files[1]],
                 filename=self.files[1]
             )
-        )
         # Switch to the second branch
-        self.assertTrue(
-            'ERROR' not in self.run_function(
+        assert 'ERROR' not in self.run_function(
                 'git.checkout',
                 [self.repo],
                 rev=self.branches[1]
             )
-        )
         # Perform the rebase. The commit should show a comment about
         # self.files[0] being modified, as that is the file that was modified
         # in the second branch in the setUp function
-        self.assertEqual(
-            self.run_function('git.rebase', [self.repo]),
-            'First, rewinding head to replay your work on top of it...\n'
+        assert self.run_function('git.rebase', [self.repo]) == \
+            'First, rewinding head to replay your work on top of it...\n' \
             'Applying: Added a line to ' + self.files[0]
-        )
 
     # Test for git.remote_get is in test_remotes
 
@@ -773,27 +688,21 @@ class GitModuleTest(ModuleCase):
             'first': {'fetch': '/dev/null', 'push': '/dev/null'},
             'second': {'fetch': '/dev/null', 'push': '/dev/stdout'}
         }
-        self.assertEqual(
-            self.run_function(
+        assert self.run_function(
                 'git.remote_set',
                 [self.repo, remotes['first']['fetch']],
                 remote='first'
-            ),
+            ) == \
             remotes['first']
-        )
-        self.assertEqual(
-            self.run_function(
+        assert self.run_function(
                 'git.remote_set',
                 [self.repo, remotes['second']['fetch']],
                 remote='second',
                 push_url=remotes['second']['push']
-            ),
+            ) == \
             remotes['second']
-        )
-        self.assertEqual(
-            self.run_function('git.remotes', [self.repo]),
+        assert self.run_function('git.remotes', [self.repo]) == \
             remotes
-        )
 
     def test_reset(self):
         '''
@@ -802,13 +711,11 @@ class GitModuleTest(ModuleCase):
         TODO: Test more than just a hard reset
         '''
         # Switch to the second branch
-        self.assertTrue(
-            'ERROR' not in self.run_function(
+        assert 'ERROR' not in self.run_function(
                 'git.checkout',
                 [self.repo],
                 rev=self.branches[1]
             )
-        )
         # Back up one commit. We should now be at the same revision as master
         self.run_function(
             'git.reset',
@@ -818,7 +725,7 @@ class GitModuleTest(ModuleCase):
         # Get the SHA1 of current HEAD (remember, we're on the second branch)
         head_rev = self.run_function('git.revision', [self.repo], rev='HEAD')
         # Make sure revision is a 40-char string
-        self.assertTrue(len(head_rev) == 40)
+        assert len(head_rev) == 40
         # Get the master branch's SHA1
         master_rev = self.run_function(
             'git.revision',
@@ -826,21 +733,19 @@ class GitModuleTest(ModuleCase):
             rev='master'
         )
         # Make sure revision is a 40-char string
-        self.assertTrue(len(master_rev) == 40)
+        assert len(master_rev) == 40
         # The two revisions should be the same
-        self.assertEqual(head_rev, master_rev)
+        assert head_rev == master_rev
 
     def test_rev_parse(self):
         '''
         Test git.rev_parse
         '''
         # Using --abbrev-ref on HEAD will give us the current branch
-        self.assertEqual(
-            self.run_function(
+        assert self.run_function(
                 'git.rev_parse', [self.repo, 'HEAD'], opts='--abbrev-ref'
-            ),
+            ) == \
             'master'
-        )
 
     # Test for git.revision happens in test_merge_base
 
@@ -851,10 +756,8 @@ class GitModuleTest(ModuleCase):
         single_file = self.files[0]
         entire_dir = self.dirs[1]
         # Remove a single file
-        self.assertEqual(
-            self.run_function('git.rm', [self.repo, single_file]),
+        assert self.run_function('git.rm', [self.repo, single_file]) == \
             'rm \'' + single_file + '\''
-        )
         # Remove an entire dir
         expected = '\n'.join(
             sorted(['rm \'' + os.path.join(entire_dir, x) + '\''
@@ -862,10 +765,8 @@ class GitModuleTest(ModuleCase):
         )
         if salt.utils.platform.is_windows():
             expected = expected.replace('\\', '/')
-        self.assertEqual(
-            self.run_function('git.rm', [self.repo, entire_dir], opts='-r'),
+        assert self.run_function('git.rm', [self.repo, entire_dir], opts='-r') == \
             expected
-        )
 
     def test_stash(self):
         '''
@@ -876,31 +777,25 @@ class GitModuleTest(ModuleCase):
         file_path = os.path.join(self.repo, self.files[0])
         with salt.utils.files.fopen(file_path, 'a') as fp_:
             fp_.write('Temp change to be stashed')
-        self.assertTrue(
-            'ERROR' not in self.run_function('git.stash', [self.repo])
-        )
+        assert 'ERROR' not in self.run_function('git.stash', [self.repo])
         # List stashes
         ret = self.run_function('git.stash', [self.repo], action='list')
-        self.assertTrue('ERROR' not in ret)
-        self.assertTrue(len(ret.splitlines()) == 1)
+        assert 'ERROR' not in ret
+        assert len(ret.splitlines()) == 1
         # Apply the stash
-        self.assertTrue(
-            'ERROR' not in self.run_function(
+        assert 'ERROR' not in self.run_function(
                 'git.stash',
                 [self.repo],
                 action='apply',
                 opts='stash@{0}'
             )
-        )
         # Drop the stash
-        self.assertTrue(
-            'ERROR' not in self.run_function(
+        assert 'ERROR' not in self.run_function(
                 'git.stash',
                 [self.repo],
                 action='drop',
                 opts='stash@{0}'
             )
-        )
 
     def test_status(self):
         '''
@@ -921,12 +816,10 @@ class GitModuleTest(ModuleCase):
                     'This is a new file named {0}.'.format(filename)
                 ))
             # Stage the new file so it shows up as a 'new' file
-            self.assertTrue(
-                'ERROR' not in self.run_function(
+            assert 'ERROR' not in self.run_function(
                     'git.add',
                     [self.repo, filename]
                 )
-            )
         for filename in changes['deleted']:
             self.run_function('git.rm', [self.repo, filename])
         for filename in changes['untracked']:
@@ -934,10 +827,8 @@ class GitModuleTest(ModuleCase):
                 fp_.write(salt.utils.stringutils.to_str(
                     'This is a new file named {0}.'.format(filename)
                 ))
-        self.assertEqual(
-            self.run_function('git.status', [self.repo]),
+        assert self.run_function('git.status', [self.repo]) == \
             changes
-        )
 
     # TODO: Add git.submodule test
 
@@ -945,14 +836,12 @@ class GitModuleTest(ModuleCase):
         '''
         Test git.symbolic_ref
         '''
-        self.assertEqual(
-            self.run_function(
+        assert self.run_function(
                 'git.symbolic_ref',
                 [self.repo, 'HEAD'],
                 opts='--quiet'
-            ),
+            ) == \
             'refs/heads/master'
-        )
 
     @skipIf(not _worktrees_supported(),
             'Git 2.5 or newer required for worktree support')
@@ -984,23 +873,23 @@ class GitModuleTest(ModuleCase):
         ret = self.run_function(
             'git.worktree_add', [self.repo, worktree_path],
         )
-        self.assertTrue(worktree_add_prefix in ret)
-        self.assertTrue(worktree_basename in ret)
+        assert worktree_add_prefix in ret
+        assert worktree_basename in ret
         ret = self.run_function(
             'git.worktree_add', [self.repo, worktree_path2]
         )
-        self.assertTrue(worktree_add_prefix in ret)
-        self.assertTrue(worktree_basename2 in ret)
+        assert worktree_add_prefix in ret
+        assert worktree_basename2 in ret
         # Check if this new path is a worktree
-        self.assertTrue(self.run_function('git.is_worktree', [worktree_path]))
+        assert self.run_function('git.is_worktree', [worktree_path])
         # Check if the main repo is a worktree
-        self.assertFalse(self.run_function('git.is_worktree', [self.repo]))
+        assert not self.run_function('git.is_worktree', [self.repo])
         # Check if a non-repo directory is a worktree
         empty_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
-        self.assertFalse(self.run_function('git.is_worktree', [empty_dir]))
+        assert not self.run_function('git.is_worktree', [empty_dir])
         shutil.rmtree(empty_dir)
         # Remove the first worktree
-        self.assertTrue(self.run_function('git.worktree_rm', [worktree_path]))
+        assert self.run_function('git.worktree_rm', [worktree_path])
         # Prune the worktrees
         prune_message = (
             'Removing worktrees/{0}: gitdir file points to non-existent '
@@ -1011,9 +900,7 @@ class GitModuleTest(ModuleCase):
         result = self.run_function('git.worktree_prune',
                                    [self.repo],
                                    dry_run=True)
-        self.assertEqual(result, prune_message)
+        assert result == prune_message
         # Test pruning for real, and make sure the output is the same
-        self.assertEqual(
-            self.run_function('git.worktree_prune', [self.repo]),
+        assert self.run_function('git.worktree_prune', [self.repo]) == \
             prune_message
-        )

@@ -34,7 +34,7 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
             out = certutil.get_cert_serial('/path/to/cert.cer')
             mock.assert_called_once_with(
                 'certutil.exe -silent -verify /path/to/cert.cer')
-            self.assertEqual(expected, out)
+            assert expected == out
 
     def test_get_serials(self):
         '''
@@ -55,7 +55,7 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
             out = certutil.get_stored_cert_serials('TrustedPublisher')
             mock.assert_called_once_with(
                 'certutil.exe -store TrustedPublisher')
-            self.assertEqual(expected, out)
+            assert expected == out
 
     def test_add_store(self):
         '''

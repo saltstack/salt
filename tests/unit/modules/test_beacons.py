@@ -48,8 +48,7 @@ class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
             mock = MagicMock(return_value=True)
             with patch.dict(beacons.__salt__, {'event.fire': mock}):
                 with patch.object(SaltEvent, 'get_event', side_effect=event_returns):
-                    self.assertDictEqual(beacons.delete('ps'),
-                                         {'comment': comm1, 'result': True})
+                    assert beacons.delete('ps') == {'comment': comm1, 'result': True}
 
     def test_add(self):
         '''
@@ -74,8 +73,7 @@ class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
             mock = MagicMock(return_value=True)
             with patch.dict(beacons.__salt__, {'event.fire': mock}):
                 with patch.object(SaltEvent, 'get_event', side_effect=event_returns):
-                    self.assertDictEqual(beacons.add('ps', [{'processes': {'salt-master': 'stopped', 'apache2': 'stopped'}}]),
-                                         {'comment': comm1, 'result': True})
+                    assert beacons.add('ps', [{'processes': {'salt-master': 'stopped', 'apache2': 'stopped'}}]) == {'comment': comm1, 'result': True}
 
     def test_save(self):
         '''
@@ -91,8 +89,7 @@ class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(beacons.__salt__, {'event.fire': mock}):
                 _ret_value = {'complete': True, 'beacons': {}}
                 with patch.object(SaltEvent, 'get_event', return_value=_ret_value):
-                    self.assertDictEqual(beacons.save(),
-                                         {'comment': comm1, 'result': True})
+                    assert beacons.save() == {'comment': comm1, 'result': True}
 
     def test_disable(self):
         '''
@@ -109,8 +106,7 @@ class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
             mock = MagicMock(return_value=True)
             with patch.dict(beacons.__salt__, {'event.fire': mock}):
                 with patch.object(SaltEvent, 'get_event', side_effect=event_returns):
-                    self.assertDictEqual(beacons.disable(),
-                                         {'comment': comm1, 'result': True})
+                    assert beacons.disable() == {'comment': comm1, 'result': True}
 
     def test_enable(self):
         '''
@@ -127,8 +123,7 @@ class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
             mock = MagicMock(return_value=True)
             with patch.dict(beacons.__salt__, {'event.fire': mock}):
                 with patch.object(SaltEvent, 'get_event', side_effect=event_returns):
-                    self.assertDictEqual(beacons.enable(),
-                                         {'comment': comm1, 'result': True})
+                    assert beacons.enable() == {'comment': comm1, 'result': True}
 
     def test_add_beacon_module(self):
         '''
@@ -154,8 +149,7 @@ class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
             mock = MagicMock(return_value=True)
             with patch.dict(beacons.__salt__, {'event.fire': mock}):
                 with patch.object(SaltEvent, 'get_event', side_effect=event_returns):
-                    self.assertDictEqual(beacons.add('watch_salt_master', [{'processes': {'salt-master': 'stopped'}}, {'beacon_module': 'ps'}]),
-                                         {'comment': comm1, 'result': True})
+                    assert beacons.add('watch_salt_master', [{'processes': {'salt-master': 'stopped'}}, {'beacon_module': 'ps'}]) == {'comment': comm1, 'result': True}
 
     def test_enable_beacon_module(self):
         '''
@@ -172,8 +166,7 @@ class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
             mock = MagicMock(return_value=True)
             with patch.dict(beacons.__salt__, {'event.fire': mock}):
                 with patch.object(SaltEvent, 'get_event', side_effect=event_returns):
-                    self.assertDictEqual(beacons.enable(),
-                                         {'comment': comm1, 'result': True})
+                    assert beacons.enable() == {'comment': comm1, 'result': True}
 
     def test_delete_beacon_module(self):
         '''
@@ -190,5 +183,4 @@ class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
             mock = MagicMock(return_value=True)
             with patch.dict(beacons.__salt__, {'event.fire': mock}):
                 with patch.object(SaltEvent, 'get_event', side_effect=event_returns):
-                    self.assertDictEqual(beacons.delete('watch_salt_master'),
-                                         {'comment': comm1, 'result': True})
+                    assert beacons.delete('watch_salt_master') == {'comment': comm1, 'result': True}

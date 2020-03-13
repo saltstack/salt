@@ -54,20 +54,19 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests the key_exists function using a well known registry key
         '''
-        self.assertTrue(
-            reg.key_exists(hive='HKLM', key='SOFTWARE\\Microsoft'))
+        assert reg.key_exists(hive='HKLM', key='SOFTWARE\\Microsoft')
 
     def test_key_exists_non_existing(self):
         '''
         Tests the key_exists function using a non existing registry key
         '''
-        self.assertFalse(reg.key_exists(hive='HKLM', key=FAKE_KEY))
+        assert not reg.key_exists(hive='HKLM', key=FAKE_KEY)
 
     def test_key_exists_invalid_hive(self):
         '''
         Tests the key_exists function using an invalid hive
         '''
-        self.assertRaises(CommandExecutionError,
+        pytest.raises(CommandExecutionError,
                           reg.key_exists,
                           hive='BADHIVE',
                           key='SOFTWARE\\Microsoft')
@@ -79,7 +78,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         mock_error = MagicMock(
             side_effect=win32api.error(123, 'RegOpenKeyEx', 'Unknown error'))
         with patch('salt.utils.win_reg.win32api.RegOpenKeyEx', mock_error):
-            self.assertRaises(win32api.error,
+            pytest.raises(win32api.error,
                               reg.key_exists,
                               hive='HKLM',
                               key='SOFTWARE\\Microsoft')
@@ -88,8 +87,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests the value_exists function using a well known registry key
         '''
-        self.assertTrue(
-            reg.value_exists(
+        assert (reg.value_exists(
                 hive='HKLM',
                 key='SOFTWARE\\Microsoft\\Windows\\CurrentVersion',
                 vname='CommonFilesDir'))
@@ -98,8 +96,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests the value_exists function using a non existing registry key
         '''
-        self.assertFalse(
-            reg.value_exists(
+        assert not (reg.value_exists(
                 hive='HKLM',
                 key='SOFTWARE\\Microsoft\\Windows\\CurrentVersion',
                 vname='NonExistingValueName'))
@@ -108,7 +105,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests the value_exists function using an invalid hive
         '''
-        self.assertRaises(CommandExecutionError,
+        pytest.raises(CommandExecutionError,
                           reg.value_exists,
                           hive='BADHIVE',
                           key='SOFTWARE\\Microsoft\\Windows\\CurrentVersion',
@@ -121,8 +118,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         mock_error = MagicMock(
             side_effect=win32api.error(2, 'RegOpenKeyEx', 'Unknown error'))
         with patch('salt.utils.win_reg.win32api.RegOpenKeyEx', mock_error):
-            self.assertFalse(
-                reg.value_exists(
+            assert not (reg.value_exists(
                     hive='HKLM',
                     key='SOFTWARE\\Microsoft\\Windows\\CurrentVersion',
                     vname='CommonFilesDir'))
@@ -135,7 +131,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         mock_error = MagicMock(
             side_effect=win32api.error(123, 'RegOpenKeyEx', 'Unknown error'))
         with patch('salt.utils.win_reg.win32api.RegOpenKeyEx', mock_error):
-            self.assertRaises(
+            pytest.raises(
                 win32api.error,
                 reg.value_exists,
                 hive='HKLM',
@@ -149,8 +145,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         mock_error = MagicMock(
             side_effect=win32api.error(2, 'RegQueryValueEx', 'Empty Value'))
         with patch('salt.utils.win_reg.win32api.RegQueryValueEx', mock_error):
-            self.assertTrue(
-                reg.value_exists(
+            assert (reg.value_exists(
                     hive='HKLM',
                     key='SOFTWARE\\Microsoft\\Windows\\CurrentVersion',
                     vname=None))
@@ -162,8 +157,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         mock_error = MagicMock(
             side_effect=win32api.error(123, 'RegQueryValueEx', 'Empty Value'))
         with patch('salt.utils.win_reg.win32api.RegQueryValueEx', mock_error):
-            self.assertFalse(
-                reg.value_exists(
+            assert not (reg.value_exists(
                     hive='HKLM',
                     key='SOFTWARE\\Microsoft\\Windows\\CurrentVersion',
                     vname='NonExistingValuePair'))
@@ -172,22 +166,20 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test the list_keys function using a well known registry key
         '''
-        self.assertIn(
-            'Microsoft',
-            reg.list_keys(hive='HKLM', key='SOFTWARE'))
+        assert 'Microsoft' in reg.list_keys(hive='HKLM', key='SOFTWARE')
 
     def test_list_keys_non_existing(self):
         '''
         Test the list_keys function using a non existing registry key
         '''
         expected = (False, 'Cannot find key: HKLM\\{0}'.format(FAKE_KEY))
-        self.assertEqual(reg.list_keys(hive='HKLM', key=FAKE_KEY), expected)
+        assert reg.list_keys(hive='HKLM', key=FAKE_KEY) == expected
 
     def test_list_keys_invalid_hive(self):
         '''
         Test the list_keys function when passing an invalid hive
         '''
-        self.assertRaises(CommandExecutionError,
+        pytest.raises(CommandExecutionError,
                           reg.list_keys,
                           hive='BADHIVE',
                           key='SOFTWARE\\Microsoft')
@@ -199,7 +191,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         mock_error = MagicMock(
             side_effect=win32api.error(123, 'RegOpenKeyEx', 'Unknown error'))
         with patch('salt.utils.win_reg.win32api.RegOpenKeyEx', mock_error):
-            self.assertRaises(win32api.error,
+            pytest.raises(win32api.error,
                               reg.list_keys,
                               hive='HKLM',
                               key='SOFTWARE\\Microsoft')
@@ -214,21 +206,20 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         keys = []
         for value in values:
             keys.append(value['vname'])
-        self.assertIn('ProgramFilesDir', keys)
+        assert 'ProgramFilesDir' in keys
 
     def test_list_values_non_existing(self):
         '''
         Test the list_values function using a non existing registry key
         '''
         expected = (False, 'Cannot find key: HKLM\\{0}'.format(FAKE_KEY))
-        self.assertEqual(reg.list_values(hive='HKLM', key=FAKE_KEY),
-                         expected)
+        assert reg.list_values(hive='HKLM', key=FAKE_KEY) == expected
 
     def test_list_values_invalid_hive(self):
         '''
         Test the list_values function when passing an invalid hive
         '''
-        self.assertRaises(CommandExecutionError,
+        pytest.raises(CommandExecutionError,
                           reg.list_values,
                           hive='BADHIVE',
                           key='SOFTWARE\\Microsoft')
@@ -240,7 +231,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         mock_error = MagicMock(
             side_effect=win32api.error(123, 'RegOpenKeyEx', 'Unknown error'))
         with patch('salt.utils.win_reg.win32api.RegOpenKeyEx', mock_error):
-            self.assertRaises(win32api.error,
+            pytest.raises(win32api.error,
                               reg.list_values,
                               hive='HKLM',
                               key='SOFTWARE\\Microsoft')
@@ -253,7 +244,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
             hive='HKLM',
             key='SOFTWARE\\Microsoft\\Windows\\CurrentVersion',
             vname='ProgramFilesPath')
-        self.assertEqual(ret['vdata'], '%ProgramFiles%')
+        assert ret['vdata'] == '%ProgramFiles%'
 
     def test_read_value_default(self):
         '''
@@ -263,7 +254,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         ret = reg.read_value(
             hive='HKLM',
             key='SOFTWARE\\Microsoft\\Windows\\CurrentVersion')
-        self.assertEqual(ret['vdata'], '(value not set)')
+        assert ret['vdata'] == '(value not set)'
 
     def test_read_value_non_existing(self):
         '''
@@ -277,12 +268,10 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
             'success': False,
             'hive': 'HKLM',
             'key': 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion'}
-        self.assertDictEqual(
-            reg.read_value(
+        assert (reg.read_value(
                 hive='HKLM',
                 key='SOFTWARE\\Microsoft\\Windows\\CurrentVersion',
-                vname='fake_name'),
-            expected)
+                vname='fake_name')) == expected
 
     def test_read_value_non_existing_key(self):
         '''
@@ -295,18 +284,16 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
             'success': False,
             'hive': 'HKLM',
             'key': FAKE_KEY}
-        self.assertDictEqual(
-            reg.read_value(
+        assert (reg.read_value(
                 hive='HKLM',
                 key=FAKE_KEY,
-                vname='fake_name'),
-            expected)
+                vname='fake_name')) == expected
 
     def test_read_value_invalid_hive(self):
         '''
         Test the read_value function when passing an invalid hive
         '''
-        self.assertRaises(CommandExecutionError,
+        pytest.raises(CommandExecutionError,
                           reg.read_value,
                           hive='BADHIVE',
                           key='SOFTWARE\\Microsoft',
@@ -319,7 +306,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         mock_error = MagicMock(
             side_effect=win32api.error(123, 'RegOpenKeyEx', 'Unknown error'))
         with patch('salt.utils.win_reg.win32api.RegOpenKeyEx', mock_error):
-            self.assertRaises(
+            pytest.raises(
                 win32api.error,
                 reg.read_value,
                 hive='HKLM',
@@ -333,7 +320,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         mock_error = MagicMock(
             side_effect=win32api.error(123, 'RegQueryValueEx', 'Unknown error'))
         with patch('salt.utils.win_reg.win32api.RegQueryValueEx', mock_error):
-            self.assertRaises(
+            pytest.raises(
                 win32api.error,
                 reg.read_value,
                 hive='HKLM',
@@ -346,15 +333,13 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         An empty REG_MULTI_SZ value should return an empty list, not None
         '''
         try:
-            self.assertTrue(
-                reg.set_value(
+            assert (reg.set_value(
                     hive='HKLM',
                     key=FAKE_KEY,
                     vname='empty_list',
                     vdata=[],
                     vtype='REG_MULTI_SZ'
-                )
-            )
+                ))
             expected = {
                 'hive': 'HKLM',
                 'key': FAKE_KEY,
@@ -363,14 +348,11 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
                 'vname': 'empty_list',
                 'vtype': 'REG_MULTI_SZ'
             }
-            self.assertEqual(
-                reg.read_value(
+            assert (reg.read_value(
                     hive='HKLM',
                     key=FAKE_KEY,
                     vname='empty_list',
-                ),
-                expected
-            )
+                )) == expected
         finally:
             reg.delete_key_recursive(hive='HKLM', key=FAKE_KEY)
 
@@ -380,8 +362,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         Test the set_value function
         '''
         try:
-            self.assertTrue(
-                reg.set_value(
+            assert (reg.set_value(
                     hive='HKLM',
                     key=FAKE_KEY,
                     vname='fake_name',
@@ -393,12 +374,10 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
                 'vdata': 'fake_data',
                 'vname': 'fake_name',
                 'vtype': 'REG_SZ'}
-            self.assertEqual(
-                reg.read_value(
+            assert (reg.read_value(
                     hive='HKLM',
                     key=FAKE_KEY,
-                    vname='fake_name'),
-                expected)
+                    vname='fake_name')) == expected
         finally:
             reg.delete_key_recursive(hive='HKLM', key=FAKE_KEY)
 
@@ -408,8 +387,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         Test the set_value function on the default value
         '''
         try:
-            self.assertTrue(
-                reg.set_value(
+            assert (reg.set_value(
                     hive='HKLM',
                     key=FAKE_KEY,
                     vdata='fake_default_data'))
@@ -420,11 +398,9 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
                 'vdata': 'fake_default_data',
                 'vname': '(Default)',
                 'vtype': 'REG_SZ'}
-            self.assertEqual(
-                reg.read_value(
+            assert (reg.read_value(
                     hive='HKLM',
-                    key=FAKE_KEY),
-                expected)
+                    key=FAKE_KEY)) == expected
         finally:
             reg.delete_key_recursive(hive='HKLM', key=FAKE_KEY)
 
@@ -434,8 +410,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         Test the set_value function on a unicode key
         '''
         try:
-            self.assertTrue(
-                reg.set_value(
+            assert (reg.set_value(
                     hive='HKLM',
                     key='\\'.join([FAKE_KEY, UNICODE_KEY]),
                     vname='fake_name',
@@ -447,12 +422,10 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
                 'vdata': 'fake_value',
                 'vname': 'fake_name',
                 'vtype': 'REG_SZ'}
-            self.assertEqual(
-                reg.read_value(
+            assert (reg.read_value(
                     hive='HKLM',
                     key='\\'.join([FAKE_KEY, UNICODE_KEY]),
-                    vname='fake_name'),
-                expected)
+                    vname='fake_name')) == expected
         finally:
             reg.delete_key_recursive(hive='HKLM', key=FAKE_KEY)
 
@@ -462,8 +435,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         Test the set_value function on a unicode value
         '''
         try:
-            self.assertTrue(
-                reg.set_value(
+            assert (reg.set_value(
                     hive='HKLM',
                     key=FAKE_KEY,
                     vname='fake_unicode',
@@ -475,12 +447,10 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
                 'vdata': UNICODE_VALUE,
                 'vname': 'fake_unicode',
                 'vtype': 'REG_SZ'}
-            self.assertEqual(
-                reg.read_value(
+            assert (reg.read_value(
                     hive='HKLM',
                     key=FAKE_KEY,
-                    vname='fake_unicode'),
-                expected)
+                    vname='fake_unicode')) == expected
         finally:
             reg.delete_key_recursive(hive='HKLM', key=FAKE_KEY)
 
@@ -490,8 +460,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         Test the set_value function on a REG_DWORD value
         '''
         try:
-            self.assertTrue(
-                reg.set_value(
+            assert (reg.set_value(
                     hive='HKLM',
                     key=FAKE_KEY,
                     vname='dword_value',
@@ -504,12 +473,10 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
                 'vdata': 123,
                 'vname': 'dword_value',
                 'vtype': 'REG_DWORD'}
-            self.assertEqual(
-                reg.read_value(
+            assert (reg.read_value(
                     hive='HKLM',
                     key=FAKE_KEY,
-                    vname='dword_value'),
-                expected)
+                    vname='dword_value')) == expected
         finally:
             reg.delete_key_recursive(hive='HKLM', key=FAKE_KEY)
 
@@ -519,8 +486,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         Test the set_value function on a REG_QWORD value
         '''
         try:
-            self.assertTrue(
-                reg.set_value(
+            assert (reg.set_value(
                     hive='HKLM',
                     key=FAKE_KEY,
                     vname='qword_value',
@@ -533,12 +499,10 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
                 'vdata': 123,
                 'vname': 'qword_value',
                 'vtype': 'REG_QWORD'}
-            self.assertEqual(
-                reg.read_value(
+            assert (reg.read_value(
                     hive='HKLM',
                     key=FAKE_KEY,
-                    vname='qword_value'),
-                expected)
+                    vname='qword_value')) == expected
         finally:
             reg.delete_key_recursive(hive='HKLM', key=FAKE_KEY)
 
@@ -546,7 +510,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test the set_value function when passing an invalid hive
         '''
-        self.assertRaises(CommandExecutionError,
+        pytest.raises(CommandExecutionError,
                           reg.set_value,
                           hive='BADHIVE',
                           key=FAKE_KEY,
@@ -561,8 +525,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         mock_error = MagicMock(
             side_effect=win32api.error(123, 'RegCreateKeyEx', 'Unknown error'))
         with patch('salt.utils.win_reg.win32api.RegCreateKeyEx', mock_error):
-            self.assertFalse(
-                reg.set_value(
+            assert not (reg.set_value(
                     hive='HKLM',
                     key=FAKE_KEY,
                     vname='fake_name',
@@ -575,8 +538,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         mock_error = MagicMock(
             side_effect=TypeError('Mocked TypeError'))
         with patch('salt.utils.win_reg.win32api.RegSetValueEx', mock_error):
-            self.assertFalse(
-                reg.set_value(
+            assert not (reg.set_value(
                     hive='HKLM',
                     key=FAKE_KEY,
                     vname='fake_name',
@@ -590,8 +552,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         mock_error = MagicMock(
             side_effect=SystemError('Mocked SystemError'))
         with patch('salt.utils.win_reg.win32api.RegSetValueEx', mock_error):
-            self.assertFalse(
-                reg.set_value(
+            assert not (reg.set_value(
                     hive='HKLM',
                     key=FAKE_KEY,
                     vname='fake_name',
@@ -605,8 +566,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         mock_error = MagicMock(
             side_effect=ValueError('Mocked ValueError'))
         with patch('salt.utils.win_reg.win32api.RegSetValueEx', mock_error):
-            self.assertFalse(
-                reg.set_value(
+            assert not (reg.set_value(
                     hive='HKLM',
                     key=FAKE_KEY,
                     vname='fake_name',
@@ -618,14 +578,12 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         Test the delete_value function
         '''
         try:
-            self.assertTrue(
-                reg.set_value(
+            assert (reg.set_value(
                     hive='HKLM',
                     key=FAKE_KEY,
                     vname='fake_name',
                     vdata='fake_data'))
-            self.assertTrue(
-                reg.delete_value(
+            assert (reg.delete_value(
                     hive='HKLM',
                     key=FAKE_KEY,
                     vname='fake_name'))
@@ -639,17 +597,16 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         mock_error = MagicMock(
             side_effect=win32api.error(2, 'RegOpenKeyEx', 'Unknown error'))
         with patch('salt.utils.win_reg.win32api.RegOpenKeyEx', mock_error):
-            self.assertIsNone(
-                reg.delete_value(
+            assert (reg.delete_value(
                     hive='HKLM',
                     key=FAKE_KEY,
-                    vname='fake_name'))
+                    vname='fake_name')) is None
 
     def test_delete_value_invalid_hive(self):
         '''
         Test the delete_value function when passing an invalid hive
         '''
-        self.assertRaises(CommandExecutionError,
+        pytest.raises(CommandExecutionError,
                           reg.delete_value,
                           hive='BADHIVE',
                           key=FAKE_KEY,
@@ -662,7 +619,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         mock_error = MagicMock(
             side_effect=win32api.error(123, 'RegOpenKeyEx', 'Unknown error'))
         with patch('salt.utils.win_reg.win32api.RegOpenKeyEx', mock_error):
-            self.assertRaises(win32api.error,
+            pytest.raises(win32api.error,
                               reg.delete_value,
                               hive='HKLM',
                               key=FAKE_KEY,
@@ -674,14 +631,12 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         Test the delete_value function on a unicode value
         '''
         try:
-            self.assertTrue(
-                reg.set_value(
+            assert (reg.set_value(
                     hive='HKLM',
                     key=FAKE_KEY,
                     vname='fake_unicode',
                     vdata=UNICODE_VALUE))
-            self.assertTrue(
-                reg.delete_value(
+            assert (reg.delete_value(
                     hive='HKLM',
                     key=FAKE_KEY,
                     vname='fake_unicode'))
@@ -694,14 +649,12 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         Test the delete_value function on a unicode vname
         '''
         try:
-            self.assertTrue(
-                reg.set_value(
+            assert (reg.set_value(
                     hive='HKLM',
                     key=FAKE_KEY,
                     vname=UNICODE_KEY,
                     vdata='junk data'))
-            self.assertTrue(
-                reg.delete_value(
+            assert (reg.delete_value(
                     hive='HKLM',
                     key=FAKE_KEY,
                     vname=UNICODE_KEY))
@@ -714,14 +667,12 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         Test the delete_value function on a unicode key
         '''
         try:
-            self.assertTrue(
-                reg.set_value(
+            assert (reg.set_value(
                     hive='HKLM',
                     key='\\'.join([FAKE_KEY, UNICODE_KEY]),
                     vname='fake_name',
                     vdata='junk data'))
-            self.assertTrue(
-                reg.delete_value(
+            assert (reg.delete_value(
                     hive='HKLM',
                     key='\\'.join([FAKE_KEY, UNICODE_KEY]),
                     vname='fake_name'))
@@ -732,7 +683,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test the delete_key_recursive function when passing an invalid hive
         '''
-        self.assertRaises(CommandExecutionError,
+        pytest.raises(CommandExecutionError,
                           reg.delete_key_recursive,
                           hive='BADHIVE',
                           key=FAKE_KEY)
@@ -742,10 +693,8 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         Test the delete_key_recursive function when the passed key to delete is
         not found.
         '''
-        self.assertFalse(
-            reg.key_exists(hive='HKLM', key=FAKE_KEY))
-        self.assertFalse(
-            reg.delete_key_recursive(hive='HKLM', key=FAKE_KEY))
+        assert not reg.key_exists(hive='HKLM', key=FAKE_KEY)
+        assert not reg.delete_key_recursive(hive='HKLM', key=FAKE_KEY)
 
     def test_delete_key_recursive_too_close(self):
         '''
@@ -754,8 +703,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_true = MagicMock(return_value=True)
         with patch('salt.utils.win_reg.key_exists', mock_true):
-            self.assertFalse(
-                reg.delete_key_recursive(hive='HKLM', key='FAKE_KEY'))
+            assert not reg.delete_key_recursive(hive='HKLM', key='FAKE_KEY')
 
     @pytest.mark.destructive_test
     def test_delete_key_recursive(self):
@@ -763,8 +711,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         Test the delete_key_recursive function
         '''
         try:
-            self.assertTrue(
-                reg.set_value(
+            assert (reg.set_value(
                     hive='HKLM',
                     key=FAKE_KEY,
                     vname='fake_name',
@@ -772,11 +719,9 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
             expected = {
                 'Deleted': ['\\'.join(['HKLM', FAKE_KEY])],
                 'Failed': []}
-            self.assertDictEqual(
-                reg.delete_key_recursive(
+            assert (reg.delete_key_recursive(
                     hive='HKLM',
-                    key=FAKE_KEY),
-                expected)
+                    key=FAKE_KEY)) == expected
         finally:
             reg.delete_key_recursive(hive='HKLM', key=FAKE_KEY)
 
@@ -786,8 +731,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         Test the delete_key_recursive function on failure to open the key
         '''
         try:
-            self.assertTrue(
-                reg.set_value(
+            assert (reg.set_value(
                     hive='HKLM',
                     key=FAKE_KEY,
                     vname='fake_name',
@@ -805,11 +749,9 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
                 ])
             with patch('salt.utils.win_reg.key_exists', mock_true), \
                     patch('salt.utils.win_reg.win32api.RegOpenKeyEx', mock_error):
-                self.assertDictEqual(
-                    reg.delete_key_recursive(
+                assert (reg.delete_key_recursive(
                         hive='HKLM',
-                        key=FAKE_KEY),
-                    expected)
+                        key=FAKE_KEY)) == expected
         finally:
             reg.delete_key_recursive(hive='HKLM', key=FAKE_KEY)
 
@@ -819,8 +761,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         Test the delete_key_recursive function on failure to delete a key
         '''
         try:
-            self.assertTrue(
-                reg.set_value(
+            assert (reg.set_value(
                     hive='HKLM',
                     key=FAKE_KEY,
                     vname='fake_name',
@@ -830,11 +771,9 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
                 'Failed': ['\\'.join(['HKLM', FAKE_KEY]) + ' Unknown error']}
             mock_error = MagicMock(side_effect=WindowsError('Unknown error'))  # pylint: disable=undefined-variable
             with patch('salt.utils.win_reg.win32api.RegDeleteKey', mock_error):
-                self.assertDictEqual(
-                    reg.delete_key_recursive(
+                assert (reg.delete_key_recursive(
                         hive='HKLM',
-                        key=FAKE_KEY),
-                    expected)
+                        key=FAKE_KEY)) == expected
         finally:
             reg.delete_key_recursive(hive='HKLM', key=FAKE_KEY)
 
@@ -844,8 +783,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         Test the delete_key_recursive function on value within a unicode key
         '''
         try:
-            self.assertTrue(
-                reg.set_value(
+            assert (reg.set_value(
                     hive='HKLM',
                     key='\\'.join([FAKE_KEY, UNICODE_KEY]),
                     vname='fake_name',
@@ -853,10 +791,8 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
             expected = {
                 'Deleted': ['\\'.join(['HKLM', FAKE_KEY, UNICODE_KEY])],
                 'Failed': []}
-            self.assertDictEqual(
-                reg.delete_key_recursive(
+            assert (reg.delete_key_recursive(
                     hive='HKLM',
-                    key='\\'.join([FAKE_KEY, UNICODE_KEY])),
-                expected)
+                    key='\\'.join([FAKE_KEY, UNICODE_KEY]))) == expected
         finally:
             reg.delete_key_recursive(hive='HKLM', key=FAKE_KEY)

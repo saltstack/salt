@@ -37,6 +37,7 @@ import salt.utils.vmware
 
 # Import Third Party Libs
 from salt.ext import six
+import pytest
 try:
     from pyVmomi import vim, vmodl  # pylint: disable=no-name-in-module
     HAS_PYVMOMI = True
@@ -157,22 +158,22 @@ class GetClusterTestCase(TestCase):
                    MagicMock(return_value='fake_dc')):
             with patch('salt.utils.vmware.get_mors_with_properties',
                        MagicMock(return_value=[])):
-                with self.assertRaises(VMwareObjectRetrievalError) as excinfo:
+                with pytest.raises(VMwareObjectRetrievalError) as excinfo:
                     salt.utils.vmware.get_cluster(self.mock_dc, 'fake_cluster')
-        self.assertEqual(excinfo.exception.strerror,
-                         'Cluster \'fake_cluster\' was not found in '
-                         'datacenter \'fake_dc\'')
+        assert excinfo.value.strerror == \
+                         'Cluster \'fake_cluster\' was not found in ' \
+                         'datacenter \'fake_dc\''
 
     def test_cluster_not_found(self):
         with patch('salt.utils.vmware.get_managed_object_name',
                    MagicMock(return_value='fake_dc')):
             with patch('salt.utils.vmware.get_mors_with_properties',
                        MagicMock(return_value=self.mock_entries)):
-                with self.assertRaises(VMwareObjectRetrievalError) as excinfo:
+                with pytest.raises(VMwareObjectRetrievalError) as excinfo:
                     salt.utils.vmware.get_cluster(self.mock_dc, 'fake_cluster')
-        self.assertEqual(excinfo.exception.strerror,
-                         'Cluster \'fake_cluster\' was not found in '
-                         'datacenter \'fake_dc\'')
+        assert excinfo.value.strerror == \
+                         'Cluster \'fake_cluster\' was not found in ' \
+                         'datacenter \'fake_dc\''
 
     def test_cluster_found(self):
         with patch('salt.utils.vmware.get_managed_object_name',
@@ -180,7 +181,7 @@ class GetClusterTestCase(TestCase):
             with patch('salt.utils.vmware.get_mors_with_properties',
                        MagicMock(return_value=self.mock_entries)):
                 res = salt.utils.vmware.get_cluster(self.mock_dc, 'fake_cluster2')
-        self.assertEqual(res, self.mock_cluster2)
+        assert res == self.mock_cluster2
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -223,32 +224,32 @@ class CreateClusterTestCase(TestCase):
         exc.privilegeId = 'Fake privilege'
         self.mock_dc.hostFolder.CreateClusterEx = MagicMock(
             side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.create_cluster(self.mock_dc, 'fake_cluster',
                                              self.mock_cluster_spec)
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_create_cluster_raise_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = 'VimFault msg'
         self.mock_dc.hostFolder.CreateClusterEx = MagicMock(
             side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.create_cluster(self.mock_dc, 'fake_cluster',
                                              self.mock_cluster_spec)
-        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+        assert excinfo.value.strerror == 'VimFault msg'
 
     def test_create_cluster_raise_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = 'RuntimeFault msg'
         self.mock_dc.hostFolder.CreateClusterEx = MagicMock(
             side_effect=exc)
-        with self.assertRaises(VMwareRuntimeError) as excinfo:
+        with pytest.raises(VMwareRuntimeError) as excinfo:
             salt.utils.vmware.create_cluster(self.mock_dc, 'fake_cluster',
                                              self.mock_cluster_spec)
-        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+        assert excinfo.value.strerror == 'RuntimeFault msg'
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -292,29 +293,29 @@ class UpdateClusterTestCase(TestCase):
         exc.privilegeId = 'Fake privilege'
         self.mock_cluster.ReconfigureComputeResource_Task = \
                 MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.update_cluster(self.mock_cluster, self.mock_cluster_spec)
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_reconfigure_compute_resource_raise_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = 'VimFault msg'
         self.mock_cluster.ReconfigureComputeResource_Task = \
                 MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.update_cluster(self.mock_cluster, self.mock_cluster_spec)
-        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+        assert excinfo.value.strerror == 'VimFault msg'
 
     def test_reconfigure_compute_resource_raise_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = 'RuntimeFault msg'
         self.mock_cluster.ReconfigureComputeResource_Task = \
                 MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareRuntimeError) as excinfo:
+        with pytest.raises(VMwareRuntimeError) as excinfo:
             salt.utils.vmware.update_cluster(self.mock_cluster, self.mock_cluster_spec)
-        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+        assert excinfo.value.strerror == 'RuntimeFault msg'
 
     def test_wait_for_task_call(self):
         mock_wait_for_task = MagicMock()
@@ -347,35 +348,35 @@ class WaitForTaskTestCase(TestCase):
         exc.privilegeId = 'Fake privilege'
         mock_task = MagicMock()
         type(mock_task).info = PropertyMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.wait_for_task(mock_task,
                                             'fake_instance_name',
                                             'task_type')
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_first_task_info_raise_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = 'VimFault msg'
         mock_task = MagicMock()
         type(mock_task).info = PropertyMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.wait_for_task(mock_task,
                                             'fake_instance_name',
                                             'task_type')
-        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+        assert excinfo.value.strerror == 'VimFault msg'
 
     def test_first_task_info_raise_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = 'RuntimeFault msg'
         mock_task = MagicMock()
         type(mock_task).info = PropertyMock(side_effect=exc)
-        with self.assertRaises(VMwareRuntimeError) as excinfo:
+        with pytest.raises(VMwareRuntimeError) as excinfo:
             salt.utils.vmware.wait_for_task(mock_task,
                                             'fake_instance_name',
                                             'task_type')
-        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+        assert excinfo.value.strerror == 'RuntimeFault msg'
 
     def test_inner_loop_task_info_raise_no_permission(self):
         exc = vim.fault.NoPermission()
@@ -385,13 +386,13 @@ class WaitForTaskTestCase(TestCase):
         type(mock_task).info = PropertyMock(
             side_effect=[mock_info1, exc])
         type(mock_info1).state = PropertyMock(side_effect=['running', 'bad'])
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.wait_for_task(mock_task,
                                             'fake_instance_name',
                                             'task_type')
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_inner_loop_task_info_raise_vim_fault(self):
         exc = vim.fault.VimFault()
@@ -401,11 +402,11 @@ class WaitForTaskTestCase(TestCase):
         type(mock_task).info = PropertyMock(
             side_effect=[mock_info1, exc])
         type(mock_info1).state = PropertyMock(side_effect=['running', 'bad'])
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.wait_for_task(mock_task,
                                             'fake_instance_name',
                                             'task_type')
-        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+        assert excinfo.value.strerror == 'VimFault msg'
 
     def test_inner_loop_task_info_raise_runtime_fault(self):
         exc = vmodl.RuntimeFault()
@@ -415,11 +416,11 @@ class WaitForTaskTestCase(TestCase):
         type(mock_task).info = PropertyMock(
             side_effect=[mock_info1, exc])
         type(mock_info1).state = PropertyMock(side_effect=['running', 'bad'])
-        with self.assertRaises(VMwareRuntimeError) as excinfo:
+        with pytest.raises(VMwareRuntimeError) as excinfo:
             salt.utils.vmware.wait_for_task(mock_task,
                                             'fake_instance_name',
                                             'task_type')
-        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+        assert excinfo.value.strerror == 'RuntimeFault msg'
 
     def test_info_state_running(self):
         # The 'bad' values are invalid in the while loop
@@ -432,8 +433,8 @@ class WaitForTaskTestCase(TestCase):
         salt.utils.vmware.wait_for_task(mock_task,
                                         'fake_instance_name',
                                         'task_type')
-        self.assertEqual(prop_mock_state.call_count, 4)
-        self.assertEqual(prop_mock_result.call_count, 1)
+        assert prop_mock_state.call_count == 4
+        assert prop_mock_result.call_count == 1
 
     def test_info_state_running_continues_loop(self):
         mock_task = MagicMock()
@@ -447,8 +448,8 @@ class WaitForTaskTestCase(TestCase):
         salt.utils.vmware.wait_for_task(mock_task,
                                         'fake_instance_name',
                                         'task_type')
-        self.assertEqual(prop_mock_state.call_count, 4)
-        self.assertEqual(prop_mock_result.call_count, 1)
+        assert prop_mock_state.call_count == 4
+        assert prop_mock_result.call_count == 1
 
     def test_info_state_queued_continues_loop(self):
         mock_task = MagicMock()
@@ -462,8 +463,8 @@ class WaitForTaskTestCase(TestCase):
         salt.utils.vmware.wait_for_task(mock_task,
                                         'fake_instance_name',
                                         'task_type')
-        self.assertEqual(prop_mock_state.call_count, 5)
-        self.assertEqual(prop_mock_result.call_count, 1)
+        assert prop_mock_state.call_count == 5
+        assert prop_mock_result.call_count == 1
 
     def test_info_state_success(self):
         mock_task = MagicMock()
@@ -474,8 +475,8 @@ class WaitForTaskTestCase(TestCase):
         salt.utils.vmware.wait_for_task(mock_task,
                                         'fake_instance_name',
                                         'task_type')
-        self.assertEqual(prop_mock_state.call_count, 3)
-        self.assertEqual(prop_mock_result.call_count, 1)
+        assert prop_mock_state.call_count == 3
+        assert prop_mock_result.call_count == 1
 
     def test_info_error_exception(self):
         mock_task = MagicMock()
@@ -483,11 +484,11 @@ class WaitForTaskTestCase(TestCase):
         prop_mock_error = PropertyMock(side_effect=Exception('error exc'))
         type(mock_task.info).state = prop_mock_state
         type(mock_task.info).error = prop_mock_error
-        with self.assertRaises(Exception) as excinfo:
+        with pytest.raises(Exception) as excinfo:
             salt.utils.vmware.wait_for_task(mock_task,
                                             'fake_instance_name',
                                             'task_type')
-        self.assertEqual(six.text_type(excinfo.exception), 'error exc')
+        assert six.text_type(excinfo.value) == 'error exc'
 
     def test_info_error_no_permission(self):
         exc = vim.fault.NoPermission()
@@ -497,13 +498,13 @@ class WaitForTaskTestCase(TestCase):
         prop_mock_error = PropertyMock(side_effect=exc)
         type(mock_task.info).state = prop_mock_state
         type(mock_task.info).error = prop_mock_error
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.wait_for_task(mock_task,
                                             'fake_instance_name',
                                             'task_type')
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_info_error_vim_fault(self):
         exc = vim.fault.VimFault()
@@ -513,11 +514,11 @@ class WaitForTaskTestCase(TestCase):
         prop_mock_error = PropertyMock(side_effect=exc)
         type(mock_task.info).state = prop_mock_state
         type(mock_task.info).error = prop_mock_error
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.wait_for_task(mock_task,
                                             'fake_instance_name',
                                             'task_type')
-        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+        assert excinfo.value.strerror == 'VimFault msg'
 
     def test_info_error_system_fault(self):
         exc = vmodl.fault.SystemError()
@@ -527,11 +528,11 @@ class WaitForTaskTestCase(TestCase):
         prop_mock_error = PropertyMock(side_effect=exc)
         type(mock_task.info).state = prop_mock_state
         type(mock_task.info).error = prop_mock_error
-        with self.assertRaises(VMwareSystemError) as excinfo:
+        with pytest.raises(VMwareSystemError) as excinfo:
             salt.utils.vmware.wait_for_task(mock_task,
                                             'fake_instance_name',
                                             'task_type')
-        self.assertEqual(excinfo.exception.strerror, 'SystemError msg')
+        assert excinfo.value.strerror == 'SystemError msg'
 
     def test_info_error_invalid_argument_no_fault_message(self):
         exc = vmodl.fault.InvalidArgument()
@@ -542,12 +543,12 @@ class WaitForTaskTestCase(TestCase):
         prop_mock_error = PropertyMock(side_effect=exc)
         type(mock_task.info).state = prop_mock_state
         type(mock_task.info).error = prop_mock_error
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.wait_for_task(mock_task,
                                             'fake_instance_name',
                                             'task_type')
-        self.assertEqual(excinfo.exception.strerror,
-                         'InvalidArgumentFault msg')
+        assert excinfo.value.strerror == \
+                         'InvalidArgumentFault msg'
 
     def test_info_error_invalid_argument_with_fault_message(self):
         exc = vmodl.fault.InvalidArgument()
@@ -560,12 +561,12 @@ class WaitForTaskTestCase(TestCase):
         prop_mock_error = PropertyMock(side_effect=exc)
         type(mock_task.info).state = prop_mock_state
         type(mock_task.info).error = prop_mock_error
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.wait_for_task(mock_task,
                                             'fake_instance_name',
                                             'task_type')
-        self.assertEqual(excinfo.exception.strerror,
-                         'InvalidArgumentFault msg (LocalFault msg)')
+        assert excinfo.value.strerror == \
+                         'InvalidArgumentFault msg (LocalFault msg)'
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -599,7 +600,7 @@ class GetMorsWithPropertiesTestCase(TestCase):
             container_ref=self.container_ref,
             traversal_spec=self.traversal_spec,
             local_properties=False)
-        self.assertEqual(ret, [])
+        assert ret == []
 
     def test_local_properties_set(self):
         obj_mock = MagicMock()
@@ -644,10 +645,10 @@ class GetMorsWithPropertiesTestCase(TestCase):
                 container_ref=self.container_ref,
                 traversal_spec=self.traversal_spec,
                 local_properties=False)
-        self.assertEqual(propSet_prop.call_count, 1)
-        self.assertEqual(obj_prop.call_count, 1)
-        self.assertEqual(len(ret), 1)
-        self.assertDictEqual(ret[0], {'object': inner_obj_mock})
+        assert propSet_prop.call_count == 1
+        assert obj_prop.call_count == 1
+        assert len(ret) == 1
+        assert ret[0] == {'object': inner_obj_mock}
 
     def test_multiple_element_content(self):
         # obj1
@@ -680,13 +681,13 @@ class GetMorsWithPropertiesTestCase(TestCase):
             container_ref=self.container_ref,
             traversal_spec=self.traversal_spec,
             local_properties=False)
-        self.assertEqual(obj1_propSet_prop.call_count, 1)
-        self.assertEqual(obj2_propSet_prop.call_count, 1)
-        self.assertEqual(obj1_obj_prop.call_count, 1)
-        self.assertEqual(obj2_obj_prop.call_count, 1)
-        self.assertEqual(len(ret), 2)
-        self.assertDictEqual(ret[0], {'object': obj1_inner_obj_mock})
-        self.assertDictEqual(ret[1], {'object': obj2_inner_obj_mock})
+        assert obj1_propSet_prop.call_count == 1
+        assert obj2_propSet_prop.call_count == 1
+        assert obj1_obj_prop.call_count == 1
+        assert obj2_obj_prop.call_count == 1
+        assert len(ret) == 2
+        assert ret[0] == {'object': obj1_inner_obj_mock}
+        assert ret[1] == {'object': obj2_inner_obj_mock}
 
     def test_one_elem_one_property(self):
         obj_mock = MagicMock()
@@ -719,13 +720,13 @@ class GetMorsWithPropertiesTestCase(TestCase):
             container_ref=self.container_ref,
             traversal_spec=self.traversal_spec,
             local_properties=False)
-        self.assertEqual(propSet_prop.call_count, 1)
-        self.assertEqual(prop_set_obj_name_prop.call_count, 1)
-        self.assertEqual(prop_set_obj_val_prop.call_count, 1)
-        self.assertEqual(obj_prop.call_count, 1)
-        self.assertEqual(len(ret), 1)
-        self.assertDictEqual(ret[0], {'prop_name': 'prop_value',
-                                      'object': inner_obj_mock})
+        assert propSet_prop.call_count == 1
+        assert prop_set_obj_name_prop.call_count == 1
+        assert prop_set_obj_val_prop.call_count == 1
+        assert obj_prop.call_count == 1
+        assert len(ret) == 1
+        assert ret[0] == {'prop_name': 'prop_value',
+                                      'object': inner_obj_mock}
 
     def test_one_elem_multiple_properties(self):
         obj_mock = MagicMock()
@@ -765,16 +766,16 @@ class GetMorsWithPropertiesTestCase(TestCase):
             container_ref=self.container_ref,
             traversal_spec=self.traversal_spec,
             local_properties=False)
-        self.assertEqual(propSet_prop.call_count, 1)
-        self.assertEqual(prop_set_obj1_name_prop.call_count, 1)
-        self.assertEqual(prop_set_obj1_val_prop.call_count, 1)
-        self.assertEqual(prop_set_obj2_name_prop.call_count, 1)
-        self.assertEqual(prop_set_obj2_val_prop.call_count, 1)
-        self.assertEqual(obj_prop.call_count, 1)
-        self.assertEqual(len(ret), 1)
-        self.assertDictEqual(ret[0], {'prop_name1': 'prop_value1',
+        assert propSet_prop.call_count == 1
+        assert prop_set_obj1_name_prop.call_count == 1
+        assert prop_set_obj1_val_prop.call_count == 1
+        assert prop_set_obj2_name_prop.call_count == 1
+        assert prop_set_obj2_val_prop.call_count == 1
+        assert obj_prop.call_count == 1
+        assert len(ret) == 1
+        assert ret[0] == {'prop_name1': 'prop_value1',
                                       'prop_name2': 'prop_value2',
-                                      'object': inner_obj_mock})
+                                      'object': inner_obj_mock}
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -832,20 +833,20 @@ class GetPropertiesOfManagedObjectTestCase(TestCase):
     def test_managed_object_no_name_property(self):
         with patch('salt.utils.vmware.get_mors_with_properties',
                    MagicMock(side_effect=[vmodl.query.InvalidProperty(), []])):
-            with self.assertRaises(VMwareApiError) as excinfo:
+            with pytest.raises(VMwareApiError) as excinfo:
                 salt.utils.vmware.get_properties_of_managed_object(
                     self.fake_mo_ref, self.mock_props)
-        self.assertEqual('Properties of managed object \'<unnamed>\' weren\'t '
-                         'retrieved', excinfo.exception.strerror)
+        assert 'Properties of managed object \'<unnamed>\' weren\'t ' \
+                         'retrieved' == excinfo.value.strerror
 
     def test_no_items_named_object(self):
         with patch('salt.utils.vmware.get_mors_with_properties',
                    MagicMock(side_effect=[[self.mock_item_name], []])):
-            with self.assertRaises(VMwareApiError) as excinfo:
+            with pytest.raises(VMwareApiError) as excinfo:
                 salt.utils.vmware.get_properties_of_managed_object(
                     self.fake_mo_ref, self.mock_props)
-        self.assertEqual('Properties of managed object \'fake_name\' weren\'t '
-                         'retrieved', excinfo.exception.strerror)
+        assert 'Properties of managed object \'fake_name\' weren\'t ' \
+                         'retrieved' == excinfo.value.strerror
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -874,14 +875,14 @@ class GetManagedObjectName(TestCase):
 
     def test_no_name_in_property_dict(self):
         ret = salt.utils.vmware.get_managed_object_name(self.mock_mo_ref)
-        self.assertIsNone(ret)
+        assert ret is None
 
     def test_return_managed_object_name(self):
         mock_get_properties_of_managed_object = MagicMock()
         with patch('salt.utils.vmware.get_properties_of_managed_object',
                    MagicMock(return_value={'name': 'fake_name'})):
             ret = salt.utils.vmware.get_managed_object_name(self.mock_mo_ref)
-        self.assertEqual(ret, 'fake_name')
+        assert ret == 'fake_name'
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -983,7 +984,7 @@ class GetContentTestCase(TestCase):
                 salt.utils.vmware.get_content(
                     self.si_mock, self.obj_type_mock,
                     container_ref=container_ref_mock)
-        self.assertEqual(self.get_root_folder_mock.call_count, 0)
+        assert self.get_root_folder_mock.call_count == 0
         self.create_container_view_mock.assert_called_once_with(
             container_ref_mock, [self.obj_type_mock], True)
 
@@ -1006,7 +1007,7 @@ class GetContentTestCase(TestCase):
             skip=True,
             selectSet=[self.traversal_spec_ret_mock])
         # check destroy is called
-        self.assertEqual(self.destroy_mock.call_count, 1)
+        assert self.destroy_mock.call_count == 1
 
     def test_create_container_view_raise_no_permission(self):
         exc = vim.fault.NoPermission()
@@ -1015,11 +1016,11 @@ class GetContentTestCase(TestCase):
                 MagicMock(side_effect=exc)
         with patch('salt.utils.vmware.get_root_folder',
                    self.get_root_folder_mock):
-            with self.assertRaises(VMwareApiError) as excinfo:
+            with pytest.raises(VMwareApiError) as excinfo:
                 salt.utils.vmware.get_content(self.si_mock, self.obj_type_mock)
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_create_container_view_raise_vim_fault(self):
         exc = vim.fault.VimFault()
@@ -1028,9 +1029,9 @@ class GetContentTestCase(TestCase):
                 MagicMock(side_effect=exc)
         with patch('salt.utils.vmware.get_root_folder',
                    self.get_root_folder_mock):
-            with self.assertRaises(VMwareApiError) as excinfo:
+            with pytest.raises(VMwareApiError) as excinfo:
                 salt.utils.vmware.get_content(self.si_mock, self.obj_type_mock)
-        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+        assert excinfo.value.strerror == 'VimFault msg'
 
     def test_create_container_view_raise_runtime_fault(self):
         exc = vmodl.RuntimeFault()
@@ -1039,9 +1040,9 @@ class GetContentTestCase(TestCase):
                 MagicMock(side_effect=exc)
         with patch('salt.utils.vmware.get_root_folder',
                    self.get_root_folder_mock):
-            with self.assertRaises(VMwareRuntimeError) as excinfo:
+            with pytest.raises(VMwareRuntimeError) as excinfo:
                 salt.utils.vmware.get_content(self.si_mock, self.obj_type_mock)
-        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+        assert excinfo.value.strerror == 'RuntimeFault msg'
 
     def test_destroy_raise_no_permission(self):
         exc = vim.fault.NoPermission()
@@ -1050,11 +1051,11 @@ class GetContentTestCase(TestCase):
             return_value=MagicMock(Destroy=MagicMock(side_effect=exc)))
         with patch('salt.utils.vmware.get_root_folder',
                    self.get_root_folder_mock):
-            with self.assertRaises(VMwareApiError) as excinfo:
+            with pytest.raises(VMwareApiError) as excinfo:
                 salt.utils.vmware.get_content(self.si_mock, self.obj_type_mock)
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_destroy_raise_vim_fault(self):
         exc = vim.fault.VimFault()
@@ -1063,9 +1064,9 @@ class GetContentTestCase(TestCase):
             return_value=MagicMock(Destroy=MagicMock(side_effect=exc)))
         with patch('salt.utils.vmware.get_root_folder',
                    self.get_root_folder_mock):
-            with self.assertRaises(VMwareApiError) as excinfo:
+            with pytest.raises(VMwareApiError) as excinfo:
                 salt.utils.vmware.get_content(self.si_mock, self.obj_type_mock)
-        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+        assert excinfo.value.strerror == 'VimFault msg'
 
     def test_destroy_raise_runtime_fault(self):
         exc = vmodl.RuntimeFault()
@@ -1074,9 +1075,9 @@ class GetContentTestCase(TestCase):
             return_value=MagicMock(Destroy=MagicMock(side_effect=exc)))
         with patch('salt.utils.vmware.get_root_folder',
                    self.get_root_folder_mock):
-            with self.assertRaises(VMwareRuntimeError) as excinfo:
+            with pytest.raises(VMwareRuntimeError) as excinfo:
                 salt.utils.vmware.get_content(self.si_mock, self.obj_type_mock)
-        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+        assert excinfo.value.strerror == 'RuntimeFault msg'
 
     # Also checks destroy is not called
     def test_external_traversal_spec(self):
@@ -1095,10 +1096,10 @@ class GetContentTestCase(TestCase):
             skip=True,
             selectSet=[traversal_spec_obj_mock])
         # Check local traversal methods are not called
-        self.assertEqual(self.create_container_view_mock.call_count, 0)
-        self.assertEqual(self.traversal_spec_mock.call_count, 0)
+        assert self.create_container_view_mock.call_count == 0
+        assert self.traversal_spec_mock.call_count == 0
         # check destroy is not called
-        self.assertEqual(self.destroy_mock.call_count, 0)
+        assert self.destroy_mock.call_count == 0
 
     def test_property_obj_filter_specs_and_contents(self):
         with patch(self.traversal_spec_method_name, self.traversal_spec_mock):
@@ -1119,36 +1120,36 @@ class GetContentTestCase(TestCase):
             selectSet=[self.traversal_spec_ret_mock])
         self.retrieve_contents_mock.assert_called_once_with(
             [self.filter_spec_ret_mock])
-        self.assertEqual(ret, self.result_mock)
+        assert ret == self.result_mock
 
     def test_retrieve_contents_raise_no_permission(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = 'Fake privilege'
         self.si_mock.content.propertyCollector.RetrieveContents = \
                 MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.get_content(self.si_mock, self.obj_type_mock)
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_retrieve_contents_raise_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = 'VimFault msg'
         self.si_mock.content.propertyCollector.RetrieveContents = \
                 MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.get_content(self.si_mock, self.obj_type_mock)
-        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+        assert excinfo.value.strerror == 'VimFault msg'
 
     def test_retrieve_contents_raise_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = 'RuntimeFault msg'
         self.si_mock.content.propertyCollector.RetrieveContents = \
                 MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareRuntimeError) as excinfo:
+        with pytest.raises(VMwareRuntimeError) as excinfo:
             salt.utils.vmware.get_content(self.si_mock, self.obj_type_mock)
-        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+        assert excinfo.value.strerror == 'RuntimeFault msg'
 
     def test_local_properties_set(self):
         container_ref_mock = MagicMock()
@@ -1160,7 +1161,7 @@ class GetContentTestCase(TestCase):
                         self.obj_type_mock,
                         container_ref=container_ref_mock,
                         local_properties=True)
-        self.assertEqual(self.traversal_spec_mock.call_count, 0)
+        assert self.traversal_spec_mock.call_count == 0
         self.obj_spec_mock.assert_called_once_with(
             obj=container_ref_mock, skip=False, selectSet=None)
 
@@ -1181,31 +1182,31 @@ class GetRootFolderTestCase(TestCase):
         exc = vim.fault.NoPermission()
         exc.privilegeId = 'Fake privilege'
         type(self.mock_content).rootFolder = PropertyMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.get_root_folder(self.mock_si)
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_raise_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = 'VimFault msg'
         type(self.mock_content).rootFolder = PropertyMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.get_root_folder(self.mock_si)
-        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+        assert excinfo.value.strerror == 'VimFault msg'
 
     def test_raise_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = 'RuntimeFault msg'
         type(self.mock_content).rootFolder = PropertyMock(side_effect=exc)
-        with self.assertRaises(VMwareRuntimeError) as excinfo:
+        with pytest.raises(VMwareRuntimeError) as excinfo:
             salt.utils.vmware.get_root_folder(self.mock_si)
-        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+        assert excinfo.value.strerror == 'RuntimeFault msg'
 
     def test_return(self):
         ret = salt.utils.vmware.get_root_folder(self.mock_si)
-        self.assertEqual(ret, self.mock_root_folder)
+        assert ret == self.mock_root_folder
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -1225,36 +1226,36 @@ class GetServiceInfoTestCase(TestCase):
 
     def test_about_ret(self):
         ret = salt.utils.vmware.get_service_info(self.mock_si)
-        self.assertEqual(ret, self.mock_about)
+        assert ret == self.mock_about
 
     def test_about_raises_no_permission(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = 'Fake privilege'
         type(self.mock_si.content).about = \
                 PropertyMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.get_service_info(self.mock_si)
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_about_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = 'VimFault msg'
         type(self.mock_si.content).about = \
                 PropertyMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.get_service_info(self.mock_si)
-        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+        assert excinfo.value.strerror == 'VimFault msg'
 
     def test_about_raises_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = 'RuntimeFault msg'
         type(self.mock_si.content).about = \
                 PropertyMock(side_effect=exc)
-        with self.assertRaises(VMwareRuntimeError) as excinfo:
+        with pytest.raises(VMwareRuntimeError) as excinfo:
             salt.utils.vmware.get_service_info(self.mock_si)
-        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+        assert excinfo.value.strerror == 'RuntimeFault msg'
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -1275,17 +1276,17 @@ class GssapiTokenTest(TestCase):
 
     def test_no_gssapi(self):
         with patch('salt.utils.vmware.HAS_GSSAPI', False):
-            with self.assertRaises(ImportError) as excinfo:
+            with pytest.raises(ImportError) as excinfo:
                 salt.utils.vmware.get_gssapi_token('principal', 'host', 'domain')
-                self.assertIn('The gssapi library is not imported.',
-                              excinfo.exception.message)
+                assert 'The gssapi library is not imported.' in \
+                              excinfo.value.message
 
     @skipIf(not HAS_GSSAPI, 'The \'gssapi\' library is missing')
     def test_service_name(self):
         mock_name = MagicMock()
         with patch.object(salt.utils.vmware.gssapi, 'Name', mock_name):
 
-            with self.assertRaises(CommandExecutionError):
+            with pytest.raises(CommandExecutionError):
                 salt.utils.vmware.get_gssapi_token('principal', 'host',
                                                    'domain')
             mock_name.assert_called_once_with('principal/host@domain',
@@ -1300,8 +1301,8 @@ class GssapiTokenTest(TestCase):
                           mock_context):
             ret = salt.utils.vmware.get_gssapi_token('principal', 'host',
                                                      'domain')
-            self.assertEqual(mock_context.return_value.step.called, 1)
-            self.assertEqual(ret, base64.b64encode(b'out_token'))
+            assert mock_context.return_value.step.called == 1
+            assert ret == base64.b64encode(b'out_token')
 
     @skipIf(not HAS_GSSAPI, 'The \'gssapi\' library is missing')
     def test_out_token_undefined(self):
@@ -1310,12 +1311,12 @@ class GssapiTokenTest(TestCase):
         mock_context.return_value.step = MagicMock(return_value=None)
         with patch.object(salt.utils.vmware.gssapi, 'InitContext',
                           mock_context):
-            with self.assertRaises(CommandExecutionError) as excinfo:
+            with pytest.raises(CommandExecutionError) as excinfo:
                 salt.utils.vmware.get_gssapi_token('principal', 'host',
                                                    'domain')
-            self.assertEqual(mock_context.return_value.step.called, 1)
-            self.assertIn('Can\'t receive token',
-                          excinfo.exception.strerror)
+            assert mock_context.return_value.step.called == 1
+            assert 'Can\'t receive token' in \
+                          excinfo.value.strerror
 
     @skipIf(not HAS_GSSAPI, 'The \'gssapi\' library is missing')
     def test_context_extablished(self):
@@ -1326,12 +1327,12 @@ class GssapiTokenTest(TestCase):
                           mock_context):
             mock_context.established = True
             mock_context.step = MagicMock(return_value=None)
-            with self.assertRaises(CommandExecutionError) as excinfo:
+            with pytest.raises(CommandExecutionError) as excinfo:
                 salt.utils.vmware.get_gssapi_token('principal', 'host',
                                                    'domain')
-            self.assertEqual(mock_context.step.called, 0)
-            self.assertIn('Context established, but didn\'t receive token',
-                          excinfo.exception.strerror)
+            assert mock_context.step.called == 0
+            assert 'Context established, but didn\'t receive token' in \
+                          excinfo.value.strerror
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -1352,7 +1353,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
             self.addCleanup(patcher.stop)
 
     def test_invalid_mechianism(self):
-        with self.assertRaises(CommandExecutionError) as excinfo:
+        with pytest.raises(CommandExecutionError) as excinfo:
             salt.utils.vmware._get_service_instance(
                 host='fake_host.fqdn',
                 username='fake_username',
@@ -1362,10 +1363,10 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                 mechanism='invalid_mechanism',
                 principal='fake principal',
                 domain='fake_domain')
-        self.assertIn('Unsupported mechanism', excinfo.exception.strerror)
+        assert 'Unsupported mechanism' in excinfo.value.strerror
 
     def test_userpass_mechanism_empty_username(self):
-        with self.assertRaises(CommandExecutionError) as excinfo:
+        with pytest.raises(CommandExecutionError) as excinfo:
             salt.utils.vmware._get_service_instance(
                 host='fake_host.fqdn',
                 username=None,
@@ -1375,11 +1376,11 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                 mechanism='userpass',
                 principal='fake principal',
                 domain='fake_domain')
-        self.assertIn('mandatory parameter \'username\'',
-                      excinfo.exception.strerror)
+        assert 'mandatory parameter \'username\'' in \
+                      excinfo.value.strerror
 
     def test_userpass_mechanism_empty_password(self):
-        with self.assertRaises(CommandExecutionError) as excinfo:
+        with pytest.raises(CommandExecutionError) as excinfo:
             salt.utils.vmware._get_service_instance(
                 host='fake_host.fqdn',
                 username='fake_username',
@@ -1389,8 +1390,8 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                 mechanism='userpass',
                 principal='fake principal',
                 domain='fake_domain')
-        self.assertIn('mandatory parameter \'password\'',
-                      excinfo.exception.strerror)
+        assert 'mandatory parameter \'password\'' in \
+                      excinfo.value.strerror
 
     def test_userpass_mechanism_no_domain(self):
         mock_sc = MagicMock()
@@ -1453,7 +1454,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                 mechanism='userpass')
 
     def test_sspi_empty_principal(self):
-        with self.assertRaises(CommandExecutionError) as excinfo:
+        with pytest.raises(CommandExecutionError) as excinfo:
             salt.utils.vmware._get_service_instance(
                 host='fake_host.fqdn',
                 username='fake_username',
@@ -1463,11 +1464,11 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                 mechanism='sspi',
                 principal=None,
                 domain='fake_domain')
-        self.assertIn('mandatory parameters are missing',
-                      excinfo.exception.strerror)
+        assert 'mandatory parameters are missing' in \
+                      excinfo.value.strerror
 
     def test_sspi_empty_domain(self):
-        with self.assertRaises(CommandExecutionError) as excinfo:
+        with pytest.raises(CommandExecutionError) as excinfo:
             salt.utils.vmware._get_service_instance(
                 host='fake_host.fqdn',
                 username='fake_username',
@@ -1477,14 +1478,14 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                 mechanism='sspi',
                 principal='fake_principal',
                 domain=None)
-        self.assertIn('mandatory parameters are missing',
-                      excinfo.exception.strerror)
+        assert 'mandatory parameters are missing' in \
+                      excinfo.value.strerror
 
     def test_sspi_get_token_error(self):
         mock_token = MagicMock(side_effect=Exception('Exception'))
 
         with patch('salt.utils.vmware.get_gssapi_token', mock_token):
-            with self.assertRaises(VMwareConnectionError) as excinfo:
+            with pytest.raises(VMwareConnectionError) as excinfo:
                 salt.utils.vmware._get_service_instance(
                     host='fake_host.fqdn',
                     username='fake_username',
@@ -1497,7 +1498,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
             mock_token.assert_called_once_with('fake_principal',
                                                'fake_host.fqdn',
                                                'fake_domain')
-            self.assertEqual('Exception', excinfo.exception.strerror)
+            assert 'Exception' == excinfo.value.strerror
 
     def test_sspi_get_token_success_(self):
         mock_token = MagicMock(return_value='fake_token')
@@ -1646,7 +1647,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
         mock_sc = MagicMock(side_effect=exc)
 
         with patch('salt.utils.vmware.SmartConnect', mock_sc):
-            with self.assertRaises(VMwareConnectionError) as excinfo:
+            with pytest.raises(VMwareConnectionError) as excinfo:
                 salt.utils.vmware._get_service_instance(
                     host='fake_host.fqdn',
                     username='fake_username',
@@ -1657,9 +1658,9 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                     principal='fake_principal',
                     domain='fake_domain')
 
-                self.assertEqual(mock_sc.call_count, 1)
-                self.assertIn('Could not connect to host \'fake_host.fqdn\'',
-                              excinfo.Exception.message)
+                assert mock_sc.call_count == 1
+                assert 'Could not connect to host \'fake_host.fqdn\'' in \
+                              excinfo.Exception.message
 
     def test_first_attempt_unsuccessful_connection_vim_fault(self):
         exc = vim.fault.VimFault()
@@ -1667,7 +1668,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
         mock_sc = MagicMock(side_effect=exc)
 
         with patch('salt.utils.vmware.SmartConnect', mock_sc):
-            with self.assertRaises(VMwareConnectionError) as excinfo:
+            with pytest.raises(VMwareConnectionError) as excinfo:
                 salt.utils.vmware._get_service_instance(
                     host='fake_host.fqdn',
                     username='fake_username',
@@ -1678,8 +1679,8 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                     principal='fake_principal',
                     domain='fake_domain')
 
-                self.assertEqual(mock_sc.call_count, 1)
-                self.assertEqual('VimFault', excinfo.Exception.message)
+                assert mock_sc.call_count == 1
+                assert 'VimFault' == excinfo.Exception.message
 
     @skipIf(not SSL_VALIDATION, 'SSL validation is not enabled')
     def test_second_attempt_unsuccsessful_connection_default_error(self):
@@ -1691,7 +1692,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
             mock_sc = MagicMock(side_effect=[exc, exc2])
 
             with patch('salt.utils.vmware.SmartConnect', mock_sc):
-                with self.assertRaises(VMwareConnectionError) as excinfo:
+                with pytest.raises(VMwareConnectionError) as excinfo:
                     salt.utils.vmware._get_service_instance(
                         host='fake_host.fqdn',
                         username='fake_username',
@@ -1702,9 +1703,9 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                         principal='fake_principal',
                         domain='fake_domain')
 
-                    self.assertEqual(mock_sc.call_count, 2)
-                    self.assertIn('Could not connect to host \'fake_host.fqdn\'',
-                                  excinfo.Exception.message)
+                    assert mock_sc.call_count == 2
+                    assert 'Could not connect to host \'fake_host.fqdn\'' in \
+                                  excinfo.Exception.message
 
     @skipIf(not SSL_VALIDATION, 'SSL validation is not enabled')
     def test_second_attempt_unsuccsessful_connection_vim_fault(self):
@@ -1717,7 +1718,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
             mock_sc = MagicMock(side_effect=[exc, exc2])
 
             with patch('salt.utils.vmware.SmartConnect', mock_sc):
-                with self.assertRaises(VMwareConnectionError) as excinfo:
+                with pytest.raises(VMwareConnectionError) as excinfo:
                     salt.utils.vmware._get_service_instance(
                         host='fake_host.fqdn',
                         username='fake_username',
@@ -1728,8 +1729,8 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                         principal='fake_principal',
                         domain='fake_domain')
 
-                    self.assertEqual(mock_sc.call_count, 2)
-                    self.assertIn('VimFault', excinfo.Exception.message)
+                    assert mock_sc.call_count == 2
+                    assert 'VimFault' in excinfo.Exception.message
 
     @skipIf(not SSL_VALIDATION, 'SSL validation is not enabled')
     def test_third_attempt_unsuccessful_connection_detault_error(self):
@@ -1742,7 +1743,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
             mock_sc = MagicMock(side_effect=[exc, exc2, exc3])
 
             with patch('salt.utils.vmware.SmartConnect', mock_sc):
-                with self.assertRaises(VMwareConnectionError) as excinfo:
+                with pytest.raises(VMwareConnectionError) as excinfo:
                     salt.utils.vmware._get_service_instance(
                         host='fake_host.fqdn',
                         username='fake_username',
@@ -1753,8 +1754,8 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                         principal='fake_principal',
                         domain='fake_domain')
 
-                    self.assertEqual(mock_sc.call_count, 3)
-                    self.assertIn('Exception', excinfo.Exception.message)
+                    assert mock_sc.call_count == 3
+                    assert 'Exception' in excinfo.Exception.message
 
     @skipIf(not SSL_VALIDATION, 'SSL validation is not enabled')
     def test_third_attempt_unsuccessful_connection_vim_fault(self):
@@ -1768,7 +1769,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
             mock_sc = MagicMock(side_effect=[exc, exc2, exc3])
 
             with patch('salt.utils.vmware.SmartConnect', mock_sc):
-                with self.assertRaises(VMwareConnectionError) as excinfo:
+                with pytest.raises(VMwareConnectionError) as excinfo:
                     salt.utils.vmware._get_service_instance(
                         host='fake_host.fqdn',
                         username='fake_username',
@@ -1779,8 +1780,8 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                         principal='fake_principal',
                         domain='fake_domain')
 
-                    self.assertEqual(mock_sc.call_count, 3)
-                    self.assertIn('VimFault', excinfo.Exception.message)
+                    assert mock_sc.call_count == 3
+                    assert 'VimFault' in excinfo.Exception.message
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -1851,9 +1852,9 @@ class GetServiceInstanceTestCase(TestCase):
                         principal='fake_principal',
                         domain='fake_domain'
                     )
-            self.assertEqual(mock_get_si.call_count, 1)
-            self.assertEqual(mock_getstub.call_count, 1)
-            self.assertEqual(mock_disconnect.call_count, 1)
+            assert mock_get_si.call_count == 1
+            assert mock_getstub.call_count == 1
+            assert mock_disconnect.call_count == 1
 
     def test_uncached_service_instance(self):
         # Service instance is uncached when using class default mock objs
@@ -1896,9 +1897,9 @@ class GetServiceInstanceTestCase(TestCase):
                     principal='fake_principal',
                     domain='fake_domain'
                 )
-                self.assertEqual(mock_si_current_time.call_count, 1)
-                self.assertEqual(mock_disconnect.call_count, 1)
-                self.assertEqual(mock_get_si.call_count, 2)
+                assert mock_si_current_time.call_count == 1
+                assert mock_disconnect.call_count == 1
+                assert mock_get_si.call_count == 2
 
     def test_current_time_raise_no_permission(self):
         exc = vim.fault.NoPermission()
@@ -1906,7 +1907,7 @@ class GetServiceInstanceTestCase(TestCase):
         with patch('salt.utils.vmware._get_service_instance',
                    MagicMock(return_value=MagicMock(
                        CurrentTime=MagicMock(side_effect=exc)))):
-            with self.assertRaises(VMwareApiError) as excinfo:
+            with pytest.raises(VMwareApiError) as excinfo:
                 salt.utils.vmware.get_service_instance(
                     host='fake_host',
                     username='fake_username',
@@ -1916,9 +1917,9 @@ class GetServiceInstanceTestCase(TestCase):
                     mechanism='fake_mechanism',
                     principal='fake_principal',
                     domain='fake_domain')
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_current_time_raise_vim_fault(self):
         exc = vim.fault.VimFault()
@@ -1926,7 +1927,7 @@ class GetServiceInstanceTestCase(TestCase):
         with patch('salt.utils.vmware._get_service_instance',
                    MagicMock(return_value=MagicMock(
                        CurrentTime=MagicMock(side_effect=exc)))):
-            with self.assertRaises(VMwareApiError) as excinfo:
+            with pytest.raises(VMwareApiError) as excinfo:
                 salt.utils.vmware.get_service_instance(
                     host='fake_host',
                     username='fake_username',
@@ -1936,7 +1937,7 @@ class GetServiceInstanceTestCase(TestCase):
                     mechanism='fake_mechanism',
                     principal='fake_principal',
                     domain='fake_domain')
-        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+        assert excinfo.value.strerror == 'VimFault msg'
 
     def test_current_time_raise_runtime_fault(self):
         exc = vmodl.RuntimeFault()
@@ -1944,7 +1945,7 @@ class GetServiceInstanceTestCase(TestCase):
         with patch('salt.utils.vmware._get_service_instance',
                    MagicMock(return_value=MagicMock(
                        CurrentTime=MagicMock(side_effect=exc)))):
-            with self.assertRaises(VMwareRuntimeError) as excinfo:
+            with pytest.raises(VMwareRuntimeError) as excinfo:
                 salt.utils.vmware.get_service_instance(
                     host='fake_host',
                     username='fake_username',
@@ -1954,7 +1955,7 @@ class GetServiceInstanceTestCase(TestCase):
                     mechanism='fake_mechanism',
                     principal='fake_principal',
                     domain='fake_domain')
-        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+        assert excinfo.value.strerror == 'RuntimeFault msg'
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -1978,30 +1979,30 @@ class DisconnectTestCase(TestCase):
         exc = vim.fault.NoPermission()
         exc.privilegeId = 'Fake privilege'
         with patch('salt.utils.vmware.Disconnect', MagicMock(side_effect=exc)):
-            with self.assertRaises(VMwareApiError) as excinfo:
+            with pytest.raises(VMwareApiError) as excinfo:
                 salt.utils.vmware.disconnect(
                     service_instance=self.mock_si)
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_disconnect_raise_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = 'VimFault msg'
         with patch('salt.utils.vmware.Disconnect', MagicMock(side_effect=exc)):
-            with self.assertRaises(VMwareApiError) as excinfo:
+            with pytest.raises(VMwareApiError) as excinfo:
                 salt.utils.vmware.disconnect(
                     service_instance=self.mock_si)
-        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+        assert excinfo.value.strerror == 'VimFault msg'
 
     def test_disconnect_raise_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = 'RuntimeFault msg'
         with patch('salt.utils.vmware.Disconnect', MagicMock(side_effect=exc)):
-            with self.assertRaises(VMwareRuntimeError) as excinfo:
+            with pytest.raises(VMwareRuntimeError) as excinfo:
                 salt.utils.vmware.disconnect(
                     service_instance=self.mock_si)
-        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+        assert excinfo.value.strerror == 'RuntimeFault msg'
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -2015,52 +2016,52 @@ class IsConnectionToAVCenterTestCase(TestCase):
         exc.privilegeId = 'Fake privilege'
         mock_si = MagicMock()
         type(mock_si.content.about).apiType = PropertyMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.is_connection_to_a_vcenter(mock_si)
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_api_type_raise_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = 'VimFault msg'
         mock_si = MagicMock()
         type(mock_si.content.about).apiType = PropertyMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.is_connection_to_a_vcenter(mock_si)
-        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+        assert excinfo.value.strerror == 'VimFault msg'
 
     def test_api_type_raise_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = 'RuntimeFault msg'
         mock_si = MagicMock()
         type(mock_si.content.about).apiType = PropertyMock(side_effect=exc)
-        with self.assertRaises(VMwareRuntimeError) as excinfo:
+        with pytest.raises(VMwareRuntimeError) as excinfo:
             salt.utils.vmware.is_connection_to_a_vcenter(mock_si)
-        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+        assert excinfo.value.strerror == 'RuntimeFault msg'
 
     def test_connected_to_a_vcenter(self):
         mock_si = MagicMock()
         mock_si.content.about.apiType = 'VirtualCenter'
 
         ret = salt.utils.vmware.is_connection_to_a_vcenter(mock_si)
-        self.assertTrue(ret)
+        assert ret
 
     def test_connected_to_a_host(self):
         mock_si = MagicMock()
         mock_si.content.about.apiType = 'HostAgent'
 
         ret = salt.utils.vmware.is_connection_to_a_vcenter(mock_si)
-        self.assertFalse(ret)
+        assert not ret
 
     def test_connected_to_invalid_entity(self):
         mock_si = MagicMock()
         mock_si.content.about.apiType = 'UnsupportedType'
 
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.is_connection_to_a_vcenter(mock_si)
-        self.assertIn('Unexpected api type \'UnsupportedType\'',
-                      excinfo.exception.strerror)
+        assert 'Unexpected api type \'UnsupportedType\'' in \
+                      excinfo.value.strerror
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -2111,21 +2112,21 @@ class GetNewServiceInstanceStub(TestCase, LoaderModuleMockMixin):
         salt.utils.vmware.get_new_service_instance_stub(
             self.mock_si, 'fake_path')
         self.mock_create_default_context.assert_called_once_with()
-        self.assertFalse(self.mock_context.check_hostname)
-        self.assertEqual(self.mock_context.verify_mode,
-                         salt.utils.vmware.ssl.CERT_NONE)
+        assert not self.mock_context.check_hostname
+        assert self.mock_context.verify_mode == \
+                         salt.utils.vmware.ssl.CERT_NONE
 
     def test_ssl_default_context_not_loaded(self):
         type(salt.utils.vmware.sys).version_info = \
                 PropertyMock(return_value=(2, 7, 8))
         salt.utils.vmware.get_new_service_instance_stub(
             self.mock_si, 'fake_path')
-        self.assertEqual(self.mock_create_default_context.call_count, 0)
+        assert self.mock_create_default_context.call_count == 0
 
     def test_session_cookie_in_context(self):
         salt.utils.vmware.get_new_service_instance_stub(
             self.mock_si, 'fake_path')
-        self.assertEqual(self.context_dict['vcSessionCookie'], 'fake_cookie')
+        assert self.context_dict['vcSessionCookie'] == 'fake_cookie'
 
     def test_get_new_stub(self):
         mock_get_new_stub = MagicMock()
@@ -2150,8 +2151,8 @@ class GetNewServiceInstanceStub(TestCase, LoaderModuleMockMixin):
     def test_new_stub_returned(self):
         ret = salt.utils.vmware.get_new_service_instance_stub(
             self.mock_si, 'fake_path')
-        self.assertEqual(self.mock_new_stub.cookie, 'ignore"fake_cookie')
-        self.assertEqual(ret, self.mock_new_stub)
+        assert self.mock_new_stub.cookie == 'ignore"fake_cookie'
+        assert ret == self.mock_new_stub
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -2205,8 +2206,8 @@ class GetServiceInstanceFromManagedObjectTestCase(TestCase):
                    MagicMock(return_value=self.mock_si)):
             ret = salt.utils.vmware.get_service_instance_from_managed_object(
                 self.mock_mo_ref)
-        self.assertEqual(ret, self.mock_si)
-        self.assertEqual(ret._stub, self.mock_stub)
+        assert ret == self.mock_si
+        assert ret._stub == self.mock_stub
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -2246,34 +2247,34 @@ class GetDatacentersTestCase(TestCase):
                    MagicMock(return_value=[])):
             res = salt.utils.vmware.get_datacenters(self.mock_si,
                                                     datacenter_names=['fake_dc1'])
-        self.assertEqual(res, [])
+        assert res == []
 
     def test_no_parameters(self):
         with patch('salt.utils.vmware.get_mors_with_properties',
                    MagicMock(return_value=self.mock_entries)):
             res = salt.utils.vmware.get_datacenters(self.mock_si)
-        self.assertEqual(res, [])
+        assert res == []
 
     def test_datastore_not_found(self):
         with patch('salt.utils.vmware.get_mors_with_properties',
                    MagicMock(return_value=self.mock_entries)):
             res = salt.utils.vmware.get_datacenters(self.mock_si,
                                                     datacenter_names=['fake_dc'])
-        self.assertEqual(res, [])
+        assert res == []
 
     def test_datastore_found(self):
         with patch('salt.utils.vmware.get_mors_with_properties',
                    MagicMock(return_value=self.mock_entries)):
             res = salt.utils.vmware.get_datacenters(
                 self.mock_si, datacenter_names=['fake_dc2'])
-        self.assertEqual(res, [self.mock_dc2])
+        assert res == [self.mock_dc2]
 
     def test_get_all_datastores(self):
         with patch('salt.utils.vmware.get_mors_with_properties',
                    MagicMock(return_value=self.mock_entries)):
             res = salt.utils.vmware.get_datacenters(
                 self.mock_si, get_all_datacenters=True)
-        self.assertEqual(res, [self.mock_dc1, self.mock_dc2])
+        assert res == [self.mock_dc1, self.mock_dc2]
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -2304,16 +2305,16 @@ class GetDatacenterTestCase(TestCase):
     def test_no_datacenters_returned(self):
         with patch('salt.utils.vmware.get_datacenters',
                    MagicMock(return_value=[])):
-            with self.assertRaises(VMwareObjectRetrievalError) as excinfo:
+            with pytest.raises(VMwareObjectRetrievalError) as excinfo:
                 salt.utils.vmware.get_datacenter(self.mock_si, 'fake_dc1')
-        self.assertEqual('Datacenter \'fake_dc1\' was not found',
-                         excinfo.exception.strerror)
+        assert 'Datacenter \'fake_dc1\' was not found' == \
+                         excinfo.value.strerror
 
     def test_get_datacenter_return(self):
         with patch('salt.utils.vmware.get_datacenters',
                    MagicMock(return_value=[self.mock_dc])):
             res = salt.utils.vmware.get_datacenter(self.mock_si, 'fake_dc1')
-        self.assertEqual(res, self.mock_dc)
+        assert res == self.mock_dc
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -2355,11 +2356,11 @@ class CreateDatacenterTestCase(TestCase):
             CreateDatacenter=MagicMock(side_effect=exc))
         with patch('salt.utils.vmware.get_root_folder',
                    MagicMock(return_value=self.mock_root_folder)):
-            with self.assertRaises(VMwareApiError) as excinfo:
+            with pytest.raises(VMwareApiError) as excinfo:
                 salt.utils.vmware.create_datacenter(self.mock_si, 'fake_dc')
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_create_datacenter_raise_vim_fault(self):
         exc = vim.VimFault()
@@ -2368,9 +2369,9 @@ class CreateDatacenterTestCase(TestCase):
             CreateDatacenter=MagicMock(side_effect=exc))
         with patch('salt.utils.vmware.get_root_folder',
                    MagicMock(return_value=self.mock_root_folder)):
-            with self.assertRaises(VMwareApiError) as excinfo:
+            with pytest.raises(VMwareApiError) as excinfo:
                 salt.utils.vmware.create_datacenter(self.mock_si, 'fake_dc')
-        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+        assert excinfo.value.strerror == 'VimFault msg'
 
     def test_create_datacenter_runtime_fault(self):
         exc = vmodl.RuntimeFault()
@@ -2379,15 +2380,15 @@ class CreateDatacenterTestCase(TestCase):
             CreateDatacenter=MagicMock(side_effect=exc))
         with patch('salt.utils.vmware.get_root_folder',
                    MagicMock(return_value=self.mock_root_folder)):
-            with self.assertRaises(VMwareRuntimeError) as excinfo:
+            with pytest.raises(VMwareRuntimeError) as excinfo:
                 salt.utils.vmware.create_datacenter(self.mock_si, 'fake_dc')
-        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+        assert excinfo.value.strerror == 'RuntimeFault msg'
 
     def test_datastore_successfully_created(self):
         with patch('salt.utils.vmware.get_root_folder',
                    MagicMock(return_value=self.mock_root_folder)):
             res = salt.utils.vmware.create_datacenter(self.mock_si, 'fake_dc')
-        self.assertEqual(res, self.mock_dc)
+        assert res == self.mock_dc
 
 
 class FakeTaskClass(object):
@@ -2455,17 +2456,17 @@ class GetDvssTestCase(TestCase):
 
     def test_get_no_dvss(self):
         ret = salt.utils.vmware.get_dvss(self.mock_dc_ref)
-        self.assertEqual(ret, [])
+        assert ret == []
 
     def test_get_all_dvss(self):
         ret = salt.utils.vmware.get_dvss(self.mock_dc_ref, get_all_dvss=True)
-        self.assertEqual(ret, [i['object'] for i in self.mock_items])
+        assert ret == [i['object'] for i in self.mock_items]
 
     def test_filtered_all_dvss(self):
         ret = salt.utils.vmware.get_dvss(self.mock_dc_ref,
                               dvs_names=['fake_dvs1', 'fake_dvs3', 'no_dvs'])
-        self.assertEqual(ret, [self.mock_items[0]['object'],
-                               self.mock_items[2]['object']])
+        assert ret == [self.mock_items[0]['object'],
+                               self.mock_items[2]['object']]
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -2523,15 +2524,15 @@ class GetNetworkFolderTestCase(TestCase):
     def test_get_no_network_folder(self):
         with patch('salt.utils.vmware.get_mors_with_properties',
                    MagicMock(return_value=[])):
-            with self.assertRaises(VMwareObjectRetrievalError) as excinfo:
+            with pytest.raises(VMwareObjectRetrievalError) as excinfo:
                 salt.utils.vmware.get_network_folder(self.mock_dc_ref)
-        self.assertEqual(excinfo.exception.strerror,
-                         'Network folder in datacenter \'fake_dc\' wasn\'t '
-                         'retrieved')
+        assert excinfo.value.strerror == \
+                         'Network folder in datacenter \'fake_dc\' wasn\'t ' \
+                         'retrieved'
 
     def test_get_network_folder(self):
         ret = salt.utils.vmware.get_network_folder(self.mock_dc_ref)
-        self.assertEqual(ret, self.mock_entries[0]['object'])
+        assert ret == self.mock_entries[0]['object']
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -2581,8 +2582,8 @@ class CreateDvsTestCase(TestCase):
                 salt.utils.vmware.create_dvs(self.mock_dc_ref, 'fake_dvs')
         mock_dvs_create_spec.assert_called_once_with()
         mock_vmware_dvs_config_spec.assert_called_once_with()
-        self.assertEqual(mock_spec.configSpec, mock_config_spec)
-        self.assertEqual(mock_config_spec.name, 'fake_dvs')
+        assert mock_spec.configSpec == mock_config_spec
+        assert mock_config_spec.name == 'fake_dvs'
         self.mock_netw_folder.CreateDVS_Task.assert_called_once_with(mock_spec)
 
     def test_get_network_folder(self):
@@ -2602,30 +2603,30 @@ class CreateDvsTestCase(TestCase):
         exc = vim.fault.NoPermission()
         exc.privilegeId = 'Fake privilege'
         self.mock_netw_folder.CreateDVS_Task = MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.create_dvs(self.mock_dc_ref, 'fake_dvs',
                                          dvs_create_spec=self.mock_dvs_create_spec)
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_create_dvs_task_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = 'VimFault msg'
         self.mock_netw_folder.CreateDVS_Task = MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.create_dvs(self.mock_dc_ref, 'fake_dvs',
                                          dvs_create_spec=self.mock_dvs_create_spec)
-        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+        assert excinfo.value.strerror == 'VimFault msg'
 
     def test_create_dvs_task_raises_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = 'RuntimeFault msg'
         self.mock_netw_folder.CreateDVS_Task = MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareRuntimeError) as excinfo:
+        with pytest.raises(VMwareRuntimeError) as excinfo:
             salt.utils.vmware.create_dvs(self.mock_dc_ref, 'fake_dvs',
                                          dvs_create_spec=self.mock_dvs_create_spec)
-        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+        assert excinfo.value.strerror == 'RuntimeFault msg'
 
     def test_wait_for_tasks(self):
         salt.utils.vmware.create_dvs(self.mock_dc_ref, 'fake_dvs',
@@ -2676,27 +2677,27 @@ class UpdateDvsTestCase(TestCase):
         exc = vim.fault.NoPermission()
         exc.privilegeId = 'Fake privilege'
         self.mock_dvs_ref.ReconfigureDvs_Task = MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.update_dvs(self.mock_dvs_ref, self.mock_dvs_spec)
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_reconfigure_dvs_task_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = 'VimFault msg'
         self.mock_dvs_ref.ReconfigureDvs_Task = MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.update_dvs(self.mock_dvs_ref, self.mock_dvs_spec)
-        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+        assert excinfo.value.strerror == 'VimFault msg'
 
     def test_reconfigure_dvs_task_raises_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = 'RuntimeFault msg'
         self.mock_dvs_ref.ReconfigureDvs_Task = MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareRuntimeError) as excinfo:
+        with pytest.raises(VMwareRuntimeError) as excinfo:
             salt.utils.vmware.update_dvs(self.mock_dvs_ref, self.mock_dvs_spec)
-        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+        assert excinfo.value.strerror == 'RuntimeFault msg'
 
     def test_wait_for_tasks(self):
         salt.utils.vmware.update_dvs(self.mock_dvs_ref, self.mock_dvs_spec)
@@ -2745,19 +2746,19 @@ class SetDvsNetworkResourceManagementEnabledTestCase(TestCase):
         exc.privilegeId = 'Fake privilege'
         self.mock_dvs_ref.EnableNetworkResourceManagement = \
                 MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.set_dvs_network_resource_management_enabled(
                 self.mock_dvs_ref, self.mock_enabled)
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_enable_network_resource_management_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = 'VimFault msg'
         self.mock_dvs_ref.EnableNetworkResourceManagement = \
                 MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.set_dvs_network_resource_management_enabled(
                 self.mock_dvs_ref, self.mock_enabled)
 
@@ -2766,10 +2767,10 @@ class SetDvsNetworkResourceManagementEnabledTestCase(TestCase):
         exc.msg = 'RuntimeFault msg'
         self.mock_dvs_ref.EnableNetworkResourceManagement = \
                 MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareRuntimeError) as excinfo:
+        with pytest.raises(VMwareRuntimeError) as excinfo:
             salt.utils.vmware.set_dvs_network_resource_management_enabled(
                 self.mock_dvs_ref, self.mock_enabled)
-        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+        assert excinfo.value.strerror == 'RuntimeFault msg'
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -2807,11 +2808,11 @@ class GetDvportgroupsTestCase(TestCase):
             delattr(self, attr)
 
     def test_unsupported_parrent(self):
-        with self.assertRaises(ArgumentValueError) as excinfo:
+        with pytest.raises(ArgumentValueError) as excinfo:
             salt.utils.vmware.get_dvportgroups(MagicMock())
-        self.assertEqual(excinfo.exception.strerror,
-                         'Parent has to be either a datacenter, or a '
-                         'distributed virtual switch')
+        assert excinfo.value.strerror == \
+                         'Parent has to be either a datacenter, or a ' \
+                         'distributed virtual switch'
 
     def test_get_managed_object_name_call(self):
         mock_get_managed_object_name = MagicMock()
@@ -2851,18 +2852,18 @@ class GetDvportgroupsTestCase(TestCase):
 
     def test_get_no_pgs(self):
         ret = salt.utils.vmware.get_dvportgroups(self.mock_dvs_ref)
-        self.assertEqual(ret, [])
+        assert ret == []
 
     def test_get_all_pgs(self):
         ret = salt.utils.vmware.get_dvportgroups(self.mock_dvs_ref,
                                       get_all_portgroups=True)
-        self.assertEqual(ret, [i['object'] for i in self.mock_items])
+        assert ret == [i['object'] for i in self.mock_items]
 
     def test_filtered_pgs(self):
         ret = salt.utils.vmware.get_dvss(self.mock_dc_ref,
                               dvs_names=['fake_pg1', 'fake_pg3', 'no_pg'])
-        self.assertEqual(ret, [self.mock_items[0]['object'],
-                               self.mock_items[2]['object']])
+        assert ret == [self.mock_items[0]['object'],
+                               self.mock_items[2]['object']]
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -2923,14 +2924,14 @@ class GetUplinkDvportgroupTestCase(TestCase):
     def test_get_no_uplink_pg(self):
         with patch('salt.utils.vmware.get_mors_with_properties',
                    MagicMock(return_value=[])):
-            with self.assertRaises(VMwareObjectRetrievalError) as excinfo:
+            with pytest.raises(VMwareObjectRetrievalError) as excinfo:
                 salt.utils.vmware.get_uplink_dvportgroup(self.mock_dvs_ref)
-        self.assertEqual(excinfo.exception.strerror,
-                         'Uplink portgroup of DVS \'fake_dvs\' wasn\'t found')
+        assert excinfo.value.strerror == \
+                         'Uplink portgroup of DVS \'fake_dvs\' wasn\'t found'
 
     def test_get_uplink_pg(self):
         ret = salt.utils.vmware.get_uplink_dvportgroup(self.mock_dvs_ref)
-        self.assertEqual(ret, self.mock_items[1]['object'])
+        assert ret == self.mock_items[1]['object']
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -2973,27 +2974,27 @@ class CreateDvportgroupTestCase(TestCase):
         exc = vim.fault.NoPermission()
         exc.privilegeId = 'Fake privilege'
         self.mock_dvs_ref.CreateDVPortgroup_Task = MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.create_dvportgroup(self.mock_dvs_ref, self.mock_pg_spec)
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_create_dvporgroup_task_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = 'VimFault msg'
         self.mock_dvs_ref.CreateDVPortgroup_Task = MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.create_dvportgroup(self.mock_dvs_ref, self.mock_pg_spec)
-        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+        assert excinfo.value.strerror == 'VimFault msg'
 
     def test_create_dvporgroup_task_raises_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = 'RuntimeFault msg'
         self.mock_dvs_ref.CreateDVPortgroup_Task = MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareRuntimeError) as excinfo:
+        with pytest.raises(VMwareRuntimeError) as excinfo:
             salt.utils.vmware.create_dvportgroup(self.mock_dvs_ref, self.mock_pg_spec)
-        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+        assert excinfo.value.strerror == 'RuntimeFault msg'
 
     def test_wait_for_tasks(self):
         salt.utils.vmware.create_dvportgroup(self.mock_dvs_ref, self.mock_pg_spec)
@@ -3045,29 +3046,29 @@ class UpdateDvportgroupTestCase(TestCase):
         exc.privilegeId = 'Fake privilege'
         self.mock_pg_ref.ReconfigureDVPortgroup_Task = \
                 MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.update_dvportgroup(self.mock_pg_ref, self.mock_pg_spec)
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_reconfigure_dvporgroup_task_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = 'VimFault msg'
         self.mock_pg_ref.ReconfigureDVPortgroup_Task = \
                 MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.update_dvportgroup(self.mock_pg_ref, self.mock_pg_spec)
-        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+        assert excinfo.value.strerror == 'VimFault msg'
 
     def test_reconfigure_dvporgroup_task_raises_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = 'RuntimeFault msg'
         self.mock_pg_ref.ReconfigureDVPortgroup_Task = \
                 MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareRuntimeError) as excinfo:
+        with pytest.raises(VMwareRuntimeError) as excinfo:
             salt.utils.vmware.update_dvportgroup(self.mock_pg_ref, self.mock_pg_spec)
-        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+        assert excinfo.value.strerror == 'RuntimeFault msg'
 
     def test_wait_for_tasks(self):
         salt.utils.vmware.update_dvportgroup(self.mock_pg_ref, self.mock_pg_spec)
@@ -3115,27 +3116,27 @@ class RemoveDvportgroupTestCase(TestCase):
         exc = vim.fault.NoPermission()
         exc.privilegeId = 'Fake privilege'
         self.mock_pg_ref.Destroy_Task = MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.remove_dvportgroup(self.mock_pg_ref)
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_destroy_treconfigure_dvporgroup_task_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = 'VimFault msg'
         self.mock_pg_ref.Destroy_Task = MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.remove_dvportgroup(self.mock_pg_ref)
-        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+        assert excinfo.value.strerror == 'VimFault msg'
 
     def test_destroy_treconfigure_dvporgroup_task_raises_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = 'RuntimeFault msg'
         self.mock_pg_ref.Destroy_Task = MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareRuntimeError) as excinfo:
+        with pytest.raises(VMwareRuntimeError) as excinfo:
             salt.utils.vmware.remove_dvportgroup(self.mock_pg_ref)
-        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+        assert excinfo.value.strerror == 'RuntimeFault msg'
 
     def test_wait_for_tasks(self):
         salt.utils.vmware.remove_dvportgroup(self.mock_pg_ref)
@@ -3176,12 +3177,12 @@ class GetHostsTestCase(TestCase):
                                 self.mock_prop_host3]
 
     def test_cluster_no_datacenter(self):
-        with self.assertRaises(ArgumentValueError) as excinfo:
+        with pytest.raises(ArgumentValueError) as excinfo:
             salt.utils.vmware.get_hosts(self.mock_si,
                                         cluster_name='fake_cluster')
-        self.assertEqual(excinfo.exception.strerror,
-                         'Must specify the datacenter when specifying the '
-                         'cluster')
+        assert excinfo.value.strerror == \
+                         'Must specify the datacenter when specifying the ' \
+                         'cluster'
 
     def test_get_si_no_datacenter_no_cluster(self):
         mock_get_mors = MagicMock()
@@ -3234,8 +3235,8 @@ class GetHostsTestCase(TestCase):
             with patch('salt.utils.vmware.get_mors_with_properties',
                        MagicMock(return_value=self.mock_prop_hosts)):
                 res = salt.utils.vmware.get_hosts(self.mock_si, get_all_hosts=True)
-        self.assertEqual(res, [self.mock_host1, self.mock_host2,
-                               self.mock_host3])
+        assert res == [self.mock_host1, self.mock_host2,
+                               self.mock_host3]
 
     def test_filter_hostname(self):
         with patch('salt.utils.vmware.get_mors_with_properties',
@@ -3243,13 +3244,13 @@ class GetHostsTestCase(TestCase):
             res = salt.utils.vmware.get_hosts(self.mock_si,
                                               host_names=['fake_hostname1',
                                                           'fake_hostname2'])
-        self.assertEqual(res, [self.mock_host1, self.mock_host2])
+        assert res == [self.mock_host1, self.mock_host2]
 
     def test_get_all_host_flag_not_set_and_no_host_names(self):
         with patch('salt.utils.vmware.get_mors_with_properties',
                    MagicMock(return_value=self.mock_prop_hosts)):
             res = salt.utils.vmware.get_hosts(self.mock_si)
-        self.assertEqual(res, [])
+        assert res == []
 
     def test_filter_cluster(self):
         self.mock_prop_host1['parent'] = vim.ClusterComputeResource('cluster')
@@ -3264,20 +3265,20 @@ class GetHostsTestCase(TestCase):
                 res = salt.utils.vmware.get_hosts(
                     self.mock_si, datacenter_name='fake_datacenter',
                     cluster_name='fake_good_cluster', get_all_hosts=True)
-        self.assertEqual(mock_get_cl_name.call_count, 2)
-        self.assertEqual(res, [self.mock_host2])
+        assert mock_get_cl_name.call_count == 2
+        assert res == [self.mock_host2]
 
     def test_no_hosts(self):
         with patch('salt.utils.vmware.get_mors_with_properties',
                    MagicMock(return_value=[])):
             res = salt.utils.vmware.get_hosts(self.mock_si, get_all_hosts=True)
-        self.assertEqual(res, [])
+        assert res == []
 
     def test_one_host_returned(self):
         with patch('salt.utils.vmware.get_mors_with_properties',
                    MagicMock(return_value=[self.mock_prop_host1])):
             res = salt.utils.vmware.get_hosts(self.mock_si, get_all_hosts=True)
-        self.assertEqual(res, [self.mock_host1])
+        assert res == [self.mock_host1]
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -3301,33 +3302,33 @@ class GetLicenseManagerTestCase(TestCase):
         exc.privilegeId = 'Fake privilege'
         type(self.mock_si.content).licenseManager = PropertyMock(
             side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.get_license_manager(self.mock_si)
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_raise_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = 'VimFault msg'
         type(self.mock_si.content).licenseManager = PropertyMock(
             side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.get_license_manager(self.mock_si)
-        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+        assert excinfo.value.strerror == 'VimFault msg'
 
     def test_raise_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = 'RuntimeFault msg'
         type(self.mock_si.content).licenseManager = PropertyMock(
             side_effect=exc)
-        with self.assertRaises(VMwareRuntimeError) as excinfo:
+        with pytest.raises(VMwareRuntimeError) as excinfo:
             salt.utils.vmware.get_license_manager(self.mock_si)
-        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+        assert excinfo.value.strerror == 'RuntimeFault msg'
 
     def test_valid_assignment_manager(self):
         ret = salt.utils.vmware.get_license_manager(self.mock_si)
-        self.assertEqual(ret, self.mock_lic_mgr)
+        assert ret == self.mock_lic_mgr
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -3351,41 +3352,41 @@ class GetLicenseAssignmentManagerTestCase(TestCase):
         exc.privilegeId = 'Fake privilege'
         type(self.mock_si.content.licenseManager).licenseAssignmentManager = \
                 PropertyMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.get_license_assignment_manager(self.mock_si)
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_raise_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = 'VimFault msg'
         type(self.mock_si.content.licenseManager).licenseAssignmentManager = \
                 PropertyMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.get_license_assignment_manager(self.mock_si)
-        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+        assert excinfo.value.strerror == 'VimFault msg'
 
     def test_raise_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = 'RuntimeFault msg'
         type(self.mock_si.content.licenseManager).licenseAssignmentManager = \
                 PropertyMock(side_effect=exc)
-        with self.assertRaises(VMwareRuntimeError) as excinfo:
+        with pytest.raises(VMwareRuntimeError) as excinfo:
             salt.utils.vmware.get_license_assignment_manager(self.mock_si)
-        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+        assert excinfo.value.strerror == 'RuntimeFault msg'
 
     def test_empty_license_assignment_manager(self):
         type(self.mock_si.content.licenseManager).licenseAssignmentManager = \
                 PropertyMock(return_value=None)
-        with self.assertRaises(VMwareObjectRetrievalError) as excinfo:
+        with pytest.raises(VMwareObjectRetrievalError) as excinfo:
             salt.utils.vmware.get_license_assignment_manager(self.mock_si)
-        self.assertEqual(excinfo.exception.strerror,
-                         'License assignment manager was not retrieved')
+        assert excinfo.value.strerror == \
+                         'License assignment manager was not retrieved'
 
     def test_valid_assignment_manager(self):
         ret = salt.utils.vmware.get_license_assignment_manager(self.mock_si)
-        self.assertEqual(ret, self.mock_lic_assign_mgr)
+        assert ret == self.mock_lic_assign_mgr
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -3428,38 +3429,38 @@ class GetLicensesTestCase(TestCase):
                    mock_get_license_manager):
             salt.utils.vmware.get_licenses(self.mock_si,
                                            license_manager=mock_lic_mgr)
-        self.assertEqual(mock_get_license_manager.call_count, 0)
-        self.assertEqual(mock_licenses.call_count, 1)
+        assert mock_get_license_manager.call_count == 0
+        assert mock_licenses.call_count == 1
 
     def test_raise_no_permission(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = 'Fake privilege'
         type(self.mock_lic_mgr).licenses = PropertyMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.get_licenses(self.mock_si)
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_raise_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = 'VimFault msg'
         type(self.mock_lic_mgr).licenses = PropertyMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.get_licenses(self.mock_si)
-        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+        assert excinfo.value.strerror == 'VimFault msg'
 
     def test_raise_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = 'RuntimeFault msg'
         type(self.mock_lic_mgr).licenses = PropertyMock(side_effect=exc)
-        with self.assertRaises(VMwareRuntimeError) as excinfo:
+        with pytest.raises(VMwareRuntimeError) as excinfo:
             salt.utils.vmware.get_licenses(self.mock_si)
-        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+        assert excinfo.value.strerror == 'RuntimeFault msg'
 
     def test_valid_licenses(self):
         ret = salt.utils.vmware.get_licenses(self.mock_si)
-        self.assertEqual(ret, self.mock_licenses)
+        assert ret == self.mock_licenses
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -3506,15 +3507,15 @@ class AddLicenseTestCase(TestCase):
                                           'fake_license_key',
                                           'fake_license_description',
                                            license_manager=self.mock_lic_mgr)
-        self.assertEqual(mock_get_license_manager.call_count, 0)
-        self.assertEqual(self.mock_add_license.call_count, 1)
+        assert mock_get_license_manager.call_count == 0
+        assert self.mock_add_license.call_count == 1
 
     def test_label_settings(self):
         salt.utils.vmware.add_license(self.mock_si,
                                       'fake_license_key',
                                       'fake_license_description')
-        self.assertEqual(self.mock_label.key, 'VpxClientLicenseLabel')
-        self.assertEqual(self.mock_label.value, 'fake_license_description')
+        assert self.mock_label.key == 'VpxClientLicenseLabel'
+        assert self.mock_label.value == 'fake_license_description'
 
     def test_add_license_arguments(self):
         salt.utils.vmware.add_license(self.mock_si,
@@ -3527,39 +3528,39 @@ class AddLicenseTestCase(TestCase):
         exc = vim.fault.NoPermission()
         exc.privilegeId = 'Fake privilege'
         self.mock_lic_mgr.AddLicense = MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.add_license(self.mock_si,
                                           'fake_license_key',
                                           'fake_license_description')
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_add_license_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = 'VimFault msg'
         self.mock_lic_mgr.AddLicense = MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.add_license(self.mock_si,
                                           'fake_license_key',
                                           'fake_license_description')
-        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+        assert excinfo.value.strerror == 'VimFault msg'
 
     def test_add_license_raises_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = 'RuntimeFault msg'
         self.mock_lic_mgr.AddLicense = MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareRuntimeError) as excinfo:
+        with pytest.raises(VMwareRuntimeError) as excinfo:
             salt.utils.vmware.add_license(self.mock_si,
                                           'fake_license_key',
                                           'fake_license_description')
-        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+        assert excinfo.value.strerror == 'RuntimeFault msg'
 
     def test_valid_license_added(self):
         ret = salt.utils.vmware.add_license(self.mock_si,
                                            'fake_license_key',
                                            'fake_license_description')
-        self.assertEqual(ret, self.mock_license)
+        assert ret == self.mock_license
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -3614,7 +3615,7 @@ class GetAssignedLicensesTestCase(TestCase):
             salt.utils.vmware.get_assigned_licenses(
                 self.mock_si, self.mock_entity_ref, 'fake_entity_name',
                 license_assignment_manager=self.mock_lic_assign_mgr)
-        self.assertEqual(mock_get_license_assign_manager.call_count, 0)
+        assert mock_get_license_assign_manager.call_count == 0
 
     def test_entity_name(self):
         mock_trace = MagicMock()
@@ -3632,60 +3633,60 @@ class GetAssignedLicensesTestCase(TestCase):
                     return_value=[MagicMock(entityDisplayName='fake_vcenter')])
         salt.utils.vmware.get_assigned_licenses(self.mock_si,
                                                 entity_name='fake_vcenter')
-        self.assertEqual(mock_instance_uuid_prop.call_count, 1)
+        assert mock_instance_uuid_prop.call_count == 1
 
     def test_instance_uuid_raises_no_permission(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = 'Fake privilege'
         type(self.mock_si.content.about).instanceUuid = \
                 PropertyMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.get_assigned_licenses(self.mock_si,
                                                     entity_name='fake_vcenter')
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_instance_uuid_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = 'VimFault msg'
         type(self.mock_si.content.about).instanceUuid = \
                 PropertyMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.get_assigned_licenses(self.mock_si,
                                                     entity_name='fake_vcenter')
-        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+        assert excinfo.value.strerror == 'VimFault msg'
 
     def test_instance_uuid_raises_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = 'RuntimeFault msg'
         type(self.mock_si.content.about).instanceUuid = \
                 PropertyMock(side_effect=exc)
-        with self.assertRaises(VMwareRuntimeError) as excinfo:
+        with pytest.raises(VMwareRuntimeError) as excinfo:
             salt.utils.vmware.get_assigned_licenses(self.mock_si,
                                                     entity_name='fake_vcenter')
-        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+        assert excinfo.value.strerror == 'RuntimeFault msg'
 
     def test_vcenter_entity_too_many_assignements(self):
         self.mock_lic_assign_mgr.QueryAssignedLicenses = MagicMock(
             return_value=[MagicMock(), MagicMock()])
-        with self.assertRaises(VMwareObjectRetrievalError) as excinfo:
+        with pytest.raises(VMwareObjectRetrievalError) as excinfo:
             salt.utils.vmware.get_assigned_licenses(self.mock_si,
                                                     entity_name='fake_vcenter')
-        self.assertEqual(excinfo.exception.strerror,
-                         'Unexpected return. Expect only a single assignment')
+        assert excinfo.value.strerror == \
+                         'Unexpected return. Expect only a single assignment'
 
     def test_wrong_vcenter_name(self):
         self.mock_lic_assign_mgr.QueryAssignedLicenses = MagicMock(
             return_value=[MagicMock(entityDisplayName='bad_vcenter')])
-        with self.assertRaises(VMwareObjectRetrievalError) as excinfo:
+        with pytest.raises(VMwareObjectRetrievalError) as excinfo:
             salt.utils.vmware.get_assigned_licenses(self.mock_si,
                                                     entity_name='fake_vcenter')
-        self.assertEqual(excinfo.exception.strerror,
-                         'Got license assignment info for a different vcenter')
+        assert excinfo.value.strerror == \
+                         'Got license assignment info for a different vcenter'
 
     def test_query_assigned_licenses_vcenter(self):
-        with self.assertRaises(VMwareObjectRetrievalError) as excinfo:
+        with pytest.raises(VMwareObjectRetrievalError) as excinfo:
             salt.utils.vmware.get_assigned_licenses(self.mock_si,
                                                     entity_name='fake_vcenter')
         self.mock_query_assigned_licenses.assert_called_once_with(
@@ -3703,41 +3704,41 @@ class GetAssignedLicensesTestCase(TestCase):
         exc.privilegeId = 'Fake privilege'
         self.mock_lic_assign_mgr.QueryAssignedLicenses = \
                 MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.get_assigned_licenses(self.mock_si,
                                                     self.mock_entity_ref,
                                                     'fake_entity_name')
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_query_assigned_licenses_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = 'VimFault msg'
         self.mock_lic_assign_mgr.QueryAssignedLicenses = \
                 MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.get_assigned_licenses(self.mock_si,
                                                     self.mock_entity_ref,
                                                     'fake_entity_name')
-        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+        assert excinfo.value.strerror == 'VimFault msg'
 
     def test_query_assigned_licenses_raises_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = 'RuntimeFault msg'
         self.mock_lic_assign_mgr.QueryAssignedLicenses = \
                 MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareRuntimeError) as excinfo:
+        with pytest.raises(VMwareRuntimeError) as excinfo:
             salt.utils.vmware.get_assigned_licenses(self.mock_si,
                                                     self.mock_entity_ref,
                                                     'fake_entity_name')
-        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+        assert excinfo.value.strerror == 'RuntimeFault msg'
 
     def test_valid_assignments(self):
         ret = salt.utils.vmware.get_assigned_licenses(self.mock_si,
                                                       self.mock_entity_ref,
                                                       'fake_entity_name')
-        self.assertEqual(ret, self.mock_assignments)
+        assert ret == self.mock_assignments
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -3788,8 +3789,8 @@ class AssignLicenseTestCase(TestCase):
                 self.mock_si, self.mock_lic_key, 'fake_license_name',
                 self.mock_entity_ref, 'fake_entity_name',
                 license_assignment_manager=self.mock_lic_assign_mgr)
-        self.assertEqual(mock_get_license_assign_manager.call_count, 0)
-        self.assertEqual(self.mock_update_assigned_license.call_count, 1)
+        assert mock_get_license_assign_manager.call_count == 0
+        assert self.mock_update_assigned_license.call_count == 1
 
     def test_entity_name(self):
         mock_trace = MagicMock()
@@ -3811,45 +3812,45 @@ class AssignLicenseTestCase(TestCase):
                                          self.mock_lic_key,
                                          'fake_license_name',
                                          entity_name='fake_entity_name')
-        self.assertEqual(mock_instance_uuid_prop.call_count, 1)
+        assert mock_instance_uuid_prop.call_count == 1
 
     def test_instance_uuid_raises_no_permission(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = 'Fake privilege'
         type(self.mock_si.content.about).instanceUuid = \
                 PropertyMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.assign_license(self.mock_si,
                                              self.mock_lic_key,
                                              'fake_license_name',
                                              entity_name='fake_entity_name')
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_instance_uuid_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = 'VimFault msg'
         type(self.mock_si.content.about).instanceUuid = \
                 PropertyMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.assign_license(self.mock_si,
                                              self.mock_lic_key,
                                              'fake_license_name',
                                              entity_name='fake_entity_name')
-        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+        assert excinfo.value.strerror == 'VimFault msg'
 
     def test_instance_uuid_raises_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = 'RuntimeFault msg'
         type(self.mock_si.content.about).instanceUuid = \
                 PropertyMock(side_effect=exc)
-        with self.assertRaises(VMwareRuntimeError) as excinfo:
+        with pytest.raises(VMwareRuntimeError) as excinfo:
             salt.utils.vmware.assign_license(self.mock_si,
                                              self.mock_lic_key,
                                              'fake_license_name',
                                              entity_name='fake_entity_name')
-        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+        assert excinfo.value.strerror == 'RuntimeFault msg'
 
     def test_update_assigned_licenses_vcenter(self):
         salt.utils.vmware.assign_license(self.mock_si,
@@ -3873,41 +3874,41 @@ class AssignLicenseTestCase(TestCase):
         exc.privilegeId = 'Fake privilege'
         self.mock_lic_assign_mgr.UpdateAssignedLicense = \
                 MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.assign_license(self.mock_si,
                                              self.mock_lic_key,
                                              'fake_license_name',
                                              self.mock_entity_ref,
                                              'fake_entity_name')
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_update_assigned_licenses_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = 'VimFault msg'
         self.mock_lic_assign_mgr.UpdateAssignedLicense = \
                 MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.assign_license(self.mock_si,
                                              self.mock_lic_key,
                                              'fake_license_name',
                                              self.mock_entity_ref,
                                              'fake_entity_name')
-        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+        assert excinfo.value.strerror == 'VimFault msg'
 
     def test_update_assigned_licenses_raises_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = 'RuntimeFault msg'
         self.mock_lic_assign_mgr.UpdateAssignedLicense = \
                 MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareRuntimeError) as excinfo:
+        with pytest.raises(VMwareRuntimeError) as excinfo:
             salt.utils.vmware.assign_license(self.mock_si,
                                              self.mock_lic_key,
                                              'fake_license_name',
                                              self.mock_entity_ref,
                                              'fake_entity_name')
-        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+        assert excinfo.value.strerror == 'RuntimeFault msg'
 
     def test_valid_assignments(self):
         ret = salt.utils.vmware.assign_license(self.mock_si,
@@ -3915,7 +3916,7 @@ class AssignLicenseTestCase(TestCase):
                                                'fake_license_name',
                                                self.mock_entity_ref,
                                                'fake_entity_name')
-        self.assertEqual(ret, self.mock_license)
+        assert ret == self.mock_license
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -3960,7 +3961,7 @@ class GetStorageSystemTestCase(TestCase):
         salt.utils.vmware.get_storage_system(self.mock_si,
                                              self.mock_host_ref,
                                              hostname='fake_host')
-        self.assertEqual(self.mock_get_managed_object_name.call_count, 0)
+        assert self.mock_get_managed_object_name.call_count == 0
 
     def test_traversal_spec(self):
         mock_traversal_spec = MagicMock(return_value=[{'object':
@@ -3989,17 +3990,17 @@ class GetStorageSystemTestCase(TestCase):
     def test_empty_mors_result(self):
         with patch('salt.utils.vmware.get_mors_with_properties',
                    MagicMock(return_value=[])):
-            with self.assertRaises(VMwareObjectRetrievalError) as excinfo:
+            with pytest.raises(VMwareObjectRetrievalError) as excinfo:
                 salt.utils.vmware.get_storage_system(self.mock_si,
                                                      self.mock_host_ref)
-        self.assertEqual(excinfo.exception.strerror,
-                         'Host\'s \'fake_host\' storage system was '
-                         'not retrieved')
+        assert excinfo.value.strerror == \
+                         'Host\'s \'fake_host\' storage system was ' \
+                         'not retrieved'
 
     def test_valid_mors_result(self):
         res = salt.utils.vmware.get_storage_system(self.mock_si,
                                                    self.mock_host_ref)
-        self.assertEqual(res, self.mock_obj)
+        assert res == self.mock_obj
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -4062,7 +4063,7 @@ class GetDatastoresTestCase(TestCase):
     def test_get_no_datastores(self):
         res = salt.utils.vmware.get_datastores(self.mock_si,
                                                self.mock_reference)
-        self.assertEqual(res, [])
+        assert res == []
 
     def test_get_storage_system_call(self):
         salt.utils.vmware.get_datastores(self.mock_si,
@@ -4087,7 +4088,7 @@ class GetDatastoresTestCase(TestCase):
             res = salt.utils.vmware.get_datastores(
                 self.mock_si, self.mock_reference,
                 backing_disk_ids=['fake_disk_id'])
-        self.assertEqual(res, [])
+        assert res == []
 
     def test_host_traversal_spec(self):
         # Reference is of type vim.HostSystem
@@ -4170,13 +4171,13 @@ class GetDatastoresTestCase(TestCase):
             pass
 
         mock_reference = MagicMock(spec=FakeClass)
-        with self.assertRaises(ArgumentValueError) as excinfo:
+        with pytest.raises(ArgumentValueError) as excinfo:
             salt.utils.vmware.get_datastores(
                 self.mock_si,
                 mock_reference,
                 get_all_datastores=True)
-        self.assertEqual(excinfo.exception.strerror,
-                         'Unsupported reference type \'FakeClass\'')
+        assert excinfo.value.strerror == \
+                         'Unsupported reference type \'FakeClass\''
 
     def test_get_mors_with_properties(self):
         mock_get_mors_with_properties = MagicMock()
@@ -4197,24 +4198,24 @@ class GetDatastoresTestCase(TestCase):
         res = salt.utils.vmware.get_datastores(self.mock_si,
                                                self.mock_reference,
                                                get_all_datastores=True)
-        self.assertEqual(res, [self.mock_entries[0]['object'],
+        assert res == [self.mock_entries[0]['object'],
                                self.mock_entries[1]['object'],
-                               self.mock_entries[2]['object']])
+                               self.mock_entries[2]['object']]
 
     def test_get_datastores_filtered_by_name(self):
         res = salt.utils.vmware.get_datastores(self.mock_si,
                                                self.mock_reference,
                                                datastore_names=['fake_ds1',
                                                                 'fake_ds2'])
-        self.assertEqual(res, [self.mock_entries[0]['object'],
-                               self.mock_entries[1]['object']])
+        assert res == [self.mock_entries[0]['object'],
+                               self.mock_entries[1]['object']]
 
     def test_get_datastores_filtered_by_backing_disk(self):
         res = salt.utils.vmware.get_datastores(
             self.mock_si, self.mock_reference,
             backing_disk_ids=['fake_disk2', 'fake_disk3'])
-        self.assertEqual(res, [self.mock_entries[1]['object'],
-                               self.mock_entries[2]['object']])
+        assert res == [self.mock_entries[1]['object'],
+                               self.mock_entries[2]['object']]
 
     def test_get_datastores_filtered_by_both_name_and_backing_disk(self):
         # Simulate VMware data model for volumes fake_ds2, fake_ds3
@@ -4222,8 +4223,8 @@ class GetDatastoresTestCase(TestCase):
             self.mock_si, self.mock_reference,
             datastore_names=['fake_ds1'],
             backing_disk_ids=['fake_disk3'])
-        self.assertEqual(res, [self.mock_entries[0]['object'],
-                               self.mock_entries[2]['object']])
+        assert res == [self.mock_entries[0]['object'],
+                               self.mock_entries[2]['object']]
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -4258,30 +4259,30 @@ class RenameDatastoreTestCase(TestCase):
         exc = vim.fault.NoPermission()
         exc.privilegeId = 'Fake privilege'
         type(self.mock_ds_ref).RenameDatastore = MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.rename_datastore(self.mock_ds_ref,
                                                'fake_new_name')
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_rename_datastore_raise_vim_fault(self):
         exc = vim.VimFault()
         exc.msg = 'vim_fault'
         type(self.mock_ds_ref).RenameDatastore = MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.vmware.rename_datastore(self.mock_ds_ref,
                                                'fake_new_name')
-        self.assertEqual(excinfo.exception.strerror, 'vim_fault')
+        assert excinfo.value.strerror == 'vim_fault'
 
     def test_rename_datastore_raise_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = 'runtime_fault'
         type(self.mock_ds_ref).RenameDatastore = MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareRuntimeError) as excinfo:
+        with pytest.raises(VMwareRuntimeError) as excinfo:
             salt.utils.vmware.rename_datastore(self.mock_ds_ref,
                                                'fake_new_name')
-        self.assertEqual(excinfo.exception.strerror, 'runtime_fault')
+        assert excinfo.value.strerror == 'runtime_fault'
 
     def test_rename_datastore(self):
         salt.utils.vmware.rename_datastore(self.mock_ds_ref, 'fake_new_name')
@@ -4298,16 +4299,17 @@ class ConvertToKbTestCase(TestCase):
         pass
 
     def test_gb_conversion_call(self):
-        self.assertEqual(salt.utils.vmware.convert_to_kb('Gb', 10), {'size': int(10485760), 'unit': 'KB'})
+        assert salt.utils.vmware.convert_to_kb('Gb', 10) == {'size': int(10485760), 'unit': 'KB'}
 
     def test_mb_conversion_call(self):
-        self.assertEqual(salt.utils.vmware.convert_to_kb('Mb', 10), {'size': int(10240), 'unit': 'KB'})
+        assert salt.utils.vmware.convert_to_kb('Mb', 10) == {'size': int(10240), 'unit': 'KB'}
 
     def test_kb_conversion_call(self):
-        self.assertEqual(salt.utils.vmware.convert_to_kb('Kb', 10), {'size': int(10), 'unit': 'KB'})
+        assert salt.utils.vmware.convert_to_kb('Kb', 10) == {'size': int(10), 'unit': 'KB'}
 
     def test_conversion_bad_input_argument_fault(self):
-        self.assertRaises(ArgumentValueError, salt.utils.vmware.convert_to_kb, 'test', 10)
+        with pytest.raises(ArgumentValueError):
+            salt.utils.vmware.convert_to_kb('test', 10)
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -4344,32 +4346,32 @@ class CreateVirtualMachineTestCase(TestCase):
         exception = vim.fault.NoPermission()
         exception.msg = 'vim.fault.NoPermission msg'
         self.mock_folder_object.CreateVM_Task = MagicMock(side_effect=exception)
-        with self.assertRaises(VMwareApiError) as exc:
+        with pytest.raises(VMwareApiError) as exc:
             salt.utils.vmware.create_vm(self.vm_name, self.mock_config_spec,
                                         self.mock_folder_object,
                                         self.mock_resourcepool_object)
-        self.assertEqual(exc.exception.strerror,
-                         'Not enough permissions. Required privilege: ')
+        assert exc.value.strerror == \
+                         'Not enough permissions. Required privilege: '
 
     def test_create_vm_raise_vim_fault(self):
         exception = vim.fault.VimFault()
         exception.msg = 'vim.fault.VimFault msg'
         self.mock_folder_object.CreateVM_Task = MagicMock(side_effect=exception)
-        with self.assertRaises(VMwareApiError) as exc:
+        with pytest.raises(VMwareApiError) as exc:
             salt.utils.vmware.create_vm(self.vm_name, self.mock_config_spec,
                                         self.mock_folder_object,
                                         self.mock_resourcepool_object)
-        self.assertEqual(exc.exception.strerror, 'vim.fault.VimFault msg')
+        assert exc.value.strerror == 'vim.fault.VimFault msg'
 
     def test_create_vm_raise_runtime_fault(self):
         exception = vmodl.RuntimeFault()
         exception.msg = 'vmodl.RuntimeFault msg'
         self.mock_folder_object.CreateVM_Task = MagicMock(side_effect=exception)
-        with self.assertRaises(VMwareRuntimeError) as exc:
+        with pytest.raises(VMwareRuntimeError) as exc:
             salt.utils.vmware.create_vm(self.vm_name, self.mock_config_spec,
                                         self.mock_folder_object,
                                         self.mock_resourcepool_object)
-        self.assertEqual(exc.exception.strerror, 'vmodl.RuntimeFault msg')
+        assert exc.value.strerror == 'vmodl.RuntimeFault msg'
 
     def test_create_vm_wait_for_task(self):
         mock_wait_for_task = MagicMock()
@@ -4415,32 +4417,32 @@ class RegisterVirtualMachineTestCase(TestCase):
     def test_register_vm_raise_no_permission(self):
         exception = vim.fault.NoPermission()
         self.vm_folder_object.RegisterVM_Task = MagicMock(side_effect=exception)
-        with self.assertRaises(VMwareApiError) as exc:
+        with pytest.raises(VMwareApiError) as exc:
             salt.utils.vmware.register_vm(self.datacenter, self.vm_name,
                                           self.mock_vmx_path,
                                           self.mock_resourcepool_object)
-        self.assertEqual(exc.exception.strerror,
-                         'Not enough permissions. Required privilege: ')
+        assert exc.value.strerror == \
+                         'Not enough permissions. Required privilege: '
 
     def test_register_vm_raise_vim_fault(self):
         exception = vim.fault.VimFault()
         exception.msg = 'vim.fault.VimFault msg'
         self.vm_folder_object.RegisterVM_Task = MagicMock(side_effect=exception)
-        with self.assertRaises(VMwareApiError) as exc:
+        with pytest.raises(VMwareApiError) as exc:
             salt.utils.vmware.register_vm(self.datacenter, self.vm_name,
                                           self.mock_vmx_path,
                                           self.mock_resourcepool_object)
-        self.assertEqual(exc.exception.strerror, 'vim.fault.VimFault msg')
+        assert exc.value.strerror == 'vim.fault.VimFault msg'
 
     def test_register_vm_raise_runtime_fault(self):
         exception = vmodl.RuntimeFault()
         exception.msg = 'vmodl.RuntimeFault msg'
         self.vm_folder_object.RegisterVM_Task = MagicMock(side_effect=exception)
-        with self.assertRaises(VMwareRuntimeError) as exc:
+        with pytest.raises(VMwareRuntimeError) as exc:
             salt.utils.vmware.register_vm(self.datacenter, self.vm_name,
                                           self.mock_vmx_path,
                                           self.mock_resourcepool_object)
-        self.assertEqual(exc.exception.strerror, 'vmodl.RuntimeFault msg')
+        assert exc.value.strerror == 'vmodl.RuntimeFault msg'
 
     def test_register_vm_wait_for_task(self):
         mock_wait_for_task = MagicMock()
@@ -4474,17 +4476,17 @@ class UpdateVirtualMachineTestCase(TestCase):
         exception = vim.fault.VimFault()
         exception.msg = 'vim.fault.VimFault'
         self.mock_vm_ref.ReconfigVM_Task = MagicMock(side_effect=exception)
-        with self.assertRaises(VMwareApiError) as exc:
+        with pytest.raises(VMwareApiError) as exc:
             salt.utils.vmware.update_vm(self.mock_vm_ref, self.mock_config_spec)
-        self.assertEqual(exc.exception.strerror, 'vim.fault.VimFault')
+        assert exc.value.strerror == 'vim.fault.VimFault'
 
     def test_update_vm_raise_runtime_fault(self):
         exception = vmodl.RuntimeFault()
         exception.msg = 'vmodl.RuntimeFault'
         self.mock_vm_ref.ReconfigVM_Task = MagicMock(side_effect=exception)
-        with self.assertRaises(VMwareRuntimeError) as exc:
+        with pytest.raises(VMwareRuntimeError) as exc:
             salt.utils.vmware.update_vm(self.mock_vm_ref, self.mock_config_spec)
-        self.assertEqual(exc.exception.strerror, 'vmodl.RuntimeFault')
+        assert exc.value.strerror == 'vmodl.RuntimeFault'
 
     def test_update_vm_wait_for_task(self):
         mock_wait_for_task = MagicMock()
@@ -4517,17 +4519,17 @@ class DeleteVirtualMachineTestCase(TestCase):
         exception = vim.fault.VimFault()
         exception.msg = 'vim.fault.VimFault'
         self.mock_vm_ref.Destroy_Task = MagicMock(side_effect=exception)
-        with self.assertRaises(VMwareApiError) as exc:
+        with pytest.raises(VMwareApiError) as exc:
             salt.utils.vmware.delete_vm(self.mock_vm_ref)
-        self.assertEqual(exc.exception.strerror, 'vim.fault.VimFault')
+        assert exc.value.strerror == 'vim.fault.VimFault'
 
     def test_destroy_vm_raise_runtime_fault(self):
         exception = vmodl.RuntimeFault()
         exception.msg = 'vmodl.RuntimeFault'
         self.mock_vm_ref.Destroy_Task = MagicMock(side_effect=exception)
-        with self.assertRaises(VMwareRuntimeError) as exc:
+        with pytest.raises(VMwareRuntimeError) as exc:
             salt.utils.vmware.delete_vm(self.mock_vm_ref)
-        self.assertEqual(exc.exception.strerror, 'vmodl.RuntimeFault')
+        assert exc.value.strerror == 'vmodl.RuntimeFault'
 
     def test_destroy_vm_wait_for_task(self):
         mock_wait_for_task = MagicMock()
@@ -4558,14 +4560,14 @@ class UnregisterVirtualMachineTestCase(TestCase):
         exception = vim.fault.VimFault()
         exception.msg = 'vim.fault.VimFault'
         self.mock_vm_ref.UnregisterVM = MagicMock(side_effect=exception)
-        with self.assertRaises(VMwareApiError) as exc:
+        with pytest.raises(VMwareApiError) as exc:
             salt.utils.vmware.unregister_vm(self.mock_vm_ref)
-        self.assertEqual(exc.exception.strerror, 'vim.fault.VimFault')
+        assert exc.value.strerror == 'vim.fault.VimFault'
 
     def test_unregister_vm_raise_runtime_fault(self):
         exception = vmodl.RuntimeFault()
         exception.msg = 'vmodl.RuntimeFault'
         self.mock_vm_ref.UnregisterVM = MagicMock(side_effect=exception)
-        with self.assertRaises(VMwareRuntimeError) as exc:
+        with pytest.raises(VMwareRuntimeError) as exc:
             salt.utils.vmware.unregister_vm(self.mock_vm_ref)
-        self.assertEqual(exc.exception.strerror, 'vmodl.RuntimeFault')
+        assert exc.value.strerror == 'vmodl.RuntimeFault'

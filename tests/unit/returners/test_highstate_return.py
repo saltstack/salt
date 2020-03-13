@@ -111,4 +111,4 @@ class HighstateReturnerTestCase(TestCase, LoaderModuleMockMixin):
         ]
         highstate.returner(ret)
         with salt.utils.files.fopen(self.output_file) as fh_:
-            self.assertEqual(json.load(fh_), expected)
+            assert json.load(fh_) == expected

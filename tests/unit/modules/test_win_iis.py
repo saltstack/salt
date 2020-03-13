@@ -21,6 +21,7 @@ from tests.support.mock import (
     MagicMock,
     patch,
 )
+import pytest
 
 APP_LIST = {
     'testApp': {
@@ -131,7 +132,7 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
              patch('salt.modules.win_iis.list_apppools',
                    MagicMock(return_value=dict())), \
              patch.dict(win_iis.__salt__):
-            self.assertTrue(win_iis.create_apppool('MyTestPool'))
+            assert win_iis.create_apppool('MyTestPool')
 
     def test_list_apppools(self):
         '''
@@ -140,7 +141,7 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_iis.__salt__), \
              patch('salt.modules.win_iis._srvmgr',
                    MagicMock(return_value=LIST_APPPOOLS_SRVMGR)):
-            self.assertEqual(win_iis.list_apppools(), APPPOOL_LIST)
+            assert win_iis.list_apppools() == APPPOOL_LIST
 
     def test_remove_apppool(self):
         '''
@@ -153,7 +154,7 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value={'MyTestPool': {
                        'applications': list(),
                        'state': 'Started'}})):
-            self.assertTrue(win_iis.remove_apppool('MyTestPool'))
+            assert win_iis.remove_apppool('MyTestPool')
 
     def test_restart_apppool(self):
         '''
@@ -162,7 +163,7 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_iis.__salt__), \
              patch('salt.modules.win_iis._srvmgr',
                    MagicMock(return_value={'retcode': 0})):
-            self.assertTrue(win_iis.restart_apppool('MyTestPool'))
+            assert win_iis.restart_apppool('MyTestPool')
 
     def test_create_site(self):
         '''
@@ -178,7 +179,7 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value=dict())), \
              patch('salt.modules.win_iis.list_apppools',
                    MagicMock(return_value=dict())):
-            self.assertTrue(win_iis.create_site(**kwargs))
+            assert win_iis.create_site(**kwargs)
 
     def test_create_site_failed(self):
         '''
@@ -194,7 +195,8 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value=dict())), \
              patch('salt.modules.win_iis.list_apppools',
                    MagicMock(return_value=dict())):
-            self.assertRaises(SaltInvocationError, win_iis.create_site, **kwargs)
+            with pytest.raises(SaltInvocationError):
+                win_iis.create_site(**kwargs)
 
     def test_remove_site(self):
         '''
@@ -205,7 +207,7 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value={'retcode': 0})), \
              patch('salt.modules.win_iis.list_sites',
                    MagicMock(return_value=SITE_LIST)):
-            self.assertTrue(win_iis.remove_site('MyTestSite'))
+            assert win_iis.remove_site('MyTestSite')
 
     def test_create_app(self):
         '''
@@ -219,7 +221,7 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value={'retcode': 0})), \
              patch('salt.modules.win_iis.list_apps',
                    MagicMock(return_value=APP_LIST)):
-            self.assertTrue(win_iis.create_app(**kwargs))
+            assert win_iis.create_app(**kwargs)
 
     def test_list_apps(self):
         '''
@@ -228,7 +230,7 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_iis.__salt__), \
              patch('salt.modules.win_iis._srvmgr',
                    MagicMock(return_value=LIST_APPS_SRVMGR)):
-            self.assertEqual(win_iis.list_apps('MyTestSite'), APP_LIST)
+            assert win_iis.list_apps('MyTestSite') == APP_LIST
 
     def test_remove_app(self):
         '''
@@ -240,7 +242,7 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value={'retcode': 0})), \
              patch('salt.modules.win_iis.list_apps',
                    MagicMock(return_value=APP_LIST)):
-            self.assertTrue(win_iis.remove_app(**kwargs))
+            assert win_iis.remove_app(**kwargs)
 
     def test_create_binding(self):
         '''
@@ -253,7 +255,7 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value={'retcode': 0})), \
              patch('salt.modules.win_iis.list_bindings',
                    MagicMock(return_value=BINDING_LIST)):
-            self.assertTrue(win_iis.create_binding(**kwargs))
+            assert win_iis.create_binding(**kwargs)
 
     def test_create_binding_failed(self):
         '''
@@ -266,7 +268,8 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value={'retcode': 0})), \
              patch('salt.modules.win_iis.list_bindings',
                    MagicMock(return_value=BINDING_LIST)):
-            self.assertRaises(SaltInvocationError, win_iis.create_binding, **kwargs)
+            with pytest.raises(SaltInvocationError):
+                win_iis.create_binding(**kwargs)
 
     def test_list_bindings(self):
         '''
@@ -275,7 +278,7 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_iis.__salt__), \
              patch('salt.modules.win_iis.list_sites',
                    MagicMock(return_value=SITE_LIST)):
-            self.assertEqual(win_iis.list_bindings('MyTestSite'), BINDING_LIST)
+            assert win_iis.list_bindings('MyTestSite') == BINDING_LIST
 
     def test_remove_binding(self):
         '''
@@ -288,7 +291,7 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value={'retcode': 0})), \
              patch('salt.modules.win_iis.list_bindings',
                    MagicMock(return_value=BINDING_LIST)):
-            self.assertTrue(win_iis.remove_binding(**kwargs))
+            assert win_iis.remove_binding(**kwargs)
 
     def test_create_vdir(self):
         '''
@@ -303,7 +306,7 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value={'retcode': 0})), \
              patch('salt.modules.win_iis.list_vdirs',
                    MagicMock(return_value=VDIR_LIST)):
-            self.assertTrue(win_iis.create_vdir(**kwargs))
+            assert win_iis.create_vdir(**kwargs)
 
     def test_list_vdirs(self):
         '''
@@ -317,7 +320,7 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_iis.__salt__), \
              patch('salt.modules.win_iis._srvmgr',
                    MagicMock(return_value=LIST_VDIRS_SRVMGR)):
-            self.assertEqual(win_iis.list_vdirs('MyTestSite'), vdirs)
+            assert win_iis.list_vdirs('MyTestSite') == vdirs
 
     def test_remove_vdir(self):
         '''
@@ -329,7 +332,7 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value={'retcode': 0})), \
              patch('salt.modules.win_iis.list_vdirs',
                    MagicMock(return_value=VDIR_LIST)):
-            self.assertTrue(win_iis.remove_vdir(**kwargs))
+            assert win_iis.remove_vdir(**kwargs)
 
     def test_create_cert_binding(self):
         '''
@@ -348,7 +351,7 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value=BINDING_LIST)), \
              patch('salt.modules.win_iis.list_cert_bindings',
                    MagicMock(return_value={CERT_BINDING_INFO: BINDING_LIST[CERT_BINDING_INFO]})):
-            self.assertTrue(win_iis.create_cert_binding(**kwargs))
+            assert win_iis.create_cert_binding(**kwargs)
 
     def test_list_cert_bindings(self):
         '''
@@ -358,8 +361,8 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_iis.__salt__), \
              patch('salt.modules.win_iis.list_sites',
                    MagicMock(return_value=SITE_LIST)):
-            self.assertEqual(win_iis.list_cert_bindings('MyTestSite'),
-                             {key: BINDING_LIST[key]})
+            assert win_iis.list_cert_bindings('MyTestSite') == \
+                             {key: BINDING_LIST[key]}
 
     def test_remove_cert_binding(self):
         '''
@@ -373,7 +376,7 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value={'retcode': 0})), \
              patch('salt.modules.win_iis.list_cert_bindings',
                    MagicMock(return_value={CERT_BINDING_INFO: BINDING_LIST[CERT_BINDING_INFO]})):
-            self.assertTrue(win_iis.remove_cert_binding(**kwargs))
+            assert win_iis.remove_cert_binding(**kwargs)
 
     def test_get_container_setting(self):
         '''
@@ -384,8 +387,8 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_iis.__salt__), \
              patch('salt.modules.win_iis._srvmgr',
                    MagicMock(return_value=CONTAINER_SETTING)):
-            self.assertEqual(win_iis.get_container_setting(**kwargs),
-                             {'managedPipelineMode': 'Integrated'})
+            assert win_iis.get_container_setting(**kwargs) == \
+                             {'managedPipelineMode': 'Integrated'}
 
     def test_set_container_setting(self):
         '''
@@ -398,7 +401,7 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value={'retcode': 0})), \
              patch('salt.modules.win_iis.get_container_setting',
                    MagicMock(return_value={'managedPipelineMode': 'Integrated'})):
-            self.assertTrue(win_iis.set_container_setting(**kwargs))
+            assert win_iis.set_container_setting(**kwargs)
 
     def test__collection_match_to_index(self):
         bad_match = {'key_0': 'value'}
@@ -410,11 +413,11 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
              patch('salt.modules.win_iis.get_webconfiguration_settings',
                    MagicMock(return_value=settings)):
             ret = win_iis._collection_match_to_index('pspath', 'colfilter', 'name', bad_match)
-            self.assertEqual(ret, -1)
+            assert ret == -1
             ret = win_iis._collection_match_to_index('pspath', 'colfilter', 'name', first_match)
-            self.assertEqual(ret, 0)
+            assert ret == 0
             ret = win_iis._collection_match_to_index('pspath', 'colfilter', 'name', second_match)
-            self.assertEqual(ret, 1)
+            assert ret == 1
 
     def test__prepare_settings(self):
         simple_setting = {'name': 'value', 'filter': 'value'}
@@ -425,13 +428,13 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
             ret = win_iis._prepare_settings('pspath', [
                 simple_setting, collection_setting, {'invalid': 'setting'}, {'name': 'filter-less_setting'}
             ])
-            self.assertEqual(ret, [simple_setting, collection_setting])
+            assert ret == [simple_setting, collection_setting]
 
     @patch('salt.modules.win_iis.log')
     def test_get_webconfiguration_settings_empty(self, mock_log):
         ret = win_iis.get_webconfiguration_settings('name', settings=[])
         mock_log.warning.assert_called_once_with('No settings provided')
-        self.assertEqual(ret, {})
+        assert ret == {}
 
     def test_get_webconfiguration_settings(self):
         # Setup
@@ -467,13 +470,13 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
 
             # Verify
             win_iis._srvmgr.assert_called_with(cmd=ps_cmd, return_json=True)
-            self.assertEqual(ret, {})
+            assert ret == {}
 
     @patch('salt.modules.win_iis.log')
     def test_set_webconfiguration_settings_empty(self, mock_log):
         ret = win_iis.set_webconfiguration_settings('name', settings=[])
         mock_log.warning.assert_called_once_with('No settings provided')
-        self.assertEqual(ret, False)
+        assert ret is False
 
     @patch('salt.modules.win_iis.log')
     def test_set_webconfiguration_settings_no_changes(self, mock_log):
@@ -498,7 +501,7 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
 
             # Verify
             mock_log.debug.assert_called_with('Settings already contain the provided values.')
-            self.assertEqual(ret, True)
+            assert ret is True
 
     @patch('salt.modules.win_iis.log')
     def test_set_webconfiguration_settings_failed(self, mock_log):
@@ -523,7 +526,7 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
             ret = win_iis.set_webconfiguration_settings(name, settings=settings)
 
             # Verify
-            self.assertEqual(ret, False)
+            assert ret is False
             mock_log.error.assert_called_with('Failed to change settings: %s', settings)
 
     @patch('salt.modules.win_iis.log')
@@ -548,5 +551,5 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
             ret = win_iis.set_webconfiguration_settings(name, settings=settings)
 
             # Verify
-            self.assertEqual(ret, True)
+            assert ret is True
             mock_log.debug.assert_called_with('Settings configured successfully: %s', settings)

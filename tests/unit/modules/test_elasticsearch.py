@@ -16,6 +16,7 @@ from tests.support.mock import (
 # Import Salt Libs
 from salt.modules import elasticsearch
 from salt.exceptions import CommandExecutionError, SaltInvocationError
+import pytest
 
 # Import elasticsearch exceptions
 NO_ELASTIC = False
@@ -45,14 +46,14 @@ class ElasticsearchTestCase(TestCase):
         Test if ping succeeds
         '''
         with patch.object(elasticsearch, '_get_instance', self.es_return_true):
-            self.assertTrue(elasticsearch.ping())
+            assert elasticsearch.ping()
 
     def test_ping_failure(self):
         '''
         Test if ping fails
         '''
         with patch.object(elasticsearch, '_get_instance', self.es_raise_command_execution_error):
-            self.assertFalse(elasticsearch.ping())
+            assert not elasticsearch.ping()
 
     # 'info' function tests: 2
 
@@ -72,7 +73,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertListEqual(elasticsearch.info(), [{"test": "key"}])
+            assert elasticsearch.info() == [{"test": "key"}]
 
     def test_info_failure(self):
         '''
@@ -90,7 +91,8 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertRaises(CommandExecutionError, elasticsearch.info)
+            with pytest.raises(CommandExecutionError):
+                elasticsearch.info()
 
     # 'node_info' function tests: 2
 
@@ -116,7 +118,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertListEqual(elasticsearch.node_info(), [{"test": "key"}])
+            assert elasticsearch.node_info() == [{"test": "key"}]
 
     def test_node_info_failure(self):
         '''
@@ -140,7 +142,8 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertRaises(CommandExecutionError, elasticsearch.node_info)
+            with pytest.raises(CommandExecutionError):
+                elasticsearch.node_info()
 
     # 'cluster_health' function tests: 2
 
@@ -166,7 +169,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertListEqual(elasticsearch.cluster_health(), [{"test": "key"}])
+            assert elasticsearch.cluster_health() == [{"test": "key"}]
 
     def test_cluster_health_failure(self):
         '''
@@ -190,7 +193,8 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertRaises(CommandExecutionError, elasticsearch.cluster_health)
+            with pytest.raises(CommandExecutionError):
+                elasticsearch.cluster_health()
 
     # 'cluster_stats' function tests: 2
 
@@ -216,7 +220,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertListEqual(elasticsearch.cluster_stats(), [{"test": "key"}])
+            assert elasticsearch.cluster_stats() == [{"test": "key"}]
 
     def test_cluster_stats_failure(self):
         '''
@@ -240,7 +244,8 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertRaises(CommandExecutionError, elasticsearch.cluster_stats)
+            with pytest.raises(CommandExecutionError):
+                elasticsearch.cluster_stats()
 
     # 'alias_create' function tests: 3
 
@@ -266,7 +271,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertTrue(elasticsearch.alias_create("foo", "bar", body="baz"))
+            assert elasticsearch.alias_create("foo", "bar", body="baz")
 
     def test_alias_create_unack(self):
         '''
@@ -290,7 +295,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertFalse(elasticsearch.alias_create("foo", "bar", body="baz"))
+            assert not elasticsearch.alias_create("foo", "bar", body="baz")
 
     def test_alias_create_failure(self):
         '''
@@ -314,7 +319,8 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertRaises(CommandExecutionError, elasticsearch.alias_create, "foo", "bar", body="baz")
+            with pytest.raises(CommandExecutionError):
+                elasticsearch.alias_create("foo", "bar", body="baz")
 
     # 'alias_delete' function tests: 3
 
@@ -340,7 +346,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertTrue(elasticsearch.alias_delete("foo", "bar"))
+            assert elasticsearch.alias_delete("foo", "bar")
 
     def test_alias_delete_unack(self):
         '''
@@ -364,7 +370,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertFalse(elasticsearch.alias_delete("foo", "bar"))
+            assert not elasticsearch.alias_delete("foo", "bar")
 
     def test_alias_delete_failure(self):
         '''
@@ -388,7 +394,8 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertRaises(CommandExecutionError, elasticsearch.alias_delete, "foo", "bar")
+            with pytest.raises(CommandExecutionError):
+                elasticsearch.alias_delete("foo", "bar")
 
     # 'alias_exists' function tests: 3
 
@@ -414,7 +421,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertTrue(elasticsearch.alias_exists("foo", "bar"))
+            assert elasticsearch.alias_exists("foo", "bar")
 
     def test_alias_exists_not(self):
         '''
@@ -438,7 +445,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertFalse(elasticsearch.alias_exists("foo", "bar"))
+            assert not elasticsearch.alias_exists("foo", "bar")
 
     def test_alias_exists_failure(self):
         '''
@@ -462,7 +469,8 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertRaises(CommandExecutionError, elasticsearch.alias_exists, "foo", "bar")
+            with pytest.raises(CommandExecutionError):
+                elasticsearch.alias_exists("foo", "bar")
 
     # 'alias_get' function tests: 3
 
@@ -488,7 +496,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertDictEqual(elasticsearch.alias_get("foo", "bar"), {"test": "key"})
+            assert elasticsearch.alias_get("foo", "bar") == {"test": "key"}
 
     def test_alias_get_not(self):
         '''
@@ -512,7 +520,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertIs(elasticsearch.alias_get("foo", "bar"), None)
+            assert elasticsearch.alias_get("foo", "bar") is None
 
     def test_alias_get_failure(self):
         '''
@@ -536,7 +544,8 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertRaises(CommandExecutionError, elasticsearch.alias_get, "foo", "bar")
+            with pytest.raises(CommandExecutionError):
+                elasticsearch.alias_get("foo", "bar")
 
     # 'document_create' function tests: 2
 
@@ -556,7 +565,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertDictEqual(elasticsearch.document_create("foo", "bar"), {"test": "key"})
+            assert elasticsearch.document_create("foo", "bar") == {"test": "key"}
 
     def test_document_create_failure(self):
         '''
@@ -574,7 +583,8 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertRaises(CommandExecutionError, elasticsearch.document_create, "foo", "bar")
+            with pytest.raises(CommandExecutionError):
+                elasticsearch.document_create("foo", "bar")
 
     # 'document_delete' function tests: 2
 
@@ -594,7 +604,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertDictEqual(elasticsearch.document_delete("foo", "bar", "baz"), {"test": "key"})
+            assert elasticsearch.document_delete("foo", "bar", "baz") == {"test": "key"}
 
     def test_document_delete_failure(self):
         '''
@@ -612,7 +622,8 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertRaises(CommandExecutionError, elasticsearch.document_delete, "foo", "bar", "baz")
+            with pytest.raises(CommandExecutionError):
+                elasticsearch.document_delete("foo", "bar", "baz")
 
     # 'document_exists' function tests: 3
 
@@ -632,7 +643,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertTrue(elasticsearch.document_exists("foo", "bar"))
+            assert elasticsearch.document_exists("foo", "bar")
 
     def test_document_exists_not(self):
         '''
@@ -650,7 +661,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertFalse(elasticsearch.document_exists("foo", "bar"))
+            assert not elasticsearch.document_exists("foo", "bar")
 
     def test_document_exists_failure(self):
         '''
@@ -668,7 +679,8 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertRaises(CommandExecutionError, elasticsearch.document_exists, "foo", "bar")
+            with pytest.raises(CommandExecutionError):
+                elasticsearch.document_exists("foo", "bar")
 
     # 'document_get' function tests: 3
 
@@ -688,7 +700,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertDictEqual(elasticsearch.document_get("foo", "bar"), {"test": "key"})
+            assert elasticsearch.document_get("foo", "bar") == {"test": "key"}
 
     def test_document_get_not(self):
         '''
@@ -706,7 +718,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertIs(elasticsearch.document_get("foo", "bar"), None)
+            assert elasticsearch.document_get("foo", "bar") is None
 
     def test_document_get_failure(self):
         '''
@@ -724,7 +736,8 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertRaises(CommandExecutionError, elasticsearch.document_get, "foo", "bar")
+            with pytest.raises(CommandExecutionError):
+                elasticsearch.document_get("foo", "bar")
 
     # 'index_create' function tests: 5
 
@@ -750,7 +763,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertTrue(elasticsearch.index_create("foo", "bar"))
+            assert elasticsearch.index_create("foo", "bar")
 
     def test_index_create_no_shards(self):
         '''
@@ -774,7 +787,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertTrue(elasticsearch.index_create("foo", "bar"))
+            assert elasticsearch.index_create("foo", "bar")
 
     def test_index_create_not_shards(self):
         '''
@@ -798,7 +811,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertFalse(elasticsearch.index_create("foo", "bar"))
+            assert not elasticsearch.index_create("foo", "bar")
 
     def test_index_create_not(self):
         '''
@@ -822,7 +835,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertFalse(elasticsearch.index_create("foo", "bar"))
+            assert not elasticsearch.index_create("foo", "bar")
 
     def test_index_create_failure(self):
         '''
@@ -846,7 +859,8 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertRaises(CommandExecutionError, elasticsearch.index_create, "foo", "bar")
+            with pytest.raises(CommandExecutionError):
+                elasticsearch.index_create("foo", "bar")
 
     # 'index_delete' function tests: 3
 
@@ -872,7 +886,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertTrue(elasticsearch.index_delete("foo", "bar"))
+            assert elasticsearch.index_delete("foo", "bar")
 
     def test_index_delete_not(self):
         '''
@@ -896,7 +910,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertFalse(elasticsearch.index_delete("foo", "bar"))
+            assert not elasticsearch.index_delete("foo", "bar")
 
     def test_index_delete_failure(self):
         '''
@@ -920,7 +934,8 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertRaises(CommandExecutionError, elasticsearch.index_delete, "foo", "bar")
+            with pytest.raises(CommandExecutionError):
+                elasticsearch.index_delete("foo", "bar")
 
     # 'index_exists' function tests: 3
 
@@ -946,7 +961,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertTrue(elasticsearch.index_exists("foo", "bar"))
+            assert elasticsearch.index_exists("foo", "bar")
 
     def test_index_exists_not(self):
         '''
@@ -970,7 +985,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertFalse(elasticsearch.index_exists("foo", "bar"))
+            assert not elasticsearch.index_exists("foo", "bar")
 
     def test_index_exists_failure(self):
         '''
@@ -994,7 +1009,8 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertRaises(CommandExecutionError, elasticsearch.index_exists, "foo", "bar")
+            with pytest.raises(CommandExecutionError):
+                elasticsearch.index_exists("foo", "bar")
 
     def test_index_get_settings(self):
         '''
@@ -1007,7 +1023,7 @@ class ElasticsearchTestCase(TestCase):
         fake_instance = MagicMock(return_value=fake_es)
 
         with patch.object(elasticsearch, '_get_instance', fake_instance):
-            self.assertDictEqual(elasticsearch.index_get_settings("foo", "bar"), {"foo": "key"})
+            assert elasticsearch.index_get_settings("foo", "bar") == {"foo": "key"}
 
     def test_index_get_settings_not_exists(self):
         '''
@@ -1021,7 +1037,7 @@ class ElasticsearchTestCase(TestCase):
         fake_instance = MagicMock(return_value=fake_es)
 
         with patch.object(elasticsearch, '_get_instance', fake_instance):
-            self.assertIs(elasticsearch.index_get_settings(index='foo'), None)
+            assert elasticsearch.index_get_settings(index='foo') is None
 
     def test_get_settings_failure(self):
         '''
@@ -1035,7 +1051,8 @@ class ElasticsearchTestCase(TestCase):
         fake_instance = MagicMock(return_value=fake_es)
 
         with patch.object(elasticsearch, '_get_instance', fake_instance):
-            self.assertRaises(CommandExecutionError, elasticsearch.index_get_settings, index='foo')
+            with pytest.raises(CommandExecutionError):
+                elasticsearch.index_get_settings(index='foo')
 
     def test_index_put_settings(self):
         '''
@@ -1049,7 +1066,7 @@ class ElasticsearchTestCase(TestCase):
         fake_instance = MagicMock(return_value=fake_es)
 
         with patch.object(elasticsearch, '_get_instance', fake_instance):
-            self.assertTrue(elasticsearch.index_put_settings(index='foo', body=body))
+            assert elasticsearch.index_put_settings(index='foo', body=body)
 
     def test_index_put_settings_not_exists(self):
         '''
@@ -1064,7 +1081,7 @@ class ElasticsearchTestCase(TestCase):
         fake_instance = MagicMock(return_value=fake_es)
 
         with patch.object(elasticsearch, '_get_instance', fake_instance):
-            self.assertIs(elasticsearch.index_put_settings(index='foo', body=body), None)
+            assert elasticsearch.index_put_settings(index='foo', body=body) is None
 
     def test_index_put_settings_failure(self):
         '''
@@ -1079,7 +1096,8 @@ class ElasticsearchTestCase(TestCase):
         fake_instance = MagicMock(return_value=fake_es)
 
         with patch.object(elasticsearch, '_get_instance', fake_instance):
-            self.assertRaises(CommandExecutionError, elasticsearch.index_put_settings, index='foo', body=body)
+            with pytest.raises(CommandExecutionError):
+                elasticsearch.index_put_settings(index='foo', body=body)
 
     # 'index_get' function tests: 3
 
@@ -1105,7 +1123,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertDictEqual(elasticsearch.index_get("foo", "bar"), {"test": "key"})
+            assert elasticsearch.index_get("foo", "bar") == {"test": "key"}
 
     def test_index_get_not(self):
         '''
@@ -1129,7 +1147,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertIs(elasticsearch.index_get("foo", "bar"), None)
+            assert elasticsearch.index_get("foo", "bar") is None
 
     def test_index_get_failure(self):
         '''
@@ -1153,7 +1171,8 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertRaises(CommandExecutionError, elasticsearch.index_get, "foo", "bar")
+            with pytest.raises(CommandExecutionError):
+                elasticsearch.index_get("foo", "bar")
 
     # 'index_open' function tests: 3
 
@@ -1179,7 +1198,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertTrue(elasticsearch.index_open("foo", "bar"))
+            assert elasticsearch.index_open("foo", "bar")
 
     def test_index_open_not(self):
         '''
@@ -1203,7 +1222,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertFalse(elasticsearch.index_open("foo", "bar"))
+            assert not elasticsearch.index_open("foo", "bar")
 
     def test_index_open_failure(self):
         '''
@@ -1227,7 +1246,8 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertRaises(CommandExecutionError, elasticsearch.index_open, "foo", "bar")
+            with pytest.raises(CommandExecutionError):
+                elasticsearch.index_open("foo", "bar")
 
     # 'index_close' function tests: 3
 
@@ -1253,7 +1273,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertTrue(elasticsearch.index_close("foo", "bar"))
+            assert elasticsearch.index_close("foo", "bar")
 
     def test_index_close_not(self):
         '''
@@ -1277,7 +1297,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertFalse(elasticsearch.index_close("foo", "bar"))
+            assert not elasticsearch.index_close("foo", "bar")
 
     def test_index_close_failure(self):
         '''
@@ -1301,7 +1321,8 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertRaises(CommandExecutionError, elasticsearch.index_close, "foo", "bar")
+            with pytest.raises(CommandExecutionError):
+                elasticsearch.index_close("foo", "bar")
 
     # 'mapping_create' function tests: 3
 
@@ -1327,7 +1348,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertTrue(elasticsearch.mapping_create("foo", "bar", "baz"))
+            assert elasticsearch.mapping_create("foo", "bar", "baz")
 
     def test_mapping_create_not(self):
         '''
@@ -1351,7 +1372,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertFalse(elasticsearch.mapping_create("foo", "bar", "baz"))
+            assert not elasticsearch.mapping_create("foo", "bar", "baz")
 
     def test_mapping_create_failure(self):
         '''
@@ -1375,7 +1396,8 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertRaises(CommandExecutionError, elasticsearch.mapping_create, "foo", "bar", "baz")
+            with pytest.raises(CommandExecutionError):
+                elasticsearch.mapping_create("foo", "bar", "baz")
 
     # 'mapping_delete' function tests: 3
 
@@ -1401,7 +1423,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertTrue(elasticsearch.mapping_delete("foo", "bar", "baz"))
+            assert elasticsearch.mapping_delete("foo", "bar", "baz")
 
     def test_mapping_delete_not(self):
         '''
@@ -1425,7 +1447,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertFalse(elasticsearch.mapping_delete("foo", "bar", "baz"))
+            assert not elasticsearch.mapping_delete("foo", "bar", "baz")
 
     def test_mapping_delete_failure(self):
         '''
@@ -1449,7 +1471,8 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertRaises(CommandExecutionError, elasticsearch.mapping_delete, "foo", "bar", "baz")
+            with pytest.raises(CommandExecutionError):
+                elasticsearch.mapping_delete("foo", "bar", "baz")
 
     # 'mapping_get' function tests: 3
 
@@ -1475,7 +1498,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertDictEqual(elasticsearch.mapping_get("foo", "bar", "baz"), {"test": "key"})
+            assert elasticsearch.mapping_get("foo", "bar", "baz") == {"test": "key"}
 
     def test_mapping_get_not(self):
         '''
@@ -1499,7 +1522,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertIs(elasticsearch.mapping_get("foo", "bar", "baz"), None)
+            assert elasticsearch.mapping_get("foo", "bar", "baz") is None
 
     def test_mapping_get_failure(self):
         '''
@@ -1523,7 +1546,8 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertRaises(CommandExecutionError, elasticsearch.mapping_get, "foo", "bar", "baz")
+            with pytest.raises(CommandExecutionError):
+                elasticsearch.mapping_get("foo", "bar", "baz")
 
     # 'index_template_create' function tests: 3
 
@@ -1549,7 +1573,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertTrue(elasticsearch.index_template_create("foo", "bar"))
+            assert elasticsearch.index_template_create("foo", "bar")
 
     def test_index_template_create_not(self):
         '''
@@ -1573,7 +1597,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertFalse(elasticsearch.index_template_create("foo", "bar"))
+            assert not elasticsearch.index_template_create("foo", "bar")
 
     def test_index_template_create_failure(self):
         '''
@@ -1597,7 +1621,8 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertRaises(CommandExecutionError, elasticsearch.index_template_create, "foo", "bar")
+            with pytest.raises(CommandExecutionError):
+                elasticsearch.index_template_create("foo", "bar")
 
     # 'index_template_delete' function tests: 3
 
@@ -1623,7 +1648,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertTrue(elasticsearch.index_template_delete("foo"))
+            assert elasticsearch.index_template_delete("foo")
 
     def test_index_template_delete_not(self):
         '''
@@ -1647,7 +1672,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertFalse(elasticsearch.index_template_delete("foo"))
+            assert not elasticsearch.index_template_delete("foo")
 
     def test_index_template_delete_failure(self):
         '''
@@ -1671,7 +1696,8 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertRaises(CommandExecutionError, elasticsearch.index_template_delete, "foo")
+            with pytest.raises(CommandExecutionError):
+                elasticsearch.index_template_delete("foo")
 
     # 'index_template_exists' function tests: 3
 
@@ -1697,7 +1723,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertTrue(elasticsearch.index_template_exists("foo"))
+            assert elasticsearch.index_template_exists("foo")
 
     def test_index_template_exists_not(self):
         '''
@@ -1721,7 +1747,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertFalse(elasticsearch.index_template_exists("foo"))
+            assert not elasticsearch.index_template_exists("foo")
 
     def test_index_template_exists_failure(self):
         '''
@@ -1745,7 +1771,8 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertRaises(CommandExecutionError, elasticsearch.index_template_exists, "foo")
+            with pytest.raises(CommandExecutionError):
+                elasticsearch.index_template_exists("foo")
 
     # 'index_template_get' function tests: 3
 
@@ -1771,7 +1798,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertDictEqual(elasticsearch.index_template_get("foo"), {"test": "key"})
+            assert elasticsearch.index_template_get("foo") == {"test": "key"}
 
     def test_index_template_get_not(self):
         '''
@@ -1795,7 +1822,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertIs(elasticsearch.index_template_get("foo"), None)
+            assert elasticsearch.index_template_get("foo") is None
 
     def test_index_template_get_failure(self):
         '''
@@ -1819,7 +1846,8 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertRaises(CommandExecutionError, elasticsearch.index_template_get, "foo")
+            with pytest.raises(CommandExecutionError):
+                elasticsearch.index_template_get("foo")
 
     # 'pipeline_get' function tests: 4
 
@@ -1845,7 +1873,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertDictEqual(elasticsearch.pipeline_get("foo"), {"test": "key"})
+            assert elasticsearch.pipeline_get("foo") == {"test": "key"}
 
     def test_pipeline_get_not(self):
         '''
@@ -1869,7 +1897,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertIs(elasticsearch.pipeline_get("foo"), None)
+            assert elasticsearch.pipeline_get("foo") is None
 
     def test_pipeline_get_failure(self):
         '''
@@ -1893,7 +1921,8 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertRaises(CommandExecutionError, elasticsearch.pipeline_get, "foo")
+            with pytest.raises(CommandExecutionError):
+                elasticsearch.pipeline_get("foo")
 
     def test_pipeline_get_wrong_version(self):
         '''
@@ -1910,7 +1939,8 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertRaises(CommandExecutionError, elasticsearch.pipeline_get, "foo")
+            with pytest.raises(CommandExecutionError):
+                elasticsearch.pipeline_get("foo")
 
     # 'pipeline_delete' function tests: 4
 
@@ -1936,7 +1966,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertTrue(elasticsearch.pipeline_delete("foo"))
+            assert elasticsearch.pipeline_delete("foo")
 
     def test_pipeline_delete_not(self):
         '''
@@ -1960,7 +1990,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertFalse(elasticsearch.pipeline_delete("foo"))
+            assert not elasticsearch.pipeline_delete("foo")
 
     def test_pipeline_delete_failure(self):
         '''
@@ -1984,7 +2014,8 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertRaises(CommandExecutionError, elasticsearch.pipeline_delete, "foo")
+            with pytest.raises(CommandExecutionError):
+                elasticsearch.pipeline_delete("foo")
 
     def test_pipeline_delete_wrong_version(self):
         '''
@@ -2001,7 +2032,8 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertRaises(CommandExecutionError, elasticsearch.pipeline_delete, "foo")
+            with pytest.raises(CommandExecutionError):
+                elasticsearch.pipeline_delete("foo")
 
     # 'pipeline_create' function tests: 4
 
@@ -2027,7 +2059,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertTrue(elasticsearch.pipeline_create("foo", "bar"))
+            assert elasticsearch.pipeline_create("foo", "bar")
 
     def test_pipeline_create_not(self):
         '''
@@ -2051,7 +2083,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertFalse(elasticsearch.pipeline_create("foo", "bar"))
+            assert not elasticsearch.pipeline_create("foo", "bar")
 
     def test_pipeline_create_failure(self):
         '''
@@ -2075,7 +2107,8 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertRaises(CommandExecutionError, elasticsearch.pipeline_create, "foo", "bar")
+            with pytest.raises(CommandExecutionError):
+                elasticsearch.pipeline_create("foo", "bar")
 
     def test_pipeline_create_wrong_version(self):
         '''
@@ -2092,7 +2125,8 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertRaises(CommandExecutionError, elasticsearch.pipeline_create, "foo", "bar")
+            with pytest.raises(CommandExecutionError):
+                elasticsearch.pipeline_create("foo", "bar")
 
     # 'pipeline_simulate' function tests: 3
 
@@ -2118,7 +2152,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertDictEqual(elasticsearch.pipeline_simulate("foo", "bar"), {"test": "key"})
+            assert elasticsearch.pipeline_simulate("foo", "bar") == {"test": "key"}
 
     def test_pipeline_simulate_failure(self):
         '''
@@ -2142,7 +2176,8 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertRaises(CommandExecutionError, elasticsearch.pipeline_simulate, "foo", "bar")
+            with pytest.raises(CommandExecutionError):
+                elasticsearch.pipeline_simulate("foo", "bar")
 
     def test_pipeline_simulate_wrong_version(self):
         '''
@@ -2159,7 +2194,8 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertRaises(CommandExecutionError, elasticsearch.pipeline_simulate, "foo", "bar")
+            with pytest.raises(CommandExecutionError):
+                elasticsearch.pipeline_simulate("foo", "bar")
 
     # 'search_template_get' function tests: 3
 
@@ -2179,7 +2215,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertDictEqual(elasticsearch.search_template_get("foo"), {"test": "key"})
+            assert elasticsearch.search_template_get("foo") == {"test": "key"}
 
     def test_search_template_get_not(self):
         '''
@@ -2197,7 +2233,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertIs(elasticsearch.search_template_get("foo"), None)
+            assert elasticsearch.search_template_get("foo") is None
 
     def test_search_template_get_failure(self):
         '''
@@ -2215,7 +2251,8 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertRaises(CommandExecutionError, elasticsearch.search_template_get, "foo")
+            with pytest.raises(CommandExecutionError):
+                elasticsearch.search_template_get("foo")
 
     # 'search_template_create' function tests: 3
 
@@ -2235,7 +2272,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertTrue(elasticsearch.search_template_create("foo", "bar"))
+            assert elasticsearch.search_template_create("foo", "bar")
 
     def test_search_template_create_not(self):
         '''
@@ -2253,7 +2290,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertFalse(elasticsearch.search_template_create("foo", "bar"))
+            assert not elasticsearch.search_template_create("foo", "bar")
 
     def test_search_template_create_failure(self):
         '''
@@ -2271,7 +2308,8 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertRaises(CommandExecutionError, elasticsearch.search_template_create, "foo", "bar")
+            with pytest.raises(CommandExecutionError):
+                elasticsearch.search_template_create("foo", "bar")
 
     # 'search_template_delete' function tests: 4
 
@@ -2291,7 +2329,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertTrue(elasticsearch.search_template_delete("foo"))
+            assert elasticsearch.search_template_delete("foo")
 
     def test_search_template_delete_not(self):
         '''
@@ -2309,7 +2347,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertFalse(elasticsearch.search_template_delete("foo"))
+            assert not elasticsearch.search_template_delete("foo")
 
     def test_search_template_delete_not_exists(self):
         '''
@@ -2327,7 +2365,7 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertTrue(elasticsearch.search_template_delete("foo"))
+            assert elasticsearch.search_template_delete("foo")
 
     def test_search_template_delete_failure(self):
         '''
@@ -2345,7 +2383,8 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
-            self.assertRaises(CommandExecutionError, elasticsearch.search_template_delete, "foo")
+            with pytest.raises(CommandExecutionError):
+                elasticsearch.search_template_delete("foo")
 
     # Cluster settings tests below.
     # We're assuming that _get_instance is properly tested
@@ -2378,7 +2417,8 @@ class ElasticsearchTestCase(TestCase):
         fake_instance = MagicMock(return_value=fake_es)
 
         with patch.object(elasticsearch, '_get_instance', fake_instance):
-            self.assertRaises(CommandExecutionError, elasticsearch.cluster_get_settings)
+            with pytest.raises(CommandExecutionError):
+                elasticsearch.cluster_get_settings()
 
     def test_cluster_put_settings_succeess(self):
         '''
@@ -2413,14 +2453,16 @@ class ElasticsearchTestCase(TestCase):
         fake_instance = MagicMock(return_value=fake_es)
 
         with patch.object(elasticsearch, '_get_instance', fake_instance):
-            self.assertRaises(CommandExecutionError, elasticsearch.cluster_put_settings, body=body)
+            with pytest.raises(CommandExecutionError):
+                elasticsearch.cluster_put_settings(body=body)
 
     def test_cluster_put_settings_nobody(self):
         '''
         Test if cluster put_settings fails with SaltInvocationError
         '''
 
-        self.assertRaises(SaltInvocationError, elasticsearch.cluster_put_settings)
+        with pytest.raises(SaltInvocationError):
+            elasticsearch.cluster_put_settings()
 
     # flush_synced tests below.
     # We're assuming that _get_instance is properly tested
@@ -2453,4 +2495,5 @@ class ElasticsearchTestCase(TestCase):
         fake_instance = MagicMock(return_value=fake_es)
 
         with patch.object(elasticsearch, '_get_instance', fake_instance):
-            self.assertRaises(CommandExecutionError, elasticsearch.flush_synced)
+            with pytest.raises(CommandExecutionError):
+                elasticsearch.flush_synced()

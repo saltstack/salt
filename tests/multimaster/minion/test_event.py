@@ -43,7 +43,7 @@ class TestHandleEvents(MultimasterModuleCase, MultiMasterTestShellCase, AdaptedC
                     ('filter', 'INPUT', disconnect_master_rule),
                     master_tgt='mm-sub-master',
                     )
-        self.assertTrue(res)
+        assert res
         try:
             # Send an event. This would return okay.
             res = self.run_function(
@@ -51,7 +51,7 @@ class TestHandleEvents(MultimasterModuleCase, MultiMasterTestShellCase, AdaptedC
                     ('myco/foo/bar',),
                     master_tgt='mm-sub-master',
                     )
-            self.assertTrue(res)
+            assert res
             # Send one more event. Minion was hanging on this. This is fixed by #53417
             res = self.run_function(
                     'event.send',
@@ -59,8 +59,8 @@ class TestHandleEvents(MultimasterModuleCase, MultiMasterTestShellCase, AdaptedC
                     master_tgt='mm-sub-master',
                     timeout=60,
                     )
-            self.assertTrue(res, 'Minion is not responding to the second master after the first '
-                                 'one has gone. Check #50814 for details.')
+            assert res, 'Minion is not responding to the second master after the first ' \
+                                 'one has gone. Check #50814 for details.'
         finally:
             # Remove the firewall rule taking master online back.
             # Since minion could be not responsive now use `salt-call --local` for this.
@@ -68,11 +68,11 @@ class TestHandleEvents(MultimasterModuleCase, MultiMasterTestShellCase, AdaptedC
                     "iptables.delete filter INPUT rule='{0}'".format(disconnect_master_rule),
                     local=True,
                     timeout=30)
-            self.assertEqual(res, ['local:'])
+            assert res == ['local:']
             # Ensure the master is back.
             res = self.run_function(
                     'event.send',
                     ('myco/foo/bar',),
                     master_tgt='mm-master',
                     )
-            self.assertTrue(res)
+            assert res

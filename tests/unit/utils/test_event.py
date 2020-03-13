@@ -50,73 +50,61 @@ class TestSaltEvent(TestCase):
         self.addCleanup(shutil.rmtree, self.sock_dir, ignore_errors=True)
 
     def assertGotEvent(self, evt, data, msg=None):
-        self.assertIsNotNone(evt, msg)
+        assert evt is not None, msg
         for key in data:
-            self.assertIn(key, evt, '{0}: Key {1} missing'.format(msg, key))
+            assert key in evt, '{0}: Key {1} missing'.format(msg, key)
             assertMsg = '{0}: Key {1} value mismatch, {2} != {3}'
             assertMsg = assertMsg.format(msg, key, data[key], evt[key])
-            self.assertEqual(data[key], evt[key], assertMsg)
+            assert data[key] == evt[key], assertMsg
 
     def test_master_event(self):
         me = salt.utils.event.MasterEvent(self.sock_dir, listen=False)
-        self.assertEqual(
-            me.puburi, '{0}'.format(
+        assert me.puburi == '{0}'.format(
                 os.path.join(self.sock_dir, 'master_event_pub.ipc')
             )
-        )
-        self.assertEqual(
-            me.pulluri,
+        assert me.pulluri == \
             '{0}'.format(
                 os.path.join(self.sock_dir, 'master_event_pull.ipc')
             )
-        )
 
     def test_minion_event(self):
         opts = dict(id='foo', sock_dir=self.sock_dir)
         id_hash = hashlib.sha256(salt.utils.stringutils.to_bytes(opts['id'])).hexdigest()[:10]
         me = salt.utils.event.MinionEvent(opts, listen=False)
-        self.assertEqual(
-            me.puburi,
+        assert me.puburi == \
             '{0}'.format(
                 os.path.join(
                     self.sock_dir, 'minion_event_{0}_pub.ipc'.format(id_hash)
                 )
             )
-        )
-        self.assertEqual(
-            me.pulluri,
+        assert me.pulluri == \
             '{0}'.format(
                 os.path.join(
                     self.sock_dir, 'minion_event_{0}_pull.ipc'.format(id_hash)
                 )
             )
-        )
 
     def test_minion_event_tcp_ipc_mode(self):
         opts = dict(id='foo', ipc_mode='tcp')
         me = salt.utils.event.MinionEvent(opts, listen=False)
-        self.assertEqual(me.puburi, 4510)
-        self.assertEqual(me.pulluri, 4511)
+        assert me.puburi == 4510
+        assert me.pulluri == 4511
 
     def test_minion_event_no_id(self):
         me = salt.utils.event.MinionEvent(dict(sock_dir=self.sock_dir), listen=False)
         id_hash = hashlib.sha256(salt.utils.stringutils.to_bytes('')).hexdigest()[:10]
-        self.assertEqual(
-            me.puburi,
+        assert me.puburi == \
             '{0}'.format(
                 os.path.join(
                     self.sock_dir, 'minion_event_{0}_pub.ipc'.format(id_hash)
                 )
             )
-        )
-        self.assertEqual(
-            me.pulluri,
+        assert me.pulluri == \
             '{0}'.format(
                 os.path.join(
                     self.sock_dir, 'minion_event_{0}_pull.ipc'.format(id_hash)
                 )
             )
-        )
 
     def test_event_single(self):
         '''Test a single event is received'''
@@ -136,8 +124,8 @@ class TestSaltEvent(TestCase):
             # We should get None and way before the 5 seconds wait since it's
             # non-blocking, otherwise it would wait for an event which we
             # didn't even send
-            self.assertIsNone(evt1, None)
-            self.assertLess(start, finish)
+            assert evt1 is None, None
+            assert start < finish
             me.fire_event({'data': 'foo1'}, 'evt1')
             evt1 = me.get_event(wait=0, tag='evt1')
             self.assertGotEvent(evt1, {'data': 'foo1'})
@@ -159,7 +147,7 @@ class TestSaltEvent(TestCase):
             evt1 = me.get_event(tag='evt1')
             self.assertGotEvent(evt1, {'data': 'foo1'})
             evt2 = me.get_event(tag='evt1')
-            self.assertIsNone(evt2)
+            assert evt2 is None
 
     def test_event_no_timeout(self):
         '''Test no wait timeout, we should block forever, until we get one '''
@@ -210,7 +198,7 @@ class TestSaltEvent(TestCase):
             evt2 = me.get_event(tag='evt2')
             evt1 = me.get_event(tag='evt1')
             self.assertGotEvent(evt2, {'data': 'foo2'})
-            self.assertIsNone(evt1)
+            assert evt1 is None
 
     def test_event_subscription_cache(self):
         '''Test subscriptions cache a message until requested'''
@@ -326,9 +314,9 @@ class TestAsyncEventPublisher(AsyncTestCase):
         me.fire_event({'data': 'foo1'}, 'evt1')
         self.wait()
         evt1 = me.get_event(tag='evt1')
-        self.assertEqual(self.tag, 'evt1')
+        assert self.tag == 'evt1'
         self.data.pop('_stamp')  # drop the stamp
-        self.assertEqual(self.data, {'data': 'foo1'})
+        assert self.data == {'data': 'foo1'}
 
 
 class TestEventReturn(TestCase):

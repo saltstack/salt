@@ -25,30 +25,30 @@ class PeclTestCase(TestCase):
         Test to installs one or several pecl extensions.
         '''
         with patch.object(pecl, '_pecl', return_value='A'):
-            self.assertEqual(pecl.install('fuse', force=True), 'A')
+            assert pecl.install('fuse', force=True) == 'A'
 
-            self.assertFalse(pecl.install('fuse'))
+            assert not pecl.install('fuse')
 
             with patch.object(pecl, 'list_', return_value={'A': ['A', 'B']}):
-                self.assertTrue(pecl.install(['A', 'B']))
+                assert pecl.install(['A', 'B'])
 
     def test_uninstall(self):
         '''
         Test to uninstall one or several pecl extensions.
         '''
         with patch.object(pecl, '_pecl', return_value='A'):
-            self.assertEqual(pecl.uninstall('fuse'), 'A')
+            assert pecl.uninstall('fuse') == 'A'
 
     def test_update(self):
         '''
         Test to update one or several pecl extensions.
         '''
         with patch.object(pecl, '_pecl', return_value='A'):
-            self.assertEqual(pecl.update('fuse'), 'A')
+            assert pecl.update('fuse') == 'A'
 
     def test_list_(self):
         '''
         Test to list installed pecl extensions.
         '''
         with patch.object(pecl, '_pecl', return_value='A\nB'):
-            self.assertDictEqual(pecl.list_('channel'), {})
+            assert pecl.list_('channel') == {}

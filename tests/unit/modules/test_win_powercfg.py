@@ -137,7 +137,7 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
             ]
             mock.assert_has_calls(calls)
 
-            self.assertEqual({'ac': 30, 'dc': 15}, ret)
+            assert {'ac': 30, 'dc': 15} == ret
 
     def test_get_disk_timeout(self):
         '''
@@ -157,7 +157,7 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
             ]
             mock.assert_has_calls(calls)
 
-            self.assertEqual({'ac': 30, 'dc': 15}, ret)
+            assert {'ac': 30, 'dc': 15} == ret
 
     def test_get_standby_timeout(self):
         '''
@@ -177,7 +177,7 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
             ]
             mock.assert_has_calls(calls)
 
-            self.assertEqual({'ac': 30, 'dc': 15}, ret)
+            assert {'ac': 30, 'dc': 15} == ret
 
     def test_get_hibernate_timeout(self):
         '''
@@ -197,7 +197,7 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
             ]
             mock.assert_has_calls(calls)
 
-            self.assertEqual({'ac': 30, 'dc': 15}, ret)
+            assert {'ac': 30, 'dc': 15} == ret
 
     def test_windows_7(self):
         '''
@@ -218,7 +218,7 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
                 ]
                 mock.assert_has_calls(calls)
 
-                self.assertEqual({'ac': 30, 'dc': 15}, ret)
+                assert {'ac': 30, 'dc': 15} == ret
 
     def test_set_hibernate_timeout_scheme(self):
         '''
@@ -247,4 +247,4 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
                 'powercfg /q SCHEME_MIN SUB_SLEEP HIBERNATEIDLE',
                 python_shell=False)
 
-            self.assertEqual({'ac': 30, 'dc': 15}, ret)
+            assert {'ac': 30, 'dc': 15} == ret

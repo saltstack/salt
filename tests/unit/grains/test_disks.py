@@ -55,7 +55,7 @@ class IscsiGrainsTestCase(TestCase, LoaderModuleMockMixin):
                     '\\\\.\\PhysicalDrive1',
                     '\\\\.\\PhysicalDrive2',
                     '\\\\.\\PhysicalDrive3']}
-            self.assertDictEqual(result, expected)
+            assert result == expected
             cmd = ' '.join([
                 'C:\\Windows\\System32\\wbem\\WMIC.exe',
                 '/namespace:\\\\root\\microsoft\\windows\\storage',
@@ -81,4 +81,4 @@ class IscsiGrainsTestCase(TestCase, LoaderModuleMockMixin):
             expected = {
                 'SSDs': [],
                 'disks': []}
-            self.assertDictEqual(result, expected)
+            assert result == expected

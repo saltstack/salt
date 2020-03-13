@@ -21,21 +21,19 @@ class SSHPillarTest(SSHCase):
         test pillar.items with salt-ssh
         '''
         ret = self.run_function('pillar.items')
-        self.assertDictContainsSubset({'monty': 'python'}, ret)
-        self.assertDictContainsSubset(
-            {'knights': ['Lancelot', 'Galahad', 'Bedevere', 'Robin']},
-            ret)
+        assert dict(ret, **{'monty': 'python'}) == ret
+        assert dict(ret, **{'knights': ['Lancelot', 'Galahad', 'Bedevere', 'Robin']}) == ret
 
     def test_pillar_get(self):
         '''
         test pillar.get with salt-ssh
         '''
         ret = self.run_function('pillar.get', ['monty'])
-        self.assertEqual(ret, 'python')
+        assert ret == 'python'
 
     def test_pillar_get_doesnotexist(self):
         '''
         test pillar.get when pillar does not exist with salt-ssh
         '''
         ret = self.run_function('pillar.get', ['doesnotexist'])
-        self.assertEqual(ret, '')
+        assert ret == ''

@@ -117,8 +117,8 @@ class TwilioMsgTxtBeaconTestCase(TestCase, LoaderModuleMockMixin):
         '''
         config = {}
         ret = twilio_txt_msg.validate(config)
-        self.assertEqual(ret, (False, ('Configuration for twilio_txt_msg '
-                                       'beacon must be a list.')))
+        assert ret == (False, ('Configuration for twilio_txt_msg '
+                                       'beacon must be a list.'))
 
     def test_validate_empty_config(self):
         '''
@@ -126,9 +126,9 @@ class TwilioMsgTxtBeaconTestCase(TestCase, LoaderModuleMockMixin):
         '''
         config = [{}]
         ret = twilio_txt_msg.validate(config)
-        self.assertEqual(ret, (False, ('Configuration for twilio_txt_msg '
+        assert ret == (False, ('Configuration for twilio_txt_msg '
                                        'beacon must contain account_sid, '
-                                       'auth_token and twilio_number items.')))
+                                       'auth_token and twilio_number items.'))
 
     def test_validate_missing_config_item(self):
         '''
@@ -138,9 +138,9 @@ class TwilioMsgTxtBeaconTestCase(TestCase, LoaderModuleMockMixin):
                    'twilio_number': '+15555555555'}]
 
         ret = twilio_txt_msg.validate(config)
-        self.assertEqual(ret, (False, ('Configuration for twilio_txt_msg '
+        assert ret == (False, ('Configuration for twilio_txt_msg '
                                        'beacon must contain account_sid, '
-                                       'auth_token and twilio_number items.')))
+                                       'auth_token and twilio_number items.'))
 
     def test_receive_message(self):
         '''
@@ -151,7 +151,7 @@ class TwilioMsgTxtBeaconTestCase(TestCase, LoaderModuleMockMixin):
                    'twilio_number': '+15555555555'}]
 
         ret = twilio_txt_msg.validate(config)
-        self.assertEqual(ret, (True, 'Valid beacon configuration'))
+        assert ret == (True, 'Valid beacon configuration')
 
         _expected_return = [{'texts': [{'body': 'None',
                                         'images': [],
@@ -161,4 +161,4 @@ class TwilioMsgTxtBeaconTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value=MockTwilioRestClient())
         with patch.object(twilio_txt_msg, 'TwilioRestClient', mock):
             ret = twilio_txt_msg.beacon(config)
-        self.assertEqual(ret, _expected_return)
+        assert ret == _expected_return

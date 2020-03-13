@@ -53,8 +53,8 @@ class VirtualenvTest(ModuleCase, SaltReturnAssertsMixin):
 
             # Lets check proper ownership
             statinfo = self.run_function('file.stats', [venv_dir])
-            self.assertEqual(statinfo['user'], uinfo['name'])
-            self.assertEqual(statinfo['uid'], uinfo['uid'])
+            assert statinfo['user'] == uinfo['name']
+            assert statinfo['uid'] == uinfo['uid']
         finally:
             if os.path.isdir(venv_dir):
                 shutil.rmtree(venv_dir)
@@ -108,8 +108,8 @@ class VirtualenvTest(ModuleCase, SaltReturnAssertsMixin):
 
         # Let's make sure, it really got installed
         ret = self.run_function('pip.freeze', bin_env=venv_path)
-        self.assertIn(reqs[0], ret)
-        self.assertNotIn(reqs[1], ret)
+        assert reqs[0] in ret
+        assert reqs[1] not in ret
 
         # Now let's update the requirements file, which is now cached.
         with salt.utils.files.fopen(requirements_file_path, 'w') as fhw:
@@ -136,8 +136,8 @@ class VirtualenvTest(ModuleCase, SaltReturnAssertsMixin):
 
         # Let's make sure, it really got installed
         ret = self.run_function('pip.freeze', bin_env=venv_path)
-        self.assertIn(reqs[0], ret)
-        self.assertIn(reqs[1], ret)
+        assert reqs[0] in ret
+        assert reqs[1] in ret
 
         # If we reached this point no assertion failed, so, cleanup!
         if os.path.exists(venv_path):

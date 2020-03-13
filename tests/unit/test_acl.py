@@ -34,23 +34,23 @@ class ClientACLTestCase(TestCase):
         '''
         client_acl = acl.PublisherACL(self.blacklist)
 
-        self.assertTrue(client_acl.user_is_blacklisted('joker'))
-        self.assertTrue(client_acl.user_is_blacklisted('penguin'))
-        self.assertTrue(client_acl.user_is_blacklisted('bad_'))
-        self.assertTrue(client_acl.user_is_blacklisted('bad_user'))
-        self.assertTrue(client_acl.user_is_blacklisted('bad_*'))
-        self.assertTrue(client_acl.user_is_blacklisted('user_bad_'))
-        self.assertTrue(client_acl.user_is_blacklisted('blocked_'))
-        self.assertTrue(client_acl.user_is_blacklisted('blocked_user'))
-        self.assertTrue(client_acl.user_is_blacklisted('blocked_.*'))
-        self.assertTrue(client_acl.user_is_blacklisted('Homer'))
+        assert client_acl.user_is_blacklisted('joker')
+        assert client_acl.user_is_blacklisted('penguin')
+        assert client_acl.user_is_blacklisted('bad_')
+        assert client_acl.user_is_blacklisted('bad_user')
+        assert client_acl.user_is_blacklisted('bad_*')
+        assert client_acl.user_is_blacklisted('user_bad_')
+        assert client_acl.user_is_blacklisted('blocked_')
+        assert client_acl.user_is_blacklisted('blocked_user')
+        assert client_acl.user_is_blacklisted('blocked_.*')
+        assert client_acl.user_is_blacklisted('Homer')
 
-        self.assertFalse(client_acl.user_is_blacklisted('batman'))
-        self.assertFalse(client_acl.user_is_blacklisted('robin'))
-        self.assertFalse(client_acl.user_is_blacklisted('bad'))
-        self.assertFalse(client_acl.user_is_blacklisted('blocked'))
-        self.assertFalse(client_acl.user_is_blacklisted('NotHomer'))
-        self.assertFalse(client_acl.user_is_blacklisted('HomerSimpson'))
+        assert not client_acl.user_is_blacklisted('batman')
+        assert not client_acl.user_is_blacklisted('robin')
+        assert not client_acl.user_is_blacklisted('bad')
+        assert not client_acl.user_is_blacklisted('blocked')
+        assert not client_acl.user_is_blacklisted('NotHomer')
+        assert not client_acl.user_is_blacklisted('HomerSimpson')
 
     def test_cmd_is_blacklisted(self):
         '''
@@ -58,16 +58,16 @@ class ClientACLTestCase(TestCase):
         '''
         client_acl = acl.PublisherACL(self.blacklist)
 
-        self.assertTrue(client_acl.cmd_is_blacklisted('cmd.run'))
-        self.assertTrue(client_acl.cmd_is_blacklisted('test.fib'))
-        self.assertTrue(client_acl.cmd_is_blacklisted('rm-rf.root'))
+        assert client_acl.cmd_is_blacklisted('cmd.run')
+        assert client_acl.cmd_is_blacklisted('test.fib')
+        assert client_acl.cmd_is_blacklisted('rm-rf.root')
 
-        self.assertFalse(client_acl.cmd_is_blacklisted('cmd.shell'))
-        self.assertFalse(client_acl.cmd_is_blacklisted('test.versions'))
-        self.assertFalse(client_acl.cmd_is_blacklisted('arm-rf.root'))
+        assert not client_acl.cmd_is_blacklisted('cmd.shell')
+        assert not client_acl.cmd_is_blacklisted('test.versions')
+        assert not client_acl.cmd_is_blacklisted('arm-rf.root')
 
-        self.assertTrue(client_acl.cmd_is_blacklisted(['cmd.run', 'state.sls']))
-        self.assertFalse(client_acl.cmd_is_blacklisted(['state.highstate', 'state.sls']))
+        assert client_acl.cmd_is_blacklisted(['cmd.run', 'state.sls'])
+        assert not client_acl.cmd_is_blacklisted(['state.highstate', 'state.sls'])
 
     def test_user_is_whitelisted(self):
         '''
@@ -75,10 +75,10 @@ class ClientACLTestCase(TestCase):
         '''
         client_acl = acl.PublisherACL(self.whitelist)
 
-        self.assertTrue(client_acl.user_is_whitelisted('testuser'))
-        self.assertTrue(client_acl.user_is_whitelisted('saltuser'))
-        self.assertFalse(client_acl.user_is_whitelisted('three'))
-        self.assertFalse(client_acl.user_is_whitelisted('hans'))
+        assert client_acl.user_is_whitelisted('testuser')
+        assert client_acl.user_is_whitelisted('saltuser')
+        assert not client_acl.user_is_whitelisted('three')
+        assert not client_acl.user_is_whitelisted('hans')
 
     def test_cmd_is_whitelisted(self):
         '''
@@ -86,7 +86,7 @@ class ClientACLTestCase(TestCase):
         '''
         client_acl = acl.PublisherACL(self.whitelist)
 
-        self.assertTrue(client_acl.cmd_is_whitelisted('test.ping'))
-        self.assertTrue(client_acl.cmd_is_whitelisted('grains.items'))
-        self.assertFalse(client_acl.cmd_is_whitelisted('cmd.run'))
-        self.assertFalse(client_acl.cmd_is_whitelisted('test.version'))
+        assert client_acl.cmd_is_whitelisted('test.ping')
+        assert client_acl.cmd_is_whitelisted('grains.items')
+        assert not client_acl.cmd_is_whitelisted('cmd.run')
+        assert not client_acl.cmd_is_whitelisted('test.version')

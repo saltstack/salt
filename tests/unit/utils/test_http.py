@@ -39,7 +39,7 @@ class HTTPTestCase(TestCase):
         '''
         mock_url = 'https://api.testing.com/?&foo=bar&test=testing'
         ret = http.sanitize_url(mock_url, hide_fields=None)
-        self.assertEqual(ret, mock_url)
+        assert ret == mock_url
 
     def test_sanitize_url_no_elements(self):
         '''
@@ -47,7 +47,7 @@ class HTTPTestCase(TestCase):
         '''
         mock_url = 'https://api.testing.com/?&foo=bar&test=testing'
         ret = http.sanitize_url(mock_url, [''])
-        self.assertEqual(ret, mock_url)
+        assert ret == mock_url
 
     def test_sanitize_url_single_element(self):
         '''
@@ -58,7 +58,7 @@ class HTTPTestCase(TestCase):
         mock_ret = 'https://api.testing.com/?&keep_it_secret=XXXXXXXXXX&' \
                    'api_action=module.function'
         ret = http.sanitize_url(mock_url, ['keep_it_secret'])
-        self.assertEqual(ret, mock_ret)
+        assert ret == mock_ret
 
     def test_sanitize_url_multiple_elements(self):
         '''
@@ -71,7 +71,7 @@ class HTTPTestCase(TestCase):
                    '&skipChecks=True&api_key=XXXXXXXXXX' \
                    '&NodeID=12345&api_action=module.function'
         ret = http.sanitize_url(mock_url, ['api_key', 'rootPass'])
-        self.assertEqual(ret, mock_ret)
+        assert ret == mock_ret
 
     # _sanitize_components tests
 
@@ -82,7 +82,7 @@ class HTTPTestCase(TestCase):
         mock_component_list = ['foo=bar', 'bar=baz', 'hello=world']
         mock_ret = 'foo=bar&bar=baz&hello=world&'
         ret = http._sanitize_url_components(mock_component_list, 'api_key')
-        self.assertEqual(ret, mock_ret)
+        assert ret == mock_ret
 
     def test_sanitize_components_one_element(self):
         '''
@@ -91,7 +91,7 @@ class HTTPTestCase(TestCase):
         mock_component_list = ['foo=bar', 'api_key=abcdefghijklmnop']
         mock_ret = 'foo=bar&api_key=XXXXXXXXXX&'
         ret = http._sanitize_url_components(mock_component_list, 'api_key')
-        self.assertEqual(ret, mock_ret)
+        assert ret == mock_ret
 
     def test_sanitize_components_multiple_elements(self):
         '''
@@ -100,7 +100,7 @@ class HTTPTestCase(TestCase):
         mock_component_list = ['foo=bar', 'foo=baz', 'api_key=testing']
         mock_ret = 'foo=XXXXXXXXXX&foo=XXXXXXXXXX&api_key=testing&'
         ret = http._sanitize_url_components(mock_component_list, 'foo')
-        self.assertEqual(ret, mock_ret)
+        assert ret == mock_ret
 
     def test_query_null_response(self):
         '''
@@ -133,4 +133,4 @@ class HTTPTestCase(TestCase):
         )
         body = ret.get('body', '')
         boundary = body[:body.find('\r')]
-        self.assertEqual(body, match_this.format(boundary))
+        assert body == match_this.format(boundary)

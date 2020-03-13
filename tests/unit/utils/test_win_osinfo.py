@@ -25,19 +25,19 @@ class WinOsInfo(TestCase):
     def test_get_os_version_info(self):
         sys_info = sys.getwindowsversion()
         get_info = win_osinfo.get_os_version_info()
-        self.assertEqual(sys_info.major, int(get_info['MajorVersion']))
-        self.assertEqual(sys_info.minor, int(get_info['MinorVersion']))
-        self.assertEqual(sys_info.platform, int(get_info['PlatformID']))
-        self.assertEqual(sys_info.build, int(get_info['BuildNumber']))
+        assert sys_info.major == int(get_info['MajorVersion'])
+        assert sys_info.minor == int(get_info['MinorVersion'])
+        assert sys_info.platform == int(get_info['PlatformID'])
+        assert sys_info.build == int(get_info['BuildNumber'])
         # Platform ID is the reason for this function
         # Since we can't get the actual value another way, we will just check
         # that it exists and is a number
-        self.assertIn('PlatformID', get_info)
-        self.assertTrue(isinstance(get_info['BuildNumber'], six.integer_types))
+        assert 'PlatformID' in get_info
+        assert isinstance(get_info['BuildNumber'], six.integer_types)
 
     def test_get_join_info(self):
         join_info = win_osinfo.get_join_info()
-        self.assertIn('Domain', join_info)
-        self.assertIn('DomainType', join_info)
+        assert 'Domain' in join_info
+        assert 'DomainType' in join_info
         valid_types = ['Unknown', 'Unjoined', 'Workgroup', 'Domain']
-        self.assertIn(join_info['DomainType'], valid_types)
+        assert join_info['DomainType'] in valid_types

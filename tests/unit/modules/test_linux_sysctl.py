@@ -19,6 +19,7 @@ from tests.support.mock import (
     mock_open,
     patch,
 )
+import pytest
 
 
 class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
@@ -35,7 +36,7 @@ class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_cmd = MagicMock(return_value=1)
         with patch.dict(linux_sysctl.__salt__, {'cmd.run': mock_cmd}):
-            self.assertEqual(linux_sysctl.get('net.ipv4.ip_forward'), 1)
+            assert linux_sysctl.get('net.ipv4.ip_forward') == 1
 
     def test_assign_proc_sys_failed(self):
         '''
@@ -46,9 +47,8 @@ class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
                    'stdout': 'net.ipv4.ip_forward = 1'}
             mock_cmd = MagicMock(return_value=cmd)
             with patch.dict(linux_sysctl.__salt__, {'cmd.run_all': mock_cmd}):
-                self.assertRaises(CommandExecutionError,
-                                  linux_sysctl.assign,
-                                  'net.ipv4.ip_forward', 1)
+                with pytest.raises(CommandExecutionError):
+                    linux_sysctl.assign('net.ipv4.ip_forward', 1)
 
     def test_assign_cmd_failed(self):
         '''
@@ -60,9 +60,8 @@ class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
                    'stdout': 'net.ipv4.ip_forward = backward'}
             mock_cmd = MagicMock(return_value=cmd)
             with patch.dict(linux_sysctl.__salt__, {'cmd.run_all': mock_cmd}):
-                self.assertRaises(CommandExecutionError,
-                                  linux_sysctl.assign,
-                                  'net.ipv4.ip_forward', 'backward')
+                with pytest.raises(CommandExecutionError):
+                    linux_sysctl.assign('net.ipv4.ip_forward', 'backward')
 
     def test_assign_success(self):
         '''
@@ -74,8 +73,8 @@ class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
             ret = {'net.ipv4.ip_forward': '1'}
             mock_cmd = MagicMock(return_value=cmd)
             with patch.dict(linux_sysctl.__salt__, {'cmd.run_all': mock_cmd}):
-                self.assertEqual(linux_sysctl.assign(
-                    'net.ipv4.ip_forward', 1), ret)
+                assert linux_sysctl.assign(
+                    'net.ipv4.ip_forward', 1) == ret
 
     def test_persist_no_conf_failure(self):
         '''
@@ -89,9 +88,8 @@ class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(linux_sysctl.__salt__, {'cmd.run_stdout': mock_cmd,
                                                 'cmd.run_all': mock_asn_cmd}):
             with patch('salt.utils.files.fopen', mock_open()) as m_open:
-                self.assertRaises(CommandExecutionError,
-                                  linux_sysctl.persist,
-                                  'net.ipv4.ip_forward',
+                with pytest.raises(CommandExecutionError):
+                    linux_sysctl.persist('net.ipv4.ip_forward',
                                   1, config=None)
 
     def test_persist_no_conf_success(self):
@@ -143,5 +141,5 @@ class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
                                      'cmd.run_all': mock_asn_cmd}):
                         with patch.dict(systemd.__context__,
                                         {'salt.utils.systemd.booted': True}):
-                            self.assertEqual(linux_sysctl.persist(
-                                             'net.ipv4.ip_forward', 1), 'Updated')
+                            assert linux_sysctl.persist(
+                                             'net.ipv4.ip_forward', 1) == 'Updated'

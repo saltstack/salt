@@ -27,9 +27,9 @@ class TestGemState(TestCase, LoaderModuleMockMixin):
             with patch.dict(gem.__salt__,
                             {'gem.install': gem_install_succeeds}):
                 ret = gem.installed('foo')
-                self.assertEqual(True, ret['result'])
+                assert ret['result'] is True
                 ret = gem.installed('quux')
-                self.assertEqual(True, ret['result'])
+                assert ret['result'] is True
                 gem_install_succeeds.assert_called_once_with(
                     'quux', pre_releases=False, ruby=None, runas=None,
                     version=None, proxy=None, rdoc=False, source=None,
@@ -39,7 +39,7 @@ class TestGemState(TestCase, LoaderModuleMockMixin):
             with patch.dict(gem.__salt__,
                             {'gem.install': gem_install_fails}):
                 ret = gem.installed('quux')
-                self.assertEqual(False, ret['result'])
+                assert ret['result'] is False
                 gem_install_fails.assert_called_once_with(
                     'quux', pre_releases=False, ruby=None, runas=None,
                     version=None, proxy=None, rdoc=False, source=None,
@@ -55,9 +55,9 @@ class TestGemState(TestCase, LoaderModuleMockMixin):
             with patch.dict(gem.__salt__,
                             {'gem.install': gem_install_succeeds}):
                 ret = gem.installed('foo', version='>= 1.0')
-                self.assertEqual(True, ret['result'])
-                self.assertEqual('Installed Gem meets version requirements.',
-                                 ret['comment'])
+                assert ret['result'] is True
+                assert 'Installed Gem meets version requirements.' == \
+                                 ret['comment']
 
     def test_removed(self):
         gems = ['foo', 'bar']
@@ -68,16 +68,16 @@ class TestGemState(TestCase, LoaderModuleMockMixin):
             with patch.dict(gem.__salt__,
                             {'gem.uninstall': gem_uninstall_succeeds}):
                 ret = gem.removed('quux')
-                self.assertEqual(True, ret['result'])
+                assert ret['result'] is True
                 ret = gem.removed('foo')
-                self.assertEqual(True, ret['result'])
+                assert ret['result'] is True
                 gem_uninstall_succeeds.assert_called_once_with(
                     'foo', None, runas=None, gem_bin=None)
 
             with patch.dict(gem.__salt__,
                             {'gem.uninstall': gem_uninstall_fails}):
                 ret = gem.removed('bar')
-                self.assertEqual(False, ret['result'])
+                assert ret['result'] is False
                 gem_uninstall_fails.assert_called_once_with(
                     'bar', None, runas=None, gem_bin=None)
 
@@ -89,14 +89,14 @@ class TestGemState(TestCase, LoaderModuleMockMixin):
         with patch.dict(gem.__salt__, {'gem.sources_list': gem_sources_list}):
             with patch.dict(gem.__salt__, {'gem.sources_add': gem_sources_add_succeeds}):
                 ret = gem.sources_add('http://foo')
-                self.assertEqual(True, ret['result'])
+                assert ret['result'] is True
                 ret = gem.sources_add('http://fui')
-                self.assertEqual(True, ret['result'])
+                assert ret['result'] is True
                 gem_sources_add_succeeds.assert_called_once_with(
                     source_uri='http://fui', ruby=None, runas=None)
             with patch.dict(gem.__salt__, {'gem.sources_add': gem_sources_add_fails}):
                 ret = gem.sources_add('http://fui')
-                self.assertEqual(False, ret['result'])
+                assert ret['result'] is False
                 gem_sources_add_fails.assert_called_once_with(
                     source_uri='http://fui', ruby=None, runas=None)
 
@@ -108,13 +108,13 @@ class TestGemState(TestCase, LoaderModuleMockMixin):
         with patch.dict(gem.__salt__, {'gem.sources_list': gem_sources_list}):
             with patch.dict(gem.__salt__, {'gem.sources_remove': gem_sources_remove_succeeds}):
                 ret = gem.sources_remove('http://fui')
-                self.assertEqual(True, ret['result'])
+                assert ret['result'] is True
                 ret = gem.sources_remove('http://foo')
-                self.assertEqual(True, ret['result'])
+                assert ret['result'] is True
                 gem_sources_remove_succeeds.assert_called_once_with(
                     source_uri='http://foo', ruby=None, runas=None)
             with patch.dict(gem.__salt__, {'gem.sources_remove': gem_sources_remove_fails}):
                 ret = gem.sources_remove('http://bar')
-                self.assertEqual(False, ret['result'])
+                assert ret['result'] is False
                 gem_sources_remove_fails.assert_called_once_with(
                     source_uri='http://bar', ruby=None, runas=None)

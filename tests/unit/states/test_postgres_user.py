@@ -46,13 +46,13 @@ class PostgresUserTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(postgres_user.__opts__, {'test': True}):
                 comt = ('User {0} is set to be created'.format(name))
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(postgres_user.present(name), ret)
+                assert postgres_user.present(name) == ret
 
             with patch.dict(postgres_user.__opts__, {'test': False}):
                 comt = ('The user {0} has been created'.format(name))
                 ret.update({'comment': comt, 'result': True,
                             'changes': {name: 'Present'}})
-                self.assertDictEqual(postgres_user.present(name), ret)
+                assert postgres_user.present(name) == ret
 
     # 'absent' function tests: 1
 
@@ -75,15 +75,15 @@ class PostgresUserTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(postgres_user.__opts__, {'test': True}):
                 comt = ('User {0} is set to be removed'.format(name))
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(postgres_user.absent(name), ret)
+                assert postgres_user.absent(name) == ret
 
             with patch.dict(postgres_user.__opts__, {'test': False}):
                 comt = ('User {0} has been removed'.format(name))
                 ret.update({'comment': comt, 'result': True,
                             'changes': {name: 'Absent'}})
-                self.assertDictEqual(postgres_user.absent(name), ret)
+                assert postgres_user.absent(name) == ret
 
             comt = ('User {0} is not present, so it cannot be removed'
                     .format(name))
             ret.update({'comment': comt, 'result': True, 'changes': {}})
-            self.assertDictEqual(postgres_user.absent(name), ret)
+            assert postgres_user.absent(name) == ret

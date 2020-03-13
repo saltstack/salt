@@ -40,7 +40,7 @@ class XMLTestCase(TestCase, LoaderModuleMockMixin):
             }
 
         with patch.dict(xml.__salt__, {'xml.get_value': MagicMock(return_value=value)}):
-            self.assertDictEqual(xml.value_present(name, xpath, value), state_return)
+            assert xml.value_present(name, xpath, value) == state_return
 
     def test_value_update(self):
         '''
@@ -62,7 +62,7 @@ class XMLTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.dict(xml.__salt__, {'xml.get_value': MagicMock(return_value=old_value)}):
             with patch.dict(xml.__salt__, {'xml.set_value': MagicMock(return_value=True)}):
-                self.assertDictEqual(xml.value_present(name, xpath, value), state_return)
+                assert xml.value_present(name, xpath, value) == state_return
 
     def test_value_update_test(self):
         '''
@@ -83,7 +83,7 @@ class XMLTestCase(TestCase, LoaderModuleMockMixin):
             }
 
         with patch.dict(xml.__salt__, {'xml.get_value': MagicMock(return_value=old_value)}):
-            self.assertDictEqual(xml.value_present(name, xpath, value, test=True), state_return)
+            assert xml.value_present(name, xpath, value, test=True) == state_return
 
     def test_value_update_invalid_xpath(self):
         '''
@@ -102,4 +102,4 @@ class XMLTestCase(TestCase, LoaderModuleMockMixin):
             }
 
         with patch.dict(xml.__salt__, {'xml.get_value': MagicMock(return_value=False)}):
-            self.assertDictEqual(xml.value_present(name, xpath, value, test=True), state_return)
+            assert xml.value_present(name, xpath, value, test=True) == state_return

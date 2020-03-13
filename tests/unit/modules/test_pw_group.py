@@ -32,7 +32,7 @@ class PwGroupTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'retcode': 0})
         with patch.dict(pw_group.__salt__, {'cmd.run_all': mock}):
-            self.assertTrue(pw_group.add('a'))
+            assert pw_group.add('a')
 
     def test_delete(self):
         '''
@@ -40,21 +40,21 @@ class PwGroupTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'retcode': 0})
         with patch.dict(pw_group.__salt__, {'cmd.run_all': mock}):
-            self.assertTrue(pw_group.delete('a'))
+            assert pw_group.delete('a')
 
     @skipIf(salt.utils.platform.is_windows(), 'grp not available on Windows')
     def test_info(self):
         '''
         Tests to return information about a group
         '''
-        self.assertDictEqual(pw_group.info('name'), {})
+        assert pw_group.info('name') == {}
 
         mock = MagicMock(return_value={'gr_name': 'A',
                                        'gr_passwd': 'B',
                                        'gr_gid': 1,
                                        'gr_mem': ['C', 'D']})
         with patch.dict(pw_group.grinfo, mock):
-            self.assertDictEqual(pw_group.info('name'), {})
+            assert pw_group.info('name') == {}
 
     @skipIf(salt.utils.platform.is_windows(), 'grp not available on Windows')
     def test_getent(self):
@@ -65,13 +65,13 @@ class PwGroupTestCase(TestCase, LoaderModuleMockMixin):
                         'gid': 0,
                         'name': 'root'}]
         with patch.dict(pw_group.__context__, {'group.getent': mock_getent}):
-            self.assertDictContainsSubset({'passwd': 'x',
+            assert dict(pw_group.getent()[0], **{'passwd': 'x',
                                            'gid': 0,
-                                           'name': 'root'}, pw_group.getent()[0])
+                                           'name': 'root'}) == pw_group.getent()[0]
 
         mock = MagicMock(return_value='A')
         with patch.object(pw_group, 'info', mock):
-            self.assertEqual(pw_group.getent(True)[0], 'A')
+            assert pw_group.getent(True)[0] == 'A'
 
     def test_chgid(self):
         '''
@@ -79,16 +79,16 @@ class PwGroupTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=1)
         with patch.dict(pw_group.__salt__, {'file.group_to_gid': mock}):
-            self.assertTrue(pw_group.chgid('name', 1))
+            assert pw_group.chgid('name', 1)
 
         mock = MagicMock(side_effect=[1, 0])
         with patch.dict(pw_group.__salt__, {'file.group_to_gid': mock}):
             mock = MagicMock(return_value=None)
             with patch.dict(pw_group.__salt__, {'cmd.run': mock}):
-                self.assertTrue(pw_group.chgid('name', 0))
+                assert pw_group.chgid('name', 0)
 
         mock = MagicMock(side_effect=[1, 1])
         with patch.dict(pw_group.__salt__, {'file.group_to_gid': mock}):
             mock = MagicMock(return_value=None)
             with patch.dict(pw_group.__salt__, {'cmd.run': mock}):
-                self.assertFalse(pw_group.chgid('name', 0))
+                assert not pw_group.chgid('name', 0)

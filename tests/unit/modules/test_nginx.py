@@ -37,7 +37,7 @@ class NginxTestCase(TestCase, LoaderModuleMockMixin):
     def test_nginx_status(self):
         result = nginx.status()
         nginx._urlopen.assert_called_once_with('http://127.0.0.1/status')
-        self.assertEqual(result, {
+        assert result == {
             'active connections': 7,
             'accepted': 46756,
             'handled': 46756,
@@ -45,7 +45,7 @@ class NginxTestCase(TestCase, LoaderModuleMockMixin):
             'reading': 0,
             'writing': 7,
             'waiting': 0,
-        })
+        }
 
     def test_nginx_status_with_arg(self):
         other_path = 'http://localhost/path'

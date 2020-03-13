@@ -34,7 +34,7 @@ class MoosefsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'stdout': 'Salt:salt'})
         with patch.dict(moosefs.__salt__, {'cmd.run_all': mock}):
-            self.assertDictEqual(moosefs.dirinfo('/tmp/salt'), {'Salt': 'salt'})
+            assert moosefs.dirinfo('/tmp/salt') == {'Salt': 'salt'}
 
     # 'fileinfo' function tests: 1
 
@@ -44,7 +44,7 @@ class MoosefsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'stdout': ''})
         with patch.dict(moosefs.__salt__, {'cmd.run_all': mock}):
-            self.assertDictEqual(moosefs.fileinfo('/tmp/salt'), {})
+            assert moosefs.fileinfo('/tmp/salt') == {}
 
     # 'mounts' function tests: 1
 
@@ -54,7 +54,7 @@ class MoosefsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'stdout': ''})
         with patch.dict(moosefs.__salt__, {'cmd.run_all': mock}):
-            self.assertDictEqual(moosefs.mounts(), {})
+            assert moosefs.mounts() == {}
 
     # 'getgoal' function tests: 1
 
@@ -64,4 +64,4 @@ class MoosefsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'stdout': 'Salt: salt'})
         with patch.dict(moosefs.__salt__, {'cmd.run_all': mock}):
-            self.assertDictEqual(moosefs.getgoal('/tmp/salt'), {'goal': 'salt'})
+            assert moosefs.getgoal('/tmp/salt') == {'goal': 'salt'}

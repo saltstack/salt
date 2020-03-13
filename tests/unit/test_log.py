@@ -96,16 +96,12 @@ class TestLog(TestCase):
                       exc_info_on_loglevel=logging.DEBUG)
 
         try:
-            self.assertIn(
-                'Exception raised on purpose caught: ZeroDivisionError',
+            assert 'Exception raised on purpose caught: ZeroDivisionError' in \
                 stream1.getvalue()
-            )
-            self.assertNotIn('Traceback (most recent call last)', stream1.getvalue())
-            self.assertIn(
-                'Exception raised on purpose caught: ZeroDivisionError',
+            assert 'Traceback (most recent call last)' not in stream1.getvalue()
+            assert 'Exception raised on purpose caught: ZeroDivisionError' in \
                 stream2.getvalue()
-            )
-            self.assertIn('Traceback (most recent call last)', stream2.getvalue())
+            assert 'Traceback (most recent call last)' in stream2.getvalue()
         finally:
             log.removeHandler(handler1)
             log.removeHandler(handler2)
@@ -129,16 +125,12 @@ class TestLog(TestCase):
                       exc_info_on_loglevel=logging.INFO)
 
         try:
-            self.assertIn(
-                'Exception raised on purpose caught: ZeroDivisionError',
+            assert 'Exception raised on purpose caught: ZeroDivisionError' in \
                 stream1.getvalue()
-            )
-            self.assertIn('Traceback (most recent call last)', stream1.getvalue())
-            self.assertIn(
-                'Exception raised on purpose caught: ZeroDivisionError',
+            assert 'Traceback (most recent call last)' in stream1.getvalue()
+            assert 'Exception raised on purpose caught: ZeroDivisionError' in \
                 stream2.getvalue()
-            )
-            self.assertIn('Traceback (most recent call last)', stream2.getvalue())
+            assert 'Traceback (most recent call last)' in stream2.getvalue()
         finally:
             log.removeHandler(handler1)
             log.removeHandler(handler2)
@@ -162,16 +154,12 @@ class TestLog(TestCase):
                       exc_info_on_loglevel=logging.DEBUG)
 
         try:
-            self.assertIn(
-                'Exception raised on purpose caught: ZeroDivisionError',
+            assert 'Exception raised on purpose caught: ZeroDivisionError' in \
                 stream1.getvalue()
-            )
-            self.assertNotIn('Traceback (most recent call last)', stream1.getvalue())
-            self.assertIn(
-                'Exception raised on purpose caught: ZeroDivisionError',
+            assert 'Traceback (most recent call last)' not in stream1.getvalue()
+            assert 'Exception raised on purpose caught: ZeroDivisionError' in \
                 stream2.getvalue()
-            )
-            self.assertNotIn('Traceback (most recent call last)', stream2.getvalue())
+            assert 'Traceback (most recent call last)' not in stream2.getvalue()
         finally:
             log.removeHandler(handler1)
             log.removeHandler(handler2)

@@ -170,7 +170,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
             target=target
         )
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(os.path.isdir(os.path.join(target, '.git')))
+        assert os.path.isdir(os.path.join(target, '.git'))
 
     @with_tempdir(create=False)
     def test_latest_with_rev_and_submodules(self, target):
@@ -185,7 +185,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
             submodules=True
         )
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(os.path.isdir(os.path.join(target, '.git')))
+        assert os.path.isdir(os.path.join(target, '.git'))
 
     @with_tempdir(create=False)
     def test_latest_failure(self, target):
@@ -200,7 +200,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
             submodules=True
         )
         self.assertSaltFalseReturn(ret)
-        self.assertFalse(os.path.isdir(os.path.join(target, '.git')))
+        assert not os.path.isdir(os.path.join(target, '.git'))
 
     @with_tempdir()
     def test_latest_empty_dir(self, target):
@@ -215,7 +215,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
             submodules=True
         )
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(os.path.isdir(os.path.join(target, '.git')))
+        assert os.path.isdir(os.path.join(target, '.git'))
 
     @with_tempdir(create=False)
     def test_latest_unless_no_cwd_issue_6800(self, target):
@@ -232,7 +232,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
             submodules=True
         )
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(os.path.isdir(os.path.join(target, '.git')))
+        assert os.path.isdir(os.path.join(target, '.git'))
 
     @with_tempdir(create=False)
     def test_numeric_rev(self, target):
@@ -248,7 +248,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
             timeout=120
         )
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(os.path.isdir(os.path.join(target, '.git')))
+        assert os.path.isdir(os.path.join(target, '.git'))
 
     @with_tempdir(create=False)
     def test_latest_with_local_changes(self, target):
@@ -263,14 +263,14 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
             target=target
         )
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(os.path.isdir(os.path.join(target, '.git')))
+        assert os.path.isdir(os.path.join(target, '.git'))
 
         # Make change to LICENSE file.
         with salt.utils.files.fopen(os.path.join(target, 'LICENSE'), 'a') as fp_:
             fp_.write('Lorem ipsum dolor blah blah blah....\n')
 
         # Make sure that we now have uncommitted changes
-        self.assertTrue(self.run_function('git.diff', [target, 'HEAD']))
+        assert self.run_function('git.diff', [target, 'HEAD'])
 
         # Re-run state with force_reset=False
         ret = self.run_state(
@@ -280,12 +280,10 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
             force_reset=False
         )
         self.assertSaltTrueReturn(ret)
-        self.assertEqual(
-            ret[next(iter(ret))]['comment'],
+        assert ret[next(iter(ret))]['comment'] == \
             ('Repository {0} is up-to-date, but with uncommitted changes. '
              'Set \'force_reset\' to True to purge uncommitted changes.'
              .format(target))
-        )
 
         # Now run the state with force_reset=True
         ret = self.run_state(
@@ -297,7 +295,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
         # Make sure that we no longer have uncommitted changes
-        self.assertFalse(self.run_function('git.diff', [target, 'HEAD']))
+        assert not self.run_function('git.diff', [target, 'HEAD'])
 
     @with_git_mirror(TEST_REPO)
     @uses_git_opts
@@ -376,7 +374,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltFalseReturn(ret)
 
         comment = ret[next(iter(ret))]['comment']
-        self.assertTrue(hint in comment)
+        assert hint in comment
 
     @uses_git_opts
     def test_latest_changed_local_branch_rev_head(self):
@@ -465,10 +463,8 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         )
         # HEAD is not a branch, this should fail
         self.assertSaltFalseReturn(ret)
-        self.assertIn(
-            'must be set to the name of a branch',
+        assert 'must be set to the name of a branch' in \
             ret[next(iter(ret))]['comment']
-        )
 
         ret = self.run_state(
             'git.latest',
@@ -478,7 +474,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
             depth=1
         )
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(os.path.isdir(os.path.join(target, '.git')))
+        assert os.path.isdir(os.path.join(target, '.git'))
 
     @with_git_mirror(TEST_REPO)
     @uses_git_opts
@@ -779,7 +775,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
             bare=True
         )
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(os.path.isfile(os.path.join(name, 'HEAD')))
+        assert os.path.isfile(os.path.join(name, 'HEAD'))
 
     @with_tempdir()
     def test_present_failure(self, name):
@@ -797,7 +793,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
             bare=True
         )
         self.assertSaltFalseReturn(ret)
-        self.assertFalse(os.path.isfile(os.path.join(name, 'HEAD')))
+        assert not os.path.isfile(os.path.join(name, 'HEAD'))
 
     @with_tempdir()
     def test_present_empty_dir(self, name):
@@ -810,7 +806,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
             bare=True
         )
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(os.path.isfile(os.path.join(name, 'HEAD')))
+        assert os.path.isfile(os.path.join(name, 'HEAD'))
 
     @with_tempdir()
     def test_config_set_value_with_space_character(self, name):
@@ -892,12 +888,10 @@ class LocalRepoGitTest(ModuleCase, SaltReturnAssertsMixin):
             target=self.target)
         self.assertSaltFalseReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertIn('there are uncommitted changes', ret['comment'])
-        self.assertIn(
-            'Set \'force_reset\' to True (or \'remote-changes\')',
+        assert 'there are uncommitted changes' in ret['comment']
+        assert 'Set \'force_reset\' to True (or \'remote-changes\')' in \
             ret['comment']
-        )
-        self.assertEqual(ret['changes'], {})
+        assert ret['changes'] == {}
 
         # Now run again with force_reset='remote_changes', the state should
         # succeed and discard the local changes
@@ -908,10 +902,10 @@ class LocalRepoGitTest(ModuleCase, SaltReturnAssertsMixin):
             force_reset='remote-changes')
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertIn('Uncommitted changes were discarded', ret['comment'])
-        self.assertIn('Repository was fast-forwarded', ret['comment'])
-        self.assertNotIn('forced update', ret['changes'])
-        self.assertIn('revision', ret['changes'])
+        assert 'Uncommitted changes were discarded' in ret['comment']
+        assert 'Repository was fast-forwarded' in ret['comment']
+        assert 'forced update' not in ret['changes']
+        assert 'revision' in ret['changes']
 
         # Add new local changes, but don't commit them
         with salt.utils.files.fopen(os.path.join(self.target, 'foo'), 'a') as fp_:
@@ -927,12 +921,10 @@ class LocalRepoGitTest(ModuleCase, SaltReturnAssertsMixin):
             force_reset='remote-changes')
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertIn('up-to-date, but with uncommitted changes', ret['comment'])
-        self.assertIn(
-            'Set \'force_reset\' to True to purge uncommitted changes',
+        assert 'up-to-date, but with uncommitted changes' in ret['comment']
+        assert 'Set \'force_reset\' to True to purge uncommitted changes' in \
             ret['comment']
-        )
-        self.assertEqual(ret['changes'], {})
+        assert ret['changes'] == {}
 
     def test_latest_force_reset_true_fast_forward(self):
         '''
@@ -949,8 +941,8 @@ class LocalRepoGitTest(ModuleCase, SaltReturnAssertsMixin):
             force_reset=True)
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertIn('Uncommitted changes were discarded', ret['comment'])
-        self.assertIn('Repository was fast-forwarded', ret['comment'])
+        assert 'Uncommitted changes were discarded' in ret['comment']
+        assert 'Repository was fast-forwarded' in ret['comment']
 
         # Add new local changes
         with salt.utils.files.fopen(os.path.join(self.target, 'foo'), 'a') as fp_:
@@ -963,12 +955,10 @@ class LocalRepoGitTest(ModuleCase, SaltReturnAssertsMixin):
             target=self.target)
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertIn('up-to-date, but with uncommitted changes', ret['comment'])
-        self.assertIn(
-            'Set \'force_reset\' to True to purge uncommitted changes',
+        assert 'up-to-date, but with uncommitted changes' in ret['comment']
+        assert 'Set \'force_reset\' to True to purge uncommitted changes' in \
             ret['comment']
-        )
-        self.assertEqual(ret['changes'], {})
+        assert ret['changes'] == {}
 
         # Test that local changes are discarded
         ret = self.run_state(
@@ -997,8 +987,8 @@ class LocalRepoGitTest(ModuleCase, SaltReturnAssertsMixin):
             force_reset=True)
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertIn('Uncommitted changes were discarded', ret['comment'])
-        self.assertIn('Repository was fast-forwarded', ret['comment'])
+        assert 'Uncommitted changes were discarded' in ret['comment']
+        assert 'Repository was fast-forwarded' in ret['comment']
 
         # Make and push changes to remote repo
         self._commit(self.admin,
@@ -1019,12 +1009,10 @@ class LocalRepoGitTest(ModuleCase, SaltReturnAssertsMixin):
             target=self.target)
         self.assertSaltFalseReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertIn('this is not a fast-forward merge', ret['comment'])
-        self.assertIn(
-            'Set \'force_reset\' to True to force this update',
+        assert 'this is not a fast-forward merge' in ret['comment']
+        assert 'Set \'force_reset\' to True to force this update' in \
             ret['comment']
-        )
-        self.assertEqual(ret['changes'], {})
+        assert ret['changes'] == {}
 
         # Repeat the state with force_reset=True and confirm that the hard
         # reset was performed
@@ -1035,9 +1023,9 @@ class LocalRepoGitTest(ModuleCase, SaltReturnAssertsMixin):
             force_reset=True)
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertIn('Repository was hard-reset', ret['comment'])
-        self.assertIn('forced update', ret['changes'])
-        self.assertIn('revision', ret['changes'])
+        assert 'Repository was hard-reset' in ret['comment']
+        assert 'forced update' in ret['changes']
+        assert 'revision' in ret['changes']
 
     def test_renamed_default_branch(self):
         '''
@@ -1059,22 +1047,18 @@ class LocalRepoGitTest(ModuleCase, SaltReturnAssertsMixin):
             rev='develop',
         )
         self.assertSaltFalseReturn(ret)
-        self.assertEqual(
-            ret[next(iter(ret))]['comment'],
-            'Remote HEAD refers to a ref that does not exist. '
-            'This can happen when the default branch on the '
-            'remote repository is renamed or deleted. If you '
-            'are unable to fix the remote repository, you can '
-            'work around this by setting the \'branch\' argument '
-            '(which will ensure that the named branch is created '
-            'if it does not already exist).\n\n'
-            'Changes already made: {0} cloned to {1}'
+        assert ret[next(iter(ret))]['comment'] == \
+            'Remote HEAD refers to a ref that does not exist. ' \
+            'This can happen when the default branch on the ' \
+            'remote repository is renamed or deleted. If you ' \
+            'are unable to fix the remote repository, you can ' \
+            'work around this by setting the \'branch\' argument ' \
+            '(which will ensure that the named branch is created ' \
+            'if it does not already exist).\n\n' \
+            'Changes already made: {0} cloned to {1}' \
             .format(self.repo, self.target)
-        )
-        self.assertEqual(
-            ret[next(iter(ret))]['changes'],
+        assert ret[next(iter(ret))]['changes'] == \
             {'new': '{0} => {1}'.format(self.repo, self.target)}
-        )
 
         # Run git.latest state again. This should fail again, with a different
         # error in the comment field, and should not change anything.
@@ -1085,18 +1069,16 @@ class LocalRepoGitTest(ModuleCase, SaltReturnAssertsMixin):
             rev='develop',
         )
         self.assertSaltFalseReturn(ret)
-        self.assertEqual(
-            ret[next(iter(ret))]['comment'],
-            'Cannot set/unset upstream tracking branch, local '
-            'HEAD refers to nonexistent branch. This may have '
-            'been caused by cloning a remote repository for which '
-            'the default branch was renamed or deleted. If you '
-            'are unable to fix the remote repository, you can '
-            'work around this by setting the \'branch\' argument '
-            '(which will ensure that the named branch is created '
+        assert ret[next(iter(ret))]['comment'] == \
+            'Cannot set/unset upstream tracking branch, local ' \
+            'HEAD refers to nonexistent branch. This may have ' \
+            'been caused by cloning a remote repository for which ' \
+            'the default branch was renamed or deleted. If you ' \
+            'are unable to fix the remote repository, you can ' \
+            'work around this by setting the \'branch\' argument ' \
+            '(which will ensure that the named branch is created ' \
             'if it does not already exist).'
-        )
-        self.assertEqual(ret[next(iter(ret))]['changes'], {})
+        assert ret[next(iter(ret))]['changes'] == {}
 
         # Run git.latest state again with a branch manually set. This should
         # checkout a new branch and the state should pass.
@@ -1115,20 +1097,12 @@ class LocalRepoGitTest(ModuleCase, SaltReturnAssertsMixin):
             r'\([0-9a-f]{7}\) as a starting point'
         )
         # Only the revision should be in the changes dict.
-        self.assertEqual(
-            list(ret[next(iter(ret))]['changes'].keys()),
+        assert list(ret[next(iter(ret))]['changes'].keys()) == \
             ['revision']
-        )
         # Since the remote repo was incorrectly set up, the local head should
         # not exist (therefore the old revision should be None).
-        self.assertEqual(
-            ret[next(iter(ret))]['changes']['revision']['old'],
-            None
-        )
+        assert ret[next(iter(ret))]['changes']['revision']['old'] is None
         # Make sure the new revision is a SHA (40 chars, all hex)
-        self.assertTrue(
-            len(ret[next(iter(ret))]['changes']['revision']['new']) == 40)
-        self.assertTrue(
-            all([x in string.hexdigits for x in
+        assert len(ret[next(iter(ret))]['changes']['revision']['new']) == 40
+        assert all([x in string.hexdigits for x in
                  ret[next(iter(ret))]['changes']['revision']['new']])
-        )

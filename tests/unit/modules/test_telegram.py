@@ -87,4 +87,4 @@ class TelegramModuleTest(TestCase, LoaderModuleMockMixin):
         Test the post_message function.
         '''
         message = 'Hello World!'
-        self.assertTrue(telegram.post_message(message))
+        assert telegram.post_message(message)

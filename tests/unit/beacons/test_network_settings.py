@@ -47,15 +47,15 @@ class NetworkSettingsBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         ret = network_settings.validate(config)
 
-        self.assertEqual(ret, (False, 'Configuration for network_settings'
-                                      ' beacon must be a list.'))
+        assert ret == (False, 'Configuration for network_settings'
+                                      ' beacon must be a list.')
 
     def test_empty_config(self):
         config = [{}]
 
         ret = network_settings.validate(config)
 
-        self.assertEqual(ret, (True, 'Valid beacon configuration'))
+        assert ret == (True, 'Valid beacon configuration')
 
     def test_interface(self):
         config = [{'interfaces': {'enp14s0u1u2': {'promiscuity': None}}}]
@@ -68,21 +68,21 @@ class NetworkSettingsBeaconTestCase(TestCase, LoaderModuleMockMixin):
                                                                             'group': '0'}})
 
         ret = network_settings.validate(config)
-        self.assertEqual(ret, (True, 'Valid beacon configuration'))
+        assert ret == (True, 'Valid beacon configuration')
 
         with patch.object(network_settings, 'LAST_STATS', {}), \
             patch.object(network_settings, 'IP', MockIPClass), \
             patch('salt.beacons.network_settings._copy_interfaces_info',
                   MagicMock(side_effect=[LAST_STATS, NEW_STATS])):
             ret = network_settings.beacon(config)
-            self.assertEqual(ret, [])
+            assert ret == []
 
             ret = network_settings.beacon(config)
             _expected = [{'interface': 'enp14s0u1u2',
                           'tag': 'enp14s0u1u2',
                           'change': {'promiscuity': '1'}
                          }]
-            self.assertEqual(ret, _expected)
+            assert ret == _expected
 
     def test_interface_no_change(self):
         config = [{'interfaces': {'enp14s0u1u2': {'promiscuity': None}}}]
@@ -95,17 +95,17 @@ class NetworkSettingsBeaconTestCase(TestCase, LoaderModuleMockMixin):
                                                                             'group': '0'}})
 
         ret = network_settings.validate(config)
-        self.assertEqual(ret, (True, 'Valid beacon configuration'))
+        assert ret == (True, 'Valid beacon configuration')
 
         with patch.object(network_settings, 'LAST_STATS', {}), \
             patch.object(network_settings, 'IP', MockIPClass), \
             patch('salt.beacons.network_settings._copy_interfaces_info',
                   MagicMock(side_effect=[LAST_STATS, NEW_STATS])):
             ret = network_settings.beacon(config)
-            self.assertEqual(ret, [])
+            assert ret == []
 
             ret = network_settings.beacon(config)
-            self.assertEqual(ret, [])
+            assert ret == []
 
     def test_wildcard_interface(self):
         config = [{'interfaces': {'en*': {'promiscuity': None}}}]
@@ -118,21 +118,21 @@ class NetworkSettingsBeaconTestCase(TestCase, LoaderModuleMockMixin):
                                                                             'group': '0'}})
 
         ret = network_settings.validate(config)
-        self.assertEqual(ret, (True, 'Valid beacon configuration'))
+        assert ret == (True, 'Valid beacon configuration')
 
         with patch.object(network_settings, 'LAST_STATS', {}), \
             patch.object(network_settings, 'IP', MockIPClass), \
             patch('salt.beacons.network_settings._copy_interfaces_info',
                   MagicMock(side_effect=[LAST_STATS, NEW_STATS])):
             ret = network_settings.beacon(config)
-            self.assertEqual(ret, [])
+            assert ret == []
 
             ret = network_settings.beacon(config)
             _expected = [{'interface': 'enp14s0u1u2',
                           'tag': 'enp14s0u1u2',
                           'change': {'promiscuity': '1'}
                          }]
-            self.assertEqual(ret, _expected)
+            assert ret == _expected
 
 
 @skipIf(not HAS_PYROUTE2, 'no pyroute2 installed, skipping')
@@ -147,4 +147,4 @@ class Pyroute2TestCase(TestCase):
                 #
                 # ipdb.interfaces[1] is an interface with index 1,
                 # that is the loopback interface.
-                self.assertIn(attr, ipdb.interfaces[1])
+                assert attr in ipdb.interfaces[1]

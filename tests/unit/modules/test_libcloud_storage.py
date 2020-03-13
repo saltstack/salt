@@ -84,7 +84,7 @@ class LibcloudStorageModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_module_creation(self):
         client = libcloud_storage._get_driver('test')
-        self.assertFalse(client is None)
+        assert client is not None
 
     def test_init(self):
         with patch('salt.utils.compat.pack_dunder', return_value=False) as dunder:
@@ -93,24 +93,24 @@ class LibcloudStorageModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_list_containers(self):
         containers = libcloud_storage.list_containers('test')
-        self.assertEqual(len(containers), 1)
-        self.assertEqual(containers[0]['name'], 'test_container')
+        assert len(containers) == 1
+        assert containers[0]['name'] == 'test_container'
 
     def test_list_container_objects(self):
         objects = libcloud_storage.list_container_objects('test_container', 'test')
-        self.assertEqual(len(objects), 1)
-        self.assertEqual(objects[0]['name'], 'test_obj')
-        self.assertEqual(objects[0]['size'], 1234)
+        assert len(objects) == 1
+        assert objects[0]['name'] == 'test_obj'
+        assert objects[0]['size'] == 1234
 
     def test_create_container(self):
         container = libcloud_storage.create_container('new_test_container', 'test')
-        self.assertEqual(container['name'], 'test_container')
+        assert container['name'] == 'test_container'
 
     def test_get_container(self):
         container = libcloud_storage.get_container('test_container', 'test')
-        self.assertEqual(container['name'], 'test_container')
+        assert container['name'] == 'test_container'
 
     def test_get_container_object(self):
         obj = libcloud_storage.get_container_object('test_container', 'test_obj', 'test')
-        self.assertEqual(obj['name'], 'test_obj')
-        self.assertEqual(obj['size'], 1234)
+        assert obj['name'] == 'test_obj'
+        assert obj['size'] == 1234

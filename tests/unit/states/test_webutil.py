@@ -39,7 +39,7 @@ class HtpasswdTestCase(TestCase, LoaderModuleMockMixin):
                         'result': True,
                         'comment': 'User already known',
                         'changes': {}}
-            self.assertEqual(ret, expected)
+            assert ret == expected
 
     def test_new_user_success(self):
         '''
@@ -59,7 +59,7 @@ class HtpasswdTestCase(TestCase, LoaderModuleMockMixin):
                         'result': True,
                         'comment': 'Success',
                         'changes': {'larry': True}}
-            self.assertEqual(ret, expected)
+            assert ret == expected
 
     def test_new_user_error(self):
         '''
@@ -79,4 +79,4 @@ class HtpasswdTestCase(TestCase, LoaderModuleMockMixin):
                         'result': False,
                         'comment': 'Error',
                         'changes': {}}
-            self.assertEqual(ret, expected)
+            assert ret == expected

@@ -68,4 +68,4 @@ class CloudClientTestCase(CloudTest):
         deleted = cloud_client.destroy(names=[self.instance_name])
 
         # Check that the VM was deleted correctly
-        self.assertIn(self.instance_name, deleted)
+        assert self.instance_name in deleted

@@ -21,6 +21,7 @@ import salt.modules.cmdmod
 # Testing
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import MagicMock, patch
+import pytest
 
 
 class DNShelpersCase(TestCase):
@@ -29,10 +30,11 @@ class DNShelpersCase(TestCase):
     '''
     def test_port(self):
         for right in (1, 42, '123', 65535):
-            self.assertEqual(_to_port(right), int(right))
+            assert _to_port(right) == int(right)
 
         for wrong in (0, 65536, 100000, 'not-a-port'):
-            self.assertRaises(ValueError, _to_port, wrong)
+            with pytest.raises(ValueError):
+                _to_port(wrong)
 
     def test_tree(self):
         test_map = (
@@ -52,7 +54,7 @@ class DNShelpersCase(TestCase):
         )
 
         for domain, result in zip(test_map, res_map):
-            self.assertEqual(_tree(domain), result)
+            assert _tree(domain) == result
 
     def test_weight(self):
         recs = [
@@ -72,15 +74,13 @@ class DNShelpersCase(TestCase):
 
         # What are the odds of this tripping over a build
         # 1/(8!^4) builds?
-        self.assertNotEqual(
-            _weighted_order(list(recs[-1])),
-            _weighted_order(list(recs[-1])),
+        assert _weighted_order(list(recs[-1])) != \
+            _weighted_order(list(recs[-1])), \
             _weighted_order(list(recs[-1]))
-        )
 
         for recset in recs:
             rs_res = _weighted_order(list(recset))
-            self.assertTrue(all(rec['name'] in rs_res for rec in recset))
+            assert all(rec['name'] in rs_res for rec in recset)
 
     def test_data2rec(self):
         right = [
@@ -111,7 +111,7 @@ class DNShelpersCase(TestCase):
         ]
 
         for rdata, rschema, res in zip(right, schemas, results):
-            self.assertEqual(_data2rec(rschema, rdata), res)
+            assert _data2rec(rschema, rdata) == res
 
         wrong = [
             'not-an-ip',
@@ -120,7 +120,8 @@ class DNShelpersCase(TestCase):
         ]
 
         for rdata, rschema in zip(wrong, schemas):
-            self.assertRaises(ValueError, _data2rec, rschema, rdata)
+            with pytest.raises(ValueError):
+                _data2rec(rschema, rdata)
 
     def test_data2group(self):
         right = [
@@ -150,7 +151,7 @@ class DNShelpersCase(TestCase):
 
         for rdata, res in zip(right, results):
             group = _data2rec_group(rschema, rdata, 'prio')
-            self.assertEqual(group, res)
+            assert group == res
 
 
 class DNSlookupsCase(TestCase):
@@ -245,17 +246,18 @@ class DNSlookupsCase(TestCase):
         # wrong
         for wrong in wrong:
             with self._mock_cmd_ret(wrong):
-                self.assertEqual(lookup_cb('mockq', 'A'), False)
+                assert lookup_cb('mockq', 'A') is False
 
         # empty response
         if empty is None:
             empty = {}
         with self._mock_cmd_ret(empty):
-            self.assertEqual(lookup_cb('mockq', 'AAAA'), [])
+            assert lookup_cb('mockq', 'AAAA') == []
 
         # wrong types
         with self._mock_cmd_ret(wrong_type):
-            self.assertRaises(ValueError, lookup_cb, 'mockq', 'WRONG')
+            with pytest.raises(ValueError):
+                lookup_cb('mockq', 'WRONG')
 
         # Regular outputs
         for rec_t, tests in right.items():
@@ -272,10 +274,7 @@ class DNSlookupsCase(TestCase):
                         # So we need to workaround that here as well
                         lookup_res = [res[:4] + res[4:].replace(' ', '').lower() for res in lookup_res]
 
-                    self.assertEqual(
-                        lookup_res, test_res,
-                        # msg='Error parsing {0} returns'.format(rec_t)
-                    )
+                    assert lookup_res == test_res
 
         if not secure:
             return
@@ -284,18 +283,14 @@ class DNSlookupsCase(TestCase):
         for rec_t, tests in right.items():
             with self._mock_cmd_ret([dict([('stdout', dres)]) for dres in tests]):
                 for _ in self.RESULTS[rec_t]:
-                    self.assertEqual(
-                        lookup_cb('mocksrvr.example.com', rec_t, secure=True), False,
-                        msg='Insecure {0} returns should not be returned'.format(rec_t)
-                    )
+                    assert lookup_cb('mocksrvr.example.com', rec_t, secure=True) is False, \
+                        'Insecure {0} returns should not be returned'.format(rec_t)
 
         for rec_t, tests in secure.items():
             with self._mock_cmd_ret([dict([('stdout', dres)]) for dres in tests]):
                 for test_res in self.RESULTS[rec_t]:
-                    self.assertEqual(
-                        lookup_cb('mocksrvr.example.com', rec_t, secure=True), test_res,
-                        msg='Error parsing DNSSEC\'d {0} returns'.format(rec_t)
-                    )
+                    assert lookup_cb('mocksrvr.example.com', rec_t, secure=True) == test_res, \
+                        'Error parsing DNSSEC\'d {0} returns'.format(rec_t)
 
     @skipIf(not salt.utils.dns.HAS_NSLOOKUP, 'nslookup is not available')
     def test_lookup_with_servers(self):
@@ -334,15 +329,13 @@ class DNSlookupsCase(TestCase):
                         rec = 'mocksrvr.example.com'
                     else:
                         rec = 'example.com'
-                    self.assertEqual(
-                        lookup(rec, rec_t, method='nslookup', servers='8.8.8.8'), test_res,
-                    )
+                    assert lookup(rec, rec_t, method='nslookup', servers='8.8.8.8') == test_res
 
     @skipIf(not salt.utils.dns.HAS_DIG, 'dig is not available')
     def test_dig_options(self):
         cmd = 'dig {0} -v'.format(salt.utils.dns.DIG_OPTIONS)
         cmd = salt.modules.cmdmod.retcode(cmd, python_shell=False, output_loglevel='quiet')
-        self.assertEqual(cmd, 0)
+        assert cmd == 0
 
     def test_dig(self):
         wrong_type = {'retcode': 0, 'stderr':  ';; Warning, ignoring invalid type ABC'}
@@ -489,12 +482,13 @@ class DNSlookupsCase(TestCase):
 
     def test_gai(self):
         # wrong type
-        self.assertRaises(ValueError, _lookup_gai, 'mockq', 'WRONG')
+        with pytest.raises(ValueError):
+            _lookup_gai('mockq', 'WRONG')
 
         # wrong
         with patch.object(socket, 'getaddrinfo', MagicMock(side_effect=socket.gaierror)):
             for rec_t in ('A', 'AAAA'):
-                self.assertEqual(False, _lookup_gai('mockq', rec_t))
+                assert _lookup_gai('mockq', rec_t) is False
 
         # example returns from getaddrinfo
         right = {
@@ -515,10 +509,8 @@ class DNSlookupsCase(TestCase):
         for rec_t, tests in right.items():
             with patch.object(socket, 'getaddrinfo', MagicMock(side_effect=tests)):
                 for test_res in self.RESULTS[rec_t]:
-                    self.assertEqual(
-                        _lookup_gai('mockq', rec_t), test_res,
-                        msg='Error parsing {0} returns'.format(rec_t)
-                    )
+                    assert _lookup_gai('mockq', rec_t) == test_res, \
+                        'Error parsing {0} returns'.format(rec_t)
 
     def test_host(self):
         wrong_type = {'retcode': 9, 'stderr': 'host: invalid type: WRONG'}

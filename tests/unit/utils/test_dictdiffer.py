@@ -36,60 +36,60 @@ class RecursiveDictDifferTestCase(TestCase):
                 continue
 
     def test_added(self):
-        self.assertEqual(self.recursive_diff.added(), ['a.g', 'h', 'i'])
+        assert self.recursive_diff.added() == ['a.g', 'h', 'i']
 
     def test_removed(self):
-        self.assertEqual(self.recursive_diff.removed(), ['a.f'])
+        assert self.recursive_diff.removed() == ['a.f']
 
     def test_changed_with_ignore_unset_values(self):
         self.recursive_diff.ignore_unset_values = True
-        self.assertEqual(self.recursive_diff.changed(),
-                         ['a.c', 'a.e'])
+        assert self.recursive_diff.changed() == \
+                         ['a.c', 'a.e']
 
     def test_changed_without_ignore_unset_values(self):
         self.recursive_diff.ignore_unset_values = False
-        self.assertEqual(self.recursive_diff.changed(),
-                         ['a.c', 'a.e', 'a.f', 'a.g', 'h', 'i'])
+        assert self.recursive_diff.changed() == \
+                         ['a.c', 'a.e', 'a.f', 'a.g', 'h', 'i']
 
     def test_unchanged(self):
-        self.assertEqual(self.recursive_diff.unchanged(),
-                         ['a.b', 'j'])
+        assert self.recursive_diff.unchanged() == \
+                         ['a.b', 'j']
 
     def test_diffs(self):
-        self.assertDictEqual(self.recursive_diff.diffs,
+        assert self.recursive_diff.diffs == \
                              {'a': {'c': {'old': 2, 'new': 4},
                                     'e': {'old': 'old_value',
                                           'new': 'new_value'},
                                     'f': {'old': 'old_key', 'new': NONE},
                                     'g': {'old': NONE, 'new': 'new_key'}},
                               'h': {'old': NONE, 'new': 'new_key'},
-                              'i': {'old': NONE, 'new': None}})
-        self.assertDictEqual(self.recursive_diff_ign.diffs,
+                              'i': {'old': NONE, 'new': None}}
+        assert self.recursive_diff_ign.diffs == \
                              {'a': {'c': {'old': 2, 'new': 4},
                                     'e': {'old': 'old_value',
                                           'new': 'new_value'},
                                     'g': {'old': NONE, 'new': 'new_key'}},
                               'h': {'old': NONE, 'new': 'new_key'},
-                              'i': {'old': NONE, 'new': None}})
+                              'i': {'old': NONE, 'new': None}}
 
     def test_new_values(self):
-        self.assertDictEqual(self.recursive_diff.new_values,
+        assert self.recursive_diff.new_values == \
                              {'a': {'c': 4, 'e': 'new_value',
                                     'f': NONE, 'g': 'new_key'},
-                              'h': 'new_key', 'i': None})
+                              'h': 'new_key', 'i': None}
 
     def test_old_values(self):
-        self.assertDictEqual(self.recursive_diff.old_values,
+        assert self.recursive_diff.old_values == \
                              {'a': {'c': 2, 'e': 'old_value',
                                     'f': 'old_key', 'g': NONE},
-                              'h': NONE, 'i': NONE})
+                              'h': NONE, 'i': NONE}
 
     def test_changes_str(self):
-        self.assertEqual(self.recursive_diff.changes_str,
-                         'a:\n'
-                         '  c from 2 to 4\n'
-                         '  e from \'old_value\' to \'new_value\'\n'
-                         '  f from \'old_key\' to nothing\n'
-                         '  g from nothing to \'new_key\'\n'
-                         'h from nothing to \'new_key\'\n'
-                         'i from nothing to None')
+        assert self.recursive_diff.changes_str == \
+                         'a:\n' \
+                         '  c from 2 to 4\n' \
+                         '  e from \'old_value\' to \'new_value\'\n' \
+                         '  f from \'old_key\' to nothing\n' \
+                         '  g from nothing to \'new_key\'\n' \
+                         'h from nothing to \'new_key\'\n' \
+                         'i from nothing to None'

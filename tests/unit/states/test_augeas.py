@@ -65,7 +65,7 @@ class AugeasTestCase(TestCase, LoaderModuleMockMixin):
         comt = ('\'changes\' must be specified as a list')
         self.ret.update({'comment': comt})
 
-        self.assertDictEqual(augeas.change(self.name), self.ret)
+        assert augeas.change(self.name) == self.ret
 
     def test_change_non_list_load_path(self):
         '''
@@ -74,8 +74,8 @@ class AugeasTestCase(TestCase, LoaderModuleMockMixin):
         comt = ('\'load_path\' must be specified as a list')
         self.ret.update({'comment': comt})
 
-        self.assertDictEqual(augeas.change(
-            self.name, self.context, self.changes, load_path='x'), self.ret)
+        assert augeas.change(
+            self.name, self.context, self.changes, load_path='x') == self.ret
 
     def test_change_in_test_mode(self):
         '''
@@ -87,9 +87,8 @@ class AugeasTestCase(TestCase, LoaderModuleMockMixin):
         self.ret.update({'comment': comt, 'result': True})
 
         with patch.dict(augeas.__opts__, {'test': True}):
-            self.assertDictEqual(
-                augeas.change(self.name, self.context, self.changes),
-                self.ret)
+            assert augeas.change(self.name, self.context, self.changes) == \
+                self.ret
 
     def test_change_no_context_without_full_path(self):
         '''
@@ -104,9 +103,8 @@ class AugeasTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(augeas.__opts__, {'test': False}):
             mock_dict_ = {'augeas.method_map': self.mock_method_map}
             with patch.dict(augeas.__salt__, mock_dict_):
-                self.assertDictEqual(
-                    augeas.change(self.name, changes=self.changes),
-                    self.ret)
+                assert augeas.change(self.name, changes=self.changes) == \
+                    self.ret
 
     def test_change_no_context_with_full_path_fail(self):
         '''
@@ -120,9 +118,8 @@ class AugeasTestCase(TestCase, LoaderModuleMockMixin):
             mock_dict_ = {'augeas.execute': mock_execute,
                         'augeas.method_map': self.mock_method_map}
             with patch.dict(augeas.__salt__, mock_dict_):
-                self.assertDictEqual(
-                    augeas.change(self.name, changes=self.fp_changes),
-                    self.ret)
+                assert augeas.change(self.name, changes=self.fp_changes) == \
+                    self.ret
 
     def test_change_no_context_with_full_path_pass(self):
         '''
@@ -143,9 +140,9 @@ class AugeasTestCase(TestCase, LoaderModuleMockMixin):
                     with patch('salt.utils.files.fopen', MagicMock(mock_open)):
                         mock_diff = MagicMock(return_value=['+ zabbix-agent'])
                         with patch('difflib.unified_diff', mock_diff):
-                            self.assertDictEqual(augeas.change(self.name,
-                                                 changes=self.fp_changes),
-                                                 self.ret)
+                            assert augeas.change(self.name,
+                                                 changes=self.fp_changes) == \
+                                                 self.ret
 
     def test_change_no_context_without_full_path_invalid_cmd(self):
         '''
@@ -160,9 +157,9 @@ class AugeasTestCase(TestCase, LoaderModuleMockMixin):
                         'augeas.method_map': self.mock_method_map}
             with patch.dict(augeas.__salt__, mock_dict_):
                 changes = ['det service-name[last()] zabbix-agent']
-                self.assertDictEqual(augeas.change(self.name,
-                                    changes=changes),
-                                    self.ret)
+                assert augeas.change(self.name,
+                                    changes=changes) == \
+                                    self.ret
 
     def test_change_no_context_without_full_path_invalid_change(self):
         '''
@@ -179,9 +176,9 @@ class AugeasTestCase(TestCase, LoaderModuleMockMixin):
             mock_dict_ = {'augeas.execute': mock_execute,
                         'augeas.method_map': self.mock_method_map}
             with patch.dict(augeas.__salt__, mock_dict_):
-                self.assertDictEqual(augeas.change(self.name,
-                                    changes=changes),
-                                    self.ret)
+                assert augeas.change(self.name,
+                                    changes=changes) == \
+                                    self.ret
 
     def test_change_no_context_with_full_path_multiple_files(self):
         '''
@@ -203,9 +200,9 @@ class AugeasTestCase(TestCase, LoaderModuleMockMixin):
             mock_dict_ = {'augeas.execute': mock_execute,
                         'augeas.method_map': self.mock_method_map}
             with patch.dict(augeas.__salt__, mock_dict_):
-                self.assertDictEqual(augeas.change(self.name,
-                                    changes=changes),
-                                    self.ret)
+                assert augeas.change(self.name,
+                                    changes=changes) == \
+                                    self.ret
 
     def test_change_with_context_without_full_path_fail(self):
         '''
@@ -220,10 +217,10 @@ class AugeasTestCase(TestCase, LoaderModuleMockMixin):
                         'augeas.method_map': self.mock_method_map}
             with patch.dict(augeas.__salt__, mock_dict_):
                 with patch('salt.utils.files.fopen', MagicMock(mock_open)):
-                    self.assertDictEqual(augeas.change(self.name,
+                    assert augeas.change(self.name,
                                         context=self.context,
-                                        changes=self.changes),
-                                        self.ret)
+                                        changes=self.changes) == \
+                                        self.ret
 
     def test_change_with_context_without_old_file(self):
         '''
@@ -240,7 +237,7 @@ class AugeasTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(augeas.__salt__, mock_dict_):
                 mock_isfile = MagicMock(return_value=False)
                 with patch.object(os.path, 'isfile', mock_isfile):
-                    self.assertDictEqual(augeas.change(self.name,
+                    assert augeas.change(self.name,
                                         context=self.context,
-                                        changes=self.changes),
-                                        self.ret)
+                                        changes=self.changes) == \
+                                        self.ret

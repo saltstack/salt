@@ -67,7 +67,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                     'data': {}}
 
         ret = disk.status(mock_fs)
-        self.assertEqual(ret, mock_ret)
+        assert ret == mock_ret
 
     def test_status_type_error(self):
         '''
@@ -82,11 +82,11 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
 
         mock_ret['comment'] = 'maximum must be an integer '
         ret = disk.status(mock_fs, maximum=r'e^{i\pi}')
-        self.assertEqual(ret, mock_ret)
+        assert ret == mock_ret
 
         mock_ret['comment'] = 'minimum must be an integer '
         ret = disk.status(mock_fs, minimum=r'\cos\pi + i\sin\pi')
-        self.assertEqual(ret, mock_ret)
+        assert ret == mock_ret
 
     def test_status_range_error(self):
         '''
@@ -101,11 +101,11 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
 
         mock_ret['comment'] = 'maximum must be in the range [0, 100] '
         ret = disk.status(mock_fs, maximum='-1')
-        self.assertEqual(ret, mock_ret)
+        assert ret == mock_ret
 
         mock_ret['comment'] = 'minimum must be in the range [0, 100] '
         ret = disk.status(mock_fs, minimum='101')
-        self.assertEqual(ret, mock_ret)
+        assert ret == mock_ret
 
     def test_status_inverted_range(self):
         '''
@@ -119,7 +119,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                     'data': {}}
 
         ret = disk.status(mock_fs, maximum='0', minimum='1')
-        self.assertEqual(ret, mock_ret)
+        assert ret == mock_ret
 
     def test_status_threshold(self):
         '''
@@ -140,14 +140,14 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                                    mock_used
                                )
         ret = disk.status(mock_fs, minimum=mock_min)
-        self.assertEqual(ret, mock_ret)
+        assert ret == mock_ret
 
         mock_ret['comment'] = 'Disk used space is above maximum of {0} % at {1} %'.format(
                                    mock_max,
                                    mock_used
                                )
         ret = disk.status(mock_fs, maximum=mock_max)
-        self.assertEqual(ret, mock_ret)
+        assert ret == mock_ret
 
     def test_status_strip(self):
         '''
@@ -161,22 +161,22 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                     'data': self.mock_data[mock_fs]}
 
         ret = disk.status(mock_fs, minimum='0%')
-        self.assertEqual(ret, mock_ret)
+        assert ret == mock_ret
 
         ret = disk.status(mock_fs, minimum='0 %')
-        self.assertEqual(ret, mock_ret)
+        assert ret == mock_ret
 
         ret = disk.status(mock_fs, maximum='100%')
-        self.assertEqual(ret, mock_ret)
+        assert ret == mock_ret
 
         ret = disk.status(mock_fs, minimum='1024K', absolute=True)
-        self.assertEqual(ret, mock_ret)
+        assert ret == mock_ret
 
         ret = disk.status(mock_fs, minimum='1024KB', absolute=True)
-        self.assertEqual(ret, mock_ret)
+        assert ret == mock_ret
 
         ret = disk.status(mock_fs, maximum='4194304 KB', absolute=True)
-        self.assertEqual(ret, mock_ret)
+        assert ret == mock_ret
 
     def test_status(self):
         '''
@@ -192,10 +192,10 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                     'data': self.mock_data[mock_fs]}
 
         ret = disk.status(mock_fs, minimum=mock_min)
-        self.assertEqual(ret, mock_ret)
+        assert ret == mock_ret
 
         ret = disk.status(mock_fs, maximum=mock_max)
-        self.assertEqual(ret, mock_ret)
+        assert ret == mock_ret
 
         # Reset mock because it's an iterator to run the tests with the
         # absolute flag
@@ -214,23 +214,23 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(path, 'isdir', mock):
                 comt = 'Disk mount / not present. Directory / does not exist or is not a directory'
                 ret.update({'comment': comt})
-                self.assertDictEqual(disk.status(mock_fs), ret)
+                assert disk.status(mock_fs) == ret
 
                 comt = 'minimum must be less than maximum '
                 ret.update({'comment': comt})
-                self.assertDictEqual(disk.status(mock_fs, '10', '20', absolute=True), ret)
+                assert disk.status(mock_fs, '10', '20', absolute=True) == ret
 
                 comt = 'Disk used space is below minimum of 10 KB at 8 KB'
                 ret.update({'comment': comt, 'data': data_1})
-                self.assertDictEqual(disk.status(mock_fs, '20', '10', absolute=True), ret)
+                assert disk.status(mock_fs, '20', '10', absolute=True) == ret
 
                 comt = 'Disk used space is above maximum of 20 KB at 22 KB'
                 ret.update({'comment': comt, 'data': data_2})
-                self.assertDictEqual(disk.status(mock_fs, '20', '10', absolute=True), ret)
+                assert disk.status(mock_fs, '20', '10', absolute=True) == ret
 
                 comt = 'Disk used space in acceptable range'
                 ret.update({'comment': comt, 'result': True, 'data': data_3})
-                self.assertDictEqual(disk.status(mock_fs, '20', '10', absolute=True), ret)
+                assert disk.status(mock_fs, '20', '10', absolute=True) == ret
 
     def test_path_missing(self):
         mock_fs = '/bar'
@@ -242,7 +242,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                     'data': {}}
         mock = MagicMock(return_value=False)
         with patch.object(path, 'isdir', mock):
-            self.assertDictEqual(disk.status(mock_fs, '58', '55', absolute=True, free=False), mock_ret)
+            assert disk.status(mock_fs, '58', '55', absolute=True, free=False) == mock_ret
 
     # acceptable range
     def test_path_used_absolute_acceptable(self):
@@ -254,7 +254,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                     'data': self.mock_data_path}
         mock = MagicMock(return_value=True)
         with patch.object(path, 'isdir', mock):
-            self.assertDictEqual(disk.status(mock_fs, '58', '55', absolute=True, free=False), mock_ret)
+            assert disk.status(mock_fs, '58', '55', absolute=True, free=False) == mock_ret
 
     def test_path_used_relative_acceptable(self):
         mock_fs = '/foo'
@@ -265,7 +265,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                     'data': self.mock_data_path}
         mock = MagicMock(return_value=True)
         with patch.object(path, 'isdir', mock):
-            self.assertDictEqual(disk.status(mock_fs, '100%', '57%', absolute=False, free=False), mock_ret)
+            assert disk.status(mock_fs, '100%', '57%', absolute=False, free=False) == mock_ret
 
     def test_path_free_absolute_acceptable(self):
         mock_fs = '/foo'
@@ -276,7 +276,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                     'data': self.mock_data_path}
         mock = MagicMock(return_value=True)
         with patch.object(path, 'isdir', mock):
-            self.assertDictEqual(disk.status(mock_fs, '100', '42', absolute=True, free=True), mock_ret)
+            assert disk.status(mock_fs, '100', '42', absolute=True, free=True) == mock_ret
 
     def test_path_free_relative_acceptable(self):
         mock_fs = '/foo'
@@ -287,7 +287,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                     'data': self.mock_data_path}
         mock = MagicMock(return_value=True)
         with patch.object(path, 'isdir', mock):
-            self.assertDictEqual(disk.status(mock_fs, '42%', '41%', absolute=False, free=True), mock_ret)
+            assert disk.status(mock_fs, '42%', '41%', absolute=False, free=True) == mock_ret
 
     def test_mount_used_absolute_acceptable(self):
         mock_fs = '/'
@@ -296,7 +296,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                     'comment': 'Disk used space in acceptable range',
                     'changes': {},
                     'data': self.mock_data[mock_fs]}
-        self.assertDictEqual(disk.status(mock_fs, '2172881', '2172880', absolute=True, free=False), mock_ret)
+        assert disk.status(mock_fs, '2172881', '2172880', absolute=True, free=False) == mock_ret
 
     def test_mount_used_relative_acceptable(self):
         mock_fs = '/'
@@ -306,7 +306,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                     'changes': {},
                     'data': self.mock_data[mock_fs]}
 
-        self.assertDictEqual(disk.status(mock_fs, '7%', '6%', absolute=False, free=False), mock_ret)
+        assert disk.status(mock_fs, '7%', '6%', absolute=False, free=False) == mock_ret
 
     def test_mount_free_absolute_acceptable(self):
         mock_fs = '/'
@@ -315,7 +315,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                     'comment': 'Disk used space in acceptable range',
                     'changes': {},
                     'data': self.mock_data[mock_fs]}
-        self.assertDictEqual(disk.status(mock_fs, '37087976', '37087975', absolute=True, free=True), mock_ret)
+        assert disk.status(mock_fs, '37087976', '37087975', absolute=True, free=True) == mock_ret
 
     def test_mount_free_relative_acceptable(self):
         mock_fs = '/'
@@ -325,7 +325,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                     'changes': {},
                     'data': self.mock_data[mock_fs]}
 
-        self.assertDictEqual(disk.status(mock_fs, '100%', '94%', absolute=False, free=True), mock_ret)
+        assert disk.status(mock_fs, '100%', '94%', absolute=False, free=True) == mock_ret
 
     # below minimum
     def test_path_used_absolute_below(self):
@@ -337,7 +337,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                     'data': self.mock_data_path}
         mock = MagicMock(return_value=True)
         with patch.object(path, 'isdir', mock):
-            self.assertDictEqual(disk.status(mock_fs, '60', '59', absolute=True, free=False), mock_ret)
+            assert disk.status(mock_fs, '60', '59', absolute=True, free=False) == mock_ret
 
     def test_path_used_relative_below(self):
         mock_fs = '/foo'
@@ -348,7 +348,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                     'data': self.mock_data_path}
         mock = MagicMock(return_value=True)
         with patch.object(path, 'isdir', mock):
-            self.assertDictEqual(disk.status(mock_fs, '60%', '59%', absolute=False, free=False), mock_ret)
+            assert disk.status(mock_fs, '60%', '59%', absolute=False, free=False) == mock_ret
 
     def test_path_free_absolute_below(self):
         mock_fs = '/foo'
@@ -359,7 +359,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                     'data': self.mock_data_path}
         mock = MagicMock(return_value=True)
         with patch.object(path, 'isdir', mock):
-            self.assertDictEqual(disk.status(mock_fs, '100', '43', absolute=True, free=True), mock_ret)
+            assert disk.status(mock_fs, '100', '43', absolute=True, free=True) == mock_ret
 
     def test_path_free_relative_below(self):
         mock_fs = '/foo'
@@ -370,7 +370,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                     'data': self.mock_data_path}
         mock = MagicMock(return_value=True)
         with patch.object(path, 'isdir', mock):
-            self.assertDictEqual(disk.status(mock_fs, '100%', '43%', absolute=False, free=True), mock_ret)
+            assert disk.status(mock_fs, '100%', '43%', absolute=False, free=True) == mock_ret
 
     def test_mount_used_absolute_below(self):
         mock_fs = '/'
@@ -379,7 +379,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                     'comment': 'Disk used space is below minimum of 2172881 KB at 2172880 KB',
                     'changes': {},
                     'data': self.mock_data[mock_fs]}
-        self.assertDictEqual(disk.status(mock_fs, '2172882', '2172881', absolute=True, free=False), mock_ret)
+        assert disk.status(mock_fs, '2172882', '2172881', absolute=True, free=False) == mock_ret
 
     def test_mount_used_relative_below(self):
         mock_fs = '/'
@@ -389,7 +389,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                     'changes': {},
                     'data': self.mock_data[mock_fs]}
 
-        self.assertDictEqual(disk.status(mock_fs, '8%', '7%', absolute=False, free=False), mock_ret)
+        assert disk.status(mock_fs, '8%', '7%', absolute=False, free=False) == mock_ret
 
     def test_mount_free_absolute_below(self):
         mock_fs = '/'
@@ -398,7 +398,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                     'comment': 'Disk available space is below minimum of 37087977 KB at 37087976 KB',
                     'changes': {},
                     'data': self.mock_data[mock_fs]}
-        self.assertDictEqual(disk.status(mock_fs, '37087978', '37087977', absolute=True, free=True), mock_ret)
+        assert disk.status(mock_fs, '37087978', '37087977', absolute=True, free=True) == mock_ret
 
     def test_mount_free_relative_below(self):
         mock_fs = '/'
@@ -408,7 +408,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                     'changes': {},
                     'data': self.mock_data[mock_fs]}
 
-        self.assertDictEqual(disk.status(mock_fs, '100%', '95%', absolute=False, free=True), mock_ret)
+        assert disk.status(mock_fs, '100%', '95%', absolute=False, free=True) == mock_ret
 
     # above maximum
     def test_path_used_absolute_above(self):
@@ -420,7 +420,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                     'data': self.mock_data_path}
         mock = MagicMock(return_value=True)
         with patch.object(path, 'isdir', mock):
-            self.assertDictEqual(disk.status(mock_fs, '57', '56', absolute=True, free=False), mock_ret)
+            assert disk.status(mock_fs, '57', '56', absolute=True, free=False) == mock_ret
 
     def test_path_used_relative_above(self):
         mock_fs = '/foo'
@@ -431,7 +431,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                     'data': self.mock_data_path}
         mock = MagicMock(return_value=True)
         with patch.object(path, 'isdir', mock):
-            self.assertDictEqual(disk.status(mock_fs, '57%', '56%', absolute=False, free=False), mock_ret)
+            assert disk.status(mock_fs, '57%', '56%', absolute=False, free=False) == mock_ret
 
     def test_path_free_absolute_above(self):
         mock_fs = '/foo'
@@ -442,7 +442,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                     'data': self.mock_data_path}
         mock = MagicMock(return_value=True)
         with patch.object(path, 'isdir', mock):
-            self.assertDictEqual(disk.status(mock_fs, '41', '40', absolute=True, free=True), mock_ret)
+            assert disk.status(mock_fs, '41', '40', absolute=True, free=True) == mock_ret
 
     def test_path_free_relative_above(self):
         mock_fs = '/foo'
@@ -453,7 +453,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                     'data': self.mock_data_path}
         mock = MagicMock(return_value=True)
         with patch.object(path, 'isdir', mock):
-            self.assertDictEqual(disk.status(mock_fs, '41%', '40%', absolute=False, free=True), mock_ret)
+            assert disk.status(mock_fs, '41%', '40%', absolute=False, free=True) == mock_ret
 
     def test_mount_used_absolute_above(self):
         mock_fs = '/'
@@ -462,7 +462,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                     'comment': 'Disk used space is above maximum of 2172879 KB at 2172880 KB',
                     'changes': {},
                     'data': self.mock_data[mock_fs]}
-        self.assertDictEqual(disk.status(mock_fs, '2172879', '2172878', absolute=True, free=False), mock_ret)
+        assert disk.status(mock_fs, '2172879', '2172878', absolute=True, free=False) == mock_ret
 
     def test_mount_used_relative_above(self):
         mock_fs = '/'
@@ -472,7 +472,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                     'changes': {},
                     'data': self.mock_data[mock_fs]}
 
-        self.assertDictEqual(disk.status(mock_fs, '5%', '4%', absolute=False, free=False), mock_ret)
+        assert disk.status(mock_fs, '5%', '4%', absolute=False, free=False) == mock_ret
 
     def test_mount_free_absolute_above(self):
         mock_fs = '/'
@@ -481,7 +481,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                     'comment': 'Disk available space is above maximum of 37087975 KB at 37087976 KB',
                     'changes': {},
                     'data': self.mock_data[mock_fs]}
-        self.assertDictEqual(disk.status(mock_fs, '37087975', '37087974', absolute=True, free=True), mock_ret)
+        assert disk.status(mock_fs, '37087975', '37087974', absolute=True, free=True) == mock_ret
 
     def test_mount_free_relative_above(self):
         mock_fs = '/'
@@ -491,4 +491,4 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                     'changes': {},
                     'data': self.mock_data[mock_fs]}
 
-        self.assertDictEqual(disk.status(mock_fs, '93%', '92%', absolute=False, free=True), mock_ret)
+        assert disk.status(mock_fs, '93%', '92%', absolute=False, free=True) == mock_ret

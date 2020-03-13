@@ -22,6 +22,4 @@ class MasterTopsTest(ShellCase):
         resp = self.run_call(
             'state.show_top'
         )
-        self.assertTrue(
-            any('master_tops_test' in _x for _x in resp)
-        )
+        assert any('master_tops_test' in _x for _x in resp)

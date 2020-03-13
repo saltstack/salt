@@ -19,6 +19,7 @@ from tests.support.mixins import ShellCaseCommonTestsMixin
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.yaml
+import re
 
 
 USERA = 'saltdev'
@@ -42,10 +43,10 @@ class RunTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin)
             add_user = self.run_call('user.add {0} createhome=False'.format(USERA))
             add_pwd = self.run_call('shadow.set_password {0} \'{1}\''.format(USERA,
                                     USERA_PWD if salt.utils.platform.is_darwin() else HASHED_USERA_PWD))
-            self.assertTrue(add_user)
-            self.assertTrue(add_pwd)
+            assert add_user
+            assert add_pwd
             user_list = self.run_call('user.list_users')
-            self.assertIn(USERA, str(user_list))
+            assert USERA in str(user_list)
         except AssertionError:
             self.run_call('user.delete {0} remove=True'.format(USERA))
             self.skipTest(
@@ -67,13 +68,13 @@ class RunTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin)
         '''
         data = self.run_run('-d')
         data = '\n'.join(data)
-        self.assertIn('jobs.active:', data)
-        self.assertIn('jobs.list_jobs:', data)
-        self.assertIn('jobs.lookup_jid:', data)
-        self.assertIn('manage.down:', data)
-        self.assertIn('manage.up:', data)
-        self.assertIn('network.wol:', data)
-        self.assertIn('network.wollist:', data)
+        assert 'jobs.active:' in data
+        assert 'jobs.list_jobs:' in data
+        assert 'jobs.lookup_jid:' in data
+        assert 'manage.down:' in data
+        assert 'manage.up:' in data
+        assert 'network.wol:' in data
+        assert 'network.wollist:' in data
 
     def test_notin_docs(self):
         '''
@@ -81,14 +82,14 @@ class RunTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin)
         '''
         data = self.run_run('-d')
         data = '\n'.join(data)
-        self.assertNotIn('jobs.SaltException:', data)
+        assert 'jobs.SaltException:' not in data
 
     def test_salt_documentation_too_many_arguments(self):
         '''
         Test to see if passing additional arguments shows an error
         '''
         data = self.run_run('-d virt.list foo', catch_stderr=True)
-        self.assertIn('You can only get documentation for one method at one time', '\n'.join(data[1]))
+        assert 'You can only get documentation for one method at one time' in '\n'.join(data[1])
 
     def test_exit_status_unknown_argument(self):
         '''
@@ -146,7 +147,7 @@ class RunTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin)
             run_cmd = self.run_run('{0} pam --username {1} --password {2}\
                                    test.arg arg kwarg=kwarg1'.format(arg, USERA, USERA_PWD))
             expect = ['args:', '    - arg', 'kwargs:', '    ----------', '    kwarg:', '        kwarg1']
-            self.assertEqual(expect, run_cmd)
+            assert expect == run_cmd
         self._remove_user()
 
     @pytest.mark.skip_if_not_root
@@ -158,7 +159,7 @@ class RunTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin)
         run_cmd = self.run_run('-a pam --username {0} --password wrongpassword\
                                test.arg arg kwarg=kwarg1'.format(USERA))
         expect = ['Authentication failure of type "eauth" occurred for user saltdev.']
-        self.assertEqual(expect, run_cmd)
+        assert expect == run_cmd
         self._remove_user()
 
     def test_salt_run_with_wrong_eauth(self):
@@ -168,4 +169,4 @@ class RunTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin)
         run_cmd = self.run_run('-a wrongeauth --username {0} --password {1}\
                                test.arg arg kwarg=kwarg1'.format(USERA, USERA_PWD))
         expect = r"^The specified external authentication system \"wrongeauth\" is not available\tAvailable eauth types: auto, .*"
-        self.assertRegex("\t".join(run_cmd), expect)
+        assert re.search(expect, "\t".join(run_cmd))

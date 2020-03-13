@@ -121,13 +121,13 @@ class IPCMessageClient(BaseIPCReqCase):
         msg = {'foo': 'bar', 'stop': True}
         self.channel.send(msg)
         self.wait()
-        self.assertEqual(self.payloads[0], msg)
+        assert self.payloads[0] == msg
 
     def test_basic_send(self):
         msg = {'foo': 'bar', 'stop': True}
         self.channel.send(msg)
         self.wait()
-        self.assertEqual(self.payloads[0], msg)
+        assert self.payloads[0] == msg
 
     def test_many_send(self):
         msgs = []
@@ -140,14 +140,14 @@ class IPCMessageClient(BaseIPCReqCase):
             self.channel.send(i)
         self.channel.send({'stop': True})
         self.wait()
-        self.assertEqual(self.payloads[:-1], msgs)
+        assert self.payloads[:-1] == msgs
 
     def test_very_big_message(self):
         long_str = ''.join([six.text_type(num) for num in range(10**5)])
         msg = {'long_str': long_str, 'stop': True}
         self.channel.send(msg)
         self.wait()
-        self.assertEqual(msg, self.payloads[0])
+        assert msg == self.payloads[0]
 
     def test_multistream_sends(self):
         local_channel = self._get_channel()
@@ -157,7 +157,7 @@ class IPCMessageClient(BaseIPCReqCase):
 
         self.channel.send({'stop': True})
         self.wait()
-        self.assertEqual(self.payloads[:-1], ['foo', 'foo'])
+        assert self.payloads[:-1] == ['foo', 'foo']
 
     def test_multistream_errors(self):
         local_channel = self._get_channel()
@@ -170,7 +170,7 @@ class IPCMessageClient(BaseIPCReqCase):
 
         self.channel.send({'stop': True})
         self.wait()
-        self.assertEqual(self.payloads[:-1], [None, None, 'foo', 'foo'])
+        assert self.payloads[:-1] == [None, None, 'foo', 'foo']
 
 
 @skipIf(salt.utils.platform.is_windows(), 'Windows does not support Posix IPC')
@@ -250,9 +250,9 @@ class IPCMessagePubSubCase(salt.ext.tornado.testing.AsyncTestCase):
         client2.read_async(handler)
         self.pub_channel.publish('TEST')
         self.wait()
-        self.assertEqual(len(call_cnt), 2)
-        self.assertEqual(call_cnt[0], 'TEST')
-        self.assertEqual(call_cnt[1], 'TEST')
+        assert len(call_cnt) == 2
+        assert call_cnt[0] == 'TEST'
+        assert call_cnt[1] == 'TEST'
 
     def test_sync_reading(self):
         # To be completely fair let's create 2 clients.
@@ -264,5 +264,5 @@ class IPCMessagePubSubCase(salt.ext.tornado.testing.AsyncTestCase):
         self.pub_channel.publish('TEST')
         ret1 = client1.read_sync()
         ret2 = client2.read_sync()
-        self.assertEqual(ret1, 'TEST')
-        self.assertEqual(ret2, 'TEST')
+        assert ret1 == 'TEST'
+        assert ret2 == 'TEST'

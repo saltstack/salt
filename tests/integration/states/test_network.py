@@ -32,7 +32,7 @@ class NetworkTest(ModuleCase, SaltReturnAssertsMixin):
         state_key = 'network_|-dummy0_|-dummy0_|-managed'
 
         ret = self.run_function('state.sls', mods='network.managed', test=True)
-        self.assertEqual('Interface dummy0 is set to be added.', ret[state_key]['comment'])
+        assert 'Interface dummy0 is set to be added.' == ret[state_key]['comment']
 
     def test_routes(self):
         '''
@@ -43,7 +43,7 @@ class NetworkTest(ModuleCase, SaltReturnAssertsMixin):
 
         ret = self.run_function('state.sls', mods='network.routes', test=True)
 
-        self.assertEqual(ret[state_key]['comment'], 'Interface dummy0 routes are set to be added.')
+        assert ret[state_key]['comment'] == 'Interface dummy0 routes are set to be added.'
 
     def test_system(self):
         '''
@@ -53,9 +53,7 @@ class NetworkTest(ModuleCase, SaltReturnAssertsMixin):
 
         global_settings = self.run_function('ip.get_network_settings')
         ret = self.run_function('state.sls', mods='network.system', test=True)
-        self.assertIn(
-            'Global network settings are set to be {0}'.format(
+        assert 'Global network settings are set to be {0}'.format(
                 'added' if not global_settings else 'updated'
-            ),
+            ) in \
             ret[state_key]['comment']
-        )

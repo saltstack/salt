@@ -115,12 +115,12 @@ class GroupModuleTest(ModuleCase):
         Test the add group function
         '''
         # add a new group
-        self.assertTrue(self.run_function('group.add', [self._group], gid=self._gid))
+        assert self.run_function('group.add', [self._group], gid=self._gid)
         group_info = self.run_function('group.info', [self._group])
-        self.assertEqual(group_info['gid'], self._gid)
-        self.assertEqual(group_info['name'], self._group)
+        assert group_info['gid'] == self._gid
+        assert group_info['name'] == self._group
         # try adding the group again
-        self.assertFalse(self.run_function('group.add', [self._group], gid=self._gid))
+        assert not self.run_function('group.add', [self._group], gid=self._gid)
 
     @pytest.mark.destructive_test
     @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows')
@@ -132,14 +132,14 @@ class GroupModuleTest(ModuleCase):
         gid_min, gid_max = self.__get_system_group_gid_range()
 
         # add a new system group
-        self.assertTrue(self.run_function('group.add',
-                                          [self._group, None, True]))
+        assert self.run_function('group.add',
+                                          [self._group, None, True])
         group_info = self.run_function('group.info', [self._group])
-        self.assertEqual(group_info['name'], self._group)
-        self.assertTrue(gid_min <= group_info['gid'] <= gid_max)
+        assert group_info['name'] == self._group
+        assert gid_min <= group_info['gid'] <= gid_max
         # try adding the group again
-        self.assertFalse(self.run_function('group.add',
-                                           [self._group]))
+        assert not self.run_function('group.add',
+                                           [self._group])
 
     @pytest.mark.destructive_test
     @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows')
@@ -151,27 +151,27 @@ class GroupModuleTest(ModuleCase):
         gid = self.__get_free_system_gid()
 
         # add a new system group
-        self.assertTrue(self.run_function('group.add',
-                                          [self._group, gid, True]))
+        assert self.run_function('group.add',
+                                          [self._group, gid, True])
         group_info = self.run_function('group.info', [self._group])
-        self.assertEqual(group_info['name'], self._group)
-        self.assertEqual(group_info['gid'], gid)
+        assert group_info['name'] == self._group
+        assert group_info['gid'] == gid
         # try adding the group again
-        self.assertFalse(self.run_function('group.add',
-                                           [self._group, gid]))
+        assert not self.run_function('group.add',
+                                           [self._group, gid])
 
     @pytest.mark.destructive_test
     def test_delete(self):
         '''
         Test the delete group function
         '''
-        self.assertTrue(self.run_function('group.add', [self._group]))
+        assert self.run_function('group.add', [self._group])
 
         # correct functionality
-        self.assertTrue(self.run_function('group.delete', [self._group]))
+        assert self.run_function('group.delete', [self._group])
 
         # group does not exist
-        self.assertFalse(self.run_function('group.delete', [self._no_group]))
+        assert not self.run_function('group.delete', [self._no_group])
 
     def test_info(self):
         '''
@@ -182,9 +182,9 @@ class GroupModuleTest(ModuleCase):
         self.run_function('group.adduser', [self._group, self._user])
         group_info = self.run_function('group.info', [self._group])
 
-        self.assertEqual(group_info['name'], self._group)
-        self.assertEqual(group_info['gid'], self._gid)
-        self.assertIn(self._user, str(group_info['members']))
+        assert group_info['name'] == self._group
+        assert group_info['gid'] == self._gid
+        assert self._user in str(group_info['members'])
 
     @skipIf(salt.utils.platform.is_windows(), 'gid test skipped on windows')
     def test_chgid(self):
@@ -192,9 +192,9 @@ class GroupModuleTest(ModuleCase):
         Test the change gid function
         '''
         self.run_function('group.add', [self._group], gid=self._gid)
-        self.assertTrue(self.run_function('group.chgid', [self._group, self._new_gid]))
+        assert self.run_function('group.chgid', [self._group, self._new_gid])
         group_info = self.run_function('group.info', [self._group])
-        self.assertEqual(group_info['gid'], self._new_gid)
+        assert group_info['gid'] == self._new_gid
 
     def test_adduser(self):
         '''
@@ -202,15 +202,15 @@ class GroupModuleTest(ModuleCase):
         '''
         self.run_function('group.add', [self._group], gid=self._gid)
         self.run_function('user.add', [self._user])
-        self.assertTrue(self.run_function('group.adduser', [self._group, self._user]))
+        assert self.run_function('group.adduser', [self._group, self._user])
         group_info = self.run_function('group.info', [self._group])
-        self.assertIn(self._user, str(group_info['members']))
+        assert self._user in str(group_info['members'])
         # try add a non existing user
-        self.assertFalse(self.run_function('group.adduser', [self._group, self._no_user]))
+        assert not self.run_function('group.adduser', [self._group, self._no_user])
         # try add a user to non existing group
-        self.assertFalse(self.run_function('group.adduser', [self._no_group, self._user]))
+        assert not self.run_function('group.adduser', [self._no_group, self._user])
         # try add a non existing user to a non existing group
-        self.assertFalse(self.run_function('group.adduser', [self._no_group, self._no_user]))
+        assert not self.run_function('group.adduser', [self._no_group, self._no_user])
 
     def test_deluser(self):
         '''
@@ -219,9 +219,9 @@ class GroupModuleTest(ModuleCase):
         self.run_function('group.add', [self._group], gid=self._gid)
         self.run_function('user.add', [self._user])
         self.run_function('group.adduser', [self._group, self._user])
-        self.assertTrue(self.run_function('group.deluser', [self._group, self._user]))
+        assert self.run_function('group.deluser', [self._group, self._user])
         group_info = self.run_function('group.info', [self._group])
-        self.assertNotIn(self._user, str(group_info['members']))
+        assert self._user not in str(group_info['members'])
 
     def test_members(self):
         '''
@@ -232,10 +232,10 @@ class GroupModuleTest(ModuleCase):
         self.run_function('user.add', [self._user1])
         m = '{0},{1}'.format(self._user, self._user1)
         ret = self.run_function('group.members', [self._group, m])
-        self.assertTrue(ret)
+        assert ret
         group_info = self.run_function('group.info', [self._group])
-        self.assertIn(self._user, str(group_info['members']))
-        self.assertIn(self._user1, str(group_info['members']))
+        assert self._user in str(group_info['members'])
+        assert self._user1 in str(group_info['members'])
 
     def test_getent(self):
         '''
@@ -245,7 +245,7 @@ class GroupModuleTest(ModuleCase):
         self.run_function('user.add', [self._user])
         self.run_function('group.adduser', [self._group, self._user])
         ginfo = self.run_function('user.getent')
-        self.assertIn(self._group, six.text_type(ginfo))
-        self.assertIn(self._user, six.text_type(ginfo))
-        self.assertNotIn(self._no_group, six.text_type(ginfo))
-        self.assertNotIn(self._no_user, six.text_type(ginfo))
+        assert self._group in six.text_type(ginfo)
+        assert self._user in six.text_type(ginfo)
+        assert self._no_group not in six.text_type(ginfo)
+        assert self._no_user not in six.text_type(ginfo)

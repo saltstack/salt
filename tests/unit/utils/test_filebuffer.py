@@ -17,20 +17,21 @@ from tests.support.paths import BASE_FILES
 
 # Import salt libs
 from salt.utils.filebuffer import BufferedReader, InvalidFileMode
+import pytest
 
 
 class TestFileBuffer(TestCase):
     def test_read_only_mode(self):
-        with self.assertRaises(InvalidFileMode):
+        with pytest.raises(InvalidFileMode):
             BufferedReader('/tmp/foo', mode='a')
 
-        with self.assertRaises(InvalidFileMode):
+        with pytest.raises(InvalidFileMode):
             BufferedReader('/tmp/foo', mode='ab')
 
-        with self.assertRaises(InvalidFileMode):
+        with pytest.raises(InvalidFileMode):
             BufferedReader('/tmp/foo', mode='w')
 
-        with self.assertRaises(InvalidFileMode):
+        with pytest.raises(InvalidFileMode):
             BufferedReader('/tmp/foo', mode='wb')
 
     def test_issue_51309(self):
@@ -50,4 +51,4 @@ class TestFileBuffer(TestCase):
             except (IOError, OSError):
                 return False
 
-        self.assertTrue(find_value('We have the Holy Hand Grenade'))
+        assert find_value('We have the Holy Hand Grenade')

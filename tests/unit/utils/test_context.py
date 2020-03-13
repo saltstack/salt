@@ -59,8 +59,8 @@ class ContextDictTests(AsyncTestCase):
             t.join()
 
         for r in rets:
-            self.assertEqual(r[0], r[1])
-            self.assertEqual(r[2], r[3])
+            assert r[0] == r[1]
+            assert r[2] == r[3]
 
     @gen_test
     def test_coroutines(self):
@@ -104,69 +104,49 @@ class ContextDictTests(AsyncTestCase):
         wait_iterator = salt.ext.tornado.gen.WaitIterator(*futures)
         while not wait_iterator.done():
             r = yield wait_iterator.next()  # pylint: disable=incompatible-py3-code
-            self.assertEqual(r[0], r[1])  # verify that the global value remails
-            self.assertEqual(r[2], r[3])  # verify that the override sticks locally
-            self.assertEqual(r[3], r[4])  # verify that the override sticks across coroutines
+            assert r[0] == r[1]  # verify that the global value remails
+            assert r[2] == r[3]  # verify that the override sticks locally
+            assert r[3] == r[4]  # verify that the override sticks across coroutines
 
     def test_basic(self):
         '''Test that the contextDict is a dict
         '''
         # ensure we get the global value
-        self.assertEqual(
-            dict(self.cd),
-            {'foo': 'global'},
-        )
+        assert dict(self.cd) == \
+            {'foo': 'global'}
 
     def test_override(self):
         over = self.cd.clone()
         over['bar'] = 'global'
-        self.assertEqual(
-            dict(over),
-            {'foo': 'global', 'bar': 'global'},
-        )
-        self.assertEqual(
-            dict(self.cd),
-            {'foo': 'global'},
-        )
+        assert dict(over) == \
+            {'foo': 'global', 'bar': 'global'}
+        assert dict(self.cd) == \
+            {'foo': 'global'}
         with over:
-            self.assertEqual(
-                dict(over),
-                {'foo': 'global', 'bar': 'global'},
-            )
-            self.assertEqual(
-                dict(self.cd),
-                {'foo': 'global', 'bar': 'global'},
-            )
+            assert dict(over) == \
+                {'foo': 'global', 'bar': 'global'}
+            assert dict(self.cd) == \
+                {'foo': 'global', 'bar': 'global'}
             over['bar'] = 'baz'
-            self.assertEqual(
-                dict(over),
-                {'foo': 'global', 'bar': 'baz'},
-            )
-            self.assertEqual(
-                dict(self.cd),
-                {'foo': 'global', 'bar': 'baz'},
-            )
-        self.assertEqual(
-            dict(over),
-            {'foo': 'global', 'bar': 'baz'},
-        )
-        self.assertEqual(
-            dict(self.cd),
-            {'foo': 'global'},
-        )
+            assert dict(over) == \
+                {'foo': 'global', 'bar': 'baz'}
+            assert dict(self.cd) == \
+                {'foo': 'global', 'bar': 'baz'}
+        assert dict(over) == \
+            {'foo': 'global', 'bar': 'baz'}
+        assert dict(self.cd) == \
+            {'foo': 'global'}
 
     def test_multiple_contexts(self):
         cds = []
         for x in range(0, 10):
             cds.append(self.cd.clone(bar=x))
         for x, cd in enumerate(cds):
-            self.assertNotIn('bar', self.cd)
+            assert 'bar' not in self.cd
             with cd:
-                self.assertEqual(
-                    dict(self.cd),
-                    {'bar': x, 'foo': 'global'},
-                )
-        self.assertNotIn('bar', self.cd)
+                assert dict(self.cd) == \
+                    {'bar': x, 'foo': 'global'}
+        assert 'bar' not in self.cd
 
 
 class NamespacedDictWrapperTests(TestCase):
@@ -178,19 +158,19 @@ class NamespacedDictWrapperTests(TestCase):
     def test_single_key(self):
         self._dict['prefix'] = {'foo': 'bar'}
         w = NamespacedDictWrapper(self._dict, 'prefix')
-        self.assertEqual(w['foo'], 'bar')
+        assert w['foo'] == 'bar'
 
     def test_multiple_key(self):
         self._dict['prefix'] = {'foo': {'bar': 'baz'}}
         w = NamespacedDictWrapper(self._dict, ('prefix', 'foo'))
-        self.assertEqual(w['bar'], 'baz')
+        assert w['bar'] == 'baz'
 
     def test_json_dumps_single_key(self):
         self._dict['prefix'] = {'foo': {'bar': 'baz'}}
         w = NamespacedDictWrapper(self._dict, 'prefix')
-        self.assertEqual(salt.utils.json.dumps(w), '{"foo": {"bar": "baz"}}')
+        assert salt.utils.json.dumps(w) == '{"foo": {"bar": "baz"}}'
 
     def test_json_dumps_multiple_key(self):
         self._dict['prefix'] = {'foo': {'bar': 'baz'}}
         w = NamespacedDictWrapper(self._dict, ('prefix', 'foo'))
-        self.assertEqual(salt.utils.json.dumps(w), '{"bar": "baz"}')
+        assert salt.utils.json.dumps(w) == '{"bar": "baz"}'

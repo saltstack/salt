@@ -42,11 +42,11 @@ class AwsSqsTestCase(TestCase, LoaderModuleMockMixin):
             comt = 'AWS SQS queue {0} is set to be created'.format(name)
             ret.update({'comment': comt})
             with patch.dict(aws_sqs.__opts__, {'test': True}):
-                self.assertDictEqual(aws_sqs.exists(name, region), ret)
+                assert aws_sqs.exists(name, region) == ret
 
             comt = '{0} exists in {1}'.format(name, region)
             ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(aws_sqs.exists(name, region), ret)
+            assert aws_sqs.exists(name, region) == ret
 
     # 'absent' function tests: 1
 
@@ -67,8 +67,8 @@ class AwsSqsTestCase(TestCase, LoaderModuleMockMixin):
             comt = 'AWS SQS queue {0} is set to be removed'.format(name)
             ret.update({'comment': comt})
             with patch.dict(aws_sqs.__opts__, {'test': True}):
-                self.assertDictEqual(aws_sqs.absent(name, region), ret)
+                assert aws_sqs.absent(name, region) == ret
 
             comt = '{0} does not exist in {1}'.format(name, region)
             ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(aws_sqs.absent(name, region), ret)
+            assert aws_sqs.absent(name, region) == ret

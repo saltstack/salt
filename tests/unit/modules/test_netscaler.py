@@ -580,15 +580,15 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value='')
         with patch.dict(netscaler.__salt__, {'config.option': mock}):
             MockNSNitro.flag = None
-            self.assertTrue(netscaler.servicegroup_exists('serviceGrpName'))
+            assert netscaler.servicegroup_exists('serviceGrpName')
 
-            self.assertFalse(netscaler.servicegroup_exists('serviceGrpName',
-                                                           sg_type='HTTP'))
+            assert not netscaler.servicegroup_exists('serviceGrpName',
+                                                           sg_type='HTTP')
 
             MockNSNitro.flag = True
             with patch.object(netscaler, '_connect',
                               MagicMock(return_value=None)):
-                self.assertFalse(netscaler.servicegroup_exists('serGrpNme'))
+                assert not netscaler.servicegroup_exists('serGrpNme')
 
     # 'servicegroup_add' function tests: 1
 
@@ -598,14 +598,14 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='')
         with patch.dict(netscaler.__salt__, {'config.option': mock}):
-            self.assertFalse(netscaler.servicegroup_add('serviceGroupName'))
+            assert not netscaler.servicegroup_add('serviceGroupName')
 
             MockNSNitro.flag = True
-            self.assertFalse(netscaler.servicegroup_add('serviceGroupName'))
+            assert not netscaler.servicegroup_add('serviceGroupName')
 
             with patch.object(netscaler, '_connect',
                               MagicMock(return_value=None)):
-                self.assertFalse(netscaler.servicegroup_add('serveGrpName'))
+                assert not netscaler.servicegroup_add('serveGrpName')
 
     # 'servicegroup_delete' function tests: 1
 
@@ -616,16 +616,16 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value='')
         with patch.dict(netscaler.__salt__, {'config.option': mock}):
             MockNSNitro.flag = None
-            self.assertTrue(netscaler.servicegroup_delete('serviceGrpName'))
+            assert netscaler.servicegroup_delete('serviceGrpName')
 
             mock = MagicMock(side_effect=[None, MockNSServiceGroup()])
             with patch.object(netscaler, '_servicegroup_get', mock):
                 MockNSNitro.flag = True
-                self.assertFalse(netscaler.servicegroup_delete('srGrpName'))
+                assert not netscaler.servicegroup_delete('srGrpName')
 
                 with patch.object(netscaler, '_connect',
                                   MagicMock(return_value=None)):
-                    self.assertFalse(netscaler.servicegroup_delete('sGNam'))
+                    assert not netscaler.servicegroup_delete('sGNam')
 
     # 'servicegroup_server_exists' function tests: 1
 
@@ -636,8 +636,7 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='')
         with patch.dict(netscaler.__salt__, {'config.option': mock}):
-            self.assertFalse(netscaler.servicegroup_server_exists
-                             ('serviceGrpName', 'serverName', 'serverPort'))
+            assert not netscaler.servicegroup_server_exists('serviceGrpName', 'serverName', 'serverPort')
 
     # 'servicegroup_server_up' function tests: 1
 
@@ -648,8 +647,7 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='')
         with patch.dict(netscaler.__salt__, {'config.option': mock}):
-            self.assertFalse(netscaler.servicegroup_server_up
-                             ('serviceGrpName', 'serverName', 'serverPort'))
+            assert not netscaler.servicegroup_server_up('serviceGrpName', 'serverName', 'serverPort')
 
     # 'servicegroup_server_enable' function tests: 1
 
@@ -659,19 +657,16 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='')
         with patch.dict(netscaler.__salt__, {'config.option': mock}):
-            self.assertFalse(netscaler.servicegroup_server_enable
-                             ('serviceGrpName', 'serverName', 'serverPort'))
+            assert not netscaler.servicegroup_server_enable('serviceGrpName', 'serverName', 'serverPort')
 
             with patch.object(netscaler, '_servicegroup_get_server',
                               MagicMock(return_value=MockNSServiceGroup())):
                 MockNSNitro.flag = None
-                self.assertTrue(netscaler.servicegroup_server_enable
-                                ('servGrpName', 'serverName', 'serPort'))
+                assert netscaler.servicegroup_server_enable('servGrpName', 'serverName', 'serPort')
 
                 with patch.object(netscaler, '_connect',
                                   MagicMock(return_value=None)):
-                    self.assertFalse(netscaler.servicegroup_server_enable
-                                     ('serGrpName', 'serverName', 'sPort'))
+                    assert not netscaler.servicegroup_server_enable('serGrpName', 'serverName', 'sPort')
 
     # 'servicegroup_server_disable' function tests: 1
 
@@ -681,19 +676,16 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='')
         with patch.dict(netscaler.__salt__, {'config.option': mock}):
-            self.assertFalse(netscaler.servicegroup_server_disable
-                             ('serviceGrpName', 'serverName', 'serverPort'))
+            assert not netscaler.servicegroup_server_disable('serviceGrpName', 'serverName', 'serverPort')
 
             with patch.object(netscaler, '_servicegroup_get_server',
                               MagicMock(return_value=MockNSServiceGroup())):
                 MockNSNitro.flag = None
-                self.assertTrue(netscaler.servicegroup_server_disable
-                                ('serveGrpName', 'serverName', 'serPort'))
+                assert netscaler.servicegroup_server_disable('serveGrpName', 'serverName', 'serPort')
 
                 with patch.object(netscaler, '_connect',
                                   MagicMock(return_value=None)):
-                    self.assertFalse(netscaler.servicegroup_server_disable
-                                     ('servGrpName', 'serverName', 'sPort'))
+                    assert not netscaler.servicegroup_server_disable('servGrpName', 'serverName', 'sPort')
 
     # 'servicegroup_server_add' function tests: 1
 
@@ -705,21 +697,17 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(netscaler.__salt__, {'config.option': mock}):
             with patch.object(netscaler, '_connect',
                               MagicMock(return_value=None)):
-                self.assertFalse(netscaler.servicegroup_server_add
-                                 ('serGrpName', 'serverName', 'sPort'))
+                assert not netscaler.servicegroup_server_add('serGrpName', 'serverName', 'sPort')
 
             MockNSNitro.flag = None
-            self.assertTrue(netscaler.servicegroup_server_add
-                            ('serGrpName', 'serverName', 'serverPort'))
+            assert netscaler.servicegroup_server_add('serGrpName', 'serverName', 'serverPort')
 
             mock = MagicMock(return_value=
                              MockNSServiceGroupServerBinding())
             with patch.object(netscaler, '_servicegroup_get_server',
                               mock):
                 MockNSNitro.flag = True
-                self.assertFalse(netscaler.servicegroup_server_add
-                                 ('serviceGroupName', 'serverName',
-                                  'serPort'))
+                assert not netscaler.servicegroup_server_add('serviceGroupName', 'serverName', 'serPort')
 
     # 'servicegroup_server_delete' function tests: 1
 
@@ -731,21 +719,16 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(netscaler.__salt__, {'config.option': mock}):
             with patch.object(netscaler, '_connect',
                               MagicMock(return_value=None)):
-                self.assertFalse(netscaler.servicegroup_server_delete
-                                 ('servGrpName', 'serverName', 'sPort'))
+                assert not netscaler.servicegroup_server_delete('servGrpName', 'serverName', 'sPort')
 
-            self.assertFalse(netscaler.servicegroup_server_delete
-                             ('serviceGroupName', 'serverName',
-                              'serverPort'))
+            assert not netscaler.servicegroup_server_delete('serviceGroupName', 'serverName', 'serverPort')
 
             mock = MagicMock(return_value=
                              MockNSServiceGroupServerBinding())
             with patch.object(netscaler, '_servicegroup_get_server',
                               mock):
                 MockNSNitro.flag = None
-                self.assertTrue(netscaler.servicegroup_server_delete
-                                ('serviceGroupName', 'serverName',
-                                 'serPort'))
+                assert netscaler.servicegroup_server_delete('serviceGroupName', 'serverName', 'serPort')
 
     # 'service_up' function tests: 1
 
@@ -755,7 +738,7 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=MockNSService())
         with patch.object(netscaler, '_service_get', mock):
-            self.assertTrue(netscaler.service_up('serviceGrpName'))
+            assert netscaler.service_up('serviceGrpName')
 
     # 'service_exists' function tests: 1
 
@@ -765,7 +748,7 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=MockNSService())
         with patch.object(netscaler, '_service_get', mock):
-            self.assertTrue(netscaler.service_exists('serviceGrpName'))
+            assert netscaler.service_exists('serviceGrpName')
 
     # 'service_enable' function tests: 1
 
@@ -775,15 +758,15 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='')
         with patch.dict(netscaler.__salt__, {'config.option': mock}):
-            self.assertTrue(netscaler.service_enable('serviceGrpName'))
+            assert netscaler.service_enable('serviceGrpName')
 
             with patch.object(netscaler, '_connect',
                               MagicMock(return_value=None)):
-                self.assertFalse(netscaler.service_enable('serviceGrpName'))
+                assert not netscaler.service_enable('serviceGrpName')
 
                 mock = MagicMock(return_value=MockNSService())
                 with patch.object(netscaler, '_service_get', mock):
-                    self.assertFalse(netscaler.service_enable('serGrpName'))
+                    assert not netscaler.service_enable('serGrpName')
 
     # 'service_disable' function tests: 1
 
@@ -793,15 +776,15 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='')
         with patch.dict(netscaler.__salt__, {'config.option': mock}):
-            self.assertTrue(netscaler.service_disable('serviceGrpName'))
+            assert netscaler.service_disable('serviceGrpName')
 
             with patch.object(netscaler, '_connect',
                               MagicMock(return_value=None)):
-                self.assertFalse(netscaler.service_disable('serceGrpName'))
+                assert not netscaler.service_disable('serceGrpName')
 
                 mock = MagicMock(return_value=MockNSService())
                 with patch.object(netscaler, '_service_get', mock):
-                    self.assertFalse(netscaler.service_disable('seGrpName'))
+                    assert not netscaler.service_disable('seGrpName')
 
     # 'server_exists' function tests: 1
 
@@ -811,17 +794,15 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='')
         with patch.dict(netscaler.__salt__, {'config.option': mock}):
-            self.assertTrue(netscaler.server_exists('serviceGrpName'))
+            assert netscaler.server_exists('serviceGrpName')
 
             with patch.object(netscaler, '_connect',
                               MagicMock(return_value=None)):
-                self.assertFalse(netscaler.server_exists('serviceGrpName'))
+                assert not netscaler.server_exists('serviceGrpName')
 
-            self.assertFalse(netscaler.server_exists('serviceGrpName',
-                                                     ip='1.0.0.1'))
+            assert not netscaler.server_exists('serviceGrpName', ip='1.0.0.1')
 
-            self.assertFalse(netscaler.server_exists('serviceGrpName',
-                                                     s_state='serverName'))
+            assert not netscaler.server_exists('serviceGrpName', s_state='serverName')
 
     # 'server_add' function tests: 1
 
@@ -831,17 +812,17 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='')
         with patch.dict(netscaler.__salt__, {'config.option': mock}):
-            self.assertFalse(netscaler.server_add('servGrpName', '1.0.0.1'))
+            assert not netscaler.server_add('servGrpName', '1.0.0.1')
 
             with patch.object(netscaler, '_connect',
                               MagicMock(return_value=None)):
-                self.assertFalse(netscaler.server_add('serviceGrpName',
-                                                      '1.0.0.1'))
+                assert not netscaler.server_add('serviceGrpName',
+                                                      '1.0.0.1')
 
             mock = MagicMock(return_value=False)
             with patch.object(netscaler, 'server_exists', mock):
-                self.assertTrue(netscaler.server_add('serviceGrpName',
-                                                     '1.0.0.1'))
+                assert netscaler.server_add('serviceGrpName',
+                                                     '1.0.0.1')
 
     # 'server_delete' function tests: 1
 
@@ -851,15 +832,15 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='')
         with patch.dict(netscaler.__salt__, {'config.option': mock}):
-            self.assertTrue(netscaler.server_delete('serviceGrpName'))
+            assert netscaler.server_delete('serviceGrpName')
 
             mock = MagicMock(side_effect=[MockNSServer(), None])
             with patch.object(netscaler, '_server_get', mock):
                 with patch.object(netscaler, '_connect',
                                   MagicMock(return_value=None)):
-                    self.assertFalse(netscaler.server_delete('serGrpName'))
+                    assert not netscaler.server_delete('serGrpName')
 
-                self.assertFalse(netscaler.server_delete('serviceGrpName'))
+                assert not netscaler.server_delete('serviceGrpName')
 
     # 'server_update' function tests: 1
 
@@ -870,19 +851,19 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(side_effect=[None, MockNSServer(), MockNSServer(),
                                       MockNSServer()])
         with patch.object(netscaler, '_server_get', mock):
-            self.assertFalse(netscaler.server_update('seGrName', '1.0.0.1'))
+            assert not netscaler.server_update('seGrName', '1.0.0.1')
 
-            self.assertFalse(netscaler.server_update('serGrpName', ''))
+            assert not netscaler.server_update('serGrpName', '')
 
             with patch.object(netscaler, '_connect',
                               MagicMock(return_value=None)):
-                self.assertFalse(netscaler.server_update('serGrpName',
-                                                         '1.0.0.1'))
+                assert not netscaler.server_update('serGrpName',
+                                                         '1.0.0.1')
 
             mock = MagicMock(return_value='')
             with patch.dict(netscaler.__salt__, {'config.option': mock}):
-                self.assertTrue(netscaler.server_update('serGrpName',
-                                                        '1.0.0.1'))
+                assert netscaler.server_update('serGrpName',
+                                                        '1.0.0.1')
 
     # 'server_enabled' function tests: 1
 
@@ -893,7 +874,7 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value=MockNSServer())
         with patch.object(netscaler, '_server_get', mock):
             MockNSServer.flag = None
-            self.assertTrue(netscaler.server_enabled('serGrpName'))
+            assert netscaler.server_enabled('serGrpName')
 
     # 'server_enable' function tests: 1
 
@@ -903,18 +884,18 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='')
         with patch.dict(netscaler.__salt__, {'config.option': mock}):
-            self.assertTrue(netscaler.server_enable('serGrpName'))
+            assert netscaler.server_enable('serGrpName')
 
             MockNSServer.flag = 1
-            self.assertTrue(netscaler.server_enable('serGrpName'))
+            assert netscaler.server_enable('serGrpName')
 
             mock = MagicMock(side_effect=[MockNSServer(), None])
             with patch.object(netscaler, '_server_get', mock):
                 with patch.object(netscaler, '_connect',
                                   MagicMock(return_value=None)):
-                    self.assertFalse(netscaler.server_enable('serGrpName'))
+                    assert not netscaler.server_enable('serGrpName')
 
-                self.assertFalse(netscaler.server_enable('serGrpName'))
+                assert not netscaler.server_enable('serGrpName')
 
     # 'server_disable' function tests: 1
 
@@ -924,19 +905,19 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='')
         with patch.dict(netscaler.__salt__, {'config.option': mock}):
-            self.assertTrue(netscaler.server_disable('serGrpName'))
+            assert netscaler.server_disable('serGrpName')
 
             MockNSServer.flag = 2
-            self.assertTrue(netscaler.server_disable('serGrpName'))
+            assert netscaler.server_disable('serGrpName')
 
             MockNSServer.flag = None
             mock = MagicMock(side_effect=[None, MockNSServer()])
             with patch.object(netscaler, '_server_get', mock):
-                self.assertFalse(netscaler.server_disable('serGrpName'))
+                assert not netscaler.server_disable('serGrpName')
 
                 with patch.object(netscaler, '_connect',
                                   MagicMock(return_value=None)):
-                    self.assertFalse(netscaler.server_disable('serGrpName'))
+                    assert not netscaler.server_disable('serGrpName')
 
     # 'vserver_exists' function tests: 1
 
@@ -946,21 +927,21 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='')
         with patch.dict(netscaler.__salt__, {'config.option': mock}):
-            self.assertTrue(netscaler.vserver_exists('vserverName'))
+            assert netscaler.vserver_exists('vserverName')
 
-            self.assertFalse(netscaler.vserver_exists('vserverName',
-                                                      v_ip='1.0.0.1'))
+            assert not netscaler.vserver_exists('vserverName',
+                                                      v_ip='1.0.0.1')
 
-            self.assertFalse(netscaler.vserver_exists('vserrName', v_ip='',
-                                                      v_port='vserverPort'))
+            assert not netscaler.vserver_exists('vserrName', v_ip='',
+                                                      v_port='vserverPort')
 
-            self.assertFalse(netscaler.vserver_exists('vserrName', v_ip='',
+            assert not netscaler.vserver_exists('vserrName', v_ip='',
                                                       v_port='',
-                                                      v_type='vserverType'))
+                                                      v_type='vserverType')
 
             mock = MagicMock(return_value=None)
             with patch.object(netscaler, '_vserver_get', mock):
-                self.assertFalse(netscaler.vserver_exists('vserverName'))
+                assert not netscaler.vserver_exists('vserverName')
 
     # 'vserver_add' function tests: 1
 
@@ -970,20 +951,20 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='')
         with patch.dict(netscaler.__salt__, {'config.option': mock}):
-            self.assertFalse(netscaler.vserver_add('alex.patate.chaude.443',
-                                                   '1.2.3.4', '443', 'SSL'))
+            assert not netscaler.vserver_add('alex.patate.chaude.443',
+                                                   '1.2.3.4', '443', 'SSL')
 
             mock = MagicMock(return_value=False)
             with patch.object(netscaler, 'vserver_exists', mock):
-                self.assertTrue(netscaler.vserver_add('alex.pae.chaude.443',
+                assert netscaler.vserver_add('alex.pae.chaude.443',
                                                       '1.2.3.4', '443',
-                                                      'SSL'))
+                                                      'SSL')
 
                 with patch.object(netscaler, '_connect',
                                   MagicMock(return_value=None)):
-                    self.assertFalse(netscaler.vserver_add('alex.chde.443',
+                    assert not netscaler.vserver_add('alex.chde.443',
                                                            '1.2.3.4', '443',
-                                                           'SSL'))
+                                                           'SSL')
 
     # 'vserver_delete' function tests: 1
 
@@ -993,15 +974,15 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='')
         with patch.dict(netscaler.__salt__, {'config.option': mock}):
-            self.assertTrue(netscaler.vserver_delete('alex.pe.chaude.443'))
+            assert netscaler.vserver_delete('alex.pe.chaude.443')
 
             mock = MagicMock(side_effect=[None, MockNSLBVServer()])
             with patch.object(netscaler, '_vserver_get', mock):
-                self.assertFalse(netscaler.vserver_delete('alex.chade.443'))
+                assert not netscaler.vserver_delete('alex.chade.443')
 
                 with patch.object(netscaler, '_connect',
                                   MagicMock(return_value=None)):
-                    self.assertFalse(netscaler.vserver_delete('al.cha.443'))
+                    assert not netscaler.vserver_delete('al.cha.443')
 
     # 'vserver_servicegroup_exists' function tests: 1
 
@@ -1011,8 +992,7 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='')
         with patch.dict(netscaler.__salt__, {'config.option': mock}):
-            self.assertTrue(netscaler.vserver_servicegroup_exists
-                            ('vserverName', 'serviceGroupName'))
+            assert netscaler.vserver_servicegroup_exists('vserverName', 'serviceGroupName')
 
     # 'vserver_servicegroup_add' function tests: 1
 
@@ -1023,20 +1003,17 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value='')
         with patch.dict(netscaler.__salt__, {'config.option': mock}):
             MockNSNitro.flag = None
-            self.assertTrue(netscaler.vserver_servicegroup_add
-                            ('vserverName', 'serGroupName'))
+            assert netscaler.vserver_servicegroup_add('vserverName', 'serGroupName')
 
             mock = MagicMock(side_effect=
                              [MockNSLBVServerServiceGroupBinding(), None])
             with patch.object(netscaler, 'vserver_servicegroup_exists',
                               mock):
-                self.assertFalse(netscaler.vserver_servicegroup_add
-                                 ('vserName', 'serGroupName'))
+                assert not netscaler.vserver_servicegroup_add('vserName', 'serGroupName')
 
                 with patch.object(netscaler, '_connect',
                                   MagicMock(return_value=None)):
-                    self.assertFalse(netscaler.vserver_servicegroup_add
-                                     ('vName', 'serGroupName'))
+                    assert not netscaler.vserver_servicegroup_add('vName', 'serGroupName')
 
     # 'vserver_servicegroup_delete' function tests: 1
 
@@ -1046,21 +1023,18 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='')
         with patch.dict(netscaler.__salt__, {'config.option': mock}):
-            self.assertFalse(netscaler.vserver_servicegroup_delete
-                             ('vservName', 'serGroupName'))
+            assert not netscaler.vserver_servicegroup_delete('vservName', 'serGroupName')
 
             mock = MagicMock(return_value=
                              MockNSLBVServerServiceGroupBinding())
             with patch.object(netscaler, 'vserver_servicegroup_exists',
                               mock):
                 MockNSNitro.flag = None
-                self.assertTrue(netscaler.vserver_servicegroup_delete
-                                ('vName', 'serGroupName'))
+                assert netscaler.vserver_servicegroup_delete('vName', 'serGroupName')
 
                 with patch.object(netscaler, '_connect',
                                   MagicMock(return_value=None)):
-                    self.assertFalse(netscaler.vserver_servicegroup_delete
-                                     ('vserverName', 'serGroupName'))
+                    assert not netscaler.vserver_servicegroup_delete('vserverName', 'serGroupName')
 
     # 'vserver_sslcert_exists' function tests: 1
 
@@ -1070,8 +1044,7 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='')
         with patch.dict(netscaler.__salt__, {'config.option': mock}):
-            self.assertTrue(netscaler.vserver_sslcert_exists
-                            ('vserverName', 'serviceGroupName'))
+            assert netscaler.vserver_sslcert_exists('vserverName', 'serviceGroupName')
 
     # 'vserver_sslcert_add' function tests: 1
 
@@ -1082,19 +1055,16 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(side_effect=[MockNSSSLVServerSSLCertKeyBinding(),
                                       None, None])
         with patch.object(netscaler, 'vserver_sslcert_exists', mock):
-            self.assertFalse(netscaler.vserver_sslcert_add
-                             ('vserName', 'serGroupName'))
+            assert not netscaler.vserver_sslcert_add('vserName', 'serGroupName')
 
             with patch.object(netscaler, '_connect',
                               MagicMock(return_value=None)):
-                self.assertFalse(netscaler.vserver_sslcert_add
-                                 ('vName', 'serGrName'))
+                assert not netscaler.vserver_sslcert_add('vName', 'serGrName')
 
             mock = MagicMock(return_value='')
             with patch.dict(netscaler.__salt__, {'config.option': mock}):
                 MockNSNitro.flag = None
-                self.assertTrue(netscaler.vserver_sslcert_add
-                                ('vserverName', 'serGroupName'))
+                assert netscaler.vserver_sslcert_add('vserverName', 'serGroupName')
 
     # 'vserver_sslcert_delete' function tests: 1
 
@@ -1106,16 +1076,14 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
                                       MockNSSSLVServerSSLCertKeyBinding(),
                                       MockNSSSLVServerSSLCertKeyBinding()])
         with patch.object(netscaler, 'vserver_sslcert_exists', mock):
-            self.assertFalse(netscaler.vserver_sslcert_delete('vName',
-                                                              'serGrpName'))
+            assert not netscaler.vserver_sslcert_delete('vName',
+                                                              'serGrpName')
 
             mock = MagicMock(return_value='')
             with patch.dict(netscaler.__salt__, {'config.option': mock}):
                 MockNSNitro.flag = None
-                self.assertTrue(netscaler.vserver_sslcert_delete
-                                ('vservName', 'serGroupName'))
+                assert netscaler.vserver_sslcert_delete('vservName', 'serGroupName')
 
             with patch.object(netscaler, '_connect',
                               MagicMock(return_value=None)):
-                self.assertFalse(netscaler.vserver_sslcert_delete
-                                 ('vserverName', 'serGroupName'))
+                assert not netscaler.vserver_sslcert_delete('vserverName', 'serGroupName')

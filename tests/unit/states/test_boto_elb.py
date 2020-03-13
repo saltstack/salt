@@ -65,10 +65,10 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
                     listeners,
                     availability_zones=avail_zones
                 )
-                self.assertTrue(boto_elb.__salt__['boto_elb.exists'].called)
-                self.assertTrue(boto_elb.__salt__['boto_elb.create'].called)
-                self.assertIn('Failed to create myelb ELB.', ret['comment'])
-                self.assertFalse(ret['result'])
+                assert boto_elb.__salt__['boto_elb.exists'].called
+                assert boto_elb.__salt__['boto_elb.create'].called
+                assert 'Failed to create myelb ELB.' in ret['comment']
+                assert not ret['result']
 
         def mock_config_option(*args, **kwargs):
             if args[0] == 'boto_elb_policies':
@@ -93,17 +93,13 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
                         health_check=health_check,
                         alarms=alarms
                     )
-                    self.assertTrue(boto_elb.__salt__['boto_elb.exists'].called)
-                    self.assertTrue(boto_elb.__salt__['boto_elb.create'].called)
-                    self.assertTrue(boto_elb.__states__['boto_cloudwatch_alarm.present'].called)
-                    self.assertFalse(
-                        boto_elb.__salt__['boto_elb.get_attributes'].called
-                    )
-                    self.assertTrue(
-                        boto_elb.__salt__['boto_elb.get_health_check'].called
-                    )
-                    self.assertIn('ELB myelb created.', ret['comment'])
-                    self.assertTrue(ret['result'])
+                    assert boto_elb.__salt__['boto_elb.exists'].called
+                    assert boto_elb.__salt__['boto_elb.create'].called
+                    assert boto_elb.__states__['boto_cloudwatch_alarm.present'].called
+                    assert not boto_elb.__salt__['boto_elb.get_attributes'].called
+                    assert boto_elb.__salt__['boto_elb.get_health_check'].called
+                    assert 'ELB myelb created.' in ret['comment']
+                    assert ret['result']
 
         mock = MagicMock(return_value={})
         mock_elb = MagicMock(return_value={'dns_name': 'myelb.amazon.com', 'policies': [], 'listeners': [], 'backends': []})
@@ -125,9 +121,9 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
                         cnames=cnames
                     )
                     mock_changes = {'new': {'elb': 'myelb'}, 'old': {'elb': None}}
-                    self.assertTrue(boto_elb.__states__['boto_route53.present'].called)
-                    self.assertEqual(mock_changes, ret['changes'])
-                    self.assertTrue(ret['result'])
+                    assert boto_elb.__states__['boto_route53.present'].called
+                    assert mock_changes == ret['changes']
+                    assert ret['result']
 
     # 'register_instances' function tests: 1
 
@@ -147,8 +143,8 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(boto_elb.__salt__, {'boto_elb.exists': mock_bool}):
             comt = ('Could not find lb {0}'.format(name))
             ret.update({'comment': comt})
-            self.assertDictEqual(boto_elb.register_instances(name,
-                                                             instances), ret)
+            assert boto_elb.register_instances(name,
+                                                             instances) == ret
 
     # 'absent' function tests: 1
 
@@ -167,9 +163,9 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(boto_elb.__salt__, {'boto_elb.exists': mock}):
             comt = ('{0} ELB does not exist.'.format(name))
             ret.update({'comment': comt})
-            self.assertDictEqual(boto_elb.absent(name), ret)
+            assert boto_elb.absent(name) == ret
 
             with patch.dict(boto_elb.__opts__, {'test': True}):
                 comt = ('ELB {0} is set to be removed.'.format(name))
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(boto_elb.absent(name), ret)
+                assert boto_elb.absent(name) == ret

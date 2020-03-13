@@ -29,14 +29,14 @@ class AvahiAnnounceBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         ret = avahi_announce.validate(config)
 
-        self.assertEqual(ret, (False, 'Configuration for avahi_announce'
-                                      ' beacon must be a list.'))
+        assert ret == (False, 'Configuration for avahi_announce'
+                                      ' beacon must be a list.')
 
     def test_empty_config(self):
         config = [{}]
 
         ret = avahi_announce.validate(config)
 
-        self.assertEqual(ret, (False, 'Configuration for avahi_announce'
+        assert ret == (False, 'Configuration for avahi_announce'
                                       ' beacon must contain servicetype, port'
-                                      ' and txt items.'))
+                                      ' and txt items.')

@@ -20,6 +20,7 @@ import salt.modules.rh_ip as rh_ip
 # Import 3rd-party libs
 import jinja2.exceptions
 from salt.ext import six
+import pytest
 
 
 class RhipTestCase(TestCase, LoaderModuleMockMixin):
@@ -34,12 +35,12 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
         iface = 'ethtest'
         option = 'test'
         msg = rh_ip._error_msg_iface(iface, option, values)
-        self.assertTrue(msg.endswith('[1|True|False|no-kaboom]'), msg)
+        assert msg.endswith('[1|True|False|no-kaboom]'), msg
 
     def test_error_message_network_should_process_non_str_expected(self):
         values = [1, True, False, 'no-kaboom']
         msg = rh_ip._error_msg_network('fnord', values)
-        self.assertTrue(msg.endswith('[1|True|False|no-kaboom]'), msg)
+        assert msg.endswith('[1|True|False|no-kaboom]'), msg
 
     def test_build_bond(self):
         '''
@@ -51,19 +52,19 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
                 mock = jinja2.exceptions.TemplateNotFound('foo')
                 with patch.object(jinja2.Environment, 'get_template',
                                   MagicMock(side_effect=mock)):
-                    self.assertEqual(rh_ip.build_bond('iface'), '')
+                    assert rh_ip.build_bond('iface') == ''
 
                 with patch.dict(rh_ip.__salt__, {'kmod.load':
                                                  MagicMock(return_value=None)}):
                     with patch.object(rh_ip, '_write_file_iface',
                                       return_value=None):
                         with patch.object(rh_ip, '_read_temp', return_value='A'):
-                            self.assertEqual(rh_ip.build_bond('iface', test='A'),
-                                             'A')
+                            assert rh_ip.build_bond('iface', test='A') == \
+                                             'A'
 
                         with patch.object(rh_ip, '_read_file', return_value='A'):
-                            self.assertEqual(rh_ip.build_bond('iface', test=None),
-                                             'A')
+                            assert rh_ip.build_bond('iface', test=None) == \
+                                             'A'
 
     def test_build_interface(self):
         '''
@@ -71,22 +72,18 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(rh_ip.__grains__, {'os': 'Fedora', 'osmajorrelease': 26}):
             with patch.object(rh_ip, '_raise_error_iface', return_value=None):
-                self.assertRaises(AttributeError,
-                                  rh_ip.build_interface,
-                                  'iface', 'slave', True)
+                with pytest.raises(AttributeError):
+                    rh_ip.build_interface('iface', 'slave', True)
 
                 with patch.dict(rh_ip.__salt__, {'network.interfaces': lambda: {'eth': True}}):
-                    self.assertRaises(AttributeError,
-                                      rh_ip.build_interface,
-                                      'iface', 'eth', True, netmask='255.255.255.255', prefix=32,
+                    with pytest.raises(AttributeError):
+                        rh_ip.build_interface('iface', 'eth', True, netmask='255.255.255.255', prefix=32,
                                       test=True)
-                    self.assertRaises(AttributeError,
-                                      rh_ip.build_interface,
-                                      'iface', 'eth', True, ipaddrs=['A'],
+                    with pytest.raises(AttributeError):
+                        rh_ip.build_interface('iface', 'eth', True, ipaddrs=['A'],
                                       test=True)
-                    self.assertRaises(AttributeError,
-                                      rh_ip.build_interface,
-                                      'iface', 'eth', True, ipv6addrs=['A'],
+                    with pytest.raises(AttributeError):
+                        rh_ip.build_interface('iface', 'eth', True, ipv6addrs=['A'],
                                       test=True)
 
         for osrelease in range(5, 8):
@@ -97,18 +94,18 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
                         with patch.object(jinja2.Environment,
                                           'get_template',
                                           MagicMock(side_effect=mock)):
-                            self.assertEqual(rh_ip.build_interface('iface',
+                            assert rh_ip.build_interface('iface',
                                                                    'vlan',
-                                                                   True), '')
+                                                                   True) == ''
 
                         with patch.object(rh_ip, '_read_temp', return_value='A'):
                             with patch.object(jinja2.Environment,
                                               'get_template', MagicMock()):
-                                self.assertEqual(rh_ip.build_interface('iface',
+                                assert rh_ip.build_interface('iface',
                                                                        'vlan',
                                                                        True,
-                                                                       test='A'),
-                                                 'A')
+                                                                       test='A') == \
+                                                 'A'
 
                                 with patch.object(rh_ip, '_write_file_iface',
                                                   return_value=None):
@@ -116,17 +113,11 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
                                                       return_value='A'):
                                         with patch.object(rh_ip, '_read_file',
                                                           return_value='A'):
-                                            self.assertEqual(rh_ip.build_interface
-                                                             ('iface', 'vlan',
-                                                              True), 'A')
+                                            assert rh_ip.build_interface('iface', 'vlan', True) == 'A'
                                             if osrelease > 6:
                                                 with patch.dict(rh_ip.__salt__, {'network.interfaces': lambda: {'eth': True}}):
-                                                    self.assertEqual(rh_ip.build_interface
-                                                                     ('iface', 'eth', True,
-                                                                      ipaddrs=['127.0.0.1/8']), 'A')
-                                                    self.assertEqual(rh_ip.build_interface
-                                                                     ('iface', 'eth', True,
-                                                                      ipv6addrs=['fc00::1/128']), 'A')
+                                                    assert rh_ip.build_interface('iface', 'eth', True, ipaddrs=['127.0.0.1/8']) == 'A'
+                                                    assert rh_ip.build_interface('iface', 'eth', True, ipv6addrs=['fc00::1/128']) == 'A'
 
     def test_build_routes(self):
         '''
@@ -137,20 +128,18 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
                 mock = jinja2.exceptions.TemplateNotFound('foo')
                 with patch.object(jinja2.Environment,
                                   'get_template', MagicMock(side_effect=mock)):
-                    self.assertEqual(rh_ip.build_routes('iface'), '')
+                    assert rh_ip.build_routes('iface') == ''
 
                 with patch.object(jinja2.Environment,
                                   'get_template', MagicMock()):
                     with patch.object(rh_ip, '_read_temp', return_value=['A']):
-                        self.assertEqual(rh_ip.build_routes('i', test='t'), ['A', 'A'])
+                        assert rh_ip.build_routes('i', test='t') == ['A', 'A']
 
                     with patch.object(rh_ip, '_read_file', return_value=['A']):
                         with patch.object(os.path, 'join', return_value='A'):
                             with patch.object(rh_ip, '_write_file_iface',
                                               return_value=None):
-                                self.assertEqual(rh_ip.build_routes('i',
-                                                                    test=None),
-                                                 ['A', 'A'])
+                                assert rh_ip.build_routes('i', test=None) == ['A', 'A']
 
     def test_down(self):
         '''
@@ -158,9 +147,9 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(rh_ip.__salt__, {'cmd.run':
                                          MagicMock(return_value='A')}):
-            self.assertEqual(rh_ip.down('iface', 'iface_type'), 'A')
+            assert rh_ip.down('iface', 'iface_type') == 'A'
 
-        self.assertEqual(rh_ip.down('iface', 'slave'), None)
+        assert rh_ip.down('iface', 'slave') is None
 
     def test_get_bond(self):
         '''
@@ -168,7 +157,7 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.object(os.path, 'join', return_value='A'):
             with patch.object(rh_ip, '_read_file', return_value='A'):
-                self.assertEqual(rh_ip.get_bond('iface'), 'A')
+                assert rh_ip.get_bond('iface') == 'A'
 
     def test_get_interface(self):
         '''
@@ -176,7 +165,7 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.object(os.path, 'join', return_value='A'):
             with patch.object(rh_ip, '_read_file', return_value='A'):
-                self.assertEqual(rh_ip.get_interface('iface'), 'A')
+                assert rh_ip.get_interface('iface') == 'A'
 
     def test_up(self):
         '''
@@ -184,9 +173,9 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(rh_ip.__salt__, {'cmd.run':
                                          MagicMock(return_value='A')}):
-            self.assertEqual(rh_ip.up('iface', 'iface_type'), 'A')
+            assert rh_ip.up('iface', 'iface_type') == 'A'
 
-        self.assertEqual(rh_ip.up('iface', 'slave'), None)
+        assert rh_ip.up('iface', 'slave') is None
 
     def test_get_routes(self):
         '''
@@ -194,14 +183,14 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.object(os.path, 'join', return_value='A'):
             with patch.object(rh_ip, '_read_file', return_value=['A']):
-                self.assertEqual(rh_ip.get_routes('iface'), ['A', 'A'])
+                assert rh_ip.get_routes('iface') == ['A', 'A']
 
     def test_get_network_settings(self):
         '''
         Test to return the contents of the global network script.
         '''
         with patch.object(rh_ip, '_read_file', return_value='A'):
-            self.assertEqual(rh_ip.get_network_settings(), 'A')
+            assert rh_ip.get_network_settings() == 'A'
 
     def test_apply_network_settings(self):
         '''
@@ -209,7 +198,7 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(rh_ip.__salt__, {'service.restart':
                                          MagicMock(return_value=True)}):
-            self.assertTrue(rh_ip.apply_network_settings())
+            assert rh_ip.apply_network_settings()
 
     def test_build_network_settings(self):
         '''
@@ -221,17 +210,15 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
                 mock = jinja2.exceptions.TemplateNotFound('foo')
                 with patch.object(jinja2.Environment,
                                   'get_template', MagicMock(side_effect=mock)):
-                    self.assertEqual(rh_ip.build_network_settings(), '')
+                    assert rh_ip.build_network_settings() == ''
 
                 with patch.object(jinja2.Environment,
                                   'get_template', MagicMock()):
                     with patch.object(rh_ip, '_read_temp', return_value='A'):
-                        self.assertEqual(rh_ip.build_network_settings
-                                         (test='t'), 'A')
+                        assert rh_ip.build_network_settings(test='t') == 'A'
 
                         with patch.object(rh_ip, '_write_file_network',
                                           return_value=None):
                             with patch.object(rh_ip, '_read_file',
                                               return_value='A'):
-                                self.assertEqual(rh_ip.build_network_settings
-                                                 (test=None), 'A')
+                                assert rh_ip.build_network_settings(test=None) == 'A'

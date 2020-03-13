@@ -25,6 +25,7 @@ import salt.netapi
 from salt.exceptions import (
     EauthAuthenticationError
 )
+import pytest
 
 log = logging.getLogger(__name__)
 
@@ -56,7 +57,7 @@ class NetapiClientTest(TestCase):
         # runner's proxy minion is running, and we're not testing proxy
         # minions here anyway, just remove it from the response.
         ret.pop('proxytest', None)
-        self.assertEqual(ret, {'minion': True, 'sub_minion': True})
+        assert ret == {'minion': True, 'sub_minion': True}
 
     def test_local_batch(self):
         low = {'client': 'local_batch', 'tgt': '*', 'fun': 'test.ping', 'timeout': 300}
@@ -66,8 +67,8 @@ class NetapiClientTest(TestCase):
         rets = []
         for _ret in ret:
             rets.append(_ret)
-        self.assertIn({'sub_minion': True}, rets)
-        self.assertIn({'minion': True}, rets)
+        assert {'sub_minion': True} in rets
+        assert {'minion': True} in rets
 
     def test_local_async(self):
         low = {'client': 'local_async', 'tgt': '*', 'fun': 'test.ping'}
@@ -76,7 +77,7 @@ class NetapiClientTest(TestCase):
         ret = self.netapi.run(low)
 
         # Remove all the volatile values before doing the compare.
-        self.assertIn('jid', ret)
+        assert 'jid' in ret
         ret.pop('jid', None)
         ret['minions'] = sorted(ret['minions'])
         try:
@@ -87,12 +88,12 @@ class NetapiClientTest(TestCase):
             ret['minions'].remove('proxytest')
         except ValueError:
             pass
-        self.assertEqual(ret, {'minions': sorted(['minion', 'sub_minion'])})
+        assert ret == {'minions': sorted(['minion', 'sub_minion'])}
 
     def test_local_unauthenticated(self):
         low = {'client': 'local', 'tgt': '*', 'fun': 'test.ping'}
 
-        with self.assertRaises(EauthAuthenticationError) as excinfo:
+        with pytest.raises(EauthAuthenticationError) as excinfo:
             ret = self.netapi.run(low)
 
     def test_wheel(self):
@@ -102,21 +103,21 @@ class NetapiClientTest(TestCase):
         ret = self.netapi.run(low)
 
         # Remove all the volatile values before doing the compare.
-        self.assertIn('tag', ret)
+        assert 'tag' in ret
         ret.pop('tag')
 
         data = ret.get('data', {})
-        self.assertIn('jid', data)
+        assert 'jid' in data
         data.pop('jid', None)
 
-        self.assertIn('tag', data)
+        assert 'tag' in data
         data.pop('tag', None)
 
         ret.pop('_stamp', None)
         data.pop('_stamp', None)
 
         self.maxDiff = None
-        self.assertTrue(set(['master.pem', 'master.pub']).issubset(set(ret['data']['return']['local'])))
+        assert set(['master.pem', 'master.pub']).issubset(set(ret['data']['return']['local']))
 
     def test_wheel_async(self):
         # Give this test a little breathing room
@@ -125,13 +126,13 @@ class NetapiClientTest(TestCase):
         low.update(self.eauth_creds)
 
         ret = self.netapi.run(low)
-        self.assertIn('jid', ret)
-        self.assertIn('tag', ret)
+        assert 'jid' in ret
+        assert 'tag' in ret
 
     def test_wheel_unauthenticated(self):
         low = {'client': 'wheel', 'tgt': '*', 'fun': 'test.ping'}
 
-        with self.assertRaises(EauthAuthenticationError) as excinfo:
+        with pytest.raises(EauthAuthenticationError) as excinfo:
             ret = self.netapi.run(low)
 
     @skipIf(True, 'This is not testing anything. Skipping for now.')
@@ -156,7 +157,7 @@ class NetapiClientTest(TestCase):
     def test_runner_unauthenticated(self):
         low = {'client': 'runner', 'tgt': '*', 'fun': 'test.ping'}
 
-        with self.assertRaises(EauthAuthenticationError) as excinfo:
+        with pytest.raises(EauthAuthenticationError) as excinfo:
             ret = self.netapi.run(low)
 
 
@@ -209,16 +210,16 @@ class NetapiSSHClientTest(SSHCase):
 
         ret = self.netapi.run(low)
 
-        self.assertIn('localhost', ret)
-        self.assertIn('return', ret['localhost'])
-        self.assertEqual(ret['localhost']['return'], True)
-        self.assertEqual(ret['localhost']['id'], 'localhost')
-        self.assertEqual(ret['localhost']['fun'], 'test.ping')
+        assert 'localhost' in ret
+        assert 'return' in ret['localhost']
+        assert ret['localhost']['return'] is True
+        assert ret['localhost']['id'] == 'localhost'
+        assert ret['localhost']['fun'] == 'test.ping'
 
     def test_ssh_unauthenticated(self):
         low = {'client': 'ssh', 'tgt': 'localhost', 'fun': 'test.ping'}
 
-        with self.assertRaises(EauthAuthenticationError) as excinfo:
+        with pytest.raises(EauthAuthenticationError) as excinfo:
             ret = self.netapi.run(low)
 
     def test_ssh_unauthenticated_raw_shell_curl(self):
@@ -230,11 +231,11 @@ class NetapiSSHClientTest(SSHCase):
                'raw_shell': True}
 
         ret = None
-        with self.assertRaises(EauthAuthenticationError) as excinfo:
+        with pytest.raises(EauthAuthenticationError) as excinfo:
             ret = self.netapi.run(low)
 
-        self.assertEqual(self.post_web_handler.received_requests, [])
-        self.assertEqual(ret, None)
+        assert not self.post_web_handler.received_requests
+        assert ret is None
 
     def test_ssh_unauthenticated_raw_shell_touch(self):
 
@@ -246,11 +247,11 @@ class NetapiSSHClientTest(SSHCase):
                'raw_shell': True}
 
         ret = None
-        with self.assertRaises(EauthAuthenticationError) as excinfo:
+        with pytest.raises(EauthAuthenticationError) as excinfo:
             ret = self.netapi.run(low)
 
-        self.assertEqual(ret, None)
-        self.assertFalse(os.path.exists('badfile.txt'))
+        assert ret is None
+        assert not os.path.exists('badfile.txt')
 
     def test_ssh_authenticated_raw_shell_disabled(self):
 
@@ -266,8 +267,8 @@ class NetapiSSHClientTest(SSHCase):
         ret = None
         with patch.dict(self.netapi.opts,
                         {'netapi_allow_raw_shell': False}):
-            with self.assertRaises(EauthAuthenticationError) as excinfo:
+            with pytest.raises(EauthAuthenticationError) as excinfo:
                 ret = self.netapi.run(low)
 
-        self.assertEqual(ret, None)
-        self.assertFalse(os.path.exists('badfile.txt'))
+        assert ret is None
+        assert not os.path.exists('badfile.txt')

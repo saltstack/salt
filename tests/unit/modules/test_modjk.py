@@ -28,7 +28,7 @@ class ModjkTestCase(TestCase):
         '''
         with patch.object(modjk, '_do_http', return_value=
                           {'worker.jk_version': 'mod_jk/1.2.37'}):
-            self.assertEqual(modjk.version(), '1.2.37')
+            assert modjk.version() == '1.2.37'
 
     # 'get_running' function tests: 1
 
@@ -37,7 +37,7 @@ class ModjkTestCase(TestCase):
         Test for get the current running config (not from disk)
         '''
         with patch.object(modjk, '_do_http', return_value={}):
-            self.assertDictEqual(modjk.get_running(), {})
+            assert modjk.get_running() == {}
 
     # 'dump_config' function tests: 1
 
@@ -46,7 +46,7 @@ class ModjkTestCase(TestCase):
         Test for dump the original configuration that was loaded from disk
         '''
         with patch.object(modjk, '_do_http', return_value={}):
-            self.assertDictEqual(modjk.dump_config(), {})
+            assert modjk.dump_config() == {}
 
     # 'list_configured_members' function tests: 1
 
@@ -55,13 +55,13 @@ class ModjkTestCase(TestCase):
         Test for return a list of member workers from the configuration files
         '''
         with patch.object(modjk, '_do_http', return_value={}):
-            self.assertListEqual(modjk.list_configured_members('loadbalancer1'),
-                                 [])
+            assert modjk.list_configured_members('loadbalancer1') == \
+                                 []
 
         with patch.object(modjk, '_do_http', return_value=
                           {'worker.loadbalancer1.balance_workers': 'SALT'}):
-            self.assertListEqual(modjk.list_configured_members('loadbalancer1'),
-                                 ['SALT'])
+            assert modjk.list_configured_members('loadbalancer1') == \
+                                 ['SALT']
 
     # 'workers' function tests: 1
 
@@ -71,7 +71,7 @@ class ModjkTestCase(TestCase):
         '''
         with patch.object(modjk, '_do_http', return_value=
                           {'worker.list': 'Salt1,Salt2'}):
-            self.assertDictEqual(modjk.workers(), {})
+            assert modjk.workers() == {}
 
     # 'recover_all' function tests: 1
 
@@ -81,16 +81,16 @@ class ModjkTestCase(TestCase):
         activate them if they are not
         '''
         with patch.object(modjk, '_do_http', return_value={}):
-            self.assertDictEqual(modjk.recover_all('loadbalancer1'), {})
+            assert modjk.recover_all('loadbalancer1') == {}
 
         with patch.object(modjk, '_do_http', return_value=
                           {'worker.loadbalancer1.balance_workers': 'SALT'}):
             with patch.object(modjk, 'worker_status',
                               return_value={'activation': 'ACT',
                                             'state': 'OK'}):
-                self.assertDictEqual(modjk.recover_all('loadbalancer1'),
+                assert modjk.recover_all('loadbalancer1') == \
                                      {'SALT': {'activation': 'ACT',
-                                               'state': 'OK'}})
+                                               'state': 'OK'}}
 
     # 'reset_stats' function tests: 1
 
@@ -100,7 +100,7 @@ class ModjkTestCase(TestCase):
         '''
         with patch.object(modjk, '_do_http', return_value=
                           {'worker.result.type': 'OK'}):
-            self.assertTrue(modjk.reset_stats('loadbalancer1'))
+            assert modjk.reset_stats('loadbalancer1')
 
     # 'lb_edit' function tests: 1
 
@@ -110,8 +110,8 @@ class ModjkTestCase(TestCase):
         '''
         with patch.object(modjk, '_do_http', return_value=
                           {'worker.result.type': 'OK'}):
-            self.assertTrue(modjk.lb_edit('loadbalancer1', {'vlr': 1,
-                                                            'vlt': 60}))
+            assert modjk.lb_edit('loadbalancer1', {'vlr': 1,
+                                                            'vlt': 60})
 
     # 'bulk_stop' function tests: 1
 
@@ -121,8 +121,8 @@ class ModjkTestCase(TestCase):
         '''
         with patch.object(modjk, '_do_http', return_value=
                           {'worker.result.type': 'OK'}):
-            self.assertTrue(modjk.bulk_stop(["node1", "node2", "node3"],
-                                            'loadbalancer1'))
+            assert modjk.bulk_stop(["node1", "node2", "node3"],
+                                            'loadbalancer1')
 
     # 'bulk_activate' function tests: 1
 
@@ -132,8 +132,8 @@ class ModjkTestCase(TestCase):
         '''
         with patch.object(modjk, '_do_http', return_value=
                           {'worker.result.type': 'OK'}):
-            self.assertTrue(modjk.bulk_activate(["node1", "node2", "node3"],
-                                                'loadbalancer1'))
+            assert modjk.bulk_activate(["node1", "node2", "node3"],
+                                                'loadbalancer1')
 
     # 'bulk_disable' function tests: 1
 
@@ -143,8 +143,8 @@ class ModjkTestCase(TestCase):
         '''
         with patch.object(modjk, '_do_http', return_value=
                           {'worker.result.type': 'OK'}):
-            self.assertTrue(modjk.bulk_disable(["node1", "node2", "node3"],
-                                               'loadbalancer1'))
+            assert modjk.bulk_disable(["node1", "node2", "node3"],
+                                               'loadbalancer1')
 
     # 'bulk_recover' function tests: 1
 
@@ -154,8 +154,8 @@ class ModjkTestCase(TestCase):
         '''
         with patch.object(modjk, '_do_http', return_value=
                           {'worker.result.type': 'OK'}):
-            self.assertTrue(modjk.bulk_recover(["node1", "node2", "node3"],
-                                               'loadbalancer1'))
+            assert modjk.bulk_recover(["node1", "node2", "node3"],
+                                               'loadbalancer1')
 
     # 'worker_status' function tests: 1
 
@@ -166,11 +166,11 @@ class ModjkTestCase(TestCase):
         with patch.object(modjk, '_do_http', return_value=
                           {'worker.node1.activation': 'ACT',
                            'worker.node1.state': 'OK'}):
-            self.assertDictEqual(modjk.worker_status("node1"),
-                                 {'activation': 'ACT', 'state': 'OK'})
+            assert modjk.worker_status("node1") == \
+                                 {'activation': 'ACT', 'state': 'OK'}
 
         with patch.object(modjk, '_do_http', return_value={}):
-            self.assertFalse(modjk.worker_status("node1"))
+            assert not modjk.worker_status("node1")
 
     # 'worker_recover' function tests: 1
 
@@ -180,8 +180,8 @@ class ModjkTestCase(TestCase):
         if it is in OK state
         '''
         with patch.object(modjk, '_do_http', return_value={}):
-            self.assertDictEqual(modjk.worker_recover("node1", 'loadbalancer1'),
-                                 {})
+            assert modjk.worker_recover("node1", 'loadbalancer1') == \
+                                 {}
 
     # 'worker_disable' function tests: 1
 
@@ -191,7 +191,7 @@ class ModjkTestCase(TestCase):
         '''
         with patch.object(modjk, '_do_http', return_value=
                           {'worker.result.type': 'OK'}):
-            self.assertTrue(modjk.worker_disable('node1', 'loadbalancer1'))
+            assert modjk.worker_disable('node1', 'loadbalancer1')
 
     # 'worker_activate' function tests: 1
 
@@ -201,7 +201,7 @@ class ModjkTestCase(TestCase):
         '''
         with patch.object(modjk, '_do_http', return_value=
                           {'worker.result.type': 'OK'}):
-            self.assertTrue(modjk.worker_activate('node1', 'loadbalancer1'))
+            assert modjk.worker_activate('node1', 'loadbalancer1')
 
     # 'worker_stop' function tests: 1
 
@@ -211,7 +211,7 @@ class ModjkTestCase(TestCase):
         '''
         with patch.object(modjk, '_do_http', return_value=
                           {'worker.result.type': 'OK'}):
-            self.assertTrue(modjk.worker_stop('node1', 'loadbalancer1'))
+            assert modjk.worker_stop('node1', 'loadbalancer1')
 
     # 'worker_edit' function tests: 1
 
@@ -221,5 +221,5 @@ class ModjkTestCase(TestCase):
         '''
         with patch.object(modjk, '_do_http', return_value=
                           {'worker.result.type': 'OK'}):
-            self.assertTrue(modjk.worker_edit('node1', 'loadbalancer1',
-                                              {'vwf': 500, 'vwd': 60}))
+            assert modjk.worker_edit('node1', 'loadbalancer1',
+                                              {'vwf': 500, 'vwd': 60})

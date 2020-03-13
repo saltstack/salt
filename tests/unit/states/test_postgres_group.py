@@ -46,12 +46,12 @@ class PostgresGroupTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(postgres_group.__opts__, {'test': True}):
                 comt = ('Group {0} is set to be created'.format(name))
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(postgres_group.present(name), ret)
+                assert postgres_group.present(name) == ret
 
             with patch.dict(postgres_group.__opts__, {'test': False}):
                 comt = ('The group {0} has been created'.format(name))
                 ret.update({'comment': comt, 'result': True})
-                self.assertDictEqual(postgres_group.present(name), ret)
+                assert postgres_group.present(name) == ret
 
     # 'absent' function tests: 1
 
@@ -74,15 +74,15 @@ class PostgresGroupTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(postgres_group.__opts__, {'test': True}):
                 comt = ('Group {0} is set to be removed'.format(name))
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(postgres_group.absent(name), ret)
+                assert postgres_group.absent(name) == ret
 
             with patch.dict(postgres_group.__opts__, {'test': False}):
                 comt = ('Group {0} has been removed'.format(name))
                 ret.update({'comment': comt, 'result': True,
                             'changes': {name: 'Absent'}})
-                self.assertDictEqual(postgres_group.absent(name), ret)
+                assert postgres_group.absent(name) == ret
 
             comt = ('Group {0} is not present, so it cannot be removed'
                     .format(name))
             ret.update({'comment': comt, 'result': True, 'changes': {}})
-            self.assertDictEqual(postgres_group.absent(name), ret)
+            assert postgres_group.absent(name) == ret

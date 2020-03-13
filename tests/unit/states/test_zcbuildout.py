@@ -46,19 +46,17 @@ class BuildoutTestCase(Base):
         assert False, os.listdir(self.rdir)
         modbuildout.upgrade_bootstrap(c_dir)
         cret = buildout.installed(c_dir, python=self.py_st)
-        self.assertFalse('OUTPUT:' in cret['comment'], cret['comment'])
-        self.assertFalse('Log summary:' in cret['comment'], cret['comment'])
-        self.assertTrue(cret['result'], cret['comment'])
+        assert not ('OUTPUT:' in cret['comment']), cret['comment']
+        assert not ('Log summary:' in cret['comment']), cret['comment']
+        assert cret['result'], cret['comment']
 
     @pytest.mark.requires_network
     def test_error(self):
         b_dir = os.path.join(self.tdir, 'e')
         ret = buildout.installed(b_dir, python=self.py_st)
-        self.assertTrue(
-            'We did not get any expectable answer from buildout'
+        assert 'We did not get any expectable answer from buildout' \
             in ret['comment']
-        )
-        self.assertFalse(ret['result'])
+        assert not ret['result']
 
     @pytest.mark.requires_network
     def test_installed(self):
@@ -68,17 +66,17 @@ class BuildoutTestCase(Base):
         ret = buildout.installed(b_dir,
                                  python=self.py_st,
                                  onlyif=RUNTIME_VARS.SHELL_FALSE_PATH)
-        self.assertEqual(ret['comment'], '\nonlyif condition is false')
-        self.assertEqual(ret['result'], True)
-        self.assertTrue(os.sep + 'b' in ret['name'])
+        assert ret['comment'] == '\nonlyif condition is false'
+        assert ret['result'] is True
+        assert os.sep + 'b' in ret['name']
         b_dir = os.path.join(self.tdir, 'b')
         ret = buildout.installed(b_dir,
                                  python=self.py_st,
                                  unless=RUNTIME_VARS.SHELL_TRUE_PATH)
-        self.assertEqual(ret['comment'], '\nunless condition is true')
-        self.assertEqual(ret['result'], True)
-        self.assertTrue(os.sep + 'b' in ret['name'])
+        assert ret['comment'] == '\nunless condition is true'
+        assert ret['result'] is True
+        assert os.sep + 'b' in ret['name']
         ret = buildout.installed(b_dir, python=self.py_st)
-        self.assertEqual(ret['result'], True)
-        self.assertTrue('OUTPUT:' in ret['comment'])
-        self.assertTrue('Log summary:' in ret['comment'])
+        assert ret['result'] is True
+        assert 'OUTPUT:' in ret['comment']
+        assert 'Log summary:' in ret['comment']

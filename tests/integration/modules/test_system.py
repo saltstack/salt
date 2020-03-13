@@ -84,7 +84,7 @@ class SystemModuleTest(ModuleCase):
 
     def _restore_time(self):
         result = self._set_time(self._orig_time, "+0000")
-        self.assertTrue(result, msg="Unable to restore time properly")
+        assert result, "Unable to restore time properly"
 
     def _same_times(self, t1, t2, seconds_diff=30):
         '''
@@ -150,8 +150,8 @@ class SystemModuleTest(ModuleCase):
                             swTime = float(timeComp[1])
                             diff = abs(hwTime - swTime)
 
-                            self.assertTrue(diff <= 2.0,
-                                msg=("hwclock difference too big: " + six.text_type(timeCompStr)))
+                            assert diff <= 2.0, \
+                                ("hwclock difference too big: " + six.text_type(timeCompStr))
                             break
             except CompareTimeout:
                 p.terminate()
@@ -184,7 +184,7 @@ class SystemModuleTest(ModuleCase):
         t2 = datetime.datetime.strptime(res, self.fmt_str)
         msg = ("Difference in times is too large. Now: {0} Fake: {1}"
                .format(t1, t2))
-        self.assertTrue(self._same_times(t1, t2, seconds_diff=2), msg=msg)
+        assert self._same_times(t1, t2, seconds_diff=2), msg
 
     def test_get_system_date_time_utc(self):
         '''
@@ -196,7 +196,7 @@ class SystemModuleTest(ModuleCase):
         t2 = datetime.datetime.strptime(res, self.fmt_str)
         msg = ("Difference in times is too large. Now: {0} Fake: {1}"
                .format(t1, t2))
-        self.assertTrue(self._same_times(t1, t2, seconds_diff=2), msg=msg)
+        assert self._same_times(t1, t2, seconds_diff=2), msg
 
     @pytest.mark.destructive_test
     @pytest.mark.skip_if_not_root
@@ -212,8 +212,8 @@ class SystemModuleTest(ModuleCase):
 
         msg = ("Difference in times is too large. Now: {0} Fake: {1}"
                .format(time_now, cmp_time))
-        self.assertTrue(result and self._same_times(time_now, cmp_time),
-                        msg=msg)
+        assert result and self._same_times(time_now, cmp_time), \
+                        msg
         self._test_hwclock_sync()
 
     @pytest.mark.destructive_test
@@ -230,8 +230,8 @@ class SystemModuleTest(ModuleCase):
 
         msg = ("Difference in times is too large. Now: {0} Fake: {1}"
                .format(time_now, cmp_time))
-        self.assertTrue(result)
-        self.assertTrue(self._same_times(time_now, cmp_time), msg=msg)
+        assert result
+        assert self._same_times(time_now, cmp_time), msg
         self._test_hwclock_sync()
 
     @pytest.mark.destructive_test
@@ -250,8 +250,8 @@ class SystemModuleTest(ModuleCase):
 
         msg = ("Difference in times is too large. Now: {0} Fake: {1}"
                .format(time_now, cmp_time))
-        self.assertTrue(result)
-        self.assertTrue(self._same_times(time_now, cmp_time), msg=msg)
+        assert result
+        assert self._same_times(time_now, cmp_time), msg
         self._test_hwclock_sync()
 
     @pytest.mark.destructive_test
@@ -270,8 +270,8 @@ class SystemModuleTest(ModuleCase):
 
         msg = ("Difference in times is too large. Now: {0} Fake: {1}"
                .format(time_now, cmp_time))
-        self.assertTrue(result)
-        self.assertTrue(self._same_times(time_now, cmp_time), msg=msg)
+        assert result
+        assert self._same_times(time_now, cmp_time), msg
         self._test_hwclock_sync()
 
     @pytest.mark.flaky(max_runs=4)
@@ -290,8 +290,8 @@ class SystemModuleTest(ModuleCase):
         msg = ("Difference in times is too large. Now: {0} Fake: {1}"
                .format(time_now, cmp_time))
 
-        self.assertTrue(result)
-        self.assertTrue(self._same_times(time_now, cmp_time), msg=msg)
+        assert result
+        assert self._same_times(time_now, cmp_time), msg
         self._test_hwclock_sync()
 
     @pytest.mark.destructive_test
@@ -312,8 +312,8 @@ class SystemModuleTest(ModuleCase):
         msg = ("Difference in times is too large. Now: {0} Fake: {1}"
                .format(time_now, cmp_time))
 
-        self.assertTrue(result)
-        self.assertTrue(self._same_times(time_now, cmp_time), msg=msg)
+        assert result
+        assert self._same_times(time_now, cmp_time), msg
         self._test_hwclock_sync()
 
     @pytest.mark.skip_if_not_root
@@ -326,14 +326,14 @@ class SystemModuleTest(ModuleCase):
         hostname_cmd = salt.utils.path.which('hostnamectl')
         if hostname_cmd:
             desc = self.run_function('cmd.run', ["hostnamectl status --pretty"])
-            self.assertEqual(res, desc)
+            assert res == desc
         else:
             if not os.path.isfile('/etc/machine-info'):
-                self.assertFalse(res)
+                assert not res
             else:
                 with salt.utils.files.fopen('/etc/machine-info', 'r') as mach_info:
                     data = mach_info.read()
-                    self.assertIn(res, data.decode('string_escape'))
+                    assert res in data.decode('string_escape')
 
     @pytest.mark.destructive_test
     @pytest.mark.skip_if_not_root
@@ -346,8 +346,8 @@ class SystemModuleTest(ModuleCase):
         ret = self.run_function('system.set_computer_desc', [desc])
         computer_desc = self.run_function('system.get_computer_desc')
 
-        self.assertTrue(ret)
-        self.assertIn(desc, computer_desc)
+        assert ret
+        assert desc in computer_desc
 
     @pytest.mark.destructive_test
     @pytest.mark.skip_if_not_root
@@ -368,8 +368,8 @@ class SystemModuleTest(ModuleCase):
             self.run_function('system.get_computer_desc')
         )
 
-        self.assertTrue(ret)
-        self.assertIn(desc, computer_desc)
+        assert ret
+        assert desc in computer_desc
 
     @pytest.mark.skip_if_not_root
     def test_has_hwclock(self):
@@ -377,8 +377,8 @@ class SystemModuleTest(ModuleCase):
         Verify platform has a settable hardware clock, if possible.
         '''
         if self.run_function('grains.get', ['os_family']) == 'NILinuxRT':
-            self.assertTrue(self.run_function('system._has_settable_hwclock'))
-            self.assertTrue(self._hwclock_has_compare())
+            assert self.run_function('system._has_settable_hwclock')
+            assert self._hwclock_has_compare()
 
 
 @skipIf(not salt.utils.platform.is_windows(),
@@ -406,10 +406,10 @@ class WinSystemModuleTest(ModuleCase):
         '''
         ret = self.run_function('system.get_computer_name')
 
-        self.assertTrue(isinstance(ret, six.text_type))
+        assert isinstance(ret, six.text_type)
         import socket
         name = socket.gethostname()
-        self.assertEqual(name, ret)
+        assert name == ret
 
     @pytest.mark.destructive_test
     def test_set_computer_desc(self):
@@ -420,10 +420,10 @@ class WinSystemModuleTest(ModuleCase):
         desc = 'test description'
         try:
             set_desc = self.run_function('system.set_computer_desc', [desc])
-            self.assertTrue(set_desc)
+            assert set_desc
 
             get_desc = self.run_function('system.get_computer_desc')
-            self.assertEqual(set_desc['Computer Description'], get_desc)
+            assert set_desc['Computer Description'] == get_desc
         finally:
             self.run_function('system.set_computer_desc', [current_desc])
 
@@ -449,7 +449,7 @@ class WinSystemModuleTest(ModuleCase):
             time_sys = time_sys + datetime.timedelta(hours=12)
         diff = time_sys - time_now
         # Timeouts are set to 300 seconds. We're adding a 30 second buffer
-        self.assertTrue(diff.seconds < 330)
+        assert diff.seconds < 330
 
     @skipIf(True, 'WAR ROOM 7/18/2019, unit test?')
     @pytest.mark.destructive_test
@@ -469,7 +469,7 @@ class WinSystemModuleTest(ModuleCase):
             self.run_function('system.set_system_time', [test_time + ' AM'])
             time.sleep(.25)
             new_time = datetime.datetime.now().strftime('%H:%M')
-            self.assertEqual(new_time, test_time)
+            assert new_time == test_time
         finally:
             self.run_function('system.set_system_time', [current_time])
             self.run_function('service.start', ['w32time'])
@@ -480,7 +480,7 @@ class WinSystemModuleTest(ModuleCase):
         '''
         ret = self.run_function('system.get_system_date')
         date = datetime.datetime.now().strftime("%m/%d/%Y")
-        self.assertEqual(date, ret)
+        assert date == ret
 
     @skipIf(True, 'WAR ROOM 7/18/2019, unit test?')
     @pytest.mark.destructive_test
@@ -500,7 +500,7 @@ class WinSystemModuleTest(ModuleCase):
             current_date = datetime.datetime.now().strftime('%Y/%m/%d')
             self.run_function('system.set_system_date', ['03/25/2018'])
             new_date = datetime.datetime.now().strftime('%Y/%m/%d')
-            self.assertEqual(new_date, '2018/03/25')
+            assert new_date == '2018/03/25'
         finally:
             self.run_function('system.set_system_date', [current_date])
             self.run_function('service.start', ['w32time'])

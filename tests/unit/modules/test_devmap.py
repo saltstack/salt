@@ -32,7 +32,7 @@ class DevMapTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='A')
         with patch.dict(devmap.__salt__, {'cmd.run': mock}):
-            self.assertEqual(devmap.multipath_list(), ['A'])
+            assert devmap.multipath_list() == ['A']
 
     def test_multipath_flush(self):
         '''
@@ -40,11 +40,11 @@ class DevMapTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=False)
         with patch.object(os.path, 'exists', mock):
-            self.assertEqual(devmap.multipath_flush('device'),
-                             'device does not exist')
+            assert devmap.multipath_flush('device') == \
+                             'device does not exist'
 
         mock = MagicMock(return_value=True)
         with patch.object(os.path, 'exists', mock):
             mock = MagicMock(return_value='A')
             with patch.dict(devmap.__salt__, {'cmd.run': mock}):
-                self.assertEqual(devmap.multipath_flush('device'), ['A'])
+                assert devmap.multipath_flush('device') == ['A']

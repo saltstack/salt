@@ -78,8 +78,8 @@ class JoyentTestCase(TestCase, LoaderModuleMockMixin):
         reply = (200, {'state': 'provisioning'})
         with patch.object(joyent, 'show_instance', return_value=reply):
             result = joyent.query_instance(self.vm_)
-        self.assertTrue(joyent.__utils__['cloud.fire_event'].called_once())
-        self.assertEqual(result, None)
+        assert joyent.__utils__['cloud.fire_event'].called_once()
+        assert result is None
 
     def test_query_instance_has_ip(self):
         '''
@@ -88,8 +88,8 @@ class JoyentTestCase(TestCase, LoaderModuleMockMixin):
         reply = (200, {'primaryIp': '1.1.1.1', 'state': 'provisioning'})
         with patch.object(joyent, 'show_instance', return_value=reply):
             result = joyent.query_instance(self.vm_)
-        self.assertTrue(joyent.__utils__['cloud.fire_event'].called_once())
-        self.assertEqual(result, None)
+        assert joyent.__utils__['cloud.fire_event'].called_once()
+        assert result is None
 
     def test_query_instance_ready(self):
         '''
@@ -98,5 +98,5 @@ class JoyentTestCase(TestCase, LoaderModuleMockMixin):
         reply = (200, {'primaryIp': '1.1.1.1', 'state': 'running'})
         with patch.object(joyent, 'show_instance', return_value=reply):
             result = joyent.query_instance(self.vm_)
-        self.assertTrue(joyent.__utils__['cloud.fire_event'].called_once())
-        self.assertEqual(result, '1.1.1.1')
+        assert joyent.__utils__['cloud.fire_event'].called_once()
+        assert result == '1.1.1.1'

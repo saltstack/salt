@@ -112,10 +112,8 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
         filemod.replace(self.tfile.name, r'Etiam', 'Salticus', backup=False)
 
         with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
-            self.assertIn(
-                'Salticus',
+            assert 'Salticus' in \
                 salt.utils.stringutils.to_unicode(fp.read())
-            )
 
     def test_replace_append_if_not_found(self):
         '''
@@ -135,8 +133,7 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
         filemod.replace(tfile.name, **args)
         expected = os.linesep.join([base, 'baz=\\g<value>']) + os.linesep
         with salt.utils.files.fopen(tfile.name) as tfile2:
-            self.assertEqual(
-                salt.utils.stringutils.to_unicode(tfile2.read()), expected)
+            assert salt.utils.stringutils.to_unicode(tfile2.read()) == expected
         os.remove(tfile.name)
 
         # File not ending with a newline, no match
@@ -145,8 +142,7 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
             tfile.flush()
         filemod.replace(tfile.name, **args)
         with salt.utils.files.fopen(tfile.name) as tfile2:
-            self.assertEqual(
-                salt.utils.stringutils.to_unicode(tfile2.read()), expected)
+            assert salt.utils.stringutils.to_unicode(tfile2.read()) == expected
         os.remove(tfile.name)
 
         # A newline should not be added in empty files
@@ -155,8 +151,7 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
         filemod.replace(tfile.name, **args)
         expected = args['repl'] + os.linesep
         with salt.utils.files.fopen(tfile.name) as tfile2:
-            self.assertEqual(
-                salt.utils.stringutils.to_unicode(tfile2.read()), expected)
+            assert salt.utils.stringutils.to_unicode(tfile2.read()) == expected
         os.remove(tfile.name)
 
         # Using not_found_content, rather than repl
@@ -167,8 +162,7 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
         expected = os.linesep.join([base, 'baz=3']) + os.linesep
         filemod.replace(tfile.name, **args)
         with salt.utils.files.fopen(tfile.name) as tfile2:
-            self.assertEqual(
-                salt.utils.stringutils.to_unicode(tfile2.read()), expected)
+            assert salt.utils.stringutils.to_unicode(tfile2.read()) == expected
         os.remove(tfile.name)
 
         # not appending if matches
@@ -179,8 +173,7 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
         expected = base
         filemod.replace(tfile.name, **args)
         with salt.utils.files.fopen(tfile.name) as tfile2:
-            self.assertEqual(
-                salt.utils.stringutils.to_unicode(tfile2.read()), expected)
+            assert salt.utils.stringutils.to_unicode(tfile2.read()) == expected
 
     def test_backup(self):
         fext = '.bak'
@@ -188,7 +181,7 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
 
         filemod.replace(self.tfile.name, r'Etiam', 'Salticus', backup=fext)
 
-        self.assertTrue(os.path.exists(bak_file))
+        assert os.path.exists(bak_file)
         os.unlink(bak_file)
 
     def test_nobackup(self):
@@ -197,28 +190,28 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
 
         filemod.replace(self.tfile.name, r'Etiam', 'Salticus', backup=False)
 
-        self.assertFalse(os.path.exists(bak_file))
+        assert not os.path.exists(bak_file)
 
     def test_dry_run(self):
         before_ctime = os.stat(self.tfile.name).st_mtime
         filemod.replace(self.tfile.name, r'Etiam', 'Salticus', dry_run=True)
         after_ctime = os.stat(self.tfile.name).st_mtime
 
-        self.assertEqual(before_ctime, after_ctime)
+        assert before_ctime == after_ctime
 
     def test_show_changes(self):
         ret = filemod.replace(self.tfile.name,
                               r'Etiam', 'Salticus',
                               show_changes=True)
 
-        self.assertTrue(ret.startswith('---'))  # looks like a diff
+        assert ret.startswith('---')  # looks like a diff
 
     def test_noshow_changes(self):
         ret = filemod.replace(self.tfile.name,
                               r'Etiam', 'Salticus',
                               show_changes=False)
 
-        self.assertIsInstance(ret, bool)
+        assert isinstance(ret, bool)
 
     def test_re_str_flags(self):
         # upper- & lower-case
@@ -244,16 +237,16 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
                               r'Etiam', 'Salticus',
                               search_only=True)
 
-        self.assertIsInstance(ret, bool)
-        self.assertEqual(ret, True)
+        assert isinstance(ret, bool)
+        assert ret is True
 
     def test_search_only_return_false(self):
         ret = filemod.replace(self.tfile.name,
                               r'Etian', 'Salticus',
                               search_only=True)
 
-        self.assertIsInstance(ret, bool)
-        self.assertEqual(ret, False)
+        assert isinstance(ret, bool)
+        assert ret is False
 
 
 class FileCommentLineTestCase(TestCase, LoaderModuleMockMixin):
@@ -303,7 +296,7 @@ class FileCommentLineTestCase(TestCase, LoaderModuleMockMixin):
 
         with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
             filecontent = fp.read()
-        self.assertIn('#ipsum', filecontent)
+        assert '#ipsum' in filecontent
 
     def test_comment(self):
         filemod.comment(self.tfile.name,
@@ -311,7 +304,7 @@ class FileCommentLineTestCase(TestCase, LoaderModuleMockMixin):
 
         with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
             filecontent = fp.read()
-        self.assertIn('#ipsum', filecontent)
+        assert '#ipsum' in filecontent
 
     def test_comment_different_character(self):
         filemod.comment_line(self.tfile.name,
@@ -320,7 +313,7 @@ class FileCommentLineTestCase(TestCase, LoaderModuleMockMixin):
 
         with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
             filecontent = fp.read()
-        self.assertIn('//ipsum', filecontent)
+        assert '//ipsum' in filecontent
 
     def test_comment_not_found(self):
         filemod.comment_line(self.tfile.name,
@@ -328,8 +321,8 @@ class FileCommentLineTestCase(TestCase, LoaderModuleMockMixin):
 
         with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
             filecontent = fp.read()
-        self.assertNotIn('#sit', filecontent)
-        self.assertNotIn('sit', filecontent)
+        assert '#sit' not in filecontent
+        assert 'sit' not in filecontent
 
     def test_uncomment(self):
         filemod.uncomment(self.tfile.name,
@@ -337,8 +330,8 @@ class FileCommentLineTestCase(TestCase, LoaderModuleMockMixin):
 
         with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
             filecontent = fp.read()
-        self.assertIn('dolor', filecontent)
-        self.assertNotIn('#dolor', filecontent)
+        assert 'dolor' in filecontent
+        assert '#dolor' not in filecontent
 
 
 class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
@@ -441,31 +434,26 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
 
         with salt.utils.files.fopen(self.tfile.name, 'rb') as fp:
             filecontent = fp.read()
-        self.assertIn(salt.utils.stringutils.to_bytes(
+        assert salt.utils.stringutils.to_bytes(
             os.linesep.join([
-                '#-- START BLOCK 1', new_multiline_content, '#-- END BLOCK 1'])),
-            filecontent)
-        self.assertNotIn(b'old content part 1', filecontent)
-        self.assertNotIn(b'old content part 2', filecontent)
+                '#-- START BLOCK 1', new_multiline_content, '#-- END BLOCK 1'])) in \
+            filecontent
+        assert b'old content part 1' not in filecontent
+        assert b'old content part 2' not in filecontent
 
     def test_replace_append(self):
         new_content = "Well, I didn't vote for you."
 
-        self.assertRaises(
-            CommandExecutionError,
-            filemod.blockreplace,
-            self.tfile.name,
+        with pytest.raises(CommandExecutionError):
+            filemod.blockreplace(self.tfile.name,
             marker_start='#-- START BLOCK 2',
             marker_end='#-- END BLOCK 2',
             content=new_content,
             append_if_not_found=False,
-            backup=False
-        )
+            backup=False)
         with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
-            self.assertNotIn(
-                '#-- START BLOCK 2' + "\n" + new_content + '#-- END BLOCK 2',
+            assert '#-- START BLOCK 2' + "\n" + new_content + '#-- END BLOCK 2' not in \
                 salt.utils.stringutils.to_unicode(fp.read())
-            )
 
         if salt.utils.platform.is_windows():
             check_perms_patch = win_file.check_perms
@@ -480,11 +468,11 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                                  append_if_not_found=True)
 
         with salt.utils.files.fopen(self.tfile.name, 'rb') as fp:
-            self.assertIn(salt.utils.stringutils.to_bytes(
+            assert salt.utils.stringutils.to_bytes(
                 os.linesep.join([
                     '#-- START BLOCK 2',
-                    '{0}#-- END BLOCK 2'.format(new_content)])),
-                fp.read())
+                    '{0}#-- END BLOCK 2'.format(new_content)])) in \
+                fp.read()
 
     def test_replace_append_newline_at_eof(self):
         '''
@@ -511,8 +499,7 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
             filemod.blockreplace(tfile.name, **args)
         expected = os.linesep.join([base, block])
         with salt.utils.files.fopen(tfile.name) as tfile2:
-            self.assertEqual(
-                salt.utils.stringutils.to_unicode(tfile2.read()), expected)
+            assert salt.utils.stringutils.to_unicode(tfile2.read()) == expected
         os.remove(tfile.name)
 
         # File not ending with a newline
@@ -526,8 +513,7 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(filemod, 'check_perms', check_perms_patch):
             filemod.blockreplace(tfile.name, **args)
         with salt.utils.files.fopen(tfile.name) as tfile2:
-            self.assertEqual(
-                salt.utils.stringutils.to_unicode(tfile2.read()), expected)
+            assert salt.utils.stringutils.to_unicode(tfile2.read()) == expected
         os.remove(tfile.name)
 
         # A newline should not be added in empty files
@@ -540,29 +526,25 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(filemod, 'check_perms', check_perms_patch):
             filemod.blockreplace(tfile.name, **args)
         with salt.utils.files.fopen(tfile.name) as tfile2:
-            self.assertEqual(
-                salt.utils.stringutils.to_unicode(tfile2.read()), block)
+            assert salt.utils.stringutils.to_unicode(tfile2.read()) == block
         os.remove(tfile.name)
 
     def test_replace_prepend(self):
         new_content = "Well, I didn't vote for you."
 
-        self.assertRaises(
-            CommandExecutionError,
-            filemod.blockreplace,
-            self.tfile.name,
+        with pytest.raises(CommandExecutionError):
+            filemod.blockreplace(self.tfile.name,
             marker_start='#-- START BLOCK 2',
             marker_end='#-- END BLOCK 2',
             content=new_content,
             prepend_if_not_found=False,
-            backup=False
-        )
+            backup=False)
         with salt.utils.files.fopen(self.tfile.name, 'rb') as fp:
-            self.assertNotIn(salt.utils.stringutils.to_bytes(
+            assert salt.utils.stringutils.to_bytes(
                 os.linesep.join([
                     '#-- START BLOCK 2',
-                    '{0}#-- END BLOCK 2'.format(new_content)])),
-                fp.read())
+                    '{0}#-- END BLOCK 2'.format(new_content)])) not in \
+                fp.read()
 
         if salt.utils.platform.is_windows():
             check_perms_patch = win_file.check_perms
@@ -577,11 +559,10 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                                  prepend_if_not_found=True)
 
         with salt.utils.files.fopen(self.tfile.name, 'rb') as fp:
-            self.assertTrue(
-                fp.read().startswith(salt.utils.stringutils.to_bytes(
+            assert fp.read().startswith(salt.utils.stringutils.to_bytes(
                     os.linesep.join([
                         '#-- START BLOCK 2',
-                        '{0}#-- END BLOCK 2'.format(new_content)]))))
+                        '{0}#-- END BLOCK 2'.format(new_content)])))
 
     def test_replace_partial_marked_lines(self):
         if salt.utils.platform.is_windows():
@@ -597,12 +578,12 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
 
         with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
             filecontent = salt.utils.stringutils.to_unicode(fp.read())
-        self.assertIn('new content 1', filecontent)
-        self.assertNotIn('to be removed', filecontent)
-        self.assertIn('first part of start line', filecontent)
-        self.assertNotIn('first part of end line', filecontent)
-        self.assertIn('part of start line not removed', filecontent)
-        self.assertIn('part of end line not removed', filecontent)
+        assert 'new content 1' in filecontent
+        assert 'to be removed' not in filecontent
+        assert 'first part of start line' in filecontent
+        assert 'first part of end line' not in filecontent
+        assert 'part of start line not removed' in filecontent
+        assert 'part of end line not removed' in filecontent
 
     def test_backup(self):
         fext = '.bak'
@@ -620,9 +601,9 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                 content='new content 2',
                 backup=fext)
 
-        self.assertTrue(os.path.exists(bak_file))
+        assert os.path.exists(bak_file)
         os.unlink(bak_file)
-        self.assertFalse(os.path.exists(bak_file))
+        assert not os.path.exists(bak_file)
 
         fext = '.bak'
         bak_file = '{0}{1}'.format(self.tfile.name, fext)
@@ -638,7 +619,7 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                                  content='new content 3',
                                  backup=False)
 
-        self.assertFalse(os.path.exists(bak_file))
+        assert not os.path.exists(bak_file)
 
     def test_no_modifications(self):
         if salt.utils.platform.is_windows():
@@ -666,7 +647,7 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                                  append_newline=None)
         after_ctime = os.stat(self.tfile.name).st_mtime
 
-        self.assertEqual(before_ctime, after_ctime)
+        assert before_ctime == after_ctime
 
     def test_dry_run(self):
         before_ctime = os.stat(self.tfile.name).st_mtime
@@ -677,7 +658,7 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                              dry_run=True)
         after_ctime = os.stat(self.tfile.name).st_mtime
 
-        self.assertEqual(before_ctime, after_ctime)
+        assert before_ctime == after_ctime
 
     def test_show_changes(self):
         if salt.utils.platform.is_windows():
@@ -692,7 +673,7 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                                        backup=False,
                                        show_changes=True)
 
-            self.assertTrue(ret.startswith('---'))  # looks like a diff
+            assert ret.startswith('---')  # looks like a diff
 
             ret = filemod.blockreplace(self.tfile.name,
                                        marker_start='// START BLOCK',
@@ -701,18 +682,15 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                                        backup=False,
                                        show_changes=False)
 
-            self.assertIsInstance(ret, bool)
+            assert isinstance(ret, bool)
 
     def test_unfinished_block_exception(self):
-        self.assertRaises(
-            CommandExecutionError,
-            filemod.blockreplace,
-            self.tfile.name,
+        with pytest.raises(CommandExecutionError):
+            filemod.blockreplace(self.tfile.name,
             marker_start='#-- START BLOCK UNFINISHED',
             marker_end='#-- END BLOCK UNFINISHED',
             content='foobar',
-            backup=False
-        )
+            backup=False)
 
 
 @skipIf(salt.utils.platform.is_windows(), 'Skip on windows')
@@ -761,40 +739,40 @@ class FileGrepTestCase(TestCase, LoaderModuleMockMixin):
         result = filemod.grep(self.tfile.name,
                      'Lorem ipsum')
 
-        self.assertTrue(result, None)
-        self.assertTrue(result['retcode'] == 0)
-        self.assertTrue(result['stdout'] == 'Lorem ipsum dolor sit amet, consectetur')
-        self.assertTrue(result['stderr'] == '')
+        assert result, None
+        assert result['retcode'] == 0
+        assert result['stdout'] == 'Lorem ipsum dolor sit amet, consectetur'
+        assert result['stderr'] == ''
 
     def test_grep_query_not_exists(self):
         result = filemod.grep(self.tfile.name,
                      'Lorem Lorem')
 
-        self.assertTrue(result['retcode'] == 1)
-        self.assertTrue(result['stdout'] == '')
-        self.assertTrue(result['stderr'] == '')
+        assert result['retcode'] == 1
+        assert result['stdout'] == ''
+        assert result['stderr'] == ''
 
     def test_grep_query_exists_with_opt(self):
         result = filemod.grep(self.tfile.name,
                      'Lorem ipsum',
                      '-i')
 
-        self.assertTrue(result, None)
-        self.assertTrue(result['retcode'] == 0)
-        self.assertTrue(result['stdout'] == 'Lorem ipsum dolor sit amet, consectetur')
-        self.assertTrue(result['stderr'] == '')
+        assert result, None
+        assert result['retcode'] == 0
+        assert result['stdout'] == 'Lorem ipsum dolor sit amet, consectetur'
+        assert result['stderr'] == ''
 
     def test_grep_query_not_exists_opt(self):
         result = filemod.grep(self.tfile.name,
                      'Lorem Lorem',
                      '-v')
 
-        self.assertTrue(result['retcode'] == 0)
-        self.assertTrue(result['stdout'] == FileGrepTestCase.MULTILINE_STRING)
-        self.assertTrue(result['stderr'] == '')
+        assert result['retcode'] == 0
+        assert result['stdout'] == FileGrepTestCase.MULTILINE_STRING
+        assert result['stderr'] == ''
 
     def test_grep_query_too_many_opts(self):
-        with self.assertRaisesRegex(SaltInvocationError, '^Passing multiple command line arg') as cm:
+        with pytest.raises(SaltInvocationError, match='^Passing multiple command line arg') as cm:
             result = filemod.grep(self.tfile.name,
                                   'Lorem Lorem',
                                   '-i -b2')
@@ -804,21 +782,21 @@ class FileGrepTestCase(TestCase, LoaderModuleMockMixin):
         result = filemod.grep(_file,
                      'Lorem ipsum')
 
-        self.assertTrue(result, None)
-        self.assertTrue(result['retcode'] == 0)
-        self.assertTrue(result['stdout'] == 'Lorem ipsum dolor sit amet, consectetur')
-        self.assertTrue(result['stderr'] == '')
+        assert result, None
+        assert result['retcode'] == 0
+        assert result['stdout'] == 'Lorem ipsum dolor sit amet, consectetur'
+        assert result['stderr'] == ''
 
     def test_grep_file_not_exists_wildcard(self):
         _file = '{0}-junk*'.format(self.tfile.name)
         result = filemod.grep(_file,
                      'Lorem ipsum')
 
-        self.assertTrue(result, None)
-        self.assertFalse(result['retcode'] == 0)
-        self.assertFalse(result['stdout'] == 'Lorem ipsum dolor sit amet, consectetur')
+        assert result, None
+        assert result['retcode'] != 0
+        assert result['stdout'] != 'Lorem ipsum dolor sit amet, consectetur'
         _expected_stderr = 'grep: {0}-junk*: No such file or directory'.format(self.tfile.name)
-        self.assertTrue(result['stderr'] == _expected_stderr)
+        assert result['stderr'] == _expected_stderr
 
 
 class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
@@ -863,7 +841,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
                 result = filemod.check_file_meta(name, name, source, source_sum,
                                                  'root', 'root', '755', None,
                                                  'base')
-        self.assertTrue(result, None)
+        assert result, None
 
     @skipIf(salt.utils.platform.is_windows(), 'SED is not available on Windows')
     def test_sed_limit_escaped(self):
@@ -879,10 +857,8 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
             filemod.sed(path, before, after, limit=limit)
 
             with salt.utils.files.fopen(path, 'r') as newfile:
-                self.assertEqual(
-                    SED_CONTENT.replace(before, ''),
+                assert SED_CONTENT.replace(before, '') == \
                     salt.utils.stringutils.to_unicode(newfile.read())
-                )
 
     def test_append_newline_at_eof(self):
         '''
@@ -897,7 +873,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
         expected = os.linesep.join(['foo', 'bar', ''])
         with salt.utils.files.fopen(tfile.name) as tfile2:
             new_file = salt.utils.stringutils.to_unicode(tfile2.read())
-        self.assertEqual(new_file, expected)
+        assert new_file == expected
 
         # File not ending with a newline
         with tempfile.NamedTemporaryFile(mode='wb', delete=False) as tfile:
@@ -905,17 +881,14 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
             tfile.flush()
         filemod.append(tfile.name, 'bar')
         with salt.utils.files.fopen(tfile.name) as tfile2:
-            self.assertEqual(
-                salt.utils.stringutils.to_unicode(tfile2.read()), expected)
+            assert salt.utils.stringutils.to_unicode(tfile2.read()) == expected
 
         # A newline should be added in empty files
         with tempfile.NamedTemporaryFile(mode='wb', delete=False) as tfile:
             filemod.append(tfile.name, salt.utils.stringutils.to_str('bar'))
         with salt.utils.files.fopen(tfile.name) as tfile2:
-            self.assertEqual(
-                salt.utils.stringutils.to_unicode(tfile2.read()),
+            assert salt.utils.stringutils.to_unicode(tfile2.read()) == \
                 'bar' + os.linesep
-            )
 
     def test_extract_hash(self):
         '''
@@ -932,16 +905,16 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
             tfile.flush()
 
         result = filemod.extract_hash(tfile.name, '', '/rc.conf')
-        self.assertEqual(result, {
+        assert result == {
             'hsum': 'ef6e82e4006dee563d98ada2a2a80a27',
             'hash_type': 'md5'
-        })
+        }
 
         result = filemod.extract_hash(tfile.name, '', '/example.tar.gz')
-        self.assertEqual(result, {
+        assert result == {
             'hsum': 'ead48423703509d37c4a90e6a0d53e143b6fc268',
             'hash_type': 'sha1'
-        })
+        }
 
         # All the checksums in this test file are sha1 sums. We run this
         # loop three times. The first pass tests auto-detection of hash
@@ -966,7 +939,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
                 'hsum': 'fe05bcdcdc4928012781a5f1a2a77cbb5398e106',
                 'hash_type': 'sha1'
             } if hash_type != 'sha256' else None
-            self.assertEqual(result, expected)
+            assert result == expected
 
             # Test both a file_name and source but no source_hash_name.
             # Even though there are matches for both file_name and
@@ -984,7 +957,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
                 'hsum': 'ead48423703509d37c4a90e6a0d53e143b6fc268',
                 'hash_type': 'sha1'
             } if hash_type != 'sha256' else None
-            self.assertEqual(result, expected)
+            assert result == expected
 
             # Test both a file_name and source but no source_hash_name.
             # Since there is no match for the file_name, the source is
@@ -1002,7 +975,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
                 'hsum': 'ad782ecdac770fc6eb9a62e44f90873fb97fb26b',
                 'hash_type': 'sha1'
             } if hash_type != 'sha256' else None
-            self.assertEqual(result, expected)
+            assert result == expected
 
         # Hash only, no file name (Maven repo checksum format)
         # Since there is no name match, the first checksum in the file will
@@ -1019,7 +992,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
                 'hsum': 'ead48423703509d37c4a90e6a0d53e143b6fc268',
                 'hash_type': 'sha1'
             } if hash_type != 'sha256' else None
-            self.assertEqual(result, expected)
+            assert result == expected
 
     def test_user_to_uid_int(self):
         '''
@@ -1027,7 +1000,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
         '''
         user = 5034
         ret = filemod.user_to_uid(user)
-        self.assertEqual(ret, user)
+        assert ret == user
 
     def test_group_to_gid_int(self):
         '''
@@ -1035,7 +1008,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
         '''
         group = 5034
         ret = filemod.group_to_gid(group)
-        self.assertEqual(ret, group)
+        assert ret == group
 
     def test_patch(self):
         with patch('os.path.isdir', return_value=False) as mock_isdir, \
@@ -1046,7 +1019,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
             cmd = ['/bin/patch', '--forward', '--reject-file=-',
                 '-i', '/path/to/patch', '/path/to/file']
             cmd_mock.assert_called_once_with(cmd, python_shell=False)
-            self.assertEqual('test_retval', ret)
+            assert 'test_retval' == ret
 
     def test_patch_dry_run(self):
         with patch('os.path.isdir', return_value=False) as mock_isdir, \
@@ -1057,7 +1030,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
             cmd = ['/bin/patch', '--dry-run', '--forward', '--reject-file=-',
                 '-i', '/path/to/patch', '/path/to/file']
             cmd_mock.assert_called_once_with(cmd, python_shell=False)
-            self.assertEqual('test_retval', ret)
+            assert 'test_retval' == ret
 
     def test_patch_dir(self):
         with patch('os.path.isdir', return_value=True) as mock_isdir, \
@@ -1068,7 +1041,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
             cmd = ['/bin/patch', '--forward', '--reject-file=-',
                 '-i', '/path/to/patch', '-d', '/path/to/dir', '--strip=0']
             cmd_mock.assert_called_once_with(cmd, python_shell=False)
-            self.assertEqual('test_retval', ret)
+            assert 'test_retval' == ret
 
     def test_apply_template_on_contents(self):
         '''
@@ -1083,7 +1056,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
                 context={'opts': filemod.__opts__},
                 defaults=defaults,
                 saltenv='base')
-        self.assertEqual(ret, 'This is a templated file.')
+        assert ret == 'This is a templated file.'
 
     def test_get_diff(self):
 
@@ -1156,11 +1129,11 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
 
                 # Identical files
                 ret = filemod.get_diff('text1', 'text1')
-                self.assertEqual(ret, '')
+                assert ret == ''
 
                 # Non-identical files
                 ret = filemod.get_diff('text1', 'text2')
-                self.assertEqual(ret, diff_result)
+                assert ret == diff_result
 
                 # Repeat the above test with remote file paths. The expectation
                 # is that the cp.cache_file mock will ensure that we are not
@@ -1169,40 +1142,40 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(filemod, '_binary_replace',
                                   MagicMock(return_value='')):
                     ret = filemod.get_diff('salt://text1', 'salt://text1')
-                    self.assertEqual(ret, '')
+                    assert ret == ''
                     ret = filemod.get_diff('salt://text1', 'salt://text2')
-                    self.assertEqual(ret, diff_result)
+                    assert ret == diff_result
 
             # Test diffing two binary files
             with patch.dict(filemod.__utils__, {'files.is_text': mock_bin_bin}):
 
                 # Identical files
                 ret = filemod.get_diff('binary1', 'binary1')
-                self.assertEqual(ret, '')
+                assert ret == ''
 
                 # Non-identical files
                 ret = filemod.get_diff('binary1', 'binary2')
-                self.assertEqual(ret, 'Replace binary file')
+                assert ret == 'Replace binary file'
 
             # Test diffing a text file with a binary file
             with patch.dict(filemod.__utils__, {'files.is_text': mock_text_bin}):
 
                 ret = filemod.get_diff('text1', 'binary1')
-                self.assertEqual(ret, 'Replace text file with binary file')
+                assert ret == 'Replace text file with binary file'
 
             # Test diffing a binary file with a text file
             with patch.dict(filemod.__utils__, {'files.is_text': mock_bin_text}):
 
                 ret = filemod.get_diff('binary1', 'text1')
-                self.assertEqual(ret, 'Replace binary file with text file')
+                assert ret == 'Replace binary file with text file'
 
     def test_stats(self):
         with patch('os.path.expanduser', MagicMock(side_effect=lambda path: path)), \
                 patch('os.path.exists', MagicMock(return_value=True)), \
                 patch('os.stat', MagicMock(return_value=DummyStat())):
             ret = filemod.stats('dummy', None, True)
-            self.assertEqual(ret['mode'], '0644')
-            self.assertEqual(ret['type'], 'file')
+            assert ret['mode'] == '0644'
+            assert ret['type'] == 'file'
 
 
 @skipIf(pytest is None, 'PyTest required for this set of tests')
@@ -1272,9 +1245,9 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             with patch('salt.utils.files.fopen', mock_open(read_data='')), \
                     patch('os.stat', self._anyattr), \
                     patch('salt.modules.file.log', _log):
-                self.assertFalse(filemod.line('/dummy/path', content='foo', match='bar', mode=mode))
-            self.assertIn('Cannot find text to {0}'.format(mode),
-                          _log.warning.call_args_list[0][0][0])
+                assert not filemod.line('/dummy/path', content='foo', match='bar', mode=mode)
+            assert 'Cannot find text to {0}'.format(mode) in \
+                          _log.warning.call_args_list[0][0][0]
 
     @patch('os.path.realpath', MagicMock())
     @patch('os.path.isfile', MagicMock(return_value=True))
@@ -1297,7 +1270,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             with patch('salt.utils.files.fopen', files_fopen):
                 atomic_opener = mock_open()
                 with patch('salt.utils.atomicfile.atomic_open', atomic_opener):
-                    self.assertFalse(filemod.line('foo', content='foo', match=match, mode=mode))
+                    assert not filemod.line('foo', content='foo', match=match, mode=mode)
 
     @patch('os.path.realpath', MagicMock(wraps=lambda x: x))
     @patch('os.path.isfile', MagicMock(return_value=True))
@@ -1310,7 +1283,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         for mode, err_msg in [(None, 'How to process the file'), ('nonsense', 'Unknown mode')]:
             with pytest.raises(CommandExecutionError) as exc_info:
                 filemod.line('foo', mode=mode)
-            self.assertIn(err_msg, six.text_type(exc_info.value))
+            assert err_msg in six.text_type(exc_info.value)
 
     @patch('os.path.realpath', MagicMock(wraps=lambda x: x))
     @patch('os.path.isfile', MagicMock(return_value=True))
@@ -1322,8 +1295,8 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         for mode in ['insert', 'ensure', 'replace']:
             with pytest.raises(CommandExecutionError) as exc_info:
                 filemod.line('foo', mode=mode)
-            self.assertIn('Content can only be empty if mode is "delete"',
-                          six.text_type(exc_info.value))
+            assert 'Content can only be empty if mode is "delete"' in \
+                          six.text_type(exc_info.value)
 
     @patch('os.path.realpath', MagicMock(wraps=lambda x: x))
     @patch('os.path.isfile', MagicMock(return_value=True))
@@ -1337,8 +1310,8 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         with patch('salt.utils.files.fopen', files_fopen):
             with pytest.raises(CommandExecutionError) as exc_info:
                 filemod.line('foo', content='test content', mode='insert')
-            self.assertIn('"location" or "before/after"',
-                          six.text_type(exc_info.value))
+            assert '"location" or "before/after"' in \
+                          six.text_type(exc_info.value)
 
     def test_util_starts_till(self):
         '''
@@ -1347,12 +1320,9 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         :return:
         '''
         src = 'here is something'
-        self.assertEqual(
-            filemod._starts_till(src=src, probe='here quite something else'), 1)
-        self.assertEqual(
-            filemod._starts_till(src=src, probe='here is something'), 0)
-        self.assertEqual(
-            filemod._starts_till(src=src, probe='and here is something'), -1)
+        assert filemod._starts_till(src=src, probe='here quite something else') == 1
+        assert filemod._starts_till(src=src, probe='here is something') == 0
+        assert filemod._starts_till(src=src, probe='and here is something') == -1
 
     @with_tempfile()
     def test_line_insert_after_no_pattern(self, name):
@@ -1550,10 +1520,10 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             with patch('salt.utils.files.fopen', files_fopen):
                 atomic_opener = mock_open()
                 with patch('salt.utils.atomicfile.atomic_open', atomic_opener):
-                    with self.assertRaises(CommandExecutionError) as cm:
+                    with pytest.raises(CommandExecutionError) as cm:
                         filemod.line('foo', content=cfg_content, before=before_line, mode='insert')
-                    self.assertEqual(cm.exception.strerror,
-                                     'Found more than expected occurrences in "before" expression')
+                    assert cm.value.strerror == \
+                                     'Found more than expected occurrences in "before" expression'
 
     @with_tempfile()
     def test_line_insert_before_after(self, name):
@@ -1946,9 +1916,8 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                 with patch('salt.utils.atomicfile.atomic_open', atomic_opener):
                     with pytest.raises(CommandExecutionError) as exc_info:
                         filemod.line('foo', content=cfg_content, after=_after, before=_before, mode='ensure')
-            self.assertIn(
-                'Found more than one line between boundaries "before" and "after"',
-                six.text_type(exc_info.value))
+            assert 'Found more than one line between boundaries "before" and "after"' in \
+                six.text_type(exc_info.value)
 
     @with_tempfile()
     def test_line_delete(self, name):
@@ -2072,14 +2041,14 @@ class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
         os.symlink(self.tfile.name, self.directory + '/a_link')
         self.addCleanup(os.remove, self.directory + '/a_link')
         result = filemod.symlink(self.tfile.name, self.directory + '/a_link')
-        self.assertTrue(result)
+        assert result
 
     @skipIf(salt.utils.platform.is_windows(), 'os.link is not available on Windows')
     def test_hardlink_sanity(self):
         target = os.path.join(self.directory, 'a_hardlink')
         self.addCleanup(os.remove, target)
         result = filemod.link(self.tfile.name, target)
-        self.assertTrue(result)
+        assert result
 
     @skipIf(salt.utils.platform.is_windows(), 'os.link is not available on Windows')
     def test_hardlink_numlinks(self):
@@ -2087,7 +2056,7 @@ class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
         self.addCleanup(os.remove, target)
         result = filemod.link(self.tfile.name, target)
         name_i = os.stat(self.tfile.name).st_nlink
-        self.assertTrue(name_i > 1)
+        assert name_i > 1
 
     @skipIf(salt.utils.platform.is_windows(), 'os.link is not available on Windows')
     def test_hardlink_working(self):
@@ -2096,7 +2065,7 @@ class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
         result = filemod.link(self.tfile.name, target)
         name_i = os.stat(self.tfile.name).st_ino
         target_i = os.stat(target).st_ino
-        self.assertTrue(name_i == target_i)
+        assert name_i == target_i
 
     def test_source_list_for_list_returns_file_from_dict_via_http(self):
         with patch('salt.modules.file.os.remove') as remove:
@@ -2106,7 +2075,7 @@ class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
                                                'cp.cache_file': MagicMock(return_value='/tmp/http.conf')}):
                 ret = filemod.source_list(
                     [{'http://t.est.com/http/httpd.conf': 'filehash'}], '', 'base')
-                self.assertEqual(list(ret), ['http://t.est.com/http/httpd.conf', 'filehash'])
+                assert list(ret) == ['http://t.est.com/http/httpd.conf', 'filehash']
 
     def test_source_list_for_list_returns_existing_file(self):
         with patch.dict(filemod.__salt__, {'cp.list_master': MagicMock(return_value=['http/httpd.conf.fallback']),
@@ -2114,7 +2083,7 @@ class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
             ret = filemod.source_list(['salt://http/httpd.conf',
                                        'salt://http/httpd.conf.fallback'],
                                       'filehash', 'base')
-            self.assertEqual(list(ret), ['salt://http/httpd.conf.fallback', 'filehash'])
+            assert list(ret) == ['salt://http/httpd.conf.fallback', 'filehash']
 
     def test_source_list_for_list_returns_file_from_other_env(self):
         def list_master(env):
@@ -2126,14 +2095,14 @@ class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
             ret = filemod.source_list(['salt://http/httpd.conf?saltenv=dev',
                                        'salt://http/httpd.conf.fallback'],
                                       'filehash', 'base')
-            self.assertEqual(list(ret), ['salt://http/httpd.conf?saltenv=dev', 'filehash'])
+            assert list(ret) == ['salt://http/httpd.conf?saltenv=dev', 'filehash']
 
     def test_source_list_for_list_returns_file_from_dict(self):
         with patch.dict(filemod.__salt__, {'cp.list_master': MagicMock(return_value=['http/httpd.conf']),
                                            'cp.list_master_dirs': MagicMock(return_value=[])}):
             ret = filemod.source_list(
                 [{'salt://http/httpd.conf': ''}], 'filehash', 'base')
-            self.assertEqual(list(ret), ['salt://http/httpd.conf', 'filehash'])
+            assert list(ret) == ['salt://http/httpd.conf', 'filehash']
 
     def test_source_list_for_list_returns_existing_local_file_slash(self):
         with patch.dict(filemod.__salt__, {'cp.list_master': MagicMock(return_value=[]),
@@ -2141,7 +2110,7 @@ class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
             ret = filemod.source_list([self.myfile + '-foo',
                                        self.myfile],
                                       'filehash', 'base')
-            self.assertEqual(list(ret), [self.myfile, 'filehash'])
+            assert list(ret) == [self.myfile, 'filehash']
 
     def test_source_list_for_list_returns_existing_local_file_proto(self):
         with patch.dict(filemod.__salt__, {'cp.list_master': MagicMock(return_value=[]),
@@ -2149,21 +2118,21 @@ class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
             ret = filemod.source_list(['file://' + self.myfile + '-foo',
                                        'file://' + self.myfile],
                                       'filehash', 'base')
-            self.assertEqual(list(ret), ['file://' + self.myfile, 'filehash'])
+            assert list(ret) == ['file://' + self.myfile, 'filehash']
 
     def test_source_list_for_list_returns_local_file_slash_from_dict(self):
         with patch.dict(filemod.__salt__, {'cp.list_master': MagicMock(return_value=[]),
                                            'cp.list_master_dirs': MagicMock(return_value=[])}):
             ret = filemod.source_list(
                 [{self.myfile: ''}], 'filehash', 'base')
-            self.assertEqual(list(ret), [self.myfile, 'filehash'])
+            assert list(ret) == [self.myfile, 'filehash']
 
     def test_source_list_for_list_returns_local_file_proto_from_dict(self):
         with patch.dict(filemod.__salt__, {'cp.list_master': MagicMock(return_value=[]),
                                            'cp.list_master_dirs': MagicMock(return_value=[])}):
             ret = filemod.source_list(
                 [{'file://' + self.myfile: ''}], 'filehash', 'base')
-            self.assertEqual(list(ret), ['file://' + self.myfile, 'filehash'])
+            assert list(ret) == ['file://' + self.myfile, 'filehash']
 
 
 class LsattrTests(TestCase, LoaderModuleMockMixin):
@@ -2210,14 +2179,14 @@ class LsattrTests(TestCase, LoaderModuleMockMixin):
             # SaltInvocationError will be raised if filemod.lsattr
             # doesn't early exit
             actual = filemod.lsattr('foo')
-            self.assertIsNone(actual)
+            assert actual is None
 
     def test_SaltInvocationError_should_be_raised_when_file_is_missing(self):
         patch_exists = patch(
             'os.path.exists',
             Mock(return_value=False),
         )
-        with patch_exists, self.assertRaises(SaltInvocationError):
+        with patch_exists, pytest.raises(SaltInvocationError):
             filemod.lsattr('foo')
 
     def test_if_chattr_version_is_less_than_required_flags_should_ignore_extended(self):
@@ -2324,7 +2293,7 @@ class ChattrTests(TestCase, LoaderModuleMockMixin):
         )
         with patch_which:
             actual = filemod._chattr_version()
-            self.assertIsNone(actual)
+            assert actual is None
 
     def test_on_aix_chattr_version_should_be_None_even_if_tune2fs_exists(self):
         patch_which = patch(
@@ -2339,7 +2308,7 @@ class ChattrTests(TestCase, LoaderModuleMockMixin):
         patch_run = patch.dict(filemod.__salt__, {'cmd.run': mock_run})
         with patch_which, patch_aix, patch_run:
             actual = filemod._chattr_version()
-            self.assertIsNone(actual)
+            assert actual is None
             mock_run.assert_not_called()
 
     def test_chattr_version_should_return_version_from_tune2fs(self):
@@ -2367,7 +2336,7 @@ class ChattrTests(TestCase, LoaderModuleMockMixin):
         )
         with patch_which, patch_run:
             actual = filemod._chattr_version()
-            self.assertEqual(actual, expected)
+            assert actual == expected
 
     def test_if_tune2fs_has_no_version_version_should_be_None(self):
         patch_which = patch(
@@ -2380,7 +2349,7 @@ class ChattrTests(TestCase, LoaderModuleMockMixin):
         )
         with patch_which, patch_run:
             actual = filemod._chattr_version()
-            self.assertIsNone(actual)
+            assert actual is None
 
     def test_chattr_has_extended_attrs_should_return_False_if_chattr_version_is_None(self):
         patch_chattr = patch(
@@ -2536,4 +2505,4 @@ class ChattrTests(TestCase, LoaderModuleMockMixin):
                 attrs=attrs,
                 follow_symlinks=False,
             )
-            self.assertDictEqual(actual_ret['changes'], expected)
+            assert actual_ret['changes'] == expected

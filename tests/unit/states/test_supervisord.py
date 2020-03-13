@@ -40,19 +40,19 @@ class SupervisordTestCase(TestCase, LoaderModuleMockMixin):
         comt = ('Supervisord module not activated.'
                 ' Do you need to install supervisord?')
         ret.update({'comment': comt, 'result': False})
-        self.assertDictEqual(supervisord.running(name), ret)
+        assert supervisord.running(name) == ret
 
         mock = MagicMock(return_value={name: {'state': 'running'}})
         with patch.dict(supervisord.__salt__, {'supervisord.status': mock}):
             with patch.dict(supervisord.__opts__, {'test': True}):
                 comt = ('Service wsgi_server is already running')
                 ret.update({'comment': comt, 'result': True})
-                self.assertDictEqual(supervisord.running(name), ret)
+                assert supervisord.running(name) == ret
 
             with patch.dict(supervisord.__opts__, {'test': False}):
                 comt = ('Not starting already running service: wsgi_server')
                 ret.update({'comment': comt})
-                self.assertDictEqual(supervisord.running(name), ret)
+                assert supervisord.running(name) == ret
 
     # 'dead' function tests: 1
 
@@ -70,7 +70,7 @@ class SupervisordTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(supervisord.__opts__, {'test': True}):
             comt = ('Service {0} is set to be stopped'.format(name))
             ret.update({'comment': comt})
-            self.assertDictEqual(supervisord.dead(name), ret)
+            assert supervisord.dead(name) == ret
 
     # 'mod_watch' function tests: 1
 
@@ -88,4 +88,4 @@ class SupervisordTestCase(TestCase, LoaderModuleMockMixin):
         comt = ('Supervisord module not activated.'
                 ' Do you need to install supervisord?')
         ret.update({'comment': comt, 'result': False})
-        self.assertDictEqual(supervisord.mod_watch(name), ret)
+        assert supervisord.mod_watch(name) == ret

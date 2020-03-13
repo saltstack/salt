@@ -63,10 +63,10 @@ class GemModuleTest(ModuleCase):
         '''
         self.run_function('gem.install', [self.GEM])
         gem_list = self.run_function('gem.list', [self.GEM])
-        self.assertIn(self.GEM, gem_list)
+        assert self.GEM in gem_list
 
         self.run_function('gem.uninstall', [self.GEM])
-        self.assertFalse(self.run_function('gem.list', [self.GEM]))
+        assert not self.run_function('gem.list', [self.GEM])
 
     def test_install_version(self):
         '''
@@ -74,11 +74,11 @@ class GemModuleTest(ModuleCase):
         '''
         self.run_function('gem.install', [self.GEM], version=self.GEM_VER)
         gem_list = self.run_function('gem.list', [self.GEM])
-        self.assertIn(self.GEM, gem_list)
-        self.assertIn(self.GEM_VER, gem_list[self.GEM])
+        assert self.GEM in gem_list
+        assert self.GEM_VER in gem_list[self.GEM]
 
         self.run_function('gem.uninstall', [self.GEM])
-        self.assertFalse(self.run_function('gem.list', [self.GEM]))
+        assert not self.run_function('gem.list', [self.GEM])
 
     def test_list(self):
         '''
@@ -88,10 +88,10 @@ class GemModuleTest(ModuleCase):
 
         all_ret = self.run_function('gem.list')
         for gem in self.GEM_LIST:
-            self.assertIn(gem, all_ret)
+            assert gem in all_ret
 
         single_ret = self.run_function('gem.list', [self.GEM])
-        self.assertIn(self.GEM, single_ret)
+        assert self.GEM in single_ret
 
         self.run_function('gem.uninstall', [' '.join(self.GEM_LIST)])
 
@@ -103,7 +103,7 @@ class GemModuleTest(ModuleCase):
         self.run_function('gem.install', [self.OLD_GEM], version=self.OLD_VERSION)
 
         ret = self.run_function('gem.list_upgrades')
-        self.assertIn(self.OLD_GEM, ret)
+        assert self.OLD_GEM in ret
 
         self.run_function('gem.uninstall', [self.OLD_GEM])
 
@@ -116,11 +116,11 @@ class GemModuleTest(ModuleCase):
 
         self.run_function('gem.sources_add', [source])
         sources_list = self.run_function('gem.sources_list')
-        self.assertIn(source, sources_list)
+        assert source in sources_list
 
         self.run_function('gem.sources_remove', [source])
         sources_list = self.run_function('gem.sources_list')
-        self.assertNotIn(source, sources_list)
+        assert source not in sources_list
 
     def test_update(self):
         '''
@@ -128,18 +128,18 @@ class GemModuleTest(ModuleCase):
         '''
         self.run_function('gem.install', [self.OLD_GEM], version=self.OLD_VERSION)
         gem_list = self.run_function('gem.list', [self.OLD_GEM])
-        self.assertEqual({self.OLD_GEM: [self.OLD_VERSION]}, gem_list)
+        assert {self.OLD_GEM: [self.OLD_VERSION]} == gem_list
 
         self.run_function('gem.update', [self.OLD_GEM])
         gem_list = self.run_function('gem.list', [self.OLD_GEM])
-        self.assertEqual({self.OLD_GEM: [self.NEW_VERSION, self.OLD_VERSION]}, gem_list)
+        assert {self.OLD_GEM: [self.NEW_VERSION, self.OLD_VERSION]} == gem_list
 
         self.run_function('gem.uninstall', [self.OLD_GEM])
-        self.assertFalse(self.run_function('gem.list', [self.OLD_GEM]))
+        assert not self.run_function('gem.list', [self.OLD_GEM])
 
     def test_update_system(self):
         '''
         gem.update_system
         '''
         ret = self.run_function('gem.update_system')
-        self.assertTrue(ret)
+        assert ret

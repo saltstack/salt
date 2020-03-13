@@ -45,7 +45,7 @@ class NodegroupsPillarTestCase(TestCase, LoaderModuleMockMixin):
                 MagicMock(side_effect=side_effect)):
             pillar_name = pillar_name or fake_pillar_name
             actual_ret = nodegroups.ext_pillar(fake_minion_id, fake_pillar, pillar_name=pillar_name)
-            self.assertDictEqual(actual_ret, expected_ret)
+            assert actual_ret == expected_ret
 
     def test_succeeds(self):
         ret = {fake_pillar_name: ['groupA', ]}

@@ -35,16 +35,16 @@ class SaltProxyBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         ret = salt_proxy.validate(config)
 
-        self.assertEqual(ret, (False, 'Configuration for salt_proxy beacon'
-                                      ' must be a list.'))
+        assert ret == (False, 'Configuration for salt_proxy beacon'
+                                      ' must be a list.')
 
     def test_empty_config(self):
         config = [{}]
 
         ret = salt_proxy.validate(config)
 
-        self.assertEqual(ret, (False, 'Configuration for salt_proxy '
-                                      'beacon requires proxies.'))
+        assert ret == (False, 'Configuration for salt_proxy '
+                                      'beacon requires proxies.')
 
     def test_salt_proxy_running(self):
         mock = MagicMock(return_value={'result': True})
@@ -52,10 +52,10 @@ class SaltProxyBeaconTestCase(TestCase, LoaderModuleMockMixin):
             config = [{'proxies': {'p8000': ''}}]
 
             ret = salt_proxy.validate(config)
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             ret = salt_proxy.beacon(config)
-            self.assertEqual(ret, [{'p8000': 'Proxy p8000 is already running'}])
+            assert ret == [{'p8000': 'Proxy p8000 is already running'}]
 
     def test_salt_proxy_not_running(self):
         is_running_mock = MagicMock(return_value={'result': False})
@@ -75,7 +75,7 @@ class SaltProxyBeaconTestCase(TestCase, LoaderModuleMockMixin):
             config = [{'proxies': {'p8000': ''}}]
 
             ret = salt_proxy.validate(config)
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             ret = salt_proxy.beacon(config)
-            self.assertEqual(ret, [{'p8000': 'Proxy p8000 was started'}])
+            assert ret == [{'p8000': 'Proxy p8000 was started'}]

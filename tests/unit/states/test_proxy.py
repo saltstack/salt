@@ -74,7 +74,7 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
                 ]
 
                 set_proxy_mock.assert_has_calls(calls)
-                self.assertEqual(out, expected)
+                assert out == expected
 
     def test_set_proxy_macos_same(self):
         '''
@@ -111,7 +111,7 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
                                     bypass_domains=['salt.com', 'test.com'])
 
                 assert not set_proxy_mock.called
-                self.assertEqual(out, expected)
+                assert out == expected
 
     def test_set_proxy_windows(self):
         '''
@@ -138,7 +138,7 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
 
                 set_proxy_mock.assert_called_once_with('192.168.0.1', '3128', ['http', 'https', 'ftp'],
                                                        ['salt.com', 'test.com'])
-                self.assertEqual(out, expected)
+                assert out == expected
 
     def test_set_proxy_windows_same(self):
         '''
@@ -183,4 +183,4 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
                                     bypass_domains=['salt.com', 'test.com'])
 
                 assert not set_proxy_mock.called
-                self.assertEqual(out, expected)
+                assert out == expected

@@ -125,26 +125,26 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
-        self.assertDictEqual(saltmod.state(name, tgt, allow_fail='a'), ret)
+        assert saltmod.state(name, tgt, allow_fail='a') == ret
 
         comt = ('No highstate or sls specified, no execution made')
         ret.update({'comment': comt})
-        self.assertDictEqual(saltmod.state(name, tgt), ret)
+        assert saltmod.state(name, tgt) == ret
 
         comt = ("Must pass in boolean for value of 'concurrent'")
         ret.update({'comment': comt})
-        self.assertDictEqual(saltmod.state(name, tgt, highstate=True,
-                                           concurrent='a'), ret)
+        assert saltmod.state(name, tgt, highstate=True,
+                                           concurrent='a') == ret
 
         ret.update({'comment': comt, 'result': None})
         with patch.dict(saltmod.__opts__, {'test': True}):
-            self.assertDictEqual(saltmod.state(name, tgt, highstate=True), test_ret)
+            assert saltmod.state(name, tgt, highstate=True) == test_ret
 
         ret.update({'comment': 'States ran successfully. No changes made to silver.', 'result': True, '__jid__': '20170406104341210934'})
         with patch.dict(saltmod.__opts__, {'test': False}):
             mock = MagicMock(return_value={'silver': {'jid': '20170406104341210934', 'retcode': 0, 'ret': {'test_|-notify_me_|-this is a name_|-show_notification': {'comment': 'Notify me', 'name': 'this is a name', 'start_time': '10:43:41.487565', 'result': True, 'duration': 0.35, '__run_num__': 0, '__sls__': 'demo', 'changes': {}, '__id__': 'notify_me'}}, 'out': 'highstate'}})
             with patch.dict(saltmod.__salt__, {'saltutil.cmd': mock}):
-                self.assertDictEqual(saltmod.state(name, tgt, highstate=True), ret)
+                assert saltmod.state(name, tgt, highstate=True) == ret
 
         ret.update({'comment': 'States ran successfully. No changes made to minion1, minion3, minion2.'})
         del ret['__jid__']
@@ -155,12 +155,12 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
                 # Test return without checking the comment contents. Comments are tested later.
                 comment = state_run.pop('comment')
                 ret.pop('comment')
-                self.assertDictEqual(state_run, ret)
+                assert state_run == ret
 
                 # Check the comment contents in a non-order specific way (ordering fails sometimes on PY3)
-                self.assertIn('States ran successfully. No changes made to', comment)
+                assert 'States ran successfully. No changes made to' in comment
                 for minion in ['minion1', 'minion2', 'minion3']:
-                    self.assertIn(minion, comment)
+                    assert minion in comment
 
     # 'function' function tests: 1
 
@@ -179,7 +179,7 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
                           'on target {0}'.format(tgt)}
 
         with patch.dict(saltmod.__opts__, {'test': True}):
-            self.assertDictEqual(saltmod.function(name, tgt), ret)
+            assert saltmod.function(name, tgt) == ret
 
         ret.update({'result': True,
                     'changes': {'out': 'highstate', 'ret': {tgt: ''}},
@@ -189,7 +189,7 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
             mock_ret = {'larry': {'ret': '', 'retcode': 0, 'failed': False}}
             mock_cmd = MagicMock(return_value=mock_ret)
             with patch.dict(saltmod.__salt__, {'saltutil.cmd': mock_cmd}):
-                self.assertDictEqual(saltmod.function(name, tgt), ret)
+                assert saltmod.function(name, tgt) == ret
 
     # 'wait_for_event' function tests: 1
 
@@ -230,20 +230,20 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(saltmod.__opts__, {'sock_dir': True,
                                                'transport': True}):
                 with patch.object(time, 'time', MagicMock(return_value=1.0)):
-                    self.assertDictEqual(saltmod.wait_for_event(name, 'salt',
-                                                                timeout=-1.0),
-                                         ret)
+                    assert saltmod.wait_for_event(name, 'salt',
+                                                                timeout=-1.0) == \
+                                         ret
 
                     Mockevent.flag = True
                     ret.update({'comment': 'All events seen in 0.0 seconds.',
                                 'result': True})
-                    self.assertDictEqual(saltmod.wait_for_event(name, ''), ret)
+                    assert saltmod.wait_for_event(name, '') == ret
 
                     ret.update({'comment': 'Timeout value reached.',
                                 'result': False})
-                    self.assertDictEqual(saltmod.wait_for_event(name, tgt,
-                                                                timeout=-1.0),
-                                         ret)
+                    assert saltmod.wait_for_event(name, tgt,
+                                                                timeout=-1.0) == \
+                                         ret
 
     # 'runner' function tests: 1
 
@@ -259,7 +259,7 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
         runner_mock = MagicMock(return_value={'return': True})
 
         with patch.dict(saltmod.__salt__, {'saltutil.runner': runner_mock}):
-            self.assertDictEqual(saltmod.runner(name), ret)
+            assert saltmod.runner(name) == ret
 
     # 'wheel' function tests: 1
 
@@ -275,7 +275,7 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
         wheel_mock = MagicMock(return_value={'return': True})
 
         with patch.dict(saltmod.__salt__, {'saltutil.wheel': wheel_mock}):
-            self.assertDictEqual(saltmod.wheel(name), ret)
+            assert saltmod.wheel(name) == ret
 
     def test_state_ssh(self):
         '''
@@ -346,4 +346,4 @@ class StatemodTests(TestCase, LoaderModuleMockMixin):
             'name': 'webserver_setup',
             'result': True
         }
-        self.assertEqual(ret, expected)
+        assert ret == expected

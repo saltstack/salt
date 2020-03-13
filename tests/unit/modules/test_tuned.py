@@ -39,13 +39,11 @@ class TunedListTestCase(TestCase, LoaderModuleMockMixin):
 Current active profile: throughput-performance'''
         mock_cmd = MagicMock(return_value=tuned_list)
         with patch.dict(tuned.__salt__, {'cmd.run': mock_cmd}):
-            self.assertEqual(
-                tuned.list_(),
-                ['throughput-performance', 'virtual-guest',
+            assert tuned.list_() == ['throughput-performance', 'virtual-guest',
                  'latency-performance', 'laptop-battery-powersave',
                  'laptop-ac-powersave', 'virtual-host',
                  'desktop-powersave', 'server-powersave',
-                 'spindown-disk', 'sap', 'enterprise-storage', 'default'])
+                 'spindown-disk', 'sap', 'enterprise-storage', 'default']
 
     def test_v_271(self):
         '''
@@ -66,12 +64,10 @@ Current active profile: virtual-guest
 '''
         mock_cmd = MagicMock(return_value=tuned_list)
         with patch.dict(tuned.__salt__, {'cmd.run': mock_cmd}):
-            self.assertEqual(
-                tuned.list_(),
-                ['balanced', 'desktop', 'latency-performance',
+            assert tuned.list_() == ['balanced', 'desktop', 'latency-performance',
                  'network-latency', 'network-throughput', 'powersave',
                  'throughput-performance', 'virtual-guest',
-                 'virtual-host'])
+                 'virtual-host']
 
     def test_none(self):
         '''
@@ -79,4 +75,4 @@ Current active profile: virtual-guest
         ret = {'pid': 12345, 'retcode': 1, 'stderr': 'stderr: Cannot talk to Tuned daemon via DBus. Is Tuned daemon running?', 'stdout': 'No current active profile.'}
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(tuned.__salt__, {'cmd.run_all': mock_cmd}):
-            self.assertEqual(tuned.active(), 'none')
+            assert tuned.active() == 'none'

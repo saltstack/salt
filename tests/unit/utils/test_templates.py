@@ -36,17 +36,17 @@ class RenderTestCase(TestCase):
     def test_render_jinja_sanity(self):
         tmpl = '''OK'''
         res = salt.utils.templates.render_jinja_tmpl(tmpl, dict(self.context))
-        self.assertEqual(res, 'OK')
+        assert res == 'OK'
 
     def test_render_jinja_evaluate(self):
         tmpl = '''{{ "OK" }}'''
         res = salt.utils.templates.render_jinja_tmpl(tmpl, dict(self.context))
-        self.assertEqual(res, 'OK')
+        assert res == 'OK'
 
     def test_render_jinja_evaluate_multi(self):
         tmpl = '''{% if 1 -%}OK{%- endif %}'''
         res = salt.utils.templates.render_jinja_tmpl(tmpl, dict(self.context))
-        self.assertEqual(res, 'OK')
+        assert res == 'OK'
 
     def test_render_jinja_variable(self):
         tmpl = '''{{ var }}'''
@@ -54,18 +54,18 @@ class RenderTestCase(TestCase):
         ctx = dict(self.context)
         ctx['var'] = 'OK'
         res = salt.utils.templates.render_jinja_tmpl(tmpl, ctx)
-        self.assertEqual(res, 'OK')
+        assert res == 'OK'
 
     ### Tests for mako template
     def test_render_mako_sanity(self):
         tmpl = '''OK'''
         res = salt.utils.templates.render_mako_tmpl(tmpl, dict(self.context))
-        self.assertEqual(res, 'OK')
+        assert res == 'OK'
 
     def test_render_mako_evaluate(self):
         tmpl = '''${ "OK" }'''
         res = salt.utils.templates.render_mako_tmpl(tmpl, dict(self.context))
-        self.assertEqual(res, 'OK')
+        assert res == 'OK'
 
     def test_render_mako_evaluate_multi(self):
         tmpl = '''
@@ -75,7 +75,7 @@ class RenderTestCase(TestCase):
         '''
         res = salt.utils.templates.render_mako_tmpl(tmpl, dict(self.context))
         stripped = res.strip()
-        self.assertEqual(stripped, 'OK')
+        assert stripped == 'OK'
 
     def test_render_mako_variable(self):
         tmpl = '''${ var }'''
@@ -83,26 +83,26 @@ class RenderTestCase(TestCase):
         ctx = dict(self.context)
         ctx['var'] = 'OK'
         res = salt.utils.templates.render_mako_tmpl(tmpl, ctx)
-        self.assertEqual(res, 'OK')
+        assert res == 'OK'
 
     ### Tests for wempy template
     @skipIf(sys.version_info > (3,), 'The wempy module is currently unsupported under Python3')
     def test_render_wempy_sanity(self):
         tmpl = '''OK'''
         res = salt.utils.templates.render_wempy_tmpl(tmpl, dict(self.context))
-        self.assertEqual(res, 'OK')
+        assert res == 'OK'
 
     @skipIf(sys.version_info > (3,), 'The wempy module is currently unsupported under Python3')
     def test_render_wempy_evaluate(self):
         tmpl = '''{{="OK"}}'''
         res = salt.utils.templates.render_wempy_tmpl(tmpl, dict(self.context))
-        self.assertEqual(res, 'OK')
+        assert res == 'OK'
 
     @skipIf(sys.version_info > (3,), 'The wempy module is currently unsupported under Python3')
     def test_render_wempy_evaluate_multi(self):
         tmpl = '''{{if 1:}}OK{{pass}}'''
         res = salt.utils.templates.render_wempy_tmpl(tmpl, dict(self.context))
-        self.assertEqual(res, 'OK')
+        assert res == 'OK'
 
     @skipIf(sys.version_info > (3,), 'The wempy module is currently unsupported under Python3')
     def test_render_wempy_variable(self):
@@ -111,23 +111,23 @@ class RenderTestCase(TestCase):
         ctx = dict(self.context)
         ctx['var'] = 'OK'
         res = salt.utils.templates.render_wempy_tmpl(tmpl, ctx)
-        self.assertEqual(res, 'OK')
+        assert res == 'OK'
 
     ### Tests for genshi template (xml-based)
     def test_render_genshi_sanity(self):
         tmpl = '''<RU>OK</RU>'''
         res = salt.utils.templates.render_genshi_tmpl(tmpl, dict(self.context))
-        self.assertEqual(res, '<RU>OK</RU>')
+        assert res == '<RU>OK</RU>'
 
     def test_render_genshi_evaluate(self):
         tmpl = '''<RU>${ "OK" }</RU>'''
         res = salt.utils.templates.render_genshi_tmpl(tmpl, dict(self.context))
-        self.assertEqual(res, '<RU>OK</RU>')
+        assert res == '<RU>OK</RU>'
 
     def test_render_genshi_evaluate_condition(self):
         tmpl = '''<RU xmlns:py="http://genshi.edgewall.org/" py:if="1">OK</RU>'''
         res = salt.utils.templates.render_genshi_tmpl(tmpl, dict(self.context))
-        self.assertEqual(res, '<RU>OK</RU>')
+        assert res == '<RU>OK</RU>'
 
     def test_render_genshi_variable(self):
         tmpl = '''<RU>$var</RU>'''
@@ -135,7 +135,7 @@ class RenderTestCase(TestCase):
         ctx = dict(self.context)
         ctx['var'] = 'OK'
         res = salt.utils.templates.render_genshi_tmpl(tmpl, ctx)
-        self.assertEqual(res, '<RU>OK</RU>')
+        assert res == '<RU>OK</RU>'
 
     def test_render_genshi_variable_replace(self):
         tmpl = '''<RU xmlns:py="http://genshi.edgewall.org/" py:content="var">not ok</RU>'''
@@ -143,18 +143,18 @@ class RenderTestCase(TestCase):
         ctx = dict(self.context)
         ctx['var'] = 'OK'
         res = salt.utils.templates.render_genshi_tmpl(tmpl, ctx)
-        self.assertEqual(res, '<RU>OK</RU>')
+        assert res == '<RU>OK</RU>'
 
     ### Tests for cheetah template (line-oriented and xml-friendly)
     def test_render_cheetah_sanity(self):
         tmpl = '''OK'''
         res = salt.utils.templates.render_cheetah_tmpl(tmpl, dict(self.context))
-        self.assertEqual(res, 'OK')
+        assert res == 'OK'
 
     def test_render_cheetah_evaluate(self):
         tmpl = '''<%="OK"%>'''
         res = salt.utils.templates.render_cheetah_tmpl(tmpl, dict(self.context))
-        self.assertEqual(res, 'OK')
+        assert res == 'OK'
 
     def test_render_cheetah_evaluate_xml(self):
         tmpl = '''
@@ -164,7 +164,7 @@ class RenderTestCase(TestCase):
         '''
         res = salt.utils.templates.render_cheetah_tmpl(tmpl, dict(self.context))
         stripped = res.strip()
-        self.assertEqual(stripped, 'OK')
+        assert stripped == 'OK'
 
     def test_render_cheetah_evaluate_text(self):
         tmpl = '''
@@ -175,7 +175,7 @@ class RenderTestCase(TestCase):
 
         res = salt.utils.templates.render_cheetah_tmpl(tmpl, dict(self.context))
         stripped = res.strip()
-        self.assertEqual(stripped, 'OK')
+        assert stripped == 'OK'
 
     def test_render_cheetah_variable(self):
         tmpl = '''$var'''
@@ -183,7 +183,7 @@ class RenderTestCase(TestCase):
         ctx = dict(self.context)
         ctx['var'] = 'OK'
         res = salt.utils.templates.render_cheetah_tmpl(tmpl, ctx)
-        self.assertEqual(res.strip(), 'OK')
+        assert res.strip() == 'OK'
 
 
 class MockRender(object):

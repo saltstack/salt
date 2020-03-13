@@ -146,7 +146,7 @@ class AESReqTestCases(BaseTCPReqCase, ReqChannelMixin):
         '''
         msgs = ['', [], tuple()]
         for msg in msgs:
-            with self.assertRaises(salt.exceptions.AuthenticationError):
+            with pytest.raises(salt.exceptions.AuthenticationError):
                 ret = self.channel.send(msg)
 
 
@@ -278,30 +278,30 @@ class SaltMessageClientPoolTest(AsyncTestCase):
         for message_client_mock in self.message_client_pool.message_clients:
             message_client_mock.send_queue = [0, 0, 0]
             message_client_mock.send.return_value = []
-        self.assertEqual([], self.message_client_pool.send())
+        assert [] == self.message_client_pool.send()
         self.message_client_pool.message_clients[2].send_queue = [0]
         self.message_client_pool.message_clients[2].send.return_value = [1]
-        self.assertEqual([1], self.message_client_pool.send())
+        assert [1] == self.message_client_pool.send()
 
     def test_write_to_stream(self):
         for message_client_mock in self.message_client_pool.message_clients:
             message_client_mock.send_queue = [0, 0, 0]
             message_client_mock._stream.write.return_value = []
-        self.assertEqual([], self.message_client_pool.write_to_stream(''))
+        assert [] == self.message_client_pool.write_to_stream('')
         self.message_client_pool.message_clients[2].send_queue = [0]
         self.message_client_pool.message_clients[2]._stream.write.return_value = [1]
-        self.assertEqual([1], self.message_client_pool.write_to_stream(''))
+        assert [1] == self.message_client_pool.write_to_stream('')
 
     def test_close(self):
         self.message_client_pool.close()
-        self.assertEqual([], self.message_client_pool.message_clients)
+        assert [] == self.message_client_pool.message_clients
 
     def test_on_recv(self):
         for message_client_mock in self.message_client_pool.message_clients:
             message_client_mock.on_recv.return_value = None
         self.message_client_pool.on_recv()
         for message_client_mock in self.message_client_pool.message_clients:
-            self.assertTrue(message_client_mock.on_recv.called)
+            assert message_client_mock.on_recv.called
 
     def test_connect_all(self):
         @gen_test
@@ -313,7 +313,7 @@ class SaltMessageClientPoolTest(AsyncTestCase):
             future.set_result('foo')
             message_client_mock.connect.return_value = future
 
-        self.assertIsNone(test_connect(self))
+        assert test_connect(self) is None
 
     def test_connect_partial(self):
         @gen_test(timeout=0.1)
@@ -326,7 +326,7 @@ class SaltMessageClientPoolTest(AsyncTestCase):
                 future.set_result('foo')
             message_client_mock.connect.return_value = future
 
-        with self.assertRaises(salt.ext.tornado.ioloop.TimeoutError):
+        with pytest.raises(salt.ext.tornado.ioloop.TimeoutError):
             test_connect(self)
 
 
@@ -414,7 +414,7 @@ class TCPPubServerChannelTest(TestCase, AdaptedConfigurationTestCaseMixin):
 
         # verify we send it with correct topic
         assert "topic_lst" in payload
-        self.assertEqual(payload["topic_lst"], ["minion01"])
+        assert payload["topic_lst"] == ["minion01"]
 
         # try with syndic settings
         opts['order_masters'] = True
@@ -448,7 +448,7 @@ class TCPPubServerChannelTest(TestCase, AdaptedConfigurationTestCaseMixin):
 
         # verify we send it with correct topic
         assert "topic_lst" in payload
-        self.assertEqual(payload["topic_lst"], ["minion02"])
+        assert payload["topic_lst"] == ["minion02"]
 
         # verify it was correctly calling check_minions
         check_minions.assert_called_with("minion02", tgt_type="list")

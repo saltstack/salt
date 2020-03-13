@@ -89,7 +89,7 @@ class TestModulesIOSConfig(TestCase, LoaderModuleMockMixin):
             ]))
         ])
         tree = iosconfig.tree(config=self.running_config)
-        self.assertEqual(tree, running_config_tree)
+        assert tree == running_config_tree
 
     def test_clean(self):
         clean_running_config = textwrap.dedent('''\
@@ -107,7 +107,7 @@ class TestModulesIOSConfig(TestCase, LoaderModuleMockMixin):
              negotiation auto
         ''')
         clean = iosconfig.clean(config=self.running_config)
-        self.assertEqual(clean, clean_running_config)
+        assert clean == clean_running_config
 
     def test_merge_tree(self):
         expected_merge_tree = OrderedDict([
@@ -135,7 +135,7 @@ class TestModulesIOSConfig(TestCase, LoaderModuleMockMixin):
         ])
         merge_tree = iosconfig.merge_tree(initial_config=self.running_config,
                                           merge_config=self.merge_config)
-        self.assertEqual(merge_tree, expected_merge_tree)
+        assert merge_tree == expected_merge_tree
 
     def test_merge_text(self):
         extected_merge_text = textwrap.dedent('''\
@@ -159,7 +159,7 @@ class TestModulesIOSConfig(TestCase, LoaderModuleMockMixin):
         ''')
         merge_text = iosconfig.merge_text(initial_config=self.running_config,
                                           merge_config=self.merge_config)
-        self.assertEqual(merge_text, extected_merge_text)
+        assert merge_text == extected_merge_text
 
     def test_merge_diff(self):
         expected_diff = textwrap.dedent('''\
@@ -175,7 +175,7 @@ class TestModulesIOSConfig(TestCase, LoaderModuleMockMixin):
         ''')
         diff = iosconfig.merge_diff(initial_config=self.running_config,
                                     merge_config=self.merge_config)
-        self.assertEqual(diff.splitlines()[2:], expected_diff.splitlines())
+        assert diff.splitlines()[2:] == expected_diff.splitlines()
 
     def test_diff_text(self):
         expected_diff = textwrap.dedent('''\
@@ -197,4 +197,4 @@ class TestModulesIOSConfig(TestCase, LoaderModuleMockMixin):
             ''')
         diff = iosconfig.diff_text(candidate_config=self.candidate_config,
                                    running_config=self.running_config)
-        self.assertEqual(diff.splitlines()[2:], expected_diff.splitlines())
+        assert diff.splitlines()[2:] == expected_diff.splitlines()

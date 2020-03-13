@@ -101,7 +101,7 @@ class ZabbixActionTestCase(TestCase, LoaderModuleMockMixin):
                 ret['comment'] = 'Zabbix Action "{0}" created.'.format(name)
                 ret['changes'] = {name: {'old': 'Zabbix Action "{0}" did not exist.'.format(name),
                                          'new': 'Zabbix Action "{0}" created according definition.'.format(name)}}
-                self.assertDictEqual(zabbix_action.present(name, {}), ret)
+                assert zabbix_action.present(name, {}) == ret
 
     def test_present_exists(self):
         '''
@@ -118,7 +118,7 @@ class ZabbixActionTestCase(TestCase, LoaderModuleMockMixin):
                              'zabbix.compare_params': MagicMock(return_value={})}):
                 ret['result'] = True
                 ret['comment'] = 'Zabbix Action "{0}" already exists and corresponds to a definition.'.format(name)
-                self.assertDictEqual(zabbix_action.present(name, {}), ret)
+                assert zabbix_action.present(name, {}) == ret
 
     def test_present_update(self):
         '''
@@ -147,7 +147,7 @@ class ZabbixActionTestCase(TestCase, LoaderModuleMockMixin):
                 ret['changes'] = {name: {'old': 'Zabbix Action "{0}" differed '
                                                 'in following parameters: {1}'.format(name, DIFF_PARAMS),
                                          'new': 'Zabbix Action "{0}" fixed.'.format(name)}}
-                self.assertDictEqual(zabbix_action.present(name, {}), ret)
+                assert zabbix_action.present(name, {}) == ret
 
     def test_absent_test_mode(self):
         '''
@@ -161,7 +161,7 @@ class ZabbixActionTestCase(TestCase, LoaderModuleMockMixin):
                 ret['comment'] = 'Zabbix Action "{0}" would be deleted.'.format(name)
                 ret['changes'] = {name: {'old': 'Zabbix Action "{0}" exists.'.format(name),
                                          'new': 'Zabbix Action "{0}" would be deleted.'.format(name)}}
-                self.assertDictEqual(zabbix_action.absent(name), ret)
+                assert zabbix_action.absent(name) == ret
 
     def test_absent(self):
         '''
@@ -173,7 +173,7 @@ class ZabbixActionTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(zabbix_action.__salt__, {'zabbix.get_object_id_by_params': MagicMock(return_value=False)}):
                 ret['result'] = True
                 ret['comment'] = 'Zabbix Action "{0}" does not exist.'.format(name)
-                self.assertDictEqual(zabbix_action.absent(name), ret)
+                assert zabbix_action.absent(name) == ret
 
             with patch.dict(zabbix_action.__salt__, {'zabbix.get_object_id_by_params': MagicMock(return_value=11)}):
                 with patch.dict(zabbix_action.__salt__, {'zabbix.run_query': MagicMock(return_value=True)}):
@@ -181,4 +181,4 @@ class ZabbixActionTestCase(TestCase, LoaderModuleMockMixin):
                     ret['comment'] = 'Zabbix Action "{0}" deleted.'.format(name)
                     ret['changes'] = {name: {'old': 'Zabbix Action "{0}" existed.'.format(name),
                                              'new': 'Zabbix Action "{0}" deleted.'.format(name)}}
-                    self.assertDictEqual(zabbix_action.absent(name), ret)
+                    assert zabbix_action.absent(name) == ret

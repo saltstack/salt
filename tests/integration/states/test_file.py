@@ -109,7 +109,7 @@ def _test_managed_file_mode_keep_helper(testcase, local=False):
         )
         testcase.assertSaltTrueReturn(ret)
         managed_mode = stat.S_IMODE(os.stat(name).st_mode)
-        testcase.assertEqual(oct(managed_mode), oct(new_mode_1))
+        assert oct(managed_mode) == oct(new_mode_1)
         # Update the mode on the fileserver (pass 2)
         # This assures us that if the file in file_roots was originally set
         # to the same mode as new_mode_1, we definitely get an updated mode
@@ -123,7 +123,7 @@ def _test_managed_file_mode_keep_helper(testcase, local=False):
         )
         testcase.assertSaltTrueReturn(ret)
         managed_mode = stat.S_IMODE(os.stat(name).st_mode)
-        testcase.assertEqual(oct(managed_mode), oct(new_mode_2))
+        assert oct(managed_mode) == oct(new_mode_2)
     finally:
         # Set the mode of the file in the file_roots back to what it
         # originally was.
@@ -187,7 +187,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             fp_.write('killme')
         ret = self.run_state('file.absent', name=name)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(os.path.isfile(name))
+        assert not os.path.isfile(name)
 
     def test_absent_dir(self):
         '''
@@ -199,7 +199,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             os.makedirs(name)
         ret = self.run_state('file.absent', name=name)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(os.path.isdir(name))
+        assert not os.path.isdir(name)
 
     def test_absent_link(self):
         '''
@@ -219,7 +219,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
         try:
             self.assertSaltTrueReturn(ret)
-            self.assertFalse(self.run_function('file.is_link', [name]))
+            assert not self.run_function('file.is_link', [name])
         finally:
             if self.run_function('file.is_link', [name]):
                 self.run_function('file.remove', [name])
@@ -233,7 +233,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             fp_.write('killme')
         ret = self.run_state('file.absent', test=True, name=name)
         self.assertSaltNoneReturn(ret)
-        self.assertTrue(os.path.isfile(name))
+        assert os.path.isfile(name)
 
     def test_managed(self):
         '''
@@ -248,7 +248,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             master_data = fp_.read()
         with salt.utils.files.fopen(name, 'r') as fp_:
             minion_data = fp_.read()
-        self.assertEqual(master_data, minion_data)
+        assert master_data == minion_data
         self.assertSaltTrueReturn(ret)
 
     def test_managed_file_mode(self):
@@ -263,14 +263,14 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
         if IS_WINDOWS:
             expected = 'The \'mode\' option is not supported on Windows'
-            self.assertEqual(ret[list(ret)[0]]['comment'], expected)
+            assert ret[list(ret)[0]]['comment'] == expected
             self.assertSaltFalseReturn(ret)
             return
 
         resulting_mode = stat.S_IMODE(
             os.stat(name).st_mode
         )
-        self.assertEqual(oct(desired_mode), oct(resulting_mode))
+        assert oct(desired_mode) == oct(resulting_mode)
         self.assertSaltTrueReturn(ret)
 
     @skipIf(IS_WINDOWS, 'Windows does not report any file modes. Skipping.')
@@ -301,14 +301,14 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
         if IS_WINDOWS:
             expected = 'The \'mode\' option is not supported on Windows'
-            self.assertEqual(ret[list(ret)[0]]['comment'], expected)
+            assert ret[list(ret)[0]]['comment'] == expected
             self.assertSaltFalseReturn(ret)
             return
 
         resulting_mode = stat.S_IMODE(
             os.stat(name).st_mode
         )
-        self.assertEqual(oct(initial_mode), oct(resulting_mode))
+        assert oct(initial_mode) == oct(resulting_mode)
 
         name = os.path.join(RUNTIME_VARS.TMP, 'grail_scene33')
         ret = self.run_state(
@@ -317,7 +317,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         resulting_mode = stat.S_IMODE(
             os.stat(name).st_mode
         )
-        self.assertEqual(oct(desired_mode), oct(resulting_mode))
+        assert oct(desired_mode) == oct(resulting_mode)
         self.assertSaltTrueReturn(ret)
 
     def test_managed_file_mode_file_exists_noreplace(self):
@@ -333,7 +333,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
         if IS_WINDOWS:
             expected = 'The \'mode\' option is not supported on Windows'
-            self.assertEqual(ret[list(ret)[0]]['comment'], expected)
+            assert ret[list(ret)[0]]['comment'] == expected
             self.assertSaltFalseReturn(ret)
             return
 
@@ -343,7 +343,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         resulting_mode = stat.S_IMODE(
             os.stat(name).st_mode
         )
-        self.assertEqual(oct(desired_mode), oct(resulting_mode))
+        assert oct(desired_mode) == oct(resulting_mode)
         self.assertSaltTrueReturn(ret)
 
     def test_managed_file_with_grains_data(self):
@@ -355,7 +355,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         state_file = 'file-grainget'
 
         self.run_function('state.sls', [state_file], pillar={'grain_path': grain_path})
-        self.assertTrue(os.path.exists(grain_path))
+        assert os.path.exists(grain_path)
 
         with salt.utils.files.fopen(grain_path, 'r') as fp_:
             file_contents = fp_.readlines()
@@ -364,7 +364,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             match = '^minion\r\n'
         else:
             match = '^minion\n'
-        self.assertTrue(re.match(match, file_contents[0]))
+        assert re.match(match, file_contents[0])
 
     def test_managed_file_with_pillar_sls(self):
         '''
@@ -382,7 +382,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
         # Check to make sure the file was created
         check_file = self.run_function('file.file_exists', [file_pillar])
-        self.assertTrue(check_file)
+        assert check_file
 
     def test_managed_file_with_pillardefault_sls(self):
         '''
@@ -400,7 +400,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
         # Check to make sure the file was created
         check_file = self.run_function('file.file_exists', [file_pillar_def])
-        self.assertTrue(check_file)
+        assert check_file
 
     @pytest.mark.skip_if_not_root
     def test_managed_dir_mode(self):
@@ -422,7 +422,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         )
         if IS_WINDOWS:
             expected = 'The \'mode\' option is not supported on Windows'
-            self.assertEqual(ret[list(ret)[0]]['comment'], expected)
+            assert ret[list(ret)[0]]['comment'] == expected
             self.assertSaltFalseReturn(ret)
             return
 
@@ -430,9 +430,9 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             os.stat(os.path.join(RUNTIME_VARS.TMP, 'a')).st_mode
         )
         resulting_owner = pwd.getpwuid(os.stat(os.path.join(RUNTIME_VARS.TMP, 'a')).st_uid).pw_name
-        self.assertEqual(oct(desired_mode), oct(resulting_mode))
+        assert oct(desired_mode) == oct(resulting_mode)
         self.assertSaltTrueReturn(ret)
-        self.assertEqual(desired_owner, resulting_owner)
+        assert desired_owner == resulting_owner
 
     def test_test_managed(self):
         '''
@@ -443,7 +443,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             'file.managed', test=True, name=name, source='salt://grail/scene33'
         )
         self.assertSaltNoneReturn(ret)
-        self.assertFalse(os.path.isfile(name))
+        assert not os.path.isfile(name)
 
     def test_managed_show_changes_false(self):
         '''
@@ -459,7 +459,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         )
 
         changes = next(six.itervalues(ret))['changes']
-        self.assertEqual('<show_changes=False>', changes['diff'])
+        assert '<show_changes=False>' == changes['diff']
 
     def test_managed_show_changes_true(self):
         '''
@@ -474,7 +474,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         )
 
         changes = next(six.itervalues(ret))['changes']
-        self.assertIn('diff', changes)
+        assert 'diff' in changes
 
     @skipIf(IS_WINDOWS, 'Don\'t know how to fix for Windows')
     def test_managed_escaped_file_path(self):
@@ -506,7 +506,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             '''.format(funny_file, funny_url)))
 
         ret = self.run_function('state.sls', [state_name])
-        self.assertTrue(ret[state_key]['result'])
+        assert ret[state_key]['result']
 
     def test_managed_contents(self):
         '''
@@ -562,8 +562,8 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_function('state.sls', [state_name])
             self.assertSaltTrueReturn(ret)
             for typ in state_keys:
-                self.assertTrue(ret[state_keys[typ]]['result'])
-                self.assertIn('diff', ret[state_keys[typ]]['changes'])
+                assert ret[state_keys[typ]]['result']
+                assert 'diff' in ret[state_keys[typ]]['changes']
         finally:
             if os.path.exists(state_file):
                 os.remove(state_file)
@@ -584,7 +584,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                        contents_newline=True)
         with salt.utils.files.fopen(name, 'r') as fp_:
             last_line = fp_.read()
-            self.assertEqual((contents + os.linesep), last_line)
+            assert (contents + os.linesep) == last_line
 
     def test_managed_contents_with_contents_newline_false(self):
         '''
@@ -599,7 +599,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                        contents_newline=False)
         with salt.utils.files.fopen(name, 'r') as fp_:
             last_line = fp_.read()
-            self.assertEqual(contents, last_line)
+            assert contents == last_line
 
     def test_managed_multiline_contents_with_contents_newline(self):
         '''
@@ -615,7 +615,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                        contents_newline=True)
         with salt.utils.files.fopen(name, 'r') as fp_:
             last_line = fp_.read()
-            self.assertEqual((contents + os.linesep), last_line)
+            assert (contents + os.linesep) == last_line
 
     def test_managed_multiline_contents_with_contents_newline_false(self):
         '''
@@ -631,7 +631,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                        contents_newline=False)
         with salt.utils.files.fopen(name, 'r') as fp_:
             last_line = fp_.read()
-            self.assertEqual(contents, last_line)
+            assert contents == last_line
 
     @pytest.mark.skip_if_not_root
     @skipIf(IS_WINDOWS, 'Windows does not support "mode" kwarg. Skipping.')
@@ -654,8 +654,8 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             )
             self.assertSaltTrueReturn(ret)
             self.assertInSaltComment('Empty file', ret)
-            self.assertEqual(ret['file_|-/tmp/sudoers_|-/tmp/sudoers_|-managed']['changes'],
-                             {'new': 'file /tmp/sudoers created', 'mode': '0440'})
+            assert ret['file_|-/tmp/sudoers_|-/tmp/sudoers_|-managed']['changes'] == \
+                             {'new': 'file /tmp/sudoers created', 'mode': '0440'}
         finally:
             # Clean Up File
             if os.path.exists('/tmp/sudoers'):
@@ -694,10 +694,9 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                     self.assertSaltFalseReturn(ret)
                     ret = ret[next(iter(ret))]
                     # Shouldn't be any changes
-                    self.assertFalse(ret['changes'])
+                    assert not ret['changes']
                     # Check that we identified a hash mismatch
-                    self.assertIn(
-                        'does not match actual checksum', ret['comment'])
+                    assert 'does not match actual checksum' in ret['comment']
 
                     ret = self.run_state(
                         'file.managed',
@@ -737,10 +736,9 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltFalseReturn(ret)
             ret = ret[next(iter(ret))]
             # Shouldn't be any changes
-            self.assertFalse(ret['changes'])
+            assert not ret['changes']
             # Check that we identified a hash mismatch
-            self.assertIn(
-                'does not exist', ret['comment'])
+            assert 'does not exist' in ret['comment']
 
     def test_managed_unicode_jinja_with_tojson_filter(self):
         '''
@@ -970,7 +968,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         name = os.path.join(RUNTIME_VARS.TMP, 'a_new_dir')
         ret = self.run_state('file.directory', name=name)
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(os.path.isdir(name))
+        assert os.path.isdir(name)
 
     def test_directory_symlink_dry_run(self):
         '''
@@ -1042,19 +1040,19 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                                      recurse=['mode'])
                 self.assertSaltTrueReturn(ret)
                 for changed_dir in dirs[0:depth+1]:
-                    self.assertEqual(changed_mode,
-                                     _get_oct_mode(changed_dir))
+                    assert changed_mode == \
+                                     _get_oct_mode(changed_dir)
                 for untouched_dir in dirs[depth+1:]:
                     # Beginning in Python 3.7, os.makedirs no longer sets
                     # the mode of intermediate directories to the mode that
                     # is passed.
                     if sys.version_info >= (3, 7):
                         _mode = initial_modes[depth][untouched_dir]
-                        self.assertEqual(_mode,
-                                         _get_oct_mode(untouched_dir))
+                        assert _mode == \
+                                         _get_oct_mode(untouched_dir)
                     else:
-                        self.assertEqual(initial_mode,
-                                         _get_oct_mode(untouched_dir))
+                        assert initial_mode == \
+                                         _get_oct_mode(untouched_dir)
         finally:
             shutil.rmtree(top)
 
@@ -1065,7 +1063,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         name = os.path.join(RUNTIME_VARS.TMP, 'a_not_dir')
         ret = self.run_state('file.directory', test=True, name=name)
         self.assertSaltNoneReturn(ret)
-        self.assertFalse(os.path.isdir(name))
+        assert not os.path.isdir(name)
 
     @with_tempdir()
     def test_directory_clean(self, base_dir):
@@ -1088,9 +1086,9 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
         ret = self.run_state('file.directory', name=name, clean=True)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(os.path.exists(strayfile))
-        self.assertFalse(os.path.exists(straydir))
-        self.assertTrue(os.path.isdir(name))
+        assert not os.path.exists(strayfile)
+        assert not os.path.exists(straydir)
+        assert os.path.isdir(name)
 
     def test_directory_is_idempotent(self):
         '''
@@ -1152,9 +1150,9 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                              exclude_pat=exclude_pat)
 
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(os.path.exists(strayfile))
-        self.assertFalse(os.path.exists(strayfile2))
-        self.assertTrue(os.path.exists(keepfile))
+        assert not os.path.exists(strayfile)
+        assert not os.path.exists(strayfile2)
+        assert os.path.exists(keepfile)
 
     @skipIf(IS_WINDOWS, 'Skip on windows')
     @with_tempdir()
@@ -1197,13 +1195,13 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         comment = next(six.itervalues(ret))['comment']
 
         self.assertSaltNoneReturn(ret)
-        self.assertTrue(os.path.exists(strayfile))
-        self.assertTrue(os.path.exists(strayfile2))
-        self.assertTrue(os.path.exists(keepfile))
+        assert os.path.exists(strayfile)
+        assert os.path.exists(strayfile2)
+        assert os.path.exists(keepfile)
 
-        self.assertIn(strayfile, comment)
-        self.assertIn(strayfile2, comment)
-        self.assertNotIn(keepfile, comment)
+        assert strayfile in comment
+        assert strayfile2 in comment
+        assert keepfile not in comment
 
     @with_tempdir()
     def test_directory_clean_require_in(self, name):
@@ -1234,8 +1232,8 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 '''.format(name=name, good_file=good_file)))
 
         ret = self.run_function('state.sls', [state_name])
-        self.assertTrue(os.path.exists(good_file))
-        self.assertFalse(os.path.exists(wrong_file))
+        assert os.path.exists(good_file)
+        assert not os.path.exists(wrong_file)
 
     @with_tempdir()
     def test_directory_clean_require_in_with_id(self, name):
@@ -1268,8 +1266,8 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 '''.format(name=name, good_file=good_file)))
 
         ret = self.run_function('state.sls', [state_name])
-        self.assertTrue(os.path.exists(good_file))
-        self.assertFalse(os.path.exists(wrong_file))
+        assert os.path.exists(good_file)
+        assert not os.path.exists(wrong_file)
 
     @skipIf(salt.utils.platform.is_darwin(), 'WAR ROOM TEMPORARY SKIP, Test is flaky on macosx')
     @with_tempdir()
@@ -1305,8 +1303,8 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 '''.format(name=name, good_file=good_file)))
 
         ret = self.run_function('state.sls', [state_name])
-        self.assertTrue(os.path.exists(good_file))
-        self.assertFalse(os.path.exists(wrong_file))
+        assert os.path.exists(good_file)
+        assert not os.path.exists(wrong_file)
 
     def test_directory_broken_symlink(self):
         '''
@@ -1343,7 +1341,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         ret = self.run_state('file.recurse', name=name, source='salt://grail')
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(os.path.isfile(os.path.join(name, '36', 'scene')))
+        assert os.path.isfile(os.path.join(name, '36', 'scene'))
 
     @with_tempdir(create=False)
     @with_tempdir(create=False)
@@ -1356,14 +1354,14 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                              source='salt://holy',
                              __env__='prod')
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(os.path.isfile(os.path.join(dir1, '32', 'scene')))
+        assert os.path.isfile(os.path.join(dir1, '32', 'scene'))
 
         ret = self.run_state('file.recurse',
                              name=dir2,
                              source='salt://holy',
                              saltenv='prod')
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(os.path.isfile(os.path.join(dir2, '32', 'scene')))
+        assert os.path.isfile(os.path.join(dir2, '32', 'scene'))
 
     @with_tempdir(create=False)
     @with_tempdir(create=False)
@@ -1375,13 +1373,13 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                              name=dir1,
                              source='salt://holy?saltenv=prod')
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(os.path.isfile(os.path.join(dir1, '32', 'scene')))
+        assert os.path.isfile(os.path.join(dir1, '32', 'scene'))
 
         ret = self.run_state('file.recurse',
                              name=dir2,
                              source='salt://holy?saltenv=prod')
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(os.path.isfile(os.path.join(dir2, '32', 'scene')))
+        assert os.path.isfile(os.path.join(dir2, '32', 'scene'))
 
     @with_tempdir(create=False)
     def test_test_recurse(self, name):
@@ -1392,8 +1390,8 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             'file.recurse', test=True, name=name, source='salt://grail',
         )
         self.assertSaltNoneReturn(ret)
-        self.assertFalse(os.path.isfile(os.path.join(name, '36', 'scene')))
-        self.assertFalse(os.path.exists(name))
+        assert not os.path.isfile(os.path.join(name, '36', 'scene'))
+        assert not os.path.exists(name)
 
     @with_tempdir(create=False)
     @with_tempdir(create=False)
@@ -1408,8 +1406,8 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                              __env__='prod'
         )
         self.assertSaltNoneReturn(ret)
-        self.assertFalse(os.path.isfile(os.path.join(dir1, '32', 'scene')))
-        self.assertFalse(os.path.exists(dir1))
+        assert not os.path.isfile(os.path.join(dir1, '32', 'scene'))
+        assert not os.path.exists(dir1)
 
         ret = self.run_state('file.recurse',
                              test=True,
@@ -1418,8 +1416,8 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                              saltenv='prod'
         )
         self.assertSaltNoneReturn(ret)
-        self.assertFalse(os.path.isfile(os.path.join(dir2, '32', 'scene')))
-        self.assertFalse(os.path.exists(dir2))
+        assert not os.path.isfile(os.path.join(dir2, '32', 'scene'))
+        assert not os.path.exists(dir2)
 
     @with_tempdir(create=False)
     def test_recurse_template(self, name):
@@ -1433,7 +1431,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         with salt.utils.files.fopen(os.path.join(name, 'scene33'), 'r') as fp_:
             contents = fp_.read()
-        self.assertIn(_ts, contents)
+        assert _ts in contents
 
     @with_tempdir()
     def test_recurse_clean(self, name):
@@ -1451,9 +1449,9 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state(
             'file.recurse', name=name, source='salt://grail', clean=True)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(os.path.exists(strayfile))
-        self.assertTrue(os.path.isfile(os.path.join(name, '36', 'scene')))
-        self.assertTrue(os.path.isfile(os.path.join(name, 'scene33')))
+        assert not os.path.exists(strayfile)
+        assert os.path.isfile(os.path.join(name, '36', 'scene'))
+        assert os.path.isfile(os.path.join(name, 'scene33'))
 
     @with_tempdir()
     def test_recurse_clean_specific_env(self, name):
@@ -1474,9 +1472,9 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                              clean=True,
                              __env__='prod')
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(os.path.exists(strayfile))
-        self.assertTrue(os.path.isfile(os.path.join(name, '32', 'scene')))
-        self.assertTrue(os.path.isfile(os.path.join(name, 'scene34')))
+        assert not os.path.exists(strayfile)
+        assert os.path.isfile(os.path.join(name, '32', 'scene'))
+        assert os.path.isfile(os.path.join(name, 'scene34'))
 
     @skipIf(IS_WINDOWS, 'Skip on windows')
     @with_tempdir()
@@ -1507,7 +1505,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                              dir_mode=dir_mode)
         self.assertSaltTrueReturn(ret)
         actual_dir_mode = oct(stat.S_IMODE(os.stat(name).st_mode))[-4:]
-        self.assertEqual(dir_mode, actual_dir_mode)
+        assert dir_mode == actual_dir_mode
 
     @with_tempdir(create=False)
     def test_recurse_issue_40578(self, name):
@@ -1527,10 +1525,8 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             files = os.listdir(name.decode('utf-8'))
         else:
             files = salt.utils.data.decode(os.listdir(name), normalize=True)
-        self.assertEqual(
-            sorted(files),
-            sorted(['foo.txt', 'спам.txt', 'яйца.txt']),
-        )
+        assert sorted(files) == \
+            sorted(['foo.txt', 'спам.txt', 'яйца.txt'])
 
     @with_tempfile()
     def test_replace(self, name):
@@ -1544,7 +1540,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 name=name, pattern='change', repl='salt', backup=False)
 
         with salt.utils.files.fopen(name, 'r') as fp_:
-            self.assertIn('salt', fp_.read())
+            assert 'salt' in fp_.read()
 
         self.assertSaltTrueReturn(ret)
 
@@ -1575,11 +1571,11 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
         # ensure, the number of lines didn't change, even after invoking 'file.replace' 3 times
         with salt.utils.files.fopen(path_test, 'r') as fp_test_:
-            self.assertTrue((sum(1 for _ in fp_test_) == 1))
+            assert sum(1 for _ in fp_test_) == 1
 
         # ensure, the replacement succeeded
         with salt.utils.files.fopen(path_test, 'r') as fp_test_:
-            self.assertTrue(fp_test_.read().startswith('en_US.UTF-8'))
+            assert fp_test_.read().startswith('en_US.UTF-8')
 
         # ensure, all runs of 'file.replace' reported success
         for item in ret:
@@ -1617,10 +1613,10 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 name=path_test, pattern='^# en_US.UTF-8$', repl='en_US.UTF-8', prepend_if_not_found=True))
 
         # ensure, the resulting file contains the expected lines
-        self.assertTrue(filecmp.cmp(path_test, path_out))
+        assert filecmp.cmp(path_test, path_out)
 
         # ensure the initial file was properly backed up
-        self.assertTrue(filecmp.cmp(path_test + '.bak', path_in))
+        assert filecmp.cmp(path_test + '.bak', path_in)
 
         # ensure, all runs of 'file.replace' reported success
         for item in ret:
@@ -1658,10 +1654,10 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 name=path_test, pattern='^# en_US.UTF-8$', repl='en_US.UTF-8', append_if_not_found=True))
 
         # ensure, the resulting file contains the expected lines
-        self.assertTrue(filecmp.cmp(path_test, path_out))
+        assert filecmp.cmp(path_test, path_out)
 
         # ensure the initial file was properly backed up
-        self.assertTrue(filecmp.cmp(path_test + '.bak', path_in))
+        assert filecmp.cmp(path_test + '.bak', path_in)
 
         # ensure, all runs of 'file.replace' reported success
         for item in ret:
@@ -1705,10 +1701,10 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             ))
 
         # ensure, the resulting file contains the expected lines
-        self.assertTrue(filecmp.cmp(path_test, path_out))
+        assert filecmp.cmp(path_test, path_out)
 
         # ensure the initial file was properly backed up
-        self.assertTrue(filecmp.cmp(path_test + '.bak', path_in))
+        assert filecmp.cmp(path_test + '.bak', path_in)
 
         # ensure, all runs of 'file.replace' reported success
         for item in ret:
@@ -1747,10 +1743,10 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 name=path_test, pattern='^#foo=bar($|(?=\r\n))', repl='foo=salt', append_if_not_found=True))
 
         # ensure, the resulting file contains the expected lines
-        self.assertTrue(filecmp.cmp(path_test, path_out))
+        assert filecmp.cmp(path_test, path_out)
 
         # ensure the initial file was properly backed up
-        self.assertTrue(filecmp.cmp(path_test + '.bak', path_in))
+        assert filecmp.cmp(path_test + '.bak', path_in)
 
         # ensure, all 'file.replace' runs reported success
         for item in ret:
@@ -1803,13 +1799,13 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         fstats_post = os.stat(path_test)
 
         # ensure, the file content didn't change
-        self.assertTrue(filecmp.cmp(path_in, path_test))
+        assert filecmp.cmp(path_in, path_test)
 
         # ensure no backup file was created
-        self.assertFalse(os.path.exists(path_test + '.bak'))
+        assert not os.path.exists(path_test + '.bak')
 
         # ensure the file's mtime didn't change
-        self.assertTrue(fstats_post.st_mtime, fstats_orig.st_mtime-age)
+        assert fstats_post.st_mtime, fstats_orig.st_mtime-age
 
         # ensure, all 'file.replace' runs reported success
         self.assertSaltTrueReturn(ret)
@@ -1844,7 +1840,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             '}',
             '',
         ])
-        self.assertEqual(serialized_file, expected_file)
+        assert serialized_file == expected_file
 
     @with_tempfile(create=False)
     def test_serializer_deserializer_opts(self, name):
@@ -1940,13 +1936,13 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         fstats_post = os.stat(path_test)
 
         # ensure, the file content didn't change
-        self.assertTrue(filecmp.cmp(path_in, path_test))
+        assert filecmp.cmp(path_in, path_test)
 
         # ensure no backup file was created
-        self.assertFalse(os.path.exists(path_test + '.bak'))
+        assert not os.path.exists(path_test + '.bak')
 
         # ensure the file's mtime didn't change
-        self.assertTrue(fstats_post.st_mtime, fstats_orig.st_mtime-age)
+        assert fstats_post.st_mtime, fstats_orig.st_mtime-age
 
         # ensure, all 'file.replace' runs reported success
         self.assertSaltTrueReturn(ret)
@@ -1970,7 +1966,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         # line is commented
         with salt.utils.files.fopen(name, 'r') as fp_:
-            self.assertTrue(fp_.read().startswith('#comment'))
+            assert fp_.read().startswith('#comment')
 
         # comment twice
         ret = self.run_state('file.comment', name=name, regex='^comment')
@@ -1979,7 +1975,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         # line is still commented
         with salt.utils.files.fopen(name, 'r') as fp_:
-            self.assertTrue(fp_.read().startswith('#comment'))
+            assert fp_.read().startswith('#comment')
 
         # Test previously commented file returns "True" now and not "None" with test=True
         ret = self.run_state('file.comment', test=True, name=name, regex='^comment')
@@ -1996,7 +1992,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             'file.comment', test=True, name=name, regex='.*comment.*',
         )
         with salt.utils.files.fopen(name, 'r') as fp_:
-            self.assertNotIn('#comment', fp_.read())
+            assert '#comment' not in fp_.read()
         self.assertSaltNoneReturn(ret)
 
     @with_tempfile()
@@ -2008,7 +2004,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             fp_.write('#comment_me')
         ret = self.run_state('file.uncomment', name=name, regex='^comment')
         with salt.utils.files.fopen(name, 'r') as fp_:
-            self.assertNotIn('#comment', fp_.read())
+            assert '#comment' not in fp_.read()
         self.assertSaltTrueReturn(ret)
 
     @with_tempfile()
@@ -2022,7 +2018,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             'file.uncomment', test=True, name=name, regex='^comment.*'
         )
         with salt.utils.files.fopen(name, 'r') as fp_:
-            self.assertIn('#comment', fp_.read())
+            assert '#comment' in fp_.read()
         self.assertSaltNoneReturn(ret)
 
     @with_tempfile()
@@ -2034,7 +2030,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             fp_.write('#salty!')
         ret = self.run_state('file.append', name=name, text='cheese')
         with salt.utils.files.fopen(name, 'r') as fp_:
-            self.assertIn('cheese', fp_.read())
+            assert 'cheese' in fp_.read()
         self.assertSaltTrueReturn(ret)
 
     @with_tempfile()
@@ -2048,7 +2044,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             'file.append', test=True, name=name, text='cheese'
         )
         with salt.utils.files.fopen(name, 'r') as fp_:
-            self.assertNotIn('cheese', fp_.read())
+            assert 'cheese' not in fp_.read()
         self.assertSaltNoneReturn(ret)
 
     @with_tempdir()
@@ -2079,7 +2075,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             'file.append', name=name, text='cheese'
         )
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(os.path.isfile(name))
+        assert os.path.isfile(name)
 
     @with_tempdir()
     def test_prepend_issue_27401_makedirs(self, base_dir):
@@ -2109,7 +2105,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             'file.prepend', name=name, text='cheese'
         )
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(os.path.isfile(name))
+        assert os.path.isfile(name)
 
     @with_tempfile()
     def test_touch(self, name):
@@ -2117,7 +2113,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         file.touch
         '''
         ret = self.run_state('file.touch', name=name)
-        self.assertTrue(os.path.isfile(name))
+        assert os.path.isfile(name)
         self.assertSaltTrueReturn(ret)
 
     @with_tempfile(create=False)
@@ -2126,7 +2122,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         file.touch test interface
         '''
         ret = self.run_state('file.touch', test=True, name=name)
-        self.assertFalse(os.path.isfile(name))
+        assert not os.path.isfile(name)
         self.assertSaltNoneReturn(ret)
 
     @with_tempdir()
@@ -2139,7 +2135,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
         ret = self.run_state('file.touch', name=name)
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(os.path.isdir(name))
+        assert os.path.isdir(name)
 
     @with_tempdir()
     def test_issue_2227_file_append(self, base_dir):
@@ -2180,7 +2176,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             with salt.utils.files.fopen(tmp_file_append, 'r') as fp_:
                 contents_post = fp_.read()
 
-            self.assertEqual(contents_pre, contents_post)
+            assert contents_pre == contents_post
         except AssertionError:
             if os.path.exists(tmp_file_append):
                 shutil.copy(tmp_file_append, tmp_file_append + '.bak')
@@ -2361,7 +2357,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             '#-- end salt managed zoneend --',
             '']
 
-        self.assertEqual([salt.utils.stringutils.to_str(line) for line in expected], contents)
+        assert [salt.utils.stringutils.to_str(line) for line in expected] == contents
 
     @with_tempdir()
     @skipIf(salt.utils.platform.is_darwin() and six.PY2, 'This test hangs on OS X on Py2')
@@ -2420,7 +2416,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         block_contents = contents[begin:end]
         for item in ('', 'bar', 'baz'):
             block_contents.remove(item)
-        self.assertEqual(block_contents, [])
+        assert block_contents == []
 
     @with_tempdir()
     def test_issue_8947_utf8_sls(self, base_dir):
@@ -2490,24 +2486,16 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             ret = {x.split('_|-')[1]: y for x, y in six.iteritems(result)}
 
             # Confirm initial creation of file
-            self.assertEqual(
-                ret['some-utf8-file-create']['comment'],
+            assert ret['some-utf8-file-create']['comment'] == \
                 'File {0} updated'.format(test_file_encoded)
-            )
-            self.assertEqual(
-                ret['some-utf8-file-create']['changes'],
+            assert ret['some-utf8-file-create']['changes'] == \
                 {'diff': 'New file'}
-            )
 
             # Confirm file was modified and that the diff was as expected
-            self.assertEqual(
-                ret['some-utf8-file-create2']['comment'],
+            assert ret['some-utf8-file-create2']['comment'] == \
                 'File {0} updated'.format(test_file_encoded)
-            )
-            self.assertEqual(
-                ret['some-utf8-file-create2']['changes'],
+            assert ret['some-utf8-file-create2']['changes'] == \
                 {'diff': diff}
-            )
             if salt.utils.platform.is_windows():
                 import subprocess
                 import win32api
@@ -2517,21 +2505,15 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                     shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 p.poll()
                 out = p.stdout.read()
-                self.assertEqual(
-                        out.decode('utf-8'),
+                assert out.decode('utf-8') == \
                         os.linesep.join((korean_2, korean_1, korean_3)) + os.linesep
-                )
             else:
-                self.assertEqual(
-                    ret['some-utf8-file-content-test']['comment'],
+                assert ret['some-utf8-file-content-test']['comment'] == \
                     'Command "cat "{0}"" run'.format(
                         test_file_encoded
                     )
-                )
-                self.assertEqual(
-                    ret['some-utf8-file-content-test']['changes']['stdout'],
+                assert ret['some-utf8-file-content-test']['changes']['stdout'] == \
                     '\n'.join((korean_2, korean_1, korean_3))
-                )
         finally:
             try:
                 os.remove(template_path)
@@ -2567,12 +2549,12 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         # onedir should be owned by the 'issue12209' user.
         onestats = os.stat(onedir)
         twostats = os.lstat(twodir)
-        self.assertEqual(pwd.getpwuid(onestats.st_uid).pw_name, user)
-        self.assertEqual(pwd.getpwuid(twostats.st_uid).pw_name, 'root')
-        self.assertEqual(grp.getgrgid(onestats.st_gid).gr_name, group)
+        assert pwd.getpwuid(onestats.st_uid).pw_name == user
+        assert pwd.getpwuid(twostats.st_uid).pw_name == 'root'
+        assert grp.getgrgid(onestats.st_gid).gr_name == group
         if salt.utils.path.which('id'):
             root_group = self.run_function('user.primary_group', ['root'])
-            self.assertEqual(grp.getgrgid(twostats.st_gid).gr_name, root_group)
+            assert grp.getgrgid(twostats.st_gid).gr_name == root_group
 
     @pytest.mark.skip_if_not_root
     @skipIf(not HAS_PWD, "pwd not available. Skipping test")
@@ -2603,10 +2585,10 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         # the 'issue12209' user, just link onedir.
         onestats = os.stat(onedir)
         twostats = os.lstat(twodir)
-        self.assertEqual(pwd.getpwuid(onestats.st_uid).pw_name, user)
-        self.assertEqual(pwd.getpwuid(twostats.st_uid).pw_name, user)
-        self.assertEqual(grp.getgrgid(onestats.st_gid).gr_name, group)
-        self.assertEqual(grp.getgrgid(twostats.st_gid).gr_name, group)
+        assert pwd.getpwuid(onestats.st_uid).pw_name == user
+        assert pwd.getpwuid(twostats.st_uid).pw_name == user
+        assert grp.getgrgid(onestats.st_gid).gr_name == group
+        assert grp.getgrgid(twostats.st_gid).gr_name == group
 
     @with_tempfile(create=False)
     @with_tempfile()
@@ -2645,10 +2627,8 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             context={'foo': 'Hello world!'}
         )
         self.assertSaltFalseReturn(ret)
-        self.assertIn(
-            ('Source file cannot be the same as destination'),
-            ret[next(iter(ret))]['comment'],
-        )
+        assert 'Source file cannot be the same as destination' in \
+            ret[next(iter(ret))]['comment']
 
     @with_tempfile(create=False)
     @with_tempfile(create=False)
@@ -2660,8 +2640,8 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         shutil.copyfile(os.path.join(RUNTIME_VARS.FILES, 'file/base/cheese'), dest)
 
         self.run_state('file.copy', name=dest, source=source, force=True)
-        self.assertTrue(os.path.exists(dest))
-        self.assertTrue(filecmp.cmp(source, dest))
+        assert os.path.exists(dest)
+        assert filecmp.cmp(source, dest)
 
         os.remove(source)
         os.remove(dest)
@@ -2679,7 +2659,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         user = 'salt'
         mode = '0644'
         ret = self.run_function('user.add', [user])
-        self.assertTrue(ret, 'Failed to add user. Are you running as sudo?')
+        assert ret, 'Failed to add user. Are you running as sudo?'
         ret = self.run_state('file.copy', name=dest, source=source, user=user,
                              makedirs=True, mode=mode)
         self.assertSaltTrueReturn(ret)
@@ -2687,8 +2667,8 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         for check in file_checks:
             user_check = self.run_function('file.get_user', [check])
             mode_check = self.run_function('file.get_mode', [check])
-            self.assertEqual(user_check, user)
-            self.assertEqual(salt.utils.files.normalize_mode(mode_check), mode)
+            assert user_check == user
+            assert salt.utils.files.normalize_mode(mode_check) == mode
 
     def test_contents_pillar_with_pillar_list(self):
         '''
@@ -2736,9 +2716,9 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         }
 
         self.assertSaltTrueReturn(ret)
-        self.assertEqual(desired['user'], result['user'])
-        self.assertEqual(desired['group'], result['group'])
-        self.assertEqual(desired['mode'], result['mode'].lstrip('0Oo'))
+        assert desired['user'] == result['user']
+        assert desired['group'] == result['group']
+        assert desired['mode'] == result['mode'].lstrip('0Oo')
 
     def test_binary_contents(self):
         '''
@@ -2805,9 +2785,9 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         temp_file_mode = six.text_type(oct(stat.S_IMODE(temp_file_stats.st_mode)))
         temp_file_mode = salt.utils.files.normalize_mode(temp_file_mode)
 
-        self.assertEqual(temp_file_mode, '4750')
-        self.assertEqual(pwd.getpwuid(temp_file_stats.st_uid).pw_name, user)
-        self.assertEqual(grp.getgrgid(temp_file_stats.st_gid).gr_name, group)
+        assert temp_file_mode == '4750'
+        assert pwd.getpwuid(temp_file_stats.st_uid).pw_name == user
+        assert grp.getgrgid(temp_file_stats.st_gid).gr_name == group
 
     @with_tempdir()
     def test_issue_48557(self, tempdir):
@@ -2827,13 +2807,13 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         with salt.utils.files.fopen(tempfile, 'rb') as fp:
             content = fp.read()
-        self.assertEqual(content, os.linesep.join([
+        assert content == os.linesep.join([
             'test1',
             'test2',
             'test4',
             'test3',
             '',
-        ]).encode('utf-8'))
+        ]).encode('utf-8')
 
     @with_tempfile()
     def test_issue_50221(self, name):
@@ -2868,7 +2848,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             master_data = fp_.read()
         with salt.utils.files.fopen(name, 'r') as fp_:
             minion_data = fp_.read()
-        self.assertEqual(master_data, minion_data)
+        assert master_data == minion_data
         self.assertSaltTrueReturn(ret)
 
 
@@ -2988,8 +2968,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              prepend_if_not_found=True)
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), expected)
+        assert ret[next(iter(ret))]['changes']
+        assert self._read(name) == expected
         # Pass 1a: Re-run state, no changes should be made
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -2998,8 +2978,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              prepend_if_not_found=True)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), expected)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == expected
 
         # Pass 2: content does not end in newline
         self._write(name, self.without_block)
@@ -3010,8 +2990,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              prepend_if_not_found=True)
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), expected)
+        assert ret[next(iter(ret))]['changes']
+        assert self._read(name) == expected
         # Pass 2a: Re-run state, no changes should be made
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -3020,8 +3000,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              prepend_if_not_found=True)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), expected)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == expected
 
     @with_tempfile()
     def test_prepend_append_newline(self, name):
@@ -3041,8 +3021,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              prepend_if_not_found=True,
                              append_newline=True)
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), expected)
+        assert ret[next(iter(ret))]['changes']
+        assert self._read(name) == expected
         # Pass 1a: Re-run state, no changes should be made
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -3052,8 +3032,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              prepend_if_not_found=True,
                              append_newline=True)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), expected)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == expected
 
         # Pass 2: content does not end in newline
         expected = self.marker_start + os.linesep + self.content + \
@@ -3067,8 +3047,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              prepend_if_not_found=True,
                              append_newline=True)
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), expected)
+        assert ret[next(iter(ret))]['changes']
+        assert self._read(name) == expected
         # Pass 2a: Re-run state, no changes should be made
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -3078,8 +3058,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              prepend_if_not_found=True,
                              append_newline=True)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), expected)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == expected
 
     @with_tempfile()
     def test_prepend_no_append_newline(self, name):
@@ -3099,8 +3079,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              prepend_if_not_found=True,
                              append_newline=False)
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), expected)
+        assert ret[next(iter(ret))]['changes']
+        assert self._read(name) == expected
         # Pass 1a: Re-run state, no changes should be made
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -3110,8 +3090,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              prepend_if_not_found=True,
                              append_newline=False)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), expected)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == expected
 
         # Pass 2: content does not end in newline
         expected = self.marker_start + os.linesep + \
@@ -3126,8 +3106,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              prepend_if_not_found=True,
                              append_newline=False)
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), expected)
+        assert ret[next(iter(ret))]['changes']
+        assert self._read(name) == expected
         # Pass 2a: Re-run state, no changes should be made
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -3137,8 +3117,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              prepend_if_not_found=True,
                              append_newline=False)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), expected)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == expected
 
     @with_tempfile()
     def test_append(self, name):
@@ -3158,8 +3138,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              append_if_not_found=True)
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), expected)
+        assert ret[next(iter(ret))]['changes']
+        assert self._read(name) == expected
         # Pass 1a: Re-run state, no changes should be made
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -3168,8 +3148,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              append_if_not_found=True)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), expected)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == expected
 
         # Pass 2: content does not end in newline
         self._write(name, self.without_block)
@@ -3180,8 +3160,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              append_if_not_found=True)
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), expected)
+        assert ret[next(iter(ret))]['changes']
+        assert self._read(name) == expected
         # Pass 2a: Re-run state, no changes should be made
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -3190,8 +3170,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              append_if_not_found=True)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), expected)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == expected
 
     @with_tempfile()
     def test_append_append_newline(self, name):
@@ -3211,8 +3191,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              append_if_not_found=True,
                              append_newline=True)
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), expected)
+        assert ret[next(iter(ret))]['changes']
+        assert self._read(name) == expected
         # Pass 1a: Re-run state, no changes should be made
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -3222,8 +3202,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              append_if_not_found=True,
                              append_newline=True)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), expected)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == expected
 
         # Pass 2: content does not end in newline
         expected = self.without_block + self.marker_start + os.linesep + \
@@ -3237,8 +3217,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              append_if_not_found=True,
                              append_newline=True)
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), expected)
+        assert ret[next(iter(ret))]['changes']
+        assert self._read(name) == expected
         # Pass 2a: Re-run state, no changes should be made
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -3248,8 +3228,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              append_if_not_found=True,
                              append_newline=True)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), expected)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == expected
 
     @with_tempfile()
     def test_append_no_append_newline(self, name):
@@ -3269,8 +3249,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              append_if_not_found=True,
                              append_newline=False)
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), expected)
+        assert ret[next(iter(ret))]['changes']
+        assert self._read(name) == expected
         # Pass 1a: Re-run state, no changes should be made
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -3280,8 +3260,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              append_if_not_found=True,
                              append_newline=False)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), expected)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == expected
 
         # Pass 2: content does not end in newline
         expected = self.without_block + self.marker_start + os.linesep + \
@@ -3295,8 +3275,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              append_if_not_found=True,
                              append_newline=False)
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), expected)
+        assert ret[next(iter(ret))]['changes']
+        assert self._read(name) == expected
         # Pass 2a: Re-run state, no changes should be made
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -3306,8 +3286,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              append_if_not_found=True,
                              append_newline=False)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), expected)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == expected
 
     @with_tempfile()
     def test_prepend_auto_line_separator(self, name):
@@ -3323,10 +3303,9 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              prepend_if_not_found=True)
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(ret[next(iter(ret))]['changes'])
-        self.assertEqual(
-            self._read(name),
-            self.with_block_prepended_explicit_windows_newlines)
+        assert ret[next(iter(ret))]['changes']
+        assert self._read(name) == \
+            self.with_block_prepended_explicit_windows_newlines
         # Re-run state, no changes should be made
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -3335,10 +3314,9 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              prepend_if_not_found=True)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(
-            self._read(name),
-            self.with_block_prepended_explicit_windows_newlines)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == \
+            self.with_block_prepended_explicit_windows_newlines
 
         # Windows newlines to POSIX newlines
         self._write(name, self.without_block_explicit_posix_newlines)
@@ -3349,10 +3327,9 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              prepend_if_not_found=True)
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(ret[next(iter(ret))]['changes'])
-        self.assertEqual(
-            self._read(name),
-            self.with_block_prepended_explicit_posix_newlines)
+        assert ret[next(iter(ret))]['changes']
+        assert self._read(name) == \
+            self.with_block_prepended_explicit_posix_newlines
         # Re-run state, no changes should be made
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -3361,10 +3338,9 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              prepend_if_not_found=True)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(
-            self._read(name),
-            self.with_block_prepended_explicit_posix_newlines)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == \
+            self.with_block_prepended_explicit_posix_newlines
 
     @with_tempfile()
     def test_append_auto_line_separator(self, name):
@@ -3380,10 +3356,9 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              append_if_not_found=True)
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(ret[next(iter(ret))]['changes'])
-        self.assertEqual(
-            self._read(name),
-            self.with_block_appended_explicit_windows_newlines)
+        assert ret[next(iter(ret))]['changes']
+        assert self._read(name) == \
+            self.with_block_appended_explicit_windows_newlines
         # Re-run state, no changes should be made
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -3392,10 +3367,9 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              append_if_not_found=True)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(
-            self._read(name),
-            self.with_block_appended_explicit_windows_newlines)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == \
+            self.with_block_appended_explicit_windows_newlines
 
         # Windows newlines to POSIX newlines
         self._write(name, self.without_block_explicit_posix_newlines)
@@ -3406,10 +3380,9 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              append_if_not_found=True)
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(ret[next(iter(ret))]['changes'])
-        self.assertEqual(
-            self._read(name),
-            self.with_block_appended_explicit_posix_newlines)
+        assert ret[next(iter(ret))]['changes']
+        assert self._read(name) == \
+            self.with_block_appended_explicit_posix_newlines
         # Re-run state, no changes should be made
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -3418,10 +3391,9 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              append_if_not_found=True)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(
-            self._read(name),
-            self.with_block_appended_explicit_posix_newlines)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == \
+            self.with_block_appended_explicit_posix_newlines
 
     @with_tempfile()
     def test_non_matching_block(self, name):
@@ -3437,8 +3409,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_start=self.marker_start,
                              marker_end=self.marker_end)
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), self.with_matching_block)
+        assert ret[next(iter(ret))]['changes']
+        assert self._read(name) == self.with_matching_block
         # Pass 1a: Re-run state, no changes should be made
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -3446,8 +3418,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_start=self.marker_start,
                              marker_end=self.marker_end)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), self.with_matching_block)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == self.with_matching_block
 
         # Pass 2: content does not end in newline
         self._write(name, self.with_non_matching_block)
@@ -3457,8 +3429,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_start=self.marker_start,
                              marker_end=self.marker_end)
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), self.with_matching_block)
+        assert ret[next(iter(ret))]['changes']
+        assert self._read(name) == self.with_matching_block
         # Pass 2a: Re-run state, no changes should be made
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -3466,8 +3438,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_start=self.marker_start,
                              marker_end=self.marker_end)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), self.with_matching_block)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == self.with_matching_block
 
     @with_tempfile()
     def test_non_matching_block_append_newline(self, name):
@@ -3484,10 +3456,9 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              append_newline=True)
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(ret[next(iter(ret))]['changes'])
-        self.assertEqual(
-            self._read(name),
-            self.with_matching_block_and_extra_newline)
+        assert ret[next(iter(ret))]['changes']
+        assert self._read(name) == \
+            self.with_matching_block_and_extra_newline
         # Pass 1a: Re-run state, no changes should be made
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -3496,10 +3467,9 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              append_newline=True)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(
-            self._read(name),
-            self.with_matching_block_and_extra_newline)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == \
+            self.with_matching_block_and_extra_newline
 
         # Pass 2: content does not end in newline
         self._write(name, self.with_non_matching_block)
@@ -3510,8 +3480,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              append_newline=True)
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), self.with_matching_block)
+        assert ret[next(iter(ret))]['changes']
+        assert self._read(name) == self.with_matching_block
         # Pass 2a: Re-run state, no changes should be made
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -3520,8 +3490,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              append_newline=True)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), self.with_matching_block)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == self.with_matching_block
 
     @with_tempfile()
     def test_non_matching_block_no_append_newline(self, name):
@@ -3538,8 +3508,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              append_newline=False)
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), self.with_matching_block)
+        assert ret[next(iter(ret))]['changes']
+        assert self._read(name) == self.with_matching_block
         # Pass 1a: Re-run state, no changes should be made
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -3548,8 +3518,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              append_newline=False)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), self.with_matching_block)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == self.with_matching_block
 
         # Pass 2: content does not end in newline
         self._write(name, self.with_non_matching_block)
@@ -3560,10 +3530,9 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              append_newline=False)
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(ret[next(iter(ret))]['changes'])
-        self.assertEqual(
-            self._read(name),
-            self.with_matching_block_and_marker_end_not_after_newline)
+        assert ret[next(iter(ret))]['changes']
+        assert self._read(name) == \
+            self.with_matching_block_and_marker_end_not_after_newline
         # Pass 2a: Re-run state, no changes should be made
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -3572,10 +3541,9 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              append_newline=False)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(
-            self._read(name),
-            self.with_matching_block_and_marker_end_not_after_newline)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == \
+            self.with_matching_block_and_marker_end_not_after_newline
 
     @with_tempfile()
     def test_non_matching_block_and_marker_not_after_newline(self, name):
@@ -3593,8 +3561,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_start=self.marker_start,
                              marker_end=self.marker_end)
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), self.with_matching_block)
+        assert ret[next(iter(ret))]['changes']
+        assert self._read(name) == self.with_matching_block
         # Pass 1a: Re-run state, no changes should be made
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -3602,8 +3570,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_start=self.marker_start,
                              marker_end=self.marker_end)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), self.with_matching_block)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == self.with_matching_block
 
         # Pass 2: content does not end in newline
         self._write(
@@ -3615,8 +3583,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_start=self.marker_start,
                              marker_end=self.marker_end)
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), self.with_matching_block)
+        assert ret[next(iter(ret))]['changes']
+        assert self._read(name) == self.with_matching_block
         # Pass 2a: Re-run state, no changes should be made
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -3624,8 +3592,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_start=self.marker_start,
                              marker_end=self.marker_end)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), self.with_matching_block)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == self.with_matching_block
 
     @with_tempfile()
     def test_non_matching_block_and_marker_not_after_newline_append_newline(self, name):
@@ -3645,10 +3613,9 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              append_newline=True)
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(ret[next(iter(ret))]['changes'])
-        self.assertEqual(
-            self._read(name),
-            self.with_matching_block_and_extra_newline)
+        assert ret[next(iter(ret))]['changes']
+        assert self._read(name) == \
+            self.with_matching_block_and_extra_newline
         # Pass 1a: Re-run state, no changes should be made
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -3657,10 +3624,9 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              append_newline=True)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(
-            self._read(name),
-            self.with_matching_block_and_extra_newline)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == \
+            self.with_matching_block_and_extra_newline
 
         # Pass 2: content does not end in newline
         self._write(
@@ -3673,8 +3639,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              append_newline=True)
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), self.with_matching_block)
+        assert ret[next(iter(ret))]['changes']
+        assert self._read(name) == self.with_matching_block
         # Pass 2a: Re-run state, no changes should be made
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -3683,8 +3649,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              append_newline=True)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), self.with_matching_block)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == self.with_matching_block
 
     @with_tempfile()
     def test_non_matching_block_and_marker_not_after_newline_no_append_newline(self, name):
@@ -3704,8 +3670,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              append_newline=False)
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), self.with_matching_block)
+        assert ret[next(iter(ret))]['changes']
+        assert self._read(name) == self.with_matching_block
         # Pass 1a: Re-run state, no changes should be made
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -3714,8 +3680,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              append_newline=False)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), self.with_matching_block)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == self.with_matching_block
 
         # Pass 2: content does not end in newline
         self._write(
@@ -3728,10 +3694,9 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              append_newline=False)
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(ret[next(iter(ret))]['changes'])
-        self.assertEqual(
-            self._read(name),
-            self.with_matching_block_and_marker_end_not_after_newline)
+        assert ret[next(iter(ret))]['changes']
+        assert self._read(name) == \
+            self.with_matching_block_and_marker_end_not_after_newline
         # Pass 2a: Re-run state, no changes should be made
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -3740,10 +3705,9 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              append_newline=False)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(
-            self._read(name),
-            self.with_matching_block_and_marker_end_not_after_newline)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == \
+            self.with_matching_block_and_marker_end_not_after_newline
 
     @with_tempfile()
     def test_matching_block(self, name):
@@ -3759,8 +3723,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_start=self.marker_start,
                              marker_end=self.marker_end)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), self.with_matching_block)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == self.with_matching_block
         # Pass 1a: Re-run state, no changes should be made
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -3768,8 +3732,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_start=self.marker_start,
                              marker_end=self.marker_end)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), self.with_matching_block)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == self.with_matching_block
 
         # Pass 2: content does not end in newline
         self._write(name, self.with_matching_block)
@@ -3779,8 +3743,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_start=self.marker_start,
                              marker_end=self.marker_end)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), self.with_matching_block)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == self.with_matching_block
         # Pass 2a: Re-run state, no changes should be made
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -3788,8 +3752,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_start=self.marker_start,
                              marker_end=self.marker_end)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), self.with_matching_block)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == self.with_matching_block
 
     @with_tempfile()
     def test_matching_block_append_newline(self, name):
@@ -3808,10 +3772,9 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              append_newline=True)
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(ret[next(iter(ret))]['changes'])
-        self.assertEqual(
-            self._read(name),
-            self.with_matching_block_and_extra_newline)
+        assert ret[next(iter(ret))]['changes']
+        assert self._read(name) == \
+            self.with_matching_block_and_extra_newline
         # Pass 1a: Re-run state, no changes should be made
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -3820,10 +3783,9 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              append_newline=True)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(
-            self._read(name),
-            self.with_matching_block_and_extra_newline)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == \
+            self.with_matching_block_and_extra_newline
 
         # Pass 2: content does not end in newline
         self._write(name, self.with_matching_block)
@@ -3834,8 +3796,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              append_newline=True)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), self.with_matching_block)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == self.with_matching_block
         # Pass 2a: Re-run state, no changes should be made
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -3844,8 +3806,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              append_newline=True)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), self.with_matching_block)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == self.with_matching_block
 
     @with_tempfile()
     def test_matching_block_no_append_newline(self, name):
@@ -3864,8 +3826,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              append_newline=False)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), self.with_matching_block)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == self.with_matching_block
 
         # Pass 1a: Re-run state, no changes should be made
         ret = self.run_state('file.blockreplace',
@@ -3875,8 +3837,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              append_newline=False)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), self.with_matching_block)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == self.with_matching_block
 
         # Pass 2: content does not end in newline
         self._write(name, self.with_matching_block)
@@ -3887,10 +3849,9 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              append_newline=False)
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(ret[next(iter(ret))]['changes'])
-        self.assertEqual(
-            self._read(name),
-            self.with_matching_block_and_marker_end_not_after_newline)
+        assert ret[next(iter(ret))]['changes']
+        assert self._read(name) == \
+            self.with_matching_block_and_marker_end_not_after_newline
 
         # Pass 2a: Re-run state, no changes should be made
         ret = self.run_state('file.blockreplace',
@@ -3900,10 +3861,9 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              append_newline=False)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(
-            self._read(name),
-            self.with_matching_block_and_marker_end_not_after_newline)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == \
+            self.with_matching_block_and_marker_end_not_after_newline
 
     @with_tempfile()
     def test_matching_block_and_marker_not_after_newline(self, name):
@@ -3921,8 +3881,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_start=self.marker_start,
                              marker_end=self.marker_end)
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), self.with_matching_block)
+        assert ret[next(iter(ret))]['changes']
+        assert self._read(name) == self.with_matching_block
         # Pass 1a: Re-run state, no changes should be made
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -3930,8 +3890,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_start=self.marker_start,
                              marker_end=self.marker_end)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), self.with_matching_block)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == self.with_matching_block
 
         # Pass 2: content does not end in newline
         self._write(
@@ -3943,8 +3903,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_start=self.marker_start,
                              marker_end=self.marker_end)
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), self.with_matching_block)
+        assert ret[next(iter(ret))]['changes']
+        assert self._read(name) == self.with_matching_block
         # Pass 2a: Re-run state, no changes should be made
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -3952,8 +3912,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_start=self.marker_start,
                              marker_end=self.marker_end)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), self.with_matching_block)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == self.with_matching_block
 
     @with_tempfile()
     def test_matching_block_and_marker_not_after_newline_append_newline(self, name):
@@ -3975,10 +3935,9 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              append_newline=True)
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(ret[next(iter(ret))]['changes'])
-        self.assertEqual(
-            self._read(name),
-            self.with_matching_block_and_extra_newline)
+        assert ret[next(iter(ret))]['changes']
+        assert self._read(name) == \
+            self.with_matching_block_and_extra_newline
         # Pass 1a: Re-run state, no changes should be made
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -3987,10 +3946,9 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              append_newline=True)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(
-            self._read(name),
-            self.with_matching_block_and_extra_newline)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == \
+            self.with_matching_block_and_extra_newline
 
         # Pass 2: content does not end in newline
         self._write(
@@ -4003,8 +3961,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              append_newline=True)
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), self.with_matching_block)
+        assert ret[next(iter(ret))]['changes']
+        assert self._read(name) == self.with_matching_block
         # Pass 2a: Re-run state, no changes should be made
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -4013,8 +3971,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              append_newline=True)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), self.with_matching_block)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == self.with_matching_block
 
     @with_tempfile()
     def test_matching_block_and_marker_not_after_newline_no_append_newline(self, name):
@@ -4034,8 +3992,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              append_newline=False)
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), self.with_matching_block)
+        assert ret[next(iter(ret))]['changes']
+        assert self._read(name) == self.with_matching_block
         # Pass 1a: Re-run state, no changes should be made
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -4044,8 +4002,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              append_newline=False)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(self._read(name), self.with_matching_block)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == self.with_matching_block
 
         # Pass 2: content does not end in newline
         self._write(
@@ -4058,10 +4016,9 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              append_newline=False)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(
-            self._read(name),
-            self.with_matching_block_and_marker_end_not_after_newline)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == \
+            self.with_matching_block_and_marker_end_not_after_newline
         # Pass 2a: Re-run state, no changes should be made
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -4070,10 +4027,9 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
                              marker_end=self.marker_end,
                              append_newline=False)
         self.assertSaltTrueReturn(ret)
-        self.assertFalse(ret[next(iter(ret))]['changes'])
-        self.assertEqual(
-            self._read(name),
-            self.with_matching_block_and_marker_end_not_after_newline)
+        assert not ret[next(iter(ret))]['changes']
+        assert self._read(name) == \
+            self.with_matching_block_and_marker_end_not_after_newline
 
     @with_tempfile()
     def test_issue_49043(self, name):
@@ -4090,9 +4046,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         +#-- end managed zone --
         ''')
         job = 'file_|-somefile-blockreplace_|-{}_|-blockreplace'.format(name)
-        self.assertEqual(
-            ret[job]['changes']['diff'],
-            diff)
+        assert ret[job]['changes']['diff'] == \
+            diff
 
 
 @pytest.mark.windows_whitelisted
@@ -4299,7 +4254,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertEqual(ret['comment'], 'Patch successfully applied')
+        assert ret['comment'] == 'Patch successfully applied'
 
         # Re-run the state, should succeed and there should be a message about
         # a partially-applied hunk.
@@ -4310,8 +4265,8 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertEqual(ret['comment'], 'Patch was already applied')
-        self.assertEqual(ret['changes'], {})
+        assert ret['comment'] == 'Patch was already applied'
+        assert ret['changes'] == {}
 
     def test_patch_directory(self):
         '''
@@ -4327,7 +4282,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertEqual(ret['comment'], 'Patch successfully applied')
+        assert ret['comment'] == 'Patch successfully applied'
 
         # Re-run the state, should succeed and there should be a message about
         # a partially-applied hunk.
@@ -4339,8 +4294,8 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertEqual(ret['comment'], 'Patch was already applied')
-        self.assertEqual(ret['changes'], {})
+        assert ret['comment'] == 'Patch was already applied'
+        assert ret['changes'] == {}
 
     def test_patch_strip_parsing(self):
         '''
@@ -4356,7 +4311,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertEqual(ret['comment'], 'Patch successfully applied')
+        assert ret['comment'] == 'Patch successfully applied'
 
         # Re-run the state using --strip=1
         ret = self.run_state(
@@ -4367,8 +4322,8 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertEqual(ret['comment'], 'Patch was already applied')
-        self.assertEqual(ret['changes'], {})
+        assert ret['comment'] == 'Patch was already applied'
+        assert ret['changes'] == {}
 
         # Re-run the state using --strip 1
         ret = self.run_state(
@@ -4379,8 +4334,8 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertEqual(ret['comment'], 'Patch was already applied')
-        self.assertEqual(ret['changes'], {})
+        assert ret['comment'] == 'Patch was already applied'
+        assert ret['changes'] == {}
 
     def test_patch_saltenv(self):
         '''
@@ -4397,10 +4352,8 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltFalseReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertEqual(
-            ret['comment'],
+        assert ret['comment'] == \
             "Source file {0} not found in saltenv 'prod'".format(self.math_patch)
-        )
 
     def test_patch_single_file_failure(self):
         '''
@@ -4418,7 +4371,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltFalseReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertIn('Patch would not apply cleanly', ret['comment'])
+        assert 'Patch would not apply cleanly' in ret['comment']
 
         # Test the reject_file option and ensure that the rejects are written
         # to the path specified.
@@ -4432,11 +4385,8 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltFalseReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertIn('Patch would not apply cleanly', ret['comment'])
-        self.assertRegex(
-            ret['comment'],
-            'saving rejects to (file )?{0}'.format(reject_file)
-        )
+        assert 'Patch would not apply cleanly' in ret['comment']
+        assert re.search('saving rejects to (file )?{0}'.format(reject_file), ret['comment'])
 
     def test_patch_directory_failure(self):
         '''
@@ -4455,7 +4405,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltFalseReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertIn('Patch would not apply cleanly', ret['comment'])
+        assert 'Patch would not apply cleanly' in ret['comment']
 
         # Test the reject_file option and ensure that the rejects are written
         # to the path specified.
@@ -4469,11 +4419,8 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltFalseReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertIn('Patch would not apply cleanly', ret['comment'])
-        self.assertRegex(
-            ret['comment'],
-            'saving rejects to (file )?{0}'.format(reject_file)
-        )
+        assert 'Patch would not apply cleanly' in ret['comment']
+        assert re.search('saving rejects to (file )?{0}'.format(reject_file), ret['comment'])
 
     def test_patch_single_file_remote_source(self):
         '''
@@ -4489,7 +4436,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltFalseReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertIn('Unable to verify upstream hash', ret['comment'])
+        assert 'Unable to verify upstream hash' in ret['comment']
 
         # Re-run the state with a source hash, it should now succeed
         ret = self.run_state(
@@ -4500,7 +4447,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertEqual(ret['comment'], 'Patch successfully applied')
+        assert ret['comment'] == 'Patch successfully applied'
 
         # Re-run again, this time with no hash and skip_verify=True to test
         # skipping hash verification
@@ -4512,8 +4459,8 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertEqual(ret['comment'], 'Patch was already applied')
-        self.assertEqual(ret['changes'], {})
+        assert ret['comment'] == 'Patch was already applied'
+        assert ret['changes'] == {}
 
     def test_patch_directory_remote_source(self):
         '''
@@ -4532,7 +4479,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltFalseReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertIn('Unable to verify upstream hash', ret['comment'])
+        assert 'Unable to verify upstream hash' in ret['comment']
 
         # Re-run the state with a source hash, it should now succeed
         ret = self.run_state(
@@ -4544,7 +4491,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertEqual(ret['comment'], 'Patch successfully applied')
+        assert ret['comment'] == 'Patch successfully applied'
 
         # Re-run again, this time with no hash and skip_verify=True to test
         # skipping hash verification
@@ -4557,8 +4504,8 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertEqual(ret['comment'], 'Patch was already applied')
-        self.assertEqual(ret['changes'], {})
+        assert ret['comment'] == 'Patch was already applied'
+        assert ret['changes'] == {}
 
     def test_patch_single_file_template(self):
         '''
@@ -4574,7 +4521,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertEqual(ret['comment'], 'Patch successfully applied')
+        assert ret['comment'] == 'Patch successfully applied'
 
         # Re-run the state, should succeed and there should be a message about
         # a partially-applied hunk.
@@ -4587,8 +4534,8 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertEqual(ret['comment'], 'Patch was already applied')
-        self.assertEqual(ret['changes'], {})
+        assert ret['comment'] == 'Patch was already applied'
+        assert ret['changes'] == {}
 
     def test_patch_directory_template(self):
         '''
@@ -4607,7 +4554,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertEqual(ret['comment'], 'Patch successfully applied')
+        assert ret['comment'] == 'Patch successfully applied'
 
         # Re-run the state, should succeed and there should be a message about
         # a partially-applied hunk.
@@ -4621,8 +4568,8 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertEqual(ret['comment'], 'Patch was already applied')
-        self.assertEqual(ret['changes'], {})
+        assert ret['comment'] == 'Patch was already applied'
+        assert ret['changes'] == {}
 
     def test_patch_single_file_remote_source_template(self):
         '''
@@ -4640,7 +4587,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltFalseReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertIn('Unable to verify upstream hash', ret['comment'])
+        assert 'Unable to verify upstream hash' in ret['comment']
 
         # Re-run the state with a source hash, it should now succeed
         ret = self.run_state(
@@ -4653,7 +4600,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertEqual(ret['comment'], 'Patch successfully applied')
+        assert ret['comment'] == 'Patch successfully applied'
 
         # Re-run again, this time with no hash and skip_verify=True to test
         # skipping hash verification
@@ -4667,8 +4614,8 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertEqual(ret['comment'], 'Patch was already applied')
-        self.assertEqual(ret['changes'], {})
+        assert ret['comment'] == 'Patch was already applied'
+        assert ret['changes'] == {}
 
     def test_patch_directory_remote_source_template(self):
         '''
@@ -4689,7 +4636,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltFalseReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertIn('Unable to verify upstream hash', ret['comment'])
+        assert 'Unable to verify upstream hash' in ret['comment']
 
         # Re-run the state with a source hash, it should now succeed
         ret = self.run_state(
@@ -4703,7 +4650,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertEqual(ret['comment'], 'Patch successfully applied')
+        assert ret['comment'] == 'Patch successfully applied'
 
         # Re-run again, this time with no hash and skip_verify=True to test
         # skipping hash verification
@@ -4718,8 +4665,8 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertEqual(ret['comment'], 'Patch was already applied')
-        self.assertEqual(ret['changes'], {})
+        assert ret['comment'] == 'Patch was already applied'
+        assert ret['changes'] == {}
 
     def test_patch_test_mode(self):
         '''
@@ -4735,8 +4682,8 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltNoneReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertEqual(ret['comment'], 'The patch would be applied')
-        self.assertTrue(ret['changes'])
+        assert ret['comment'] == 'The patch would be applied'
+        assert ret['changes']
 
         # Apply the patch for real. We'll then be able to test below that we
         # exit with a True rather than a None result if test=True is used on an
@@ -4748,8 +4695,8 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertEqual(ret['comment'], 'Patch successfully applied')
-        self.assertTrue(ret['changes'])
+        assert ret['comment'] == 'Patch successfully applied'
+        assert ret['changes']
 
         # Run again with test=True. Since the pre-check happens before we do
         # the __opts__['test'] check, we should exit with a True result just
@@ -4763,8 +4710,8 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertEqual(ret['comment'], 'Patch was already applied')
-        self.assertEqual(ret['changes'], {})
+        assert ret['comment'] == 'Patch was already applied'
+        assert ret['changes'] == {}
 
         # Empty the file to ensure that the patch doesn't apply cleanly
         with salt.utils.files.fopen(self.numbers_file, 'w'):
@@ -4782,8 +4729,8 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltFalseReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertIn('Patch would not apply cleanly', ret['comment'])
-        self.assertEqual(ret['changes'], {})
+        assert 'Patch would not apply cleanly' in ret['comment']
+        assert ret['changes'] == {}
 
 
 WIN_TEST_FILE = 'c:/testfile'
@@ -4806,14 +4753,14 @@ class WinFileTest(ModuleCase):
         '''
         Test file.managed on Windows
         '''
-        self.assertTrue(self.run_state('file.exists', name=WIN_TEST_FILE))
+        assert self.run_state('file.exists', name=WIN_TEST_FILE)
 
     def test_file_copy(self):
         '''
         Test file.copy on Windows
         '''
         ret = self.run_state('file.copy', name='c:/testfile_copy', makedirs=True, source=WIN_TEST_FILE)
-        self.assertTrue(ret)
+        assert ret
 
     def test_file_comment(self):
         '''
@@ -4821,7 +4768,7 @@ class WinFileTest(ModuleCase):
         '''
         self.run_state('file.comment', name=WIN_TEST_FILE, regex='^Only')
         with salt.utils.files.fopen(WIN_TEST_FILE, 'r') as fp_:
-            self.assertTrue(fp_.read().startswith('#Only'))
+            assert fp_.read().startswith('#Only')
 
     def test_file_replace(self):
         '''
@@ -4829,11 +4776,11 @@ class WinFileTest(ModuleCase):
         '''
         self.run_state('file.replace', name=WIN_TEST_FILE, pattern='test', repl='testing')
         with salt.utils.files.fopen(WIN_TEST_FILE, 'r') as fp_:
-            self.assertIn('testing', fp_.read())
+            assert 'testing' in fp_.read()
 
     def test_file_absent(self):
         '''
         Test file.absent on Windows
         '''
         ret = self.run_state('file.absent', name=WIN_TEST_FILE)
-        self.assertTrue(ret)
+        assert ret

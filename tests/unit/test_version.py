@@ -20,6 +20,7 @@ from tests.support.mock import MagicMock, patch
 # Import Salt libs
 from salt.version import SaltStackVersion, versions_report
 import salt.version
+import pytest
 
 
 class VersionTestCase(TestCase):
@@ -49,12 +50,10 @@ class VersionTestCase(TestCase):
 
         for vstr, full_info, version in expect:
             saltstack_version = SaltStackVersion.parse(vstr)
-            self.assertEqual(
-                saltstack_version.full_info, full_info
-            )
+            assert saltstack_version.full_info == full_info
             if version is None:
                 version = strip_initial_non_numbers_regex.search(vstr).group('vs')
-            self.assertEqual(saltstack_version.string, version)
+            assert saltstack_version.string == version
 
     def test_version_comparison(self):
         examples = (
@@ -86,15 +85,15 @@ class VersionTestCase(TestCase):
             ('v3001rc1', 'v2019.2.1rc1'),
         )
         for higher_version, lower_version in examples:
-            self.assertTrue(SaltStackVersion.parse(higher_version) > lower_version)
-            self.assertTrue(SaltStackVersion.parse(lower_version) < higher_version)
+            assert SaltStackVersion.parse(higher_version) > lower_version
+            assert SaltStackVersion.parse(lower_version) < higher_version
             assert SaltStackVersion.parse(lower_version) != higher_version
 
     def test_unparsable_version(self):
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             SaltStackVersion.from_name('Drunk')
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             SaltStackVersion.parse('Drunk')
 
     def test_sha(self):

@@ -17,6 +17,7 @@ import salt.utils.yaml
 import salt.utils.schema as schema
 from salt.ext import six
 from salt.utils.versions import LooseVersion as _LooseVersion
+import pytest
 
 # Import 3rd-party libs
 try:
@@ -62,8 +63,7 @@ class ConfigTestCase(TestCase):
         class SubClassedConfig(BaseConfig):
             hungry = schema.BooleanItem(title='Hungry', description='Are you hungry?', required=True)
 
-        self.assertDictEqual(
-            SubClassedConfig.serialize(),
+        assert SubClassedConfig.serialize() == \
             {
                 '$schema': 'http://json-schema.org/draft-04/schema#',
                 'type': 'object',
@@ -83,7 +83,6 @@ class ConfigTestCase(TestCase):
                 'x-ordering': ['base', 'hungry'],
                 'additionalProperties': False,
             }
-        )
 
         class MergedConfigClass(schema.Schema):
             thirsty = schema.BooleanItem(title='Thirsty', description='Are you thirsty?', required=True)
@@ -113,14 +112,8 @@ class ConfigTestCase(TestCase):
             'x-ordering': ['thirsty', 'base', 'hungry'],
             'additionalProperties': False,
         }
-        self.assertDictContainsSubset(
-            MergedConfigClass.serialize()['properties'],
-            expected['properties']
-        )
-        self.assertDictContainsSubset(
-            expected,
-            MergedConfigClass.serialize()
-        )
+        assert dict(expected['properties'], **MergedConfigClass.serialize()['properties']) == expected['properties']
+        assert dict(MergedConfigClass.serialize(), **expected) == MergedConfigClass.serialize()
 
     def test_configuration_items_order(self):
 
@@ -134,7 +127,7 @@ class ConfigTestCase(TestCase):
             two = schema.BooleanItem()
             three = Three(flatten=True)
 
-        self.assertEqual(Final.serialize()['x-ordering'], ['one', 'two', 'three'])
+        assert Final.serialize()['x-ordering'] == ['one', 'two', 'three']
 
     def test_optional_requirements_config(self):
         class BaseRequirements(schema.Schema):
@@ -220,7 +213,7 @@ class ConfigTestCase(TestCase):
             ],
             'additionalProperties': False
         }
-        self.assertDictEqual(expected, Requirements.serialize())
+        assert expected == Requirements.serialize()
 
         class Requirements2(BaseRequirements):
             title = 'DigitalOcean'
@@ -296,7 +289,7 @@ class ConfigTestCase(TestCase):
             ],
             'additionalProperties': False
         }
-        self.assertDictContainsSubset(expected, Requirements2.serialize())
+        assert dict(Requirements2.serialize(), **expected) == Requirements2.serialize()
 
         class Requirements3(schema.Schema):
             title = 'DigitalOcean'
@@ -350,7 +343,7 @@ class ConfigTestCase(TestCase):
             ],
             'additionalProperties': False
         }
-        self.assertDictContainsSubset(expected, Requirements3.serialize())
+        assert dict(Requirements3.serialize(), **expected) == Requirements3.serialize()
 
         class Requirements4(schema.Schema):
             title = 'DigitalOcean'
@@ -438,7 +431,7 @@ class ConfigTestCase(TestCase):
             ],
             'additionalProperties': False
         }
-        self.assertDictContainsSubset(expected, Requirements4.serialize())
+        assert dict(Requirements4.serialize(), **expected) == Requirements4.serialize()
 
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     def test_optional_requirements_config_validation(self):
@@ -501,49 +494,43 @@ class ConfigTestCase(TestCase):
         except jsonschema.exceptions.ValidationError as exc:
             self.fail('ValidationError raised: {0}'.format(exc))
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate(
                 {'personal_access_token': 'foo'},
                 Requirements.serialize()
             )
         if JSONSCHEMA_VERSION >= _LooseVersion('3.0.0'):
-            self.assertIn('\'ssh_key_file\' is a required property', excinfo.exception.message)
+            assert '\'ssh_key_file\' is a required property' in excinfo.value.message
         else:
-            self.assertIn('is not valid under any of the given schemas', excinfo.exception.message)
+            assert 'is not valid under any of the given schemas' in excinfo.value.message
 
     def test_boolean_config(self):
         item = schema.BooleanItem(title='Hungry', description='Are you hungry?')
-        self.assertDictEqual(
-            item.serialize(), {
+        assert item.serialize() == {
                 'type': 'boolean',
                 'title': item.title,
                 'description': item.description
             }
-        )
 
         item = schema.BooleanItem(title='Hungry',
                                   description='Are you hungry?',
                                   default=False)
-        self.assertDictEqual(
-            item.serialize(), {
+        assert item.serialize() == {
                 'type': 'boolean',
                 'title': item.title,
                 'description': item.description,
                 'default': item.default
             }
-        )
 
         item = schema.BooleanItem(title='Hungry',
                                   description='Are you hungry?',
                                   default=schema.Null)
-        self.assertDictEqual(
-            item.serialize(), {
+        assert item.serialize() == {
                 'type': 'boolean',
                 'title': item.title,
                 'description': item.description,
                 'default': None
             }
-        )
 
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     def test_boolean_config_validation(self):
@@ -555,38 +542,33 @@ class ConfigTestCase(TestCase):
         except jsonschema.exceptions.ValidationError as exc:
             self.fail('ValidationError raised: {0}'.format(exc))
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': 1}, TestConf.serialize())
-        self.assertIn('is not of type', excinfo.exception.message)
+        assert 'is not of type' in excinfo.value.message
 
     def test_string_config(self):
         item = schema.StringItem(title='Foo', description='Foo Item')
-        self.assertDictEqual(
-            item.serialize(), {
+        assert item.serialize() == {
                 'type': 'string',
                 'title': item.title,
                 'description': item.description
             }
-        )
 
         item = schema.StringItem(title='Foo', description='Foo Item', min_length=1, max_length=3)
-        self.assertDictEqual(
-            item.serialize(), {
+        assert item.serialize() == {
                 'type': 'string',
                 'title': item.title,
                 'description': item.description,
                 'minLength': item.min_length,
                 'maxLength': item.max_length
             }
-        )
 
         item = schema.StringItem(title='Foo',
                                  description='Foo Item',
                                  min_length=1,
                                  max_length=3,
                                  default='foo')
-        self.assertDictEqual(
-            item.serialize(), {
+        assert item.serialize() == {
                 'type': 'string',
                 'title': item.title,
                 'description': item.description,
@@ -594,15 +576,13 @@ class ConfigTestCase(TestCase):
                 'maxLength': item.max_length,
                 'default': 'foo'
             }
-        )
 
         item = schema.StringItem(title='Foo',
                                  description='Foo Item',
                                  min_length=1,
                                  max_length=3,
                                  enum=('foo', 'bar'))
-        self.assertDictEqual(
-            item.serialize(), {
+        assert item.serialize() == {
                 'type': 'string',
                 'title': item.title,
                 'description': item.description,
@@ -610,7 +590,6 @@ class ConfigTestCase(TestCase):
                 'maxLength': item.max_length,
                 'enum': ['foo', 'bar']
             }
-        )
 
         item = schema.StringItem(title='Foo',
                                  description='Foo Item',
@@ -618,8 +597,7 @@ class ConfigTestCase(TestCase):
                                  max_length=3,
                                  enum=('foo', 'bar'),
                                  enumNames=('Foo', 'Bar'))
-        self.assertDictEqual(
-            item.serialize(), {
+        assert item.serialize() == {
                 'type': 'string',
                 'title': item.title,
                 'description': item.description,
@@ -628,19 +606,16 @@ class ConfigTestCase(TestCase):
                 'enum': ['foo', 'bar'],
                 'enumNames': ['Foo', 'Bar']
             }
-        )
 
         item = schema.StringItem(title='Foo',
                                  description='Foo Item',
                                  pattern=r'^([\w_-]+)$')
-        self.assertDictEqual(
-            item.serialize(), {
+        assert item.serialize() == {
                 'type': 'string',
                 'title': item.title,
                 'description': item.description,
                 'pattern': item.pattern
             }
-        )
 
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     def test_string_config_validation(self):
@@ -661,21 +636,21 @@ class ConfigTestCase(TestCase):
         except jsonschema.exceptions.ValidationError as exc:
             self.fail('ValidationError raised: {0}'.format(exc))
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': 3}, TestConf.serialize())
-        self.assertIn('is not of type', excinfo.exception.message)
+        assert 'is not of type' in excinfo.value.message
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': 'the item the item'}, TestConf.serialize())
-        self.assertIn('is too long', excinfo.exception.message)
+        assert 'is too long' in excinfo.value.message
 
         class TestConf(schema.Schema):
             item = schema.StringItem(title='Foo', description='Foo Item',
                                      min_length=10, max_length=100)
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': 'the item'}, TestConf.serialize())
-        self.assertIn('is too short', excinfo.exception.message)
+        assert 'is too short' in excinfo.value.message
 
         class TestConf(schema.Schema):
             item = schema.StringItem(title='Foo',
@@ -691,9 +666,9 @@ class ConfigTestCase(TestCase):
             item = schema.StringItem(title='Foo',
                                      description='Foo Item',
                                      enum=('foo', 'bar'))
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': 'bin'}, TestConf.serialize())
-        self.assertIn('is not one of', excinfo.exception.message)
+        assert 'is not one of' in excinfo.value.message
 
         class TestConf(schema.Schema):
             item = schema.StringItem(title='Foo', description='Foo Item',
@@ -705,21 +680,19 @@ class ConfigTestCase(TestCase):
         except jsonschema.exceptions.ValidationError as exc:
             self.fail('ValidationError raised: {0}'.format(exc))
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': 'the item'}, TestConf.serialize(),
                                 format_checker=jsonschema.FormatChecker())
-        self.assertIn('does not match', excinfo.exception.message)
+        assert 'does not match' in excinfo.value.message
 
     def test_email_config(self):
         item = schema.EMailItem(title='Foo', description='Foo Item')
-        self.assertDictEqual(
-            item.serialize(), {
+        assert item.serialize() == {
                 'type': 'string',
                 'title': item.title,
                 'description': item.description,
                 'format': item.format
             }
-        )
 
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     def test_email_config_validation(self):
@@ -732,21 +705,19 @@ class ConfigTestCase(TestCase):
         except jsonschema.exceptions.ValidationError as exc:
             self.fail('ValidationError raised: {0}'.format(exc))
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': '3'}, TestConf.serialize(),
                                 format_checker=jsonschema.FormatChecker())
-        self.assertIn('is not a', excinfo.exception.message)
+        assert 'is not a' in excinfo.value.message
 
     def test_ipv4_config(self):
         item = schema.IPv4Item(title='Foo', description='Foo Item')
-        self.assertDictEqual(
-            item.serialize(), {
+        assert item.serialize() == {
                 'type': 'string',
                 'title': item.title,
                 'description': item.description,
                 'format': item.format
             }
-        )
 
     @skipIf(JSONSCHEMA_VERSION <= _LooseVersion('2.5.0'), 'Requires jsonschema 2.5.0 or greater')
     def test_ipv4_config_validation(self):
@@ -759,21 +730,19 @@ class ConfigTestCase(TestCase):
         except jsonschema.exceptions.ValidationError as exc:
             self.fail('ValidationError raised: {0}'.format(exc))
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': '3'}, TestConf.serialize(),
                                 format_checker=jsonschema.FormatChecker())
-        self.assertIn('is not a', excinfo.exception.message)
+        assert 'is not a' in excinfo.value.message
 
     def test_ipv6_config(self):
         item = schema.IPv6Item(title='Foo', description='Foo Item')
-        self.assertDictEqual(
-            item.serialize(), {
+        assert item.serialize() == {
                 'type': 'string',
                 'title': item.title,
                 'description': item.description,
                 'format': item.format
             }
-        )
 
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     def test_ipv6_config_validation(self):
@@ -788,21 +757,19 @@ class ConfigTestCase(TestCase):
         except jsonschema.exceptions.ValidationError as exc:
             self.fail('ValidationError raised: {0}'.format(exc))
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': '3'}, TestConf.serialize(),
                                 format_checker=jsonschema.FormatChecker())
-        self.assertIn('is not a', excinfo.exception.message)
+        assert 'is not a' in excinfo.value.message
 
     def test_hostname_config(self):
         item = schema.HostnameItem(title='Foo', description='Foo Item')
-        self.assertDictEqual(
-            item.serialize(), {
+        assert item.serialize() == {
                 'type': 'string',
                 'title': item.title,
                 'description': item.description,
                 'format': item.format
             }
-        )
 
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     def test_hostname_config_validation(self):
@@ -815,21 +782,19 @@ class ConfigTestCase(TestCase):
         except jsonschema.exceptions.ValidationError as exc:
             self.fail('ValidationError raised: {0}'.format(exc))
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': '3'}, TestConf.serialize(),
                                 format_checker=jsonschema.FormatChecker())
-        self.assertIn('is not a', excinfo.exception.message)
+        assert 'is not a' in excinfo.value.message
 
     def test_datetime_config(self):
         item = schema.DateTimeItem(title='Foo', description='Foo Item')
-        self.assertDictEqual(
-            item.serialize(), {
+        assert item.serialize() == {
                 'type': 'string',
                 'title': item.title,
                 'description': item.description,
                 'format': item.format
             }
-        )
 
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     @skipIf(any([HAS_ISODATE, HAS_STRICT_RFC3339]) is False, 'The \'strict_rfc3339\' or \'isodate\' library is missing')
@@ -843,32 +808,28 @@ class ConfigTestCase(TestCase):
         except jsonschema.exceptions.ValidationError as exc:
             self.fail('ValidationError raised: {0}'.format(exc))
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': '3'}, TestConf.serialize(),
                                 format_checker=jsonschema.FormatChecker())
-        self.assertIn('is not a', excinfo.exception.message)
+        assert 'is not a' in excinfo.value.message
 
     def test_secret_config(self):
         item = schema.SecretItem(title='Foo', description='Foo Item')
-        self.assertDictEqual(
-            item.serialize(), {
+        assert item.serialize() == {
                 'type': 'string',
                 'title': item.title,
                 'description': item.description,
                 'format': item.format
             }
-        )
 
     def test_uri_config(self):
         item = schema.UriItem(title='Foo', description='Foo Item')
-        self.assertDictEqual(
-            item.serialize(), {
+        assert item.serialize() == {
                 'type': 'string',
                 'title': item.title,
                 'description': item.description,
                 'format': item.format
             }
-        )
 
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     @skipIf(HAS_RFC3987 is False, 'The \'rfc3987\' library is missing')
@@ -882,46 +843,40 @@ class ConfigTestCase(TestCase):
         except jsonschema.exceptions.ValidationError as exc:
             self.fail('ValidationError raised: {0}'.format(exc))
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': '3'}, TestConf.serialize(),
                                 format_checker=jsonschema.FormatChecker())
-        self.assertIn('is not a', excinfo.exception.message)
+        assert 'is not a' in excinfo.value.message
 
     def test_number_config(self):
         item = schema.NumberItem(title='How many dogs', description='Question')
-        self.assertDictEqual(
-            item.serialize(), {
+        assert item.serialize() == {
                 'type': 'number',
                 'title': item.title,
                 'description': item.description
             }
-        )
 
         item = schema.NumberItem(title='How many dogs',
                                  description='Question',
                                  minimum=0,
                                  maximum=10)
-        self.assertDictEqual(
-            item.serialize(), {
+        assert item.serialize() == {
                 'type': 'number',
                 'title': item.title,
                 'description': item.description,
                 'minimum': item.minimum,
                 'maximum': item.maximum
             }
-        )
 
         item = schema.NumberItem(title='How many dogs',
                                  description='Question',
                                  multiple_of=2)
-        self.assertDictEqual(
-            item.serialize(), {
+        assert item.serialize() == {
                 'type': 'number',
                 'title': item.title,
                 'description': item.description,
                 'multipleOf': item.multiple_of
             }
-        )
 
         item = schema.NumberItem(title='How many dogs',
                                  description='Question',
@@ -929,8 +884,7 @@ class ConfigTestCase(TestCase):
                                  exclusive_minimum=True,
                                  maximum=10,
                                  exclusive_maximum=True)
-        self.assertDictEqual(
-            item.serialize(), {
+        assert item.serialize() == {
                 'type': 'number',
                 'title': item.title,
                 'description': item.description,
@@ -939,15 +893,13 @@ class ConfigTestCase(TestCase):
                 'exclusiveMinimum': True,
                 'exclusiveMaximum': True
             }
-        )
 
         item = schema.NumberItem(title='How many dogs',
                                  description='Question',
                                  minimum=0,
                                  maximum=10,
                                  default=0)
-        self.assertDictEqual(
-            item.serialize(), {
+        assert item.serialize() == {
                 'type': 'number',
                 'title': item.title,
                 'description': item.description,
@@ -955,7 +907,6 @@ class ConfigTestCase(TestCase):
                 'maximum': item.maximum,
                 'default': 0
             }
-        )
 
         item = schema.NumberItem(title='How many dogs',
                                  description='Question',
@@ -963,8 +914,7 @@ class ConfigTestCase(TestCase):
                                  maximum=10,
                                  default=0,
                                  enum=(0, 2, 4, 6))
-        self.assertDictEqual(
-            item.serialize(), {
+        assert item.serialize() == {
                 'type': 'number',
                 'title': item.title,
                 'description': item.description,
@@ -973,7 +923,6 @@ class ConfigTestCase(TestCase):
                 'default': 0,
                 'enum': [0, 2, 4, 6]
             }
-        )
 
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     def test_number_config_validation(self):
@@ -985,9 +934,9 @@ class ConfigTestCase(TestCase):
         except jsonschema.exceptions.ValidationError as exc:
             self.fail('ValidationError raised: {0}'.format(exc))
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': '3'}, TestConf.serialize())
-        self.assertIn('is not of type', excinfo.exception.message)
+        assert 'is not of type' in excinfo.value.message
 
         class TestConf(schema.Schema):
             item = schema.NumberItem(title='How many dogs',
@@ -999,9 +948,9 @@ class ConfigTestCase(TestCase):
         except jsonschema.exceptions.ValidationError as exc:
             self.fail('ValidationError raised: {0}'.format(exc))
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': 4}, TestConf.serialize())
-        self.assertIn('is not a multiple of', excinfo.exception.message)
+        assert 'is not a multiple of' in excinfo.value.message
 
         class TestConf(schema.Schema):
             item = schema.NumberItem(title='Foo', description='Foo Item',
@@ -1012,17 +961,17 @@ class ConfigTestCase(TestCase):
         except jsonschema.exceptions.ValidationError as exc:
             self.fail('ValidationError raised: {0}'.format(exc))
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': 11}, TestConf.serialize())
-        self.assertIn('is greater than the maximum of', excinfo.exception.message)
+        assert 'is greater than the maximum of' in excinfo.value.message
 
         class TestConf(schema.Schema):
             item = schema.NumberItem(title='Foo', description='Foo Item',
                                      minimum=10, maximum=100)
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': 3}, TestConf.serialize())
-        self.assertIn('is less than the minimum of', excinfo.exception.message)
+        assert 'is less than the minimum of' in excinfo.value.message
 
         class TestConf(schema.Schema):
             item = schema.NumberItem(title='How many dogs',
@@ -1032,13 +981,13 @@ class ConfigTestCase(TestCase):
                                      maximum=10,
                                      exclusive_maximum=True)
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': 0}, TestConf.serialize())
-        self.assertIn('is less than or equal to the minimum of', excinfo.exception.message)
+        assert 'is less than or equal to the minimum of' in excinfo.value.message
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': 10}, TestConf.serialize())
-        self.assertIn('is greater than or equal to the maximum of', excinfo.exception.message)
+        assert 'is greater than or equal to the maximum of' in excinfo.value.message
 
         class TestConf(schema.Schema):
             item = schema.NumberItem(title='Foo',
@@ -1054,45 +1003,39 @@ class ConfigTestCase(TestCase):
             item = schema.NumberItem(title='Foo',
                                      description='Foo Item',
                                      enum=(0, 2, 4, 6))
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': 3}, TestConf.serialize())
-        self.assertIn('is not one of', excinfo.exception.message)
+        assert 'is not one of' in excinfo.value.message
 
     def test_integer_config(self):
         item = schema.IntegerItem(title='How many dogs', description='Question')
-        self.assertDictEqual(
-            item.serialize(), {
+        assert item.serialize() == {
                 'type': 'integer',
                 'title': item.title,
                 'description': item.description
             }
-        )
 
         item = schema.IntegerItem(title='How many dogs',
                                   description='Question',
                                   minimum=0,
                                   maximum=10)
-        self.assertDictEqual(
-            item.serialize(), {
+        assert item.serialize() == {
                 'type': 'integer',
                 'title': item.title,
                 'description': item.description,
                 'minimum': item.minimum,
                 'maximum': item.maximum
             }
-        )
 
         item = schema.IntegerItem(title='How many dogs',
                                   description='Question',
                                   multiple_of=2)
-        self.assertDictEqual(
-            item.serialize(), {
+        assert item.serialize() == {
                 'type': 'integer',
                 'title': item.title,
                 'description': item.description,
                 'multipleOf': item.multiple_of
             }
-        )
 
         item = schema.IntegerItem(title='How many dogs',
                                   description='Question',
@@ -1100,8 +1043,7 @@ class ConfigTestCase(TestCase):
                                   exclusive_minimum=True,
                                   maximum=10,
                                   exclusive_maximum=True)
-        self.assertDictEqual(
-            item.serialize(), {
+        assert item.serialize() == {
                 'type': 'integer',
                 'title': item.title,
                 'description': item.description,
@@ -1110,15 +1052,13 @@ class ConfigTestCase(TestCase):
                 'exclusiveMinimum': True,
                 'exclusiveMaximum': True
             }
-        )
 
         item = schema.IntegerItem(title='How many dogs',
                                   description='Question',
                                   minimum=0,
                                   maximum=10,
                                   default=0)
-        self.assertDictEqual(
-            item.serialize(), {
+        assert item.serialize() == {
                 'type': 'integer',
                 'title': item.title,
                 'description': item.description,
@@ -1126,7 +1066,6 @@ class ConfigTestCase(TestCase):
                 'maximum': item.maximum,
                 'default': 0
             }
-        )
 
         item = schema.IntegerItem(title='How many dogs',
                                   description='Question',
@@ -1134,8 +1073,7 @@ class ConfigTestCase(TestCase):
                                   maximum=10,
                                   default=0,
                                   enum=(0, 2, 4, 6))
-        self.assertDictEqual(
-            item.serialize(), {
+        assert item.serialize() == {
                 'type': 'integer',
                 'title': item.title,
                 'description': item.description,
@@ -1144,7 +1082,6 @@ class ConfigTestCase(TestCase):
                 'default': 0,
                 'enum': [0, 2, 4, 6]
             }
-        )
 
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     def test_integer_config_validation(self):
@@ -1156,9 +1093,9 @@ class ConfigTestCase(TestCase):
         except jsonschema.exceptions.ValidationError as exc:
             self.fail('ValidationError raised: {0}'.format(exc))
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': 3.1}, TestConf.serialize())
-        self.assertIn('is not of type', excinfo.exception.message)
+        assert 'is not of type' in excinfo.value.message
 
         class TestConf(schema.Schema):
             item = schema.IntegerItem(title='How many dogs',
@@ -1170,9 +1107,9 @@ class ConfigTestCase(TestCase):
         except jsonschema.exceptions.ValidationError as exc:
             self.fail('ValidationError raised: {0}'.format(exc))
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': 3}, TestConf.serialize())
-        self.assertIn('is not a multiple of', excinfo.exception.message)
+        assert 'is not a multiple of' in excinfo.value.message
 
         class TestConf(schema.Schema):
             item = schema.IntegerItem(title='Foo', description='Foo Item',
@@ -1183,17 +1120,17 @@ class ConfigTestCase(TestCase):
         except jsonschema.exceptions.ValidationError as exc:
             self.fail('ValidationError raised: {0}'.format(exc))
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': 11}, TestConf.serialize())
-        self.assertIn('is greater than the maximum of', excinfo.exception.message)
+        assert 'is greater than the maximum of' in excinfo.value.message
 
         class TestConf(schema.Schema):
             item = schema.IntegerItem(title='Foo', description='Foo Item',
                                       minimum=10, maximum=100)
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': 3}, TestConf.serialize())
-        self.assertIn('is less than the minimum of', excinfo.exception.message)
+        assert 'is less than the minimum of' in excinfo.value.message
 
         class TestConf(schema.Schema):
             item = schema.IntegerItem(title='How many dogs',
@@ -1203,13 +1140,13 @@ class ConfigTestCase(TestCase):
                                       maximum=10,
                                       exclusive_maximum=True)
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': 0}, TestConf.serialize())
-        self.assertIn('is less than or equal to the minimum of', excinfo.exception.message)
+        assert 'is less than or equal to the minimum of' in excinfo.value.message
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': 10}, TestConf.serialize())
-        self.assertIn('is greater than or equal to the maximum of', excinfo.exception.message)
+        assert 'is greater than or equal to the maximum of' in excinfo.value.message
 
         class TestConf(schema.Schema):
             item = schema.IntegerItem(title='Foo',
@@ -1225,9 +1162,9 @@ class ConfigTestCase(TestCase):
             item = schema.IntegerItem(title='Foo',
                                       description='Foo Item',
                                       enum=(0, 2, 4, 6))
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': 3}, TestConf.serialize())
-        self.assertIn('is not one of', excinfo.exception.message)
+        assert 'is not one of' in excinfo.value.message
 
     def test_array_config(self):
         string_item = schema.StringItem(title='Dog Name',
@@ -1236,8 +1173,7 @@ class ConfigTestCase(TestCase):
                                 description='Name your dogs',
                                 items=string_item)
 
-        self.assertDictEqual(
-            item.serialize(), {
+        assert item.serialize() == {
                 'type': 'array',
                 'title': item.title,
                 'description': item.description,
@@ -1247,7 +1183,6 @@ class ConfigTestCase(TestCase):
                     'description': string_item.description
                 }
             }
-        )
 
         integer_item = schema.IntegerItem(title='Dog Age',
                                           description='The dog age')
@@ -1255,8 +1190,7 @@ class ConfigTestCase(TestCase):
                                 description='Name your dogs',
                                 items=(string_item, integer_item))
 
-        self.assertDictEqual(
-            item.serialize(), {
+        assert item.serialize() == {
                 'type': 'array',
                 'title': item.title,
                 'description': item.description,
@@ -1273,7 +1207,6 @@ class ConfigTestCase(TestCase):
                     }
                 ]
             }
-        )
 
         item = schema.ArrayItem(title='Dog Names',
                                 description='Name your dogs',
@@ -1284,8 +1217,7 @@ class ConfigTestCase(TestCase):
                                 additional_items=False,
                                 unique_items=True)
 
-        self.assertDictEqual(
-            item.serialize(), {
+        assert item.serialize() == {
                 'type': 'array',
                 'title': item.title,
                 'description': item.description,
@@ -1302,7 +1234,6 @@ class ConfigTestCase(TestCase):
                     }
                 ]
             }
-        )
 
         class HowManyConfig(schema.Schema):
             item = schema.IntegerItem(title='How many dogs', description='Question')
@@ -1310,14 +1241,12 @@ class ConfigTestCase(TestCase):
         item = schema.ArrayItem(title='Dog Names',
                                 description='Name your dogs',
                                 items=HowManyConfig())
-        self.assertDictEqual(
-            item.serialize(), {
+        assert item.serialize() == {
                 'type': 'array',
                 'title': item.title,
                 'description': item.description,
                 'items': HowManyConfig.serialize()
             }
-        )
 
         class AgesConfig(schema.Schema):
             item = schema.IntegerItem()
@@ -1325,8 +1254,7 @@ class ConfigTestCase(TestCase):
         item = schema.ArrayItem(title='Dog Names',
                                 description='Name your dogs',
                                 items=(HowManyConfig(), AgesConfig()))
-        self.assertDictEqual(
-            item.serialize(), {
+        assert item.serialize() == {
                 'type': 'array',
                 'title': item.title,
                 'description': item.description,
@@ -1335,7 +1263,6 @@ class ConfigTestCase(TestCase):
                     AgesConfig.serialize()
                 ]
             }
-        )
 
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     def test_array_config_validation(self):
@@ -1350,10 +1277,10 @@ class ConfigTestCase(TestCase):
         except jsonschema.exceptions.ValidationError as exc:
             self.fail('ValidationError raised: {0}'.format(exc))
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': ['Tobias', 'Óscar', 3]}, TestConf.serialize(),
                                 format_checker=jsonschema.FormatChecker())
-        self.assertIn('is not of type', excinfo.exception.message)
+        assert 'is not of type' in excinfo.value.message
 
         class TestConf(schema.Schema):
             item = schema.ArrayItem(title='Dog Names',
@@ -1368,15 +1295,15 @@ class ConfigTestCase(TestCase):
         except jsonschema.exceptions.ValidationError as exc:
             self.fail('ValidationError raised: {0}'.format(exc))
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': ['Tobias', 'Óscar', 'Pepe']}, TestConf.serialize(),
                                 format_checker=jsonschema.FormatChecker())
-        self.assertIn('is too long', excinfo.exception.message)
+        assert 'is too long' in excinfo.value.message
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': []}, TestConf.serialize(),
                                 format_checker=jsonschema.FormatChecker())
-        self.assertIn('is too short', excinfo.exception.message)
+        assert 'is too short' in excinfo.value.message
 
         class TestConf(schema.Schema):
             item = schema.ArrayItem(title='Dog Names',
@@ -1384,10 +1311,10 @@ class ConfigTestCase(TestCase):
                                     items=schema.StringItem(),
                                     uniqueItems=True)
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': ['Tobias', 'Tobias']}, TestConf.serialize(),
                                 format_checker=jsonschema.FormatChecker())
-        self.assertIn('has non-unique elements', excinfo.exception.message)
+        assert 'has non-unique elements' in excinfo.value.message
 
         class TestConf(schema.Schema):
             item = schema.ArrayItem(items=(schema.StringItem(),
@@ -1398,10 +1325,10 @@ class ConfigTestCase(TestCase):
         except jsonschema.exceptions.ValidationError as exc:
             self.fail('ValidationError raised: {0}'.format(exc))
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': ['Tobias', 'Óscar']}, TestConf.serialize(),
                                 format_checker=jsonschema.FormatChecker())
-        self.assertIn('is not of type', excinfo.exception.message)
+        assert 'is not of type' in excinfo.value.message
 
         class TestConf(schema.Schema):
             item = schema.ArrayItem(
@@ -1417,10 +1344,10 @@ class ConfigTestCase(TestCase):
         except jsonschema.exceptions.ValidationError as exc:
             self.fail('ValidationError raised: {0}'.format(exc))
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': [['Tobias', 8], ['Óscar', '4']]}, TestConf.serialize(),
                                 format_checker=jsonschema.FormatChecker())
-        self.assertIn('is not of type', excinfo.exception.message)
+        assert 'is not of type' in excinfo.value.message
 
         class TestConf(schema.Schema):
             item = schema.ArrayItem(items=schema.StringItem(enum=['Tobias', 'Óscar']))
@@ -1435,10 +1362,10 @@ class ConfigTestCase(TestCase):
         except jsonschema.exceptions.ValidationError as exc:
             self.fail('ValidationError raised: {0}'.format(exc))
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': ['Pepe']}, TestConf.serialize(),
                                 format_checker=jsonschema.FormatChecker())
-        self.assertIn('is not one of', excinfo.exception.message)
+        assert 'is not one of' in excinfo.value.message
 
     def test_dict_config(self):
         item = schema.DictItem(
@@ -1448,8 +1375,7 @@ class ConfigTestCase(TestCase):
                 'sides': schema.IntegerItem()
             }
         )
-        self.assertDictEqual(
-            item.serialize(), {
+        assert item.serialize() == {
                 'type': 'object',
                 'title': item.title,
                 'description': item.description,
@@ -1457,7 +1383,6 @@ class ConfigTestCase(TestCase):
                     'sides': {'type': 'integer'}
                 }
             }
-        )
 
         item = schema.DictItem(
             title='Poligon',
@@ -1468,8 +1393,7 @@ class ConfigTestCase(TestCase):
             min_properties=1,
             max_properties=2
         )
-        self.assertDictEqual(
-            item.serialize(), {
+        assert item.serialize() == {
                 'type': 'object',
                 'title': item.title,
                 'description': item.description,
@@ -1479,7 +1403,6 @@ class ConfigTestCase(TestCase):
                 'minProperties': 1,
                 'maxProperties': 2
             }
-        )
 
         item = schema.DictItem(
             title='Poligon',
@@ -1490,8 +1413,7 @@ class ConfigTestCase(TestCase):
             min_properties=1,
             max_properties=2
         )
-        self.assertDictEqual(
-            item.serialize(), {
+        assert item.serialize() == {
                 'type': 'object',
                 'title': item.title,
                 'description': item.description,
@@ -1501,7 +1423,6 @@ class ConfigTestCase(TestCase):
                 'minProperties': 1,
                 'maxProperties': 2
             }
-        )
 
         item = schema.DictItem(
             title='Poligon',
@@ -1515,8 +1436,7 @@ class ConfigTestCase(TestCase):
             min_properties=1,
             max_properties=2
         )
-        self.assertDictEqual(
-            item.serialize(), {
+        assert item.serialize() == {
                 'type': 'object',
                 'title': item.title,
                 'description': item.description,
@@ -1532,7 +1452,6 @@ class ConfigTestCase(TestCase):
                 'minProperties': 1,
                 'maxProperties': 2
             }
-        )
 
         item = schema.DictItem(
             title='Poligon',
@@ -1547,8 +1466,7 @@ class ConfigTestCase(TestCase):
             min_properties=1,
             max_properties=2
         )
-        self.assertDictEqual(
-            item.serialize(), {
+        assert item.serialize() == {
                 'type': 'object',
                 'title': item.title,
                 'description': item.description,
@@ -1565,7 +1483,6 @@ class ConfigTestCase(TestCase):
                 'maxProperties': 2,
                 'additionalProperties': True
             }
-        )
         item = schema.DictItem(
             title='Poligon',
             description='Describe the Poligon',
@@ -1575,8 +1492,7 @@ class ConfigTestCase(TestCase):
             additional_properties=schema.OneOfItem(items=[schema.BooleanItem(),
                                                           schema.StringItem()])
         )
-        self.assertDictEqual(
-            item.serialize(), {
+        assert item.serialize() == {
                 'type': 'object',
                 'title': item.title,
                 'description': item.description,
@@ -1590,7 +1506,6 @@ class ConfigTestCase(TestCase):
                     ]
                 }
             }
-        )
 
         class TestConf(schema.Schema):
             item = schema.DictItem(
@@ -1603,8 +1518,39 @@ class ConfigTestCase(TestCase):
                                                               schema.StringItem()])
             )
 
-        self.assertDictContainsSubset(
-            TestConf.serialize(), {
+        assert dict({
+                '$schema': 'http://json-schema.org/draft-04/schema#',
+                'type': 'object',
+                'properties': {
+                    'item': {
+                        'title': 'Poligon',
+                        'description': 'Describe the Poligon',
+                        'type': 'object',
+                        'properties': {
+                            'sides': {
+                                'type': 'integer'
+                            }
+                        },
+                        'additionalProperties': {
+                            'oneOf': [
+                                {
+                                    'type': 'boolean'
+                                },
+                                {
+                                    'type': 'string'
+                                }
+                            ]
+                        },
+                        'required': [
+                            'sides'
+                        ],
+                    }
+                },
+                'x-ordering': [
+                    'item'
+                ],
+                'additionalProperties': False
+            }, **TestConf.serialize()) == {
                 '$schema': 'http://json-schema.org/draft-04/schema#',
                 'type': 'object',
                 'properties': {
@@ -1637,7 +1583,6 @@ class ConfigTestCase(TestCase):
                 ],
                 'additionalProperties': False
             }
-        )
 
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     def test_dict_config_validation(self):
@@ -1654,13 +1599,13 @@ class ConfigTestCase(TestCase):
         except jsonschema.exceptions.ValidationError as exc:
             self.fail('ValidationError raised: {0}'.format(exc))
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': {'sides': '1'}}, TestConf.serialize())
-        self.assertIn('is not of type', excinfo.exception.message)
+        assert 'is not of type' in excinfo.value.message
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': 2}, TestConf.serialize())
-        self.assertIn('is not of type', excinfo.exception.message)
+        assert 'is not of type' in excinfo.value.message
 
         class TestConf(schema.Schema):
             item = schema.DictItem(
@@ -1679,13 +1624,13 @@ class ConfigTestCase(TestCase):
         except jsonschema.exceptions.ValidationError as exc:
             self.fail('ValidationError raised: {0}'.format(exc))
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': {'sides': '4', 'color': 'blue'}}, TestConf.serialize())
-        self.assertIn('is not of type', excinfo.exception.message)
+        assert 'is not of type' in excinfo.value.message
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': 2}, TestConf.serialize())
-        self.assertIn('is not of type', excinfo.exception.message)
+        assert 'is not of type' in excinfo.value.message
 
         class TestConf(schema.Schema):
             item = schema.DictItem(
@@ -1700,16 +1645,14 @@ class ConfigTestCase(TestCase):
                 additional_properties=False
             )
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': {'color': 'green', 'sides': 4, 'surfaces': 4}}, TestConf.serialize())
         if JSONSCHEMA_VERSION < _LooseVersion('2.6.0'):
-            self.assertIn(
-                'Additional properties are not allowed',
-                excinfo.exception.message)
+            assert 'Additional properties are not allowed' in \
+                excinfo.value.message
         else:
-            self.assertIn(
-                '\'surfaces\' does not match any of the regexes',
-                excinfo.exception.message)
+            assert '\'surfaces\' does not match any of the regexes' in \
+                excinfo.value.message
 
         class TestConf(schema.Schema):
             item = schema.DictItem(
@@ -1731,14 +1674,14 @@ class ConfigTestCase(TestCase):
         except jsonschema.exceptions.ValidationError as exc:
             self.fail('ValidationError raised: {0}'.format(exc))
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': {'sides': '4', 'color': 'blue'}}, TestConf.serialize())
         if JSONSCHEMA_VERSION >= _LooseVersion('3.0.0'):
-            self.assertIn("'4'", excinfo.exception.message)
-            self.assertIn("is not of type", excinfo.exception.message)
-            self.assertIn("'boolean'", excinfo.exception.message)
+            assert "'4'" in excinfo.value.message
+            assert "is not of type" in excinfo.value.message
+            assert "'boolean'" in excinfo.value.message
         else:
-            self.assertIn('is not valid under any of the given schemas', excinfo.exception.message)
+            assert 'is not valid under any of the given schemas' in excinfo.value.message
 
         class TestConf(schema.Schema):
             item = schema.DictItem(
@@ -1765,16 +1708,16 @@ class ConfigTestCase(TestCase):
         except jsonschema.exceptions.ValidationError as exc:
             self.fail('ValidationError raised: {0}'.format(exc))
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': {'color': 'blue'}}, TestConf.serialize())
-        self.assertIn('does not have enough properties', excinfo.exception.message)
+        assert 'does not have enough properties' in excinfo.value.message
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': {'sides': 4,
                                           'color': 'blue',
                                           'rugged_surface': False,
                                           'opaque': True}}, TestConf.serialize())
-        self.assertIn('has too many properties', excinfo.exception.message)
+        assert 'has too many properties' in excinfo.value.message
 
         class TestConf(schema.Schema):
             item = schema.DictItem(
@@ -1787,11 +1730,11 @@ class ConfigTestCase(TestCase):
                                                               schema.StringItem()])
             )
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': {'color': 'blue',
                                           'rugged_surface': False,
                                           'opaque': True}}, TestConf.serialize())
-        self.assertIn('\'sides\' is a required property', excinfo.exception.message)
+        assert '\'sides\' is a required property' in excinfo.value.message
 
         class Props(schema.Schema):
             sides = schema.IntegerItem(required=True)
@@ -1805,22 +1748,20 @@ class ConfigTestCase(TestCase):
                                                               schema.StringItem()])
             )
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': {'color': 'blue',
                                           'rugged_surface': False,
                                           'opaque': True}}, TestConf.serialize())
-        self.assertIn('\'sides\' is a required property', excinfo.exception.message)
+        assert '\'sides\' is a required property' in excinfo.value.message
 
     def test_oneof_config(self):
         item = schema.OneOfItem(
             items=(schema.StringItem(title='Yes', enum=['yes']),
                    schema.StringItem(title='No', enum=['no']))
         )
-        self.assertEqual(
-            item.serialize(), {
+        assert item.serialize() == {
                 'oneOf': [i.serialize() for i in item.items]
             }
-        )
 
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     def test_oneof_config_validation(self):
@@ -1839,29 +1780,27 @@ class ConfigTestCase(TestCase):
         except jsonschema.exceptions.ValidationError as exc:
             self.fail('ValidationError raised: {0}'.format(exc))
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': ['maybe']}, TestConf.serialize())
         if JSONSCHEMA_VERSION >= _LooseVersion('3.0.0'):
-            self.assertIn("'maybe'", excinfo.exception.message)
-            self.assertIn("is not one of", excinfo.exception.message)
-            self.assertIn("'yes'", excinfo.exception.message)
+            assert "'maybe'" in excinfo.value.message
+            assert "is not one of" in excinfo.value.message
+            assert "'yes'" in excinfo.value.message
         else:
-            self.assertIn('is not valid under any of the given schemas', excinfo.exception.message)
+            assert 'is not valid under any of the given schemas' in excinfo.value.message
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': 2}, TestConf.serialize())
-        self.assertIn('is not of type', excinfo.exception.message)
+        assert 'is not of type' in excinfo.value.message
 
     def test_anyof_config(self):
         item = schema.AnyOfItem(
             items=(schema.StringItem(title='Yes', enum=['yes']),
                    schema.StringItem(title='No', enum=['no']))
         )
-        self.assertEqual(
-            item.serialize(), {
+        assert item.serialize() == {
                 'anyOf': [i.serialize() for i in item.items]  # pylint: disable=E1133
             }
-        )
 
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     def test_anyof_config_validation(self):
@@ -1896,29 +1835,27 @@ class ConfigTestCase(TestCase):
         except jsonschema.exceptions.ValidationError as exc:
             self.fail('ValidationError raised: {0}'.format(exc))
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': ['maybe']}, TestConf.serialize())
         if JSONSCHEMA_VERSION >= _LooseVersion('3.0.0'):
-            self.assertIn("'maybe'", excinfo.exception.message)
-            self.assertIn("is not one of", excinfo.exception.message)
-            self.assertIn("'yes'", excinfo.exception.message)
+            assert "'maybe'" in excinfo.value.message
+            assert "is not one of" in excinfo.value.message
+            assert "'yes'" in excinfo.value.message
         else:
-            self.assertIn('is not valid under any of the given schemas', excinfo.exception.message)
+            assert 'is not valid under any of the given schemas' in excinfo.value.message
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': 2}, TestConf.serialize())
-        self.assertIn('is not of type', excinfo.exception.message)
+        assert 'is not of type' in excinfo.value.message
 
     def test_allof_config(self):
         item = schema.AllOfItem(
             items=(schema.StringItem(min_length=2),
                    schema.StringItem(max_length=3))
         )
-        self.assertEqual(
-            item.serialize(), {
+        assert item.serialize() == {
                 'allOf': [i.serialize() for i in item.items]  # pylint: disable=E1133
             }
-        )
 
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     def test_allof_config_validation(self):
@@ -1942,25 +1879,23 @@ class ConfigTestCase(TestCase):
         except jsonschema.exceptions.ValidationError as exc:
             self.fail('ValidationError raised: {0}'.format(exc))
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': ['maybe']}, TestConf.serialize())
-        self.assertIn('is too long', excinfo.exception.message)
+        assert 'is too long' in excinfo.value.message
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': ['hmmmm']}, TestConf.serialize())
-        self.assertIn('is too long', excinfo.exception.message)
+        assert 'is too long' in excinfo.value.message
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': 2}, TestConf.serialize())
-        self.assertIn('is not of type', excinfo.exception.message)
+        assert 'is not of type' in excinfo.value.message
 
     def test_not_config(self):
         item = schema.NotItem(item=schema.BooleanItem())
-        self.assertEqual(
-            item.serialize(), {
+        assert item.serialize() == {
                 'not': item.item.serialize()
             }
-        )
 
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     def test_not_config_validation(self):
@@ -1981,13 +1916,13 @@ class ConfigTestCase(TestCase):
         except jsonschema.exceptions.ValidationError as exc:
             self.fail('ValidationError raised: {0}'.format(exc))
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': [True]}, TestConf.serialize())
-        self.assertIn('is not allowed for', excinfo.exception.message)
+        assert 'is not allowed for' in excinfo.value.message
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': [False]}, TestConf.serialize())
-        self.assertIn('is not allowed for', excinfo.exception.message)
+        assert 'is not allowed for' in excinfo.value.message
 
     def test_item_name_override_class_attrname(self):
         class TestConf(schema.Schema):
@@ -2008,7 +1943,7 @@ class ConfigTestCase(TestCase):
             ],
             "additionalProperties": False
         }
-        self.assertDictEqual(TestConf.serialize(), expected)
+        assert TestConf.serialize() == expected
 
     def test_config_name_override_class_attrname(self):
         class TestConf(schema.Schema):
@@ -2042,7 +1977,7 @@ class ConfigTestCase(TestCase):
             ],
             "additionalProperties": False
         }
-        self.assertDictEqual(TestConf2.serialize(), expected)
+        assert TestConf2.serialize() == expected
 
 
 class ComplexSchemaItem(schema.ComplexSchemaItem):
@@ -2103,7 +2038,7 @@ class ComplexSchemaTestCase(TestCase):
         obj = copy.deepcopy(self.obj)
         expected_serialized = {'$ref':
                                '#/definitions/ComplexSchemaItem'}
-        self.assertDictEqual(obj.serialize(), expected_serialized)
+        assert obj.serialize() == expected_serialized
 
     def test_complex_schema_item_definition(self):
         obj = copy.deepcopy(self.obj)
@@ -2115,7 +2050,7 @@ class ComplexSchemaTestCase(TestCase):
                     'type': 'boolean',
                     'title': 'Thirsty',
                     'description': 'Are you thirsty?'}}}
-        self.assertDictEqual(obj.get_definition(), expected_def)
+        assert obj.get_definition() == expected_def
 
     def test_complex_complex_schema_item_definition(self):
         complex_obj = copy.deepcopy(self.complex_obj)
@@ -2131,7 +2066,7 @@ class ComplexSchemaTestCase(TestCase):
                     'type': 'object',
                     '$ref': '#/definitions/test_definition'}},
             'required': ['hungry']}
-        self.assertDictEqual(complex_obj.get_definition(), expected_def)
+        assert complex_obj.get_definition() == expected_def
 
     def test_complex_definition_schema(self):
         serialized = salt.utils.yaml.safe_load(salt.utils.json.dumps(self.schema.serialize()))
@@ -2153,7 +2088,7 @@ class ComplexSchemaTestCase(TestCase):
                             'type': 'boolean',
                             'title': 'Thirsty',
                             'description': 'Are you thirsty?'}}}}}
-        self.assertDictEqual(serialized, expected)
+        assert serialized == expected
 
     def test_one_of_complex_definition_schema(self):
         serialized = salt.utils.yaml.safe_load(salt.utils.json.dumps(self.one_of_schema.serialize()))
@@ -2176,7 +2111,7 @@ class ComplexSchemaTestCase(TestCase):
                             'type': 'boolean',
                             'title': 'Thirsty',
                             'description': 'Are you thirsty?'}}}}}
-        self.assertDictEqual(serialized, expected)
+        assert serialized == expected
 
     def test_array_complex_definition_schema(self):
         serialized = salt.utils.yaml.safe_load(salt.utils.json.dumps(self.array_schema.serialize()))
@@ -2200,7 +2135,7 @@ class ComplexSchemaTestCase(TestCase):
                             'type': 'boolean',
                             'title': 'Thirsty',
                             'description': 'Are you thirsty?'}}}}}
-        self.assertDictEqual(serialized, expected)
+        assert serialized == expected
 
     def test_dict_complex_definition_schema(self):
         serialized = salt.utils.yaml.safe_load(salt.utils.json.dumps(self.dict_schema.serialize()))
@@ -2229,7 +2164,7 @@ class ComplexSchemaTestCase(TestCase):
                             'type': 'boolean',
                             'title': 'Thirsty',
                             'description': 'Are you thirsty?'}}}}}
-        self.assertDictEqual(serialized, expected)
+        assert serialized == expected
 
     def test_complex_complex_definition_schema(self):
         serialized = salt.utils.yaml.safe_load(salt.utils.json.dumps(
@@ -2265,7 +2200,7 @@ class ComplexSchemaTestCase(TestCase):
                             'type': 'boolean',
                             'title': 'Thirsty',
                             'description': 'Are you thirsty?'}}}}}
-        self.assertDictEqual(serialized, expected)
+        assert serialized == expected
 
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     def test_complex_schema_item_thirsty_valid(self):
@@ -2280,13 +2215,13 @@ class ComplexSchemaTestCase(TestCase):
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     def test_complex_schema_item_thirsty_invalid(self):
         serialized = self.schema.serialize()
-        with self.assertRaises(jsonschema.exceptions.ValidationError) \
+        with pytest.raises(jsonschema.exceptions.ValidationError) \
                 as excinfo:
             jsonschema.validate({'complex_item': {'thirsty': 'Foo'}},
                                 serialized)
         expected = "u'Foo' is not of type u'boolean'" if six.PY2 \
             else "'Foo' is not of type 'boolean'"
-        self.assertIn(expected, excinfo.exception.message)
+        assert expected in excinfo.value.message
 
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     def test_complex_complex_schema_item_hungry_valid(self):
@@ -2312,18 +2247,18 @@ class ComplexSchemaTestCase(TestCase):
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     def test_complex_complex_schema_item_hungry_invalid(self):
         serialized = self.complex_schema.serialize()
-        with self.assertRaises(jsonschema.exceptions.ValidationError) \
+        with pytest.raises(jsonschema.exceptions.ValidationError) \
                 as excinfo:
             jsonschema.validate({'complex_complex_item': {'hungry': 'Foo'}},
                                 serialized)
         expected = "u'Foo' is not of type u'boolean'" if six.PY2 \
             else "'Foo' is not of type 'boolean'"
-        self.assertIn(expected, excinfo.exception.message)
+        assert expected in excinfo.value.message
 
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     def test_complex_complex_schema_item_inner_thirsty_invalid(self):
         serialized = self.complex_schema.serialize()
-        with self.assertRaises(jsonschema.exceptions.ValidationError) \
+        with pytest.raises(jsonschema.exceptions.ValidationError) \
                 as excinfo:
 
             jsonschema.validate(
@@ -2332,16 +2267,16 @@ class ComplexSchemaTestCase(TestCase):
                 serialized)
         expected = "u'Bar' is not of type u'boolean'" if six.PY2 \
             else "'Bar' is not of type 'boolean'"
-        self.assertIn(expected, excinfo.exception.message)
+        assert expected in excinfo.value.message
 
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     def test_complex_complex_schema_item_missing_required_hungry(self):
         serialized = self.complex_schema.serialize()
-        with self.assertRaises(jsonschema.exceptions.ValidationError) \
+        with pytest.raises(jsonschema.exceptions.ValidationError) \
                 as excinfo:
 
             jsonschema.validate(
                 {'complex_complex_item': {'complex_item': {'thirsty': True}}},
                 serialized)
-        self.assertIn('\'hungry\' is a required property',
-                      excinfo.exception.message)
+        assert '\'hungry\' is a required property' in \
+                      excinfo.value.message

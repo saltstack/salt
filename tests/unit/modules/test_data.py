@@ -33,7 +33,7 @@ class DataTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('os.remove', MagicMock(return_value='')):
             with patch.dict(data.__opts__, {'cachedir': ''}):
-                self.assertTrue(data.clear())
+                assert data.clear()
 
     # 'load' function tests: 1
 
@@ -48,7 +48,7 @@ class DataTestCase(TestCase, LoaderModuleMockMixin):
             with patch('salt.utils.files.fopen', MagicMock(return_value=mocked_fopen)):
                 with patch('salt.payload.Serial.loads', MagicMock(return_value=True)):
                     with patch.dict(data.__opts__, {'cachedir': '/'}):
-                        self.assertTrue(data.load())
+                        assert data.load()
 
     # 'dump' function tests: 3
 
@@ -58,14 +58,14 @@ class DataTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(data.__opts__, {'cachedir': '/'}):
             with patch('salt.utils.files.fopen', mock_open()):
-                self.assertTrue(data.dump('{"eggs": "spam"}'))
+                assert data.dump('{"eggs": "spam"}')
 
     def test_dump_isinstance(self):
         '''
         Test if it replace the entire datastore with a passed data structure
         '''
         with patch('ast.literal_eval', MagicMock(return_value='')):
-            self.assertFalse(data.dump('salt'))
+            assert not data.dump('salt')
 
     def test_dump_ioerror(self):
         '''
@@ -74,7 +74,7 @@ class DataTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(data.__opts__, {'cachedir': '/'}):
             mock = MagicMock(side_effect=IOError(''))
             with patch('salt.utils.files.fopen', mock):
-                self.assertFalse(data.dump('{"eggs": "spam"}'))
+                assert not data.dump('{"eggs": "spam"}')
 
     # 'update' function tests: 1
 
@@ -84,7 +84,7 @@ class DataTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.data.load', MagicMock(return_value={})), \
                 patch('salt.modules.data.dump', MagicMock(return_value=True)):
-            self.assertTrue(data.update('foo', 'salt'))
+            assert data.update('foo', 'salt')
 
     # 'get' function tests: 2
 
@@ -93,7 +93,7 @@ class DataTestCase(TestCase, LoaderModuleMockMixin):
         Test if it gets a value from the minion datastore
         '''
         with patch('salt.modules.data.load', MagicMock(return_value={'salt': 'SALT'})):
-            self.assertEqual(data.get('salt'), 'SALT')
+            assert data.get('salt') == 'SALT'
 
     def test_get_vals(self):
         '''
@@ -101,7 +101,7 @@ class DataTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.data.load',
                    MagicMock(return_value={'salt': 'SALT', 'salt1': 'SALT1'})):
-            self.assertEqual(data.get(['salt', 'salt1']), ['SALT', 'SALT1'])
+            assert data.get(['salt', 'salt1']) == ['SALT', 'SALT1']
 
     # 'cas' function tests: 1
 
@@ -111,7 +111,7 @@ class DataTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.data.load',
                    MagicMock(return_value={'salt': 'SALT', 'salt1': 'SALT1'})):
-            self.assertFalse(data.cas('salt3', 'SALT', 'SALTSTACK'))
+            assert not data.cas('salt3', 'SALT', 'SALTSTACK')
 
     def test_cas_not_equal(self):
         '''
@@ -119,7 +119,7 @@ class DataTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.data.load',
                    MagicMock(return_value={'salt': 'SALT', 'salt1': 'SALT1'})):
-            self.assertFalse(data.cas('salt', 'SALT', 'SALTSTACK'))
+            assert not data.cas('salt', 'SALT', 'SALTSTACK')
 
     def test_cas(self):
         '''
@@ -129,4 +129,4 @@ class DataTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value={'salt': 'SALT', 'salt1': 'SALT1'})), \
                            patch('salt.modules.data.dump',
                                  MagicMock(return_value=True)):
-            self.assertTrue(data.cas('salt', 'SALTSTACK', 'SALT'))
+            assert data.cas('salt', 'SALTSTACK', 'SALT')

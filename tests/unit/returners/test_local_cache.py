@@ -62,7 +62,7 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
         Tests that the function returns None when no jid_root is found.
         '''
         with patch('os.path.exists', MagicMock(return_value=False)):
-            self.assertEqual(local_cache.clean_old_jobs(), None)
+            assert local_cache.clean_old_jobs() is None
 
     def test_clean_old_jobs_empty_jid_dir_removed(self):
         '''
@@ -76,7 +76,7 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
             time.sleep(.01)
 
         # Make sure there are no files in the directory before continuing
-        self.assertEqual(jid_file, None)
+        assert jid_file is None
 
         # Call clean_old_jobs function, patching the keep_jobs value with a
         # very small value to force the call to clean the job.
@@ -89,7 +89,7 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
             local_cache.clean_old_jobs()
 
         # Assert that the JID dir was removed
-        self.assertEqual([], os.listdir(self.TMP_JID_DIR))
+        assert [] == os.listdir(self.TMP_JID_DIR)
 
     def test_clean_old_jobs_empty_jid_dir_remains(self):
         '''
@@ -100,7 +100,7 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
         jid_dir, jid_file = self._make_tmp_jid_dirs(create_files=False)
 
         # Make sure there are no files in the directory
-        self.assertEqual(jid_file, None)
+        assert jid_file is None
 
         # Call clean_old_jobs function
         local_cache.clean_old_jobs()
@@ -112,7 +112,7 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
             jid_dir_name = jid_dir.rpartition('/')[2]
 
         # Assert the JID directory is still present to be cleaned after keep_jobs interval
-        self.assertEqual([jid_dir_name], os.listdir(self.TMP_JID_DIR))
+        assert [jid_dir_name] == os.listdir(self.TMP_JID_DIR)
 
     def test_clean_old_jobs_jid_file_corrupted(self):
         '''
@@ -124,7 +124,7 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
 
         # Make sure there is a jid file in a new job cache director
         jid_dir_name = jid_file.rpartition('/')[2]
-        self.assertEqual(jid_dir_name, 'jid')
+        assert jid_dir_name == 'jid'
 
         # Even though we created a valid jid file in the _make_tmp_jid_dirs call to get
         # into the correct loop, we need to mock the 'os.path.isfile' check to force the
@@ -133,12 +133,12 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
             local_cache.clean_old_jobs()
 
         # there should be only 1 dir in TMP_JID_DIR
-        self.assertEqual(1, len(os.listdir(self.TMP_JID_DIR)))
+        assert 1 == len(os.listdir(self.TMP_JID_DIR))
         # top level dir should still be present
-        self.assertEqual(True, os.path.exists(jid_dir))
-        self.assertEqual(True, os.path.isdir(jid_dir))
+        assert os.path.exists(jid_dir) is True
+        assert os.path.isdir(jid_dir) is True
         # while the 'jid' dir inside it should be gone
-        self.assertEqual(False, os.path.exists(jid_dir_name))
+        assert os.path.exists(jid_dir_name) is False
 
     def test_clean_old_jobs_jid_file_is_cleaned(self):
         '''
@@ -153,7 +153,7 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
 
         # Make sure there is a jid directory
         jid_dir_name = jid_file.rpartition('/')[2]
-        self.assertEqual(jid_dir_name, 'jid')
+        assert jid_dir_name == 'jid'
 
         # Call clean_old_jobs function, patching the keep_jobs value with a
         # very small value to force the call to clean the job.
@@ -166,12 +166,12 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
             local_cache.clean_old_jobs()
 
         # there should be only 1 dir in TMP_JID_DIR
-        self.assertEqual(1, len(os.listdir(self.TMP_JID_DIR)))
+        assert 1 == len(os.listdir(self.TMP_JID_DIR))
         # top level dir should still be present
-        self.assertEqual(True, os.path.exists(jid_dir))
-        self.assertEqual(True, os.path.isdir(jid_dir))
+        assert os.path.exists(jid_dir) is True
+        assert os.path.isdir(jid_dir) is True
         # while the 'jid' dir inside it should be gone
-        self.assertEqual(False, os.path.exists(jid_dir_name))
+        assert os.path.exists(jid_dir_name) is False
 
     def _make_tmp_jid_dirs(self, create_files=True):
         '''
@@ -260,7 +260,7 @@ class Local_CacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleM
                     check_job_dir = False
                 else:
                     check_job_dir = True
-            self.assertTrue(check_job_dir, msg=msg + content)
+            assert check_job_dir, msg + content
 
     def _add_job(self):
         '''
@@ -274,7 +274,7 @@ class Local_CacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleM
                 'cmd': '_return', 'fun': 'test.ping', 'id': 'minion'}
 
         add_job = salt.utils.job.store_job(opts, load)
-        self.assertEqual(add_job, None)
+        assert add_job is None
         self._check_dir_files('Dir/file does not exist: ',
                               self.JOB_CACHE_DIR_FILES,
                               status='present')
@@ -286,7 +286,7 @@ class Local_CacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleM
         self._add_job()
 
         # remove job
-        self.assertEqual(local_cache.clean_old_jobs(), None)
+        assert local_cache.clean_old_jobs() is None
 
         self._check_dir_files('job cache was not removed: ',
                               self.JOB_CACHE_DIR_FILES,
@@ -300,7 +300,7 @@ class Local_CacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleM
         self._add_job()
 
         with patch.dict(local_cache.__opts__, {'keep_jobs': 24}):
-            self.assertEqual(local_cache.clean_old_jobs(), None)
+            assert local_cache.clean_old_jobs() is None
 
             self._check_dir_files('job cache was removed: ',
                                   self.JOB_CACHE_DIR_FILES,
@@ -343,7 +343,7 @@ class Local_CacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleM
                               status='present')
 
         # remove job
-        self.assertEqual(local_cache.clean_old_jobs(), None)
+        assert local_cache.clean_old_jobs() is None
 
         # check jid dir is removed
         self._check_dir_files('new_jid_dir was not removed',

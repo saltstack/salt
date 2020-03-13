@@ -26,7 +26,7 @@ def _find_new_locale(current_locale):
 class LocaleModuleTest(ModuleCase):
     def test_get_locale(self):
         locale = self.run_function('locale.get_locale')
-        self.assertNotIn('Unsupported platform!', locale)
+        assert 'Unsupported platform!' not in locale
 
     @pytest.mark.destructive_test
     def test_gen_locale(self):
@@ -45,7 +45,7 @@ class LocaleModuleTest(ModuleCase):
         locale = self.run_function('locale.get_locale')
         new_locale = _find_new_locale(locale)
         ret = self.run_function('locale.gen_locale', [new_locale])
-        self.assertTrue(ret)
+        assert ret
 
     @pytest.mark.destructive_test
     def test_set_locale(self):
@@ -54,6 +54,6 @@ class LocaleModuleTest(ModuleCase):
         self.run_function('locale.gen_locale', [locale_to_set])
         ret = self.run_function('locale.set_locale', [locale_to_set])
         new_locale = self.run_function('locale.get_locale')
-        self.assertTrue(ret)
-        self.assertEqual(locale_to_set, new_locale)
+        assert ret
+        assert locale_to_set == new_locale
         self.run_function('locale.set_locale', [original_locale])

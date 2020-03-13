@@ -79,7 +79,7 @@ class ServiceTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         if self.run_function('service.status', name=self.service_name):
             stop_service = self.run_function('service.stop', name=self.service_name)
-            self.assertTrue(stop_service)
+            assert stop_service
         self.check_service_status(self.stopped)
 
         if salt.utils.platform.is_darwin():
@@ -88,7 +88,7 @@ class ServiceTest(ModuleCase, SaltReturnAssertsMixin):
 
         start_service = self.run_state('service.running',
                                        name=self.service_name)
-        self.assertTrue(start_service)
+        assert start_service
         self.check_service_status(self.running)
 
     def test_service_dead(self):

@@ -23,4 +23,4 @@ class HandleOrderTest(ModuleCase):
         sorted_chunks = [chunk['name'] for chunk in sorted(ret, key=lambda c: c.get('order'))]
 
         expected = ['./configure', 'make', 'make install']
-        self.assertEqual(expected, sorted_chunks)
+        assert expected == sorted_chunks

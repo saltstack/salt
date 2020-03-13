@@ -50,7 +50,7 @@ class PkginTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.modules.pkgin._get_version', pkgin__get_version_mock), \
              patch('salt.modules.pkgin._check_pkgin', pkgin__check_pkgin_mock), \
              patch.dict(pkgin.__salt__, {'cmd.run': pkgin_search_cmd}):
-            self.assertDictEqual(pkgin.search('somepkg'), {'somepkg': '1.0'})
+            assert pkgin.search('somepkg') == {'somepkg': '1.0'}
 
         # Test searching for an available and installed package
         pkgin_out = [
@@ -66,7 +66,7 @@ class PkginTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.modules.pkgin._get_version', pkgin__get_version_mock), \
              patch('salt.modules.pkgin._check_pkgin', pkgin__check_pkgin_mock), \
              patch.dict(pkgin.__salt__, {'cmd.run': pkgin_search_cmd}):
-            self.assertDictEqual(pkgin.search('somepkg'), {'somepkg': '1.0'})
+            assert pkgin.search('somepkg') == {'somepkg': '1.0'}
 
     def test_latest_version(self):
         '''
@@ -91,7 +91,7 @@ class PkginTestCase(TestCase, LoaderModuleMockMixin):
              patch('salt.modules.pkgin._get_version', pkgin__get_version_mock), \
              patch('salt.modules.pkgin._check_pkgin', pkgin__check_pkgin_mock), \
              patch.dict(pkgin.__salt__, {'cmd.run': pkgin_search_cmd}):
-            self.assertEqual(pkgin.latest_version('somepkg'), '1.0')
+            assert pkgin.latest_version('somepkg') == '1.0'
 
         # Test getting the latest version of an installed package
         pkgin_out = [
@@ -109,7 +109,7 @@ class PkginTestCase(TestCase, LoaderModuleMockMixin):
              patch('salt.modules.pkgin._get_version', pkgin__get_version_mock), \
              patch('salt.modules.pkgin._check_pkgin', pkgin__check_pkgin_mock), \
              patch.dict(pkgin.__salt__, {'cmd.run': pkgin_search_cmd}):
-            self.assertEqual(pkgin.latest_version('somepkg'), '1.1')
+            assert pkgin.latest_version('somepkg') == '1.1'
 
         # Test getting the latest version of a package that is already installed
         # and is already at the latest version
@@ -128,7 +128,7 @@ class PkginTestCase(TestCase, LoaderModuleMockMixin):
              patch('salt.modules.pkgin._get_version', pkgin__get_version_mock), \
              patch('salt.modules.pkgin._check_pkgin', pkgin__check_pkgin_mock), \
              patch.dict(pkgin.__salt__, {'cmd.run': pkgin_search_cmd}):
-            self.assertEqual(pkgin.latest_version('somepkg'), '1.2')
+            assert pkgin.latest_version('somepkg') == '1.2'
 
         # Test getting the latest version of a bogus package
         pkgin_out = 'No results found for ^boguspkg$'
@@ -140,7 +140,7 @@ class PkginTestCase(TestCase, LoaderModuleMockMixin):
              patch('salt.modules.pkgin._get_version', pkgin__get_version_mock), \
              patch('salt.modules.pkgin._check_pkgin', pkgin__check_pkgin_mock), \
              patch.dict(pkgin.__salt__, {'cmd.run': pkgin_search_cmd}):
-            self.assertEqual(pkgin.latest_version('boguspkg'), {})
+            assert pkgin.latest_version('boguspkg') == {}
 
     def test_file_dict(self):
         '''
@@ -163,7 +163,7 @@ class PkginTestCase(TestCase, LoaderModuleMockMixin):
         pkg_info_cmd = MagicMock(return_value=pkg_info_out)
 
         with patch.dict(pkgin.__salt__, {'cmd.run_all': pkg_info_cmd}):
-            self.assertDictEqual(pkgin.file_dict('pkgin'), {
+            assert pkgin.file_dict('pkgin') == {
                 'files': {
                 'pkgin': [
                         '/opt/pkg/bin/pkgin',
@@ -172,4 +172,4 @@ class PkginTestCase(TestCase, LoaderModuleMockMixin):
                         '/opt/pkg/share/examples/pkgin/repositories.conf.example'
                     ]
                 }
-            })
+            }

@@ -62,33 +62,32 @@ class CMDModuleTest(ModuleCase):
             # Failed to get the SHELL var, don't run
             self.skipTest('Unable to get the SHELL environment variable')
 
-        self.assertTrue(self.run_function('cmd.run', ['echo $SHELL']))
-        self.assertEqual(
-            self.run_function('cmd.run',
+        assert self.run_function('cmd.run', ['echo $SHELL'])
+        assert self.run_function('cmd.run',
                               ['echo $SHELL',
                                'shell={0}'.format(shell)],
-                              python_shell=True).rstrip(), shell)
-        self.assertEqual(self.run_function('cmd.run',
+                              python_shell=True).rstrip() == shell
+        assert self.run_function('cmd.run',
                           ['ls / | grep etc'],
-                          python_shell=True), 'etc')
-        self.assertEqual(self.run_function('cmd.run',
+                          python_shell=True) == 'etc'
+        assert self.run_function('cmd.run',
                          ['echo {{grains.id}} | awk "{print $1}"'],
                          template='jinja',
-                         python_shell=True), 'minion')
-        self.assertEqual(self.run_function('cmd.run',
+                         python_shell=True) == 'minion'
+        assert self.run_function('cmd.run',
                          ['grep f'],
-                         stdin='one\ntwo\nthree\nfour\nfive\n'), 'four\nfive')
-        self.assertEqual(self.run_function('cmd.run',
+                         stdin='one\ntwo\nthree\nfour\nfive\n') == 'four\nfive'
+        assert self.run_function('cmd.run',
                          ['echo "a=b" | sed -e s/=/:/g'],
-                         python_shell=True), 'a:b')
+                         python_shell=True) == 'a:b'
 
     def test_stdout(self):
         '''
         cmd.run_stdout
         '''
-        self.assertEqual(self.run_function('cmd.run_stdout',
-                                           ['echo "cheese"']).rstrip(),
-                         'cheese' if not salt.utils.platform.is_windows() else '"cheese"')
+        assert self.run_function('cmd.run_stdout',
+                                           ['echo "cheese"']).rstrip() == \
+                         ('cheese' if not salt.utils.platform.is_windows() else '"cheese"')
 
     def test_stderr(self):
         '''
@@ -99,11 +98,11 @@ class CMDModuleTest(ModuleCase):
         else:
             shell = '/bin/bash'
 
-        self.assertEqual(self.run_function('cmd.run_stderr',
+        assert self.run_function('cmd.run_stderr',
                                            ['echo "cheese" 1>&2',
                                             'shell={0}'.format(shell)], python_shell=True
-                                           ).rstrip(),
-                         'cheese' if not salt.utils.platform.is_windows() else '"cheese"')
+                                           ).rstrip() == \
+                         ('cheese' if not salt.utils.platform.is_windows() else '"cheese"')
 
     def test_run_all(self):
         '''
@@ -116,22 +115,22 @@ class CMDModuleTest(ModuleCase):
 
         ret = self.run_function('cmd.run_all', ['echo "cheese" 1>&2',
                                                 'shell={0}'.format(shell)], python_shell=True)
-        self.assertTrue('pid' in ret)
-        self.assertTrue('retcode' in ret)
-        self.assertTrue('stdout' in ret)
-        self.assertTrue('stderr' in ret)
-        self.assertTrue(isinstance(ret.get('pid'), int))
-        self.assertTrue(isinstance(ret.get('retcode'), int))
-        self.assertTrue(isinstance(ret.get('stdout'), six.string_types))
-        self.assertTrue(isinstance(ret.get('stderr'), six.string_types))
-        self.assertEqual(ret.get('stderr').rstrip(), 'cheese' if not salt.utils.platform.is_windows() else '"cheese"')
+        assert 'pid' in ret
+        assert 'retcode' in ret
+        assert 'stdout' in ret
+        assert 'stderr' in ret
+        assert isinstance(ret.get('pid'), int)
+        assert isinstance(ret.get('retcode'), int)
+        assert isinstance(ret.get('stdout'), six.string_types)
+        assert isinstance(ret.get('stderr'), six.string_types)
+        assert ret.get('stderr').rstrip() == ('cheese' if not salt.utils.platform.is_windows() else '"cheese"')
 
     def test_retcode(self):
         '''
         cmd.retcode
         '''
-        self.assertEqual(self.run_function('cmd.retcode', ['exit 0'], python_shell=True), 0)
-        self.assertEqual(self.run_function('cmd.retcode', ['exit 1'], python_shell=True), 1)
+        assert self.run_function('cmd.retcode', ['exit 0'], python_shell=True) == 0
+        assert self.run_function('cmd.retcode', ['exit 1'], python_shell=True) == 1
 
     def test_run_all_with_success_retcodes(self):
         '''
@@ -142,8 +141,8 @@ class CMDModuleTest(ModuleCase):
                                 success_retcodes=[42],
                                 python_shell=True)
 
-        self.assertTrue('retcode' in ret)
-        self.assertEqual(ret.get('retcode'), 0)
+        assert 'retcode' in ret
+        assert ret.get('retcode') == 0
 
     def test_retcode_with_success_retcodes(self):
         '''
@@ -154,15 +153,15 @@ class CMDModuleTest(ModuleCase):
                                 success_retcodes=[42],
                                 python_shell=True)
 
-        self.assertEqual(ret, 0)
+        assert ret == 0
 
     def test_blacklist_glob(self):
         '''
         cmd_blacklist_glob
         '''
-        self.assertEqual(self.run_function('cmd.run',
-                ['bad_command --foo']).rstrip(),
-                'ERROR: The shell command "bad_command --foo" is not permitted')
+        assert self.run_function('cmd.run',
+                ['bad_command --foo']).rstrip() == \
+                'ERROR: The shell command "bad_command --foo" is not permitted'
 
     def test_script(self):
         '''
@@ -171,7 +170,7 @@ class CMDModuleTest(ModuleCase):
         args = 'saltines crackers biscuits=yes'
         script = 'salt://script.py'
         ret = self.run_function('cmd.script', [script, args])
-        self.assertEqual(ret['stdout'], args)
+        assert ret['stdout'] == args
 
     def test_script_retcode(self):
         '''
@@ -179,7 +178,7 @@ class CMDModuleTest(ModuleCase):
         '''
         script = 'salt://script.py'
         ret = self.run_function('cmd.script_retcode', [script])
-        self.assertEqual(ret, 0)
+        assert ret == 0
 
     def test_script_cwd(self):
         '''
@@ -189,7 +188,7 @@ class CMDModuleTest(ModuleCase):
         args = 'saltines crackers biscuits=yes'
         script = 'salt://script.py'
         ret = self.run_function('cmd.script', [script, args], cwd=tmp_cwd)
-        self.assertEqual(ret['stdout'], args)
+        assert ret['stdout'] == args
 
     def test_script_cwd_with_space(self):
         '''
@@ -201,7 +200,7 @@ class CMDModuleTest(ModuleCase):
         args = 'saltines crackers biscuits=yes'
         script = 'salt://script.py'
         ret = self.run_function('cmd.script', [script, args], cwd=tmp_cwd)
-        self.assertEqual(ret['stdout'], args)
+        assert ret['stdout'] == args
 
     @pytest.mark.destructive_test
     def test_tty(self):
@@ -211,15 +210,15 @@ class CMDModuleTest(ModuleCase):
         for tty in ('tty0', 'pts3'):
             if os.path.exists(os.path.join('/dev', tty)):
                 ret = self.run_function('cmd.tty', [tty, 'apply salt liberally'])
-                self.assertTrue('Success' in ret)
+                assert 'Success' in ret
 
     @pytest.mark.skip_if_binaries_missing('which')
     def test_which(self):
         '''
         cmd.which
         '''
-        self.assertEqual(self.run_function('cmd.which', ['cat']).rstrip(),
-                         self.run_function('cmd.run', ['which cat']).rstrip())
+        assert self.run_function('cmd.which', ['cat']).rstrip() == \
+                         self.run_function('cmd.run', ['which cat']).rstrip()
 
     @pytest.mark.skip_if_binaries_missing('which')
     def test_which_bin(self):
@@ -228,16 +227,16 @@ class CMDModuleTest(ModuleCase):
         '''
         cmds = ['pip3', 'pip2', 'pip', 'pip-python']
         ret = self.run_function('cmd.which_bin', [cmds])
-        self.assertTrue(os.path.split(ret)[1] in cmds)
+        assert os.path.split(ret)[1] in cmds
 
     def test_has_exec(self):
         '''
         cmd.has_exec
         '''
-        self.assertTrue(self.run_function('cmd.has_exec',
-                                          [AVAILABLE_PYTHON_EXECUTABLE]))
-        self.assertFalse(self.run_function('cmd.has_exec',
-                                           ['alllfsdfnwieulrrh9123857ygf']))
+        assert self.run_function('cmd.has_exec',
+                                          [AVAILABLE_PYTHON_EXECUTABLE])
+        assert not self.run_function('cmd.has_exec',
+                                           ['alllfsdfnwieulrrh9123857ygf'])
 
     def test_exec_code(self):
         '''
@@ -246,10 +245,10 @@ class CMDModuleTest(ModuleCase):
         code = textwrap.dedent('''\
                import sys
                sys.stdout.write('cheese')''')
-        self.assertEqual(self.run_function('cmd.exec_code',
+        assert self.run_function('cmd.exec_code',
                                            [AVAILABLE_PYTHON_EXECUTABLE,
-                                            code]).rstrip(),
-                         'cheese')
+                                            code]).rstrip() == \
+                         'cheese'
 
     def test_exec_code_with_single_arg(self):
         '''
@@ -259,11 +258,11 @@ class CMDModuleTest(ModuleCase):
                import sys
                sys.stdout.write(sys.argv[1])''')
         arg = 'cheese'
-        self.assertEqual(self.run_function('cmd.exec_code',
+        assert self.run_function('cmd.exec_code',
                                            [AVAILABLE_PYTHON_EXECUTABLE,
                                             code],
-                                           args=arg).rstrip(),
-                         arg)
+                                           args=arg).rstrip() == \
+                         arg
 
     def test_exec_code_with_multiple_args(self):
         '''
@@ -273,11 +272,11 @@ class CMDModuleTest(ModuleCase):
                import sys
                sys.stdout.write(sys.argv[1])''')
         arg = 'cheese'
-        self.assertEqual(self.run_function('cmd.exec_code',
+        assert self.run_function('cmd.exec_code',
                                            [AVAILABLE_PYTHON_EXECUTABLE,
                                             code],
-                                           args=[arg, 'test']).rstrip(),
-                         arg)
+                                           args=[arg, 'test']).rstrip() == \
+                         arg
 
     def test_quotes(self):
         '''
@@ -288,7 +287,7 @@ class CMDModuleTest(ModuleCase):
         if salt.utils.platform.is_windows():
             expected_result = '\'SELECT * FROM foo WHERE bar="baz"\''
         result = self.run_function('cmd.run_stdout', [cmd]).strip()
-        self.assertEqual(result, expected_result)
+        assert result == expected_result
 
     @pytest.mark.skip_if_not_root
     @skipIf(salt.utils.platform.is_windows(), 'skip windows, requires password')
@@ -304,7 +303,7 @@ class CMDModuleTest(ModuleCase):
 
         result = self.run_function('cmd.run_stdout', [cmd],
                                    runas=runas).strip()
-        self.assertEqual(result, expected_result)
+        assert result == expected_result
 
     @pytest.mark.destructive_test
     @pytest.mark.skip_if_not_root
@@ -321,9 +320,9 @@ class CMDModuleTest(ModuleCase):
         with self._ensure_user_exists(self.runas_usr):
             user_id = self.run_function('cmd.run_stdout', [cmd], runas=self.runas_usr)
 
-        self.assertNotEqual(user_id, root_id)
-        self.assertNotEqual(user_id, runas_root_id)
-        self.assertEqual(root_id, runas_root_id)
+        assert user_id != root_id
+        assert user_id != runas_root_id
+        assert root_id == runas_root_id
 
     @pytest.mark.destructive_test
     @pytest.mark.skip_if_not_root
@@ -338,11 +337,11 @@ class CMDModuleTest(ModuleCase):
         os.chmod(tmp_cwd, 0o711)
 
         cwd_normal = self.run_function('cmd.run_stdout', [cmd], cwd=tmp_cwd).rstrip('\n')
-        self.assertEqual(tmp_cwd, cwd_normal)
+        assert tmp_cwd == cwd_normal
 
         with self._ensure_user_exists(self.runas_usr):
             cwd_runas = self.run_function('cmd.run_stdout', [cmd], cwd=tmp_cwd, runas=self.runas_usr).rstrip('\n')
-        self.assertEqual(tmp_cwd, cwd_runas)
+        assert tmp_cwd == cwd_runas
 
     @pytest.mark.destructive_test
     @pytest.mark.skip_if_not_root
@@ -357,7 +356,7 @@ class CMDModuleTest(ModuleCase):
         # XXX: Not sure of a better way. Environment starts out with
         # /bin:/usr/bin and should be populated by path helper and the bash
         # profile.
-        self.assertNotEqual("/bin:/usr/bin", user_path)
+        assert "/bin:/usr/bin" != user_path
 
     @pytest.mark.destructive_test
     @pytest.mark.skip_if_not_root
@@ -379,9 +378,9 @@ class CMDModuleTest(ModuleCase):
         with self._ensure_user_exists(self.runas_usr):
             cmd_result = self.run_function('cmd.run_all', ['pwd; pwd; : $(echo "You have failed the test" >&2)'], cwd=tmp_cwd, runas=self.runas_usr)
 
-        self.assertEqual("", cmd_result['stdout'])
-        self.assertNotIn("You have failed the test", cmd_result['stderr'])
-        self.assertNotEqual(0, cmd_result['retcode'])
+        assert "" == cmd_result['stdout']
+        assert "You have failed the test" not in cmd_result['stderr']
+        assert 0 != cmd_result['retcode']
 
     @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
     @pytest.mark.skip_if_not_root
@@ -392,7 +391,7 @@ class CMDModuleTest(ModuleCase):
         '''
         with self._ensure_user_exists(self.runas_usr):
             out = self.run_function('cmd.run', ['env'], runas=self.runas_usr).splitlines()
-        self.assertIn('USER={0}'.format(self.runas_usr), out)
+        assert 'USER={0}'.format(self.runas_usr) in out
 
     @skipIf(not salt.utils.path.which_bin('sleep'), 'sleep cmd not installed')
     def test_timeout(self):
@@ -403,7 +402,7 @@ class CMDModuleTest(ModuleCase):
                                 ['sleep 2 && echo hello'],
                                 f_timeout=1,
                                 python_shell=True)
-        self.assertTrue('Timed out' in out)
+        assert 'Timed out' in out
 
     @skipIf(not salt.utils.path.which_bin('sleep'), 'sleep cmd not installed')
     def test_timeout_success(self):
@@ -414,7 +413,7 @@ class CMDModuleTest(ModuleCase):
                                 ['sleep 1 && echo hello'],
                                 f_timeout=2,
                                 python_shell=True)
-        self.assertEqual(out, 'hello')
+        assert out == 'hello'
 
     def test_hide_output(self):
         '''
@@ -431,44 +430,44 @@ class CMDModuleTest(ModuleCase):
             'cmd.run',
             ls_command,
             hide_output=True)
-        self.assertEqual(out, '')
+        assert out == ''
 
         # cmd.shell
         out = self.run_function(
             'cmd.shell',
             ls_command,
             hide_output=True)
-        self.assertEqual(out, '')
+        assert out == ''
 
         # cmd.run_stdout
         out = self.run_function(
             'cmd.run_stdout',
             ls_command,
             hide_output=True)
-        self.assertEqual(out, '')
+        assert out == ''
 
         # cmd.run_stderr
         out = self.run_function(
             'cmd.shell',
             error_command,
             hide_output=True)
-        self.assertEqual(out, '')
+        assert out == ''
 
         # cmd.run_all (command should have produced stdout)
         out = self.run_function(
             'cmd.run_all',
             ls_command,
             hide_output=True)
-        self.assertEqual(out['stdout'], '')
-        self.assertEqual(out['stderr'], '')
+        assert out['stdout'] == ''
+        assert out['stderr'] == ''
 
         # cmd.run_all (command should have produced stderr)
         out = self.run_function(
             'cmd.run_all',
             error_command,
             hide_output=True)
-        self.assertEqual(out['stdout'], '')
-        self.assertEqual(out['stderr'], '')
+        assert out['stdout'] == ''
+        assert out['stderr'] == ''
 
     def test_cmd_run_whoami(self):
         '''
@@ -476,9 +475,9 @@ class CMDModuleTest(ModuleCase):
         '''
         cmd = self.run_function('cmd.run', ['whoami'])
         if salt.utils.platform.is_windows():
-            self.assertIn('administrator', cmd)
+            assert 'administrator' in cmd
         else:
-            self.assertEqual('root', cmd)
+            assert 'root' == cmd
 
     @skipIf(not salt.utils.platform.is_windows(), 'minion is not windows')
     def test_windows_env_handling(self):
@@ -486,8 +485,8 @@ class CMDModuleTest(ModuleCase):
         Ensure that nt.environ is used properly with cmd.run*
         '''
         out = self.run_function('cmd.run', ['set'], env={"abc": "123", "ABC": "456"}).splitlines()
-        self.assertIn('abc=123', out)
-        self.assertIn('ABC=456', out)
+        assert 'abc=123' in out
+        assert 'ABC=456' in out
 
     @skipIf(not salt.utils.platform.is_windows(), 'minion is not windows')
     def test_windows_powershell_script_args(self):
@@ -498,4 +497,4 @@ class CMDModuleTest(ModuleCase):
         args = '-SecureString (ConvertTo-SecureString -String "{0}" -AsPlainText -Force) -ErrorAction Stop'.format(val)
         script = 'salt://issue-56195/test.ps1'
         ret = self.run_function('cmd.script', [script], args=args, shell='powershell')
-        self.assertEqual(ret['stdout'], val)
+        assert ret['stdout'] == val

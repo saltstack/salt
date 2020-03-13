@@ -85,7 +85,7 @@ class ZabbixTemplateTestCase(TestCase, LoaderModuleMockMixin):
                 ret['comment'] = 'Zabbix Template "{0}" created.'.format(name)
                 ret['changes'] = {name: {'old': 'Zabbix Template "{0}" did not exist.'.format(name),
                                          'new': 'Zabbix Template "{0}" created according definition.'.format(name)}}
-                self.assertDictEqual(zabbix_template.present(name, {}), ret)
+                assert zabbix_template.present(name, {}) == ret
 
     @patch('salt.states.zabbix_template.CHANGE_STACK', [])
     def test_present_exists(self):
@@ -112,7 +112,7 @@ class ZabbixTemplateTestCase(TestCase, LoaderModuleMockMixin):
                              'zabbix.compare_params': MagicMock(return_value={'new': {}, 'old': {}})}):
                 ret['result'] = True
                 ret['comment'] = 'Zabbix Template "{0}" already exists and corresponds to a definition.'.format(name)
-                self.assertDictEqual(zabbix_template.present(name, {}), ret)
+                assert zabbix_template.present(name, {}) == ret
 
     @patch('salt.states.zabbix_template.CHANGE_STACK', [])
     def test_present_update(self):
@@ -141,7 +141,7 @@ class ZabbixTemplateTestCase(TestCase, LoaderModuleMockMixin):
                 ret['comment'] = 'Zabbix Template "{0}" updated.'.format(name)
                 ret['changes'] = {name: {'old': 'Zabbix Template "{0}" differed.'.format(name),
                                          'new': 'Zabbix Template "{0}" updated according definition.'.format(name)}}
-                self.assertDictEqual(zabbix_template.present(name, {}), ret)
+                assert zabbix_template.present(name, {}) == ret
 
     def test_absent_test_mode(self):
         '''
@@ -155,7 +155,7 @@ class ZabbixTemplateTestCase(TestCase, LoaderModuleMockMixin):
                 ret['comment'] = 'Zabbix Template "{0}" would be deleted.'.format(name)
                 ret['changes'] = {name: {'old': 'Zabbix Template "{0}" exists.'.format(name),
                                          'new': 'Zabbix Template "{0}" would be deleted.'.format(name)}}
-                self.assertDictEqual(zabbix_template.absent(name), ret)
+                assert zabbix_template.absent(name) == ret
 
     def test_absent(self):
         '''
@@ -168,7 +168,7 @@ class ZabbixTemplateTestCase(TestCase, LoaderModuleMockMixin):
                             {'zabbix.get_object_id_by_params': MagicMock(return_value=False)}):
                 ret['result'] = True
                 ret['comment'] = 'Zabbix Template "{0}" does not exist.'.format(name)
-                self.assertDictEqual(zabbix_template.absent(name), ret)
+                assert zabbix_template.absent(name) == ret
 
             with patch.dict(zabbix_template.__salt__, {'zabbix.get_object_id_by_params': MagicMock(return_value=11)}):
                 with patch.dict(zabbix_template.__salt__, {'zabbix.run_query': MagicMock(return_value=True)}):
@@ -176,4 +176,4 @@ class ZabbixTemplateTestCase(TestCase, LoaderModuleMockMixin):
                     ret['comment'] = 'Zabbix Template "{0}" deleted.'.format(name)
                     ret['changes'] = {name: {'old': 'Zabbix Template "{0}" existed.'.format(name),
                                              'new': 'Zabbix Template "{0}" deleted.'.format(name)}}
-                    self.assertDictEqual(zabbix_template.absent(name), ret)
+                    assert zabbix_template.absent(name) == ret

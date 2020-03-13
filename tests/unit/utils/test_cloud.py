@@ -23,6 +23,7 @@ from tests.support.unit import TestCase, skipIf, SkipTest
 import salt.utils.cloud as cloud
 import salt.utils.platform
 from salt.ext import six
+import pytest
 
 
 class CloudUtilsTestCase(TestCase):
@@ -81,18 +82,10 @@ class CloudUtilsTestCase(TestCase):
         for pattern in ('Password for root@127.0.0.1:',
                         'root@127.0.0.1 Password:',
                         ' Password:'):
-            self.assertNotEqual(
-                cloud.SSH_PASSWORD_PROMP_RE.match(pattern), None
-            )
-            self.assertNotEqual(
-                cloud.SSH_PASSWORD_PROMP_RE.match(pattern.lower()), None
-            )
-            self.assertNotEqual(
-                cloud.SSH_PASSWORD_PROMP_RE.match(pattern.strip()), None
-            )
-            self.assertNotEqual(
-                cloud.SSH_PASSWORD_PROMP_RE.match(pattern.lower().strip()), None
-            )
+            assert cloud.SSH_PASSWORD_PROMP_RE.match(pattern) is not None
+            assert cloud.SSH_PASSWORD_PROMP_RE.match(pattern.lower()) is not None
+            assert cloud.SSH_PASSWORD_PROMP_RE.match(pattern.strip()) is not None
+            assert cloud.SSH_PASSWORD_PROMP_RE.match(pattern.lower().strip()) is not None
 
     def test__save_password_in_keyring(self):
         '''
@@ -113,7 +106,7 @@ class CloudUtilsTestCase(TestCase):
                     'salt.cloud.provider.test_case_provider',
                     'fake_username',
         )
-        self.assertEqual(stored_pw, 'fake_password_c8231')
+        assert stored_pw == 'fake_password_c8231'
 
     def test_retrieve_password_from_keyring(self):
         # Late import
@@ -126,13 +119,13 @@ class CloudUtilsTestCase(TestCase):
         pw_in_keyring = cloud.retrieve_password_from_keyring(
             'salt.cloud.provider.test_case_provider',
             'fake_username')
-        self.assertEqual(pw_in_keyring, 'fake_password_c8231')
+        assert pw_in_keyring == 'fake_password_c8231'
 
     def test_sftp_file_with_content_under_python3(self):
-        with self.assertRaises(Exception) as context:
+        with pytest.raises(Exception) as context:
             cloud.sftp_file("/tmp/test", "ТЕСТ test content")
         # we successful pass the place with os.write(tmpfd, ...
-        self.assertNotEqual("a bytes-like object is required, not 'str'", six.text_type(context.exception))
+        assert "a bytes-like object is required, not 'str'" != six.text_type(context.value)
 
     @skipIf(salt.utils.platform.is_windows(), 'Not applicable to Windows')
     def test_check_key_path_and_mode(self):
@@ -140,11 +133,11 @@ class CloudUtilsTestCase(TestCase):
             key_file = f.name
 
             os.chmod(key_file, 0o644)
-            self.assertFalse(cloud.check_key_path_and_mode('foo', key_file))
+            assert not cloud.check_key_path_and_mode('foo', key_file)
             os.chmod(key_file, 0o600)
-            self.assertTrue(cloud.check_key_path_and_mode('foo', key_file))
+            assert cloud.check_key_path_and_mode('foo', key_file)
             os.chmod(key_file, 0o400)
-            self.assertTrue(cloud.check_key_path_and_mode('foo', key_file))
+            assert cloud.check_key_path_and_mode('foo', key_file)
 
         # tmp file removed
-        self.assertFalse(cloud.check_key_path_and_mode('foo', key_file))
+        assert not cloud.check_key_path_and_mode('foo', key_file)

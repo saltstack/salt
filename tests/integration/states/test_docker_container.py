@@ -132,7 +132,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         # Now check to ensure that the container has volumes to match the
         # binds that we used when creating it.
         ret = self.run_function('docker.inspect_container', [name])
-        self.assertTrue('/foo' in ret['Config']['Volumes'])
+        assert '/foo' in ret['Config']['Volumes']
 
     @container_name
     def test_running_with_no_predefined_ports(self, name):
@@ -153,7 +153,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         # port_bindings that we used when creating it.
         expected_ports = (4505, 4506, 8080, '2123/udp')
         ret = self.run_function('docker.inspect_container', [name])
-        self.assertTrue(x in ret['NetworkSettings']['Ports']
+        assert (x in ret['NetworkSettings']['Ports']
                         for x in expected_ports)
 
     @container_name
@@ -175,10 +175,8 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         c_info = self.run_function('docker.inspect_container', [name])
         c_name, c_id = (c_info[x] for x in ('Name', 'Id'))
         # Alter the filesystem inside the container
-        self.assertEqual(
-            self.run_function('docker.retcode', [name, 'touch /.salttest']),
+        assert self.run_function('docker.retcode', [name, 'touch /.salttest']) == \
             0
-        )
         # Commit the changes and overwrite the test class' image
         self.run_function('docker.commit', [c_id, self.image])
         # Re-run the state
@@ -193,13 +191,13 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         # asserts easier to read/write
         ret = ret[next(iter(ret))]
         # Check to make sure that the container was replaced
-        self.assertTrue('container_id' in ret['changes'])
+        assert 'container_id' in ret['changes']
         # Check to make sure that the image is in the changes dict, since
         # it should have changed
-        self.assertTrue('image' in ret['changes'])
+        assert 'image' in ret['changes']
         # Check that the comment in the state return states that
         # container's image has changed
-        self.assertTrue('Container has a new image' in ret['comment'])
+        assert 'Container has a new image' in ret['comment']
 
     @container_name
     def test_running_start_false_without_replace(self, name):
@@ -230,10 +228,10 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         # asserts easier to read/write
         ret = ret[next(iter(ret))]
         # Check to make sure that the container was not replaced
-        self.assertTrue('container_id' not in ret['changes'])
+        assert 'container_id' not in ret['changes']
         # Check to make sure that the state is not the changes dict, since
         # it should not have changed
-        self.assertTrue('state' not in ret['changes'])
+        assert 'state' not in ret['changes']
 
     @with_network(subnet='10.247.197.96/27', create=True)
     @container_name
@@ -260,7 +258,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         # asserts easier to read/write
         ret = ret[next(iter(ret))]
         # Should be no changes
-        self.assertFalse(ret['changes'])
+        assert not ret['changes']
 
     @container_name
     def test_running_start_false_with_replace(self, name):
@@ -293,10 +291,10 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         # asserts easier to read/write
         ret = ret[next(iter(ret))]
         # Check to make sure that the container was not replaced
-        self.assertTrue('container_id' in ret['changes'])
+        assert 'container_id' in ret['changes']
         # Check to make sure that the state is not the changes dict, since
         # it should not have changed
-        self.assertTrue('state' not in ret['changes'])
+        assert 'state' not in ret['changes']
 
     @container_name
     def test_running_start_true(self, name):
@@ -327,14 +325,13 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         # asserts easier to read/write
         ret = ret[next(iter(ret))]
         # Check to make sure that the container was not replaced
-        self.assertTrue('container_id' not in ret['changes'])
+        assert 'container_id' not in ret['changes']
         # Check to make sure that the state is in the changes dict, since
         # it should have changed
-        self.assertTrue('state' in ret['changes'])
+        assert 'state' in ret['changes']
         # Check that the comment in the state return states that
         # container's state has changed
-        self.assertTrue(
-            "State changed from 'stopped' to 'running'" in ret['comment'])
+        assert "State changed from 'stopped' to 'running'" in ret['comment']
 
     @container_name
     def test_running_with_invalid_input(self, name):
@@ -355,13 +352,11 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         # asserts easier to read/write
         ret = ret[next(iter(ret))]
         # Check to make sure that the container was not created
-        self.assertTrue('container_id' not in ret['changes'])
+        assert 'container_id' not in ret['changes']
         # Check that the error message about the invalid argument is
         # included in the comment for the state
-        self.assertTrue(
-            'Ulimit definition \'nofile:2048\' is not in the format '
+        assert 'Ulimit definition \'nofile:2048\' is not in the format ' \
             'type=soft_limit[:hard_limit]' in ret['comment']
-        )
 
     @container_name
     def test_running_with_argument_collision(self, name):
@@ -384,11 +379,10 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         # asserts easier to read/write
         ret = ret[next(iter(ret))]
         # Check to make sure that the container was not created
-        self.assertTrue('container_id' not in ret['changes'])
+        assert 'container_id' not in ret['changes']
         # Check that the error message about the collision is included in
         # the comment for the state
-        self.assertTrue(
-            '\'ulimit\' is an alias for \'ulimits\'' in ret['comment'])
+        assert '\'ulimit\' is an alias for \'ulimits\'' in ret['comment']
 
     @container_name
     def test_running_with_ignore_collisions(self, name):
@@ -412,13 +406,13 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         # asserts easier to read/write
         ret = ret[next(iter(ret))]
         # Check to make sure that the container was created
-        self.assertTrue('container_id' in ret['changes'])
+        assert 'container_id' in ret['changes']
         # Check that the value from the API argument was one that was used
         # to create the container
         c_info = self.run_function('docker.inspect_container', [name])
         actual = c_info['HostConfig']['Ulimits']
         expected = [{'Name': 'nofile', 'Soft': 2048, 'Hard': 2048}]
-        self.assertEqual(actual, expected)
+        assert actual == expected
 
     @container_name
     def test_running_with_removed_argument(self, name):
@@ -453,10 +447,8 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         # Now check to ensure that the changes include the command
         # reverting back to the image's command.
         image_info = self.run_function('docker.inspect_image', [self.image])
-        self.assertEqual(
-            ret['changes']['container']['Config']['Cmd']['new'],
+        assert ret['changes']['container']['Config']['Cmd']['new'] == \
             image_info['Config']['Cmd']
-        )
 
     @container_name
     def test_running_with_port_bindings(self, name):
@@ -487,14 +479,10 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         cinfo = self.run_function('docker.inspect_container', [name])
         ports = ['1234/tcp', '1235/tcp', '1236/tcp',
                  '2234/udp', '2235/udp', '2236/udp']
-        self.assertEqual(
-            sorted(cinfo['HostConfig']['PortBindings']),
+        assert sorted(cinfo['HostConfig']['PortBindings']) == \
             ports
-        )
-        self.assertEqual(
-            sorted(cinfo['Config']['ExposedPorts']),
+        assert sorted(cinfo['Config']['ExposedPorts']) == \
             ports + ['9999/tcp']
-        )
 
     @container_name
     def test_absent_with_stopped_container(self, name):
@@ -513,7 +501,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         # asserts easier to read/write
         ret = ret[next(iter(ret))]
         # Check that we have a removed container ID in the changes dict
-        self.assertTrue('removed' in ret['changes'])
+        assert 'removed' in ret['changes']
 
         # Run the state again to confirm it changes nothing
         ret = self.run_state(
@@ -525,12 +513,10 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         # asserts easier to read/write
         ret = ret[next(iter(ret))]
         # Nothing should have changed
-        self.assertEqual(ret['changes'], {})
+        assert ret['changes'] == {}
         # Ensure that the comment field says the container does not exist
-        self.assertEqual(
-            ret['comment'],
+        assert ret['comment'] == \
             'Container \'{0}\' does not exist'.format(name)
-        )
 
     @container_name
     def test_absent_with_running_container(self, name):
@@ -558,12 +544,10 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         # asserts easier to read/write
         ret = ret[next(iter(ret))]
         # Nothing should have changed
-        self.assertEqual(ret['changes'], {})
+        assert ret['changes'] == {}
         # Ensure that the comment states that force=True is required
-        self.assertEqual(
-            ret['comment'],
+        assert ret['comment'] == \
             'Container is running, set force to True to forcibly remove it'
-        )
 
         # Try again with force=True. This should succeed.
         ret = self.run_state('docker_container.absent',
@@ -575,12 +559,10 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         # asserts easier to read/write
         ret = ret[next(iter(ret))]
         # Check that we have a removed container ID in the changes dict
-        self.assertTrue('removed' in ret['changes'])
+        assert 'removed' in ret['changes']
         # The comment should mention that the container was removed
-        self.assertEqual(
-            ret['comment'],
+        assert ret['comment'] == \
             'Forcibly removed container \'{0}\''.format(name)
-        )
 
     @container_name
     def test_running_image_name(self, name):
@@ -595,7 +577,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         ret = self.run_function('docker.inspect_container', [name])
-        self.assertEqual(ret['Config']['Image'], self.image)
+        assert ret['Config']['Image'] == self.image
 
     @container_name
     def test_env_with_running_container(self, name):
@@ -611,9 +593,9 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         ret = self.run_function('docker.inspect_container', [name])
-        self.assertTrue('VAR1=value1' in ret['Config']['Env'])
-        self.assertTrue('VAR2=value2' in ret['Config']['Env'])
-        self.assertTrue('VAR3=value3' in ret['Config']['Env'])
+        assert 'VAR1=value1' in ret['Config']['Env']
+        assert 'VAR2=value2' in ret['Config']['Env']
+        assert 'VAR3=value3' in ret['Config']['Env']
         ret = self.run_state(
             'docker_container.running',
             name=name,
@@ -623,9 +605,9 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         ret = self.run_function('docker.inspect_container', [name])
-        self.assertTrue('VAR1=value1' in ret['Config']['Env'])
-        self.assertTrue('VAR2=value2' in ret['Config']['Env'])
-        self.assertTrue('VAR3=value3' not in ret['Config']['Env'])
+        assert 'VAR1=value1' in ret['Config']['Env']
+        assert 'VAR2=value2' in ret['Config']['Env']
+        assert 'VAR3=value3' not in ret['Config']['Env']
 
     @with_network(subnet='10.247.197.96/27', create=True)
     @container_name
@@ -650,9 +632,9 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
                                            [container_name])
         connected_networks = inspect_result['NetworkSettings']['Networks']
 
-        self.assertEqual(list(connected_networks.keys()), [net.name])
-        self.assertEqual(inspect_result['HostConfig']['NetworkMode'], net.name)
-        self.assertEqual(connected_networks[net.name]['IPAMConfig']['IPv4Address'], requested_ip)
+        assert list(connected_networks.keys()) == [net.name]
+        assert inspect_result['HostConfig']['NetworkMode'] == net.name
+        assert connected_networks[net.name]['IPAMConfig']['IPv4Address'] == requested_ip
 
     def _test_running(self, container_name, *nets):
         '''
@@ -684,10 +666,8 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         # Check that the correct IP was set
         try:
             for net in nets:
-                self.assertEqual(
-                    connected_networks[net.name]['IPAMConfig'][net.arg_map(net.ip_arg)],
+                assert connected_networks[net.name]['IPAMConfig'][net.arg_map(net.ip_arg)] == \
                     net[0]
-                )
         except KeyError:
             # Fail with a meaningful error
             msg = (
@@ -699,7 +679,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             self.fail('{0}. See log for more information.'.format(msg))
 
         # Check that container continued running and didn't immediately exit
-        self.assertTrue(inspect_result['State']['Running'])
+        assert inspect_result['State']['Running']
 
         # Update the SLS configuration to use the second random IP so that we
         # can test updating a container's network configuration without
@@ -718,7 +698,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
                     'new': {net.arg_map(net.ip_arg): net[1]},
                 }
             }
-        self.assertEqual(ret['changes'], expected)
+        assert ret['changes'] == expected
 
         expected = [
             "Container '{0}' is already configured as specified.".format(
@@ -732,7 +712,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             for x in sorted(nets, key=lambda y: y.name)
         ])
         expected = ' '.join(expected)
-        self.assertEqual(ret['comment'], expected)
+        assert ret['comment'] == expected
 
         # Update the SLS configuration to remove the last network
         kwargs['networks'].pop(-1)
@@ -754,13 +734,13 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
                 }
             }
         }
-        self.assertEqual(ret['changes'], expected)
+        assert ret['changes'] == expected
 
         expected = (
             "Container '{0}' is already configured as specified. Disconnected "
             "from network '{1}'.".format(container_name, nets[-1].name)
         )
-        self.assertEqual(ret['comment'], expected)
+        assert ret['comment'] == expected
 
         # Update the SLS configuration to add back the last network, only use
         # an automatic IP instead of static IP.
@@ -785,13 +765,13 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             expected['container']['Networks'][nets[-1].name][key] = {
                 'old': None, 'new': val
             }
-        self.assertEqual(ret['changes'], expected)
+        assert ret['changes'] == expected
 
         expected = (
             "Container '{0}' is already configured as specified. Connected "
             "to network '{1}'.".format(container_name, nets[-1].name)
         )
-        self.assertEqual(ret['comment'], expected)
+        assert ret['comment'] == expected
 
         # Update the SLS configuration to remove the last network
         kwargs['networks'].pop(-1)
@@ -804,13 +784,13 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             expected['container']['Networks'][nets[-1].name][key] = {
                 'old': val, 'new': None
             }
-        self.assertEqual(ret['changes'], expected)
+        assert ret['changes'] == expected
 
         expected = (
             "Container '{0}' is already configured as specified. Disconnected "
             "from network '{1}'.".format(container_name, nets[-1].name)
         )
-        self.assertEqual(ret['comment'], expected)
+        assert ret['comment'] == expected
 
     @with_network(subnet='10.247.197.96/27', create=True)
     @container_name
@@ -876,31 +856,25 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         ret = ret[next(iter(ret))]
         net_changes = ret['changes']['container']['Networks']
 
-        self.assertIn(
-            "Container '{0}' is already configured as specified.".format(
+        assert "Container '{0}' is already configured as specified.".format(
                 container_name
-            ),
+            ) in \
             ret['comment']
-        )
 
         updated_networks = self.run_function(
             'docker.inspect_container',
             [container_name])['NetworkSettings']['Networks']
 
         for default_network in default_networks:
-            self.assertIn(
-                "Disconnected from network '{0}'.".format(default_network),
+            assert "Disconnected from network '{0}'.".format(default_network) in \
                 ret['comment']
-            )
-            self.assertIn(default_network, net_changes)
+            assert default_network in net_changes
             # We've tested that the state return is correct, but let's be extra
             # paranoid and check the actual connected networks.
-            self.assertNotIn(default_network, updated_networks)
+            assert default_network not in updated_networks
 
-        self.assertIn(
-            "Connected to network '{0}'.".format(net.name),
+        assert "Connected to network '{0}'.".format(net.name) in \
             ret['comment']
-        )
 
     @container_name
     def test_run_with_onlyif(self, name):
@@ -920,12 +894,10 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
                 onlyif=cmd)
             self.assertSaltTrueReturn(ret)
             ret = ret[next(iter(ret))]
-            self.assertFalse(ret['changes'])
-            self.assertTrue(
-                ret['comment'].startswith(
+            assert not ret['changes']
+            assert ret['comment'].startswith(
                     'onlyif command /bin/false returned exit code of'
                 )
-            )
             self.run_function('docker.rm', [name], force=True)
 
         for cmd in ('/bin/true', ['/bin/true', 'ls /']):
@@ -938,11 +910,9 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
                 onlyif=cmd)
             self.assertSaltTrueReturn(ret)
             ret = ret[next(iter(ret))]
-            self.assertEqual(ret['changes']['Logs'], 'root\n')
-            self.assertEqual(
-                ret['comment'],
+            assert ret['changes']['Logs'] == 'root\n'
+            assert ret['comment'] == \
                 'Container ran and exited with a return code of 0'
-            )
             self.run_function('docker.rm', [name], force=True)
 
     @container_name
@@ -963,11 +933,9 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
                 unless=cmd)
             self.assertSaltTrueReturn(ret)
             ret = ret[next(iter(ret))]
-            self.assertFalse(ret['changes'])
-            self.assertEqual(
-                ret['comment'],
+            assert not ret['changes']
+            assert ret['comment'] == \
                 'unless command /bin/true returned exit code of 0'
-            )
             self.run_function('docker.rm', [name], force=True)
 
         for cmd in ('/bin/false', ['/bin/false', 'ls /paththatdoesnotexist']):
@@ -980,11 +948,9 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
                 unless=cmd)
             self.assertSaltTrueReturn(ret)
             ret = ret[next(iter(ret))]
-            self.assertEqual(ret['changes']['Logs'], 'root\n')
-            self.assertEqual(
-                ret['comment'],
+            assert ret['changes']['Logs'] == 'root\n'
+            assert ret['comment'] == \
                 'Container ran and exited with a return code of 0'
-            )
             self.run_function('docker.rm', [name], force=True)
 
     @container_name
@@ -1019,11 +985,9 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
                 creates=path)
             self.assertSaltTrueReturn(ret)
             ret = ret[next(iter(ret))]
-            self.assertFalse(ret['changes'])
-            self.assertEqual(
-                ret['comment'],
+            assert not ret['changes']
+            assert ret['comment'] == \
                 'All specified paths in \'creates\' argument exist'
-            )
             self.run_function('docker.rm', [name], force=True)
 
         for path in (bad_file, [good_file1, bad_file]):
@@ -1036,11 +1000,9 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
                 creates=path)
             self.assertSaltTrueReturn(ret)
             ret = ret[next(iter(ret))]
-            self.assertEqual(ret['changes']['Logs'], 'root\n')
-            self.assertEqual(
-                ret['comment'],
+            assert ret['changes']['Logs'] == 'root\n'
+            assert ret['comment'] == \
                 'Container ran and exited with a return code of 0'
-            )
             self.run_function('docker.rm', [name], force=True)
 
     @container_name
@@ -1056,11 +1018,9 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             command='whoami')
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertEqual(ret['changes']['Logs'], 'root\n')
-        self.assertEqual(
-            ret['comment'],
+        assert ret['changes']['Logs'] == 'root\n'
+        assert ret['comment'] == \
             'Container ran and exited with a return code of 0'
-        )
 
         # Run again with replace=False, this should fail
         ret = self.run_state(
@@ -1071,12 +1031,10 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             replace=False)
         self.assertSaltFalseReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertFalse(ret['changes'])
-        self.assertEqual(
-            ret['comment'],
-            'Encountered error running container: Container \'{0}\' exists. '
+        assert not ret['changes']
+        assert ret['comment'] == \
+            'Encountered error running container: Container \'{0}\' exists. ' \
             'Run with replace=True to remove the existing container'.format(name)
-        )
 
         # Run again with replace=True, this should proceed and there should be
         # a "Replaces" key in the changes dict to show that a container was
@@ -1089,12 +1047,10 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             replace=True)
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertEqual(ret['changes']['Logs'], 'root\n')
-        self.assertTrue('Replaces' in ret['changes'])
-        self.assertEqual(
-            ret['comment'],
+        assert ret['changes']['Logs'] == 'root\n'
+        assert 'Replaces' in ret['changes']
+        assert ret['comment'] == \
             'Container ran and exited with a return code of 0'
-        )
 
     @container_name
     def test_run_force(self, name):
@@ -1119,13 +1075,11 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             force=False)
         self.assertSaltFalseReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertFalse(ret['changes'])
-        self.assertEqual(
-            ret['comment'],
-            'Encountered error running container: Container \'{0}\' exists '
-            'and is running. Run with replace=True and force=True to force '
+        assert not ret['changes']
+        assert ret['comment'] == \
+            'Encountered error running container: Container \'{0}\' exists ' \
+            'and is running. Run with replace=True and force=True to force ' \
             'removal of the existing container.'.format(name)
-        )
 
         # Run again with replace=True and force=True, this should proceed and
         # there should be a "Replaces" key in the changes dict to show that a
@@ -1139,12 +1093,10 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             force=True)
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertEqual(ret['changes']['Logs'], 'root\n')
-        self.assertTrue('Replaces' in ret['changes'])
-        self.assertEqual(
-            ret['comment'],
+        assert ret['changes']['Logs'] == 'root\n'
+        assert 'Replaces' in ret['changes']
+        assert ret['comment'] == \
             'Container ran and exited with a return code of 0'
-        )
 
     @container_name
     def test_run_failhard(self, name):
@@ -1167,12 +1119,10 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             failhard=True)
         self.assertSaltFalseReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertEqual(ret['changes']['Logs'], '')
-        self.assertTrue(
-            ret['comment'].startswith(
+        assert ret['changes']['Logs'] == ''
+        assert ret['comment'].startswith(
                 'Container ran and exited with a return code of'
             )
-        )
         self.run_function('docker.rm', [name], force=True)
 
         ret = self.run_state(
@@ -1183,12 +1133,10 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             failhard=False)
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertEqual(ret['changes']['Logs'], '')
-        self.assertTrue(
-            ret['comment'].startswith(
+        assert ret['changes']['Logs'] == ''
+        assert ret['comment'].startswith(
                 'Container ran and exited with a return code of'
             )
-        )
         self.run_function('docker.rm', [name], force=True)
 
     @container_name
@@ -1206,13 +1154,11 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             bg=True)
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertTrue('Logs' not in ret['changes'])
-        self.assertTrue('ExitCode' not in ret['changes'])
-        self.assertEqual(ret['comment'], 'Container was run in the background')
+        assert 'Logs' not in ret['changes']
+        assert 'ExitCode' not in ret['changes']
+        assert ret['comment'] == 'Container was run in the background'
 
         # Now check the logs. The expectation is that the above asserts
         # completed during the 5-second sleep.
-        self.assertEqual(
-            self.run_function('docker.logs', [name], follow=True),
+        assert self.run_function('docker.logs', [name], follow=True) == \
             'root\n'
-        )

@@ -45,7 +45,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
                 installed_mock.assert_called_once_with()
                 get_pkg_id_mock.assert_called_once_with('/path/to/file.pkg')
                 install_mock.assert_called_once_with('/path/to/file.pkg', 'LocalSystem', False, False)
-                self.assertEqual(out, expected)
+                assert out == expected
 
     def test_installed_pkg_exists(self):
         '''
@@ -71,7 +71,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
                 installed_mock.assert_called_once_with()
                 get_pkg_id_mock.assert_called_once_with('/path/to/file.pkg')
                 assert not install_mock.called
-                self.assertEqual(out, expected)
+                assert out == expected
 
     def test_installed_pkg_version_succeeds(self):
         '''
@@ -100,7 +100,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
                 assert not installed_mock.called
                 assert not get_pkg_id_mock.called
                 assert not install_mock.called
-                self.assertEqual(out, expected)
+                assert out == expected
 
     def test_installed_pkg_version_fails(self):
         '''
@@ -129,7 +129,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
                 installed_mock.assert_called_once_with()
                 get_pkg_id_mock.assert_called_once_with('/path/to/file.pkg')
                 install_mock.assert_called_once_with('/path/to/file.pkg', 'LocalSystem', False, False)
-                self.assertEqual(out, expected)
+                assert out == expected
 
     def test_installed_dmg(self):
         '''
@@ -161,7 +161,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
                 installed_mock.assert_called_once_with()
                 get_pkg_id_mock.assert_called_once_with('/tmp/dmg-X/*.pkg')
                 install_mock.assert_called_once_with('/tmp/dmg-X/*.pkg', 'LocalSystem', False, False)
-                self.assertEqual(out, expected)
+                assert out == expected
 
     def test_installed_dmg_exists(self):
         '''
@@ -193,7 +193,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
                 installed_mock.assert_called_once_with()
                 get_pkg_id_mock.assert_called_once_with('/tmp/dmg-X/*.pkg')
                 assert not install_mock.called
-                self.assertEqual(out, expected)
+                assert out == expected
 
     def test_installed_app(self):
         '''
@@ -216,7 +216,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
                 out = macpackage.installed('/path/to/file.app', app=True)
 
                 install_mock.assert_called_once_with('/path/to/file.app', '/Applications/')
-                self.assertEqual(out, expected)
+                assert out == expected
 
     def test_installed_app_exists(self):
         '''
@@ -239,7 +239,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
                 out = macpackage.installed('/path/to/file.app', app=True)
 
                 assert not install_mock.called
-                self.assertEqual(out, expected)
+                assert out == expected
 
     def test_installed_app_dmg(self):
         '''
@@ -271,7 +271,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
                 unmount_mock.assert_called_once_with('/tmp/dmg-X')
                 cmd_mock.assert_called_once_with('ls -d *.app', python_shell=True, cwd='/tmp/dmg-X')
                 install_mock.assert_called_once_with('/tmp/dmg-X/file.app', '/Applications/')
-                self.assertEqual(out, expected)
+                assert out == expected
 
     def test_installed_app_dmg_exists(self):
         '''
@@ -303,7 +303,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
                 unmount_mock.assert_called_once_with('/tmp/dmg-X')
                 cmd_mock.assert_called_once_with('ls -d *.app', python_shell=True, cwd='/tmp/dmg-X')
                 assert not install_mock.called
-                self.assertEqual(out, expected)
+                assert out == expected
 
     def test_installed_pkg_only_if_pass(self):
         '''
@@ -329,7 +329,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
             installed_mock.assert_called_once_with()
             get_pkg_id_mock.assert_called_once_with('/path/to/file.pkg')
             install_mock.assert_called_once_with('/path/to/file.pkg', 'LocalSystem', False, False)
-            self.assertEqual(out, expected)
+            assert out == expected
 
     def test_installed_pkg_onlyif_fail(self,):
         '''
@@ -347,7 +347,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.dict(macpackage.__salt__, {'cmd.retcode': mock}):
             out = macpackage.installed('/path/to/file.pkg', onlyif='some command')
-            self.assertEqual(out, expected)
+            assert out == expected
 
     def test_installed_pkg_unless_fail(self,):
         '''
@@ -365,4 +365,4 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.dict(macpackage.__salt__, {'cmd.retcode': mock}):
             out = macpackage.installed('/path/to/file.pkg', unless='some command')
-            self.assertEqual(out, expected)
+            assert out == expected

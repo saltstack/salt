@@ -144,7 +144,7 @@ class ClearReqTestCases(BaseZMQReqCase, ReqChannelMixin):
         uri = 'tcp://{master_ip}:{master_port}'.format(master_ip='localhost', master_port=self.minion_config['master_port'])
 
         channel = salt.transport.Channel.factory(self.minion_config, master_uri=uri)
-        self.assertIn('localhost', channel.master_uri)
+        assert 'localhost' in channel.master_uri
         del channel
 
 
@@ -184,7 +184,7 @@ class AESReqTestCases(BaseZMQReqCase, ReqChannelMixin):
         # release of salt-testing, the @flaky decorator should be applied to this test.
         msgs = ['', [], tuple()]
         for msg in msgs:
-            with self.assertRaises(salt.exceptions.AuthenticationError):
+            with pytest.raises(salt.exceptions.AuthenticationError):
                 ret = self.channel.send(msg, timeout=5)
 
 
@@ -304,15 +304,15 @@ class AsyncReqMessageClientPoolTest(TestCase):
             message_client_mock.send_queue = [0, 0, 0]
             message_client_mock.send.return_value = []
 
-        self.assertEqual([], self.message_client_pool.send())
+        assert [] == self.message_client_pool.send()
 
         self.message_client_pool.message_clients[2].send_queue = [0]
         self.message_client_pool.message_clients[2].send.return_value = [1]
-        self.assertEqual([1], self.message_client_pool.send())
+        assert [1] == self.message_client_pool.send()
 
     def test_destroy(self):
         self.message_client_pool.destroy()
-        self.assertEqual([], self.message_client_pool.message_clients)
+        assert [] == self.message_client_pool.message_clients
 
 
 class ZMQConfigTest(TestCase):

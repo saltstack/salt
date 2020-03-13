@@ -33,7 +33,7 @@ class PagerdutyTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.object(salt.utils.pagerduty,
                           'list_items', return_value='A'):
-            self.assertEqual(pagerduty.list_services(), 'A')
+            assert pagerduty.list_services() == 'A'
 
     def test_list_incidents(self):
         '''
@@ -41,7 +41,7 @@ class PagerdutyTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.object(salt.utils.pagerduty,
                           'list_items', return_value='A'):
-            self.assertEqual(pagerduty.list_incidents(), 'A')
+            assert pagerduty.list_incidents() == 'A'
 
     def test_list_users(self):
         '''
@@ -49,7 +49,7 @@ class PagerdutyTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.object(salt.utils.pagerduty,
                           'list_items', return_value='A'):
-            self.assertEqual(pagerduty.list_users(), 'A')
+            assert pagerduty.list_users() == 'A'
 
     def test_list_schedules(self):
         '''
@@ -57,7 +57,7 @@ class PagerdutyTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.object(salt.utils.pagerduty,
                           'list_items', return_value='A'):
-            self.assertEqual(pagerduty.list_schedules(), 'A')
+            assert pagerduty.list_schedules() == 'A'
 
     def test_list_windows(self):
         '''
@@ -65,7 +65,7 @@ class PagerdutyTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.object(salt.utils.pagerduty,
                           'list_items', return_value='A'):
-            self.assertEqual(pagerduty.list_windows(), 'A')
+            assert pagerduty.list_windows() == 'A'
 
     def test_list_policies(self):
         '''
@@ -73,7 +73,7 @@ class PagerdutyTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.object(salt.utils.pagerduty,
                           'list_items', return_value='A'):
-            self.assertEqual(pagerduty.list_policies(), 'A')
+            assert pagerduty.list_policies() == 'A'
 
     def test_create_event(self):
         '''
@@ -82,4 +82,4 @@ class PagerdutyTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(salt.utils.json, 'loads', return_value=['A']):
             with patch.object(salt.utils.pagerduty, 'query',
                               return_value='A'):
-                self.assertListEqual(pagerduty.create_event(), ['A'])
+                assert pagerduty.create_event() == ['A']

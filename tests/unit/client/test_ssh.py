@@ -24,6 +24,7 @@ import salt.utils.thin
 import salt.utils.yaml
 
 from salt.client import ssh
+import pytest
 
 ROSTER = '''
 localhost:
@@ -59,10 +60,10 @@ class SSHPasswordTests(ShellCase):
                 patch('salt.output.display_output', display_output):
             client = ssh.SSH(opts)
             ret = next(client.run_iter())
-            with self.assertRaises(SystemExit):
+            with pytest.raises(SystemExit):
                 client.run()
         display_output.assert_called_once_with(expected, 'nested', opts)
-        self.assertIs(ret, handle_ssh_ret[0])
+        assert ret is handle_ssh_ret[0]
 
 
 class SSHRosterDefaults(TestCase):
@@ -98,7 +99,7 @@ class SSHRosterDefaults(TestCase):
             with patch('salt.roster.get_roster_file', MagicMock(return_value=ROSTER)):
                 with patch('salt.template.compile_template', MagicMock(return_value=salt.utils.yaml.safe_load(ROSTER))):
                     roster = salt.roster.Roster(opts=opts)
-                    self.assertEqual(roster.targets('*', 'glob'), expected)
+                    assert roster.targets('*', 'glob') == expected
         finally:
             if os.path.isdir(tempdir):
                 shutil.rmtree(tempdir)
@@ -142,9 +143,9 @@ class SSHSingleTests(TestCase):
                 mine=False,
                 **target)
 
-        self.assertEqual(single.shell._ssh_opts(), '')
-        self.assertEqual(single.shell._cmd_str('date +%s'), 'ssh login1 '
-                         '-o KbdInteractiveAuthentication=no -o '
-                         'PasswordAuthentication=yes -o ConnectTimeout=65 -o Port=22 '
-                         '-o IdentityFile=/etc/salt/pki/master/ssh/salt-ssh.rsa '
-                         '-o User=root  date +%s')
+        assert single.shell._ssh_opts() == ''
+        assert single.shell._cmd_str('date +%s') == 'ssh login1 ' \
+                         '-o KbdInteractiveAuthentication=no -o ' \
+                         'PasswordAuthentication=yes -o ConnectTimeout=65 -o Port=22 ' \
+                         '-o IdentityFile=/etc/salt/pki/master/ssh/salt-ssh.rsa ' \
+                         '-o User=root  date +%s'

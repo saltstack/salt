@@ -28,4 +28,4 @@ class UwsgiTestCase(TestCase, LoaderModuleMockMixin):
             mock.assert_called_once_with(
                 ['uwsgi', '--connect-and-read', '{0}'.format(socket)],
                 python_shell=False)
-            self.assertEqual(result, {'a': 1, 'b': 2})
+            assert result == {'a': 1, 'b': 2}

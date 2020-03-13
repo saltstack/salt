@@ -33,7 +33,8 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
     def test_invalid_master_address(self):
         with patch.dict(self.opts, {'ipv6': False, 'master': float('127.0'), 'master_port': '4555', 'retry_dns': False}):
-            self.assertRaises(SaltSystemExit, salt.minion.resolve_dns, self.opts)
+            with pytest.raises(SaltSystemExit):
+                salt.minion.resolve_dns(self.opts)
 
     def test_source_int_name_local(self):
         '''
@@ -126,8 +127,8 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         minion = salt.minion.Minion(mock_opts, jid_queue=copy.copy(mock_jid_queue), io_loop=salt.ext.tornado.ioloop.IOLoop())
         try:
             ret = minion._handle_decoded_payload(mock_data).result()
-            self.assertEqual(minion.jid_queue, mock_jid_queue)
-            self.assertIsNone(ret)
+            assert minion.jid_queue == mock_jid_queue
+            assert ret is None
         finally:
             minion.destroy()
 
@@ -149,14 +150,14 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
                 # Assert that the minion's jid_queue attribute matches the mock_jid_queue as a baseline
                 # This can help debug any test failures if the _handle_decoded_payload call fails.
-                self.assertEqual(minion.jid_queue, mock_jid_queue)
+                assert minion.jid_queue == mock_jid_queue
 
                 # Call the _handle_decoded_payload function and update the mock_jid_queue to include the new
                 # mock_jid. The mock_jid should have been added to the jid_queue since the mock_jid wasn't
                 # previously included. The minion's jid_queue attribute and the mock_jid_queue should be equal.
                 minion._handle_decoded_payload(mock_data).result()
                 mock_jid_queue.append(mock_jid)
-                self.assertEqual(minion.jid_queue, mock_jid_queue)
+                assert minion.jid_queue == mock_jid_queue
             finally:
                 minion.destroy()
 
@@ -178,13 +179,13 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
                 # Assert that the minion's jid_queue attribute matches the mock_jid_queue as a baseline
                 # This can help debug any test failures if the _handle_decoded_payload call fails.
-                self.assertEqual(minion.jid_queue, mock_jid_queue)
+                assert minion.jid_queue == mock_jid_queue
 
                 # Call the _handle_decoded_payload function and check that the queue is smaller by one item
                 # and contains the new jid
                 minion._handle_decoded_payload(mock_data).result()
-                self.assertEqual(len(minion.jid_queue), 2)
-                self.assertEqual(minion.jid_queue, [456, 789])
+                assert len(minion.jid_queue) == 2
+                assert minion.jid_queue == [456, 789]
             finally:
                 minion.destroy()
 
@@ -219,19 +220,19 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                     mock_data = {'fun': 'foo.bar',
                                  'jid': i}
                     io_loop.run_sync(lambda data=mock_data: minion._handle_decoded_payload(data))
-                    self.assertEqual(salt.utils.process.SignalHandlingProcess.start.call_count, i + 1)
-                    self.assertEqual(len(minion.jid_queue), i + 1)
+                    assert salt.utils.process.SignalHandlingProcess.start.call_count == i + 1
+                    assert len(minion.jid_queue) == i + 1
                     salt.utils.minion.running.return_value += [i]
 
                 # above process_count_max: gen.sleep does get called, JIDs are created but no new processes are started
                 mock_data = {'fun': 'foo.bar',
                              'jid': process_count_max + 1}
 
-                self.assertRaises(SleepCalledException,
-                                  lambda: io_loop.run_sync(lambda: minion._handle_decoded_payload(mock_data)))
-                self.assertEqual(salt.utils.process.SignalHandlingProcess.start.call_count,
-                                 process_count_max)
-                self.assertEqual(len(minion.jid_queue), process_count_max + 1)
+                with pytest.raises(SleepCalledException):
+                    io_loop.run_sync(lambda: minion._handle_decoded_payload(mock_data))
+                assert salt.utils.process.SignalHandlingProcess.start.call_count == \
+                                 process_count_max
+                assert len(minion.jid_queue) == process_count_max + 1
             finally:
                 minion.destroy()
 
@@ -256,8 +257,8 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                     pass
 
                 # Make sure beacons are initialized but the sheduler is not
-                self.assertTrue('beacons' in minion.periodic_callbacks)
-                self.assertTrue('schedule' not in minion.periodic_callbacks)
+                assert 'beacons' in minion.periodic_callbacks
+                assert 'schedule' not in minion.periodic_callbacks
             finally:
                 minion.destroy()
 
@@ -281,8 +282,8 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                     pass
 
                 # Make sure the scheduler is initialized but the beacons are not
-                self.assertTrue('schedule' in minion.periodic_callbacks)
-                self.assertTrue('beacons' not in minion.periodic_callbacks)
+                assert 'schedule' in minion.periodic_callbacks
+                assert 'beacons' not in minion.periodic_callbacks
             finally:
                 minion.destroy()
 
@@ -305,7 +306,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                     pass
 
                 # Make sure the scheduler is initialized but the beacons are not
-                self.assertTrue('ping' in minion.periodic_callbacks)
+                assert 'ping' in minion.periodic_callbacks
             finally:
                 minion.destroy()
 
@@ -321,8 +322,8 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             minion._fire_master('Minion has started', 'minion_start', include_startup_grains=True)
             load = minion._send_req_sync.call_args[0][0]
 
-            self.assertTrue('grains' in load)
-            self.assertTrue('os' in load['grains'])
+            assert 'grains' in load
+            assert 'os' in load['grains']
         finally:
             minion.destroy()
 
@@ -337,7 +338,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             minion._fire_master('Minion has started', 'minion_start')
             load = minion._send_req_sync.call_args[0][0]
 
-            self.assertTrue('grains' not in load)
+            assert 'grains' not in load
         finally:
             minion.destroy()
 
@@ -353,7 +354,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             minion._fire_master('Custm_event_fired', 'custom_event')
             load = minion._send_req_sync.call_args[0][0]
 
-            self.assertTrue('grains' not in load)
+            assert 'grains' not in load
         finally:
             minion.destroy()
 
@@ -365,8 +366,8 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         with patch.dict(self.opts, {'ipv6': False, 'master': 'dummy',
                                    'master_port': '4555',
                                    'retry_dns': 1, 'retry_dns_count': 3}):
-            self.assertRaises(SaltMasterUnresolvableError,
-                              salt.minion.resolve_dns, self.opts)
+            with pytest.raises(SaltMasterUnresolvableError):
+                salt.minion.resolve_dns(self.opts)
 
     def test_gen_modules_executors(self):
         '''
@@ -442,4 +443,4 @@ class MinionAsyncTestCase(TestCase, AdaptedConfigurationTestCaseMixin, salt.ext.
                 result = True
             except SaltSystemExit:
                 result = False
-        self.assertTrue(result)
+        assert result

@@ -241,58 +241,58 @@ class SmtpTestCase(TestCase, LoaderModuleMockMixin):
                                        'smtp.sender': '', 'smtp.username': '',
                                        'smtp.password': ''})
         with patch.dict(smtp.__salt__, {'config.option': mock}):
-            self.assertTrue(smtp.send_msg('admin@example.com',
+            assert smtp.send_msg('admin@example.com',
                                           'This is a salt module test',
-                                          profile='my-smtp-account'))
+                                          profile='my-smtp-account')
 
             MockSMTPSSL.flag = 1
-            self.assertFalse(smtp.send_msg('admin@example.com',
+            assert not smtp.send_msg('admin@example.com',
                                            'This is a salt module test',
-                                           profile='my-smtp-account'))
+                                           profile='my-smtp-account')
 
             MockSMTPSSL.flag = 2
-            self.assertFalse(smtp.send_msg('admin@example.com',
+            assert not smtp.send_msg('admin@example.com',
                                            'This is a salt module test',
-                                           profile='my-smtp-account'))
+                                           profile='my-smtp-account')
 
             MockSMTPSSL.flag = 3
-            self.assertFalse(smtp.send_msg('admin@example.com',
+            assert not smtp.send_msg('admin@example.com',
                                            'This is a salt module test',
-                                           profile='my-smtp-account'))
+                                           profile='my-smtp-account')
 
             MockSMTPSSL.flag = 4
-            self.assertFalse(smtp.send_msg('admin@example.com',
+            assert not smtp.send_msg('admin@example.com',
                                            'This is a salt module test',
-                                           profile='my-smtp-account'))
+                                           profile='my-smtp-account')
 
         mock = MagicMock(return_value={'smtp.server': '', 'smtp.tls': '',
                                        'smtp.sender': '', 'smtp.username': '',
                                        'smtp.password': ''})
         with patch.dict(smtp.__salt__, {'config.option': mock}):
             MockSMTPSSL.flag = 5
-            self.assertFalse(smtp.send_msg('admin@example.com',
+            assert not smtp.send_msg('admin@example.com',
                                            'This is a salt module test',
                                            username='myuser',
                                            password='verybadpass',
                                            sender='admin@example.com',
-                                           server='smtp.domain.com'))
+                                           server='smtp.domain.com')
 
             MockSMTP.flag = 1
-            self.assertFalse(smtp.send_msg('admin@example.com',
+            assert not smtp.send_msg('admin@example.com',
                                            'This is a salt module test',
-                                           profile='my-smtp-account'))
+                                           profile='my-smtp-account')
 
             MockSMTP.flag = 2
-            self.assertFalse(smtp.send_msg('admin@example.com',
+            assert not smtp.send_msg('admin@example.com',
                                            'This is a salt module test',
-                                           profile='my-smtp-account'))
+                                           profile='my-smtp-account')
 
             MockSMTP.flag = 3
-            self.assertFalse(smtp.send_msg('admin@example.com',
+            assert not smtp.send_msg('admin@example.com',
                                            'This is a salt module test',
-                                           profile='my-smtp-account'))
+                                           profile='my-smtp-account')
 
             MockSmtplib.flag = 1
-            self.assertFalse(smtp.send_msg('admin@example.com',
+            assert not smtp.send_msg('admin@example.com',
                                            'This is a salt module test',
-                                           profile='my-smtp-account'))
+                                           profile='my-smtp-account')

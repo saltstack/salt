@@ -20,6 +20,7 @@ from tests.support.mock import MagicMock, patch
 # Import salt libs
 import salt.modules.virtualenv_mod as virtualenv_mod
 from salt.exceptions import CommandExecutionError
+import pytest
 
 
 class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
@@ -70,13 +71,11 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
                     )
 
                 # Are we logging the deprecation information?
-                self.assertIn(
-                    'INFO:The virtualenv \'--distribute\' option has been '
-                    'deprecated in virtualenv(>=1.10), as such, the '
-                    '\'distribute\' option to `virtualenv.create()` has '
-                    'also been deprecated and it\'s not necessary anymore.',
+                assert 'INFO:The virtualenv \'--distribute\' option has been ' \
+                    'deprecated in virtualenv(>=1.10), as such, the ' \
+                    '\'distribute\' option to `virtualenv.create()` has ' \
+                    'also been deprecated and it\'s not necessary anymore.' in \
                     handler.messages
-                )
 
     def test_issue_6030_deprecated_never_download(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
@@ -107,12 +106,10 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
                                                  python_shell=False)
 
                 # Are we logging the deprecation information?
-                self.assertIn(
-                    'INFO:--never-download was deprecated in 1.10.0, '
-                    'but reimplemented in 14.0.0. If this feature is needed, '
-                    'please install a supported virtualenv version.',
+                assert 'INFO:--never-download was deprecated in 1.10.0, ' \
+                    'but reimplemented in 14.0.0. If this feature is needed, ' \
+                    'please install a supported virtualenv version.' in \
                     handler.messages
-                )
 
     def test_issue_6031_multiple_extra_search_dirs(self):
         extra_search_dirs = [
@@ -157,63 +154,45 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
         # ----- Virtualenv using pyvenv options ----------------------------->
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
-            self.assertRaises(
-                CommandExecutionError,
-                virtualenv_mod.create,
-                '/tmp/foo',
+            with pytest.raises(CommandExecutionError):
+                virtualenv_mod.create('/tmp/foo',
                 venv_bin='virtualenv',
-                upgrade=True
-            )
+                upgrade=True)
 
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
-            self.assertRaises(
-                CommandExecutionError,
-                virtualenv_mod.create,
-                '/tmp/foo',
+            with pytest.raises(CommandExecutionError):
+                virtualenv_mod.create('/tmp/foo',
                 venv_bin='virtualenv',
-                symlinks=True
-            )
+                symlinks=True)
         # <---- Virtualenv using pyvenv options ------------------------------
 
         # ----- pyvenv using virtualenv options ----------------------------->
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock,
                                                   'cmd.which_bin': lambda _: 'pyvenv'}):
-            self.assertRaises(
-                CommandExecutionError,
-                virtualenv_mod.create,
-                '/tmp/foo',
+            with pytest.raises(CommandExecutionError):
+                virtualenv_mod.create('/tmp/foo',
                 venv_bin='pyvenv',
-                python='python2.7'
-            )
+                python='python2.7')
 
         with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
-            self.assertRaises(
-                CommandExecutionError,
-                virtualenv_mod.create,
-                '/tmp/foo',
+            with pytest.raises(CommandExecutionError):
+                virtualenv_mod.create('/tmp/foo',
                 venv_bin='pyvenv',
-                prompt='PY Prompt'
-            )
+                prompt='PY Prompt')
 
         with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
-            self.assertRaises(
-                CommandExecutionError,
-                virtualenv_mod.create,
-                '/tmp/foo',
+            with pytest.raises(CommandExecutionError):
+                virtualenv_mod.create('/tmp/foo',
                 venv_bin='pyvenv',
-                never_download=True
-            )
+                never_download=True)
 
         with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
-            self.assertRaises(
-                CommandExecutionError,
-                virtualenv_mod.create,
-                '/tmp/foo',
+            with pytest.raises(CommandExecutionError):
+                virtualenv_mod.create('/tmp/foo',
                 venv_bin='pyvenv',
-                extra_search_dir='/tmp/bar'
-            )
+                extra_search_dir='/tmp/bar')
         # <---- pyvenv using virtualenv options ------------------------------
 
     def test_get_virtualenv_version_from_shell(self):
@@ -222,11 +201,8 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
             # ----- virtualenv binary not available ------------------------->
             mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
             with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
-                self.assertRaises(
-                    CommandExecutionError,
-                    virtualenv_mod.create,
-                    '/tmp/foo',
-                )
+                with pytest.raises(CommandExecutionError):
+                    virtualenv_mod.create('/tmp/foo',)
             # <---- virtualenv binary not available --------------------------
 
             # ----- virtualenv binary present but > 0 exit code ------------->
@@ -235,12 +211,9 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
                 {'retcode': 0, 'stdout': ''}
             ])
             with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
-                self.assertRaises(
-                    CommandExecutionError,
-                    virtualenv_mod.create,
-                    '/tmp/foo',
-                    venv_bin='virtualenv',
-                )
+                with pytest.raises(CommandExecutionError):
+                    virtualenv_mod.create('/tmp/foo',
+                    venv_bin='virtualenv',)
             # <---- virtualenv binary present but > 0 exit code --------------
 
             # ----- virtualenv binary returns 1.9.1 as its version --------->
@@ -376,5 +349,5 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
         with ForceImportErrorOn('virtualenv'):
             mock_ver = MagicMock(return_value={'retcode': 0, 'stdout': ''})
             with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock_ver}):
-                with self.assertRaises(CommandExecutionError):
+                with pytest.raises(CommandExecutionError):
                     virtualenv_mod.virtualenv_ver(venv_bin='pyenv')

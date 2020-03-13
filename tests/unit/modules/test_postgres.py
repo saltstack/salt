@@ -13,6 +13,7 @@ from tests.support.mock import Mock, patch, call
 # Import salt libs
 import salt.modules.postgres as postgres
 from salt.exceptions import SaltInvocationError
+import pytest
 
 test_list_db_csv = (
     'Name,Owner,Encoding,Collate,Ctype,Access privileges,Tablespace\n'
@@ -72,7 +73,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
         postgres._run_psql('echo "hi"')
         cmd = postgres.__salt__['cmd.run_all']
 
-        self.assertEqual('postgres', cmd.call_args[1]['runas'])
+        assert 'postgres' == cmd.call_args[1]['runas']
 
     def test_db_alter(self):
         with patch('salt.modules.postgres._run_psql',
@@ -164,10 +165,8 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
     def test_db_create_with_trivial_sql_injection(self):
         with patch('salt.modules.postgres._run_psql',
                    Mock(return_value={'retcode': 0})):
-            self.assertRaises(
-                    SaltInvocationError,
-                    postgres.db_create,
-                    'dbname', lc_collate="foo' ENCODING='utf8")
+            with pytest.raises(SaltInvocationError):
+                postgres.db_create('dbname', lc_collate="foo' ENCODING='utf8")
 
     def test_db_exists(self):
         with patch('salt.modules.postgres._run_psql',
@@ -182,7 +181,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 password='foo',
                 runas='foo'
             )
-            self.assertTrue(ret)
+            assert ret
 
     def test_db_list(self):
         with patch('salt.modules.postgres._run_psql',
@@ -196,7 +195,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 password='foo',
                 runas='foo'
             )
-            self.assertDictEqual(ret, {
+            assert ret == {
                 'test_db': {'Encoding': 'LATIN1', 'Ctype': 'en_US',
                             'Tablespace': 'pg_default', 'Collate': 'en_US',
                             'Owner': 'postgres', 'Access privileges': ''},
@@ -214,7 +213,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                               )},
                 'postgres': {'Encoding': 'LATIN1', 'Ctype': 'en_US',
                              'Tablespace': 'pg_default', 'Collate': 'en_US',
-                             'Owner': 'postgres', 'Access privileges': ''}})
+                             'Owner': 'postgres', 'Access privileges': ''}}
 
     def test_db_remove(self):
         with patch('salt.modules.postgres._run_psql',
@@ -259,9 +258,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 # The first 14 elements of this list are initial args used in all (or
                 # virtually all) commands run through _run_psql(), so the actual SQL
                 # query will be in the 15th argument.
-                self.assertTrue(
-                    postgres._run_psql.call_args[0][0][14].startswith('CREATE ROLE')
-                )
+                assert postgres._run_psql.call_args[0][0][14].startswith('CREATE ROLE')
 
     def test_group_remove(self):
         with patch('salt.modules.postgres._run_psql',
@@ -307,12 +304,10 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 # The first 14 elements of this list are initial args used in all (or
                 # virtually all) commands run through _run_psql(), so the actual SQL
                 # query will be in the 15th argument.
-                self.assertTrue(
-                    re.match(
+                assert re.match(
                         'ALTER.* "testgroup" .* UNENCRYPTED PASSWORD',
                         postgres._run_psql.call_args[0][0][14]
                     )
-                )
 
     def test_user_create(self):
         with patch('salt.modules.postgres._run_psql',
@@ -341,13 +336,13 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 # virtually all) commands run through _run_psql(), so the actual SQL
                 # query will be in the 15th argument.
                 call = postgres._run_psql.call_args[0][0][14]
-                self.assertTrue(re.match('CREATE ROLE "testuser"', call))
+                assert re.match('CREATE ROLE "testuser"', call)
                 for i in (
                     'INHERIT', 'NOCREATEDB', 'NOCREATEROLE', 'NOSUPERUSER',
                     'NOREPLICATION', 'LOGIN', 'UNENCRYPTED', 'PASSWORD',
                     'VALID UNTIL',
                 ):
-                    self.assertTrue(i in call, '{0} not in {1}'.format(i, call))
+                    assert i in call, '{0} not in {1}'.format(i, call)
 
     def test_user_exists(self):
         with patch('salt.modules.postgres._run_psql',
@@ -380,7 +375,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                         password='test_password',
                         runas='foo'
                     )
-                    self.assertTrue(ret)
+                    assert ret
 
     def test_user_list(self):
         with patch('salt.modules.postgres._run_psql',
@@ -412,7 +407,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                         runas='foo'
                     )
 
-                    self.assertDictEqual(ret, {
+                    assert ret == {
                         'test_user': {'superuser': True,
                                       'defaults variables': None,
                                       'can create databases': True,
@@ -424,7 +419,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                                       'can login': True,
                                       'can update system catalogs': True,
                                       'groups': [],
-                                      'inherits privileges': True}})
+                                      'inherits privileges': True}}
 
     def test_user_remove(self):
         with patch('salt.modules.postgres._run_psql',
@@ -475,8 +470,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 # The first 14 elements of this list are initial args used in all (or
                 # virtually all) commands run through _run_psql(), so the actual SQL
                 # query will be in the 15th argument.
-                self.assertTrue(
-                    re.match(
+                assert re.match(
                         'ALTER ROLE "test_username" WITH  INHERIT NOCREATEDB '
                         'NOCREATEROLE NOREPLICATION LOGIN '
                         'UNENCRYPTED PASSWORD [\'"]{0,5}test_role_pass[\'"]{0,5} '
@@ -484,7 +478,6 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                         ' GRANT "test_groups" TO "test_username"',
                         postgres._run_psql.call_args[0][0][14]
                     )
-                )
 
     def test_user_update2(self):
         with patch('salt.modules.postgres._run_psql',
@@ -511,14 +504,12 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 # The first 14 elements of this list are initial args used in all (or
                 # virtually all) commands run through _run_psql(), so the actual SQL
                 # query will be in the 15th argument.
-                self.assertTrue(
-                    re.match(
+                assert re.match(
                         'ALTER ROLE "test_username" WITH  INHERIT NOCREATEDB '
                         'CREATEROLE NOREPLICATION LOGIN;'
                         ' GRANT "test_groups" TO "test_username"',
                         postgres._run_psql.call_args[0][0][14]
                     )
-                )
 
     def test_user_update3(self):
         with patch('salt.modules.postgres._run_psql',
@@ -546,14 +537,12 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 # The first 14 elements of this list are initial args used in all (or
                 # virtually all) commands run through _run_psql(), so the actual SQL
                 # query will be in the 15th argument.
-                self.assertTrue(
-                    re.match(
+                assert re.match(
                         'ALTER ROLE "test_username" WITH  INHERIT NOCREATEDB '
                         'CREATEROLE NOREPLICATION LOGIN NOPASSWORD;'
                         ' GRANT "test_groups" TO "test_username"',
                         postgres._run_psql.call_args[0][0][14]
                     )
-                )
 
     def test_user_update_encrypted_passwd(self):
         with patch('salt.modules.postgres._run_psql',
@@ -581,8 +570,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 # The first 14 elements of this list are initial args used in all (or
                 # virtually all) commands run through _run_psql(), so the actual SQL
                 # query will be in the 15th argument.
-                self.assertTrue(
-                    re.match(
+                assert re.match(
                         'ALTER ROLE "test_username" WITH  INHERIT NOCREATEDB '
                         'CREATEROLE NOREPLICATION LOGIN '
                         'ENCRYPTED PASSWORD '
@@ -590,7 +578,6 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                         '; GRANT "test_groups" TO "test_username"',
                         postgres._run_psql.call_args[0][0][14]
                     )
-                )
 
     def test_version(self):
         with patch('salt.modules.postgres._run_psql',
@@ -607,30 +594,24 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
             # The first 14 elements of this list are initial args used in all (or
             # virtually all) commands run through _run_psql(), so the actual SQL
             # query will be in the 15th argument.
-            self.assertTrue(
-                re.match(
+            assert re.match(
                     'SELECT setting FROM pg_catalog.pg_settings',
                     postgres._run_psql.call_args[0][0][14]
                 )
-            )
 
     def test_installed_extensions(self):
         with patch('salt.modules.postgres.psql_query',
                    Mock(return_value=[{'extname': "foo", 'extversion': "1"}])):
             exts = postgres.installed_extensions()
-            self.assertEqual(
-                exts,
+            assert exts == \
                 {'foo': {'extversion': '1', 'extname': 'foo'}}
-            )
 
     def test_available_extensions(self):
         with patch('salt.modules.postgres.psql_query',
                    Mock(return_value=[{'name': "foo", 'default_version': "1"}])):
             exts = postgres.available_extensions()
-            self.assertEqual(
-                exts,
+            assert exts == \
                 {'foo': {'default_version': '1', 'name': 'foo'}}
-            )
 
     def test_drop_extension2(self):
         with patch('salt.modules.postgres.installed_extensions',
@@ -639,7 +620,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                        Mock(return_value=None)):
                 with patch('salt.modules.postgres.available_extensions',
                            Mock(return_value={'foo': {'default_version': '1', 'name': 'foo'}})):
-                    self.assertEqual(postgres.drop_extension('foo'), True)
+                    assert postgres.drop_extension('foo') is True
 
     def test_drop_extension3(self):
         with patch('salt.modules.postgres.installed_extensions',
@@ -648,7 +629,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                        Mock(return_value=None)):
                 with patch('salt.modules.postgres.available_extensions',
                            Mock(return_value={'foo': {'default_version': '1', 'name': 'foo'}})):
-                    self.assertEqual(postgres.drop_extension('foo'), True)
+                    assert postgres.drop_extension('foo') is True
 
     def test_drop_extension1(self):
         with patch('salt.modules.postgres.installed_extensions',
@@ -658,7 +639,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                        Mock(return_value=None)):
                 with patch('salt.modules.postgres.available_extensions',
                            Mock(return_value={'foo': {'default_version': '1', 'name': 'foo'}})):
-                    self.assertEqual(postgres.drop_extension('foo'), False)
+                    assert postgres.drop_extension('foo') is False
 
     def test_create_mtdata(self):
         with patch('salt.modules.postgres.installed_extensions',
@@ -672,22 +653,22 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                        Mock(return_value={'foo': {'default_version': '1.4',
                                                   'name': 'foo'}})):
                 ret = postgres.create_metadata('foo', schema='bar', ext_version='1.4')
-                self.assertTrue(postgres._EXTENSION_INSTALLED in ret)
-                self.assertTrue(postgres._EXTENSION_TO_UPGRADE in ret)
-                self.assertTrue(postgres._EXTENSION_TO_MOVE in ret)
+                assert postgres._EXTENSION_INSTALLED in ret
+                assert postgres._EXTENSION_TO_UPGRADE in ret
+                assert postgres._EXTENSION_TO_MOVE in ret
                 ret = postgres.create_metadata('foo', schema='foo', ext_version='0.4')
-                self.assertTrue(postgres._EXTENSION_INSTALLED in ret)
-                self.assertFalse(postgres._EXTENSION_TO_UPGRADE in ret)
-                self.assertFalse(postgres._EXTENSION_TO_MOVE in ret)
+                assert postgres._EXTENSION_INSTALLED in ret
+                assert postgres._EXTENSION_TO_UPGRADE not in ret
+                assert postgres._EXTENSION_TO_MOVE not in ret
                 ret = postgres.create_metadata('foo')
-                self.assertTrue(postgres._EXTENSION_INSTALLED in ret)
-                self.assertFalse(postgres._EXTENSION_TO_UPGRADE in ret)
-                self.assertFalse(postgres._EXTENSION_TO_MOVE in ret)
+                assert postgres._EXTENSION_INSTALLED in ret
+                assert postgres._EXTENSION_TO_UPGRADE not in ret
+                assert postgres._EXTENSION_TO_MOVE not in ret
                 ret = postgres.create_metadata('foobar')
-                self.assertTrue(postgres._EXTENSION_NOT_INSTALLED in ret)
-                self.assertFalse(postgres._EXTENSION_INSTALLED in ret)
-                self.assertFalse(postgres._EXTENSION_TO_UPGRADE in ret)
-                self.assertFalse(postgres._EXTENSION_TO_MOVE in ret)
+                assert postgres._EXTENSION_NOT_INSTALLED in ret
+                assert postgres._EXTENSION_INSTALLED not in ret
+                assert postgres._EXTENSION_TO_UPGRADE not in ret
+                assert postgres._EXTENSION_TO_MOVE not in ret
 
     def test_create_extension_newerthan(self):
         '''
@@ -728,47 +709,45 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 with patch('salt.modules.postgres.available_extensions',
                            Mock(return_value={'foo': {'default_version': '1.4',
                                                       'name': 'foo'}})):
-                    self.assertTrue(postgres.create_extension('foo'))
-                    self.assertTrue(re.match(
+                    assert postgres.create_extension('foo')
+                    assert re.match(
                         'CREATE EXTENSION IF NOT EXISTS "foo" ;',
-                        postgres._psql_prepare_and_run.call_args[0][0][1]))
-                    self.assertTrue(postgres.create_extension(
-                        'foo', schema='a', ext_version='b', from_version='c'))
-                    self.assertTrue(re.match(
+                        postgres._psql_prepare_and_run.call_args[0][0][1])
+                    assert postgres.create_extension(
+                        'foo', schema='a', ext_version='b', from_version='c')
+                    assert re.match(
                         'CREATE EXTENSION IF NOT EXISTS "foo" '
                         'WITH SCHEMA "a" VERSION b FROM c ;',
-                        postgres._psql_prepare_and_run.call_args[0][0][1]))
-                    self.assertFalse(postgres.create_extension('foo'))
+                        postgres._psql_prepare_and_run.call_args[0][0][1])
+                    assert not postgres.create_extension('foo')
                     ret = postgres.create_extension('foo', ext_version='a', schema='b')
-                    self.assertTrue(ret)
-                    self.assertTrue(re.match(
+                    assert ret
+                    assert re.match(
                         'ALTER EXTENSION "foo" SET SCHEMA "b";'
                         ' ALTER EXTENSION "foo" UPDATE TO a;',
-                        postgres._psql_prepare_and_run.call_args[0][0][1]))
+                        postgres._psql_prepare_and_run.call_args[0][0][1])
                     ret = postgres.create_extension('foo', ext_version='a', schema='b')
-                    self.assertTrue(ret)
-                    self.assertTrue(re.match(
+                    assert ret
+                    assert re.match(
                         'ALTER EXTENSION "foo" SET SCHEMA "b";',
-                        postgres._psql_prepare_and_run.call_args[0][0][1]))
+                        postgres._psql_prepare_and_run.call_args[0][0][1])
                     ret = postgres.create_extension('foo', ext_version='a', schema='b')
-                    self.assertTrue(ret)
-                    self.assertTrue(re.match(
+                    assert ret
+                    assert re.match(
                         'ALTER EXTENSION "foo" UPDATE TO a;',
-                        postgres._psql_prepare_and_run.call_args[0][0][1]))
-                    self.assertFalse(postgres.create_extension(
-                        'foo', ext_version='a', schema='b'))
-                    self.assertFalse(postgres.create_extension(
-                        'foo', ext_version='a', schema='b'))
+                        postgres._psql_prepare_and_run.call_args[0][0][1])
+                    assert not postgres.create_extension(
+                        'foo', ext_version='a', schema='b')
+                    assert not postgres.create_extension(
+                        'foo', ext_version='a', schema='b')
 
     def test_encrypt_passwords(self):
-        self.assertEqual(
-            postgres._maybe_encrypt_password(
-                'foo', 'bar', False),
-            'bar')
-        self.assertEqual(
-            postgres._maybe_encrypt_password(
-                'foo', 'bar', True),
-            'md596948aad3fcae80c08a35c9b5958cd89')
+        assert postgres._maybe_encrypt_password(
+                'foo', 'bar', False) == \
+            'bar'
+        assert postgres._maybe_encrypt_password(
+                'foo', 'bar', True) == \
+            'md596948aad3fcae80c08a35c9b5958cd89'
 
     def test_schema_list(self):
         with patch('salt.modules.postgres._run_psql',
@@ -781,11 +760,11 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 db_port='testport',
                 db_password='foo'
             )
-            self.assertDictEqual(ret, {
+            assert ret == {
                 'public': {'acl': '{postgres=UC/postgres,=UC/postgres}',
                            'owner': 'postgres'},
                 'pg_toast': {'acl': '', 'owner': 'postgres'}
-                })
+                }
 
     def test_schema_exists(self):
         with patch('salt.modules.postgres._run_psql',
@@ -801,7 +780,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                     'template1',
                     'public'
                 )
-                self.assertTrue(ret)
+                assert ret
 
     def test_schema_get(self):
         with patch('salt.modules.postgres._run_psql',
@@ -817,7 +796,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                     'template1',
                     'public'
                 )
-                self.assertTrue(ret)
+                assert ret
 
     def test_schema_get_again(self):
         with patch('salt.modules.postgres._run_psql',
@@ -833,7 +812,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                     'template1',
                     'pg_toast'
                 )
-                self.assertFalse(ret)
+                assert not ret
 
     def test_schema_create(self):
         with patch('salt.modules.postgres._run_psql',
@@ -866,7 +845,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                                          db_user='test_user',
                                          db_password='test_password'
                                          )
-            self.assertFalse(ret)
+            assert not ret
 
     def test_schema_remove(self):
         with patch('salt.modules.postgres._run_psql',
@@ -899,7 +878,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                                          db_user='test_user',
                                          db_password='test_password'
                                          )
-            self.assertFalse(ret)
+            assert not ret
 
     def test_language_list(self):
         '''
@@ -915,11 +894,11 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 port='testport',
                 password='foo'
             )
-            self.assertDictEqual(ret,
+            assert ret == \
                 {'c': 'c',
                 'internal': 'internal',
                 'plpgsql': 'plpgsql',
-                'sql': 'sql'})
+                'sql': 'sql'}
 
     def test_language_exists(self):
         '''
@@ -939,7 +918,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                         'sql',
                         'testdb'
                     )
-                    self.assertTrue(ret)
+                    assert ret
 
     def test_language_create(self):
         '''
@@ -979,7 +958,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 user='testuser',
                 password='testpassword'
             )
-            self.assertFalse(ret)
+            assert not ret
 
     def test_language_remove(self):
         '''
@@ -1021,7 +1000,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 user='testuser',
                 password='testpassword'
             )
-            self.assertFalse(ret)
+            assert not ret
 
     def test_privileges_list_table(self):
         '''
@@ -1067,7 +1046,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 },
             }
 
-            self.assertDictEqual(ret, expected)
+            assert ret == expected
 
             query = ("COPY (SELECT relacl AS name FROM pg_catalog.pg_class c "
             "JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace "
@@ -1105,7 +1084,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 'baruwatest2': True,
             }
 
-            self.assertDictEqual(ret, expected)
+            assert ret == expected
 
             query = ("COPY (SELECT rolname, admin_option "
             "FROM pg_catalog.pg_auth_members m JOIN pg_catalog.pg_roles r "
@@ -1142,7 +1121,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 password='testpassword'
             )
 
-            self.assertTrue(ret)
+            assert ret
 
             ret = postgres.has_privileges(
                 'baruwa',
@@ -1158,7 +1137,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 password='testpassword'
             )
 
-            self.assertTrue(ret)
+            assert ret
 
             ret = postgres.has_privileges(
                 'bayestest',
@@ -1173,7 +1152,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 password='testpassword'
             )
 
-            self.assertFalse(ret)
+            assert not ret
 
             ret = postgres.has_privileges(
                 'bayestest',
@@ -1188,7 +1167,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 password='testpassword'
             )
 
-            self.assertTrue(ret)
+            assert ret
 
     def test_has_privileges_on_group(self):
         '''
@@ -1209,7 +1188,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 password='testpassword'
             )
 
-            self.assertTrue(ret)
+            assert ret
 
             ret = postgres.has_privileges(
                 'baruwa',
@@ -1224,7 +1203,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 password='testpassword'
             )
 
-            self.assertFalse(ret)
+            assert not ret
 
             ret = postgres.has_privileges(
                 'tony',
@@ -1238,7 +1217,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 password='testpassword'
             )
 
-            self.assertFalse(ret)
+            assert not ret
 
     def test_privileges_grant_table(self):
         '''
@@ -1469,7 +1448,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                     checksums=False,
                     user='postgres',
                 )
-                self.assertTrue(ret)
+                assert ret
 
     def test_datadir_exists(self):
         '''
@@ -1478,22 +1457,22 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
         with patch('os.path.isfile', Mock(return_value=True)):
             name = '/var/lib/pgsql/data'
             ret = postgres.datadir_exists(name)
-            self.assertTrue(ret)
+            assert ret
 
     def test_pg_is_older_ext_ver(self):
         '''
         Test Checks if postgres extension version string is older
         '''
-        self.assertTrue(postgres._pg_is_older_ext_ver('8.5', '9.5'))
-        self.assertTrue(postgres._pg_is_older_ext_ver('8.5', '8.6'))
-        self.assertTrue(postgres._pg_is_older_ext_ver('8.5.2', '8.5.3'))
-        self.assertFalse(postgres._pg_is_older_ext_ver('9.5', '8.5'))
-        self.assertTrue(postgres._pg_is_older_ext_ver('9.5', '9.6'))
-        self.assertTrue(postgres._pg_is_older_ext_ver('9.5.0', '9.5.1'))
-        self.assertTrue(postgres._pg_is_older_ext_ver('9.5', '9.5.1'))
-        self.assertFalse(postgres._pg_is_older_ext_ver('9.5.1', '9.5'))
-        self.assertFalse(postgres._pg_is_older_ext_ver('9.5b', '9.5a'))
-        self.assertTrue(postgres._pg_is_older_ext_ver('10a', '10b'))
-        self.assertTrue(postgres._pg_is_older_ext_ver('1.2.3.4', '1.2.3.5'))
-        self.assertTrue(postgres._pg_is_older_ext_ver('10dev', '10next'))
-        self.assertFalse(postgres._pg_is_older_ext_ver('10next', '10dev'))
+        assert postgres._pg_is_older_ext_ver('8.5', '9.5')
+        assert postgres._pg_is_older_ext_ver('8.5', '8.6')
+        assert postgres._pg_is_older_ext_ver('8.5.2', '8.5.3')
+        assert not postgres._pg_is_older_ext_ver('9.5', '8.5')
+        assert postgres._pg_is_older_ext_ver('9.5', '9.6')
+        assert postgres._pg_is_older_ext_ver('9.5.0', '9.5.1')
+        assert postgres._pg_is_older_ext_ver('9.5', '9.5.1')
+        assert not postgres._pg_is_older_ext_ver('9.5.1', '9.5')
+        assert not postgres._pg_is_older_ext_ver('9.5b', '9.5a')
+        assert postgres._pg_is_older_ext_ver('10a', '10b')
+        assert postgres._pg_is_older_ext_ver('1.2.3.4', '1.2.3.5')
+        assert postgres._pg_is_older_ext_ver('10dev', '10next')
+        assert not postgres._pg_is_older_ext_ver('10next', '10dev')

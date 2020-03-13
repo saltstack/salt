@@ -55,9 +55,9 @@ class UseraddModuleTestLinux(ModuleCase):
         try:
             uinfo = self.run_function('user.info', [uname])
             if grains['os_family'] in ('Suse',):
-                self.assertIn('users', uinfo['groups'])
+                assert 'users' in uinfo['groups']
             else:
-                self.assertIn(uname, uinfo['groups'])
+                assert uname in uinfo['groups']
 
             # This uid is available, store it
             uid = uinfo['uid']
@@ -79,7 +79,7 @@ class UseraddModuleTestLinux(ModuleCase):
                 self.skipTest('Failed to create user')
 
             uinfo = self.run_function('user.info', [uname])
-            self.assertIn(gname, uinfo['groups'])
+            assert gname in uinfo['groups']
 
         except AssertionError:
             self.run_function('user.delete', [uname, True, True])
@@ -100,7 +100,7 @@ class UseraddModuleTestLinux(ModuleCase):
             # Test useradd.primary_group
             primary_group = self.run_function('user.primary_group', [name])
             uid_info = self.run_function('user.info', [name])
-            self.assertIn(primary_group, uid_info['groups'])
+            assert primary_group in uid_info['groups']
 
         except Exception:  # pylint: disable=broad-except
             self.run_function('user.delete', [name])
@@ -148,7 +148,7 @@ class UseraddModuleTestWindows(ModuleCase):
         '''
         self._add_user()
         user_list = self.run_function('user.list_users')
-        self.assertIn(self.user_name, user_list)
+        assert self.user_name in user_list
 
     def test_add_group(self):
         '''
@@ -156,7 +156,7 @@ class UseraddModuleTestWindows(ModuleCase):
         '''
         self._add_group()
         group_list = self.run_function('group.list_groups')
-        self.assertIn(self.group_name, group_list)
+        assert self.group_name in group_list
 
     def test_add_user_to_group(self):
         '''
@@ -166,7 +166,7 @@ class UseraddModuleTestWindows(ModuleCase):
         # And create the user as a member of that group
         self.run_function('user.add', [self.user_name], groups=self.group_name)
         user_info = self.run_function('user.info', [self.user_name])
-        self.assertIn(self.group_name, user_info['groups'])
+        assert self.group_name in user_info['groups']
 
     def test_add_user_addgroup(self):
         '''
@@ -176,7 +176,7 @@ class UseraddModuleTestWindows(ModuleCase):
         self._add_user()
         self.run_function('user.addgroup', [self.user_name, self.group_name])
         info = self.run_function('user.info', [self.user_name])
-        self.assertEqual(info['groups'], [self.group_name])
+        assert info['groups'] == [self.group_name]
 
     def test_user_chhome(self):
         '''
@@ -186,7 +186,7 @@ class UseraddModuleTestWindows(ModuleCase):
         user_dir = r'c:\salt'
         self.run_function('user.chhome', [self.user_name, user_dir])
         info = self.run_function('user.info', [self.user_name])
-        self.assertEqual(info['home'], user_dir)
+        assert info['home'] == user_dir
 
     def test_user_chprofile(self):
         '''
@@ -196,7 +196,7 @@ class UseraddModuleTestWindows(ModuleCase):
         config = r'c:\salt\config'
         self.run_function('user.chprofile', [self.user_name, config])
         info = self.run_function('user.info', [self.user_name])
-        self.assertEqual(info['profile'], config)
+        assert info['profile'] == config
 
     def test_user_chfullname(self):
         '''
@@ -206,16 +206,16 @@ class UseraddModuleTestWindows(ModuleCase):
         name = 'Salt Test'
         self.run_function('user.chfullname', [self.user_name, name])
         info = self.run_function('user.info', [self.user_name])
-        self.assertEqual(info['fullname'], name)
+        assert info['fullname'] == name
 
     def test_user_delete(self):
         '''
         Test deleting a user
         '''
         self._add_user()
-        self.assertTrue(self.run_function('user.info', [self.user_name])['active'])
+        assert self.run_function('user.info', [self.user_name])['active']
         self.run_function('user.delete', [self.user_name])
-        self.assertEqual({}, self.run_function('user.info', [self.user_name]))
+        assert {} == self.run_function('user.info', [self.user_name])
 
     def test_user_removegroup(self):
         '''
@@ -224,9 +224,9 @@ class UseraddModuleTestWindows(ModuleCase):
         self._add_user()
         self._add_group()
         self.run_function('user.addgroup', [self.user_name, self.group_name])
-        self.assertIn(self.group_name, self.run_function('user.list_groups', [self.user_name]))
+        assert self.group_name in self.run_function('user.list_groups', [self.user_name])
         self.run_function('user.removegroup', [self.user_name, self.group_name])
-        self.assertNotIn(self.group_name, self.run_function('user.list_groups', [self.user_name]))
+        assert self.group_name not in self.run_function('user.list_groups', [self.user_name])
 
     def test_user_rename(self):
         '''
@@ -236,7 +236,7 @@ class UseraddModuleTestWindows(ModuleCase):
         name = 'newuser'
         self.run_function('user.rename', [self.user_name, name])
         info = self.run_function('user.info', [name])
-        self.assertTrue(info['active'])
+        assert info['active']
 
         #delete new user
         self.run_function('user.delete', [name, True, True])
@@ -247,4 +247,4 @@ class UseraddModuleTestWindows(ModuleCase):
         '''
         self._add_user()
         passwd = 'sup3rs3cr3T!'
-        self.assertTrue(self.run_function('user.setpassword', [self.user_name, passwd]))
+        assert self.run_function('user.setpassword', [self.user_name, passwd])

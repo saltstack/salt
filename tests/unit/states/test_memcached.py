@@ -42,22 +42,22 @@ class MemcachedTestCase(TestCase, LoaderModuleMockMixin):
                                         True, True])
         with patch.dict(memcached.__salt__, {'memcached.get': mock_t,
                                              'memcached.set': mock_t}):
-            self.assertDictEqual(memcached.managed(name), ret)
+            assert memcached.managed(name) == ret
 
             comt = ("Key 'foo' does not need to be updated")
             ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(memcached.managed(name, 'salt'), ret)
+            assert memcached.managed(name, 'salt') == ret
 
             with patch.dict(memcached.__opts__, {'test': True}):
                 comt = ("Value of key 'foo' would be changed")
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(memcached.managed(name, 'salt'), ret)
+                assert memcached.managed(name, 'salt') == ret
 
             with patch.dict(memcached.__opts__, {'test': False}):
                 comt = ("Successfully set key 'foo'")
                 ret.update({'comment': comt, 'result': True,
                             'changes': {'new': 'salt', 'old': True}})
-                self.assertDictEqual(memcached.managed(name, 'salt'), ret)
+                assert memcached.managed(name, 'salt') == ret
 
     # 'absent' function tests: 1
 
@@ -76,23 +76,23 @@ class MemcachedTestCase(TestCase, LoaderModuleMockMixin):
                                         True, True, True])
         with patch.dict(memcached.__salt__, {'memcached.get': mock_t,
                                              'memcached.delete': mock_t}):
-            self.assertDictEqual(memcached.absent(name), ret)
+            assert memcached.absent(name) == ret
 
             comt = ("Value of key 'foo' ('salt') is not 'bar'")
             ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(memcached.absent(name, 'bar'), ret)
+            assert memcached.absent(name, 'bar') == ret
 
             comt = ("Key 'foo' does not exist")
             ret.update({'comment': comt})
-            self.assertDictEqual(memcached.absent(name), ret)
+            assert memcached.absent(name) == ret
 
             with patch.dict(memcached.__opts__, {'test': True}):
                 comt = ("Key 'foo' would be deleted")
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(memcached.absent(name), ret)
+                assert memcached.absent(name) == ret
 
             with patch.dict(memcached.__opts__, {'test': False}):
                 comt = ("Successfully deleted key 'foo'")
                 ret.update({'comment': comt, 'result': True,
                             'changes': {'key deleted': 'foo', 'value': True}})
-                self.assertDictEqual(memcached.absent(name), ret)
+                assert memcached.absent(name) == ret

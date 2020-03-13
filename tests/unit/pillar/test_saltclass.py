@@ -40,7 +40,7 @@ class SaltclassPillarTestCase(TestCase, LoaderModuleMockMixin):
         except TypeError as err:
             self.fail(err)
         # Else give the parsed content result
-        self.assertListEqual(parsed_ret, expected_ret)
+        assert parsed_ret == expected_ret
 
     def test_succeeds(self):
         ret = ['default.users', 'default.motd', 'default.empty', 'default', 'roles.app']
@@ -67,7 +67,7 @@ class SaltclassPillarTestCaseListExpansion(TestCase, LoaderModuleMockMixin):
         except TypeError as err:
             self.fail(err)
         # Else give the parsed content result
-        self.assertListEqual(parsed_ret, expected_ret)
+        assert parsed_ret == expected_ret
 
     def test_succeeds(self):
         ret = [{'a': '192.168.10.10'}, '192.168.10.20']

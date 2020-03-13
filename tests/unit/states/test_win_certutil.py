@@ -44,7 +44,7 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
             get_cert_serial_mock.assert_called_once_with('/tmp/cert.cer')
             get_store_serials_mock.assert_called_once_with('TrustedPublisher')
             add_mock.assert_called_once_with('/path/to/cert.cer', 'TrustedPublisher')
-            self.assertEqual(expected, out)
+            assert expected == out
 
     def test_add_serial_missing(self):
         '''
@@ -70,7 +70,7 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
             assert not get_cert_serial_mock.called
             assert not get_store_serials_mock.called
             assert not add_mock.called
-            self.assertEqual(expected, out)
+            assert expected == out
 
     def test_add_serial_exists(self):
         '''
@@ -96,7 +96,7 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
             get_cert_serial_mock.assert_called_once_with('/tmp/cert.cer')
             get_store_serials_mock.assert_called_once_with('TrustedPublisher')
             assert not add_mock.called
-            self.assertEqual(expected, out)
+            assert expected == out
 
     def test_add_serial_fail(self):
         '''
@@ -122,7 +122,7 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
             get_cert_serial_mock.assert_called_once_with('/tmp/cert.cer')
             get_store_serials_mock.assert_called_once_with('TrustedPublisher')
             add_mock.assert_called_once_with('/path/to/cert.cer', 'TrustedPublisher')
-            self.assertEqual(expected, out)
+            assert expected == out
 
     def test_del_serial(self):
         '''
@@ -148,7 +148,7 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
             get_cert_serial_mock.assert_called_once_with('/tmp/cert.cer')
             get_store_serials_mock.assert_called_once_with('TrustedPublisher')
             del_mock.assert_called_once_with('/tmp/cert.cer', 'TrustedPublisher')
-            self.assertEqual(expected, out)
+            assert expected == out
 
     def test_del_serial_missing(self):
         '''
@@ -174,7 +174,7 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
             assert not get_cert_serial_mock.called
             assert not get_store_serials_mock.called
             assert not del_mock.called
-            self.assertEqual(expected, out)
+            assert expected == out
 
     def test_del_serial_doesnt_exists(self):
         '''
@@ -200,7 +200,7 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
             get_cert_serial_mock.assert_called_once_with('/tmp/cert.cer')
             get_store_serials_mock.assert_called_once_with('TrustedPublisher')
             assert not del_mock.called
-            self.assertEqual(expected, out)
+            assert expected == out
 
     def test_del_serial_fail(self):
         '''
@@ -226,4 +226,4 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
             get_cert_serial_mock.assert_called_once_with('/tmp/cert.cer')
             get_store_serials_mock.assert_called_once_with('TrustedPublisher')
             del_mock.assert_called_once_with('/tmp/cert.cer', 'TrustedPublisher')
-            self.assertEqual(expected, out)
+            assert expected == out

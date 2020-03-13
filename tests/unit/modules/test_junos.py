@@ -207,7 +207,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                                              'type': 'I'},
                             'virtual': True}
             ret['out'] = True
-            self.assertEqual(junos.facts_refresh(), ret)
+            assert junos.facts_refresh() == ret
 
     def test_facts_refresh_exception(self):
         with patch('jnpr.junos.device.Device.facts_refresh') as mock_facts_refresh:
@@ -215,7 +215,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['message'] = 'Execution failed due to "Test exception"'
             ret['out'] = False
-            self.assertEqual(junos.facts_refresh(), ret)
+            assert junos.facts_refresh() == ret
 
     def test_facts(self):
         ret = dict()
@@ -281,20 +281,20 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                                          'type': 'I'},
                         'virtual': True}
         ret['out'] = True
-        self.assertEqual(junos.facts(), ret)
+        assert junos.facts() == ret
 
     def test_facts_exception(self):
         with patch.dict(junos.__proxy__, {'junos.get_serialized_facts': self.raise_exception}):
             ret = dict()
             ret['message'] = 'Could not display facts due to "Test exception"'
             ret['out'] = False
-            self.assertEqual(junos.facts(), ret)
+            assert junos.facts() == ret
 
     def test_set_hostname_without_args(self):
         ret = dict()
         ret['message'] = 'Please provide the hostname.'
         ret['out'] = False
-        self.assertEqual(junos.set_hostname(), ret)
+        assert junos.set_hostname() == ret
 
     def test_set_hostname_load_called_with_valid_name(self):
         with patch('jnpr.junos.utils.config.Config.load') as mock_load:
@@ -308,7 +308,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['message'] = 'Could not load configuration due to error "Test exception"'
             ret['out'] = False
-            self.assertEqual(junos.set_hostname('Test-name'), ret)
+            assert junos.set_hostname('Test-name') == ret
 
     def test_set_hostname_raise_exception_for_commit_check(self):
         with patch('jnpr.junos.utils.config.Config.commit_check') as mock_commit_check:
@@ -316,7 +316,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['message'] = 'Could not commit check due to error "Test exception"'
             ret['out'] = False
-            self.assertEqual(junos.set_hostname('test-name'), ret)
+            assert junos.set_hostname('test-name') == ret
 
     def test_set_hostname_one_arg_parsed_correctly(self):
         with patch('jnpr.junos.utils.config.Config.load') as mock_load, \
@@ -368,7 +368,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['message'] = 'Successfully changed hostname.'
             ret['out'] = True
-            self.assertEqual(junos.set_hostname('test-name', **args), ret)
+            assert junos.set_hostname('test-name', **args) == ret
 
     def test_set_hostname_raise_exception_for_commit(self):
         with patch('jnpr.junos.utils.config.Config.commit') as mock_commit:
@@ -376,7 +376,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['message'] = 'Successfully loaded host-name but commit failed with "Test exception"'
             ret['out'] = False
-            self.assertEqual(junos.set_hostname('test-name'), ret)
+            assert junos.set_hostname('test-name') == ret
 
     def test_set_hostname_fail_commit_check(self):
         with patch('jnpr.junos.utils.config.Config.commit_check') as mock_commit_check, \
@@ -385,7 +385,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['out'] = False
             ret['message'] = 'Successfully loaded host-name but pre-commit check failed.'
-            self.assertEqual(junos.set_hostname('test'), ret)
+            assert junos.set_hostname('test') == ret
 
     def test_commit_without_args(self):
         with patch('jnpr.junos.utils.config.Config.commit_check') as mock_commit_check, \
@@ -395,7 +395,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['message'] = 'Commit Successful.'
             ret['out'] = True
-            self.assertEqual(junos.commit(), ret)
+            assert junos.commit() == ret
 
     def test_commit_raise_commit_check_exception(self):
         with patch('jnpr.junos.utils.config.Config.commit_check') as mock_commit_check:
@@ -403,7 +403,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['message'] = 'Could not perform commit check due to "Test exception"'
             ret['out'] = False
-            self.assertEqual(junos.commit(), ret)
+            assert junos.commit() == ret
 
     def test_commit_raise_commit_exception(self):
         with patch('jnpr.junos.utils.config.Config.commit_check') as mock_commit_check, \
@@ -414,7 +414,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret['out'] = False
             ret['message'] = \
                 'Commit check succeeded but actual commit failed with "Test exception"'
-            self.assertEqual(junos.commit(), ret)
+            assert junos.commit() == ret
 
     def test_commit_with_single_argument(self):
         with patch('jnpr.junos.utils.config.Config.commit_check') as mock_commit_check, \
@@ -461,7 +461,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['message'] = 'Commit failed.'
             ret['out'] = False
-            self.assertEqual(junos.commit(), ret)
+            assert junos.commit() == ret
 
     def test_commit_pyez_commit_check_returns_false(self):
         with patch('jnpr.junos.utils.config.Config.commit_check') as mock_commit_check:
@@ -469,7 +469,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['out'] = False
             ret['message'] = 'Pre-commit check failed.'
-            self.assertEqual(junos.commit(), ret)
+            assert junos.commit() == ret
 
     def test_rollback_exception(self):
         with patch('jnpr.junos.utils.config.Config.rollback') as mock_rollback:
@@ -477,7 +477,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['message'] = 'Rollback failed due to "Test exception"'
             ret['out'] = False
-            self.assertEqual(junos.rollback(), ret)
+            assert junos.rollback() == ret
 
     def test_rollback_without_args_success(self):
         with patch('jnpr.junos.utils.config.Config.commit_check') as mock_commit_check, \
@@ -488,7 +488,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['message'] = 'Rollback successful'
             ret['out'] = True
-            self.assertEqual(junos.rollback(), ret)
+            assert junos.rollback() == ret
 
     def test_rollback_without_args_fail(self):
         with patch('jnpr.junos.utils.config.Config.rollback') as mock_rollback:
@@ -496,7 +496,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['message'] = 'Rollback failed'
             ret['out'] = False
-            self.assertEqual(junos.rollback(), ret)
+            assert junos.rollback() == ret
 
     def test_rollback_with_id(self):
         with patch('jnpr.junos.utils.config.Config.commit_check') as mock_commit_check, \
@@ -629,7 +629,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['message'] = 'Could not commit check due to "Test exception"'
             ret['out'] = False
-            self.assertEqual(junos.rollback(), ret)
+            assert junos.rollback() == ret
 
     def test_rollback_commit_exception(self):
         with patch('jnpr.junos.utils.config.Config.commit_check') as mock_commit_check, \
@@ -641,7 +641,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret['message'] = \
                 'Rollback successful but commit failed with error "Test exception"'
             ret['out'] = False
-            self.assertEqual(junos.rollback(), ret)
+            assert junos.rollback() == ret
 
     def test_rollback_commit_check_fails(self):
         with patch('jnpr.junos.utils.config.Config.commit_check') as mock_commit_check, \
@@ -650,7 +650,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['message'] = 'Rollback succesfull but pre-commit check failed.'
             ret['out'] = False
-            self.assertEqual(junos.rollback(), ret)
+            assert junos.rollback() == ret
 
     def test_diff_without_args(self):
         with patch('jnpr.junos.utils.config.Config.diff') as mock_diff:
@@ -668,13 +668,13 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['message'] = 'Could not get diff with error "Test exception"'
             ret['out'] = False
-            self.assertEqual(junos.diff(), ret)
+            assert junos.diff() == ret
 
     def test_ping_without_args(self):
         ret = dict()
         ret['message'] = 'Please specify the destination ip to ping.'
         ret['out'] = False
-        self.assertEqual(junos.ping(), ret)
+        assert junos.ping() == ret
 
     def test_ping(self):
         with patch('jnpr.junos.device.Device.execute') as mock_execute:
@@ -705,13 +705,13 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['message'] = 'Execution failed due to "Test exception"'
             ret['out'] = False
-            self.assertEqual(junos.ping('1.1.1.1'), ret)
+            assert junos.ping('1.1.1.1') == ret
 
     def test_cli_without_args(self):
         ret = dict()
         ret['message'] = 'Please provide the CLI command to be executed.'
         ret['out'] = False
-        self.assertEqual(junos.cli(), ret)
+        assert junos.cli() == ret
 
     def test_cli_with_format_as_empty_string(self):
         with patch('jnpr.junos.device.Device.cli') as mock_cli:
@@ -744,7 +744,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['message'] = '<root><a>test</a></root>'
             ret['out'] = True
-            self.assertEqual(junos.cli('show version', **args), ret)
+            assert junos.cli('show version', **args) == ret
             mock_cli.assert_called_with('show version', 'xml', warning=False)
             mock_to_string.assert_called_once_with('<root><a>test</a></root>')
             assert mock_jxml.called
@@ -755,14 +755,14 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['message'] = 'Execution failed due to "Test exception"'
             ret['out'] = False
-            self.assertEqual(junos.cli('show version'), ret)
+            assert junos.cli('show version') == ret
 
     def test_shutdown_without_args(self):
         ret = dict()
         ret['message'] = \
             'Provide either one of the arguments: shutdown or reboot.'
         ret['out'] = False
-        self.assertEqual(junos.shutdown(), ret)
+        assert junos.shutdown() == ret
 
     def test_shutdown_with_reboot_args(self):
         with patch('salt.modules.junos.SW.reboot') as mock_reboot:
@@ -773,7 +773,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                     'reboot': True, '__pub_fun': 'junos.shutdown',
                     '__pub_jid': '20170222213858582619', '__pub_tgt': 'mac_min',
                     '__pub_tgt_type': 'glob', '__pub_ret': ''}
-            self.assertEqual(junos.shutdown(**args), ret)
+            assert junos.shutdown(**args) == ret
             assert mock_reboot.called
 
     def test_shutdown_with_poweroff_args(self):
@@ -785,7 +785,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                     'reboot': True, '__pub_fun': 'junos.shutdown',
                     '__pub_jid': '20170222213858582619', '__pub_tgt': 'mac_min',
                     '__pub_tgt_type': 'glob', '__pub_ret': ''}
-            self.assertEqual(junos.shutdown(**args), ret)
+            assert junos.shutdown(**args) == ret
             assert mock_poweroff.called
 
     def test_shutdown_with_shutdown_as_false(self):
@@ -796,7 +796,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                 'reboot': True, '__pub_fun': 'junos.shutdown',
                 '__pub_jid': '20170222213858582619', '__pub_tgt': 'mac_min',
                 '__pub_tgt_type': 'glob', '__pub_ret': ''}
-        self.assertEqual(junos.shutdown(**args), ret)
+        assert junos.shutdown(**args) == ret
 
     def test_shutdown_with_in_min_arg(self):
         with patch('salt.modules.junos.SW.poweroff') as mock_poweroff:
@@ -838,14 +838,14 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['message'] = 'Could not poweroff/reboot beacause "Test exception"'
             ret['out'] = False
-            self.assertEqual(junos.shutdown(**args), ret)
+            assert junos.shutdown(**args) == ret
 
     def test_install_config_without_args(self):
         ret = dict()
         ret['message'] = \
             'Please provide the salt path where the configuration is present'
         ret['out'] = False
-        self.assertEqual(junos.install_config(), ret)
+        assert junos.install_config() == ret
 
     def test_install_config_cp_fails(self):
         with patch('os.path.isfile') as mock_isfile:
@@ -853,7 +853,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['message'] = 'Invalid file path.'
             ret['out'] = False
-            self.assertEqual(junos.install_config('path'), ret)
+            assert junos.install_config('path') == ret
 
     def test_install_config_file_cp_fails(self):
         with patch('os.path.isfile') as mock_isfile, \
@@ -863,7 +863,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['message'] = 'Template failed to render'
             ret['out'] = False
-            self.assertEqual(junos.install_config('path'), ret)
+            assert junos.install_config('path') == ret
 
     def test_install_config(self):
         with patch('jnpr.junos.utils.config.Config.commit') as mock_commit, \
@@ -883,7 +883,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['message'] = 'Successfully loaded and committed!'
             ret['out'] = True
-            self.assertEqual(junos.install_config('actual/path/config.set'), ret)
+            assert junos.install_config('actual/path/config.set') == ret
             mock_load.assert_called_with(path='test/path/config', format='set')
 
     def test_install_config_xml_file(self):
@@ -904,7 +904,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['message'] = 'Successfully loaded and committed!'
             ret['out'] = True
-            self.assertEqual(junos.install_config('actual/path/config.xml'), ret)
+            assert junos.install_config('actual/path/config.xml') == ret
             mock_load.assert_called_with(path='test/path/config', format='xml')
 
     def test_install_config_text_file(self):
@@ -925,7 +925,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['message'] = 'Successfully loaded and committed!'
             ret['out'] = True
-            self.assertEqual(junos.install_config('actual/path/config'), ret)
+            assert junos.install_config('actual/path/config') == ret
             mock_load.assert_called_with(path='test/path/config', format='text')
 
     def test_install_config_replace(self):
@@ -951,11 +951,10 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['message'] = 'Successfully loaded and committed!'
             ret['out'] = True
-            self.assertEqual(
-                junos.install_config(
+            assert junos.install_config(
                     'actual/path/config.set',
-                    **args),
-                ret)
+                    **args) == \
+                ret
             mock_load.assert_called_with(
                 path='test/path/config',
                 format='set',
@@ -984,11 +983,10 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['message'] = 'Successfully loaded and committed!'
             ret['out'] = True
-            self.assertEqual(
-                junos.install_config(
+            assert junos.install_config(
                     'actual/path/config.xml',
-                    **args),
-                ret)
+                    **args) == \
+                ret
             mock_load.assert_called_with(
                 path='test/path/config',
                 format='xml',
@@ -1017,11 +1015,10 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['message'] = 'Successfully loaded and committed!'
             ret['out'] = True
-            self.assertEqual(
-                junos.install_config(
+            assert junos.install_config(
                     'actual/path/config',
-                    **args),
-                ret)
+                    **args) == \
+                ret
             mock_load.assert_called_with(
                 path='test/path/config', format='text', merge=True)
 
@@ -1040,9 +1037,8 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret['message'] = 'Could not load configuration due to : "Test exception"'
             ret['format'] = 'set'
             ret['out'] = False
-            self.assertEqual(
-                junos.install_config(
-                    path='actual/path/config.set'), ret)
+            assert junos.install_config(
+                    path='actual/path/config.set') == ret
 
     def test_install_config_no_diff(self):
         with patch('jnpr.junos.utils.config.Config.diff') as mock_diff, \
@@ -1058,7 +1054,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['message'] = 'Configuration already applied!'
             ret['out'] = True
-            self.assertEqual(junos.install_config('actual/path/config'), ret)
+            assert junos.install_config('actual/path/config') == ret
 
     def test_install_config_write_diff(self):
         with patch('jnpr.junos.utils.config.Config.commit') as mock_commit, \
@@ -1088,11 +1084,10 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['message'] = 'Successfully loaded and committed!'
             ret['out'] = True
-            self.assertEqual(
-                junos.install_config(
+            assert junos.install_config(
                     'actual/path/config',
-                    **args),
-                ret)
+                    **args) == \
+                ret
             mock_fopen.assert_called_with('copy/config/here', 'w')
 
     def test_install_config_write_diff_exception(self):
@@ -1124,11 +1119,10 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['message'] = 'Could not write into diffs_file due to: "Test exception"'
             ret['out'] = False
-            self.assertEqual(
-                junos.install_config(
+            assert junos.install_config(
                     'actual/path/config',
-                    **args),
-                ret)
+                    **args) == \
+                ret
             mock_fopen.assert_called_with('copy/config/here', 'w')
 
     def test_install_config_commit_params(self):
@@ -1158,11 +1152,10 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['message'] = 'Successfully loaded and committed!'
             ret['out'] = True
-            self.assertEqual(
-                junos.install_config(
+            assert junos.install_config(
                     'actual/path/config',
-                    **args),
-                ret)
+                    **args) == \
+                ret
             mock_commit.assert_called_with(comment='comitted via salt', confirm=3)
 
     def test_install_config_commit_check_fails(self):
@@ -1182,7 +1175,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['message'] = 'Loaded configuration but commit check failed, hence rolling back configuration.'
             ret['out'] = False
-            self.assertEqual(junos.install_config('actual/path/config.xml'), ret)
+            assert junos.install_config('actual/path/config.xml') == ret
 
     def test_install_config_commit_exception(self):
         with patch('jnpr.junos.utils.config.Config.commit') as mock_commit, \
@@ -1203,7 +1196,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret['message'] = \
                 'Commit check successful but commit failed with "Test exception"'
             ret['out'] = False
-            self.assertEqual(junos.install_config('actual/path/config'), ret)
+            assert junos.install_config('actual/path/config') == ret
 
     def test_zeroize(self):
         with patch('jnpr.junos.device.Device.cli') as mock_cli:
@@ -1212,7 +1205,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret['out'] = True
             ret['message'] = 'Completed zeroize and rebooted'
             mock_cli.assert_called_once_with('request system zeroize')
-            self.assertEqual(result, ret)
+            assert result == ret
 
     def test_zeroize_throw_exception(self):
         with patch('jnpr.junos.device.Device.cli') as mock_cli:
@@ -1220,14 +1213,14 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['message'] = 'Could not zeroize due to : "Test exception"'
             ret['out'] = False
-            self.assertEqual(junos.zeroize(), ret)
+            assert junos.zeroize() == ret
 
     def test_install_os_without_args(self):
         ret = dict()
         ret['message'] = \
             'Please provide the salt path where the junos image is present.'
         ret['out'] = False
-        self.assertEqual(junos.install_os(), ret)
+        assert junos.install_os() == ret
 
     def test_install_os_cp_fails(self):
         with patch('os.path.isfile') as mock_isfile, \
@@ -1237,7 +1230,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['message'] = 'Invalid image path.'
             ret['out'] = False
-            self.assertEqual(junos.install_os('/image/path/'), ret)
+            assert junos.install_os('/image/path/') == ret
 
     def test_install_os_image_cp_fails(self):
         with patch('os.path.isfile') as mock_isfile, \
@@ -1247,7 +1240,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['message'] = 'Failed to copy image'
             ret['out'] = False
-            self.assertEqual(junos.install_os('/image/path/'), ret)
+            assert junos.install_os('/image/path/') == ret
 
     def test_install_os(self):
         with patch('jnpr.junos.utils.sw.SW.install') as mock_install, \
@@ -1260,7 +1253,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['out'] = True
             ret['message'] = 'Installed the os.'
-            self.assertEqual(junos.install_os('path'), ret)
+            assert junos.install_os('path') == ret
 
     def test_install_os_with_reboot_arg(self):
         with patch('jnpr.junos.utils.sw.SW.install') as mock_install, \
@@ -1278,7 +1271,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['message'] = 'Successfully installed and rebooted!'
             ret['out'] = True
-            self.assertEqual(junos.install_os('path', **args), ret)
+            assert junos.install_os('path', **args) == ret
 
     def test_install_os_pyez_install_throws_exception(self):
         with patch('jnpr.junos.utils.sw.SW.install') as mock_install, \
@@ -1292,7 +1285,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['message'] = 'Installation failed due to: "Test exception"'
             ret['out'] = False
-            self.assertEqual(junos.install_os('path'), ret)
+            assert junos.install_os('path') == ret
 
     def test_install_os_with_reboot_raises_exception(self):
         with patch('jnpr.junos.utils.sw.SW.install') as mock_install, \
@@ -1312,7 +1305,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret['message'] = \
                 'Installation successful but reboot failed due to : "Test exception"'
             ret['out'] = False
-            self.assertEqual(junos.install_os('path', **args), ret)
+            assert junos.install_os('path', **args) == ret
 
     def test_install_os_no_copy(self):
         with patch('jnpr.junos.utils.sw.SW.install') as mock_install, \
@@ -1325,7 +1318,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['out'] = True
             ret['message'] = 'Installed the os.'
-            self.assertEqual(junos.install_os('path', no_copy=True), ret)
+            assert junos.install_os('path', no_copy=True) == ret
             mock_install.assert_called_with(u'path', no_copy=True, progress=True)
             mock_mkstemp.assert_not_called()
             mock_safe_rm.assert_not_called()
@@ -1341,7 +1334,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['out'] = True
             ret['message'] = 'Installed the os.'
-            self.assertEqual(junos.install_os('path', issu=True), ret)
+            assert junos.install_os('path', issu=True) == ret
             mock_install.assert_called_with(ANY, issu=True, progress=True)
 
     def test_install_os_add_params(self):
@@ -1356,7 +1349,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret['out'] = True
             ret['message'] = 'Installed the os.'
             remote_path = '/path/to/file'
-            self.assertEqual(junos.install_os('path', remote_path=remote_path, nssu=True, validate=True), ret)
+            assert junos.install_os('path', remote_path=remote_path, nssu=True, validate=True) == ret
             mock_install.assert_called_with(ANY, nssu=True, remote_path=remote_path, progress=True, validate=True)
 
     def test_file_copy_without_args(self):
@@ -1364,7 +1357,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         ret['message'] = \
             'Please provide the absolute path of the file to be copied.'
         ret['out'] = False
-        self.assertEqual(junos.file_copy(), ret)
+        assert junos.file_copy() == ret
 
     def test_file_copy_invalid_src(self):
         with patch('os.path.isfile') as mock_isfile:
@@ -1372,7 +1365,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['message'] = 'Invalid source file path'
             ret['out'] = False
-            self.assertEqual(junos.file_copy('invalid/file/path', 'file'), ret)
+            assert junos.file_copy('invalid/file/path', 'file') == ret
 
     def test_file_copy_without_dest(self):
         ret = dict()
@@ -1381,7 +1374,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         ret['out'] = False
         with patch('salt.modules.junos.os.path.isfile') as mck:
             mck.return_value = True
-            self.assertEqual(junos.file_copy('/home/user/config.set'), ret)
+            assert junos.file_copy('/home/user/config.set') == ret
 
     def test_file_copy(self):
         with patch('salt.modules.junos.SCP') as mock_scp, \
@@ -1390,11 +1383,10 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['message'] = 'Successfully copied file from test/src/file to file'
             ret['out'] = True
-            self.assertEqual(
-                junos.file_copy(
+            assert junos.file_copy(
                     dest='file',
-                    src='test/src/file'),
-                ret)
+                    src='test/src/file') == \
+                ret
 
     def test_file_copy_exception(self):
         with patch('salt.modules.junos.SCP') as mock_scp, \
@@ -1404,11 +1396,10 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['message'] = 'Could not copy file : "Test exception"'
             ret['out'] = False
-            self.assertEqual(
-                junos.file_copy(
+            assert junos.file_copy(
                     dest='file',
-                    src='test/src/file'),
-                ret)
+                    src='test/src/file') == \
+                ret
 
     # These test cases test the __virtual__ function, used internally by salt
     # to check if the given module is loadable. This function is not used by
@@ -1418,17 +1409,17 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         with patch.dict(junos.__opts__, {}):
             res = (False, 'The junos module could not be '
                           'loaded: junos-eznc or jxmlease or proxy could not be loaded.')
-            self.assertEqual(junos.__virtual__(), res)
+            assert junos.__virtual__() == res
 
     def test_virtual_all_true(self):
         with patch.dict(junos.__opts__, {'proxy': 'test'}):
-            self.assertEqual(junos.__virtual__(), 'junos')
+            assert junos.__virtual__() == 'junos'
 
     def test_rpc_without_args(self):
         ret = dict()
         ret['message'] = 'Please provide the rpc to execute.'
         ret['out'] = False
-        self.assertEqual(junos.rpc(), ret)
+        assert junos.rpc() == ret
 
     def test_rpc_get_config_exception(self):
         with patch('jnpr.junos.device.Device.execute') as mock_execute:
@@ -1436,7 +1427,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['message'] = 'RPC execution failed due to "Test exception"'
             ret['out'] = False
-            self.assertEqual(junos.rpc('get_config'), ret)
+            assert junos.rpc('get_config') == ret
 
     def test_rpc_get_config_filter(self):
         with patch('jnpr.junos.device.Device.execute') as mock_execute:
@@ -1503,7 +1494,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret['message'] = 'RPC execution failed due to "Test exception"'
             ret['out'] = False
-            self.assertEqual(junos.rpc('get_interface_information'), ret)
+            assert junos.rpc('get_interface_information') == ret
 
     def test_rpc_write_file_format_text(self):
         with patch('jnpr.junos.device.Device.execute') as mock_execute:
@@ -1536,44 +1527,44 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
     def test_lock_success(self):
         ret_exp = {'out': True, 'message': 'Successfully locked the configuration.'}
         ret = junos.lock()
-        self.assertEqual(ret, ret_exp)
+        assert ret == ret_exp
 
     def test_lock_error(self):
         ret_exp = {'out': False, 'message': 'Could not gain lock due to : "LockError"'}
         with patch('jnpr.junos.utils.config.Config.lock') as mock_lock:
             mock_lock.side_effect = LockError(None)
             ret = junos.lock()
-            self.assertEqual(ret, ret_exp)
+            assert ret == ret_exp
 
     def test_unlock_success(self):
         ret_exp = {'out': True, 'message': 'Successfully unlocked the configuration.'}
         ret = junos.unlock()
-        self.assertEqual(ret, ret_exp)
+        assert ret == ret_exp
 
     def test_unlock_error(self):
         ret_exp = {'out': False, 'message': 'Could not unlock configuration due to : "UnlockError"'}
         with patch('jnpr.junos.utils.config.Config.unlock') as mock_unlock:
             mock_unlock.side_effect = UnlockError(None)
             ret = junos.unlock()
-            self.assertEqual(ret, ret_exp)
+            assert ret == ret_exp
 
     def test_load_none_path(self):
         ret_exp = {'out': False,
                    'message': 'Please provide the salt path where the configuration is present'}
         ret = junos.load()
-        self.assertEqual(ret, ret_exp)
+        assert ret == ret_exp
 
     def test_load_wrong_tmp_file(self):
         ret_exp = {'out': False, 'message': 'Invalid file path.'}
         with patch('salt.utils.files.mkstemp') as mock_mkstemp:
             mock_mkstemp.return_value = '/pat/to/tmp/file'
             ret = junos.load('/path/to/file')
-            self.assertEqual(ret, ret_exp)
+            assert ret == ret_exp
 
     def test_load_invalid_path(self):
         ret_exp = {'out': False, 'message': 'Template failed to render'}
         ret = junos.load('/path/to/file')
-        self.assertEqual(ret, ret_exp)
+        assert ret == ret_exp
 
     def test_load_no_extension(self):
         ret_exp = {'out': True, 'message': 'Successfully loaded the configuration.'}
@@ -1586,7 +1577,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             mock_isfile.return_value = True
             ret = junos.load('/path/to/file')
             mock_load.assert_called_with(format='text', path='/path/to/file')
-            self.assertEqual(ret, ret_exp)
+            assert ret == ret_exp
 
     def test_load_xml_extension(self):
         ret_exp = {'out': True, 'message': 'Successfully loaded the configuration.'}
@@ -1599,7 +1590,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             mock_isfile.return_value = True
             ret = junos.load('/path/to/file.xml')
             mock_load.assert_called_with(format='xml', path='/path/to/file')
-            self.assertEqual(ret, ret_exp)
+            assert ret == ret_exp
 
     def test_load_set_extension(self):
         ret_exp = {'out': True, 'message': 'Successfully loaded the configuration.'}
@@ -1612,7 +1603,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             mock_isfile.return_value = True
             ret = junos.load('/path/to/file.set')
             mock_load.assert_called_with(format='set', path='/path/to/file')
-            self.assertEqual(ret, ret_exp)
+            assert ret == ret_exp
 
     def test_load_replace_true(self):
         ret_exp = {'out': True, 'message': 'Successfully loaded the configuration.'}
@@ -1625,7 +1616,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             mock_isfile.return_value = True
             ret = junos.load('/path/to/file', replace=True)
             mock_load.assert_called_with(format='text', merge=False, path='/path/to/file')
-            self.assertEqual(ret, ret_exp)
+            assert ret == ret_exp
 
     def test_load_replace_false(self):
         ret_exp = {'out': True, 'message': 'Successfully loaded the configuration.'}
@@ -1638,7 +1629,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             mock_isfile.return_value = True
             ret = junos.load('/path/to/file', replace=False)
             mock_load.assert_called_with(format='text', replace=False, path='/path/to/file')
-            self.assertEqual(ret, ret_exp)
+            assert ret == ret_exp
 
     def test_load_overwrite_true(self):
         ret_exp = {'out': True, 'message': 'Successfully loaded the configuration.'}
@@ -1651,7 +1642,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             mock_isfile.return_value = True
             ret = junos.load('/path/to/file', overwrite=True)
             mock_load.assert_called_with(format='text', overwrite=True, path='/path/to/file')
-            self.assertEqual(ret, ret_exp)
+            assert ret == ret_exp
 
     def test_load_overwrite_false(self):
         ret_exp = {'out': True, 'message': 'Successfully loaded the configuration.'}
@@ -1664,7 +1655,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             mock_isfile.return_value = True
             ret = junos.load('/path/to/file', overwrite=False)
             mock_load.assert_called_with(format='text', merge=True, path='/path/to/file')
-            self.assertEqual(ret, ret_exp)
+            assert ret == ret_exp
 
     def test_load_error(self):
         ret_exp = {'out': False,
@@ -1679,16 +1670,16 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             mock_isfile.return_value = True
             mock_load.side_effect = Exception('Test Error')
             ret = junos.load('/path/to/file')
-            self.assertEqual(ret, ret_exp)
+            assert ret == ret_exp
 
     def test_commit_check_success(self):
         ret_exp = {'out': True, 'message': 'Commit check succeeded.'}
         ret = junos.commit_check()
-        self.assertEqual(ret, ret_exp)
+        assert ret == ret_exp
 
     def test_commit_check_error(self):
         ret_exp = {'out': False, 'message': 'Commit check failed with '}
         with patch('jnpr.junos.utils.config.Config.commit_check') as mock_check:
             mock_check.side_effect = Exception
             ret = junos.commit_check()
-            self.assertEqual(ret, ret_exp)
+            assert ret == ret_exp

@@ -35,7 +35,7 @@ class VirtualenvModTestCase(TestCase, LoaderModuleMockMixin):
                'result': False,
                'comment': ''}
         ret.update({'comment': 'Virtualenv was not detected on this system'})
-        self.assertDictEqual(virtualenv_mod.managed('salt'), ret)
+        assert virtualenv_mod.managed('salt') == ret
 
         mock1 = MagicMock(return_value='True')
         mock = MagicMock(return_value=False)
@@ -51,34 +51,34 @@ class VirtualenvModTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(os.path, 'exists', mock):
                 ret.update({'comment': "pip requirements file"
                             " 'salt://a' not found"})
-                self.assertDictEqual(virtualenv_mod.managed('salt', None,
-                                                            'salt://a'), ret)
+                assert virtualenv_mod.managed('salt', None,
+                                                            'salt://a') == ret
 
                 with patch.dict(virtualenv_mod.__opts__, {"test": True}):
                     ret.update({'changes': {'cleared_packages': 'True',
                                             'old': 'True'},
                                 'comment': 'Virtualenv salt is set to'
                                 ' be cleared', 'result': None})
-                    self.assertDictEqual(virtualenv_mod.managed('salt',
-                                                                clear=1), ret)
+                    assert virtualenv_mod.managed('salt',
+                                                                clear=1) == ret
                     ret.update({'comment': 'Virtualenv salt is already'
                                 ' created', 'changes': {},
                                 'result': True})
-                    self.assertDictEqual(virtualenv_mod.managed('salt'), ret)
+                    assert virtualenv_mod.managed('salt') == ret
 
                     ret.update({'comment': 'Virtualenv salt is set to'
                                 ' be created', 'result': None})
-                    self.assertDictEqual(virtualenv_mod.managed('salt'), ret)
+                    assert virtualenv_mod.managed('salt') == ret
 
                 with patch.dict(virtualenv_mod.__opts__, {"test": False}):
                     ret.update({'comment': "The 'use_wheel' option is"
                                 " only supported in pip between 1.4 and 9.0.3."
                                 " The version of pip detected was 1.1.",
                                 'result': False})
-                    self.assertDictEqual(virtualenv_mod.managed('salt',
-                                                                use_wheel=1),
-                                         ret)
+                    assert virtualenv_mod.managed('salt',
+                                                                use_wheel=1) == \
+                                         ret
 
                     ret.update({'comment': 'virtualenv exists',
                                 'result': True})
-                    self.assertDictEqual(virtualenv_mod.managed('salt'), ret)
+                    assert virtualenv_mod.managed('salt') == ret

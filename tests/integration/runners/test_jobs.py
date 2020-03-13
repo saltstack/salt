@@ -22,16 +22,16 @@ class ManageTest(ShellCase):
         jobs.active
         '''
         ret = self.run_run_plus('jobs.active')
-        self.assertEqual(ret['return'], {})
-        self.assertEqual(ret['out'], [])
+        assert ret['return'] == {}
+        assert ret['out'] == []
 
     def test_lookup_jid(self):
         '''
         jobs.lookup_jid
         '''
         ret = self.run_run_plus('jobs.lookup_jid', '23974239742394')
-        self.assertEqual(ret['return'], {})
-        self.assertEqual(ret['out'], [])
+        assert ret['return'] == {}
+        assert ret['out'] == []
 
     def test_lookup_jid_invalid(self):
         '''
@@ -39,7 +39,7 @@ class ManageTest(ShellCase):
         '''
         ret = self.run_run_plus('jobs.lookup_jid')
         expected = 'Passed invalid arguments:'
-        self.assertIn(expected, ret['return'])
+        assert expected in ret['return']
 
     @skipIf(True, 'to be re-enabled when #23623 is merged')
     def test_list_jobs(self):
@@ -47,7 +47,7 @@ class ManageTest(ShellCase):
         jobs.list_jobs
         '''
         ret = self.run_run_plus('jobs.list_jobs')
-        self.assertIsInstance(ret['return'], dict)
+        assert isinstance(ret['return'], dict)
 
 
 @pytest.mark.windows_whitelisted

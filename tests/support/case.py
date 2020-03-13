@@ -66,7 +66,7 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin
                     """
                     data = self.run_salt('-L minion test.ping')
                     data = '\n'.join(data)
-                    self.assertIn('minion', data)
+                    assert 'minion' in data
         '''
         arg_str = '-c {0} -t {1} {2}'.format(self.config_dir, timeout, arg_str)
         return self.run_script('salt', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, timeout=timeout)
@@ -195,7 +195,7 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin
         stdout, stderr, retcode = self.run_call(arg_str, catch_stderr=True, with_retcode=True, **kwargs)
         if stderr:
             log.warning(stderr)
-        self.assertFalse(retcode, stderr)
+        assert not retcode, stderr
         return stdout
 
     def run_cloud(self, arg_str, catch_stderr=False, timeout=None):

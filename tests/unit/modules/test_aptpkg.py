@@ -174,7 +174,7 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
         version = LOWPKG_INFO['wget']['version']
         mock = MagicMock(return_value=version)
         with patch.dict(aptpkg.__salt__, {'pkg_resource.version': mock}):
-            self.assertEqual(aptpkg.version(*['wget']), version)
+            assert aptpkg.version(*['wget']) == version
 
     def test_upgrade_available(self):
         '''
@@ -182,7 +182,7 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.aptpkg.latest_version',
                    MagicMock(return_value='')):
-            self.assertFalse(aptpkg.upgrade_available('wget'))
+            assert not aptpkg.upgrade_available('wget')
 
     def test_add_repo_key(self):
         '''
@@ -195,8 +195,8 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
                 'stdout': 'OK'
             })
             with patch.dict(aptpkg.__salt__, {'cmd.run_all': mock}):
-                self.assertTrue(aptpkg.add_repo_key(keyserver='keyserver.ubuntu.com',
-                                                    keyid='FBB75451'))
+                assert aptpkg.add_repo_key(keyserver='keyserver.ubuntu.com',
+                                                    keyid='FBB75451')
 
     def test_add_repo_key_failed(self):
         '''
@@ -210,7 +210,8 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
                 'stdout': 'OK'
             })
             with patch.dict(aptpkg.__salt__, {'cmd.run_all': mock}):
-                self.assertRaises(SaltInvocationError, aptpkg.add_repo_key, **kwargs)
+                with pytest.raises(SaltInvocationError):
+                    aptpkg.add_repo_key(**kwargs)
 
     def test_get_repo_keys(self):
         '''
@@ -221,7 +222,7 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
             'stdout': APT_KEY_LIST
         })
         with patch.dict(aptpkg.__salt__, {'cmd.run_all': mock}):
-            self.assertEqual(aptpkg.get_repo_keys(), REPO_KEYS)
+            assert aptpkg.get_repo_keys() == REPO_KEYS
 
     def test_file_dict(self):
         '''
@@ -229,7 +230,7 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=LOWPKG_FILES)
         with patch.dict(aptpkg.__salt__, {'lowpkg.file_dict': mock}):
-            self.assertEqual(aptpkg.file_dict('wget'), LOWPKG_FILES)
+            assert aptpkg.file_dict('wget') == LOWPKG_FILES
 
     def test_file_list(self):
         '''
@@ -241,7 +242,7 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
         }
         mock = MagicMock(return_value=files)
         with patch.dict(aptpkg.__salt__, {'lowpkg.file_list': mock}):
-            self.assertEqual(aptpkg.file_list('wget'), files)
+            assert aptpkg.file_list('wget') == files
 
     def test_get_selections(self):
         '''
@@ -250,7 +251,7 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
         selections = {'install': ['wget']}
         mock = MagicMock(return_value='wget\t\t\t\t\t\tinstall')
         with patch.dict(aptpkg.__salt__, {'cmd.run_stdout': mock}):
-            self.assertEqual(aptpkg.get_selections('wget'), selections)
+            assert aptpkg.get_selections('wget') == selections
 
     def test_info_installed(self):
         '''
@@ -270,8 +271,8 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value=LOWPKG_INFO)
         with patch.dict(aptpkg.__salt__, {'lowpkg.info': mock}):
             del installed['wget']['status']
-            self.assertEqual(aptpkg.info_installed('wget'), installed)
-            self.assertEqual(len(aptpkg.info_installed()), 1)
+            assert aptpkg.info_installed('wget') == installed
+            assert len(aptpkg.info_installed()) == 1
 
     def test_owner(self):
         '''
@@ -280,7 +281,7 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
         paths = ['/usr/bin/wget']
         mock = MagicMock(return_value='wget: /usr/bin/wget')
         with patch.dict(aptpkg.__salt__, {'cmd.run_stdout': mock}):
-            self.assertEqual(aptpkg.owner(*paths), 'wget')
+            assert aptpkg.owner(*paths) == 'wget'
 
     def test_refresh_db(self):
         '''
@@ -299,7 +300,7 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
         })
         with patch('salt.utils.pkg.clear_rtag', MagicMock()):
             with patch.dict(aptpkg.__salt__, {'cmd.run_all': mock, 'config.get': MagicMock(return_value=False)}):
-                self.assertEqual(aptpkg.refresh_db(), refresh_db)
+                assert aptpkg.refresh_db() == refresh_db
 
     def test_refresh_db_failed(self):
         '''
@@ -312,7 +313,8 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
         })
         with patch('salt.utils.pkg.clear_rtag', MagicMock()):
             with patch.dict(aptpkg.__salt__, {'cmd.run_all': mock, 'config.get': MagicMock(return_value=False)}):
-                self.assertRaises(CommandExecutionError, aptpkg.refresh_db, **kwargs)
+                with pytest.raises(CommandExecutionError):
+                    aptpkg.refresh_db(**kwargs)
 
     def test_autoremove(self):
         '''
@@ -338,7 +340,7 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.aptpkg._uninstall',
                    MagicMock(return_value=UNINSTALL)):
-            self.assertEqual(aptpkg.remove(name='tmux'), UNINSTALL)
+            assert aptpkg.remove(name='tmux') == UNINSTALL
 
     def test_purge(self):
         '''
@@ -346,7 +348,7 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.aptpkg._uninstall',
                    MagicMock(return_value=UNINSTALL)):
-            self.assertEqual(aptpkg.purge(name='tmux'), UNINSTALL)
+            assert aptpkg.purge(name='tmux') == UNINSTALL
 
     def test_upgrade(self):
         '''
@@ -366,7 +368,7 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
                     }
                 }
                 with patch.multiple(aptpkg, **patch_kwargs):
-                    self.assertEqual(aptpkg.upgrade(), dict())
+                    assert aptpkg.upgrade() == dict()
 
     def test_upgrade_downloadonly(self):
         '''
@@ -389,17 +391,17 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
                     aptpkg.upgrade()
                     args_matching = [True for args in patch_kwargs['__salt__']['cmd.run_all'].call_args[0] if "--download-only" in args]
                     # Here we shouldn't see the parameter and args_matching should be empty.
-                    self.assertFalse(any(args_matching))
+                    assert not any(args_matching)
 
                     aptpkg.upgrade(downloadonly=True)
                     args_matching = [True for args in patch_kwargs['__salt__']['cmd.run_all'].call_args[0] if "--download-only" in args]
                     # --download-only should be in the args list and we should have at least on True in the list.
-                    self.assertTrue(any(args_matching))
+                    assert any(args_matching)
 
                     aptpkg.upgrade(download_only=True)
                     args_matching = [True for args in patch_kwargs['__salt__']['cmd.run_all'].call_args[0] if "--download-only" in args]
                     # --download-only should be in the args list and we should have at least on True in the list.
-                    self.assertTrue(any(args_matching))
+                    assert any(args_matching)
 
     def test_show(self):
         '''
@@ -493,20 +495,18 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
                 patch.object(aptpkg, 'refresh_db', refresh_mock):
 
             # Test success (no refresh)
-            self.assertEqual(aptpkg.show('foo*'), expected)
+            assert aptpkg.show('foo*') == expected
             refresh_mock.assert_not_called()
             refresh_mock.reset_mock()
 
             # Test success (with refresh)
-            self.assertEqual(aptpkg.show('foo*', refresh=True), expected)
+            assert aptpkg.show('foo*', refresh=True) == expected
             self.assert_called_once(refresh_mock)
             refresh_mock.reset_mock()
 
             # Test filtered return
-            self.assertEqual(
-                aptpkg.show('foo*', filter='description,provides'),
+            assert aptpkg.show('foo*', filter='description,provides') == \
                 filtered
-            )
             refresh_mock.assert_not_called()
             refresh_mock.reset_mock()
 
@@ -514,12 +514,12 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
                 patch.object(aptpkg, 'refresh_db', refresh_mock):
 
             # Test failure (no refresh)
-            self.assertEqual(aptpkg.show('foo*'), {})
+            assert aptpkg.show('foo*') == {}
             refresh_mock.assert_not_called()
             refresh_mock.reset_mock()
 
             # Test failure (with refresh)
-            self.assertEqual(aptpkg.show('foo*', refresh=True), {})
+            assert aptpkg.show('foo*', refresh=True) == {}
             self.assert_called_once(refresh_mock)
             refresh_mock.reset_mock()
 
@@ -570,8 +570,8 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(aptpkg.__salt__, {'lowpkg.bin_pkg_info': MagicMock(return_value={'name': 'test-package',
                                                                                          'version': '1.0'})}):
             list_downloaded = aptpkg.list_downloaded()
-            self.assertEqual(len(list_downloaded), 1)
-            self.assertDictEqual(list_downloaded, DOWNLOADED_RET)
+            assert len(list_downloaded) == 1
+            assert list_downloaded == DOWNLOADED_RET
 
 
 @skipIf(pytest is None, 'PyTest is missing')

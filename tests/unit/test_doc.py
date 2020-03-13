@@ -100,4 +100,4 @@ class DocTestCase(TestCase):
         self.maxDiff = None
 
         # test_ret should be empty, otherwise there are :doc: references present
-        self.assertEqual(test_ret, {})
+        assert test_ret == {}

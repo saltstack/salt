@@ -34,6 +34,7 @@ import salt.utils.stringutils
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext import six
 from salt.ext.six.moves import range
+import pytest
 # pylint: enable=no-name-in-module,redefined-builtin
 
 log = logging.getLogger(__name__)
@@ -119,13 +120,11 @@ class LazyLoaderTest(TestCase):
         '''
         # Make sure depends correctly allowed a function to load. If this
         # results in a KeyError, the decorator is broken.
-        self.assertTrue(
-            inspect.isfunction(
+        assert inspect.isfunction(
                 self.loader[self.module_name + '.loaded']
             )
-        )
         # Make sure depends correctly kept a function from loading
-        self.assertTrue(self.module_name + '.not_loaded' not in self.loader)
+        assert self.module_name + '.not_loaded' not in self.loader
 
 
 class LazyLoaderVirtualEnabledTest(TestCase):
@@ -165,64 +164,64 @@ class LazyLoaderVirtualEnabledTest(TestCase):
         Ensure that it only loads stuff when needed
         '''
         # make sure it starts empty
-        self.assertEqual(self.loader._dict, {})
+        assert self.loader._dict == {}
         # get something, and make sure its a func
-        self.assertTrue(inspect.isfunction(self.loader['test.ping']))
+        assert inspect.isfunction(self.loader['test.ping'])
 
         # make sure we only loaded "test" functions
         for key, val in six.iteritems(self.loader._dict):
-            self.assertEqual(key.split('.', 1)[0], 'test')
+            assert key.split('.', 1)[0] == 'test'
 
         # make sure the depends thing worked (double check of the depends testing,
         # since the loader does the calling magically
-        self.assertFalse('test.missing_func' in self.loader._dict)
+        assert 'test.missing_func' not in self.loader._dict
 
     def test_badkey(self):
-        with self.assertRaises(KeyError):
+        with pytest.raises(KeyError):
             self.loader[None]  # pylint: disable=W0104
 
-        with self.assertRaises(KeyError):
+        with pytest.raises(KeyError):
             self.loader[1]  # pylint: disable=W0104
 
     def test_disable(self):
-        self.assertNotIn('pillar.items', self.loader)
+        assert 'pillar.items' not in self.loader
 
     def test_len_load(self):
         '''
         Since LazyLoader is a MutableMapping, if someone asks for len() we have
         to load all
         '''
-        self.assertEqual(self.loader._dict, {})
+        assert self.loader._dict == {}
         len(self.loader)  # force a load all
-        self.assertNotEqual(self.loader._dict, {})
+        assert self.loader._dict != {}
 
     def test_iter_load(self):
         '''
         Since LazyLoader is a MutableMapping, if someone asks to iterate we have
         to load all
         '''
-        self.assertEqual(self.loader._dict, {})
+        assert self.loader._dict == {}
         # force a load all
         for key, func in six.iteritems(self.loader):
             break
-        self.assertNotEqual(self.loader._dict, {})
+        assert self.loader._dict != {}
 
     def test_context(self):
         '''
         Make sure context is shared across modules
         '''
         # make sure it starts empty
-        self.assertEqual(self.loader._dict, {})
+        assert self.loader._dict == {}
         # get something, and make sure its a func
         func = self.loader['test.ping']
         with patch.dict(func.__globals__['__context__'], {'foo': 'bar'}):
-            self.assertEqual(self.loader['test.echo'].__globals__['__context__']['foo'], 'bar')
-            self.assertEqual(self.loader['grains.get'].__globals__['__context__']['foo'], 'bar')
+            assert self.loader['test.echo'].__globals__['__context__']['foo'] == 'bar'
+            assert self.loader['grains.get'].__globals__['__context__']['foo'] == 'bar'
 
     def test_globals(self):
         func_globals = self.loader['test.ping'].__globals__
-        self.assertEqual(func_globals['__grains__'], self.opts.get('grains', {}))
-        self.assertEqual(func_globals['__pillar__'], self.opts.get('pillar', {}))
+        assert func_globals['__grains__'] == self.opts.get('grains', {})
+        assert func_globals['__pillar__'] == self.opts.get('pillar', {})
         # the opts passed into modules is at least a subset of the whole opts
         for key, val in six.iteritems(func_globals['__opts__']):
             if key in salt.config.DEFAULT_MASTER_OPTS and key not in salt.config.DEFAULT_MINION_OPTS:
@@ -233,15 +232,15 @@ class LazyLoaderVirtualEnabledTest(TestCase):
             if key not in salt.config.DEFAULT_MASTER_OPTS and key not in salt.config.DEFAULT_MINION_OPTS:
                 # This isn't even a default configuration setting, lets carry on
                 continue
-            self.assertEqual(self.opts[key], val)
+            assert self.opts[key] == val
 
     def test_pack(self):
         self.loader.pack['__foo__'] = 'bar'
         func_globals = self.loader['test.ping'].__globals__
-        self.assertEqual(func_globals['__foo__'], 'bar')
+        assert func_globals['__foo__'] == 'bar'
 
     def test_virtual(self):
-        self.assertNotIn('test_virtual.ping', self.loader)
+        assert 'test_virtual.ping' not in self.loader
 
 
 class LazyLoaderVirtualDisabledTest(TestCase):
@@ -277,7 +276,7 @@ class LazyLoaderVirtualDisabledTest(TestCase):
         del cls.proxy
 
     def test_virtual(self):
-        self.assertTrue(inspect.isfunction(self.loader['test_virtual.ping']))
+        assert inspect.isfunction(self.loader['test_virtual.ping'])
 
 
 class LazyLoaderWhitelistTest(TestCase):
@@ -313,10 +312,10 @@ class LazyLoaderWhitelistTest(TestCase):
         del cls.proxy
 
     def test_whitelist(self):
-        self.assertTrue(inspect.isfunction(self.loader['test.ping']))
-        self.assertTrue(inspect.isfunction(self.loader['pillar.get']))
+        assert inspect.isfunction(self.loader['test.ping'])
+        assert inspect.isfunction(self.loader['pillar.get'])
 
-        self.assertNotIn('grains.get', self.loader)
+        assert 'grains.get' not in self.loader
 
 
 class LazyLoaderGrainsBlacklistTest(TestCase):
@@ -338,10 +337,10 @@ class LazyLoaderGrainsBlacklistTest(TestCase):
         ]
 
         grains = salt.loader.grains(opts)
-        self.assertNotIn('master', grains)
-        self.assertNotIn('os', set([g[:2] for g in list(grains)]))
-        self.assertNotIn('ipv4', grains)
-        self.assertNotIn('ipv6', grains)
+        assert 'master' not in grains
+        assert 'os' not in set([g[:2] for g in list(grains)])
+        assert 'ipv4' not in grains
+        assert 'ipv6' not in grains
 
 
 class LazyLoaderSingleItem(TestCase):
@@ -381,11 +380,11 @@ class LazyLoaderSingleItem(TestCase):
         '''
         key = 'testing_no_dot'
         expected = "The key '{0}' should contain a '.'".format(key)
-        with self.assertRaises(KeyError) as err:
+        with pytest.raises(KeyError) as err:
             inspect.isfunction(self.loader['testing_no_dot'])
 
-        result = err.exception.args[0]
-        assert result == expected, result
+        result = err.value.args[0]
+        assert result == expected
 
 
 module_template = '''
@@ -486,31 +485,31 @@ class LazyLoaderReloadingTest(TestCase):
         Make sure that you can access alias-d modules
         '''
         # ensure it doesn't exist
-        self.assertNotIn(self.module_key, self.loader)
+        assert self.module_key not in self.loader
 
         self.update_module()
-        self.assertNotIn('{0}.test_alias'.format(self.module_name), self.loader)
-        self.assertTrue(inspect.isfunction(self.loader['{0}.working_alias'.format(self.module_name)]))
+        assert '{0}.test_alias'.format(self.module_name) not in self.loader
+        assert inspect.isfunction(self.loader['{0}.working_alias'.format(self.module_name)])
 
     def test_clear(self):
-        self.assertTrue(inspect.isfunction(self.loader['test.ping']))
+        assert inspect.isfunction(self.loader['test.ping'])
         self.update_module()  # write out out custom module
         self.loader.clear()  # clear the loader dict
 
         # force a load of our module
-        self.assertTrue(inspect.isfunction(self.loader[self.module_key]))
+        assert inspect.isfunction(self.loader[self.module_key])
 
         # make sure we only loaded our custom module
         # which means that we did correctly refresh the file mapping
         for k, v in six.iteritems(self.loader._dict):
-            self.assertTrue(k.startswith(self.module_name))
+            assert k.startswith(self.module_name)
 
     def test_load(self):
         # ensure it doesn't exist
-        self.assertNotIn(self.module_key, self.loader)
+        assert self.module_key not in self.loader
 
         self.update_module()
-        self.assertTrue(inspect.isfunction(self.loader[self.module_key]))
+        assert inspect.isfunction(self.loader[self.module_key])
 
     def test__load__(self):
         '''
@@ -519,7 +518,7 @@ class LazyLoaderReloadingTest(TestCase):
         self.update_module()
 
         # ensure it doesn't exist
-        self.assertNotIn(self.module_key + '2', self.loader)
+        assert self.module_key + '2' not in self.loader
 
     def test__load__and_depends(self):
         '''
@@ -527,24 +526,24 @@ class LazyLoaderReloadingTest(TestCase):
         '''
         self.update_module()
         # ensure it doesn't exist
-        self.assertNotIn(self.module_key + '3', self.loader)
-        self.assertNotIn(self.module_key + '4', self.loader)
+        assert self.module_key + '3' not in self.loader
+        assert self.module_key + '4' not in self.loader
 
     def test_reload(self):
         # ensure it doesn't exist
-        self.assertNotIn(self.module_key, self.loader)
+        assert self.module_key not in self.loader
 
         # make sure it updates correctly
         for x in range(1, 3):
             self.update_module()
             self.loader.clear()
-            self.assertEqual(self.loader[self.module_key](), self.count)
+            assert self.loader[self.module_key]() == self.count
 
         self.rm_module()
         # make sure that even if we remove the module, its still loaded until a clear
-        self.assertEqual(self.loader[self.module_key](), self.count)
+        assert self.loader[self.module_key]() == self.count
         self.loader.clear()
-        self.assertNotIn(self.module_key, self.loader)
+        assert self.module_key not in self.loader
 
 
 virtual_aliases = ('loadertest2', 'loadertest3')
@@ -622,9 +621,9 @@ class LazyLoaderVirtualAliasTest(TestCase):
         for mod_name in mod_names:
             func_name = '.'.join((mod_name, 'test'))
             log.debug('Running %s (dict attribute)', func_name)
-            self.assertTrue(self.loader[func_name]())
+            assert self.loader[func_name]()
             log.debug('Running %s (loader attribute)', func_name)
-            self.assertTrue(getattr(self.loader, mod_name).test())
+            assert getattr(self.loader, mod_name).test()
 
 
 submodule_template = '''
@@ -751,62 +750,62 @@ class LazyLoaderSubmodReloadingTest(TestCase):
 
     def test_basic(self):
         # ensure it doesn't exist
-        self.assertNotIn(self.module_key, self.loader)
+        assert self.module_key not in self.loader
 
         self.update_module()
         self.update_lib()
         self.loader.clear()
-        self.assertIn(self.module_key, self.loader)
+        assert self.module_key in self.loader
 
     def test_reload(self):
         # ensure it doesn't exist
-        self.assertNotIn(self.module_key, self.loader)
+        assert self.module_key not in self.loader
 
         # update both the module and the lib
         for x in range(1, 3):
             self.update_lib()
             self.update_module()
             self.loader.clear()
-            self.assertNotIn(self.module_key, self.loader._dict)
-            self.assertIn(self.module_key, self.loader)
-            self.assertEqual(self.loader[self.module_key](), (self.count, self.lib_count))
+            assert self.module_key not in self.loader._dict
+            assert self.module_key in self.loader
+            assert self.loader[self.module_key]() == (self.count, self.lib_count)
 
         # update just the module
         for x in range(1, 3):
             self.update_module()
             self.loader.clear()
-            self.assertNotIn(self.module_key, self.loader._dict)
-            self.assertIn(self.module_key, self.loader)
-            self.assertEqual(self.loader[self.module_key](), (self.count, self.lib_count))
+            assert self.module_key not in self.loader._dict
+            assert self.module_key in self.loader
+            assert self.loader[self.module_key]() == (self.count, self.lib_count)
 
         # update just the lib
         for x in range(1, 3):
             self.update_lib()
             self.loader.clear()
-            self.assertNotIn(self.module_key, self.loader._dict)
-            self.assertIn(self.module_key, self.loader)
-            self.assertEqual(self.loader[self.module_key](), (self.count, self.lib_count))
+            assert self.module_key not in self.loader._dict
+            assert self.module_key in self.loader
+            assert self.loader[self.module_key]() == (self.count, self.lib_count)
 
         self.rm_module()
         # make sure that even if we remove the module, its still loaded until a clear
-        self.assertEqual(self.loader[self.module_key](), (self.count, self.lib_count))
+        assert self.loader[self.module_key]() == (self.count, self.lib_count)
         self.loader.clear()
-        self.assertNotIn(self.module_key, self.loader)
+        assert self.module_key not in self.loader
 
     def test_reload_missing_lib(self):
         # ensure it doesn't exist
-        self.assertNotIn(self.module_key, self.loader)
+        assert self.module_key not in self.loader
 
         # update both the module and the lib
         self.update_module()
         self.update_lib()
         self.loader.clear()
-        self.assertEqual(self.loader[self.module_key](), (self.count, self.lib_count))
+        assert self.loader[self.module_key]() == (self.count, self.lib_count)
 
         # remove the lib, this means we should fail to load the module next time
         self.rm_lib()
         self.loader.clear()
-        self.assertNotIn(self.module_key, self.loader)
+        assert self.module_key not in self.loader
 
 
 mod_template = '''
@@ -884,35 +883,35 @@ class LazyLoaderModulePackageTest(TestCase):
 
     def test_module(self):
         # ensure it doesn't exist
-        self.assertNotIn('foo', self.loader)
-        self.assertNotIn('foo.test', self.loader)
+        assert 'foo' not in self.loader
+        assert 'foo.test' not in self.loader
         self.update_module('foo.py', mod_template.format(val=1))
         self.loader.clear()
-        self.assertIn('foo.test', self.loader)
-        self.assertEqual(self.loader['foo.test'](), 1)
+        assert 'foo.test' in self.loader
+        assert self.loader['foo.test']() == 1
 
     def test_package(self):
         # ensure it doesn't exist
-        self.assertNotIn('foo', self.loader)
-        self.assertNotIn('foo.test', self.loader)
+        assert 'foo' not in self.loader
+        assert 'foo.test' not in self.loader
         self.update_module('foo/__init__.py', mod_template.format(val=2))
         self.loader.clear()
-        self.assertIn('foo.test', self.loader)
-        self.assertEqual(self.loader['foo.test'](), 2)
+        assert 'foo.test' in self.loader
+        assert self.loader['foo.test']() == 2
 
     def test_module_package_collision(self):
         # ensure it doesn't exist
-        self.assertNotIn('foo', self.loader)
-        self.assertNotIn('foo.test', self.loader)
+        assert 'foo' not in self.loader
+        assert 'foo.test' not in self.loader
         self.update_module('foo.py', mod_template.format(val=3))
         self.loader.clear()
-        self.assertIn('foo.test', self.loader)
-        self.assertEqual(self.loader['foo.test'](), 3)
+        assert 'foo.test' in self.loader
+        assert self.loader['foo.test']() == 3
 
         self.update_module('foo/__init__.py', mod_template.format(val=4))
         self.loader.clear()
-        self.assertIn('foo.test', self.loader)
-        self.assertEqual(self.loader['foo.test'](), 4)
+        assert 'foo.test' in self.loader
+        assert self.loader['foo.test']() == 4
 
 
 deep_init_base = '''
@@ -983,7 +982,7 @@ class LazyLoaderDeepSubmodReloadingTest(TestCase):
             pack={'__utils__': self.utils,
                   '__proxy__': self.proxy,
                   '__salt__': self.minion_mods})
-        self.assertIn('{0}.top'.format(self.module_name), self.loader)
+        assert '{0}.top'.format(self.module_name) in self.loader
 
     def tearDown(self):
         del self.tmp_dir
@@ -1024,12 +1023,12 @@ class LazyLoaderDeepSubmodReloadingTest(TestCase):
         remove_bytecode(path)
 
     def test_basic(self):
-        self.assertIn('{0}.top'.format(self.module_name), self.loader)
+        assert '{0}.top'.format(self.module_name) in self.loader
 
     def _verify_libs(self):
         for lib in self.libs:
-            self.assertEqual(self.loader['{0}.{1}'.format(self.module_name, lib.replace('_lib', ''))](),
-                             self.lib_count[lib])
+            assert self.loader['{0}.{1}'.format(self.module_name, lib.replace('_lib', ''))]() == \
+                             self.lib_count[lib]
 
     def test_reload(self):
         '''
@@ -1070,7 +1069,7 @@ class LoaderGlobalsTest(ModuleCase):
                         global_vars.append(val.__globals__)
 
         # if we couldn't find any, then we have no modules -- so something is broken
-        self.assertNotEqual(global_vars, [], msg='No modules were loaded.')
+        assert global_vars != [], 'No modules were loaded.'
 
         # get the names of the globals you should have
         func_name = inspect.stack()[1][3]
@@ -1079,7 +1078,7 @@ class LoaderGlobalsTest(ModuleCase):
         # Now, test each module!
         for item in global_vars:
             for name in names:
-                self.assertIn(name, list(item.keys()))
+                assert name in list(item.keys())
 
     def test_auth(self):
         '''
@@ -1187,21 +1186,21 @@ class RawModTest(TestCase):
     def test_basic(self):
         testmod = salt.loader.raw_mod(self.opts, 'test', None)
         for k, v in six.iteritems(testmod):
-            self.assertEqual(k.split('.')[0], 'test')
+            assert k.split('.')[0] == 'test'
 
     def test_bad_name(self):
         testmod = salt.loader.raw_mod(self.opts, 'module_we_do_not_have', None)
-        self.assertEqual(testmod, {})
+        assert testmod == {}
 
 
 class NetworkUtilsTestCase(ModuleCase):
     def test_is_private(self):
         mod = salt.loader.raw_mod(self.minion_opts, 'network', None)
-        self.assertTrue(mod['network.is_private']('10.0.0.1'), True)
+        assert mod['network.is_private']('10.0.0.1'), True
 
     def test_is_loopback(self):
         mod = salt.loader.raw_mod(self.minion_opts, 'network', None)
-        self.assertTrue(mod['network.is_loopback']('127.0.0.1'), True)
+        assert mod['network.is_loopback']('127.0.0.1'), True
 
 
 class LazyLoaderOptimizationOrderTest(TestCase):

@@ -241,7 +241,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(gpg.__salt__, {'user.info': MagicMock(return_value=_user_mock)}):
             with patch.dict(gpg.__salt__, {'config.option': mock_opt}):
                 with patch.object(gpg, '_list_keys', return_value=_list_result):
-                    self.assertEqual(gpg.list_keys(), _expected_result)
+                    assert gpg.list_keys() == _expected_result
 
     @skipIf(not HAS_GPG, 'GPG Module Unavailable')
     def test_get_key(self):
@@ -292,7 +292,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(gpg.__salt__, {'config.option': mock_opt}):
                 with patch.object(gpg, '_list_keys', return_value=_list_result):
                     ret = gpg.get_key('xxxxxxxxxxxxxxxx')
-                    self.assertEqual(ret, _expected_result)
+                    assert ret == _expected_result
 
     @pytest.mark.destructive_test  # Need to run as root!?
     @skipIf(not HAS_GPG, 'GPG Module Unavailable')
@@ -339,7 +339,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(gpg, '_list_keys', return_value=_list_result):
                     with patch('salt.modules.gpg.gnupg.GPG.delete_keys', MagicMock(return_value='ok')):
                         ret = gpg.delete_key('xxxxxxxxxxxxxxxx', delete_secret=True)
-                        self.assertEqual(ret, _expected_result)
+                        assert ret == _expected_result
 
     @skipIf(not HAS_GPG, 'GPG Module Unavailable')
     def test_search_keys(self):
@@ -380,7 +380,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(gpg.__salt__, {'config.option': mock_opt}):
                 with patch.object(gpg, '_search_keys', return_value=_search_result):
                     ret = gpg.search_keys('person@example.com')
-                    self.assertEqual(ret, _expected_result)
+                    assert ret == _expected_result
 
     @skipIf(not HAS_GPG, 'GPG Module Unavailable')
     def test_gpg_import_pub_key(self):
@@ -389,7 +389,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(gpg.__salt__, {'config.option': config_user}):
             with patch.dict(gpg.__salt__, {'user.info': user_info}):
                 ret = gpg.import_key(None, self.gpgfile_pub, 'salt', self.gpghome)
-                self.assertEqual(ret['res'], True)
+                assert ret['res'] is True
 
     @skipIf(not HAS_GPG, 'GPG Module Unavailable')
     def test_gpg_import_priv_key(self):
@@ -398,7 +398,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(gpg.__salt__, {'config.option': config_user}):
             with patch.dict(gpg.__salt__, {'user.info': user_info}):
                 ret = gpg.import_key(None, self.gpgfile_priv, 'salt', self.gpghome)
-                self.assertEqual(ret['res'], True)
+                assert ret['res'] is True
 
     @skipIf(not HAS_GPG, 'GPG Module Unavailable')
     def test_gpg_sign(self):
@@ -409,7 +409,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(gpg.__salt__, {'user.info': user_info}):
                 with patch.dict(gpg.__salt__, {'pillar.get': pillar_mock}):
                     ret = gpg.import_key(None, self.gpgfile_priv, 'salt', self.gpghome)
-                    self.assertEqual(ret['res'], True)
+                    assert ret['res'] is True
                     gpg_text_input = 'The quick brown fox jumped over the lazy dog'
                     gpg_sign_output = gpg.sign(config_user, GPG_TEST_KEY_ID, gpg_text_input, None, None, True, self.gpghome)
-                    self.assertIsNotNone(gpg_sign_output)
+                    assert gpg_sign_output is not None

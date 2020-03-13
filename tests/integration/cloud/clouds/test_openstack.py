@@ -55,7 +55,7 @@ class OpenstackTest(ModuleCase, SaltReturnAssertsMixin):
                              service_type='identity',
                              connection_endpoint=self.endpoint,
                              connection_token=self.token)
-        self.assertTrue(ret['keystone_|-keystone_|-keystone_|-service_present']['result'])
+        assert ret['keystone_|-keystone_|-keystone_|-service_present']['result']
 
         ret = self.run_state('keystone.endpoint_present',
                              name='keystone',
@@ -65,33 +65,33 @@ class OpenstackTest(ModuleCase, SaltReturnAssertsMixin):
                              adminurl='http://localhost:35357/v2.0',
                              connection_endpoint=self.endpoint,
                              connection_token=self.token)
-        self.assertTrue(ret['keystone_|-keystone_|-keystone_|-endpoint_present']['result'])
+        assert ret['keystone_|-keystone_|-keystone_|-endpoint_present']['result']
 
         ret = self.run_state('keystone.tenant_present',
                              name='admin',
                              description='Admin Project',
                              connection_endpoint=self.endpoint,
                              connection_token=self.token)
-        self.assertTrue(ret['keystone_|-admin_|-admin_|-tenant_present']['result'])
+        assert ret['keystone_|-admin_|-admin_|-tenant_present']['result']
 
         ret = self.run_state('keystone.tenant_present',
                              name='demo',
                              description='Demo Project',
                              connection_endpoint=self.endpoint,
                              connection_token=self.token)
-        self.assertTrue(ret['keystone_|-demo_|-demo_|-tenant_present']['result'])
+        assert ret['keystone_|-demo_|-demo_|-tenant_present']['result']
 
         ret = self.run_state('keystone.role_present',
                              name='admin',
                              connection_endpoint=self.endpoint,
                              connection_token=self.token)
-        self.assertTrue(ret['keystone_|-admin_|-admin_|-role_present']['result'])
+        assert ret['keystone_|-admin_|-admin_|-role_present']['result']
 
         ret = self.run_state('keystone.role_present',
                              name='user',
                              connection_endpoint=self.endpoint,
                              connection_token=self.token)
-        self.assertTrue(ret['keystone_|-user_|-user_|-role_present']['result'])
+        assert ret['keystone_|-user_|-user_|-role_present']['result']
 
         ret = self.run_state('keystone.user_present',
                              name='admin',
@@ -101,7 +101,7 @@ class OpenstackTest(ModuleCase, SaltReturnAssertsMixin):
                              roles={'admin': ['admin']},
                              connection_endpoint=self.endpoint,
                              connection_token=self.token)
-        self.assertTrue(ret['keystone_|-admin_|-admin_|-user_present']['result'])
+        assert ret['keystone_|-admin_|-admin_|-user_present']['result']
 
         ret = self.run_state('keystone.user_present',
                              name='demo',
@@ -111,7 +111,7 @@ class OpenstackTest(ModuleCase, SaltReturnAssertsMixin):
                              roles={'demo': ['user']},
                              connection_endpoint=self.endpoint,
                              connection_token=self.token)
-        self.assertTrue(ret['keystone_|-demo_|-demo_|-user_present']['result'])
+        assert ret['keystone_|-demo_|-demo_|-user_present']['result']
 
     @pytest.mark.destructive_test
     def test_zzz_teardown_keystone_endpoint(self):
@@ -119,43 +119,43 @@ class OpenstackTest(ModuleCase, SaltReturnAssertsMixin):
                              name='admin',
                              connection_endpoint=self.endpoint,
                              connection_token=self.token)
-        self.assertTrue(ret['keystone_|-admin_|-admin_|-user_absent']['result'])
+        assert ret['keystone_|-admin_|-admin_|-user_absent']['result']
 
         ret = self.run_state('keystone.user_absent',
                              name='demo',
                              connection_endpoint=self.endpoint,
                              connection_token=self.token)
-        self.assertTrue(ret['keystone_|-demo_|-demo_|-user_absent']['result'])
+        assert ret['keystone_|-demo_|-demo_|-user_absent']['result']
 
         ret = self.run_state('keystone.role_absent',
                              name='admin',
                              connection_endpoint=self.endpoint,
                              connection_token=self.token)
-        self.assertTrue(ret['keystone_|-admin_|-admin_|-role_absent']['result'])
+        assert ret['keystone_|-admin_|-admin_|-role_absent']['result']
 
         ret = self.run_state('keystone.role_absent',
                              name='user',
                              connection_endpoint=self.endpoint,
                              connection_token=self.token)
-        self.assertTrue(ret['keystone_|-user_|-user_|-role_absent']['result'])
+        assert ret['keystone_|-user_|-user_|-role_absent']['result']
 
         ret = self.run_state('keystone.tenant_absent',
                              name='admin',
                              connection_endpoint=self.endpoint,
                              connection_token=self.token)
-        self.assertTrue(ret['keystone_|-admin_|-admin_|-tenant_absent']['result'])
+        assert ret['keystone_|-admin_|-admin_|-tenant_absent']['result']
 
         ret = self.run_state('keystone.tenant_absent',
                              name='demo',
                              connection_endpoint=self.endpoint,
                              connection_token=self.token)
-        self.assertTrue(ret['keystone_|-demo_|-demo_|-tenant_absent']['result'])
+        assert ret['keystone_|-demo_|-demo_|-tenant_absent']['result']
 
         ret = self.run_state('keystone.service_absent',
                              name='keystone',
                              connection_endpoint=self.endpoint,
                              connection_token=self.token)
-        self.assertTrue(ret['keystone_|-keystone_|-keystone_|-service_absent']['result'])
+        assert ret['keystone_|-keystone_|-keystone_|-service_absent']['result']
 
     @pytest.mark.destructive_test
     def test_libcloud_auth_v3(self):
@@ -166,7 +166,7 @@ class OpenstackTest(ModuleCase, SaltReturnAssertsMixin):
                                                   domain_name='Default',
                                                   tenant_name='admin')
         driver.authenticate()
-        self.assertTrue(driver.auth_token)
+        assert driver.auth_token
 
 
 @skipIf(not HAS_SHADE, 'openstack driver requires `shade`')

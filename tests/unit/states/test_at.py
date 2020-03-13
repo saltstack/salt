@@ -81,20 +81,20 @@ class AtTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value=mock_atat)
         with patch.dict(at.__opts__, {'test': False}):
             with patch.dict(at.__salt__, {'at.at': mock}):
-                self.assertDictEqual(at.present(name, timespec, tag), ret)
+                assert at.present(name, timespec, tag) == ret
 
         # add a job with a non-existing user
         mock = MagicMock(return_value=False)
         with patch.dict(at.__opts__, {'test': False}):
             with patch.dict(at.__salt__, {'user.info': mock}):
-                self.assertDictEqual(at.present(name, timespec, tag, user), ret_user)
+                assert at.present(name, timespec, tag, user) == ret_user
 
         # add a job with test=True
         with patch.dict(at.__opts__, {'test': True}):
             ret_test = {}
             ret_test.update(ret)
             ret_test.update({'result': None, 'changes': {}})
-            self.assertDictEqual(at.present(name, timespec, tag, user), ret_test)
+            assert at.present(name, timespec, tag, user) == ret_test
 
     # 'absent' function tests: 1
 
@@ -148,7 +148,7 @@ class AtTestCase(TestCase, LoaderModuleMockMixin):
                 'changes': {},
                 'comment': 'removed ? job(s)'
             })
-            self.assertDictEqual(at.absent(name), ret_test)
+            assert at.absent(name) == ret_test
 
         # remove a job and pass limit parameter
         with patch.dict(at.__opts__, {'test': False}):
@@ -159,13 +159,13 @@ class AtTestCase(TestCase, LoaderModuleMockMixin):
                 'changes': {},
                 'comment': 'limit parameter not supported {0}'.format(name),
             })
-            self.assertDictEqual(at.absent(name, limit='all'), ret_limit)
+            assert at.absent(name, limit='all') == ret_limit
 
         # remove all jobs (2 jobs found)
         mock = MagicMock(return_value=mock_atatrm)
         with patch.dict(at.__salt__, {'at.atrm': mock}):
             with patch.dict(at.__opts__, {'test': False}):
-                self.assertDictEqual(at.absent(name), ret)
+                assert at.absent(name) == ret
 
         # remove all jobs (0 jobs found)
         mock_atatrm_nojobs = {}
@@ -184,7 +184,7 @@ class AtTestCase(TestCase, LoaderModuleMockMixin):
                     'changes': {},
                     'comment': ret['comment'].replace('2', '0'),
                 })
-                self.assertDictEqual(at.absent(name), ret_nojobs)
+                assert at.absent(name) == ret_nojobs
 
         # remove all tagged jobs (1 jobs found)
         mock_atatrm_tag = {}
@@ -208,4 +208,4 @@ class AtTestCase(TestCase, LoaderModuleMockMixin):
                         },
                         'comment': ret['comment'].replace('2', '1'),
                     })
-                    self.assertDictEqual(at.absent(name, tag=tag), ret_tag)
+                    assert at.absent(name, tag=tag) == ret_tag

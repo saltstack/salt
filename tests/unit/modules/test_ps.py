@@ -126,12 +126,12 @@ class PsTestCase(TestCase):
     def test_get_pid_list(self):
         with patch('salt.utils.psutil_compat.pids',
                    MagicMock(return_value=STUB_PID_LIST)):
-            self.assertListEqual(STUB_PID_LIST, ps.get_pid_list())
+            assert STUB_PID_LIST == ps.get_pid_list()
 
     def test_kill_pid(self):
         with patch('salt.utils.psutil_compat.Process') as send_signal_mock:
             ps.kill_pid(0, signal=999)
-            self.assertEqual(send_signal_mock.call_args, call(0))
+            assert send_signal_mock.call_args == call(0)
 
     def test_pkill(self):
         with patch('salt.utils.psutil_compat.Process.send_signal'), \
@@ -140,77 +140,75 @@ class PsTestCase(TestCase):
             self.mocked_proc.send_signal = MagicMock()
             test_signal = 1234
             ps.pkill(_get_proc_name(self.mocked_proc), signal=test_signal)
-            self.assertEqual(self.mocked_proc.send_signal.call_args, call(test_signal))
+            assert self.mocked_proc.send_signal.call_args == call(test_signal)
 
     def test_pgrep(self):
         with patch('salt.utils.psutil_compat.process_iter',
                    MagicMock(return_value=[self.mocked_proc])):
-            self.assertIn(_get_proc_pid(self.mocked_proc), ps.pgrep(_get_proc_name(self.mocked_proc)))
+            ret = ps.pgrep(_get_proc_name(self.mocked_proc))
+            assert ret is not None
+            assert _get_proc_pid(self.mocked_proc) in ret  # pylint: disable=unsupported-membership-test
 
     def test_cpu_percent(self):
         with patch('salt.utils.psutil_compat.cpu_percent',
                    MagicMock(return_value=1)):
-            self.assertEqual(ps.cpu_percent(), 1)
+            assert ps.cpu_percent() == 1
 
     def test_cpu_times(self):
         with patch('salt.utils.psutil_compat.cpu_times',
                    MagicMock(return_value=STUB_CPU_TIMES)):
-            self.assertDictEqual({'idle': 4, 'nice': 2, 'system': 3, 'user': 1}, ps.cpu_times())
+            assert {'idle': 4, 'nice': 2, 'system': 3, 'user': 1} == ps.cpu_times()
 
     @skipIf(HAS_PSUTIL_VERSION is False, 'psutil 0.6.0 or greater is required for this test')
     def test_virtual_memory(self):
         with patch('salt.utils.psutil_compat.virtual_memory',
                    MagicMock(return_value=STUB_VIRT_MEM)):
-            self.assertDictEqual({'used': 500, 'total': 1000, 'available': 500, 'percent': 50, 'free': 500},
-                                 ps.virtual_memory())
+            assert {'used': 500, 'total': 1000, 'available': 500, 'percent': 50, 'free': 500} == \
+                                 ps.virtual_memory()
 
     @skipIf(HAS_PSUTIL_VERSION is False, 'psutil 0.6.0 or greater is required for this test')
     def test_swap_memory(self):
         with patch('salt.utils.psutil_compat.swap_memory',
                    MagicMock(return_value=STUB_SWAP_MEM)):
-            self.assertDictEqual({'used': 500, 'total': 1000, 'percent': 50, 'free': 500, 'sin': 0, 'sout': 0},
-                                 ps.swap_memory())
+            assert {'used': 500, 'total': 1000, 'percent': 50, 'free': 500, 'sin': 0, 'sout': 0} == \
+                                 ps.swap_memory()
 
     def test_disk_partitions(self):
         with patch('salt.utils.psutil_compat.disk_partitions',
                    MagicMock(return_value=[STUB_DISK_PARTITION])):
-            self.assertDictEqual(
-                {'device': '/dev/disk0s2', 'mountpoint': '/', 'opts': 'rw,local,rootfs,dovolfs,journaled,multilabel',
-                 'fstype': 'hfs'},
-                ps.disk_partitions()[0])
+            assert {'device': '/dev/disk0s2', 'mountpoint': '/', 'opts': 'rw,local,rootfs,dovolfs,journaled,multilabel',
+                 'fstype': 'hfs'} == \
+                ps.disk_partitions()[0]
 
     def test_disk_usage(self):
         with patch('salt.utils.psutil_compat.disk_usage',
                    MagicMock(return_value=STUB_DISK_USAGE)):
-            self.assertDictEqual({'used': 500, 'total': 1000, 'percent': 50, 'free': 500}, ps.disk_usage('DUMMY_PATH'))
+            assert {'used': 500, 'total': 1000, 'percent': 50, 'free': 500} == ps.disk_usage('DUMMY_PATH')
 
     def test_disk_partition_usage(self):
         with patch('salt.utils.psutil_compat.disk_partitions',
                    MagicMock(return_value=[STUB_DISK_PARTITION])):
-            self.assertDictEqual(
-                {'device': '/dev/disk0s2', 'mountpoint': '/', 'opts': 'rw,local,rootfs,dovolfs,journaled,multilabel',
-                 'fstype': 'hfs'},
-                ps.disk_partitions()[0])
+            assert {'device': '/dev/disk0s2', 'mountpoint': '/', 'opts': 'rw,local,rootfs,dovolfs,journaled,multilabel',
+                 'fstype': 'hfs'} == \
+                ps.disk_partitions()[0]
 
     def test_network_io_counters(self):
         with patch('salt.utils.psutil_compat.net_io_counters',
                    MagicMock(return_value=STUB_NETWORK_IO)):
-            self.assertDictEqual(
-                {'packets_sent': 500, 'packets_recv': 600, 'bytes_recv': 2000, 'dropout': 4, 'bytes_sent': 1000,
-                 'errout': 2, 'errin': 1, 'dropin': 3}, ps.network_io_counters())
+            assert {'packets_sent': 500, 'packets_recv': 600, 'bytes_recv': 2000, 'dropout': 4, 'bytes_sent': 1000,
+                 'errout': 2, 'errin': 1, 'dropin': 3} == ps.network_io_counters()
 
     def test_disk_io_counters(self):
         with patch('salt.utils.psutil_compat.disk_io_counters',
                    MagicMock(return_value=STUB_DISK_IO)):
-            self.assertDictEqual(
-                {'read_time': 2000, 'write_bytes': 600, 'read_bytes': 500, 'write_time': 3000, 'read_count': 1000,
-                 'write_count': 2000}, ps.disk_io_counters())
+            assert {'read_time': 2000, 'write_bytes': 600, 'read_bytes': 500, 'write_time': 3000, 'read_count': 1000,
+                 'write_count': 2000} == ps.disk_io_counters()
 
     def test_get_users(self):
         with patch('salt.utils.psutil_compat.users',
                    MagicMock(return_value=[STUB_USER])):
-            self.assertDictEqual({'terminal': 'ttys000', 'started': 0.0, 'host': 'localhost', 'name': 'bdobbs'},
-                                 ps.get_users()[0])
+            assert {'terminal': 'ttys000', 'started': 0.0, 'host': 'localhost', 'name': 'bdobbs'} == \
+                                 ps.get_users()[0]
 
         ## This is commented out pending discussion on https://github.com/saltstack/salt/commit/2e5c3162ef87cca8a2c7b12ade7c7e1b32028f0a
         # @skipIf(not HAS_UTMP, "The utmp module must be installed to run test_get_users_utmp()")

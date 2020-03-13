@@ -46,16 +46,16 @@ class BeaconTestCase(TestCase, LoaderModuleMockMixin):
                         {'beacons.list': mock_lst,
                          'beacons.modify': mock_mod,
                          'beacons.add': mock_mod}):
-            self.assertDictEqual(beacon.present(beacon_name), ret)
+            assert beacon.present(beacon_name) == ret
 
             with patch.dict(beacon.__opts__, {'test': False}):
-                self.assertDictEqual(beacon.present(beacon_name), ret)
+                assert beacon.present(beacon_name) == ret
 
-                self.assertDictEqual(beacon.present(beacon_name), ret)
+                assert beacon.present(beacon_name) == ret
 
             with patch.dict(beacon.__opts__, {'test': True}):
                 ret.update({'result': True})
-                self.assertDictEqual(beacon.present(beacon_name), ret)
+                assert beacon.present(beacon_name) == ret
 
     # 'absent' function tests: 1
 
@@ -76,9 +76,9 @@ class BeaconTestCase(TestCase, LoaderModuleMockMixin):
                         {'beacons.list': mock_lst,
                          'beacons.delete': mock_mod}):
             with patch.dict(beacon.__opts__, {'test': False}):
-                self.assertDictEqual(beacon.absent(beacon_name), ret)
+                assert beacon.absent(beacon_name) == ret
 
             with patch.dict(beacon.__opts__, {'test': True}):
                 comt = ('ps not configured in beacons')
                 ret.update({'comment': comt, 'result': True})
-                self.assertDictEqual(beacon.absent(beacon_name), ret)
+                assert beacon.absent(beacon_name) == ret

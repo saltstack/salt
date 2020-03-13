@@ -79,7 +79,7 @@ class OpenstackTestCase(TestCase, LoaderModuleMockMixin):
     def test_get_configured_provider_bad(self):
         with patch.dict(openstack.__opts__, {'providers': {}}):
             result = openstack.get_configured_provider()
-            self.assertEqual(result, False)
+            assert result is False
 
     def test_get_configured_provider_auth(self):
         config = {
@@ -88,7 +88,7 @@ class OpenstackTestCase(TestCase, LoaderModuleMockMixin):
         }
         with patch.dict(openstack.__opts__, {'providers': {'my-openstack-cloud': {'openstack': config}}}):
             result = openstack.get_configured_provider()
-            self.assertEqual(config, result)
+            assert config == result
 
     def test_get_configured_provider_cloud(self):
         config = {
@@ -97,35 +97,35 @@ class OpenstackTestCase(TestCase, LoaderModuleMockMixin):
         }
         with patch.dict(openstack.__opts__, {'providers': {'my-openstack-cloud': {'openstack': config}}}):
             result = openstack.get_configured_provider()
-            self.assertEqual(config, result)
+            assert config == result
 
     def test_get_dependencies(self):
         HAS_SHADE = (True, 'Please install newer version of shade: >= 1.19.0')
         with patch('salt.cloud.clouds.openstack.HAS_SHADE', HAS_SHADE):
             result = openstack.get_dependencies()
-            self.assertEqual(result, True)
+            assert result is True
 
     def test_get_dependencies_no_shade(self):
         HAS_SHADE = (False, 'Install pypi module shade >= 1.19.0')
         with patch('salt.cloud.clouds.openstack.HAS_SHADE', HAS_SHADE):
             result = openstack.get_dependencies()
-            self.assertEqual(result, False)
+            assert result is False
 
     def test_list_nodes_full_image_str(self):
         node_image = 'node image'
         conn = MockConn(node_image)
         with patch('salt.cloud.clouds.openstack._get_ips', return_value=[]):
             ret = openstack.list_nodes_full(conn=conn)
-            self.assertEqual(ret[conn.node.name]['image'], node_image)
+            assert ret[conn.node.name]['image'] == node_image
 
     def test_list_nodes_full_image_obj(self):
         conn = MockConn(MockImage())
         with patch('salt.cloud.clouds.openstack._get_ips', return_value=[]):
             ret = openstack.list_nodes_full(conn=conn)
-            self.assertEqual(ret[conn.node.name]['image'], MockImage.name)
+            assert ret[conn.node.name]['image'] == MockImage.name
 
     def test_show_instance(self):
         conn = MockConn(MockImage())
         with patch('salt.cloud.clouds.openstack._get_ips', return_value=[]):
             ret = openstack.show_instance(conn.node.name, conn=conn, call='action')
-            self.assertEqual(ret['image'], MockImage.name)
+            assert ret['image'] == MockImage.name

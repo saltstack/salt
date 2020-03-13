@@ -138,11 +138,9 @@ class PipModuleTest(ModuleCase):
         # Let's run a pip depending functions
         for func in ('pip.freeze', 'pip.list'):
             ret = self.run_function(func, bin_env=self.venv_dir)
-            self.assertIn(
-                'Command required for \'{0}\' not found: '
-                'Could not find a `pip` binary'.format(func),
+            assert 'Command required for \'{0}\' not found: ' \
+                'Could not find a `pip` binary'.format(func) in \
                 ret
-            )
 
     def test_requirements_as_list_of_chains__cwd_set__absolute_file_path(self):
         self._create_virtualenv(self.venv_dir)
@@ -175,9 +173,9 @@ class PipModuleTest(ModuleCase):
             )
 
         try:
-            self.assertEqual(ret['retcode'], 0)
+            assert ret['retcode'] == 0
             found = self.pip_successful_install(ret['stdout'])
-            self.assertTrue(found)
+            assert found
         except KeyError as exc:
             self.fail(
                 'The returned dictionary is missing an expected key. Error: \'{}\'. Dictionary: {}'.format(
@@ -217,9 +215,9 @@ class PipModuleTest(ModuleCase):
             )
 
         try:
-            self.assertEqual(ret['retcode'], 0)
+            assert ret['retcode'] == 0
             found = self.pip_successful_install(ret['stdout'])
-            self.assertTrue(found)
+            assert found
         except KeyError as exc:
             self.fail(
                 'The returned dictionary is missing an expected key. Error: \'{}\'. Dictionary: {}'.format(
@@ -251,9 +249,9 @@ class PipModuleTest(ModuleCase):
             )
 
         try:
-            self.assertEqual(ret['retcode'], 0)
+            assert ret['retcode'] == 0
             found = self.pip_successful_install(ret['stdout'])
-            self.assertTrue(found)
+            assert found
         except KeyError as exc:
             self.fail(
                 'The returned dictionary is missing an expected key. Error: \'{}\'. Dictionary: {}'.format(
@@ -292,9 +290,9 @@ class PipModuleTest(ModuleCase):
             )
 
         try:
-            self.assertEqual(ret['retcode'], 0)
+            assert ret['retcode'] == 0
             found = self.pip_successful_install(ret['stdout'])
-            self.assertTrue(found)
+            assert found
         except KeyError as exc:
             self.fail(
                 'The returned dictionary is missing an expected key. Error: \'{}\'. Dictionary: {}'.format(
@@ -325,8 +323,8 @@ class PipModuleTest(ModuleCase):
             )
 
         try:
-            self.assertEqual(ret['retcode'], 0)
-            self.assertIn('installed pep8', ret['stdout'])
+            assert ret['retcode'] == 0
+            assert 'installed pep8' in ret['stdout']
         except KeyError as exc:
             self.fail(
                 'The returned dictionary is missing an expected key. Error: \'{}\'. Dictionary: {}'.format(
@@ -362,8 +360,8 @@ class PipModuleTest(ModuleCase):
             )
 
         try:
-            self.assertEqual(ret['retcode'], 0)
-            self.assertIn('installed pep8', ret['stdout'])
+            assert ret['retcode'] == 0
+            assert 'installed pep8' in ret['stdout']
         except KeyError as exc:
             self.fail(
                 'The returned dictionary is missing an expected key. Error: \'{}\'. Dictionary: {}'.format(
@@ -394,8 +392,8 @@ class PipModuleTest(ModuleCase):
         try:
             if self._check_download_error(ret['stdout']):
                 self.skipTest('Test skipped due to pip download error')
-            self.assertEqual(ret['retcode'], 0)
-            self.assertIn('installed pep8', ret['stdout'])
+            assert ret['retcode'] == 0
+            assert 'installed pep8' in ret['stdout']
         except KeyError as exc:
             self.fail(
                 'The returned dictionary is missing an expected key. Error: \'{}\'. Dictionary: {}'.format(
@@ -417,8 +415,8 @@ class PipModuleTest(ModuleCase):
         try:
             if self._check_download_error(ret['stdout']):
                 self.skipTest('Test skipped due to pip download error')
-            self.assertEqual(ret['retcode'], 0)
-            self.assertIn('installed pep8', ret['stdout'])
+            assert ret['retcode'] == 0
+            assert 'installed pep8' in ret['stdout']
         except KeyError as exc:
             self.fail(
                 'The returned dictionary is missing an expected key. Error: \'{}\'. Dictionary: {}'.format(
@@ -436,8 +434,8 @@ class PipModuleTest(ModuleCase):
             )
 
         try:
-            self.assertEqual(ret['retcode'], 0)
-            self.assertIn('uninstalled pep8', ret['stdout'])
+            assert ret['retcode'] == 0
+            assert 'uninstalled pep8' in ret['stdout']
         except KeyError as exc:
             self.fail(
                 'The returned dictionary is missing an expected key. Error: \'{}\'. Dictionary: {}'.format(
@@ -461,8 +459,8 @@ class PipModuleTest(ModuleCase):
         try:
             if self._check_download_error(ret['stdout']):
                 self.skipTest('Test skipped due to pip download error')
-            self.assertEqual(ret['retcode'], 0)
-            self.assertIn('installed pep8', ret['stdout'])
+            assert ret['retcode'] == 0
+            assert 'installed pep8' in ret['stdout']
         except KeyError as exc:
             self.fail(
                 'The returned dictionary is missing an expected key. Error: \'{}\'. Dictionary: {}'.format(
@@ -486,8 +484,8 @@ class PipModuleTest(ModuleCase):
         try:
             if self._check_download_error(ret['stdout']):
                 self.skipTest('Test skipped due to pip download error')
-            self.assertEqual(ret['retcode'], 0)
-            self.assertIn('installed pep8', ret['stdout'])
+            assert ret['retcode'] == 0
+            assert 'installed pep8' in ret['stdout']
         except KeyError as exc:
             self.fail(
                 'The returned dictionary is missing an expected key. Error: \'{}\'. Dictionary: {}'.format(
@@ -506,8 +504,8 @@ class PipModuleTest(ModuleCase):
             )
 
         try:
-            self.assertEqual(ret['retcode'], 0)
-            self.assertIn('uninstalled pep8', ret['stdout'])
+            assert ret['retcode'] == 0
+            assert 'uninstalled pep8' in ret['stdout']
         except KeyError as exc:
             self.fail(
                 'The returned dictionary is missing an expected key. Error: \'{}\'. Dictionary: {}'.format(
@@ -538,10 +536,8 @@ class PipModuleTest(ModuleCase):
         try:
             if self._check_download_error(ret['stdout']):
                 self.skipTest('Test skipped due to pip download error')
-            self.assertEqual(ret['retcode'], 0)
-            self.assertIn(
-                'Successfully installed Blinker SaltTesting', ret['stdout']
-            )
+            assert ret['retcode'] == 0
+            assert 'Successfully installed Blinker SaltTesting' in ret['stdout']
         except KeyError as exc:
             self.fail(
                 'The returned dictionary is missing an expected key. Error: \'{}\'. Dictionary: {}'.format(
@@ -572,12 +568,9 @@ class PipModuleTest(ModuleCase):
         try:
             if self._check_download_error(ret['stdout']):
                 self.skipTest('Test skipped due to pip download error')
-            self.assertEqual(ret['retcode'], 0)
+            assert ret['retcode'] == 0
             for package in ('Blinker', 'SaltTesting', 'pep8'):
-                self.assertRegex(
-                    ret['stdout'],
-                    r'(?:.*)(Successfully installed)(?:.*)({0})(?:.*)'.format(package)
-                )
+                assert re.search(r'(?:.*)(Successfully installed)(?:.*)({0})(?:.*)'.format(package), ret['stdout'])
         except KeyError as exc:
             self.fail(
                 'The returned dictionary is missing an expected key. Error: \'{}\'. Dictionary: {}'.format(

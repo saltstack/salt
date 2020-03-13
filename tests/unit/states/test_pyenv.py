@@ -40,7 +40,7 @@ class PyenvTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pyenv.__opts__, {'test': True}):
             comt = ('python 2.7.6 is set to be installed')
             ret.update({'comment': comt})
-            self.assertDictEqual(pyenv.installed(name), ret)
+            assert pyenv.installed(name) == ret
 
         with patch.dict(pyenv.__opts__, {'test': False}):
             mock_f = MagicMock(side_effect=[False, False, True])
@@ -53,13 +53,13 @@ class PyenvTestCase(TestCase, LoaderModuleMockMixin):
                                              'pyenv.versions': mock_lst}):
                 comt = ('pyenv failed to install')
                 ret.update({'comment': comt, 'result': False})
-                self.assertDictEqual(pyenv.installed(name), ret)
+                assert pyenv.installed(name) == ret
 
                 comt = ('Requested python exists.')
                 ret.update({'comment': comt, 'result': True, 'default': True})
-                self.assertDictEqual(pyenv.installed(name), ret)
+                assert pyenv.installed(name) == ret
 
-                self.assertDictEqual(pyenv.installed(name), ret)
+                assert pyenv.installed(name) == ret
 
     # 'absent' function tests: 1
 
@@ -77,7 +77,7 @@ class PyenvTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pyenv.__opts__, {'test': True}):
             comt = ('python 2.7.6 is set to be uninstalled')
             ret.update({'comment': comt})
-            self.assertDictEqual(pyenv.absent(name), ret)
+            assert pyenv.absent(name) == ret
 
         with patch.dict(pyenv.__opts__, {'test': False}):
             mock_f = MagicMock(side_effect=[False, True])
@@ -90,12 +90,12 @@ class PyenvTestCase(TestCase, LoaderModuleMockMixin):
                                              'pyenv.versions': mock_lst}):
                 comt = ('pyenv not installed, 2.7.6 not either')
                 ret.update({'comment': comt, 'result': True})
-                self.assertDictEqual(pyenv.absent(name), ret)
+                assert pyenv.absent(name) == ret
 
                 comt = ('Successfully removed python')
                 ret.update({'comment': comt, 'result': True, 'default': True,
                             'changes': {'2.7.6': 'Uninstalled'}})
-                self.assertDictEqual(pyenv.absent(name), ret)
+                assert pyenv.absent(name) == ret
 
     # 'install_pyenv' function tests: 1
 
@@ -113,7 +113,7 @@ class PyenvTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pyenv.__opts__, {'test': True}):
             comt = ('pyenv is set to be installed')
             ret.update({'comment': comt})
-            self.assertDictEqual(pyenv.install_pyenv(name), ret)
+            assert pyenv.install_pyenv(name) == ret
 
         with patch.dict(pyenv.__opts__, {'test': False}):
             mock_t = MagicMock(return_value=True)
@@ -125,4 +125,4 @@ class PyenvTestCase(TestCase, LoaderModuleMockMixin):
                 comt = ('Successfully installed python')
                 ret.update({'comment': comt, 'result': True, 'default': False,
                             'changes': {None: 'Installed'}})
-                self.assertDictEqual(pyenv.install_pyenv(name), ret)
+                assert pyenv.install_pyenv(name) == ret

@@ -28,7 +28,7 @@ class NetworkTest(ModuleCase):
         ret = self.run_function('network.ping', [URL])
         exp_out = ['ping', URL, 'ms', 'time']
         for out in exp_out:
-            self.assertIn(out, ret.lower())
+            assert out in ret.lower()
 
     @skipIf(salt.utils.platform.is_darwin(), 'not supported on macosx')
     def test_network_netstat(self):
@@ -39,7 +39,7 @@ class NetworkTest(ModuleCase):
         exp_out = ['proto', 'local-address']
         for val in ret:
             for out in exp_out:
-                self.assertIn(out, val)
+                assert out in val
 
     def test_network_traceroute(self):
         '''
@@ -50,7 +50,7 @@ class NetworkTest(ModuleCase):
         ret = self.run_function('network.traceroute', [URL])
         exp_out = ['hostname', 'ip']
         for out in exp_out:
-            self.assertIn(out, exp_out)
+            assert out in exp_out
 
     @skipIf(not salt.utils.platform.is_windows(), 'windows only test')
     def test_network_nslookup(self):
@@ -60,4 +60,4 @@ class NetworkTest(ModuleCase):
         ret = self.run_function('network.nslookup', [URL])
         exp_out = ['Server', 'Address']
         for out in exp_out:
-            self.assertIn(out, exp_out)
+            assert out in exp_out

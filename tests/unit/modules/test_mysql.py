@@ -164,7 +164,7 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(mysql, 'user_exists', MagicMock(return_value=True)):
                 with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
                     ret = mysql.user_create('testuser')
-                    self.assertEqual(False, ret)
+                    assert ret is False
 
         # test_user_create_when_user_exists(self):
         # ensure we don't try to create a user when one already exists
@@ -174,7 +174,7 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(mysql, 'verify_login', MagicMock(return_value=True)):
                     with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
                         ret = mysql.user_create('testuser')
-                        self.assertEqual(False, ret)
+                        assert ret is False
 
     def test_user_create(self):
         '''
@@ -393,7 +393,7 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
                     'testuser',
                     '%'
                 )
-                self.assertEqual(ret, True)
+                assert ret is True
 
     def test_grant_exists_false(self):
         '''
@@ -413,7 +413,7 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
                     'testuser',
                     '%'
                 )
-                self.assertEqual(ret, False)
+                assert ret is False
 
     def test_grant_exists_all(self):
         '''
@@ -432,7 +432,7 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
                     'testuser',
                     '%'
                 )
-                self.assertEqual(ret, True)
+                assert ret is True
 
         mock_grants = ["GRANT ALL PRIVILEGES ON testdb.testtableone TO `testuser`@`%`"]
         with patch.object(mysql, 'version', return_value='5.6.41'):
@@ -444,7 +444,7 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
                     'testuser',
                     '%'
                 )
-                self.assertEqual(ret, True)
+                assert ret is True
 
     @skipIf(True, 'TODO: Mock up user_grants()')
     def test_grant_add(self):
@@ -487,7 +487,7 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
                 rslt = mysql.get_slave_status()
                 connect_mock.assert_has_calls([call()])
-                self.assertEqual(rslt, [])
+                assert rslt == []
 
     @skipIf(True, 'MySQL module claims this function is not ready for production')
     def test_free_slave(self):
@@ -505,9 +505,9 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
                 side_effect = mysql.OperationalError(9999, 'Something Went Wrong')
                 with patch.object(mysql, '_execute', MagicMock(side_effect=side_effect)):
                     mysql.query('testdb', 'SELECT * FROM testdb')
-            self.assertIn('mysql.error', mysql.__context__)
+            assert 'mysql.error' in mysql.__context__
             expected = 'MySQL Error 9999: Something Went Wrong'
-            self.assertEqual(mysql.__context__['mysql.error'], expected)
+            assert mysql.__context__['mysql.error'] == expected
 
     def test_plugin_add(self):
         '''

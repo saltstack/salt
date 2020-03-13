@@ -38,21 +38,21 @@ class VboxGuestTestCase(TestCase, LoaderModuleMockMixin):
                         {"vbox_guest.additions_version": mock,
                          "vbox_guest.additions_install": mock}):
             ret.update({'comment': 'System already in the correct state'})
-            self.assertDictEqual(vbox_guest.additions_installed('salt'), ret)
+            assert vbox_guest.additions_installed('salt') == ret
 
             with patch.dict(vbox_guest.__opts__, {"test": True}):
                 ret.update({'changes': {'new': True, 'old': False},
                             'comment': 'The state of VirtualBox Guest'
                             ' Additions will be changed.', 'result': None})
-                self.assertDictEqual(vbox_guest.additions_installed('salt'),
-                                     ret)
+                assert vbox_guest.additions_installed('salt') == \
+                                     ret
 
             with patch.dict(vbox_guest.__opts__, {"test": False}):
                 ret.update({'changes': {'new': False, 'old': False},
                             'comment': 'The state of VirtualBox Guest'
                             ' Additions was changed!', 'result': False})
-                self.assertDictEqual(vbox_guest.additions_installed('salt'),
-                                     ret)
+                assert vbox_guest.additions_installed('salt') == \
+                                     ret
 
     def test_additions_removed(self):
         '''
@@ -67,20 +67,20 @@ class VboxGuestTestCase(TestCase, LoaderModuleMockMixin):
                         {"vbox_guest.additions_version": mock,
                          "vbox_guest.additions_remove": mock}):
             ret.update({'comment': 'System already in the correct state'})
-            self.assertDictEqual(vbox_guest.additions_removed('salt'), ret)
+            assert vbox_guest.additions_removed('salt') == ret
 
             with patch.dict(vbox_guest.__opts__, {"test": True}):
                 ret.update({'changes': {'new': True, 'old': True},
                             'comment': 'The state of VirtualBox Guest'
                             ' Additions will be changed.', 'result': None})
-                self.assertDictEqual(vbox_guest.additions_removed('salt'),
-                                     ret)
+                assert vbox_guest.additions_removed('salt') == \
+                                     ret
 
             with patch.dict(vbox_guest.__opts__, {"test": False}):
                 ret.update({'comment': 'The state of VirtualBox Guest'
                             ' Additions was changed!', 'result': True})
-                self.assertDictEqual(vbox_guest.additions_removed('salt'),
-                                     ret)
+                assert vbox_guest.additions_removed('salt') == \
+                                     ret
 
     def test_grantaccess_to_sharedfolders(self):
         '''
@@ -116,5 +116,5 @@ class VboxGuestTestCase(TestCase, LoaderModuleMockMixin):
         '''
             Method call for assert statements
         '''
-        self.assertDictEqual(vbox_guest.grant_access_to_shared_folders_to('AB'),
-                             ret)
+        assert vbox_guest.grant_access_to_shared_folders_to('AB') == \
+                             ret

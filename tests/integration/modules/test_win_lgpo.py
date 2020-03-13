@@ -56,18 +56,17 @@ class WinLgpoTest(ModuleCase):
         '''
         ret = self.run_function('lgpo.set_computer_policy',
                                 (policy_name, policy_config))
-        self.assertTrue(ret)
+        assert ret
         val = reg.read_value(
             hive=registry_value_hive,
             key=registry_value_path,
             vname=registry_value_vname)
-        self.assertTrue(val['success'], msg='Failed to obtain the registry data for policy {0}'.format(policy_name))
+        assert val['success'], 'Failed to obtain the registry data for policy {0}'.format(policy_name)
         if val['success']:
-            self.assertEqual(
-                val['vdata'],
-                expected_value_data,
+            assert val['vdata'] == \
+                expected_value_data, \
                 'The registry value data {0} does not match the expected value {1} for policy {2}'.format(
-                    val['vdata'], expected_value_data, policy_name))
+                    val['vdata'], expected_value_data, policy_name)
 
     def _testSeceditPolicy(self,
                            policy_name,
@@ -88,7 +87,7 @@ class WinLgpoTest(ModuleCase):
         ret = self.run_function('lgpo.set_computer_policy',
                                 (policy_name, policy_config),
                                 cumulative_rights_assignments=cumulative_rights_assignments)
-        self.assertTrue(ret)
+        assert ret
         secedit_output_file = os.path.join(RUNTIME_VARS.TMP, generate_random_name('secedit-output-'))
         secedit_output = self.run_function(
                 'cmd.run',
@@ -103,7 +102,7 @@ class WinLgpoTest(ModuleCase):
                     expected_regex,
                     secedit_file_content,
                     re.IGNORECASE | re.MULTILINE)
-            self.assertIsNotNone(match, 'Failed validating policy "{0}" configuration, regex "{1}" not found in secedit output'.format(policy_name, expected_regex))
+            assert match is not None, 'Failed validating policy "{0}" configuration, regex "{1}" not found in secedit output'.format(policy_name, expected_regex)
 
     def _testAdmxPolicy(self,
                         policy_name,
@@ -142,23 +141,21 @@ class WinLgpoTest(ModuleCase):
                lgpo_class,
                r'c:\Windows\System32\GroupPolicy\{}\Registry.pol'.format(lgpo_folder)]
         if assert_true:
-            self.assertTrue(ret)
+            assert ret
             lgpo_output = self.run_function('cmd.run', (), cmd=' '.join(cmd))
             # validate that the lgpo output doesn't say the format is invalid
-            self.assertIsNone(
-                re.search(r'Invalid file format\.', lgpo_output, re.IGNORECASE),
-                msg='Failed validating Registry.pol file format')
+            assert re.search(r'Invalid file format\.', lgpo_output, re.IGNORECASE) is None, \
+                'Failed validating Registry.pol file format'
             # validate that the regexes we expect are in the output
             for expected_regex in expected_regexes:
                 match = re.search(expected_regex, lgpo_output, re.IGNORECASE)
-                self.assertIsNotNone(
-                    match,
-                    msg='Failed validating policy "{0}" configuration, regex '
-                        '"{1}" not found in lgpo output:\n{2}'
-                        ''.format(policy_name, expected_regex, lgpo_output))
+                assert match is not None, \
+                    'Failed validating policy "{0}" configuration, regex ' \
+                        '"{1}" not found in lgpo output:\n{2}' \
+                        ''.format(policy_name, expected_regex, lgpo_output)
         else:
             # expecting it to fail
-            self.assertNotEqual(ret, True)
+            assert ret is not True
 
     def runTest(self):
         '''
@@ -788,7 +785,7 @@ class WinLgpoTest(ModuleCase):
                     'old': {
                         'Computer Configuration': {
                             'Disable pre-release features or settings': 'Not Configured'}}}
-                self.assertDictEqual(result[name]['changes'], expected)
+                assert result[name]['changes'] == expected
             else:
                 result = self.run_function(
                     'lgpo.get_policy_info',
@@ -812,7 +809,7 @@ class WinLgpoTest(ModuleCase):
                         'old': {
                             'Computer Configuration': {
                                 'Manage preview builds': 'Not Configured'}}}
-                    self.assertDictEqual(result[name]['changes'], expected)
+                    assert result[name]['changes'] == expected
 
     def tearDown(self):
         '''

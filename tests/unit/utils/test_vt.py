@@ -46,9 +46,7 @@ class VTTestCase(TestCase):
             stream_stderr=False
         )
         # First the assertion
-        self.assertEqual(
-            terminal.getwinsize(), (24, cols)
-        )
+        assert terminal.getwinsize() == (24, cols)
         # Then wait for the terminal child to exit
         terminal.wait()
         terminal.close()
@@ -139,16 +137,16 @@ class VTTestCase(TestCase):
                     buffer_e += stderr
                 # While there's data to be read, the process is alive
                 if stdout is None and stderr is None:
-                    self.assertFalse(term.isalive())
+                    assert not term.isalive()
 
             # term should be dead now
-            self.assertEqual(buffer_o, expected_data)
-            self.assertFalse(term.isalive())
+            assert buffer_o == expected_data
+            assert not term.isalive()
 
             stdout, stderr = term.recv()
-            self.assertFalse(term.isalive())
-            self.assertIsNone(stderr)
-            self.assertIsNone(stdout)
+            assert not term.isalive()
+            assert stderr is None
+            assert stdout is None
         finally:
             term.close(terminate=True, kill=True)
 
@@ -167,16 +165,16 @@ class VTTestCase(TestCase):
                     buffer_e += stderr
                 # While there's data to be read, the process is alive
                 if stdout is None and stderr is None:
-                    self.assertFalse(term.isalive())
+                    assert not term.isalive()
 
             # term should be dead now
-            self.assertEqual(buffer_e, expected_data)
-            self.assertFalse(term.isalive())
+            assert buffer_e == expected_data
+            assert not term.isalive()
 
             stdout, stderr = term.recv()
-            self.assertFalse(term.isalive())
-            self.assertIsNone(stderr)
-            self.assertIsNone(stdout)
+            assert not term.isalive()
+            assert stderr is None
+            assert stdout is None
         finally:
             term.close(terminate=True, kill=True)
 
@@ -195,20 +193,20 @@ class VTTestCase(TestCase):
                     buffer_e += stderr
                 # While there's data to be read, the process is alive
                 if stdout is None and stderr is None:
-                    self.assertFalse(term.isalive())
+                    assert not term.isalive()
 
                 if buffer_o != expected_data:
-                    self.assertTrue(term.isalive())
+                    assert term.isalive()
                 # Don't spin
                 time.sleep(0.1)
 
             # term should be dead now
-            self.assertEqual(buffer_o, expected_data)
-            self.assertFalse(term.isalive())
+            assert buffer_o == expected_data
+            assert not term.isalive()
 
             stdout, stderr = term.recv()
-            self.assertFalse(term.isalive())
-            self.assertIsNone(stderr)
-            self.assertIsNone(stdout)
+            assert not term.isalive()
+            assert stderr is None
+            assert stdout is None
         finally:
             term.close(terminate=True, kill=True)

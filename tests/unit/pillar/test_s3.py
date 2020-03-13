@@ -90,4 +90,4 @@ class S3PillarTestCase(TestCase, LoaderModuleMockMixin):
                                                             False,
                                                             'base',
                                                             '')
-                self.assertEqual(ret, _expected)
+                assert ret == _expected

@@ -10,7 +10,6 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Libs
-from salt.ext.six import text_type
 import salt.modules.vsphere as vsphere
 from salt.exceptions import (
     CommandExecutionError,
@@ -46,6 +45,7 @@ except ImportError:
 
 import salt.utils.args
 import salt.utils.vmware
+import pytest
 
 # Globals
 HOST = '1.2.3.4'
@@ -69,9 +69,8 @@ class VsphereTestCase(TestCase, LoaderModuleMockMixin):
         Tests CommandExecutionError is raised when esxi_hosts is provided,
         but is not a list.
         '''
-        self.assertRaises(CommandExecutionError,
-                          vsphere.get_coredump_network_config,
-                          HOST, USER, PASSWORD, esxi_hosts='foo')
+        with pytest.raises(CommandExecutionError):
+            vsphere.get_coredump_network_config(HOST, USER, PASSWORD, esxi_hosts='foo')
 
     def test_get_coredump_network_config_host_list_bad_retcode(self):
         '''
@@ -79,8 +78,8 @@ class VsphereTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.utils.vmware.esxcli', MagicMock(return_value={'retcode': 1, 'stdout': ERROR})):
             host_1 = 'host_1.foo.com'
-            self.assertEqual({host_1: {'Error': ERROR}},
-                             vsphere.get_coredump_network_config(HOST, USER, PASSWORD, esxi_hosts=[host_1]))
+            assert {host_1: {'Error': ERROR}} == \
+                             vsphere.get_coredump_network_config(HOST, USER, PASSWORD, esxi_hosts=[host_1])
 
     def test_get_coredump_network_config_host_list_success(self):
         '''
@@ -89,16 +88,16 @@ class VsphereTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.utils.vmware.esxcli', MagicMock(return_value={'retcode': 0, 'stdout': ''})):
             with patch('salt.modules.vsphere._format_coredump_stdout', MagicMock(return_value={})):
                 host_1 = 'host_1.foo.com'
-                self.assertEqual({host_1: {'Coredump Config': {}}},
-                                 vsphere.get_coredump_network_config(HOST, USER, PASSWORD, esxi_hosts=[host_1]))
+                assert {host_1: {'Coredump Config': {}}} == \
+                                 vsphere.get_coredump_network_config(HOST, USER, PASSWORD, esxi_hosts=[host_1])
 
     def test_get_coredump_network_config_bad_retcode(self):
         '''
         Tests error message given for a single ESXi host.
         '''
         with patch('salt.utils.vmware.esxcli', MagicMock(return_value={'retcode': 1, 'stdout': ERROR})):
-            self.assertEqual({HOST: {'Error': ERROR}},
-                             vsphere.get_coredump_network_config(HOST, USER, PASSWORD))
+            assert {HOST: {'Error': ERROR}} == \
+                             vsphere.get_coredump_network_config(HOST, USER, PASSWORD)
 
     def test_get_coredump_network_config_success(self):
         '''
@@ -106,8 +105,8 @@ class VsphereTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.utils.vmware.esxcli', MagicMock(return_value={'retcode': 0, 'stdout': ''})):
             with patch('salt.modules.vsphere._format_coredump_stdout', MagicMock(return_value={})):
-                self.assertEqual({HOST: {'Coredump Config': {}}},
-                                 vsphere.get_coredump_network_config(HOST, USER, PASSWORD))
+                assert {HOST: {'Coredump Config': {}}} == \
+                                 vsphere.get_coredump_network_config(HOST, USER, PASSWORD)
 
     # Tests for coredump_network_enable function
 
@@ -116,9 +115,8 @@ class VsphereTestCase(TestCase, LoaderModuleMockMixin):
         Tests CommandExecutionError is raised when esxi_hosts is provided,
         but is not a list.
         '''
-        self.assertRaises(CommandExecutionError,
-                          vsphere.coredump_network_enable,
-                          HOST, USER, PASSWORD, True, esxi_hosts='foo')
+        with pytest.raises(CommandExecutionError):
+            vsphere.coredump_network_enable(HOST, USER, PASSWORD, True, esxi_hosts='foo')
 
     def test_coredump_network_enable_host_list_bad_retcode(self):
         '''
@@ -126,8 +124,8 @@ class VsphereTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.utils.vmware.esxcli', MagicMock(return_value={'retcode': 1, 'stdout': ERROR})):
             host_1 = 'host_1.foo.com'
-            self.assertEqual({host_1: {'Error': ERROR}},
-                             vsphere.coredump_network_enable(HOST, USER, PASSWORD, True, esxi_hosts=[host_1]))
+            assert {host_1: {'Error': ERROR}} == \
+                             vsphere.coredump_network_enable(HOST, USER, PASSWORD, True, esxi_hosts=[host_1])
 
     def test_coredump_network_enable_host_list_success(self):
         '''
@@ -137,16 +135,16 @@ class VsphereTestCase(TestCase, LoaderModuleMockMixin):
             with patch('salt.modules.vsphere._format_coredump_stdout', MagicMock(return_value={})):
                 enabled = True
                 host_1 = 'host_1.foo.com'
-                self.assertEqual({host_1: {'Coredump Enabled': enabled}},
-                                 vsphere.coredump_network_enable(HOST, USER, PASSWORD, enabled, esxi_hosts=[host_1]))
+                assert {host_1: {'Coredump Enabled': enabled}} == \
+                                 vsphere.coredump_network_enable(HOST, USER, PASSWORD, enabled, esxi_hosts=[host_1])
 
     def test_coredump_network_enable_bad_retcode(self):
         '''
         Tests error message given for a single ESXi host.
         '''
         with patch('salt.utils.vmware.esxcli', MagicMock(return_value={'retcode': 1, 'stdout': ERROR})):
-            self.assertEqual({HOST: {'Error': ERROR}},
-                             vsphere.coredump_network_enable(HOST, USER, PASSWORD, True))
+            assert {HOST: {'Error': ERROR}} == \
+                             vsphere.coredump_network_enable(HOST, USER, PASSWORD, True)
 
     def test_coredump_network_enable_success(self):
         '''
@@ -155,8 +153,8 @@ class VsphereTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.utils.vmware.esxcli', MagicMock(return_value={'retcode': 0, 'stdout': ''})):
             with patch('salt.modules.vsphere._format_coredump_stdout', MagicMock(return_value={})):
                 enabled = True
-                self.assertEqual({HOST: {'Coredump Enabled': enabled}},
-                                 vsphere.coredump_network_enable(HOST, USER, PASSWORD, enabled))
+                assert {HOST: {'Coredump Enabled': enabled}} == \
+                                 vsphere.coredump_network_enable(HOST, USER, PASSWORD, enabled)
 
     # Tests for set_coredump_network_config function
 
@@ -165,9 +163,8 @@ class VsphereTestCase(TestCase, LoaderModuleMockMixin):
         Tests CommandExecutionError is raised when esxi_hosts is provided,
         but is not a list.
         '''
-        self.assertRaises(CommandExecutionError,
-                          vsphere.set_coredump_network_config,
-                          HOST, USER, PASSWORD, 'loghost', 'foo', esxi_hosts='bar')
+        with pytest.raises(CommandExecutionError):
+            vsphere.set_coredump_network_config(HOST, USER, PASSWORD, 'loghost', 'foo', esxi_hosts='bar')
 
     def test_set_coredump_network_config_host_list_bad_retcode(self):
         '''
@@ -175,12 +172,12 @@ class VsphereTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.utils.vmware.esxcli', MagicMock(return_value={'retcode': 1})):
             host_1 = 'host_1.foo.com'
-            self.assertEqual({host_1: {'retcode': 1, 'success': False}},
+            assert {host_1: {'retcode': 1, 'success': False}} == \
                              vsphere.set_coredump_network_config(HOST,
                                                                  USER,
                                                                  PASSWORD,
                                                                  'dump-ip.test.com',
-                                                                 esxi_hosts=[host_1]))
+                                                                 esxi_hosts=[host_1])
 
     def test_set_coredump_network_config_host_list_success(self):
         '''
@@ -188,34 +185,34 @@ class VsphereTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.utils.vmware.esxcli', MagicMock(return_value={'retcode': 0})):
             host_1 = 'host_1.foo.com'
-            self.assertEqual({host_1: {'retcode': 0, 'success': True}},
+            assert {host_1: {'retcode': 0, 'success': True}} == \
                              vsphere.set_coredump_network_config(HOST,
                                                                  USER,
                                                                  PASSWORD,
                                                                  'dump-ip.test.com',
-                                                                 esxi_hosts=[host_1]))
+                                                                 esxi_hosts=[host_1])
 
     def test_set_coredump_network_config_bad_retcode(self):
         '''
         Tests error message given for a single ESXi host.
         '''
         with patch('salt.utils.vmware.esxcli', MagicMock(return_value={'retcode': 1})):
-            self.assertEqual({HOST: {'retcode': 1, 'success': False}},
+            assert {HOST: {'retcode': 1, 'success': False}} == \
                              vsphere.set_coredump_network_config(HOST,
                                                                  USER,
                                                                  PASSWORD,
-                                                                 'dump-ip.test.com'))
+                                                                 'dump-ip.test.com')
 
     def test_set_coredump_network_config_success(self):
         '''
         Tests successful function return for a single ESXi host.
         '''
         with patch('salt.utils.vmware.esxcli', MagicMock(return_value={'retcode': 0})):
-            self.assertEqual({HOST: {'retcode': 0, 'success': True}},
+            assert {HOST: {'retcode': 0, 'success': True}} == \
                              vsphere.set_coredump_network_config(HOST,
                                                                  USER,
                                                                  PASSWORD,
-                                                                 'dump-ip.test.com'))
+                                                                 'dump-ip.test.com')
 
     # Tests for get_firewall_status function
 
@@ -224,9 +221,8 @@ class VsphereTestCase(TestCase, LoaderModuleMockMixin):
         Tests CommandExecutionError is raised when esxi_hosts is provided,
         but is not a list.
         '''
-        self.assertRaises(CommandExecutionError,
-                          vsphere.get_firewall_status,
-                          HOST, USER, PASSWORD, esxi_hosts='foo')
+        with pytest.raises(CommandExecutionError):
+            vsphere.get_firewall_status(HOST, USER, PASSWORD, esxi_hosts='foo')
 
     def test_get_firewall_status_host_list_bad_retcode(self):
         '''
@@ -234,8 +230,8 @@ class VsphereTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.utils.vmware.esxcli', MagicMock(return_value={'retcode': 1, 'stdout': ERROR})):
             host_1 = 'host_1.foo.com'
-            self.assertEqual({host_1: {'success': False, 'Error': ERROR, 'rulesets': None}},
-                             vsphere.get_firewall_status(HOST, USER, PASSWORD, esxi_hosts=[host_1]))
+            assert {host_1: {'success': False, 'Error': ERROR, 'rulesets': None}} == \
+                             vsphere.get_firewall_status(HOST, USER, PASSWORD, esxi_hosts=[host_1])
 
     def test_get_firewall_status_host_list_success(self):
         '''
@@ -243,24 +239,24 @@ class VsphereTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.utils.vmware.esxcli', MagicMock(return_value={'retcode': 0, 'stdout': ''})):
             host_1 = 'host_1.foo.com'
-            self.assertEqual({host_1: {'rulesets': {}, 'success': True}},
-                             vsphere.get_firewall_status(HOST, USER, PASSWORD, esxi_hosts=[host_1]))
+            assert {host_1: {'rulesets': {}, 'success': True}} == \
+                             vsphere.get_firewall_status(HOST, USER, PASSWORD, esxi_hosts=[host_1])
 
     def test_get_firewall_status_bad_retcode(self):
         '''
         Tests error message given for a single ESXi host.
         '''
         with patch('salt.utils.vmware.esxcli', MagicMock(return_value={'retcode': 1, 'stdout': ERROR})):
-            self.assertEqual({HOST: {'success': False, 'Error': ERROR, 'rulesets': None}},
-                             vsphere.get_firewall_status(HOST, USER, PASSWORD))
+            assert {HOST: {'success': False, 'Error': ERROR, 'rulesets': None}} == \
+                             vsphere.get_firewall_status(HOST, USER, PASSWORD)
 
     def test_get_firewall_status_success(self):
         '''
         Tests successful function return for a single ESXi host.
         '''
         with patch('salt.utils.vmware.esxcli', MagicMock(return_value={'retcode': 0, 'stdout': ''})):
-            self.assertEqual({HOST: {'rulesets': {}, 'success': True}},
-                             vsphere.get_firewall_status(HOST, USER, PASSWORD))
+            assert {HOST: {'rulesets': {}, 'success': True}} == \
+                             vsphere.get_firewall_status(HOST, USER, PASSWORD)
 
     # Tests for enable_firewall_ruleset function
 
@@ -269,9 +265,8 @@ class VsphereTestCase(TestCase, LoaderModuleMockMixin):
         Tests CommandExecutionError is raised when esxi_hosts is provided,
         but is not a list.
         '''
-        self.assertRaises(CommandExecutionError,
-                          vsphere.enable_firewall_ruleset,
-                          HOST, USER, PASSWORD, 'foo', 'bar', esxi_hosts='baz')
+        with pytest.raises(CommandExecutionError):
+            vsphere.enable_firewall_ruleset(HOST, USER, PASSWORD, 'foo', 'bar', esxi_hosts='baz')
 
     # Tests for syslog_service_reload function
 
@@ -280,9 +275,8 @@ class VsphereTestCase(TestCase, LoaderModuleMockMixin):
         Tests CommandExecutionError is raised when esxi_hosts is provided,
         but is not a list.
         '''
-        self.assertRaises(CommandExecutionError,
-                          vsphere.syslog_service_reload,
-                          HOST, USER, PASSWORD, esxi_hosts='foo')
+        with pytest.raises(CommandExecutionError):
+            vsphere.syslog_service_reload(HOST, USER, PASSWORD, esxi_hosts='foo')
 
     # Tests for set_syslog_config function.
     # These tests only test the firewall=True and syslog_config == 'loghost' if block.
@@ -293,18 +287,16 @@ class VsphereTestCase(TestCase, LoaderModuleMockMixin):
         Tests CommandExecutionError is raised when esxi_hosts is provided,
         but is not a list, but we don't enter the 'loghost'/firewall loop.
         '''
-        self.assertRaises(CommandExecutionError,
-                          vsphere.set_syslog_config,
-                          HOST, USER, PASSWORD, 'foo', 'bar', esxi_hosts='baz')
+        with pytest.raises(CommandExecutionError):
+            vsphere.set_syslog_config(HOST, USER, PASSWORD, 'foo', 'bar', esxi_hosts='baz')
 
     def test_set_syslog_config_esxi_hosts_not_list_firewall(self):
         '''
         Tests CommandExecutionError is raised when esxi_hosts is provided,
         but is not a list, and we enter the 'loghost'/firewall loop.
         '''
-        self.assertRaises(CommandExecutionError,
-                          vsphere.set_syslog_config,
-                          HOST, USER, PASSWORD, 'loghost', 'foo', firewall=True, esxi_hosts='bar')
+        with pytest.raises(CommandExecutionError):
+            vsphere.set_syslog_config(HOST, USER, PASSWORD, 'loghost', 'foo', firewall=True, esxi_hosts='bar')
 
     def test_set_syslog_config_host_list_firewall_bad_retcode(self):
         '''
@@ -315,14 +307,14 @@ class VsphereTestCase(TestCase, LoaderModuleMockMixin):
             with patch('salt.modules.vsphere._set_syslog_config_helper',
                        MagicMock(return_value={})):
                 host_1 = 'host_1.foo.com'
-                self.assertEqual({host_1: {'enable_firewall': {'message': ERROR, 'success': False}}},
+                assert {host_1: {'enable_firewall': {'message': ERROR, 'success': False}}} == \
                                  vsphere.set_syslog_config(HOST,
                                                            USER,
                                                            PASSWORD,
                                                            'loghost',
                                                            'foo',
                                                            firewall=True,
-                                                           esxi_hosts=[host_1]))
+                                                           esxi_hosts=[host_1])
 
     def test_set_syslog_config_host_list_firewall_success(self):
         '''
@@ -333,14 +325,14 @@ class VsphereTestCase(TestCase, LoaderModuleMockMixin):
             with patch('salt.modules.vsphere._set_syslog_config_helper',
                        MagicMock(return_value={})):
                 host_1 = 'host_1.foo.com'
-                self.assertEqual({host_1: {'enable_firewall': {'success': True}}},
+                assert {host_1: {'enable_firewall': {'success': True}}} == \
                                  vsphere.set_syslog_config(HOST,
                                                            USER,
                                                            PASSWORD,
                                                            'loghost',
                                                            'foo',
                                                            firewall=True,
-                                                           esxi_hosts=[host_1]))
+                                                           esxi_hosts=[host_1])
 
     def test_set_syslog_config_firewall_bad_retcode(self):
         '''
@@ -350,13 +342,13 @@ class VsphereTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value={HOST: {'retcode': 1, 'stdout': ERROR}})):
             with patch('salt.modules.vsphere._set_syslog_config_helper',
                        MagicMock(return_value={})):
-                self.assertEqual({HOST: {'enable_firewall': {'message': ERROR, 'success': False}}},
+                assert {HOST: {'enable_firewall': {'message': ERROR, 'success': False}}} == \
                                  vsphere.set_syslog_config(HOST,
                                                            USER,
                                                            PASSWORD,
                                                            'loghost',
                                                            'foo',
-                                                           firewall=True))
+                                                           firewall=True)
 
     def test_set_syslog_config_firewall_success(self):
         '''
@@ -366,13 +358,13 @@ class VsphereTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value={HOST: {'retcode': 0}})):
             with patch('salt.modules.vsphere._set_syslog_config_helper',
                        MagicMock(return_value={})):
-                self.assertEqual({HOST: {'enable_firewall': {'success': True}}},
+                assert {HOST: {'enable_firewall': {'success': True}}} == \
                                  vsphere.set_syslog_config(HOST,
                                                            USER,
                                                            PASSWORD,
                                                            'loghost',
                                                            'foo',
-                                                           firewall=True))
+                                                           firewall=True)
 
     # Tests for get_syslog_config function
 
@@ -381,9 +373,8 @@ class VsphereTestCase(TestCase, LoaderModuleMockMixin):
         Tests CommandExecutionError is raised when esxi_hosts is provided,
         but is not a list.
         '''
-        self.assertRaises(CommandExecutionError,
-                          vsphere.get_syslog_config,
-                          HOST, USER, PASSWORD, esxi_hosts='foo')
+        with pytest.raises(CommandExecutionError):
+            vsphere.get_syslog_config(HOST, USER, PASSWORD, esxi_hosts='foo')
 
     def test_get_syslog_config_host_list_bad_retcode(self):
         '''
@@ -391,8 +382,8 @@ class VsphereTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.utils.vmware.esxcli', MagicMock(return_value={'retcode': 1, 'stdout': ERROR})):
             host_1 = 'host_1.foo.com'
-            self.assertEqual({host_1: {'message': ERROR, 'success': False}},
-                             vsphere.get_syslog_config(HOST, USER, PASSWORD, esxi_hosts=[host_1]))
+            assert {host_1: {'message': ERROR, 'success': False}} == \
+                             vsphere.get_syslog_config(HOST, USER, PASSWORD, esxi_hosts=[host_1])
 
     def test_get_syslog_config_host_list_success(self):
         '''
@@ -400,24 +391,24 @@ class VsphereTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.utils.vmware.esxcli', MagicMock(return_value={'retcode': 0, 'stdout': ''})):
             host_1 = 'host_1.foo.com'
-            self.assertEqual({host_1: {'success': True}},
-                             vsphere.get_syslog_config(HOST, USER, PASSWORD, esxi_hosts=[host_1]))
+            assert {host_1: {'success': True}} == \
+                             vsphere.get_syslog_config(HOST, USER, PASSWORD, esxi_hosts=[host_1])
 
     def test_get_syslog_config_bad_retcode(self):
         '''
         Tests error message given for a single ESXi host.
         '''
         with patch('salt.utils.vmware.esxcli', MagicMock(return_value={'retcode': 1, 'stdout': ERROR})):
-            self.assertEqual({HOST: {'message': ERROR, 'success': False}},
-                             vsphere.get_syslog_config(HOST, USER, PASSWORD))
+            assert {HOST: {'message': ERROR, 'success': False}} == \
+                             vsphere.get_syslog_config(HOST, USER, PASSWORD)
 
     def test_get_syslog_config_success(self):
         '''
         Tests successful function return for a single ESXi host.
         '''
         with patch('salt.utils.vmware.esxcli', MagicMock(return_value={'retcode': 0, 'stdout': ''})):
-            self.assertEqual({HOST: {'success': True}},
-                             vsphere.get_syslog_config(HOST, USER, PASSWORD))
+            assert {HOST: {'success': True}} == \
+                             vsphere.get_syslog_config(HOST, USER, PASSWORD)
 
     # Tests for reset_syslog_config function
 
@@ -425,18 +416,16 @@ class VsphereTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests CommandExecutionError is raised when a syslog_config parameter is missing.
         '''
-        self.assertRaises(CommandExecutionError,
-                          vsphere.reset_syslog_config,
-                          HOST, USER, PASSWORD)
+        with pytest.raises(CommandExecutionError):
+            vsphere.reset_syslog_config(HOST, USER, PASSWORD)
 
     def test_reset_syslog_config_esxi_hosts_not_list(self):
         '''
         Tests CommandExecutionError is raised when esxi_hosts is provided,
         but is not a list.
         '''
-        self.assertRaises(CommandExecutionError,
-                          vsphere.reset_syslog_config,
-                          HOST, USER, PASSWORD, syslog_config='test', esxi_hosts='foo')
+        with pytest.raises(CommandExecutionError):
+            vsphere.reset_syslog_config(HOST, USER, PASSWORD, syslog_config='test', esxi_hosts='foo')
 
     def test_reset_syslog_config_invalid_config_param(self):
         '''
@@ -444,9 +433,9 @@ class VsphereTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.utils.vmware.esxcli', MagicMock(return_value={})):
             error = 'Invalid syslog configuration parameter'
-            self.assertEqual({HOST: {'success': False, 'test': {'message': error, 'success': False}}},
+            assert {HOST: {'success': False, 'test': {'message': error, 'success': False}}} == \
                              vsphere.reset_syslog_config(HOST, USER, PASSWORD,
-                                                         syslog_config='test'))
+                                                         syslog_config='test')
 
     def test_reset_syslog_config_host_list_bad_retcode(self):
         '''
@@ -454,10 +443,10 @@ class VsphereTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.utils.vmware.esxcli', MagicMock(return_value={'retcode': 1, 'stdout': ERROR})):
             host_1 = 'host_1.foo.com'
-            self.assertEqual({host_1: {'success': False, 'logdir': {'message': ERROR, 'success': False}}},
+            assert {host_1: {'success': False, 'logdir': {'message': ERROR, 'success': False}}} == \
                              vsphere.reset_syslog_config(HOST, USER, PASSWORD,
                                                          syslog_config='logdir',
-                                                         esxi_hosts=[host_1]))
+                                                         esxi_hosts=[host_1])
 
     def test_reset_syslog_config_host_list_success(self):
         '''
@@ -465,54 +454,54 @@ class VsphereTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.utils.vmware.esxcli', MagicMock(return_value={'retcode': 0, 'stdout': ''})):
             host_1 = 'host_1.foo.com'
-            self.assertEqual({host_1: {'success': True, 'loghost': {'success': True}}},
+            assert {host_1: {'success': True, 'loghost': {'success': True}}} == \
                              vsphere.reset_syslog_config(HOST, USER, PASSWORD,
                                                          syslog_config='loghost',
-                                                         esxi_hosts=[host_1]))
+                                                         esxi_hosts=[host_1])
 
     def test_reset_syslog_config_bad_retcode(self):
         '''
         Tests error message given for a single ESXi host.
         '''
         with patch('salt.utils.vmware.esxcli', MagicMock(return_value={'retcode': 1, 'stdout': ERROR})):
-            self.assertEqual({HOST: {'success': False, 'logdir-unique': {'message': ERROR, 'success': False}}},
+            assert {HOST: {'success': False, 'logdir-unique': {'message': ERROR, 'success': False}}} == \
                              vsphere.reset_syslog_config(HOST, USER, PASSWORD,
-                                                         syslog_config='logdir-unique'))
+                                                         syslog_config='logdir-unique')
 
     def test_reset_syslog_config_success(self):
         '''
         Tests successful function return for a single ESXi host.
         '''
         with patch('salt.utils.vmware.esxcli', MagicMock(return_value={'retcode': 0, 'stdout': ''})):
-            self.assertEqual({HOST: {'success': True, 'default-rotate': {'success': True}}},
+            assert {HOST: {'success': True, 'default-rotate': {'success': True}}} == \
                              vsphere.reset_syslog_config(HOST, USER, PASSWORD,
-                                                         syslog_config='default-rotate'))
+                                                         syslog_config='default-rotate')
 
     def test_reset_syslog_config_success_multiple_configs(self):
         '''
         Tests successful function return for a single ESXi host when passing in multiple syslog_config values.
         '''
         with patch('salt.utils.vmware.esxcli', MagicMock(return_value={'retcode': 0, 'stdout': ''})):
-            self.assertEqual({HOST: {'success': True,
+            assert {HOST: {'success': True,
                                      'default-size': {'success': True},
-                                     'default-timeout': {'success': True}}},
+                                     'default-timeout': {'success': True}}} == \
                              vsphere.reset_syslog_config(HOST, USER, PASSWORD,
-                                                         syslog_config='default-size,default-timeout'))
+                                                         syslog_config='default-size,default-timeout')
 
     def test_reset_syslog_config_success_all_configs(self):
         '''
         Tests successful function return for a single ESXi host when passing in multiple syslog_config values.
         '''
         with patch('salt.utils.vmware.esxcli', MagicMock(return_value={'retcode': 0, 'stdout': ''})):
-            self.assertEqual({HOST: {'success': True,
+            assert {HOST: {'success': True,
                                      'logdir': {'success': True},
                                      'loghost': {'success': True},
                                      'default-rotate': {'success': True},
                                      'default-size': {'success': True},
                                      'default-timeout': {'success': True},
-                                     'logdir-unique': {'success': True}}},
+                                     'logdir-unique': {'success': True}}} == \
                              vsphere.reset_syslog_config(HOST, USER, PASSWORD,
-                                                         syslog_config='all'))
+                                                         syslog_config='all')
 
     # Tests for _reset_syslog_config_params function
 
@@ -523,8 +512,8 @@ class VsphereTestCase(TestCase, LoaderModuleMockMixin):
         valid_resets = ['hello', 'world']
         config = 'foo'
         ret = {'success': False, config: {'success': False, 'message': 'Invalid syslog configuration parameter'}}
-        self.assertEqual(ret, vsphere._reset_syslog_config_params(HOST, USER, PASSWORD,
-                                                                  'cmd', config, valid_resets))
+        assert ret == vsphere._reset_syslog_config_params(HOST, USER, PASSWORD,
+                                                                  'cmd', config, valid_resets)
 
     def test_reset_syslog_config_params_error(self):
         '''
@@ -534,8 +523,8 @@ class VsphereTestCase(TestCase, LoaderModuleMockMixin):
             valid_resets = ['hello', 'world']
             error_dict = {'success': False, 'message': ERROR}
             ret = {'success': False, 'hello': error_dict, 'world': error_dict}
-            self.assertDictEqual(ret, vsphere._reset_syslog_config_params(HOST, USER, PASSWORD,
-                                                                          'cmd', valid_resets, valid_resets))
+            assert ret == vsphere._reset_syslog_config_params(HOST, USER, PASSWORD,
+                                                                          'cmd', valid_resets, valid_resets)
 
     def test_reset_syslog_config_params_success(self):
         '''
@@ -544,8 +533,8 @@ class VsphereTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.utils.vmware.esxcli', MagicMock(return_value={'retcode': 0})):
             valid_resets = ['hello', 'world']
             ret = {'success': True, 'hello': {'success': True}, 'world': {'success': True}}
-            self.assertDictEqual(ret, vsphere._reset_syslog_config_params(HOST, USER, PASSWORD,
-                                                                          'cmd', valid_resets, valid_resets))
+            assert ret == vsphere._reset_syslog_config_params(HOST, USER, PASSWORD,
+                                                                          'cmd', valid_resets, valid_resets)
 
     # Tests for _set_syslog_config_helper function
 
@@ -555,7 +544,7 @@ class VsphereTestCase(TestCase, LoaderModuleMockMixin):
         '''
         config = 'foo'
         ret = {'success': False, 'message': '\'{0}\' is not a valid config variable.'.format(config)}
-        self.assertEqual(ret, vsphere._set_syslog_config_helper(HOST, USER, PASSWORD, config, 'bar'))
+        assert ret == vsphere._set_syslog_config_helper(HOST, USER, PASSWORD, config, 'bar')
 
     def test_set_syslog_config_helper_bad_retcode(self):
         '''
@@ -563,8 +552,8 @@ class VsphereTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.utils.vmware.esxcli', MagicMock(return_value={'retcode': 1, 'stdout': ERROR})):
             config = 'default-rotate'
-            self.assertEqual({config: {'success': False, 'message': ERROR}},
-                             vsphere._set_syslog_config_helper(HOST, USER, PASSWORD, config, 'foo'))
+            assert {config: {'success': False, 'message': ERROR}} == \
+                             vsphere._set_syslog_config_helper(HOST, USER, PASSWORD, config, 'foo')
 
     def test_set_syslog_config_helper_success(self):
         '''
@@ -572,8 +561,8 @@ class VsphereTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.utils.vmware.esxcli', MagicMock(return_value={'retcode': 0})):
             config = 'logdir'
-            self.assertEqual({config: {'success': True}},
-                             vsphere._set_syslog_config_helper(HOST, USER, PASSWORD, config, 'foo'))
+            assert {config: {'success': True}} == \
+                             vsphere._set_syslog_config_helper(HOST, USER, PASSWORD, config, 'foo')
 
 
 class GetProxyTypeTestCase(TestCase, LoaderModuleMockMixin):
@@ -588,7 +577,7 @@ class GetProxyTypeTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(vsphere.__pillar__,
                         {'proxy': {'proxytype': 'fake_proxy_type'}}):
             ret = vsphere.get_proxy_type()
-        self.assertEqual('fake_proxy_type', ret)
+        assert 'fake_proxy_type' == ret
 
 
 class SupportsProxiesTestCase(TestCase, LoaderModuleMockMixin):
@@ -607,7 +596,7 @@ class SupportsProxiesTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.modules.vsphere.get_proxy_type',
                    MagicMock(return_value='supported')):
             ret = mock_function()
-        self.assertEqual('fake_function', ret)
+        assert 'fake_function' == ret
 
     def test_unsupported_proxy(self):
         @vsphere.supports_proxies('supported')
@@ -616,11 +605,9 @@ class SupportsProxiesTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch('salt.modules.vsphere.get_proxy_type',
                    MagicMock(return_value='unsupported')):
-            with self.assertRaises(CommandExecutionError) as excinfo:
+            with pytest.raises(CommandExecutionError) as excinfo:
                 mock_function()
-        self.assertEqual('\'unsupported\' proxy is not supported by '
-                         'function mock_function',
-                         excinfo.exception.strerror)
+        assert str(excinfo.value) == '\'unsupported\' proxy is not supported by function mock_function'
 
 
 class _GetProxyConnectionDetailsTestCase(TestCase, LoaderModuleMockMixin):
@@ -691,9 +678,9 @@ class _GetProxyConnectionDetailsTestCase(TestCase, LoaderModuleMockMixin):
                             {'esxi.get_details':
                                  MagicMock(return_value=self.esxi_host_details)}):
                 ret = vsphere._get_proxy_connection_details()
-        self.assertEqual(('fake_host', 'fake_username', 'fake_password',
+        assert ('fake_host', 'fake_username', 'fake_password',
                           'fake_protocol', 'fake_port', 'fake_mechanism',
-                          'fake_principal', 'fake_domain'), ret)
+                          'fake_principal', 'fake_domain') == ret
 
     def test_esxdatacenter_proxy_details(self):
         with patch('salt.modules.vsphere.get_proxy_type',
@@ -702,9 +689,9 @@ class _GetProxyConnectionDetailsTestCase(TestCase, LoaderModuleMockMixin):
                             {'esxdatacenter.get_details': MagicMock(
                                 return_value=self.esxdatacenter_details)}):
                 ret = vsphere._get_proxy_connection_details()
-        self.assertEqual(('fake_vcenter', 'fake_username', 'fake_password',
+        assert ('fake_vcenter', 'fake_username', 'fake_password',
                           'fake_protocol', 'fake_port', 'fake_mechanism',
-                          'fake_principal', 'fake_domain'), ret)
+                          'fake_principal', 'fake_domain') == ret
 
     def test_esxcluster_proxy_details(self):
         with patch('salt.modules.vsphere.get_proxy_type',
@@ -713,9 +700,9 @@ class _GetProxyConnectionDetailsTestCase(TestCase, LoaderModuleMockMixin):
                             {'esxcluster.get_details': MagicMock(
                                 return_value=self.esxcluster_details)}):
                 ret = vsphere._get_proxy_connection_details()
-        self.assertEqual(('fake_vcenter', 'fake_username', 'fake_password',
+        assert ('fake_vcenter', 'fake_username', 'fake_password',
                           'fake_protocol', 'fake_port', 'fake_mechanism',
-                          'fake_principal', 'fake_domain'), ret)
+                          'fake_principal', 'fake_domain') == ret
 
     def test_esxi_proxy_vcenter_details(self):
         with patch('salt.modules.vsphere.get_proxy_type',
@@ -725,9 +712,9 @@ class _GetProxyConnectionDetailsTestCase(TestCase, LoaderModuleMockMixin):
                                 MagicMock(
                                     return_value=self.esxi_vcenter_details)}):
                 ret = vsphere._get_proxy_connection_details()
-        self.assertEqual(('fake_vcenter', 'fake_username', 'fake_password',
+        assert ('fake_vcenter', 'fake_username', 'fake_password',
                           'fake_protocol', 'fake_port', 'fake_mechanism',
-                          'fake_principal', 'fake_domain'), ret)
+                          'fake_principal', 'fake_domain') == ret
 
     def test_vcenter_proxy_details(self):
         with patch('salt.modules.vsphere.get_proxy_type',
@@ -736,17 +723,17 @@ class _GetProxyConnectionDetailsTestCase(TestCase, LoaderModuleMockMixin):
                             {'vcenter.get_details': MagicMock(
                                 return_value=self.vcenter_details)}):
                 ret = vsphere._get_proxy_connection_details()
-        self.assertEqual(('fake_vcenter', 'fake_username', 'fake_password',
+        assert ('fake_vcenter', 'fake_username', 'fake_password',
                           'fake_protocol', 'fake_port', 'fake_mechanism',
-                          'fake_principal', 'fake_domain'), ret)
+                          'fake_principal', 'fake_domain') == ret
 
     def test_unsupported_proxy_details(self):
         with patch('salt.modules.vsphere.get_proxy_type',
                    MagicMock(return_value='unsupported')):
-            with self.assertRaises(CommandExecutionError) as excinfo:
+            with pytest.raises(CommandExecutionError) as excinfo:
                 ret = vsphere._get_proxy_connection_details()
-        self.assertEqual('\'unsupported\' proxy is not supported',
-                         excinfo.exception.strerror)
+        assert '\'unsupported\' proxy is not supported' == \
+                         excinfo.value.strerror
 
 
 class GetsServiceInstanceViaProxyTestCase(TestCase, LoaderModuleMockMixin):
@@ -786,11 +773,11 @@ class GetsServiceInstanceViaProxyTestCase(TestCase, LoaderModuleMockMixin):
         def mock_function():
             return 'fake_function'
 
-        with self.assertRaises(CommandExecutionError) as excinfo:
+        with pytest.raises(CommandExecutionError) as excinfo:
             mock_function()
-        self.assertEqual('Function mock_function must have either a '
-                         '\'service_instance\', or a \'**kwargs\' type '
-                         'parameter', excinfo.exception.strerror)
+        assert 'Function mock_function must have either a ' \
+                         '\'service_instance\', or a \'**kwargs\' type ' \
+                         'parameter' == excinfo.value.strerror
 
     def test___get_proxy_connection_details_call(self):
         mock__get_proxy_connection_details = MagicMock()
@@ -822,7 +809,7 @@ class GetsServiceInstanceViaProxyTestCase(TestCase, LoaderModuleMockMixin):
         mock_get_service_instance.assert_called_once_with(self.mock_details1,
                                                           self.mock_details2)
         mock_disconnect.assert_called_once_with(self.mock_si)
-        self.assertEqual(ret, self.mock_si)
+        assert ret == self.mock_si
 
     def test_service_instance_kwargs_parameter_no_value(self):
         mock_get_service_instance = MagicMock(return_value=self.mock_si)
@@ -842,7 +829,7 @@ class GetsServiceInstanceViaProxyTestCase(TestCase, LoaderModuleMockMixin):
         mock_get_service_instance.assert_called_once_with(self.mock_details1,
                                                           self.mock_details2)
         mock_disconnect.assert_called_once_with(self.mock_si)
-        self.assertEqual(ret, self.mock_si)
+        assert ret == self.mock_si
 
     def test_service_instance_positional_parameter_no_default_value(self):
         mock_get_service_instance = MagicMock()
@@ -859,9 +846,9 @@ class GetsServiceInstanceViaProxyTestCase(TestCase, LoaderModuleMockMixin):
                        mock_get_service_instance):
                 with patch('salt.utils.vmware.disconnect', mock_disconnect):
                     ret = mock_function(self.mock_si)
-        self.assertEqual(mock_get_service_instance.call_count, 0)
-        self.assertEqual(mock_disconnect.call_count, 0)
-        self.assertEqual(ret, self.mock_si)
+        assert mock_get_service_instance.call_count == 0
+        assert mock_disconnect.call_count == 0
+        assert ret == self.mock_si
 
     def test_service_instance_positional_parameter_with_default_value(self):
         mock_get_service_instance = MagicMock()
@@ -878,9 +865,9 @@ class GetsServiceInstanceViaProxyTestCase(TestCase, LoaderModuleMockMixin):
                        mock_get_service_instance):
                 with patch('salt.utils.vmware.disconnect', mock_disconnect):
                     ret = mock_function(self.mock_si)
-        self.assertEqual(mock_get_service_instance.call_count, 0)
-        self.assertEqual(mock_disconnect.call_count, 0)
-        self.assertEqual(ret, self.mock_si)
+        assert mock_get_service_instance.call_count == 0
+        assert mock_disconnect.call_count == 0
+        assert ret == self.mock_si
 
     def test_service_instance_named_parameter_with_default_value(self):
         mock_get_service_instance = MagicMock()
@@ -897,9 +884,9 @@ class GetsServiceInstanceViaProxyTestCase(TestCase, LoaderModuleMockMixin):
                        mock_get_service_instance):
                 with patch('salt.utils.vmware.disconnect', mock_disconnect):
                     ret = mock_function(service_instance=self.mock_si)
-        self.assertEqual(mock_get_service_instance.call_count, 0)
-        self.assertEqual(mock_disconnect.call_count, 0)
-        self.assertEqual(ret, self.mock_si)
+        assert mock_get_service_instance.call_count == 0
+        assert mock_disconnect.call_count == 0
+        assert ret == self.mock_si
 
     def test_service_instance_kwargs_parameter_passthrough(self):
         mock_get_service_instance = MagicMock()
@@ -916,9 +903,9 @@ class GetsServiceInstanceViaProxyTestCase(TestCase, LoaderModuleMockMixin):
                        mock_get_service_instance):
                 with patch('salt.utils.vmware.disconnect', mock_disconnect):
                     ret = mock_function(service_instance=self.mock_si)
-        self.assertEqual(mock_get_service_instance.call_count, 0)
-        self.assertEqual(mock_disconnect.call_count, 0)
-        self.assertEqual(ret, self.mock_si)
+        assert mock_get_service_instance.call_count == 0
+        assert mock_disconnect.call_count == 0
+        assert ret == self.mock_si
 
 
 class GetServiceInstanceViaProxyTestCase(TestCase, LoaderModuleMockMixin):
@@ -961,7 +948,7 @@ class GetServiceInstanceViaProxyTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.utils.vmware.get_service_instance',
                    MagicMock(return_value=mock_si)):
             res = vsphere.get_service_instance_via_proxy()
-        self.assertEqual(res, mock_si)
+        assert res == mock_si
 
 
 class DisconnectTestCase(TestCase, LoaderModuleMockMixin):
@@ -998,7 +985,7 @@ class DisconnectTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_output(self):
         res = vsphere.disconnect(self.mock_si)
-        self.assertEqual(res, True)
+        assert res is True
 
 
 class TestVcenterConnectionTestCase(TestCase, LoaderModuleMockMixin):
@@ -1053,27 +1040,29 @@ class TestVcenterConnectionTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.utils.vmware.is_connection_to_a_vcenter',
                    MagicMock(side_effect=exc)):
             res = vsphere.test_vcenter_connection()
-        self.assertEqual(res, False)
+        assert res is False
 
     def test_is_connection_to_a_vcenter_raises_non_vmware_salt_error(self):
-        exc = Exception('NonVMwareSaltError')
+        class NonVMwareSaltError(Exception):
+            pass
+
         with patch('salt.utils.vmware.is_connection_to_a_vcenter',
-                   MagicMock(side_effect=exc)):
-            with self.assertRaises(Exception) as excinfo:
+                   MagicMock(side_effect=NonVMwareSaltError())):
+            with pytest.raises(NonVMwareSaltError) as excinfo:
                 res = vsphere.test_vcenter_connection()
-        self.assertEqual('NonVMwareSaltError', text_type(excinfo.exception))
+        assert excinfo.type is NonVMwareSaltError
 
     def test_output_true(self):
         with patch('salt.utils.vmware.is_connection_to_a_vcenter',
                    MagicMock(return_value=True)):
             res = vsphere.test_vcenter_connection()
-        self.assertEqual(res, True)
+        assert res is True
 
     def test_output_false(self):
         with patch('salt.utils.vmware.is_connection_to_a_vcenter',
                    MagicMock(return_value=False)):
             res = vsphere.test_vcenter_connection()
-        self.assertEqual(res, False)
+        assert res is False
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -1159,7 +1148,7 @@ class ListDatacentersViaProxyTestCase(TestCase, LoaderModuleMockMixin):
                 res = vsphere.list_datacenters_via_proxy()
 
         # Just the first two names are in the result
-        self.assertEqual(res, [{'name': 'fake_dc1'}, {'name': 'fake_dc2'}])
+        assert res == [{'name': 'fake_dc1'}, {'name': 'fake_dc2'}]
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -1210,7 +1199,7 @@ class CreateDatacenterTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_returned_value(self):
         res = vsphere.create_datacenter('fake_dc1')
-        self.assertEqual(res, {'create_datacenter': True})
+        assert res == {'create_datacenter': True}
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -1263,10 +1252,10 @@ class EraseDiskPartitionsTestCase(TestCase, LoaderModuleMockMixin):
                 vsphere.erase_disk_partitions(disk_id='fake_disk')
 
     def test_no_disk_id_or_scsi_address(self):
-        with self.assertRaises(ArgumentValueError) as excinfo:
+        with pytest.raises(ArgumentValueError) as excinfo:
             vsphere.erase_disk_partitions()
-        self.assertEqual('Either \'disk_id\' or \'scsi_address\' needs to '
-                         'be specified', excinfo.exception.strerror)
+        assert 'Either \'disk_id\' or \'scsi_address\' needs to ' \
+                         'be specified' == excinfo.value.strerror
 
     def test_get_proxy_target(self):
         mock_test_proxy_target = MagicMock()
@@ -1278,11 +1267,11 @@ class EraseDiskPartitionsTestCase(TestCase, LoaderModuleMockMixin):
     def test_scsi_address_not_found(self):
         mock = MagicMock(return_value={'bad_scsi_address': 'bad_disk_id'})
         with patch('salt.utils.vmware.get_scsi_address_to_lun_map', mock):
-            with self.assertRaises(VMwareObjectRetrievalError) as excinfo:
+            with pytest.raises(VMwareObjectRetrievalError) as excinfo:
                 vsphere.erase_disk_partitions(scsi_address='fake_scsi_address')
-        self.assertEqual('Scsi lun with address \'fake_scsi_address\' was '
-                         'not found on host \'fake_host\'',
-                         excinfo.exception.strerror)
+        assert 'Scsi lun with address \'fake_scsi_address\' was ' \
+                         'not found on host \'fake_host\'' == \
+                         excinfo.value.strerror
 
     def test_scsi_address_to_disk_id_map(self):
         mock_disk_id = MagicMock(canonicalName='fake_scsi_disk_id')
@@ -1366,18 +1355,18 @@ class RemoveDatastoreTestCase(TestCase, LoaderModuleMockMixin):
     def test_datastore_not_found(self):
         with patch('salt.utils.vmware.get_datastores',
                    MagicMock(return_value=[])):
-            with self.assertRaises(VMwareObjectRetrievalError) as excinfo:
+            with pytest.raises(VMwareObjectRetrievalError) as excinfo:
                 vsphere.remove_datastore(datastore='fake_ds')
-        self.assertEqual('Datastore \'fake_ds\' was not found',
-                         excinfo.exception.strerror)
+        assert 'Datastore \'fake_ds\' was not found' == \
+                         excinfo.value.strerror
 
     def test_multiple_datastores_found(self):
         with patch('salt.utils.vmware.get_datastores',
                    MagicMock(return_value=[MagicMock(), MagicMock()])):
-            with self.assertRaises(VMwareObjectRetrievalError) as excinfo:
+            with pytest.raises(VMwareObjectRetrievalError) as excinfo:
                 vsphere.remove_datastore(datastore='fake_ds')
-        self.assertEqual('Multiple datastores \'fake_ds\' were found',
-                         excinfo.exception.strerror)
+        assert 'Multiple datastores \'fake_ds\' were found' == \
+                         excinfo.value.strerror
 
     def test_remove_datastore_call(self):
         mock_remove_datastore = MagicMock()
@@ -1389,7 +1378,7 @@ class RemoveDatastoreTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_success_output(self):
         res = vsphere.remove_datastore(datastore='fake_ds')
-        self.assertTrue(res)
+        assert res
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -1456,12 +1445,12 @@ class RemoveDiskgroupTestCase(TestCase, LoaderModuleMockMixin):
     def test_disk_group_not_found_safety_checks_set(self):
         with patch('salt.utils.vmware.get_diskgroups',
                    MagicMock(return_value=[])):
-            with self.assertRaises(VMwareObjectRetrievalError) as excinfo:
+            with pytest.raises(VMwareObjectRetrievalError) as excinfo:
                 vsphere.remove_diskgroup(cache_disk_id='fake_disk_id')
-        self.assertEqual('No diskgroup with cache disk id '
-                         '\'fake_disk_id\' was found in ESXi host '
-                         '\'fake_host\'',
-                         excinfo.exception.strerror)
+        assert 'No diskgroup with cache disk id ' \
+                         '\'fake_disk_id\' was found in ESXi host ' \
+                         '\'fake_host\'' == \
+                         excinfo.value.strerror
 
     def test_remove_disk_group(self):
         mock_remove_diskgroup = MagicMock(return_value=None)
@@ -1484,7 +1473,7 @@ class RemoveDiskgroupTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_success_output(self):
         res = vsphere.remove_diskgroup(cache_disk_id='fake_disk_id')
-        self.assertTrue(res)
+        assert res
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -1555,11 +1544,11 @@ class RemoveCapacityFromDiskgroupTestCase(TestCase, LoaderModuleMockMixin):
             side_effect=vsphere.jsonschema.exceptions.ValidationError('err'))
         with patch('salt.modules.vsphere.jsonschema.validate',
                    mock_schema_validate):
-            with self.assertRaises(ArgumentValueError) as excinfo:
+            with pytest.raises(ArgumentValueError) as excinfo:
                 vsphere.remove_capacity_from_diskgroup(
                     cache_disk_id='fake_cache_disk_id',
                     capacity_disk_ids=['fake_disk1', 'fake_disk2'])
-        self.assertEqual('err', excinfo.exception.strerror)
+        assert 'err' == excinfo.value.strerror
 
     def test_supported_proxes(self):
         supported_proxies = ['esxi']
@@ -1593,14 +1582,14 @@ class RemoveCapacityFromDiskgroupTestCase(TestCase, LoaderModuleMockMixin):
         mock_get_disks = MagicMock(
             return_value=[self.mock_disk1, self.mock_disk2, self.mock_disk3])
         with patch('salt.utils.vmware.get_disks', mock_get_disks):
-            with self.assertRaises(VMwareObjectRetrievalError) as excinfo:
+            with pytest.raises(VMwareObjectRetrievalError) as excinfo:
                 vsphere.remove_capacity_from_diskgroup(
                     cache_disk_id='fake_cache_disk_id',
                     capacity_disk_ids=['fake_disk1', 'fake_disk4'],
                     safety_checks=True)
-        self.assertEqual('No disk with id \'fake_disk4\' was found '
-                         'in ESXi host \'fake_host\'',
-                         excinfo.exception.strerror)
+        assert 'No disk with id \'fake_disk4\' was found ' \
+                         'in ESXi host \'fake_host\'' == \
+                         excinfo.value.strerror
 
     def test_get_diskgroups(self):
         mock_get_diskgroups = MagicMock(return_value=[self.mock_diskgroup])
@@ -1615,14 +1604,14 @@ class RemoveCapacityFromDiskgroupTestCase(TestCase, LoaderModuleMockMixin):
     def test_diskgroup_not_found(self):
         with patch('salt.utils.vmware.get_diskgroups',
                    MagicMock(return_value=[])):
-            with self.assertRaises(VMwareObjectRetrievalError) as excinfo:
+            with pytest.raises(VMwareObjectRetrievalError) as excinfo:
                 vsphere.remove_capacity_from_diskgroup(
                     cache_disk_id='fake_cache_disk_id',
                     capacity_disk_ids=['fake_disk1', 'fake_disk2'])
-        self.assertEqual('No diskgroup with cache disk id '
-                         '\'fake_cache_disk_id\' was found in ESXi host '
-                         '\'fake_host\'',
-                         excinfo.exception.strerror)
+        assert 'No diskgroup with cache disk id ' \
+                         '\'fake_cache_disk_id\' was found in ESXi host ' \
+                         '\'fake_host\'' == \
+                         excinfo.value.strerror
 
     def test_remove_capacity_from_diskgroup(self):
         mock_remove_capacity_from_diskgroup = MagicMock()
@@ -1653,7 +1642,7 @@ class RemoveCapacityFromDiskgroupTestCase(TestCase, LoaderModuleMockMixin):
         res = vsphere.remove_capacity_from_diskgroup(
             cache_disk_id='fake_cache_disk_id',
             capacity_disk_ids=['fake_disk1', 'fake_disk2'])
-        self.assertTrue(res)
+        assert res
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -1730,10 +1719,10 @@ class ListClusterTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.modules.vsphere.get_proxy_type',
                    MagicMock(return_value='esxdatacenter')):
             with patch('salt.modules.vsphere._get_proxy_target', MagicMock()):
-                with self.assertRaises(ArgumentValueError) as excinfo:
+                with pytest.raises(ArgumentValueError) as excinfo:
                     vsphere.list_cluster()
-        self.assertEqual(excinfo.exception.strerror,
-                         '\'cluster\' needs to be specified')
+        assert excinfo.value.strerror == \
+                         '\'cluster\' needs to be specified'
 
     def test_get_cluster_call(self):
         with patch('salt.modules.vsphere.get_proxy_type',
@@ -1821,10 +1810,10 @@ class RenameDatastoreTestCase(TestCase, LoaderModuleMockMixin):
     def test_get_no_datastores(self):
         with patch('salt.utils.vmware.get_datastores',
                    MagicMock(return_value=[])):
-            with self.assertRaises(VMwareObjectRetrievalError) as excinfo:
+            with pytest.raises(VMwareObjectRetrievalError) as excinfo:
                 vsphere.rename_datastore('current_ds_name', 'new_ds_name')
-        self.assertEqual(excinfo.exception.strerror,
-                         'Datastore \'current_ds_name\' was not found')
+        assert excinfo.value.strerror == \
+                         'Datastore \'current_ds_name\' was not found'
 
     def test_rename_datastore_call(self):
         vsphere.rename_datastore('current_ds_name', 'new_ds_name')
@@ -1890,11 +1879,11 @@ class _GetProxyTargetTestCase(TestCase, LoaderModuleMockMixin):
     def test_connected_to_esxi(self):
         with patch('salt.utils.vmware.is_connection_to_a_vcenter',
                    MagicMock(return_value=False)):
-            with self.assertRaises(CommandExecutionError) as excinfo:
+            with pytest.raises(CommandExecutionError) as excinfo:
                 vsphere._get_proxy_target(self.mock_si)
-            self.assertEqual(excinfo.exception.strerror,
-                             '\'_get_proxy_target\' not supported when '
-                             'connected via the ESXi host')
+            assert excinfo.value.strerror == \
+                             '\'_get_proxy_target\' not supported when ' \
+                             'connected via the ESXi host'
 
     def test_get_cluster_call(self):
         vsphere._get_proxy_target(self.mock_si)
@@ -1906,7 +1895,7 @@ class _GetProxyTargetTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.modules.vsphere.get_proxy_type',
                    MagicMock(return_value='esxcluster')):
             ret = vsphere._get_proxy_target(self.mock_si)
-        self.assertEqual(ret, self.mock_cl)
+        assert ret == self.mock_cl
 
     def test_get_datacenter_call(self):
         with patch('salt.modules.vsphere.get_proxy_type',
@@ -1914,20 +1903,20 @@ class _GetProxyTargetTestCase(TestCase, LoaderModuleMockMixin):
             vsphere._get_proxy_target(self.mock_si)
         self.mock_get_datacenter.assert_called_once_with(self.mock_si,
                                                          'datacenter')
-        self.assertEqual(self.mock_get_cluster.call_count, 0)
+        assert self.mock_get_cluster.call_count == 0
 
     def test_esxdatacenter_proxy_return(self):
         with patch('salt.modules.vsphere.get_proxy_type',
                    MagicMock(return_value='esxdatacenter')):
             ret = vsphere._get_proxy_target(self.mock_si)
-        self.assertEqual(ret, self.mock_dc)
+        assert ret == self.mock_dc
 
     def test_vcenter_proxy_return(self):
         with patch('salt.modules.vsphere.get_proxy_type',
                    MagicMock(return_value='vcenter')):
             ret = vsphere._get_proxy_target(self.mock_si)
         self.mock_get_root_folder.assert_called_once_with(self.mock_si)
-        self.assertEqual(ret, self.mock_root)
+        assert ret == self.mock_root
 
 
 @skipIf(not HAS_VSPHERE_SDK, 'The \'vsphere-automation-sdk\' library is missing')
@@ -2076,7 +2065,7 @@ class TestVSphereTagging(TestCase, LoaderModuleMockMixin):
                             get_proxy_connection.assert_called_once()
                             get_service_instance.assert_called_once()
                             get_vsphere_client.assert_called_once()
-                            self.assertEqual(ret, {'Category created': None})
+                            assert ret == {'Category created': None}
 
     def test_create_tag_category_client(self):
         get_details = MagicMock(return_value=self.details)
@@ -2121,7 +2110,7 @@ class TestVSphereTagging(TestCase, LoaderModuleMockMixin):
                             get_proxy_connection.assert_called_once()
                             get_service_instance.assert_called_once()
                             get_vsphere_client.assert_called_once()
-                            self.assertEqual(ret, self.create_tag_category)
+                            assert ret == self.create_tag_category
 
     def test_create_tag_client_none(self):
         get_details = MagicMock(return_value=self.details)
@@ -2156,7 +2145,7 @@ class TestVSphereTagging(TestCase, LoaderModuleMockMixin):
                             get_proxy_connection.assert_called_once()
                             get_service_instance.assert_called_once()
                             get_vsphere_client.assert_called_once()
-                            self.assertEqual(ret, {'Tag created': None})
+                            assert ret == {'Tag created': None}
 
     def test_create_tag_client(self):
         get_details = MagicMock(return_value=self.details)
@@ -2199,7 +2188,7 @@ class TestVSphereTagging(TestCase, LoaderModuleMockMixin):
                             get_proxy_connection.assert_called_once()
                             get_service_instance.assert_called_once()
                             get_vsphere_client.assert_called_once()
-                            self.assertEqual(ret, self.create_tag)
+                            assert ret == self.create_tag
 
     def test_delete_tag_category_client_none(self):
         get_details = MagicMock(return_value=self.details)
@@ -2232,7 +2221,7 @@ class TestVSphereTagging(TestCase, LoaderModuleMockMixin):
                             get_proxy_connection.assert_called_once()
                             get_service_instance.assert_called_once()
                             get_vsphere_client.assert_called_once()
-                            self.assertEqual(ret, {'Category deleted': None})
+                            assert ret == {'Category deleted': None}
 
     def test_delete_tag_category_client(self):
         get_details = MagicMock(return_value=self.details)
@@ -2273,7 +2262,7 @@ class TestVSphereTagging(TestCase, LoaderModuleMockMixin):
                             get_proxy_connection.assert_called_once()
                             get_service_instance.assert_called_once()
                             get_vsphere_client.assert_called_once()
-                            self.assertEqual(ret, self.delete_tag_category)
+                            assert ret == self.delete_tag_category
 
     def test_delete_tag_client_none(self):
         get_details = MagicMock(return_value=self.details)
@@ -2305,7 +2294,7 @@ class TestVSphereTagging(TestCase, LoaderModuleMockMixin):
                             get_proxy_connection.assert_called_once()
                             get_service_instance.assert_called_once()
                             get_vsphere_client.assert_called_once()
-                            self.assertEqual(ret, {'Tag deleted': None})
+                            assert ret == {'Tag deleted': None}
 
     def test_delete_tag_client(self):
         get_details = MagicMock(return_value=self.details)
@@ -2346,7 +2335,7 @@ class TestVSphereTagging(TestCase, LoaderModuleMockMixin):
                             get_proxy_connection.assert_called_once()
                             get_service_instance.assert_called_once()
                             get_vsphere_client.assert_called_once()
-                            self.assertEqual(ret, self.delete_tag)
+                            assert ret == self.delete_tag
 
     def test_list_tag_categories_client_none(self):
         get_details = MagicMock(return_value=self.details)
@@ -2378,7 +2367,7 @@ class TestVSphereTagging(TestCase, LoaderModuleMockMixin):
                             get_proxy_connection.assert_called_once()
                             get_service_instance.assert_called_once()
                             get_vsphere_client.assert_called_once()
-                            self.assertEqual(ret, {'Categories': None})
+                            assert ret == {'Categories': None}
 
     def test_list_tag_categories_client(self):
         get_details = MagicMock(return_value=self.details)
@@ -2417,9 +2406,8 @@ class TestVSphereTagging(TestCase, LoaderModuleMockMixin):
                             get_proxy_connection.assert_called_once()
                             get_service_instance.assert_called_once()
                             get_vsphere_client.assert_called_once()
-                            self.assertEqual(
-                                ret, {'Categories':
-                                          self.list_tag_categories_return})
+                            assert ret == {'Categories':
+                                          self.list_tag_categories_return}
 
     def test_list_tags_client_none(self):
         get_details = MagicMock(return_value=self.details)
@@ -2451,7 +2439,7 @@ class TestVSphereTagging(TestCase, LoaderModuleMockMixin):
                             get_proxy_connection.assert_called_once()
                             get_service_instance.assert_called_once()
                             get_vsphere_client.assert_called_once()
-                            self.assertEqual(ret, {'Tags': None})
+                            assert ret == {'Tags': None}
 
     def test_list_tags_client(self):
         get_details = MagicMock(return_value=self.details)
@@ -2490,8 +2478,8 @@ class TestVSphereTagging(TestCase, LoaderModuleMockMixin):
                             get_proxy_connection.assert_called_once()
                             get_service_instance.assert_called_once()
                             get_vsphere_client.assert_called_once()
-                            self.assertEqual(ret,
-                                             {'Tags': self.list_tags_return})
+                            assert ret == \
+                                             {'Tags': self.list_tags_return}
 
     def test_list_attached_tags_client_none(self):
         get_details = MagicMock(return_value=self.details)
@@ -2526,7 +2514,7 @@ class TestVSphereTagging(TestCase, LoaderModuleMockMixin):
                                 get_proxy_connection.assert_called_once()
                                 get_service_instance.assert_called_once()
                                 get_vsphere_client.assert_called_once()
-                                self.assertEqual(ret, {'Attached tags': None})
+                                assert ret == {'Attached tags': None}
 
     def test_list_attached_tags_client(self):
         get_details = MagicMock(return_value=self.details)
@@ -2570,9 +2558,8 @@ class TestVSphereTagging(TestCase, LoaderModuleMockMixin):
                                 get_proxy_connection.assert_called_once()
                                 get_service_instance.assert_called_once()
                                 get_vsphere_client.assert_called_once()
-                                self.assertEqual(
-                                    ret, {'Attached tags':
-                                              self.list_attached_tags_return})
+                                assert ret == {'Attached tags':
+                                              self.list_attached_tags_return}
 
     def test_attach_tags_client_none(self):
         get_details = MagicMock(return_value=self.details)
@@ -2606,7 +2593,7 @@ class TestVSphereTagging(TestCase, LoaderModuleMockMixin):
                             get_proxy_connection.assert_called_once()
                             get_service_instance.assert_called_once()
                             get_vsphere_client.assert_called_once()
-                            self.assertEqual(ret, {'Tag attached': None})
+                            assert ret == {'Tag attached': None}
 
     def test_attach_tags_client(self):
         get_details = MagicMock(return_value=self.details)
@@ -2650,6 +2637,5 @@ class TestVSphereTagging(TestCase, LoaderModuleMockMixin):
                                 get_proxy_connection.assert_called_once()
                                 get_service_instance.assert_called_once()
                                 get_vsphere_client.assert_called_once()
-                                self.assertEqual(
-                                    ret, {'Tag attached':
-                                              self.list_attached_tags_return})
+                                assert ret == {'Tag attached':
+                                              self.list_attached_tags_return}

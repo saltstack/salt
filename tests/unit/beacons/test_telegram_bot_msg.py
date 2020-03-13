@@ -33,31 +33,31 @@ class TelegramBotMsgBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_validate_empty_config(self, *args, **kwargs):
         ret = telegram_bot_msg.validate(None)
-        self.assertEqual(ret, (False, ('Configuration for telegram_bot_msg '
-                                       'beacon must be a list.')))
+        assert ret == (False, ('Configuration for telegram_bot_msg '
+                                       'beacon must be a list.'))
 
     def test_validate_missing_accept_from_config(self, *args, **kwargs):
         ret = telegram_bot_msg.validate([{
             'token': 'bcd'
         }])
-        self.assertEqual(ret, (False, ('Not all required configuration for '
-                                       'telegram_bot_msg are set.')))
+        assert ret == (False, ('Not all required configuration for '
+                                       'telegram_bot_msg are set.'))
 
     def test_validate_missing_token_config(self, *args, **kwargs):
         ret = telegram_bot_msg.validate([{
             'accept_from': []
         }])
-        self.assertEqual(ret, (False, ('Not all required configuration for '
-                                       'telegram_bot_msg are set.')))
+        assert ret == (False, ('Not all required configuration for '
+                                       'telegram_bot_msg are set.'))
 
     def test_validate_config_not_list_in_accept_from(self, *args, **kwargs):
         ret = telegram_bot_msg.validate([{
             'token': 'bcd',
             'accept_from': {'nodict': "1"}
         }])
-        self.assertEqual(ret, (False, ('Configuration for telegram_bot_msg, '
+        assert ret == (False, ('Configuration for telegram_bot_msg, '
                                        'accept_from must be a list of '
-                                       'usernames.')))
+                                       'usernames.'))
 
     def test_validate_valid_config(self, *args, **kwargs):
         ret = telegram_bot_msg.validate([{
@@ -66,7 +66,7 @@ class TelegramBotMsgBeaconTestCase(TestCase, LoaderModuleMockMixin):
                 'username'
             ]
         }])
-        self.assertEqual(ret, (True, 'Valid beacon configuration.'))
+        assert ret == (True, 'Valid beacon configuration.')
 
     def test_call_no_updates(self):
         with patch("salt.beacons.telegram_bot_msg.telegram") as telegram_api:
@@ -80,10 +80,10 @@ class TelegramBotMsgBeaconTestCase(TestCase, LoaderModuleMockMixin):
             inst.get_updates.return_value = []
 
             ret = telegram_bot_msg.beacon(config)
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             telegram_api.Bot.assert_called_once_with(token)
-            self.assertEqual(ret, [])
+            assert ret == []
 
     def test_call_telegram_return_no_updates_for_user(self):
         with patch("salt.beacons.telegram_bot_msg.telegram") as telegram_api:
@@ -107,10 +107,10 @@ class TelegramBotMsgBeaconTestCase(TestCase, LoaderModuleMockMixin):
             inst.get_updates.return_value = [update]
 
             ret = telegram_bot_msg.beacon(config)
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             telegram_api.Bot.assert_called_once_with(token)
-            self.assertEqual(ret, [])
+            assert ret == []
 
     def test_call_telegram_returning_updates(self):
         with patch("salt.beacons.telegram_bot_msg.telegram") as telegram_api:
@@ -132,8 +132,8 @@ class TelegramBotMsgBeaconTestCase(TestCase, LoaderModuleMockMixin):
             inst.get_updates.return_value = [update]
 
             ret = telegram_bot_msg.beacon(config)
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             telegram_api.Bot.assert_called_once_with(token)
-            self.assertTrue(ret)
-            self.assertEqual(ret[0]['msgs'][0], message.to_dict())
+            assert ret
+            assert ret[0]['msgs'][0] == message.to_dict()

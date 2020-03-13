@@ -41,12 +41,12 @@ class LvmTestCase(TestCase, LoaderModuleMockMixin):
 
         mock = MagicMock(side_effect=[True, False])
         with patch.dict(lvm.__salt__, {'lvm.pvdisplay': mock}):
-            self.assertDictEqual(lvm.pv_present(name), ret)
+            assert lvm.pv_present(name) == ret
 
             comt = ('Physical Volume {0} is set to be created'.format(name))
             ret.update({'comment': comt, 'result': None})
             with patch.dict(lvm.__opts__, {'test': True}):
-                self.assertDictEqual(lvm.pv_present(name), ret)
+                assert lvm.pv_present(name) == ret
 
     # 'pv_absent' function tests: 1
 
@@ -65,12 +65,12 @@ class LvmTestCase(TestCase, LoaderModuleMockMixin):
 
         mock = MagicMock(side_effect=[False, True])
         with patch.dict(lvm.__salt__, {'lvm.pvdisplay': mock}):
-            self.assertDictEqual(lvm.pv_absent(name), ret)
+            assert lvm.pv_absent(name) == ret
 
             comt = ('Physical Volume {0} is set to be removed'.format(name))
             ret.update({'comment': comt, 'result': None})
             with patch.dict(lvm.__opts__, {'test': True}):
-                self.assertDictEqual(lvm.pv_absent(name), ret)
+                assert lvm.pv_absent(name) == ret
 
     # 'vg_present' function tests: 1
 
@@ -91,12 +91,12 @@ class LvmTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(lvm.__salt__, {'lvm.vgdisplay': mock,
                                        'lvm.vgcreate': mock}):
             with patch.dict(lvm.__opts__, {'test': False}):
-                self.assertDictEqual(lvm.vg_present(name), ret)
+                assert lvm.vg_present(name) == ret
 
             comt = ('Volume Group {0} is set to be created'.format(name))
             ret.update({'comment': comt, 'result': None})
             with patch.dict(lvm.__opts__, {'test': True}):
-                self.assertDictEqual(lvm.vg_present(name), ret)
+                assert lvm.vg_present(name) == ret
 
     # 'vg_absent' function tests: 1
 
@@ -115,12 +115,12 @@ class LvmTestCase(TestCase, LoaderModuleMockMixin):
 
         mock = MagicMock(side_effect=[False, True])
         with patch.dict(lvm.__salt__, {'lvm.vgdisplay': mock}):
-            self.assertDictEqual(lvm.vg_absent(name), ret)
+            assert lvm.vg_absent(name) == ret
 
             comt = ('Volume Group {0} is set to be removed'.format(name))
             ret.update({'comment': comt, 'result': None})
             with patch.dict(lvm.__opts__, {'test': True}):
-                self.assertDictEqual(lvm.vg_absent(name), ret)
+                assert lvm.vg_absent(name) == ret
 
     # 'lv_present' function tests: 1
 
@@ -139,12 +139,12 @@ class LvmTestCase(TestCase, LoaderModuleMockMixin):
 
         mock = MagicMock(side_effect=[True, False])
         with patch.dict(lvm.__salt__, {'lvm.lvdisplay': mock}):
-            self.assertDictEqual(lvm.lv_present(name), ret)
+            assert lvm.lv_present(name) == ret
 
             comt = ('Logical Volume {0} is set to be created'.format(name))
             ret.update({'comment': comt, 'result': None})
             with patch.dict(lvm.__opts__, {'test': True}):
-                self.assertDictEqual(lvm.lv_present(name), ret)
+                assert lvm.lv_present(name) == ret
 
     def test_lv_present_with_force(self):
         '''
@@ -161,12 +161,12 @@ class LvmTestCase(TestCase, LoaderModuleMockMixin):
 
         mock = MagicMock(side_effect=[True, False])
         with patch.dict(lvm.__salt__, {'lvm.lvdisplay': mock}):
-            self.assertDictEqual(lvm.lv_present(name, force=True), ret)
+            assert lvm.lv_present(name, force=True) == ret
 
             comt = ('Logical Volume {0} is set to be created'.format(name))
             ret.update({'comment': comt, 'result': None})
             with patch.dict(lvm.__opts__, {'test': True}):
-                self.assertDictEqual(lvm.lv_present(name, force=True), ret)
+                assert lvm.lv_present(name, force=True) == ret
 
     # 'lv_absent' function tests: 1
 
@@ -186,9 +186,9 @@ class LvmTestCase(TestCase, LoaderModuleMockMixin):
 
         mock = MagicMock(side_effect=[False, True])
         with patch.dict(lvm.__salt__, {'lvm.lvdisplay': mock}):
-            self.assertDictEqual(lvm.lv_absent(name), ret)
+            assert lvm.lv_absent(name) == ret
 
             comt = ('Logical Volume {0} is set to be removed'.format(name))
             ret.update({'comment': comt, 'result': None})
             with patch.dict(lvm.__opts__, {'test': True}):
-                self.assertDictEqual(lvm.lv_absent(name), ret)
+                assert lvm.lv_absent(name) == ret

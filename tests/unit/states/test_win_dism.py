@@ -46,7 +46,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
                 mock_installed.assert_called_with()
                 mock_add.assert_called_once_with(
                     'Capa2', 'somewhere', True, None, False)
-                self.assertEqual(out, expected)
+                assert out == expected
 
     def test_capability_installed_failure(self):
         '''
@@ -73,7 +73,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
                 mock_installed.assert_called_with()
                 mock_add.assert_called_once_with(
                     'Capa2', 'somewhere', True, None, False)
-                self.assertEqual(out, expected)
+                assert out == expected
 
     def test_capability_installed_installed(self):
         '''
@@ -98,7 +98,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
 
                 mock_installed.assert_called_once_with()
                 assert not mock_add.called
-                self.assertEqual(out, expected)
+                assert out == expected
 
     def test_capability_removed(self):
         '''
@@ -125,7 +125,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
 
                 mock_removed.assert_called_with()
                 mock_remove.assert_called_once_with('Capa2', None, False)
-                self.assertEqual(out, expected)
+                assert out == expected
 
     def test_capability_removed_failure(self):
         '''
@@ -152,7 +152,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
                 mock_removed.assert_called_with()
                 mock_remove.assert_called_once_with(
                     'Capa2', None, False)
-                self.assertEqual(out, expected)
+                assert out == expected
 
     def test_capability_removed_removed(self):
         '''
@@ -176,7 +176,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
 
             mock_removed.assert_called_once_with()
             assert not mock_remove.called
-            self.assertEqual(out, expected)
+            assert out == expected
 
     def test_feature_installed(self):
         '''
@@ -204,7 +204,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
                 mock_installed.assert_called_with()
                 mock_add.assert_called_once_with(
                     'Feat2', None, None, False, False, None, False)
-                self.assertEqual(out, expected)
+                assert out == expected
 
     def test_feature_installed_failure(self):
         '''
@@ -231,7 +231,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
                 mock_installed.assert_called_with()
                 mock_add.assert_called_once_with(
                     'Feat2', None, None, False, False, None, False)
-                self.assertEqual(out, expected)
+                assert out == expected
 
     def test_feature_installed_installed(self):
         '''
@@ -255,7 +255,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
 
             mock_installed.assert_called_once_with()
             assert not mock_add.called
-            self.assertEqual(out, expected)
+            assert out == expected
 
     def test_feature_removed(self):
         '''
@@ -283,7 +283,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
                 mock_removed.assert_called_with()
                 mock_remove.assert_called_once_with(
                     'Feat2', False, None, False)
-                self.assertEqual(out, expected)
+                assert out == expected
 
     def test_feature_removed_failure(self):
         '''
@@ -310,7 +310,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
                 mock_removed.assert_called_with()
                 mock_remove.assert_called_once_with(
                     'Feat2', False, None, False)
-                self.assertEqual(out, expected)
+                assert out == expected
 
     def test_feature_removed_removed(self):
         '''
@@ -334,7 +334,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
 
             mock_removed.assert_called_once_with()
             assert not mock_remove.called
-            self.assertEqual(out, expected)
+            assert out == expected
 
     def test_package_installed(self):
         '''
@@ -366,7 +366,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
                     mock_installed.assert_called_with()
                     mock_add.assert_called_once_with(
                         'Pack2', False, False, None, False)
-                    self.assertEqual(out, expected)
+                    assert out == expected
 
     def test_package_installed_failure(self):
         '''
@@ -397,7 +397,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
                     mock_installed.assert_called_with()
                     mock_add.assert_called_once_with(
                         'Pack2', False, False, None, False)
-                    self.assertEqual(out, expected)
+                    assert out == expected
 
     def test_package_installed_installed(self):
         '''
@@ -426,7 +426,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
 
                     mock_installed.assert_called_once_with()
                     assert not mock_add.called
-                    self.assertEqual(out, expected)
+                    assert out == expected
 
     def test_package_removed(self):
         '''
@@ -458,7 +458,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
                     mock_removed.assert_called_with()
                     mock_remove.assert_called_once_with(
                         'Pack2', None, False)
-                    self.assertEqual(out, expected)
+                    assert out == expected
 
     def test_package_removed_failure(self):
         '''
@@ -489,7 +489,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
                     mock_removed.assert_called_with()
                     mock_remove.assert_called_once_with(
                         'Pack2', None, False)
-                    self.assertEqual(out, expected)
+                    assert out == expected
 
     def test_package_removed_removed(self):
         '''
@@ -518,4 +518,4 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
 
                     mock_removed.assert_called_once_with()
                     assert not mock_remove.called
-                    self.assertEqual(out, expected)
+                    assert out == expected

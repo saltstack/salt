@@ -30,7 +30,7 @@ class StateMatchTest(ModuleCase):
     @pytest.mark.skip_if_not_root
     def test_issue_2167_ipcidr_no_AttributeError(self):
         subnets = self.run_function('network.subnets')
-        self.assertTrue(len(subnets) > 0)
+        assert len(subnets) > 0
         top_filename = 'issue-2167-ipcidr-match.sls'
         top_file = os.path.join(RUNTIME_VARS.BASE_FILES, top_filename)
         try:
@@ -44,10 +44,8 @@ class StateMatchTest(ModuleCase):
                     )
                 )
             ret = self.run_function('state.top', [top_filename])
-            self.assertNotIn(
-                'AttributeError: \'Matcher\' object has no attribute '
-                '\'functions\'',
+            assert 'AttributeError: \'Matcher\' object has no attribute ' \
+                '\'functions\'' not in \
                 ret
-            )
         finally:
             os.remove(top_file)

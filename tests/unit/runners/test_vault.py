@@ -89,7 +89,7 @@ class VaultTest(TestCase, LoaderModuleMockMixin):
                 log.debug('Test %s failed', case)
                 log.debug('Expected:\n\t%s\nGot\n\t%s', output, correct_output)
                 log.debug('Difference:\n\t%s', diff)
-            self.assertEqual(output, correct_output)
+            assert output == correct_output
 
     def test_get_policies_for_nonexisting_minions(self):
         minion_id = 'salt_master'
@@ -109,7 +109,7 @@ class VaultTest(TestCase, LoaderModuleMockMixin):
                     log.debug('Test %s failed', case)
                     log.debug('Expected:\n\t%s\nGot\n\t%s', output, correct_output)
                     log.debug('Difference:\n\t%s', diff)
-                self.assertEqual(output, correct_output)
+                assert output == correct_output
 
     def test_get_policies(self):
         '''
@@ -149,24 +149,24 @@ class VaultTest(TestCase, LoaderModuleMockMixin):
                     log.debug('Test %s failed', case)
                     log.debug('Expected:\n\t%s\nGot\n\t%s', output, correct_output)
                     log.debug('Difference:\n\t%s', diff)
-                self.assertEqual(output, correct_output)
+                assert output == correct_output
 
     def test_get_token_create_url(self):
         '''
         Ensure _get_token_create_url parses config correctly
         '''
-        self.assertEqual(vault._get_token_create_url(  # pylint: disable=protected-access
-            {"url": "http://127.0.0.1"}),
-            "http://127.0.0.1/v1/auth/token/create")
-        self.assertEqual(vault._get_token_create_url(  # pylint: disable=protected-access
-            {"url": "https://127.0.0.1/"}),
-            "https://127.0.0.1/v1/auth/token/create")
-        self.assertEqual(vault._get_token_create_url(  # pylint: disable=protected-access
-            {"url": "http://127.0.0.1:8200", "role_name": "therole"}),
-            "http://127.0.0.1:8200/v1/auth/token/create/therole")
-        self.assertEqual(vault._get_token_create_url(  # pylint: disable=protected-access
-            {"url": "https://127.0.0.1/test", "role_name": "therole"}),
-            "https://127.0.0.1/test/v1/auth/token/create/therole")
+        assert vault._get_token_create_url(  # pylint: disable=protected-access
+            {"url": "http://127.0.0.1"}) == \
+            "http://127.0.0.1/v1/auth/token/create"
+        assert vault._get_token_create_url(  # pylint: disable=protected-access
+            {"url": "https://127.0.0.1/"}) == \
+            "https://127.0.0.1/v1/auth/token/create"
+        assert vault._get_token_create_url(  # pylint: disable=protected-access
+            {"url": "http://127.0.0.1:8200", "role_name": "therole"}) == \
+            "http://127.0.0.1:8200/v1/auth/token/create/therole"
+        assert vault._get_token_create_url(  # pylint: disable=protected-access
+            {"url": "https://127.0.0.1/test", "role_name": "therole"}) == \
+            "https://127.0.0.1/test/v1/auth/token/create/therole"
 
 
 def _mock_json_response(data, status_code=200, reason=""):
@@ -210,31 +210,31 @@ class VaultTokenAuthTest(TestCase, LoaderModuleMockMixin):
         with patch('requests.post', mock):
             result = vault.generate_token('test-minion', 'signature')
             log.debug('generate_token result: %s', result)
-            self.assertTrue(isinstance(result, dict))
-            self.assertFalse('error' in result)
-            self.assertTrue('token' in result)
-            self.assertEqual(result['token'], 'test')
+            assert isinstance(result, dict)
+            assert 'error' not in result
+            assert 'token' in result
+            assert result['token'] == 'test'
             mock.assert_called_with("http://fake_url", headers=ANY, json=ANY, verify=ANY)
 
         mock = _mock_json_response({}, status_code=403, reason="no reason")
         with patch('requests.post', mock):
             result = vault.generate_token('test-minion', 'signature')
-            self.assertTrue(isinstance(result, dict))
-            self.assertTrue('error' in result)
-            self.assertEqual(result['error'], "no reason")
+            assert isinstance(result, dict)
+            assert 'error' in result
+            assert result['error'] == "no reason"
 
         with patch('salt.runners.vault._get_policies', MagicMock(return_value=[])):
             result = vault.generate_token('test-minion', 'signature')
-            self.assertTrue(isinstance(result, dict))
-            self.assertTrue('error' in result)
-            self.assertEqual(result['error'], 'No policies matched minion')
+            assert isinstance(result, dict)
+            assert 'error' in result
+            assert result['error'] == 'No policies matched minion'
 
         with patch('requests.post',
                    MagicMock(side_effect=Exception('Test Exception Reason'))):
             result = vault.generate_token('test-minion', 'signature')
-            self.assertTrue(isinstance(result, dict))
-            self.assertTrue('error' in result)
-            self.assertEqual(result['error'], 'Test Exception Reason')
+            assert isinstance(result, dict)
+            assert 'error' in result
+            assert result['error'] == 'Test Exception Reason'
 
 
 class VaultAppRoleAuthTest(TestCase, LoaderModuleMockMixin):
@@ -268,10 +268,10 @@ class VaultAppRoleAuthTest(TestCase, LoaderModuleMockMixin):
         with patch('requests.post', mock):
             result = vault.generate_token('test-minion', 'signature')
             log.debug('generate_token result: %s', result)
-            self.assertTrue(isinstance(result, dict))
-            self.assertFalse('error' in result)
-            self.assertTrue('token' in result)
-            self.assertEqual(result['token'], 'test')
+            assert isinstance(result, dict)
+            assert 'error' not in result
+            assert 'token' in result
+            assert result['token'] == 'test'
             calls = [
                 call("http://127.0.0.1/v1/auth/approle/login", json=ANY, verify=ANY),
                 call("http://fake_url", headers=ANY, json=ANY, verify=ANY)

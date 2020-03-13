@@ -52,71 +52,61 @@ class MacServiceModuleTest(ModuleCase):
         '''
         # Existing Service
         service_info = self.run_function('service.show', [self.SERVICE_NAME])
-        self.assertIsInstance(service_info, dict)
-        self.assertEqual(service_info['plist']['Label'], self.SERVICE_NAME)
+        assert isinstance(service_info, dict)
+        assert service_info['plist']['Label'] == self.SERVICE_NAME
 
         # Missing Service
-        self.assertIn(
-            'Service not found',
-            self.run_function('service.show', ['spongebob']))
+        assert 'Service not found' in \
+            self.run_function('service.show', ['spongebob'])
 
     def test_launchctl(self):
         '''
         Test service.launchctl
         '''
         # Expected Functionality
-        self.assertTrue(
-            self.run_function('service.launchctl',
-                              ['error', 'bootstrap', 64]))
-        self.assertEqual(
-            self.run_function('service.launchctl',
+        assert self.run_function('service.launchctl',
+                              ['error', 'bootstrap', 64])
+        assert self.run_function('service.launchctl',
                               ['error', 'bootstrap', 64],
-                              return_stdout=True),
-            '64: unknown error code')
+                              return_stdout=True) == \
+            '64: unknown error code'
 
         # Raise an error
-        self.assertIn(
-            'Failed to error service',
-            self.run_function('service.launchctl', ['error', 'bootstrap']))
+        assert 'Failed to error service' in \
+            self.run_function('service.launchctl', ['error', 'bootstrap'])
 
     def test_list(self):
         '''
         Test service.list
         '''
         # Expected Functionality
-        self.assertIn('PID', self.run_function('service.list'))
-        self.assertIn(
-            '{',
-            self.run_function('service.list', ['com.apple.coreservicesd']))
+        assert 'PID' in self.run_function('service.list')
+        assert '{' in \
+            self.run_function('service.list', ['com.apple.coreservicesd'])
 
         # Service not found
-        self.assertIn(
-            'Service not found',
-            self.run_function('service.list', ['spongebob']))
+        assert 'Service not found' in \
+            self.run_function('service.list', ['spongebob'])
 
     @pytest.mark.destructive_test
     def test_enable(self):
         '''
         Test service.enable
         '''
-        self.assertTrue(
-            self.run_function('service.enable', [self.SERVICE_NAME]))
+        assert self.run_function('service.enable', [self.SERVICE_NAME])
 
-        self.assertIn(
-            'Service not found',
-            self.run_function('service.enable', ['spongebob']))
+        assert 'Service not found' in \
+            self.run_function('service.enable', ['spongebob'])
 
     @pytest.mark.destructive_test
     def test_disable(self):
         '''
         Test service.disable
         '''
-        self.assertTrue(
-            self.run_function('service.disable', [self.SERVICE_NAME]))
+        assert self.run_function('service.disable', [self.SERVICE_NAME])
 
-        self.assertIn(
-            'Service not found',
-            self.run_function('service.disable', ['spongebob']))
+        assert 'Service not found' in \
+            self.run_function('service.disable', ['spongebob'])
 
     @pytest.mark.destructive_test
     def test_start(self):
@@ -125,22 +115,20 @@ class MacServiceModuleTest(ModuleCase):
         Test service.stop
         Test service.status
         '''
-        self.assertTrue(self.run_function('service.start', [self.SERVICE_NAME]))
+        assert self.run_function('service.start', [self.SERVICE_NAME])
 
-        self.assertIn(
-            'Service not found',
-            self.run_function('service.start', ['spongebob']))
+        assert 'Service not found' in \
+            self.run_function('service.start', ['spongebob'])
 
     @pytest.mark.destructive_test
     def test_stop(self):
         '''
         Test service.stop
         '''
-        self.assertTrue(self.run_function('service.stop', [self.SERVICE_NAME]))
+        assert self.run_function('service.stop', [self.SERVICE_NAME])
 
-        self.assertIn(
-            'Service not found',
-            self.run_function('service.stop', ['spongebob']))
+        assert 'Service not found' in \
+            self.run_function('service.stop', ['spongebob'])
 
     @pytest.mark.destructive_test
     def test_status(self):
@@ -148,48 +136,43 @@ class MacServiceModuleTest(ModuleCase):
         Test service.status
         '''
         # A running service
-        self.assertTrue(self.run_function('service.start', [self.SERVICE_NAME]))
-        self.assertTrue(
-            self.run_function('service.status', [self.SERVICE_NAME]).isdigit())
+        assert self.run_function('service.start', [self.SERVICE_NAME])
+        assert self.run_function('service.status', [self.SERVICE_NAME]).isdigit()
 
         # A stopped service
-        self.assertTrue(self.run_function('service.stop', [self.SERVICE_NAME]))
-        self.assertEqual(
-            '',
-            self.run_function('service.status', [self.SERVICE_NAME]))
+        assert self.run_function('service.stop', [self.SERVICE_NAME])
+        assert '' == \
+            self.run_function('service.status', [self.SERVICE_NAME])
 
         # Service not found
-        self.assertEqual('', self.run_function('service.status', ['spongebob']))
+        assert '' == self.run_function('service.status', ['spongebob'])
 
     def test_available(self):
         '''
         Test service.available
         '''
-        self.assertTrue(
-            self.run_function('service.available', [self.SERVICE_NAME]))
-        self.assertFalse(self.run_function('service.available', ['spongebob']))
+        assert self.run_function('service.available', [self.SERVICE_NAME])
+        assert not self.run_function('service.available', ['spongebob'])
 
     def test_missing(self):
         '''
         Test service.missing
         '''
-        self.assertFalse(self.run_function('service.missing', [self.SERVICE_NAME]))
-        self.assertTrue(self.run_function('service.missing', ['spongebob']))
+        assert not self.run_function('service.missing', [self.SERVICE_NAME])
+        assert self.run_function('service.missing', ['spongebob'])
 
     @pytest.mark.destructive_test
     def test_enabled(self):
         '''
         Test service.enabled
         '''
-        self.assertTrue(self.run_function('service.start', [self.SERVICE_NAME]))
-        self.assertTrue(
-            self.run_function('service.enabled', [self.SERVICE_NAME]))
+        assert self.run_function('service.start', [self.SERVICE_NAME])
+        assert self.run_function('service.enabled', [self.SERVICE_NAME])
 
-        self.assertTrue(self.run_function('service.stop', [self.SERVICE_NAME]))
-        self.assertFalse(
-            self.run_function('service.enabled', [self.SERVICE_NAME]))
+        assert self.run_function('service.stop', [self.SERVICE_NAME])
+        assert not self.run_function('service.enabled', [self.SERVICE_NAME])
 
-        self.assertFalse(self.run_function('service.enabled', ['spongebob']))
+        assert not self.run_function('service.enabled', ['spongebob'])
 
     @pytest.mark.destructive_test
     def test_disabled(self):
@@ -197,29 +180,27 @@ class MacServiceModuleTest(ModuleCase):
         Test service.disabled
         '''
         SERVICE_NAME = 'com.apple.nfsd'
-        self.assertTrue(self.run_function('service.start', [SERVICE_NAME]))
-        self.assertFalse(
-            self.run_function('service.disabled', [SERVICE_NAME]))
+        assert self.run_function('service.start', [SERVICE_NAME])
+        assert not self.run_function('service.disabled', [SERVICE_NAME])
 
-        self.assertTrue(self.run_function('service.disable', [SERVICE_NAME]))
-        self.assertTrue(
-            self.run_function('service.disabled', [SERVICE_NAME]))
-        self.assertTrue(self.run_function('service.enable', [SERVICE_NAME]))
+        assert self.run_function('service.disable', [SERVICE_NAME])
+        assert self.run_function('service.disabled', [SERVICE_NAME])
+        assert self.run_function('service.enable', [SERVICE_NAME])
 
-        self.assertFalse(self.run_function('service.disabled', ['spongebob']))
+        assert not self.run_function('service.disabled', ['spongebob'])
 
     def test_get_all(self):
         '''
         Test service.get_all
         '''
         services = self.run_function('service.get_all')
-        self.assertIsInstance(services, list)
-        self.assertIn(self.SERVICE_NAME, services)
+        assert isinstance(services, list)
+        assert self.SERVICE_NAME in services
 
     def test_get_enabled(self):
         '''
         Test service.get_enabled
         '''
         services = self.run_function('service.get_enabled')
-        self.assertIsInstance(services, list)
-        self.assertIn('com.apple.coreservicesd', services)
+        assert isinstance(services, list)
+        assert 'com.apple.coreservicesd' in services

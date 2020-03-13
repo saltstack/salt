@@ -61,17 +61,17 @@ class JobsTest(TestCase, LoaderModuleMockMixin):
                    'non-existant': {}}
 
         with patch.object(salt.minion, 'MasterMinion', MockMasterMinion):
-            self.assertEqual(jobs.list_jobs(), returns['all'])
+            assert jobs.list_jobs() == returns['all']
 
-            self.assertEqual(jobs.list_jobs(search_target=['node-1-1*',
-                                                           'node-1-2*']),
-                             returns['all'])
+            assert jobs.list_jobs(search_target=['node-1-1*',
+                                                           'node-1-2*']) == \
+                             returns['all']
 
-            self.assertEqual(jobs.list_jobs(search_target='node-1-1.com'),
-                             returns['node-1-1.com'])
+            assert jobs.list_jobs(search_target='node-1-1.com') == \
+                             returns['node-1-1.com']
 
-            self.assertEqual(jobs.list_jobs(search_target='node-1-2.com'),
-                             returns['node-1-2.com'])
+            assert jobs.list_jobs(search_target='node-1-2.com') == \
+                             returns['node-1-2.com']
 
-            self.assertEqual(jobs.list_jobs(search_target='non-existant'),
-                             returns['non-existant'])
+            assert jobs.list_jobs(search_target='non-existant') == \
+                             returns['non-existant']

@@ -46,7 +46,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
 
         expect = ['local:',
                   '    - 2']
-        self.assertEqual(expect, out[:-1])
+        assert expect == out[:-1]
 
     def test_text_output(self):
         out = self.run_call('-l quiet --out txt test.fib 3')
@@ -55,25 +55,25 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             'local: (2'
         ]
 
-        self.assertEqual(''.join(expect), ''.join(out).rsplit(",", 1)[0])
+        assert ''.join(expect) == ''.join(out).rsplit(",", 1)[0]
 
     def test_json_out_indent(self):
         out = self.run_call('test.ping -l quiet --out=json --out-indent=-1')
-        self.assertIn('"local": true', ''.join(out))
+        assert '"local": true' in ''.join(out)
 
         out = self.run_call('test.ping -l quiet --out=json --out-indent=0')
-        self.assertIn('"local": true', ''.join(out))
+        assert '"local": true' in ''.join(out)
 
         out = self.run_call('test.ping -l quiet --out=json --out-indent=1')
-        self.assertIn('"local": true', ''.join(out))
+        assert '"local": true' in ''.join(out)
 
     def test_local_sls_call(self):
         fileroot = os.path.join(RUNTIME_VARS.FILES, 'file', 'base')
         out = self.run_call('--file-root {0} state.sls saltcalllocal'.format(fileroot), local=True)
-        self.assertIn('Name: test.echo', ''.join(out))
-        self.assertIn('Result: True', ''.join(out))
-        self.assertIn('hello', ''.join(out))
-        self.assertIn('Succeeded: 1', ''.join(out))
+        assert 'Name: test.echo' in ''.join(out)
+        assert 'Result: True' in ''.join(out)
+        assert 'hello' in ''.join(out)
+        assert 'Succeeded: 1' in ''.join(out)
 
     @with_tempfile()
     def test_local_salt_call(self, name):
@@ -106,7 +106,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
         Test to see if passing additional arguments shows an error
         '''
         data = self.run_call('-d virtualenv.create /tmp/ve', catch_stderr=True)
-        self.assertIn('You can only get documentation for one method at one time', '\n'.join(data[1]))
+        assert 'You can only get documentation for one method at one time' in '\n'.join(data[1])
 
     def test_issue_6973_state_highstate_exit_code(self):
         '''
@@ -125,8 +125,8 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             )
         finally:
             shutil.move(dst, src)
-        self.assertIn(expected_comment, ''.join(stdout))
-        self.assertNotEqual(0, retcode)
+        assert expected_comment in ''.join(stdout)
+        assert 0 != retcode
 
     @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
     @skipIf(True, 'to be re-enabled when #23623 is merged')
@@ -134,7 +134,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
         self.run_call('cmd.run "echo returnTOmaster"')
         jobs = [a for a in self.run_run('jobs.list_jobs')]
 
-        self.assertTrue(True in ['returnTOmaster' in j for j in jobs])
+        assert True in ['returnTOmaster' in j for j in jobs]
         # lookback jid
         first_match = [(i, j)
                        for i, j in enumerate(jobs)
@@ -151,7 +151,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
         master_out = [
             a for a in self.run_run('jobs.lookup_jid {0}'.format(jid))
         ]
-        self.assertTrue(True in ['returnTOmaster' in a for a in master_out])
+        assert True in ['returnTOmaster' in a for a in master_out]
 
     @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows')
     def test_syslog_file_not_found(self):
@@ -183,14 +183,12 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
         )
         try:
             if sys.version_info >= (3, 5, 4):
-                self.assertIn('local:', ret[0])
-                self.assertIn('[WARNING ] The log_file does not exist. Logging not setup correctly or syslog service not started.', ret[1])
-                self.assertEqual(ret[2], 0)
+                assert 'local:' in ret[0]
+                assert '[WARNING ] The log_file does not exist. Logging not setup correctly or syslog service not started.' in ret[1]
+                assert ret[2] == 0
             else:
-                self.assertIn(
-                    'Failed to setup the Syslog logging handler', '\n'.join(ret[1])
-                )
-                self.assertEqual(ret[2], 2)
+                assert 'Failed to setup the Syslog logging handler' in '\n'.join(ret[1])
+                assert ret[2] == 2
         finally:
             self.chdir(old_cwd)
             if os.path.isdir(config_dir):
@@ -225,7 +223,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
                 with_retcode=True
             )
             with salt.utils.files.fopen(output_file_append) as ofa:
-                self.assertEqual(ofa.read(), output + output)
+                assert ofa.read() == output + output
         finally:
             if os.path.exists(output_file_append):
                 os.unlink(output_file_append)
@@ -267,9 +265,9 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
                     stat2 = os.stat(output_file)
                 except OSError:
                     self.fail('Failed to generate output file, see log for details')
-                self.assertEqual(stat1.st_mode, stat2.st_mode)
+                assert stat1.st_mode == stat2.st_mode
                 # Data was appeneded to file
-                self.assertTrue(stat1.st_size < stat2.st_size)
+                assert stat1.st_size < stat2.st_size
 
                 # Let's remove the output file
                 os.unlink(output_file)
@@ -289,7 +287,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
                 except OSError:
                     self.fail('Failed to generate output file, see log for details')
                 # Mode must have changed since we're creating a new log file
-                self.assertNotEqual(stat1.st_mode, stat3.st_mode)
+                assert stat1.st_mode != stat3.st_mode
             finally:
                 if os.path.exists(output_file):
                     os.unlink(output_file)
@@ -318,7 +316,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
         exp_out = ['        - Lancelot', '        - Galahad', '        - Bedevere',
                    '    monty:', '        python']
         for out in exp_out:
-            self.assertIn(out, get_items)
+            assert out in get_items
 
     def tearDown(self):
         '''
@@ -363,9 +361,9 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
                    '          ID: {0}'.format(destpath)]
 
         for out in exp_out:
-            self.assertIn(out, ret)
+            assert out in ret
 
-        self.assertTrue(os.path.exists(destpath))
+        assert os.path.exists(destpath)
 
     def test_exit_status_correct_usage(self):
         '''

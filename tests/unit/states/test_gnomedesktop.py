@@ -29,7 +29,7 @@ class GnomedesktopTestCase(TestCase):
                'comment': '',
                'changes': {}}
 
-        self.assertDictEqual(gnomedesktop.wm_preferences(name), ret)
+        assert gnomedesktop.wm_preferences(name) == ret
 
     # 'desktop_lockdown' function tests: 1
 
@@ -44,7 +44,7 @@ class GnomedesktopTestCase(TestCase):
                'comment': '',
                'changes': {}}
 
-        self.assertDictEqual(gnomedesktop.desktop_lockdown(name), ret)
+        assert gnomedesktop.desktop_lockdown(name) == ret
 
     # 'desktop_interface' function tests: 1
 
@@ -59,4 +59,4 @@ class GnomedesktopTestCase(TestCase):
                'comment': '',
                'changes': {}}
 
-        self.assertDictEqual(gnomedesktop.desktop_interface(name), ret)
+        assert gnomedesktop.desktop_interface(name) == ret

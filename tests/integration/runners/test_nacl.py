@@ -37,8 +37,8 @@ class NaclTest(ShellCase):
         ret = self.run_run_plus(
             'nacl.keygen',
         )
-        self.assertIn('pk', ret['return'])
-        self.assertIn('sk', ret['return'])
+        assert 'pk' in ret['return']
+        assert 'sk' in ret['return']
 
     def test_enc(self):
         '''
@@ -48,8 +48,8 @@ class NaclTest(ShellCase):
         ret = self.run_run_plus(
             'nacl.keygen',
         )
-        self.assertIn('pk', ret['return'])
-        self.assertIn('sk', ret['return'])
+        assert 'pk' in ret['return']
+        assert 'sk' in ret['return']
         pk = ret['return']['pk']
         sk = ret['return']['sk']
 
@@ -61,7 +61,7 @@ class NaclTest(ShellCase):
             data=unencrypted_data,
             pk=pk,
         )
-        self.assertIn('return', ret)
+        assert 'return' in ret
 
     def test_enc_dec(self):
         '''
@@ -71,8 +71,8 @@ class NaclTest(ShellCase):
         ret = self.run_run_plus(
             'nacl.keygen',
         )
-        self.assertIn('pk', ret['return'])
-        self.assertIn('sk', ret['return'])
+        assert 'pk' in ret['return']
+        assert 'sk' in ret['return']
         pk = ret['return']['pk']
         sk = ret['return']['sk']
 
@@ -84,7 +84,7 @@ class NaclTest(ShellCase):
             data=unencrypted_data,
             pk=pk,
         )
-        self.assertIn('return', ret)
+        assert 'return' in ret
         encrypted_data = ret['return']
 
         # Decrypt with sk
@@ -93,8 +93,8 @@ class NaclTest(ShellCase):
             data=encrypted_data,
             sk=sk,
         )
-        self.assertIn('return', ret)
-        self.assertEqual(unencrypted_data, ret['return'])
+        assert 'return' in ret
+        assert unencrypted_data == ret['return']
 
     def test_sealedbox_enc_dec(self):
         '''
@@ -104,8 +104,8 @@ class NaclTest(ShellCase):
         ret = self.run_run_plus(
             'nacl.keygen',
         )
-        self.assertIn('pk', ret['return'])
-        self.assertIn('sk', ret['return'])
+        assert 'pk' in ret['return']
+        assert 'sk' in ret['return']
         pk = ret['return']['pk']
         sk = ret['return']['sk']
 
@@ -125,7 +125,7 @@ class NaclTest(ShellCase):
             data=encrypted_data,
             sk=sk,
         )
-        self.assertEqual(unencrypted_data, ret['return'])
+        assert unencrypted_data == ret['return']
 
     def test_secretbox_enc_dec(self):
         '''
@@ -135,8 +135,8 @@ class NaclTest(ShellCase):
         ret = self.run_run_plus(
             'nacl.keygen',
         )
-        self.assertIn('pk', ret['return'])
-        self.assertIn('sk', ret['return'])
+        assert 'pk' in ret['return']
+        assert 'sk' in ret['return']
         pk = ret['return']['pk']
         sk = ret['return']['sk']
 
@@ -156,7 +156,7 @@ class NaclTest(ShellCase):
             data=encrypted_data,
             sk=sk,
         )
-        self.assertEqual(unencrypted_data, ret['return'])
+        assert unencrypted_data == ret['return']
 
     def test_enc_dec_no_pk_no_sk(self):
         '''
@@ -166,8 +166,8 @@ class NaclTest(ShellCase):
         ret = self.run_run_plus(
             'nacl.keygen',
         )
-        self.assertIn('pk', ret['return'])
-        self.assertIn('sk', ret['return'])
+        assert 'pk' in ret['return']
+        assert 'sk' in ret['return']
         pk = ret['return']['pk']
         sk = ret['return']['sk']
 
@@ -179,9 +179,9 @@ class NaclTest(ShellCase):
             data=unencrypted_data,
             pk=None,
         )
-        self.assertIn('Exception: no pubkey or pk_file found', ret['return'])
+        assert 'Exception: no pubkey or pk_file found' in ret['return']
 
-        self.assertIn('return', ret)
+        assert 'return' in ret
         encrypted_data = ret['return']
 
         # Decrypt with sk
@@ -190,4 +190,4 @@ class NaclTest(ShellCase):
             data=encrypted_data,
             sk=None,
         )
-        self.assertIn('Exception: no key or sk_file found', ret['return'])
+        assert 'Exception: no key or sk_file found' in ret['return']

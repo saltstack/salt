@@ -74,8 +74,8 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
                 }):
             ret_classic = mine.get('*', 'funky.doodle')
             ret_dict = mine.get('*', ['funky.doodle'])
-        self.assertEqual(ret_classic, {})
-        self.assertEqual(ret_dict, {})
+        assert ret_classic == {}
+        assert ret_dict == {}
 
     def test_get_local_classic(self):
         '''
@@ -90,8 +90,8 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
                 }):
             ret_classic = mine.get('*', 'foobard')
             ret_dict = mine.get('*', ['foobard'])
-        self.assertEqual(ret_classic, {'webserver': 'barfood'})
-        self.assertEqual(ret_dict, {'foobard': {'webserver': 'barfood'}})
+        assert ret_classic == {'webserver': 'barfood'}
+        assert ret_dict == {'foobard': {'webserver': 'barfood'}}
 
     def test_send_get_local(self):
         '''
@@ -110,14 +110,12 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
                 }):
             ret = mine.send('ip_addr', mine_function='network.ip_addrs')
             mine.send('foo.bar')
-        self.assertEqual(ret, 'FakeCache:StoreSuccess!')
-        self.assertEqual(
-            self.cache.fetch('minions/webserver', 'mine_cache'),
+        assert ret == 'FakeCache:StoreSuccess!'
+        assert self.cache.fetch('minions/webserver', 'mine_cache') == \
             {
                 'ip_addr': self.ip_ret,
                 'foo.bar': self.foo_ret,
             }
-        )
         with patch.dict(mine.__opts__, {
                     'file_client': 'local',
                     'id': 'webserver',
@@ -126,10 +124,10 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
             ret_single_dict = mine.get('*', ['ip_addr'])
             ret_multi = mine.get('*', 'ip_addr,foo.bar')
             ret_multi2 = mine.get('*', ['ip_addr', 'foo.bar'])
-        self.assertEqual(ret_single, {'webserver': self.ip_ret})
-        self.assertEqual(ret_single_dict, {'ip_addr': {'webserver': self.ip_ret}})
-        self.assertEqual(ret_multi, {'ip_addr': {'webserver': self.ip_ret}, 'foo.bar': {'webserver': self.foo_ret}})
-        self.assertEqual(ret_multi, ret_multi2)
+        assert ret_single == {'webserver': self.ip_ret}
+        assert ret_single_dict == {'ip_addr': {'webserver': self.ip_ret}}
+        assert ret_multi == {'ip_addr': {'webserver': self.ip_ret}, 'foo.bar': {'webserver': self.foo_ret}}
+        assert ret_multi == ret_multi2
 
     def test_send_get_acl_local(self):
         '''
@@ -149,9 +147,8 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
                 }):
             ret = mine.send('ip_addr', mine_function='network.ip_addrs', allow_tgt='web*', allow_tgt_type='glob')
             mine.send('foo.bar')
-        self.assertEqual(ret, 'FakeCache:StoreSuccess!')
-        self.assertEqual(
-            self.cache.fetch('minions/webserver', 'mine_cache'),
+        assert ret == 'FakeCache:StoreSuccess!'
+        assert self.cache.fetch('minions/webserver', 'mine_cache') == \
             {
                 'ip_addr': {
                     salt.utils.mine.MINE_ITEM_ACL_DATA: self.ip_ret,
@@ -161,13 +158,12 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
                 },
                 'foo.bar': self.foo_ret,
             }
-        )
         with patch.dict(mine.__opts__, {
                     'file_client': 'local',
                     'id': 'webserver',
                 }):
             ret_single = mine.get('*', 'ip_addr')
-        self.assertEqual(ret_single, {'webserver': self.ip_ret})
+        assert ret_single == {'webserver': self.ip_ret}
 
     def test_send_master(self):
         '''
@@ -183,15 +179,13 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
                     'id': 'foo',
                 }):
             ret = mine.send('foo.bar')
-        self.assertEqual(
-            ret,
+        assert ret == \
             {
                 'id': 'foo',
                 'cmd': '_mine',
                 'data': {'foo.bar': self.foo_ret},
                 'clear': False,
             }
-        )
 
     def test_send_master_acl(self):
         '''
@@ -207,8 +201,7 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
                     'id': 'foo',
                 }):
             ret = mine.send('foo.bar', allow_tgt='roles:web', allow_tgt_type='grains')
-        self.assertEqual(
-            ret,
+        assert ret == \
             {
                 'id': 'foo',
                 'cmd': '_mine',
@@ -222,7 +215,6 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
                 },
                 'clear': False,
             }
-        )
 
     def test_get_master(self):
         '''
@@ -241,10 +233,8 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
                     'id': 'foo',
                 }):
             # Verify the correct load
-            self.assertEqual(
-                mine.get('*', 'foo.bar'),
+            assert mine.get('*', 'foo.bar') == \
                 mock_load
-            )
 
     def test_get_master_exclude_minion(self):
         '''
@@ -256,14 +246,10 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
                     'file_client': 'remote',
                     'id': 'webserver',
                 }):
-            self.assertEqual(
-                mine.get('*', 'foo.bar', exclude_minion=False),
+            assert mine.get('*', 'foo.bar', exclude_minion=False) == \
                 {'webserver': 'value'}
-            )
-            self.assertEqual(
-                mine.get('*', 'foo.bar', exclude_minion=True),
+            assert mine.get('*', 'foo.bar', exclude_minion=True) == \
                 {}
-            )
 
     def test_update_local(self):
         '''
@@ -288,10 +274,9 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
                     'foo.bar': MagicMock(return_value=self.foo_ret),
                 }):
             ret = mine.update()
-        self.assertEqual(ret, 'FakeCache:StoreSuccess!')
+        assert ret == 'FakeCache:StoreSuccess!'
         # Check if the mine entries have been stored properly in the FakeCache.
-        self.assertEqual(
-            self.cache.fetch('minions/webserver', 'mine_cache'),
+        assert self.cache.fetch('minions/webserver', 'mine_cache') == \
             {
                 'ip_addr': self.ip_ret,
                 'network.ip_addrs': self.ip_ret,
@@ -307,7 +292,6 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
                     'allow_tgt': 'web*',
                 },
             }
-        )
 
     def test_update_local_specific(self):
         '''
@@ -332,10 +316,9 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
                     'foo.bar': MagicMock(return_value=self.foo_ret),
                 }):
             ret = mine.update(mine_functions=manual_mine_functions)
-        self.assertEqual(ret, 'FakeCache:StoreSuccess!')
+        assert ret == 'FakeCache:StoreSuccess!'
         # Check if the mine entries have been stored properly in the FakeCache.
-        self.assertEqual(
-            self.cache.fetch('minions/webserver', 'mine_cache'),
+        assert self.cache.fetch('minions/webserver', 'mine_cache') == \
             {
                 'ip_addr': self.ip_ret,
                 'network.ip_addrs': self.ip_ret,
@@ -351,7 +334,6 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
                     'allow_tgt': 'web*',
                 },
             }
-        )
 
     def test_update_master(self):
         '''
@@ -387,10 +369,8 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
                     'foo.bar': MagicMock(return_value=self.foo_ret),
                 }):
             # Verify the correct load
-            self.assertEqual(
-                mine.update(),
+            assert mine.update() == \
                 mock_load
-            )
 
     def test_delete_local(self):
         '''
@@ -403,10 +383,8 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
                     'id': 'webserver',
                 }):
             ret = mine.delete('foobard')
-            self.assertEqual(
-                self.cache.fetch('minions/webserver', 'mine_cache'),
+            assert self.cache.fetch('minions/webserver', 'mine_cache') == \
                 {}
-            )
 
     def test_delete_master(self):
         '''
@@ -425,10 +403,8 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
                     'id': 'foo',
                 }):
             # Verify the correct load
-            self.assertEqual(
-                mine.delete('foobard'),
+            assert mine.delete('foobard') == \
                 mock_load
-            )
 
     def test_flush_local(self):
         '''
@@ -441,10 +417,8 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
                     'id': 'webserver',
                 }):
             ret = mine.flush()
-            self.assertEqual(
-                self.cache.fetch('minions/webserver', 'mine_cache'),
+            assert self.cache.fetch('minions/webserver', 'mine_cache') == \
                 {}
-            )
 
     def test_flush_master(self):
         '''
@@ -460,10 +434,8 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
                     'id': 'foo',
                 }):
             # Verify the correct load
-            self.assertEqual(
-                mine.flush(),
+            assert mine.flush() == \
                 mock_load
-            )
 
     def test_valid(self):
         '''
@@ -482,13 +454,11 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
                     'network.ip_addrs': lambda: True,
                     'grains.get': lambda: True,
                 }):
-            self.assertEqual(
-                mine.valid(),
+            assert mine.valid() == \
                 {
                     'network.ip_addrs': [],
                     'kernel': {'grains.get': ['kernel']},
                 }
-            )
 
     def test_get_docker(self):
         '''
@@ -531,12 +501,12 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
             ret = mine.get_docker()
             # Sort ifaces since that will change between py2 and py3
             ret['image:latest']['ipv4'][80] = sorted(ret['image:latest']['ipv4'][80])
-            self.assertEqual(ret,
+            assert ret == \
                              {'image:latest': {
                                  'ipv4': {80: sorted([
                                      '172.17.42.1:80',
                                      '192.168.0.1:80',
-                                 ])}}})
+                                 ])}}}
 
     def test_get_docker_with_container_id(self):
         '''
@@ -579,9 +549,9 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
             ret = mine.get_docker(with_container_id=True)
             # Sort ifaces since that will change between py2 and py3
             ret['image:latest']['ipv4'][80] = sorted(ret['image:latest']['ipv4'][80])
-            self.assertEqual(ret,
+            assert ret == \
                              {'image:latest': {
                                  'ipv4': {80: sorted([
                                      ('172.17.42.1:80', 'abcdefhjhi1234567899'),
                                      ('192.168.0.1:80', 'abcdefhjhi1234567899'),
-                                 ])}}})
+                                 ])}}}

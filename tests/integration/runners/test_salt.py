@@ -26,8 +26,8 @@ class SaltRunnerTest(ShellCase):
         out_ret = ret.get('out')[0]
         return_ret = ret.get('return')
 
-        self.assertEqual(out_ret, 'True')
-        self.assertTrue(return_ret)
+        assert out_ret == 'True'
+        assert return_ret
 
     def test_salt_cmd_invalid(self):
         '''
@@ -35,4 +35,4 @@ class SaltRunnerTest(ShellCase):
         '''
         ret = self.run_run_plus('salt.cmd')
         expected = 'Passed invalid arguments:'
-        self.assertIn(expected, ret['return'])
+        assert expected in ret['return']

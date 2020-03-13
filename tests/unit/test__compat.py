@@ -24,35 +24,35 @@ PY3 = sys.version_info.major == 3
 class CompatTestCase(TestCase):
     def test_text(self):
         ret = compat.text_('test string')
-        self.assertTrue(isinstance(ret, text_type))
+        assert isinstance(ret, text_type)
 
     def test_text_binary(self):
         ret = compat.text_(b'test string')
-        self.assertTrue(isinstance(ret, text_type))
+        assert isinstance(ret, text_type)
 
     def test_bytes(self):
         ret = compat.bytes_('test string')
-        self.assertTrue(isinstance(ret, binary_type))
+        assert isinstance(ret, binary_type)
 
     def test_bytes_binary(self):
         ret = compat.bytes_(b'test string')
-        self.assertTrue(isinstance(ret, binary_type))
+        assert isinstance(ret, binary_type)
 
     def test_ascii_native(self):
         ret = compat.ascii_native_('test string')
-        self.assertTrue(isinstance(ret, str))
+        assert isinstance(ret, str)
 
     def test_ascii_native_binary(self):
         ret = compat.ascii_native_(b'test string')
-        self.assertTrue(isinstance(ret, str))
+        assert isinstance(ret, str)
 
     def test_native(self):
         ret = compat.native_('test string')
-        self.assertTrue(isinstance(ret, str))
+        assert isinstance(ret, str)
 
     def test_native_binary(self):
         ret = compat.native_(b'test string')
-        self.assertTrue(isinstance(ret, str))
+        assert isinstance(ret, str)
 
     def test_string_io(self):
         ret = compat.string_io('test string')
@@ -60,7 +60,7 @@ class CompatTestCase(TestCase):
             expected = 'io.StringIO object'
         else:
             expected = 'cStringIO.StringI object'
-        self.assertTrue(expected in repr(ret))
+        assert expected in repr(ret)
 
     def test_string_io_unicode(self):
         ret = compat.string_io(u'test string \xf8')
@@ -68,16 +68,16 @@ class CompatTestCase(TestCase):
             expected = 'io.StringIO object'
         else:
             expected = 'StringIO.StringIO instance'
-        self.assertTrue(expected in repr(ret))
+        assert expected in repr(ret)
 
     def test_ipv6_class__is_packed_binary(self):
         ipv6 = compat.IPv6AddressScoped('2001:db8::')
-        self.assertEqual(str(ipv6), '2001:db8::')
+        assert str(ipv6) == '2001:db8::'
 
     def test_ipv6_class__is_packed_binary_integer(self):
         ipv6 = compat.IPv6AddressScoped(42540766411282592856903984951653826560)
-        self.assertEqual(str(ipv6), '2001:db8::')
+        assert str(ipv6) == '2001:db8::'
 
     def test_ipv6_class__is_packed_binary__issue_51831(self):
         ipv6 = compat.IPv6AddressScoped(b'sixteen.digit.bn')
-        self.assertEqual(str(ipv6), '7369:7874:6565:6e2e:6469:6769:742e:626e')
+        assert str(ipv6) == '7369:7874:6565:6e2e:6469:6769:742e:626e'

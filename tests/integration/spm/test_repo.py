@@ -29,10 +29,10 @@ class SPMRepoTest(SPMCase):
         '''
         self._spm_create_update_repo(self.config)
 
-        self.assertTrue(os.path.exists(self.config['spm_db']))
+        assert os.path.exists(self.config['spm_db'])
 
         l_repo_file = os.path.join(self.config['spm_cache_dir'], 'local_repo.p')
-        self.assertTrue(os.path.exists(l_repo_file))
+        assert os.path.exists(l_repo_file)
 
     def tearDown(self):
         shutil.rmtree(self._tmp_spm)

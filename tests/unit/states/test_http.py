@@ -34,13 +34,13 @@ class HttpTestCase(TestCase, LoaderModuleMockMixin):
                 'name': 'salt', 'result': False},
                {'changes': {}, 'comment': ' (TEST MODE)', 'data': True, 'name': 'salt',
                 'result': None}]
-        self.assertDictEqual(http.query("salt"), ret[0])
+        assert http.query("salt") == ret[0]
 
         with patch.dict(http.__opts__, {'test': True}):
             mock = MagicMock(return_value=True)
             with patch.dict(http.__salt__, {'http.query': mock}):
-                self.assertDictEqual(http.query("salt", "Dude", "stack"),
-                                     ret[1])
+                assert http.query("salt", "Dude", "stack") == \
+                                     ret[1]
 
     def test_query_pcre_statustype(self):
         '''
@@ -60,11 +60,11 @@ class HttpTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(http.__opts__, {'test': False}):
             mock = MagicMock(return_value=http_result)
             with patch.dict(http.__salt__, {'http.query': mock}):
-                self.assertDictEqual(http.query(testurl,
+                assert http.query(testurl,
                                                 match="This page returned",
                                                 status="200|201",
                                                 status_type='pcre'
-                                                ), state_return)
+                                                ) == state_return
 
     def test_query_stringstatustype(self):
         '''
@@ -84,11 +84,11 @@ class HttpTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(http.__opts__, {'test': False}):
             mock = MagicMock(return_value=http_result)
             with patch.dict(http.__salt__, {'http.query': mock}):
-                self.assertDictEqual(http.query(testurl,
+                assert http.query(testurl,
                                                 match="This page returned",
                                                 status="201",
                                                 status_type='string'
-                                                ), state_return)
+                                                ) == state_return
 
     def test_query_liststatustype(self):
         '''
@@ -108,11 +108,11 @@ class HttpTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(http.__opts__, {'test': False}):
             mock = MagicMock(return_value=http_result)
             with patch.dict(http.__salt__, {'http.query': mock}):
-                self.assertDictEqual(http.query(testurl,
+                assert http.query(testurl,
                                                 match="This page returned",
                                                 status=["200", "201"],
                                                 status_type='list'
-                                                ), state_return)
+                                                ) == state_return
 
     def test_wait_for_with_interval(self):
         '''
@@ -123,8 +123,8 @@ class HttpTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.object(http, 'query', query_mock):
             with patch('time.sleep', MagicMock()) as sleep_mock:
-                self.assertEqual(http.wait_for_successful_query('url', request_interval=1, status=200),
-                                 {'result': True})
+                assert http.wait_for_successful_query('url', request_interval=1, status=200) == \
+                                 {'result': True}
                 sleep_mock.assert_called_once_with(1)
 
     def test_wait_for_without_interval(self):
@@ -136,5 +136,5 @@ class HttpTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.object(http, 'query', query_mock):
             with patch('time.sleep', MagicMock()) as sleep_mock:
-                self.assertEqual(http.wait_for_successful_query('url', status=200), {'result': True})
+                assert http.wait_for_successful_query('url', status=200) == {'result': True}
                 sleep_mock.assert_not_called()

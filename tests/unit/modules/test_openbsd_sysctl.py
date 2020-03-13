@@ -17,6 +17,7 @@ from tests.support.mock import (
     MagicMock,
     patch,
 )
+import pytest
 
 
 class OpenBSDSysctlTestCase(TestCase, LoaderModuleMockMixin):
@@ -32,7 +33,7 @@ class OpenBSDSysctlTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_cmd = MagicMock(return_value='OpenBSD')
         with patch.dict(openbsd_sysctl.__salt__, {'cmd.run': mock_cmd}):
-            self.assertEqual(openbsd_sysctl.get('kern.ostype'), 'OpenBSD')
+            assert openbsd_sysctl.get('kern.ostype') == 'OpenBSD'
 
     def test_assign_cmd_failed(self):
         '''
@@ -42,9 +43,8 @@ class OpenBSDSysctlTestCase(TestCase, LoaderModuleMockMixin):
                'stdout': 'kern.securelevel: 1 -> 9000'}
         mock_cmd = MagicMock(return_value=cmd)
         with patch.dict(openbsd_sysctl.__salt__, {'cmd.run_all': mock_cmd}):
-            self.assertRaises(CommandExecutionError,
-                              openbsd_sysctl.assign,
-                              'kern.securelevel', 9000)
+            with pytest.raises(CommandExecutionError):
+                openbsd_sysctl.assign('kern.securelevel', 9000)
 
     def test_assign_cmd_eperm(self):
         '''
@@ -54,9 +54,8 @@ class OpenBSDSysctlTestCase(TestCase, LoaderModuleMockMixin):
                'stderr': 'sysctl: ddb.console: Operation not permitted'}
         mock_cmd = MagicMock(return_value=cmd)
         with patch.dict(openbsd_sysctl.__salt__, {'cmd.run_all': mock_cmd}):
-            self.assertRaises(CommandExecutionError,
-                              openbsd_sysctl.assign,
-                              'ddb.console', 1)
+            with pytest.raises(CommandExecutionError):
+                openbsd_sysctl.assign('ddb.console', 1)
 
     def test_assign(self):
         '''
@@ -67,5 +66,5 @@ class OpenBSDSysctlTestCase(TestCase, LoaderModuleMockMixin):
         ret = {'net.inet.ip.forwarding': '1'}
         mock_cmd = MagicMock(return_value=cmd)
         with patch.dict(openbsd_sysctl.__salt__, {'cmd.run_all': mock_cmd}):
-            self.assertEqual(openbsd_sysctl.assign(
-                'net.inet.ip.forwarding', 1), ret)
+            assert openbsd_sysctl.assign(
+                'net.inet.ip.forwarding', 1) == ret

@@ -69,10 +69,10 @@ mock_writes_list = salt.utils.data.decode([
 class DNSUtilTestCase(TestCase):
     def test_parse_hosts(self):
         with patch('salt.utils.files.fopen', mock_open(read_data=mock_hosts_file)):
-            self.assertEqual(dnsutil.parse_hosts(), {'::1': ['localhost'],
+            assert dnsutil.parse_hosts() == {'::1': ['localhost'],
                                                      '255.255.255.255': ['broadcasthost'],
                                                      '127.0.0.1': ['localhost'],
-                                                     'fe80::1%lo0': ['localhost']})
+                                                     'fe80::1%lo0': ['localhost']}
 
     def test_hosts_append(self):
         with patch('salt.utils.files.fopen', mock_open(read_data=mock_hosts_file)) as m_open, \
@@ -101,21 +101,21 @@ class DNSUtilTestCase(TestCase):
             log.debug(dnsutil.parse_zone('/var/lib/named/example.com.zone'))
 
     def test_to_seconds_hour(self):
-        self.assertEqual(dnsutil._to_seconds('4H'), 14400,
-                         msg='Did not detect valid hours as invalid')
+        assert dnsutil._to_seconds('4H') == 14400, \
+                         'Did not detect valid hours as invalid'
 
     def test_to_seconds_day(self):
-        self.assertEqual(dnsutil._to_seconds('1D'), 86400,
-                         msg='Did not detect valid day as invalid')
+        assert dnsutil._to_seconds('1D') == 86400, \
+                         'Did not detect valid day as invalid'
 
     def test_to_seconds_week(self):
-        self.assertEqual(dnsutil._to_seconds('2W'), 604800,
-                         msg='Did not set time greater than one week to one week')
+        assert dnsutil._to_seconds('2W') == 604800, \
+                         'Did not set time greater than one week to one week'
 
     def test_to_seconds_empty(self):
-        self.assertEqual(dnsutil._to_seconds(''), 604800,
-                         msg='Did not set empty time to one week')
+        assert dnsutil._to_seconds('') == 604800, \
+                         'Did not set empty time to one week'
 
     def test_to_seconds_large(self):
-        self.assertEqual(dnsutil._to_seconds('604801'), 604800,
-                         msg='Did not set time greater than one week to one week')
+        assert dnsutil._to_seconds('604801') == 604800, \
+                         'Did not set time greater than one week to one week'

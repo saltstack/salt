@@ -43,28 +43,28 @@ class BotoElasticacheTestCase(TestCase, LoaderModuleMockMixin):
                          'boto_elasticache.create': mock_bool}):
             comt = ('Failed to retrieve cache cluster info from AWS.')
             ret.update({'comment': comt})
-            self.assertDictEqual(boto_elasticache.present(name, engine,
-                                                          cache_node_type), ret)
+            assert boto_elasticache.present(name, engine,
+                                                          cache_node_type) == ret
 
             with patch.dict(boto_elasticache.__opts__, {'test': True}):
                 comt = ('Cache cluster {0} is set to be created.'.format(name))
                 ret.update({'comment': comt})
-                self.assertDictEqual(boto_elasticache.present(name, engine,
-                                                              cache_node_type),
-                                     ret)
+                assert boto_elasticache.present(name, engine,
+                                                              cache_node_type) == \
+                                     ret
 
             with patch.dict(boto_elasticache.__opts__, {'test': False}):
                 comt = ('Failed to create {0} cache cluster.'.format(name))
                 ret.update({'comment': comt, 'result': False})
-                self.assertDictEqual(boto_elasticache.present(name, engine,
-                                                              cache_node_type),
-                                     ret)
+                assert boto_elasticache.present(name, engine,
+                                                              cache_node_type) == \
+                                     ret
 
                 comt = ('Cache cluster {0} is present.'.format(name))
                 ret.update({'comment': comt, 'result': True})
-                self.assertDictEqual(boto_elasticache.present(name, engine,
-                                                              cache_node_type),
-                                     ret)
+                assert boto_elasticache.present(name, engine,
+                                                              cache_node_type) == \
+                                     ret
 
     # 'absent' function tests: 1
 
@@ -84,12 +84,12 @@ class BotoElasticacheTestCase(TestCase, LoaderModuleMockMixin):
                         {'boto_elasticache.exists': mock}):
             comt = ('{0} does not exist in None.'.format(name))
             ret.update({'comment': comt})
-            self.assertDictEqual(boto_elasticache.absent(name), ret)
+            assert boto_elasticache.absent(name) == ret
 
             with patch.dict(boto_elasticache.__opts__, {'test': True}):
                 comt = ('Cache cluster {0} is set to be removed.'.format(name))
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(boto_elasticache.absent(name), ret)
+                assert boto_elasticache.absent(name) == ret
 
     # 'creategroup' function tests: 1
 
@@ -111,6 +111,5 @@ class BotoElasticacheTestCase(TestCase, LoaderModuleMockMixin):
                         {'boto_elasticache.group_exists': mock}):
             comt = ('{0} replication group exists .'.format(name))
             ret.update({'comment': comt})
-            self.assertDictEqual(boto_elasticache.creategroup
-                                 (name, primary_cluster_id,
-                                  replication_group_description), ret)
+            assert boto_elasticache.creategroup(name, primary_cluster_id,
+                                                replication_group_description) == ret

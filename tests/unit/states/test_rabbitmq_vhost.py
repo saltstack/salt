@@ -41,7 +41,7 @@ class RabbitmqVhostTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(rabbitmq_vhost.__salt__,
                         {'rabbitmq.vhost_exists': mock}):
             with patch.dict(rabbitmq_vhost.__opts__, {'test': True}):
-                self.assertDictEqual(rabbitmq_vhost.present(name), ret)
+                assert rabbitmq_vhost.present(name) == ret
 
     # 'absent' function tests: 1
 
@@ -59,4 +59,4 @@ class RabbitmqVhostTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value=False)
         with patch.dict(rabbitmq_vhost.__salt__,
                         {'rabbitmq.vhost_exists': mock}):
-            self.assertDictEqual(rabbitmq_vhost.absent(name), ret)
+            assert rabbitmq_vhost.absent(name) == ret

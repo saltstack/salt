@@ -39,7 +39,7 @@ class PacmanTestCase(TestCase, LoaderModuleMockMixin):
                 'pkg_resource.sort_pkglist': sortmock,
                 'pkg_resource.stringify': stringifymock
                 }):
-            self.assertDictEqual(pacman.list_pkgs(), mock_ret)
+            assert pacman.list_pkgs() == mock_ret
 
         sortmock.assert_called_with(mock_ret)
         stringifymock.assert_called_with(mock_ret)
@@ -58,10 +58,10 @@ class PacmanTestCase(TestCase, LoaderModuleMockMixin):
                 'pkg_resource.sort_pkglist': sortmock,
                 'pkg_resource.stringify': stringifymock
                 }):
-            self.assertDictEqual(pacman.list_pkgs(True), mock_ret)
+            assert pacman.list_pkgs(True) == mock_ret
 
         sortmock.assert_called_with(mock_ret)
-        self.assertTrue(stringifymock.call_count == 0)
+        assert stringifymock.call_count == 0
 
     def test_group_list(self):
         '''
@@ -86,7 +86,7 @@ class PacmanTestCase(TestCase, LoaderModuleMockMixin):
                 'cmd.run': cmdmock,
                 'pkg_resource.sort_pkglist': sortmock
                 }):
-            self.assertDictEqual(pacman.group_list(), {'available': ['group-c', 'group-f'], 'installed': ['group-b'], 'partially_installed': ['group-a']})
+            assert pacman.group_list() == {'available': ['group-c', 'group-f'], 'installed': ['group-b'], 'partially_installed': ['group-a']}
 
     def test_group_info(self):
         '''
@@ -109,7 +109,7 @@ class PacmanTestCase(TestCase, LoaderModuleMockMixin):
                 'cmd.run': cmdmock,
                 'pkg_resource.sort_pkglist': sortmock
                 }):
-            self.assertEqual(pacman.group_info('testgroup')['default'], ['pkg1', 'pkg2'])
+            assert pacman.group_info('testgroup')['default'] == ['pkg1', 'pkg2']
 
     def test_group_diff(self):
         '''
@@ -127,4 +127,4 @@ class PacmanTestCase(TestCase, LoaderModuleMockMixin):
                 'pkg.group_info': groupmock
                 }):
             results = pacman.group_diff('testgroup')
-            self.assertEqual(results['default'], {'installed': ['A'], 'not installed': ['C']})
+            assert results['default'] == {'installed': ['A'], 'not installed': ['C']}

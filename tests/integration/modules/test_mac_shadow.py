@@ -62,11 +62,11 @@ class MacShadowModuleTest(ModuleCase):
         '''
         # Correct Functionality
         ret = self.run_function('shadow.info', [TEST_USER])
-        self.assertEqual(ret['name'], TEST_USER)
+        assert ret['name'] == TEST_USER
 
         # User does not exist
         ret = self.run_function('shadow.info', [NO_USER])
-        self.assertEqual(ret['name'], '')
+        assert ret['name'] == ''
 
     @pytest.mark.destructive_test
     def test_get_account_created(self):
@@ -75,14 +75,13 @@ class MacShadowModuleTest(ModuleCase):
         '''
         # Correct Functionality
         text_date = self.run_function('shadow.get_account_created', [TEST_USER])
-        self.assertNotEqual(text_date, 'Invalid Timestamp')
+        assert text_date != 'Invalid Timestamp'
         obj_date = datetime.datetime.strptime(text_date, '%Y-%m-%d %H:%M:%S')
-        self.assertIsInstance(obj_date, datetime.date)
+        assert isinstance(obj_date, datetime.date)
 
         # User does not exist
-        self.assertEqual(
-            self.run_function('shadow.get_account_created', [NO_USER]),
-            'ERROR: User not found: {0}'.format(NO_USER))
+        assert self.run_function('shadow.get_account_created', [NO_USER]) == \
+            'ERROR: User not found: {0}'.format(NO_USER)
 
     @pytest.mark.destructive_test
     def test_get_last_change(self):
@@ -91,14 +90,13 @@ class MacShadowModuleTest(ModuleCase):
         '''
         # Correct Functionality
         text_date = self.run_function('shadow.get_last_change', [TEST_USER])
-        self.assertNotEqual(text_date, 'Invalid Timestamp')
+        assert text_date != 'Invalid Timestamp'
         obj_date = datetime.datetime.strptime(text_date, '%Y-%m-%d %H:%M:%S')
-        self.assertIsInstance(obj_date, datetime.date)
+        assert isinstance(obj_date, datetime.date)
 
         # User does not exist
-        self.assertEqual(
-            self.run_function('shadow.get_last_change', [NO_USER]),
-            'ERROR: User not found: {0}'.format(NO_USER))
+        assert self.run_function('shadow.get_last_change', [NO_USER]) == \
+            'ERROR: User not found: {0}'.format(NO_USER)
 
     @pytest.mark.destructive_test
     def test_get_login_failed_last(self):
@@ -107,14 +105,13 @@ class MacShadowModuleTest(ModuleCase):
         '''
         # Correct Functionality
         text_date = self.run_function('shadow.get_login_failed_last', [TEST_USER])
-        self.assertNotEqual(text_date, 'Invalid Timestamp')
+        assert text_date != 'Invalid Timestamp'
         obj_date = datetime.datetime.strptime(text_date, '%Y-%m-%d %H:%M:%S')
-        self.assertIsInstance(obj_date, datetime.date)
+        assert isinstance(obj_date, datetime.date)
 
         # User does not exist
-        self.assertEqual(
-            self.run_function('shadow.get_login_failed_last', [NO_USER]),
-            'ERROR: User not found: {0}'.format(NO_USER))
+        assert self.run_function('shadow.get_login_failed_last', [NO_USER]) == \
+            'ERROR: User not found: {0}'.format(NO_USER)
 
     @pytest.mark.destructive_test
     def test_get_login_failed_count(self):
@@ -122,14 +119,12 @@ class MacShadowModuleTest(ModuleCase):
         Test shadow.get_login_failed_count
         '''
         # Correct Functionality
-        self.assertEqual(
-            self.run_function('shadow.get_login_failed_count', [TEST_USER]),
-            '0')
+        assert self.run_function('shadow.get_login_failed_count', [TEST_USER]) == \
+            '0'
 
         # User does not exist
-        self.assertEqual(
-            self.run_function('shadow.get_login_failed_count', [NO_USER]),
-            'ERROR: User not found: {0}'.format(NO_USER))
+        assert self.run_function('shadow.get_login_failed_count', [NO_USER]) == \
+            'ERROR: User not found: {0}'.format(NO_USER)
 
     @pytest.mark.destructive_test
     def test_get_set_maxdays(self):
@@ -138,18 +133,14 @@ class MacShadowModuleTest(ModuleCase):
         Test shadow.set_maxdays
         '''
         # Correct Functionality
-        self.assertTrue(
-            self.run_function('shadow.set_maxdays', [TEST_USER, 20]))
-        self.assertEqual(
-            self.run_function('shadow.get_maxdays', [TEST_USER]), 20)
+        assert self.run_function('shadow.set_maxdays', [TEST_USER, 20])
+        assert self.run_function('shadow.get_maxdays', [TEST_USER]) == 20
 
         # User does not exist
-        self.assertEqual(
-            self.run_function('shadow.set_maxdays', [NO_USER, 7]),
-            'ERROR: User not found: {0}'.format(NO_USER))
-        self.assertEqual(
-            self.run_function('shadow.get_maxdays', [NO_USER]),
-            'ERROR: User not found: {0}'.format(NO_USER))
+        assert self.run_function('shadow.set_maxdays', [NO_USER, 7]) == \
+            'ERROR: User not found: {0}'.format(NO_USER)
+        assert self.run_function('shadow.get_maxdays', [NO_USER]) == \
+            'ERROR: User not found: {0}'.format(NO_USER)
 
     @pytest.mark.destructive_test
     def test_get_set_change(self):
@@ -158,18 +149,15 @@ class MacShadowModuleTest(ModuleCase):
         Test shadow.set_change
         '''
         # Correct Functionality
-        self.assertTrue(
-            self.run_function('shadow.set_change', [TEST_USER, '02/11/2011']))
-        self.assertEqual(self.run_function('shadow.get_change', [TEST_USER]),
-                         '02/11/2011')
+        assert self.run_function('shadow.set_change', [TEST_USER, '02/11/2011'])
+        assert self.run_function('shadow.get_change', [TEST_USER]) == \
+                         '02/11/2011'
 
         # User does not exist
-        self.assertEqual(
-            self.run_function('shadow.set_change', [NO_USER, '02/11/2012']),
-            'ERROR: User not found: {0}'.format(NO_USER))
-        self.assertEqual(
-            self.run_function('shadow.get_change', [NO_USER]),
-            'ERROR: User not found: {0}'.format(NO_USER))
+        assert self.run_function('shadow.set_change', [NO_USER, '02/11/2012']) == \
+            'ERROR: User not found: {0}'.format(NO_USER)
+        assert self.run_function('shadow.get_change', [NO_USER]) == \
+            'ERROR: User not found: {0}'.format(NO_USER)
 
     @pytest.mark.destructive_test
     def test_get_set_expire(self):
@@ -178,18 +166,14 @@ class MacShadowModuleTest(ModuleCase):
         Test shadow.set_expire
         '''
         # Correct Functionality
-        self.assertTrue(
-            self.run_function('shadow.set_expire', [TEST_USER, '02/11/2011']))
-        self.assertEqual(
-            self.run_function('shadow.get_expire', [TEST_USER]), '02/11/2011')
+        assert self.run_function('shadow.set_expire', [TEST_USER, '02/11/2011'])
+        assert self.run_function('shadow.get_expire', [TEST_USER]) == '02/11/2011'
 
         # User does not exist
-        self.assertEqual(
-            self.run_function('shadow.set_expire', [NO_USER, '02/11/2012']),
-            'ERROR: User not found: {0}'.format(NO_USER))
-        self.assertEqual(
-            self.run_function('shadow.get_expire', [NO_USER]),
-            'ERROR: User not found: {0}'.format(NO_USER))
+        assert self.run_function('shadow.set_expire', [NO_USER, '02/11/2012']) == \
+            'ERROR: User not found: {0}'.format(NO_USER)
+        assert self.run_function('shadow.get_expire', [NO_USER]) == \
+            'ERROR: User not found: {0}'.format(NO_USER)
 
     @pytest.mark.destructive_test
     def test_del_password(self):
@@ -197,14 +181,12 @@ class MacShadowModuleTest(ModuleCase):
         Test shadow.del_password
         '''
         # Correct Functionality
-        self.assertTrue(self.run_function('shadow.del_password', [TEST_USER]))
-        self.assertEqual(
-            self.run_function('shadow.info', [TEST_USER])['passwd'], '*')
+        assert self.run_function('shadow.del_password', [TEST_USER])
+        assert self.run_function('shadow.info', [TEST_USER])['passwd'] == '*'
 
         # User does not exist
-        self.assertEqual(
-            self.run_function('shadow.del_password', [NO_USER]),
-            'ERROR: User not found: {0}'.format(NO_USER))
+        assert self.run_function('shadow.del_password', [NO_USER]) == \
+            'ERROR: User not found: {0}'.format(NO_USER)
 
     @pytest.mark.destructive_test
     def test_set_password(self):
@@ -212,10 +194,8 @@ class MacShadowModuleTest(ModuleCase):
         Test shadow.set_password
         '''
         # Correct Functionality
-        self.assertTrue(
-            self.run_function('shadow.set_password', [TEST_USER, 'Pa$$W0rd']))
+        assert self.run_function('shadow.set_password', [TEST_USER, 'Pa$$W0rd'])
 
         # User does not exist
-        self.assertEqual(
-            self.run_function('shadow.set_password', [NO_USER, 'P@SSw0rd']),
-            'ERROR: User not found: {0}'.format(NO_USER))
+        assert self.run_function('shadow.set_password', [NO_USER, 'P@SSw0rd']) == \
+            'ERROR: User not found: {0}'.format(NO_USER)

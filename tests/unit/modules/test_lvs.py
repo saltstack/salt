@@ -37,7 +37,7 @@ class LvsTestCase(TestCase, LoaderModuleMockMixin):
                                                          'ret',
                                                          'stderr':
                                                          'stderr'})}):
-                    self.assertEqual(lvs.add_service(), 'stderr')
+                    assert lvs.add_service() == 'stderr'
 
     def test_edit_service(self):
         '''
@@ -51,7 +51,7 @@ class LvsTestCase(TestCase, LoaderModuleMockMixin):
                                                          'ret',
                                                          'stderr':
                                                          'stderr'})}):
-                    self.assertEqual(lvs.edit_service(), 'stderr')
+                    assert lvs.edit_service() == 'stderr'
 
     def test_delete_service(self):
         '''
@@ -65,7 +65,7 @@ class LvsTestCase(TestCase, LoaderModuleMockMixin):
                                                          'ret',
                                                          'stderr':
                                                          'stderr'})}):
-                    self.assertEqual(lvs.delete_service(), 'stderr')
+                    assert lvs.delete_service() == 'stderr'
 
     def test_add_server(self):
         '''
@@ -79,7 +79,7 @@ class LvsTestCase(TestCase, LoaderModuleMockMixin):
                                                          'ret',
                                                          'stderr':
                                                          'stderr'})}):
-                    self.assertEqual(lvs.add_server(), 'stderr')
+                    assert lvs.add_server() == 'stderr'
 
     def test_edit_server(self):
         '''
@@ -93,7 +93,7 @@ class LvsTestCase(TestCase, LoaderModuleMockMixin):
                                                          'ret',
                                                          'stderr':
                                                          'stderr'})}):
-                    self.assertEqual(lvs.edit_server(), 'stderr')
+                    assert lvs.edit_server() == 'stderr'
 
     def test_delete_server(self):
         '''
@@ -107,7 +107,7 @@ class LvsTestCase(TestCase, LoaderModuleMockMixin):
                                                          'ret',
                                                          'stderr':
                                                          'stderr'})}):
-                    self.assertEqual(lvs.delete_server(), 'stderr')
+                    assert lvs.delete_server() == 'stderr'
 
     def test_clear(self):
         '''
@@ -120,7 +120,7 @@ class LvsTestCase(TestCase, LoaderModuleMockMixin):
                                                      'ret',
                                                      'stderr':
                                                      'stderr'})}):
-                self.assertEqual(lvs.clear(), 'stderr')
+                assert lvs.clear() == 'stderr'
 
     def test_get_rules(self):
         '''
@@ -130,7 +130,7 @@ class LvsTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(lvs.__salt__,
                             {'cmd.run':
                              MagicMock(return_value='A')}):
-                self.assertEqual(lvs.get_rules(), 'A')
+                assert lvs.get_rules() == 'A'
 
     def test_list_(self):
         '''
@@ -144,7 +144,7 @@ class LvsTestCase(TestCase, LoaderModuleMockMixin):
                                                          'ret',
                                                          'stderr':
                                                          'stderr'})}):
-                    self.assertEqual(lvs.list_('p', 's'), 'stderr')
+                    assert lvs.list_('p', 's') == 'stderr'
 
     def test_zero(self):
         '''
@@ -159,7 +159,7 @@ class LvsTestCase(TestCase, LoaderModuleMockMixin):
                                                          'ret',
                                                          'stderr':
                                                          'stderr'})}):
-                    self.assertEqual(lvs.zero('p', 's'), 'stderr')
+                    assert lvs.zero('p', 's') == 'stderr'
 
     def test_check_service(self):
         '''
@@ -174,8 +174,8 @@ class LvsTestCase(TestCase, LoaderModuleMockMixin):
                                                          'stderr':
                                                          'stderr'})}):
                     with patch.object(lvs, 'get_rules', return_value='C'):
-                        self.assertEqual(lvs.check_service('p', 's'),
-                                         'Error: service not exists')
+                        assert lvs.check_service('p', 's') == \
+                                         'Error: service not exists'
 
     def test_check_server(self):
         '''
@@ -190,5 +190,5 @@ class LvsTestCase(TestCase, LoaderModuleMockMixin):
                                                          'stderr':
                                                          'stderr'})}):
                     with patch.object(lvs, 'get_rules', return_value='C'):
-                        self.assertEqual(lvs.check_server('p', 's'),
-                                         'Error: server not exists')
+                        assert lvs.check_server('p', 's') == \
+                                         'Error: server not exists'

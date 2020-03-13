@@ -153,12 +153,12 @@ class TestSaltCacheLoader(TestCase):
         res = loader.get_source(None, 'hello_simple')
         assert len(res) == 3
         # res[0] on Windows is unicode and use os.linesep so it works cross OS
-        self.assertEqual(six.text_type(res[0]), 'world' + os.linesep)
+        assert six.text_type(res[0]) == 'world' + os.linesep
         tmpl_dir = os.path.join(self.template_dir, 'hello_simple')
-        self.assertEqual(res[1], tmpl_dir)
+        assert res[1] == tmpl_dir
         assert res[2](), 'Template up to date?'
         assert loader._file_client.requests
-        self.assertEqual(loader._file_client.requests[0]['path'], 'salt://hello_simple')
+        assert loader._file_client.requests[0]['path'] == 'salt://hello_simple'
 
     def get_loader(self, opts=None, saltenv='base'):
         '''
@@ -187,10 +187,10 @@ class TestSaltCacheLoader(TestCase):
         '''
         fc, jinja = self.get_test_saltenv()
         result = jinja.get_template('hello_import').render()
-        self.assertEqual(result, 'Hey world !a b !')
+        assert result == 'Hey world !a b !'
         assert len(fc.requests) == 2
-        self.assertEqual(fc.requests[0]['path'], 'salt://hello_import')
-        self.assertEqual(fc.requests[1]['path'], 'salt://macro')
+        assert fc.requests[0]['path'] == 'salt://hello_import'
+        assert fc.requests[1]['path'] == 'salt://macro'
 
     def test_relative_import(self):
         '''
@@ -200,14 +200,15 @@ class TestSaltCacheLoader(TestCase):
         fc, jinja = self.get_test_saltenv()
         tmpl = jinja.get_template(os.path.join('relative', 'rhello'))
         result = tmpl.render()
-        self.assertEqual(result, 'Hey world !a b !')
+        assert result == 'Hey world !a b !'
         assert len(fc.requests) == 3
-        self.assertEqual(fc.requests[0]['path'], os.path.join('salt://relative', 'rhello'))
-        self.assertEqual(fc.requests[1]['path'], os.path.join('salt://relative', 'rmacro'))
-        self.assertEqual(fc.requests[2]['path'], 'salt://macro')
+        assert fc.requests[0]['path'] == os.path.join('salt://relative', 'rhello')
+        assert fc.requests[1]['path'] == os.path.join('salt://relative', 'rmacro')
+        assert fc.requests[2]['path'] == 'salt://macro'
         # This must fail when rendered: attempts to import from outside file root
         template = jinja.get_template('relative/rescape')
-        self.assertRaises(exceptions.TemplateNotFound, template.render)
+        with pytest.raises(exceptions.TemplateNotFound):
+            template.render()
 
     def test_include(self):
         '''
@@ -215,11 +216,11 @@ class TestSaltCacheLoader(TestCase):
         '''
         fc, jinja = self.get_test_saltenv()
         result = jinja.get_template('hello_include').render()
-        self.assertEqual(result, 'Hey world !a b !')
+        assert result == 'Hey world !a b !'
         assert len(fc.requests) == 3
-        self.assertEqual(fc.requests[0]['path'], 'salt://hello_include')
-        self.assertEqual(fc.requests[1]['path'], 'salt://hello_import')
-        self.assertEqual(fc.requests[2]['path'], 'salt://macro')
+        assert fc.requests[0]['path'] == 'salt://hello_include'
+        assert fc.requests[1]['path'] == 'salt://hello_import'
+        assert fc.requests[2]['path'] == 'salt://macro'
 
     def test_include_context(self):
         '''
@@ -227,7 +228,7 @@ class TestSaltCacheLoader(TestCase):
         '''
         _, jinja = self.get_test_saltenv()
         result = jinja.get_template('hello_include').render(a='Hi', b='Salt')
-        self.assertEqual(result, 'Hey world !Hi Salt !')
+        assert result == 'Hey world !Hi Salt !'
 
     def test_cached_file_client(self):
         '''
@@ -304,7 +305,7 @@ class TestGetTemplate(TestCase):
                 salt.utils.stringutils.to_unicode(fp_.read()),
                 dict(opts=self.local_opts, saltenv='test', salt=self.local_salt)
             )
-        self.assertEqual(out, 'world' + os.linesep)
+        assert out == 'world' + os.linesep
 
     def test_fallback_noloader(self):
         '''
@@ -317,7 +318,7 @@ class TestGetTemplate(TestCase):
                 salt.utils.stringutils.to_unicode(fp_.read()),
                 dict(opts=self.local_opts, saltenv='test', salt=self.local_salt)
             )
-        self.assertEqual(out, 'Hey world !a b !' + os.linesep)
+        assert out == 'Hey world !a b !' + os.linesep
 
     def test_saltenv(self):
         '''
@@ -336,8 +337,8 @@ class TestGetTemplate(TestCase):
                                'file_roots': self.local_opts['file_roots'],
                                'pillar_roots': self.local_opts['pillar_roots']},
                          a='Hi', b='Salt', saltenv='test', salt=self.local_salt))
-            self.assertEqual(out, 'Hey world !Hi Salt !' + os.linesep)
-            self.assertEqual(fc.requests[0]['path'], 'salt://macro')
+            assert out == 'Hey world !Hi Salt !' + os.linesep
+            assert fc.requests[0]['path'] == 'salt://macro'
 
     def test_macro_additional_log_for_generalexc(self):
         '''
@@ -355,11 +356,8 @@ class TestGetTemplate(TestCase):
         fc = MockFileClient()
         with patch.object(SaltCacheLoader, 'file_client', MagicMock(return_value=fc)):
             with salt.utils.files.fopen(filename) as fp_:
-                self.assertRaisesRegex(
-                    SaltRenderError,
-                    expected,
-                    render_jinja_tmpl,
-                    salt.utils.stringutils.to_unicode(fp_.read()),
+                with pytest.raises(SaltRenderError, match=expected):
+                    render_jinja_tmpl(salt.utils.stringutils.to_unicode(fp_.read()),
                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
 
     def test_macro_additional_log_for_undefined(self):
@@ -378,11 +376,8 @@ class TestGetTemplate(TestCase):
         fc = MockFileClient()
         with patch.object(SaltCacheLoader, 'file_client', MagicMock(return_value=fc)):
             with salt.utils.files.fopen(filename) as fp_:
-                self.assertRaisesRegex(
-                    SaltRenderError,
-                    expected,
-                    render_jinja_tmpl,
-                    salt.utils.stringutils.to_unicode(fp_.read()),
+                with pytest.raises(SaltRenderError, match=expected):
+                    render_jinja_tmpl(salt.utils.stringutils.to_unicode(fp_.read()),
                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
 
     def test_macro_additional_log_syntaxerror(self):
@@ -401,11 +396,8 @@ class TestGetTemplate(TestCase):
         fc = MockFileClient()
         with patch.object(SaltCacheLoader, 'file_client', MagicMock(return_value=fc)):
             with salt.utils.files.fopen(filename) as fp_:
-                self.assertRaisesRegex(
-                    SaltRenderError,
-                    expected,
-                    render_jinja_tmpl,
-                    salt.utils.stringutils.to_unicode(fp_.read()),
+                with pytest.raises(SaltRenderError, match=expected):
+                    render_jinja_tmpl(salt.utils.stringutils.to_unicode(fp_.read()),
                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
 
     def test_non_ascii_encoding(self):
@@ -419,8 +411,8 @@ class TestGetTemplate(TestCase):
                                'file_roots': self.local_opts['file_roots'],
                                'pillar_roots': self.local_opts['pillar_roots']},
                          a='Hi', b='Sàlt', saltenv='test', salt=self.local_salt))
-            self.assertEqual(out, salt.utils.stringutils.to_unicode('Hey world !Hi Sàlt !' + os.linesep))
-            self.assertEqual(fc.requests[0]['path'], 'salt://macro')
+            assert out == salt.utils.stringutils.to_unicode('Hey world !Hi Sàlt !' + os.linesep)
+            assert fc.requests[0]['path'] == 'salt://macro'
 
             filename = os.path.join(self.template_dir, 'non_ascii')
             with salt.utils.files.fopen(filename, 'rb') as fp_:
@@ -430,8 +422,8 @@ class TestGetTemplate(TestCase):
                                'file_roots': self.local_opts['file_roots'],
                                'pillar_roots': self.local_opts['pillar_roots']},
                          a='Hi', b='Sàlt', saltenv='test', salt=self.local_salt))
-            self.assertEqual('Assunção' + os.linesep, out)
-            self.assertEqual(fc.requests[0]['path'], 'salt://macro')
+            assert 'Assunção' + os.linesep == out
+            assert fc.requests[0]['path'] == 'salt://macro'
 
     @skipIf(HAS_TIMELIB is False, 'The `timelib` library is not installed.')
     def test_strftime(self):
@@ -442,7 +434,7 @@ class TestGetTemplate(TestCase):
                 saltenv='test',
                 salt=self.local_salt
             ))
-        self.assertEqual(response, '2002-12-25')
+        assert response == '2002-12-25'
 
         objects = (
             datetime.datetime(2002, 12, 25, 12, 00, 00, 00),
@@ -460,7 +452,7 @@ class TestGetTemplate(TestCase):
                     saltenv='test',
                     salt=self.local_salt
                 ))
-            self.assertEqual(response, '2002-12-25')
+            assert response == '2002-12-25'
 
             response = render_jinja_tmpl(
                 '{{ object|strftime("%b %d, %Y") }}',
@@ -470,7 +462,7 @@ class TestGetTemplate(TestCase):
                     saltenv='test',
                     salt=self.local_salt
                 ))
-            self.assertEqual(response, 'Dec 25, 2002')
+            assert response == 'Dec 25, 2002'
 
             response = render_jinja_tmpl(
                 '{{ object|strftime("%y") }}',
@@ -480,7 +472,7 @@ class TestGetTemplate(TestCase):
                     saltenv='test',
                     salt=self.local_salt
                 ))
-            self.assertEqual(response, '02')
+            assert response == '02'
 
     def test_non_ascii(self):
         fn = os.path.join(self.template_dir, 'non_ascii')
@@ -492,61 +484,53 @@ class TestGetTemplate(TestCase):
         )
         with salt.utils.files.fopen(out['data'], 'rb') as fp:
             result = salt.utils.stringutils.to_unicode(fp.read(), 'utf-8')
-            self.assertEqual(salt.utils.stringutils.to_unicode('Assunção' + os.linesep), result)
+            assert salt.utils.stringutils.to_unicode('Assunção' + os.linesep) == result
 
     def test_get_context_has_enough_context(self):
         template = '1\n2\n3\n4\n5\n6\n7\n8\n9\na\nb\nc\nd\ne\nf'
         context = salt.utils.stringutils.get_context(template, 8)
         expected = '---\n[...]\n3\n4\n5\n6\n7\n8\n9\na\nb\nc\nd\n[...]\n---'
-        self.assertEqual(expected, context)
+        assert expected == context
 
     def test_get_context_at_top_of_file(self):
         template = '1\n2\n3\n4\n5\n6\n7\n8\n9\na\nb\nc\nd\ne\nf'
         context = salt.utils.stringutils.get_context(template, 1)
         expected = '---\n1\n2\n3\n4\n5\n6\n[...]\n---'
-        self.assertEqual(expected, context)
+        assert expected == context
 
     def test_get_context_at_bottom_of_file(self):
         template = '1\n2\n3\n4\n5\n6\n7\n8\n9\na\nb\nc\nd\ne\nf'
         context = salt.utils.stringutils.get_context(template, 15)
         expected = '---\n[...]\na\nb\nc\nd\ne\nf\n---'
-        self.assertEqual(expected, context)
+        assert expected == context
 
     def test_get_context_2_context_lines(self):
         template = '1\n2\n3\n4\n5\n6\n7\n8\n9\na\nb\nc\nd\ne\nf'
         context = salt.utils.stringutils.get_context(template, 8, num_lines=2)
         expected = '---\n[...]\n6\n7\n8\n9\na\n[...]\n---'
-        self.assertEqual(expected, context)
+        assert expected == context
 
     def test_get_context_with_marker(self):
         template = '1\n2\n3\n4\n5\n6\n7\n8\n9\na\nb\nc\nd\ne\nf'
         context = salt.utils.stringutils.get_context(template, 8, num_lines=2, marker=' <---')
         expected = '---\n[...]\n6\n7\n8 <---\n9\na\n[...]\n---'
-        self.assertEqual(expected, context)
+        assert expected == context
 
     def test_render_with_syntax_error(self):
         template = 'hello\n\n{{ bad\n\nfoo'
         expected = r'.*---\nhello\n\n{{ bad\n\nfoo    <======================\n---'
-        self.assertRaisesRegex(
-            SaltRenderError,
-            expected,
-            render_jinja_tmpl,
-            template,
-            dict(opts=self.local_opts, saltenv='test', salt=self.local_salt)
-        )
+        with pytest.raises(SaltRenderError, match=expected):
+            render_jinja_tmpl(template,
+            dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
 
     @skipIf(six.PY3, 'Not applicable to Python 3')
     def test_render_with_unicode_syntax_error(self):
         with patch.object(builtins, '__salt_system_encoding__', 'utf-8'):
             template = 'hello\n\n{{ bad\n\nfoo한'
-            expected = r'.*---\nhello\n\n{{ bad\n\nfoo\xed\x95\x9c    <======================\n---'
-            self.assertRaisesRegex(
-                SaltRenderError,
-                expected,
-                render_jinja_tmpl,
-                template,
-                dict(opts=self.local_opts, saltenv='test', salt=self.local_salt)
-            )
+            expected = r'(?m).*---\nhello\n\n{{ bad\n\nfoo\ud55c    <======================\n---'
+            with pytest.raises(SaltRenderError, match=expected):
+                render_jinja_tmpl(template,
+                dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
 
     def test_render_with_utf8_syntax_error(self):
         with patch.object(builtins, '__salt_system_encoding__', 'utf-8'):
@@ -554,46 +538,30 @@ class TestGetTemplate(TestCase):
             expected = salt.utils.stringutils.to_str(
                 r'.*---\nhello\n\n{{ bad\n\nfoo한    <======================\n---'
             )
-            self.assertRaisesRegex(
-                SaltRenderError,
-                expected,
-                render_jinja_tmpl,
-                template,
-                dict(opts=self.local_opts, saltenv='test', salt=self.local_salt)
-            )
+            with pytest.raises(SaltRenderError, match=expected):
+                render_jinja_tmpl(template,
+                dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
 
     def test_render_with_undefined_variable(self):
         template = "hello\n\n{{ foo }}\n\nfoo"
         expected = r'Jinja variable \'foo\' is undefined'
-        self.assertRaisesRegex(
-            SaltRenderError,
-            expected,
-            render_jinja_tmpl,
-            template,
-            dict(opts=self.local_opts, saltenv='test', salt=self.local_salt)
-        )
+        with pytest.raises(SaltRenderError, match=expected):
+            render_jinja_tmpl(template,
+            dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
 
     def test_render_with_undefined_variable_utf8(self):
         template = "hello\xed\x95\x9c\n\n{{ foo }}\n\nfoo"
         expected = r'Jinja variable \'foo\' is undefined'
-        self.assertRaisesRegex(
-            SaltRenderError,
-            expected,
-            render_jinja_tmpl,
-            template,
-            dict(opts=self.local_opts, saltenv='test', salt=self.local_salt)
-        )
+        with pytest.raises(SaltRenderError, match=expected):
+            render_jinja_tmpl(template,
+            dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
 
     def test_render_with_undefined_variable_unicode(self):
         template = 'hello한\n\n{{ foo }}\n\nfoo'
         expected = r'Jinja variable \'foo\' is undefined'
-        self.assertRaisesRegex(
-            SaltRenderError,
-            expected,
-            render_jinja_tmpl,
-            template,
-            dict(opts=self.local_opts, saltenv='test', salt=self.local_salt)
-        )
+        with pytest.raises(SaltRenderError, match=expected):
+            render_jinja_tmpl(template,
+            dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
 
 
 class TestJinjaDefaultOptions(TestCase):
@@ -642,7 +610,7 @@ class TestJinjaDefaultOptions(TestCase):
             """
         rendered = render_jinja_tmpl(template,
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, 'onetwothree')
+        assert rendered == 'onetwothree'
 
     def test_statement_prefix(self):
 
@@ -655,7 +623,7 @@ class TestJinjaDefaultOptions(TestCase):
             """
         rendered = render_jinja_tmpl(template,
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, 'onetwothree')
+        assert rendered == 'onetwothree'
 
 
 class TestCustomExtensions(TestCase):
@@ -693,7 +661,7 @@ class TestCustomExtensions(TestCase):
         env = Environment(extensions=[SerializerExtension])
         env.filters.update(JinjaFilter.salt_jinja_filters)
         rendered = env.from_string('{{ dataset|regex_escape }}').render(dataset=dataset)
-        self.assertEqual(rendered, re.escape(dataset))
+        assert rendered == re.escape(dataset)
 
     def test_unique_string(self):
         dataset = 'foo'
@@ -702,10 +670,10 @@ class TestCustomExtensions(TestCase):
         env.filters.update(JinjaFilter.salt_jinja_filters)
         if six.PY3:
             rendered = env.from_string('{{ dataset|unique }}').render(dataset=dataset).strip("'{}").split("', '")
-            self.assertEqual(sorted(rendered), sorted(list(unique)))
+            assert sorted(rendered) == sorted(list(unique))
         else:
             rendered = env.from_string('{{ dataset|unique }}').render(dataset=dataset)
-            self.assertEqual(rendered, "{0}".format(unique))
+            assert rendered == "{0}".format(unique)
 
     def test_unique_tuple(self):
         dataset = ('foo', 'foo', 'bar')
@@ -714,10 +682,10 @@ class TestCustomExtensions(TestCase):
         env.filters.update(JinjaFilter.salt_jinja_filters)
         if six.PY3:
             rendered = env.from_string('{{ dataset|unique }}').render(dataset=dataset).strip("'{}").split("', '")
-            self.assertEqual(sorted(rendered), sorted(list(unique)))
+            assert sorted(rendered) == sorted(list(unique))
         else:
             rendered = env.from_string('{{ dataset|unique }}').render(dataset=dataset)
-            self.assertEqual(rendered, "{0}".format(unique))
+            assert rendered == "{0}".format(unique)
 
     def test_unique_list(self):
         dataset = ['foo', 'foo', 'bar']
@@ -726,10 +694,10 @@ class TestCustomExtensions(TestCase):
         env.filters.update(JinjaFilter.salt_jinja_filters)
         if six.PY3:
             rendered = env.from_string('{{ dataset|unique }}').render(dataset=dataset).strip("'[]").split("', '")
-            self.assertEqual(rendered, unique)
+            assert rendered == unique
         else:
             rendered = env.from_string('{{ dataset|unique }}').render(dataset=dataset)
-            self.assertEqual(rendered, "{0}".format(unique))
+            assert rendered == "{0}".format(unique)
 
     def test_serialize_json(self):
         dataset = {
@@ -740,7 +708,7 @@ class TestCustomExtensions(TestCase):
         }
         env = Environment(extensions=[SerializerExtension])
         rendered = env.from_string('{{ dataset|json }}').render(dataset=dataset)
-        self.assertEqual(dataset, salt.utils.json.loads(rendered))
+        assert dataset == salt.utils.json.loads(rendered)
 
     def test_serialize_yaml(self):
         dataset = {
@@ -758,20 +726,20 @@ class TestCustomExtensions(TestCase):
         }
         env = Environment(extensions=[SerializerExtension])
         rendered = env.from_string('{{ dataset|yaml }}').render(dataset=dataset)
-        self.assertEqual(dataset, salt.utils.yaml.safe_load(rendered))
+        assert dataset == salt.utils.yaml.safe_load(rendered)
 
     def test_serialize_yaml_str(self):
         dataset = "str value"
         env = Environment(extensions=[SerializerExtension])
         rendered = env.from_string('{{ dataset|yaml }}').render(dataset=dataset)
-        self.assertEqual(dataset, rendered)
+        assert dataset == rendered
 
     def test_serialize_yaml_unicode(self):
         dataset = 'str value'
         env = Environment(extensions=[SerializerExtension])
         rendered = env.from_string('{{ dataset|yaml }}').render(dataset=dataset)
         if six.PY3:
-            self.assertEqual("str value", rendered)
+            assert "str value" == rendered
         else:
             # Due to a bug in the equality handler, this check needs to be split
             # up into several different assertions. We need to check that the various
@@ -779,8 +747,8 @@ class TestCustomExtensions(TestCase):
             # type of the rendered variable (should be unicode, which is the same as
             # six.text_type). This should cover all use cases but also allow the test
             # to pass on CentOS 6 running Python 2.7.
-            self.assertIn('str value', rendered)
-            self.assertIsInstance(rendered, six.text_type)
+            assert 'str value' in rendered
+            assert isinstance(rendered, six.text_type)
 
     def test_serialize_python(self):
         dataset = {
@@ -791,18 +759,18 @@ class TestCustomExtensions(TestCase):
         }
         env = Environment(extensions=[SerializerExtension])
         rendered = env.from_string('{{ dataset|python }}').render(dataset=dataset)
-        self.assertEqual(rendered, pprint.pformat(dataset))
+        assert rendered == pprint.pformat(dataset)
 
     def test_load_yaml(self):
         env = Environment(extensions=[SerializerExtension])
         rendered = env.from_string('{% set document = "{foo: it works}"|load_yaml %}{{ document.foo }}').render()
-        self.assertEqual(rendered, "it works")
+        assert rendered == "it works"
 
         rendered = env.from_string('{% set document = document|load_yaml %}'
                                    '{{ document.foo }}').render(document="{foo: it works}")
-        self.assertEqual(rendered, "it works")
+        assert rendered == "it works"
 
-        with self.assertRaises((TypeError, exceptions.TemplateRuntimeError)):
+        with pytest.raises((TypeError, exceptions.TemplateRuntimeError)):
             env.from_string('{% set document = document|load_yaml %}'
                             '{{ document.foo }}').render(document={"foo": "it works"})
 
@@ -814,54 +782,54 @@ class TestCustomExtensions(TestCase):
                  '{{ docu.foo }}'
 
         rendered = env.from_string(source).render(bar="barred")
-        self.assertEqual(rendered, "barred, it works")
+        assert rendered == "barred, it works"
 
         source = '{{ bar }}, {% load_json as docu %}{"foo": "it works", "{{ bar }}": "baz"}{% endload %}' + \
                  '{{ docu.foo }}'
 
         rendered = env.from_string(source).render(bar="barred")
-        self.assertEqual(rendered, "barred, it works")
+        assert rendered == "barred, it works"
 
-        with self.assertRaises(exceptions.TemplateSyntaxError):
+        with pytest.raises(exceptions.TemplateSyntaxError):
             env.from_string('{% load_yamle as document %}{foo, bar: it works}{% endload %}').render()
 
-        with self.assertRaises(exceptions.TemplateRuntimeError):
+        with pytest.raises(exceptions.TemplateRuntimeError):
             env.from_string('{% load_json as document %}{foo, bar: it works}{% endload %}').render()
 
     def test_load_json(self):
         env = Environment(extensions=[SerializerExtension])
         rendered = env.from_string('{% set document = \'{"foo": "it works"}\'|load_json %}'
                                    '{{ document.foo }}').render()
-        self.assertEqual(rendered, "it works")
+        assert rendered == "it works"
 
         rendered = env.from_string('{% set document = document|load_json %}'
                                    '{{ document.foo }}').render(document='{"foo": "it works"}')
-        self.assertEqual(rendered, "it works")
+        assert rendered == "it works"
 
         # bad quotes
-        with self.assertRaises(exceptions.TemplateRuntimeError):
+        with pytest.raises(exceptions.TemplateRuntimeError):
             env.from_string("{{ document|load_json }}").render(document="{'foo': 'it works'}")
 
         # not a string
-        with self.assertRaises(exceptions.TemplateRuntimeError):
+        with pytest.raises(exceptions.TemplateRuntimeError):
             env.from_string('{{ document|load_json }}').render(document={"foo": "it works"})
 
     def test_load_yaml_template(self):
         loader = DictLoader({'foo': '{bar: "my god is blue", foo: [1, 2, 3]}'})
         env = Environment(extensions=[SerializerExtension], loader=loader)
         rendered = env.from_string('{% import_yaml "foo" as doc %}{{ doc.bar }}').render()
-        self.assertEqual(rendered, "my god is blue")
+        assert rendered == "my god is blue"
 
-        with self.assertRaises(exceptions.TemplateNotFound):
+        with pytest.raises(exceptions.TemplateNotFound):
             env.from_string('{% import_yaml "does not exists" as doc %}').render()
 
     def test_load_json_template(self):
         loader = DictLoader({'foo': '{"bar": "my god is blue", "foo": [1, 2, 3]}'})
         env = Environment(extensions=[SerializerExtension], loader=loader)
         rendered = env.from_string('{% import_json "foo" as doc %}{{ doc.bar }}').render()
-        self.assertEqual(rendered, "my god is blue")
+        assert rendered == "my god is blue"
 
-        with self.assertRaises(exceptions.TemplateNotFound):
+        with pytest.raises(exceptions.TemplateNotFound):
             env.from_string('{% import_json "does not exists" as doc %}').render()
 
     def test_load_text_template(self):
@@ -869,9 +837,9 @@ class TestCustomExtensions(TestCase):
         env = Environment(extensions=[SerializerExtension], loader=loader)
 
         rendered = env.from_string('{% import_text "foo" as doc %}{{ doc }}').render()
-        self.assertEqual(rendered, "Foo!")
+        assert rendered == "Foo!"
 
-        with self.assertRaises(exceptions.TemplateNotFound):
+        with pytest.raises(exceptions.TemplateNotFound):
             env.from_string('{% import_text "does not exists" as doc %}').render()
 
     def test_catalog(self):
@@ -906,27 +874,27 @@ class TestCustomExtensions(TestCase):
 
         env = Environment(extensions=[SerializerExtension], loader=loader)
         rendered = env.get_template('main1').render()
-        self.assertEqual(rendered, "my god is blue")
+        assert rendered == "my god is blue"
 
         rendered = env.get_template('main2').render()
-        self.assertEqual(rendered, "it works")
+        assert rendered == "it works"
 
         rendered = env.get_template('main3').render().strip()
-        self.assertEqual(rendered, "my god is blue")
+        assert rendered == "my god is blue"
 
         rendered = env.get_template('main4').render().strip()
-        self.assertEqual(rendered, "it works")
+        assert rendered == "it works"
 
         rendered = env.get_template('main5').render().strip()
-        self.assertEqual(rendered, "my god is blue")
+        assert rendered == "my god is blue"
 
         rendered = env.get_template('main6').render().strip()
-        self.assertEqual(rendered, "it works")
+        assert rendered == "it works"
 
     def test_nested_structures(self):
         env = Environment(extensions=[SerializerExtension])
         rendered = env.from_string('{{ data }}').render(data="foo")
-        self.assertEqual(rendered, "foo")
+        assert rendered == "foo"
 
         data = OrderedDict([
             ('foo', OrderedDict([
@@ -936,11 +904,9 @@ class TestCustomExtensions(TestCase):
         ])
 
         rendered = env.from_string('{{ data }}').render(data=data)
-        self.assertEqual(
-            rendered,
-            "{u'foo': {u'bar': u'baz', u'qux': 42}}" if six.PY2
-            else "{'foo': {'bar': 'baz', 'qux': 42}}"
-        )
+        assert rendered == \
+            ("{u'foo': {u'bar': u'baz', u'qux': 42}}" if six.PY2
+            else "{'foo': {'bar': 'baz', 'qux': 42}}")
 
         rendered = env.from_string('{{ data }}').render(data=[
                                                             OrderedDict(
@@ -950,11 +916,9 @@ class TestCustomExtensions(TestCase):
                                                                 baz=42,
                                                             )
                                                         ])
-        self.assertEqual(
-            rendered,
-            "[{'foo': u'bar'}, {'baz': 42}]" if six.PY2
-            else "[{'foo': 'bar'}, {'baz': 42}]"
-        )
+        assert rendered == \
+            ("[{'foo': u'bar'}, {'baz': 42}]" if six.PY2
+            else "[{'foo': 'bar'}, {'baz': 42}]")
 
     def test_set_dict_key_value(self):
         '''
@@ -964,13 +928,13 @@ class TestCustomExtensions(TestCase):
                                      dict(opts=self.local_opts,
                                           saltenv='test',
                                           salt=self.local_salt))
-        self.assertEqual(rendered, "{'foo': {'bar': {'baz': 42}}}")
+        assert rendered == "{'foo': {'bar': {'baz': 42}}}"
 
         rendered = render_jinja_tmpl("{{ {} | set_dict_key_value('foo.bar.baz', 42, delimiter='.') }}",
                                      dict(opts=self.local_opts,
                                           saltenv='test',
                                           salt=self.local_salt))
-        self.assertEqual(rendered, "{'foo': {'bar': {'baz': 42}}}")
+        assert rendered == "{'foo': {'bar': {'baz': 42}}}"
 
     def test_update_dict_key_value(self):
         '''
@@ -986,25 +950,20 @@ class TestCustomExtensions(TestCase):
                                           opts=self.local_opts,
                                           saltenv='test',
                                           salt=self.local_salt))
-        self.assertEqual(
-            rendered,
-            "{u'bar': {u'baz': {u'qux': 1, u'quux': 3}}}" if six.PY2
+        assert rendered == \
+            ("{u'bar': {u'baz': {u'qux': 1, u'quux': 3}}}" if six.PY2
             else "{'bar': {'baz': {'qux': 1, 'quux': 3}}}")
 
         # Test incorrect usage
         for update_with in [42, 'foo', [42]]:
             template = "{{ {} | update_dict_key_value('bar:baz', update_with) }}"
             expected = r"Cannot update {} with a {}.".format(type({}), type(update_with))
-            self.assertRaisesRegex(
-                SaltRenderError,
-                expected,
-                render_jinja_tmpl,
-                template,
+            with pytest.raises(SaltRenderError, match=expected):
+                render_jinja_tmpl(template,
                 dict(update_with=update_with,
                      opts=self.local_opts,
                      saltenv='test',
-                     salt=self.local_salt)
-            )
+                     salt=self.local_salt))
 
     def test_append_dict_key_value(self):
         '''
@@ -1014,18 +973,16 @@ class TestCustomExtensions(TestCase):
                                      dict(opts=self.local_opts,
                                           saltenv='test',
                                           salt=self.local_salt))
-        self.assertEqual(rendered, "{'foo': {'bar': {'baz': [42]}}}")
+        assert rendered == "{'foo': {'bar': {'baz': [42]}}}"
 
         rendered = render_jinja_tmpl("{{ foo | append_dict_key_value('bar:baz', 42) }}",
                                      dict(foo={'bar': {'baz': [1, 2]}},
                                           opts=self.local_opts,
                                           saltenv='test',
                                           salt=self.local_salt))
-        self.assertEqual(
-            rendered,
-            "{u'bar': {u'baz': [1, 2, 42]}}" if six.PY2
-            else "{'bar': {'baz': [1, 2, 42]}}"
-        )
+        assert rendered == \
+            ("{u'bar': {u'baz': [1, 2, 42]}}" if six.PY2
+            else "{'bar': {'baz': [1, 2, 42]}}")
 
     def test_extend_dict_key_value(self):
         '''
@@ -1033,38 +990,32 @@ class TestCustomExtensions(TestCase):
         '''
         rendered = render_jinja_tmpl("{{ {} | extend_dict_key_value('foo:bar:baz', [42]) }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, "{'foo': {'bar': {'baz': [42]}}}")
+        assert rendered == "{'foo': {'bar': {'baz': [42]}}}"
 
         rendered = render_jinja_tmpl("{{ foo | extend_dict_key_value('bar:baz', [42, 43]) }}",
                                      dict(foo={'bar': {'baz': [1, 2]}},
                                           opts=self.local_opts,
                                           saltenv='test',
                                           salt=self.local_salt))
-        self.assertEqual(
-            rendered,
-            "{u'bar': {u'baz': [1, 2, 42, 43]}}" if six.PY2
-            else "{'bar': {'baz': [1, 2, 42, 43]}}"
-        )
+        assert rendered == \
+            ("{u'bar': {u'baz': [1, 2, 42, 43]}}" if six.PY2
+            else "{'bar': {'baz': [1, 2, 42, 43]}}")
         # Edge cases
         rendered = render_jinja_tmpl("{{ {} | extend_dict_key_value('foo:bar:baz', 'quux') }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, "{'foo': {'bar': {'baz': ['q', 'u', 'u', 'x']}}}")
+        assert rendered == "{'foo': {'bar': {'baz': ['q', 'u', 'u', 'x']}}}"
         # Beware! When supplying a dict, the list gets extended with the dict coerced to a list,
         # which will only contain the keys of the dict.
         rendered = render_jinja_tmpl("{{ {} | extend_dict_key_value('foo:bar:baz', {'foo': 'bar'}) }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, "{'foo': {'bar': {'baz': ['foo']}}}")
+        assert rendered == "{'foo': {'bar': {'baz': ['foo']}}}"
 
         # Test incorrect usage
         template = "{{ {} | extend_dict_key_value('bar:baz', 42) }}"
         expected = r"Cannot extend {} with a {}.".format(type([]), type(42))
-        self.assertRaisesRegex(
-            SaltRenderError,
-            expected,
-            render_jinja_tmpl,
-            template,
-            dict(opts=self.local_opts, saltenv='test', salt=self.local_salt)
-        )
+        with pytest.raises(SaltRenderError, match=expected):
+            render_jinja_tmpl(template,
+            dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
 
     def test_sequence(self):
         env = Environment()
@@ -1072,23 +1023,23 @@ class TestCustomExtensions(TestCase):
 
         rendered = env.from_string('{{ data | sequence | length }}') \
                       .render(data='foo')
-        self.assertEqual(rendered, '1')
+        assert rendered == '1'
 
         rendered = env.from_string('{{ data | sequence | length }}') \
                       .render(data=['foo', 'bar'])
-        self.assertEqual(rendered, '2')
+        assert rendered == '2'
 
         rendered = env.from_string('{{ data | sequence | length }}') \
                       .render(data=('foo', 'bar'))
-        self.assertEqual(rendered, '2')
+        assert rendered == '2'
 
         rendered = env.from_string('{{ data | sequence | length }}') \
                       .render(data=set(['foo', 'bar']))
-        self.assertEqual(rendered, '2')
+        assert rendered == '2'
 
         rendered = env.from_string('{{ data | sequence | length }}') \
                       .render(data={'foo': 'bar'})
-        self.assertEqual(rendered, '1')
+        assert rendered == '1'
 
     def test_camel_to_snake_case(self):
         '''
@@ -1096,7 +1047,7 @@ class TestCustomExtensions(TestCase):
         '''
         rendered = render_jinja_tmpl('{{ \'abcdEfghhIjkLmnoP\' | to_snake_case }}',
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, 'abcd_efghh_ijk_lmno_p')
+        assert rendered == 'abcd_efghh_ijk_lmno_p'
 
     def test_snake_to_camel_case(self):
         '''
@@ -1104,11 +1055,11 @@ class TestCustomExtensions(TestCase):
         '''
         rendered = render_jinja_tmpl('{{ \'the_fox_jumped_over_the_lazy_dog\' | to_camelcase }}',
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, 'theFoxJumpedOverTheLazyDog')
+        assert rendered == 'theFoxJumpedOverTheLazyDog'
 
         rendered = render_jinja_tmpl('{{ \'the_fox_jumped_over_the_lazy_dog\' | to_camelcase(uppercamel=True) }}',
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, 'TheFoxJumpedOverTheLazyDog')
+        assert rendered == 'TheFoxJumpedOverTheLazyDog'
 
     def test_is_ip(self):
         '''
@@ -1116,15 +1067,15 @@ class TestCustomExtensions(TestCase):
         '''
         rendered = render_jinja_tmpl("{{ '192.168.0.1' | is_ip }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, 'True')
+        assert rendered == 'True'
 
         rendered = render_jinja_tmpl("{{ 'FE80::' | is_ip }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, 'True')
+        assert rendered == 'True'
 
         rendered = render_jinja_tmpl("{{ 'random' | is_ip }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, 'False')
+        assert rendered == 'False'
 
     def test_is_ipv4(self):
         '''
@@ -1132,15 +1083,15 @@ class TestCustomExtensions(TestCase):
         '''
         rendered = render_jinja_tmpl("{{ '192.168.0.1' | is_ipv4 }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, 'True')
+        assert rendered == 'True'
 
         rendered = render_jinja_tmpl("{{ 'FE80::' | is_ipv4 }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, 'False')
+        assert rendered == 'False'
 
         rendered = render_jinja_tmpl("{{ 'random' | is_ipv4 }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, 'False')
+        assert rendered == 'False'
 
     def test_is_ipv6(self):
         '''
@@ -1148,19 +1099,19 @@ class TestCustomExtensions(TestCase):
         '''
         rendered = render_jinja_tmpl("{{ '192.168.0.1' | is_ipv6 }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, 'False')
+        assert rendered == 'False'
 
         rendered = render_jinja_tmpl("{{ 'fe80::20d:b9ff:fe01:ea8%eth0' | is_ipv6 }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, 'True')
+        assert rendered == 'True'
 
         rendered = render_jinja_tmpl("{{ 'FE80::' | is_ipv6 }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, 'True')
+        assert rendered == 'True'
 
         rendered = render_jinja_tmpl("{{ 'random' | is_ipv6 }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, 'False')
+        assert rendered == 'False'
 
     def test_ipaddr(self):
         '''
@@ -1168,21 +1119,21 @@ class TestCustomExtensions(TestCase):
         '''
         rendered = render_jinja_tmpl("{{ '::' | ipaddr }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, '::')
+        assert rendered == '::'
 
         rendered = render_jinja_tmpl("{{ '192.168.0.1' | ipaddr }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, '192.168.0.1')
+        assert rendered == '192.168.0.1'
 
         # provides a list with valid IP addresses only
         rendered = render_jinja_tmpl("{{ ['192.168.0.1', '172.17.17.1', 'foo', 'bar', '::'] | ipaddr | join(', ') }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, '192.168.0.1, 172.17.17.1, ::')
+        assert rendered == '192.168.0.1, 172.17.17.1, ::'
 
         # return only multicast addresses
         rendered = render_jinja_tmpl("{{ ['224.0.0.1', 'FF01::1', '::'] | ipaddr(options='multicast') | join(', ') }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, '224.0.0.1, ff01::1')
+        assert rendered == '224.0.0.1, ff01::1'
 
     def test_ipv4(self):
         '''
@@ -1190,27 +1141,27 @@ class TestCustomExtensions(TestCase):
         '''
         rendered = render_jinja_tmpl("{{ '192.168.0.1' | ipv4 }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, '192.168.0.1')
+        assert rendered == '192.168.0.1'
 
         rendered = render_jinja_tmpl("{{ ['192.168.0.1', '172.17.17.1'] | ipv4 | join(', ')}}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, '192.168.0.1, 172.17.17.1')
+        assert rendered == '192.168.0.1, 172.17.17.1'
 
         rendered = render_jinja_tmpl("{{ 'fe80::' | ipv4 }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, 'None')
+        assert rendered == 'None'
 
         rendered = render_jinja_tmpl("{{ 'random' | ipv4 }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, 'None')
+        assert rendered == 'None'
 
         rendered = render_jinja_tmpl("{{ '192.168.0.1' | ipv4(options='lo') }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, 'None')
+        assert rendered == 'None'
 
         rendered = render_jinja_tmpl("{{ '127.0.0.1' | ipv4(options='lo') }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, '127.0.0.1')
+        assert rendered == '127.0.0.1'
 
     def test_ipv6(self):
         '''
@@ -1218,35 +1169,35 @@ class TestCustomExtensions(TestCase):
         '''
         rendered = render_jinja_tmpl("{{ '192.168.0.1' | ipv6 }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, 'None')
+        assert rendered == 'None'
 
         rendered = render_jinja_tmpl("{{ 'random' | ipv6 }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, 'None')
+        assert rendered == 'None'
 
         # returns the standard format value
         rendered = render_jinja_tmpl("{{ 'FE80:0:0::0' | ipv6 }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, 'fe80::')
+        assert rendered == 'fe80::'
 
         # fe80:: is link local therefore will be returned
         rendered = render_jinja_tmpl("{{ 'fe80::' | ipv6(options='ll') }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, 'fe80::')
+        assert rendered == 'fe80::'
 
         # fe80:: is not loopback
         rendered = render_jinja_tmpl("{{ 'fe80::' | ipv6(options='lo') }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, 'None')
+        assert rendered == 'None'
 
         # returns only IPv6 addresses in the list
         rendered = render_jinja_tmpl("{{ ['fe80::', '192.168.0.1'] | ipv6 | join(', ') }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, 'fe80::')
+        assert rendered == 'fe80::'
 
         rendered = render_jinja_tmpl("{{ ['fe80::', '::'] | ipv6 | join(', ') }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, 'fe80::, ::')
+        assert rendered == 'fe80::, ::'
 
     def test_network_hosts(self):
         '''
@@ -1254,7 +1205,7 @@ class TestCustomExtensions(TestCase):
         '''
         rendered = render_jinja_tmpl("{{ '192.168.0.1/30' | network_hosts | join(', ') }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, '192.168.0.1, 192.168.0.2')
+        assert rendered == '192.168.0.1, 192.168.0.2'
 
     def test_network_size(self):
         '''
@@ -1262,11 +1213,11 @@ class TestCustomExtensions(TestCase):
         '''
         rendered = render_jinja_tmpl("{{ '192.168.0.1' | network_size }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, '1')
+        assert rendered == '1'
 
         rendered = render_jinja_tmpl("{{ '192.168.0.1/8' | network_size }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, '16777216')
+        assert rendered == '16777216'
 
     @pytest.mark.flaky(max_runs=4)
     def test_http_query(self):
@@ -1276,10 +1227,10 @@ class TestCustomExtensions(TestCase):
         for backend in ('requests', 'tornado', 'urllib2'):
             rendered = render_jinja_tmpl("{{ 'http://icanhazip.com' | http_query(backend='" + backend + "') }}",
                                          dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-            self.assertIsInstance(rendered, six.text_type, 'Failed with backend: {}'.format(backend))
+            assert isinstance(rendered, six.text_type), 'Failed with backend: {}'.format(backend)
             dict_reply = ast.literal_eval(rendered)
-            self.assertIsInstance(dict_reply, dict, 'Failed with backend: {}'.format(backend))
-            self.assertIsInstance(dict_reply['body'], six.string_types, 'Failed with backend: {}'.format(backend))
+            assert isinstance(dict_reply, dict), 'Failed with backend: {}'.format(backend)
+            assert isinstance(dict_reply['body'], six.string_types), 'Failed with backend: {}'.format(backend)
 
     def test_to_bool(self):
         '''
@@ -1287,19 +1238,19 @@ class TestCustomExtensions(TestCase):
         '''
         rendered = render_jinja_tmpl("{{ 1 | to_bool }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, 'True')
+        assert rendered == 'True'
 
         rendered = render_jinja_tmpl("{{ 'True' | to_bool }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, 'True')
+        assert rendered == 'True'
 
         rendered = render_jinja_tmpl("{{ 0 | to_bool }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, 'False')
+        assert rendered == 'False'
 
         rendered = render_jinja_tmpl("{{ 'Yes' | to_bool }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, 'True')
+        assert rendered == 'True'
 
     def test_quote(self):
         '''
@@ -1307,7 +1258,7 @@ class TestCustomExtensions(TestCase):
         '''
         rendered = render_jinja_tmpl("{{ 'random' | quote }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, 'random')
+        assert rendered == 'random'
 
     def test_regex_search(self):
         '''
@@ -1315,7 +1266,7 @@ class TestCustomExtensions(TestCase):
         '''
         rendered = render_jinja_tmpl("{{ 'abcdefabcdef' | regex_search('BC(.*)', ignorecase=True) }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, "('defabcdef',)")  # because search looks only at the beginning
+        assert rendered == "('defabcdef',)"  # because search looks only at the beginning
 
     def test_regex_match(self):
         '''
@@ -1323,7 +1274,7 @@ class TestCustomExtensions(TestCase):
         '''
         rendered = render_jinja_tmpl("{{ 'abcdefabcdef' | regex_match('BC(.*)', ignorecase=True)}}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, "None")
+        assert rendered == "None"
 
     def test_regex_replace(self):
         '''
@@ -1331,7 +1282,7 @@ class TestCustomExtensions(TestCase):
         '''
         rendered = render_jinja_tmpl(r"{{ 'lets replace spaces' | regex_replace('\s+', '__') }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, 'lets__replace__spaces')
+        assert rendered == 'lets__replace__spaces'
 
     def test_uuid(self):
         '''
@@ -1339,7 +1290,7 @@ class TestCustomExtensions(TestCase):
         '''
         rendered = render_jinja_tmpl("{{ 'random' | uuid }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, '3652b285-26ad-588e-a5dc-c2ee65edc804')
+        assert rendered == '3652b285-26ad-588e-a5dc-c2ee65edc804'
 
     def test_min(self):
         '''
@@ -1347,7 +1298,7 @@ class TestCustomExtensions(TestCase):
         '''
         rendered = render_jinja_tmpl("{{ [1, 2, 3] | min }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, '1')
+        assert rendered == '1'
 
     def test_max(self):
         '''
@@ -1355,7 +1306,7 @@ class TestCustomExtensions(TestCase):
         '''
         rendered = render_jinja_tmpl("{{ [1, 2, 3] | max }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, '3')
+        assert rendered == '3'
 
     def test_avg(self):
         '''
@@ -1363,7 +1314,7 @@ class TestCustomExtensions(TestCase):
         '''
         rendered = render_jinja_tmpl("{{ [1, 2, 3] | avg }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, '2.0')
+        assert rendered == '2.0'
 
     def test_union(self):
         '''
@@ -1371,7 +1322,7 @@ class TestCustomExtensions(TestCase):
         '''
         rendered = render_jinja_tmpl("{{ [1, 2, 3] | union([2, 3, 4]) | join(', ') }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, '1, 2, 3, 4')
+        assert rendered == '1, 2, 3, 4'
 
     def test_intersect(self):
         '''
@@ -1379,7 +1330,7 @@ class TestCustomExtensions(TestCase):
         '''
         rendered = render_jinja_tmpl("{{ [1, 2, 3] | intersect([2, 3, 4]) | join(', ') }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, '2, 3')
+        assert rendered == '2, 3'
 
     def test_difference(self):
         '''
@@ -1387,7 +1338,7 @@ class TestCustomExtensions(TestCase):
         '''
         rendered = render_jinja_tmpl("{{ [1, 2, 3] | difference([2, 3, 4]) | join(', ') }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, '1')
+        assert rendered == '1'
 
     def test_symmetric_difference(self):
         '''
@@ -1395,7 +1346,7 @@ class TestCustomExtensions(TestCase):
         '''
         rendered = render_jinja_tmpl("{{ [1, 2, 3] | symmetric_difference([2, 3, 4]) | join(', ') }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, '1, 4')
+        assert rendered == '1, 4'
 
     def test_md5(self):
         '''
@@ -1403,7 +1354,7 @@ class TestCustomExtensions(TestCase):
         '''
         rendered = render_jinja_tmpl("{{ 'random' | md5 }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, '7ddf32e17a6ac5ce04a8ecbf782ca509')
+        assert rendered == '7ddf32e17a6ac5ce04a8ecbf782ca509'
 
     def test_sha256(self):
         '''
@@ -1411,7 +1362,7 @@ class TestCustomExtensions(TestCase):
         '''
         rendered = render_jinja_tmpl("{{ 'random' | sha256 }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, 'a441b15fe9a3cf56661190a0b93b9dec7d04127288cc87250967cf3b52894d11')
+        assert rendered == 'a441b15fe9a3cf56661190a0b93b9dec7d04127288cc87250967cf3b52894d11'
 
     def test_sha512(self):
         '''
@@ -1419,8 +1370,8 @@ class TestCustomExtensions(TestCase):
         '''
         rendered = render_jinja_tmpl("{{ 'random' | sha512 }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, six.text_type(('811a90e1c8e86c7b4c0eef5b2c0bf0ec1b19c4b1b5a242e6455be93787cb473cb7bc'
-                                                  '9b0fdeb960d00d5c6881c2094dd63c5c900ce9057255e2a4e271fc25fef1')))
+        assert rendered == six.text_type(('811a90e1c8e86c7b4c0eef5b2c0bf0ec1b19c4b1b5a242e6455be93787cb473cb7bc'
+                                                  '9b0fdeb960d00d5c6881c2094dd63c5c900ce9057255e2a4e271fc25fef1'))
 
     def test_hmac(self):
         '''
@@ -1428,12 +1379,12 @@ class TestCustomExtensions(TestCase):
         '''
         rendered = render_jinja_tmpl("{{ 'random' | hmac('secret', 'blah') }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, 'False')
+        assert rendered == 'False'
 
         rendered = render_jinja_tmpl(("{{ 'get salted' | "
                                       "hmac('shared secret', 'eBWf9bstXg+NiP5AOwppB5HMvZiYMPzEM9W5YMm/AmQ=') }}"),
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, 'True')
+        assert rendered == 'True'
 
     def test_base64_encode(self):
         '''
@@ -1441,7 +1392,7 @@ class TestCustomExtensions(TestCase):
         '''
         rendered = render_jinja_tmpl("{{ 'random' | base64_encode }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, 'cmFuZG9t')
+        assert rendered == 'cmFuZG9t'
 
     def test_base64_decode(self):
         '''
@@ -1449,7 +1400,7 @@ class TestCustomExtensions(TestCase):
         '''
         rendered = render_jinja_tmpl("{{ 'cmFuZG9t' | base64_decode }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
-        self.assertEqual(rendered, 'random')
+        assert rendered == 'random'
 
     def test_json_query(self):
         '''
@@ -1459,7 +1410,7 @@ class TestCustomExtensions(TestCase):
             "{{ [1, 2, 3] | json_query('[1]')}}",
             dict(opts=self.local_opts, saltenv='test', salt=self.local_salt)
         )
-        self.assertEqual(rendered, '2')
+        assert rendered == '2'
 
     # def test_print(self):
     #     env = Environment(extensions=[SerializerExtension])
@@ -1500,7 +1451,7 @@ class TestDotNotationLookup(ModuleCase):
 
         with patch.object(SaltCacheLoader, 'file_client', Mock()):
             ret = self.render(tmpl_str)
-        self.assertEqual(ret, 'Hello, True.')
+        assert ret == 'Hello, True.'
 
     def test_dotlookup(self):
         '''
@@ -1510,7 +1461,7 @@ class TestDotNotationLookup(ModuleCase):
 
         with patch.object(SaltCacheLoader, 'file_client', Mock()):
             ret = self.render(tmpl_str)
-        self.assertEqual(ret, 'Hello, True.')
+        assert ret == 'Hello, True.'
 
     def test_shadowed_dict_method(self):
         '''
@@ -1521,4 +1472,4 @@ class TestDotNotationLookup(ModuleCase):
 
         with patch.object(SaltCacheLoader, 'file_client', Mock()):
             ret = self.render(tmpl_str)
-        self.assertEqual(ret, 'Hello, jerry.')
+        assert ret == 'Hello, jerry.'

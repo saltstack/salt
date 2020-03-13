@@ -23,7 +23,7 @@ class SPMTest(ShellCase, SPMCase):
         expected_args = ['--version', '--assume-yes', '--help']
         output = self.run_spm('--help')
         for arg in expected_args:
-            self.assertIn(arg, ''.join(output))
+            assert arg in ''.join(output)
 
     def test_spm_bad_arg(self):
         '''
@@ -32,7 +32,7 @@ class SPMTest(ShellCase, SPMCase):
         expected_args = ['--version', '--assume-yes', '--help']
         output = self.run_spm('doesnotexist')
         for arg in expected_args:
-            self.assertIn(arg, ''.join(output))
+            assert arg in ''.join(output)
 
     def test_spm_assume_yes(self):
         '''
@@ -50,8 +50,8 @@ class SPMTest(ShellCase, SPMCase):
         install = self.run_spm('install {0} -c {1} -y'.format(spm_file,
                                                            self._tmp_spm))
 
-        self.assertTrue(os.path.exists(os.path.join(config['formula_path'],
-                                                    'apache', 'apache.sls')))
+        assert os.path.exists(os.path.join(config['formula_path'],
+                                                    'apache', 'apache.sls'))
 
     def test_spm_force(self):
         '''
@@ -69,11 +69,11 @@ class SPMTest(ShellCase, SPMCase):
         install = self.run_spm('install {0} -c {1} -y'.format(spm_file,
                                                            self._tmp_spm))
 
-        self.assertTrue(os.path.exists(os.path.join(config['formula_path'],
-                                                    'apache', 'apache.sls')))
+        assert os.path.exists(os.path.join(config['formula_path'],
+                                                    'apache', 'apache.sls'))
 
         # check if it forces the install after its already been installed it
         install = self.run_spm('install {0} -c {1} -y -f'.format(spm_file,
                                                            self._tmp_spm))
 
-        self.assertEqual(['... installing apache'], install)
+        assert ['... installing apache'] == install

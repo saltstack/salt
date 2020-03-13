@@ -13,6 +13,7 @@ from tests.support.mock import MagicMock, patch
 # Import Salt Libs
 import salt.states.boto_lc as boto_lc
 from salt.exceptions import SaltInvocationError
+import pytest
 
 
 class BotoLcTestCase(TestCase, LoaderModuleMockMixin):
@@ -36,7 +37,8 @@ class BotoLcTestCase(TestCase, LoaderModuleMockMixin):
                'changes': {},
                'comment': ''}
 
-        self.assertRaises(SaltInvocationError, boto_lc.present, name,
+        with pytest.raises(SaltInvocationError):
+            boto_lc.present(name,
                           image_id, user_data=True, cloud_init=True)
 
         mock = MagicMock(side_effect=[True, False])
@@ -44,12 +46,12 @@ class BotoLcTestCase(TestCase, LoaderModuleMockMixin):
                         {'boto_asg.launch_configuration_exists': mock}):
             comt = ('Launch configuration present.')
             ret.update({'comment': comt})
-            self.assertDictEqual(boto_lc.present(name, image_id), ret)
+            assert boto_lc.present(name, image_id) == ret
 
             with patch.dict(boto_lc.__opts__, {'test': True}):
                 comt = ('Launch configuration set to be created.')
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(boto_lc.present(name, image_id), ret)
+                assert boto_lc.present(name, image_id) == ret
 
     # 'absent' function tests: 1
 
@@ -69,9 +71,9 @@ class BotoLcTestCase(TestCase, LoaderModuleMockMixin):
                         {'boto_asg.launch_configuration_exists': mock}):
             comt = ('Launch configuration does not exist.')
             ret.update({'comment': comt})
-            self.assertDictEqual(boto_lc.absent(name), ret)
+            assert boto_lc.absent(name) == ret
 
             with patch.dict(boto_lc.__opts__, {'test': True}):
                 comt = ('Launch configuration set to be deleted.')
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(boto_lc.absent(name), ret)
+                assert boto_lc.absent(name) == ret

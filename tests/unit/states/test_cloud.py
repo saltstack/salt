@@ -46,35 +46,35 @@ class CloudTestCase(TestCase, LoaderModuleMockMixin):
                                          'cloud.create': mock_dict}):
             comt = ('onlyif condition is false')
             ret.update({'comment': comt})
-            self.assertDictEqual(cloud.present(name, cloud_provider,
-                                               onlyif=False), ret)
+            assert cloud.present(name, cloud_provider,
+                                               onlyif=False) == ret
 
-            self.assertDictEqual(cloud.present(name, cloud_provider, onlyif=''),
-                                 ret)
+            assert cloud.present(name, cloud_provider, onlyif='') == \
+                                 ret
 
             comt = ('unless condition is true')
             ret.update({'comment': comt})
-            self.assertDictEqual(cloud.present(name, cloud_provider,
-                                               unless=True), ret)
+            assert cloud.present(name, cloud_provider,
+                                               unless=True) == ret
 
-            self.assertDictEqual(cloud.present(name, cloud_provider, unless=''),
-                                 ret)
+            assert cloud.present(name, cloud_provider, unless='') == \
+                                 ret
 
             comt = ('Already present instance {0}'.format(name))
             ret.update({'comment': comt})
-            self.assertDictEqual(cloud.present(name, cloud_provider), ret)
+            assert cloud.present(name, cloud_provider) == ret
 
             with patch.dict(cloud.__opts__, {'test': True}):
                 comt = ('Instance {0} needs to be created'.format(name))
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(cloud.present(name, cloud_provider), ret)
+                assert cloud.present(name, cloud_provider) == ret
 
             with patch.dict(cloud.__opts__, {'test': False}):
                 comt = ('Created instance mycloud using provider '
                         'my_cloud_provider and the following options: {}')
                 ret.update({'comment': comt, 'result': True,
                             'changes': {'cloud': 'saltcloud'}})
-                self.assertDictEqual(cloud.present(name, cloud_provider), ret)
+                assert cloud.present(name, cloud_provider) == ret
 
     # 'absent' function tests: 1
 
@@ -97,30 +97,30 @@ class CloudTestCase(TestCase, LoaderModuleMockMixin):
                                          'cloud.destroy': mock_dict}):
             comt = ('onlyif condition is false')
             ret.update({'comment': comt})
-            self.assertDictEqual(cloud.absent(name, onlyif=False), ret)
+            assert cloud.absent(name, onlyif=False) == ret
 
-            self.assertDictEqual(cloud.absent(name, onlyif=''), ret)
+            assert cloud.absent(name, onlyif='') == ret
 
             comt = ('unless condition is true')
             ret.update({'comment': comt})
-            self.assertDictEqual(cloud.absent(name, unless=True), ret)
+            assert cloud.absent(name, unless=True) == ret
 
-            self.assertDictEqual(cloud.absent(name, unless=''), ret)
+            assert cloud.absent(name, unless='') == ret
 
             comt = ('Already absent instance {0}'.format(name))
             ret.update({'comment': comt})
-            self.assertDictEqual(cloud.absent(name), ret)
+            assert cloud.absent(name) == ret
 
             with patch.dict(cloud.__opts__, {'test': True}):
                 comt = ('Instance {0} needs to be destroyed'.format(name))
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(cloud.absent(name), ret)
+                assert cloud.absent(name) == ret
 
             with patch.dict(cloud.__opts__, {'test': False}):
                 comt = (('Destroyed instance {0}').format(name))
                 ret.update({'comment': comt, 'result': True,
                             'changes': {'cloud': 'saltcloud'}})
-                self.assertDictEqual(cloud.absent(name), ret)
+                assert cloud.absent(name) == ret
 
     # 'profile' function tests: 1
 
@@ -151,37 +151,37 @@ class CloudTestCase(TestCase, LoaderModuleMockMixin):
                                          'cloud.action': mock_dict}):
             comt = ('onlyif condition is false')
             ret.update({'comment': comt})
-            self.assertDictEqual(cloud.profile(name, profile, onlyif=False),
-                                 ret)
+            assert cloud.profile(name, profile, onlyif=False) == \
+                                 ret
 
-            self.assertDictEqual(cloud.profile(name, profile, onlyif=''), ret)
+            assert cloud.profile(name, profile, onlyif='') == ret
 
             comt = ('unless condition is true')
             ret.update({'comment': comt})
-            self.assertDictEqual(cloud.profile(name, profile, unless=True), ret)
+            assert cloud.profile(name, profile, unless=True) == ret
 
-            self.assertDictEqual(cloud.profile(name, profile, unless=''), ret)
+            assert cloud.profile(name, profile, unless='') == ret
 
             comt = ('Already present instance {0}'.format(name))
             ret.update({'comment': comt})
-            self.assertDictEqual(cloud.profile(name, profile), ret)
+            assert cloud.profile(name, profile) == ret
 
             with patch.dict(cloud.__opts__, {'test': True}):
                 comt = ('Instance {0} needs to be created'.format(name))
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(cloud.profile(name, profile), ret)
+                assert cloud.profile(name, profile) == ret
 
             with patch.dict(cloud.__opts__, {'test': False}):
                 comt = (('Failed to create instance {0}'
                          'using profile {1}').format(name, profile))
                 ret.update({'comment': comt, 'result': False})
-                self.assertDictEqual(cloud.profile(name, profile), ret)
+                assert cloud.profile(name, profile) == ret
 
             with patch.dict(cloud.__opts__, {'test': False}):
                 comt = (('Failed to create instance {0}'
                          'using profile {1}').format(name, profile))
                 ret.update({'comment': comt, 'result': False})
-                self.assertDictEqual(cloud.profile(name, profile), ret)
+                assert cloud.profile(name, profile) == ret
 
     # 'volume_present' function tests: 1
 
@@ -204,22 +204,22 @@ class CloudTestCase(TestCase, LoaderModuleMockMixin):
                               MagicMock(return_value=True)):
                 comt = ('Invalid characters in name.')
                 ret.update({'comment': comt})
-                self.assertDictEqual(cloud.volume_present(name), ret)
+                assert cloud.volume_present(name) == ret
 
             comt = ('Volume exists: {0}'.format(name))
             ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(cloud.volume_present(name), ret)
+            assert cloud.volume_present(name) == ret
 
             with patch.dict(cloud.__opts__, {'test': True}):
                 comt = ('Volume {0} will be created.'.format(name))
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(cloud.volume_present(name), ret)
+                assert cloud.volume_present(name) == ret
 
             with patch.dict(cloud.__opts__, {'test': False}):
                 comt = ('Volume {0} was created'.format(name))
                 ret.update({'comment': comt, 'result': True,
                             'changes': {'old': None, 'new': name}})
-                self.assertDictEqual(cloud.volume_present(name), ret)
+                assert cloud.volume_present(name) == ret
 
     # 'volume_absent' function tests: 1
 
@@ -242,21 +242,21 @@ class CloudTestCase(TestCase, LoaderModuleMockMixin):
                               MagicMock(return_value=True)):
                 comt = ('Invalid characters in name.')
                 ret.update({'comment': comt})
-                self.assertDictEqual(cloud.volume_absent(name), ret)
+                assert cloud.volume_absent(name) == ret
 
             comt = ('Volume is absent.')
             ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(cloud.volume_absent(name), ret)
+            assert cloud.volume_absent(name) == ret
 
             with patch.dict(cloud.__opts__, {'test': True}):
                 comt = ('Volume {0} will be deleted.'.format(name))
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(cloud.volume_absent(name), ret)
+                assert cloud.volume_absent(name) == ret
 
             with patch.dict(cloud.__opts__, {'test': False}):
                 comt = ('Volume {0} failed to delete.'.format(name))
                 ret.update({'comment': comt, 'result': False})
-                self.assertDictEqual(cloud.volume_absent(name), ret)
+                assert cloud.volume_absent(name) == ret
 
     # 'volume_attached' function tests: 1
 
@@ -284,24 +284,24 @@ class CloudTestCase(TestCase, LoaderModuleMockMixin):
                               MagicMock(side_effect=[True, False, True])):
                 comt = ('Invalid characters in name.')
                 ret.update({'comment': comt})
-                self.assertDictEqual(cloud.volume_attached(name, server_name),
-                                     ret)
+                assert cloud.volume_attached(name, server_name) == \
+                                     ret
 
                 ret.update({'name': server_name})
-                self.assertDictEqual(cloud.volume_attached(name, server_name),
-                                     ret)
+                assert cloud.volume_attached(name, server_name) == \
+                                     ret
 
             comt = ('Volume {0} is already attached: True'.format(disk_name))
             ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(cloud.volume_attached(name, server_name), ret)
+            assert cloud.volume_attached(name, server_name) == ret
 
             comt = ('Volume {0} does not exist'.format(name))
             ret.update({'comment': comt, 'result': False})
-            self.assertDictEqual(cloud.volume_attached(name, server_name), ret)
+            assert cloud.volume_attached(name, server_name) == ret
 
             comt = ('Server {0} does not exist'.format(server_name))
             ret.update({'comment': comt, 'result': False})
-            self.assertDictEqual(cloud.volume_attached(name, server_name), ret)
+            assert cloud.volume_attached(name, server_name) == ret
 
             mock = MagicMock(return_value=True)
             with patch.dict(cloud.__salt__, {'cloud.action': mock,
@@ -309,9 +309,9 @@ class CloudTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.dict(cloud.__opts__, {'test': True}):
                     comt = ('Volume {0} will be will be attached.'.format(name))
                     ret.update({'comment': comt, 'result': None})
-                    self.assertDictEqual(cloud.volume_attached(name,
-                                                               server_name),
-                                         ret)
+                    assert cloud.volume_attached(name,
+                                                               server_name) == \
+                                         ret
 
                 with patch.dict(cloud.__opts__, {'test': False}):
                     comt = ('Volume {0} was created'.format(name))
@@ -319,9 +319,9 @@ class CloudTestCase(TestCase, LoaderModuleMockMixin):
                                 'changes': {'new': True,
                                             'old': {'name': disk_name,
                                                     'attachments': False}}})
-                    self.assertDictEqual(cloud.volume_attached(name,
-                                                               server_name),
-                                         ret)
+                    assert cloud.volume_attached(name,
+                                                               server_name) == \
+                                         ret
 
     # 'volume_detached' function tests: 1
 
@@ -349,24 +349,24 @@ class CloudTestCase(TestCase, LoaderModuleMockMixin):
                               MagicMock(side_effect=[True, False, True])):
                 comt = ('Invalid characters in name.')
                 ret.update({'comment': comt})
-                self.assertDictEqual(cloud.volume_detached(name, server_name),
-                                     ret)
+                assert cloud.volume_detached(name, server_name) == \
+                                     ret
 
                 ret.update({'name': server_name})
-                self.assertDictEqual(cloud.volume_detached(name, server_name),
-                                     ret)
+                assert cloud.volume_detached(name, server_name) == \
+                                     ret
 
             comt = ('Volume {0} is not currently attached to anything.'.format(disk_name))
             ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(cloud.volume_detached(name, server_name), ret)
+            assert cloud.volume_detached(name, server_name) == ret
 
             comt = ('Volume {0} does not exist'.format(name))
             ret.update({'comment': comt})
-            self.assertDictEqual(cloud.volume_detached(name, server_name), ret)
+            assert cloud.volume_detached(name, server_name) == ret
 
             comt = ('Server {0} does not exist'.format(server_name))
             ret.update({'comment': comt})
-            self.assertDictEqual(cloud.volume_detached(name, server_name), ret)
+            assert cloud.volume_detached(name, server_name) == ret
 
             mock = MagicMock(return_value=True)
             with patch.dict(cloud.__salt__, {'cloud.action': mock,
@@ -374,9 +374,9 @@ class CloudTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.dict(cloud.__opts__, {'test': True}):
                     comt = ('Volume {0} will be will be detached.'.format(name))
                     ret.update({'comment': comt, 'result': None})
-                    self.assertDictEqual(cloud.volume_detached(name,
-                                                               server_name),
-                                         ret)
+                    assert cloud.volume_detached(name,
+                                                               server_name) == \
+                                         ret
 
                 with patch.dict(cloud.__opts__, {'test': False}):
                     comt = ('Volume {0} was created'.format(name))
@@ -384,6 +384,6 @@ class CloudTestCase(TestCase, LoaderModuleMockMixin):
                                 'changes': {'new': True,
                                             'old': {'name': disk_name,
                                                     'attachments': True}}})
-                    self.assertDictEqual(cloud.volume_detached(name,
-                                                               server_name),
-                                         ret)
+                    assert cloud.volume_detached(name,
+                                                               server_name) == \
+                                         ret

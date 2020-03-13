@@ -48,14 +48,14 @@ class MysqlQueryTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(mysql_query.__salt__, {'mysql.db_exists': mock_f}):
             with patch.object(mysql_query, '_get_mysql_error', mock_str):
                 ret.update({'comment': 'salt', 'result': False})
-                self.assertDictEqual(mysql_query.run(name, database, query),
-                                     ret)
+                assert mysql_query.run(name, database, query) == \
+                                     ret
 
             with patch.object(mysql_query, '_get_mysql_error', mock_none):
                 comt = ('Database {0} is not present'.format(name))
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(mysql_query.run(name, database, query),
-                                     ret)
+                assert mysql_query.run(name, database, query) == \
+                                     ret
 
         with patch.dict(mysql_query.__salt__, {'mysql.db_exists': mock_t,
                                                'grains.ls': mock_lst,
@@ -63,58 +63,58 @@ class MysqlQueryTestCase(TestCase, LoaderModuleMockMixin):
                                                'mysql.query': mock_str}):
             comt = ('No execution needed. Grain grain already set')
             ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(mysql_query.run(name, database, query,
+            assert mysql_query.run(name, database, query,
                                                  output='grain', grain='grain',
-                                                 overwrite=False), ret)
+                                                 overwrite=False) == ret
 
             with patch.dict(mysql_query.__opts__, {'test': True}):
                 comt = ('Query would execute, storing result in grain: grain')
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(mysql_query.run(name, database, query,
+                assert mysql_query.run(name, database, query,
                                                      output='grain',
-                                                     grain='grain'), ret)
+                                                     grain='grain') == ret
 
                 comt = ('Query would execute, storing result'
                         ' in grain: grain:salt')
                 ret.update({'comment': comt})
-                self.assertDictEqual(mysql_query.run(name, database, query,
+                assert mysql_query.run(name, database, query,
                                                      output='grain',
                                                      grain='grain',
-                                                     key='salt'), ret)
+                                                     key='salt') == ret
 
                 comt = ('Query would execute, storing result in file: salt')
                 ret.update({'comment': comt})
-                self.assertDictEqual(mysql_query.run(name, database, query,
+                assert mysql_query.run(name, database, query,
                                                      output='salt',
-                                                     grain='grain'), ret)
+                                                     grain='grain') == ret
 
                 comt = ('Query would execute, not storing result')
                 ret.update({'comment': comt})
-                self.assertDictEqual(mysql_query.run(name, database, query),
-                                     ret)
+                assert mysql_query.run(name, database, query) == \
+                                     ret
 
             comt = ('No execution needed. Grain grain:salt already set')
             ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(mysql_query.run(name, database, query,
+            assert mysql_query.run(name, database, query,
                                                  output='grain', grain='grain',
-                                                 key='salt', overwrite=False),
-                                 ret)
+                                                 key='salt', overwrite=False) == \
+                                 ret
 
             comt = ("Error: output type 'grain' needs the grain parameter\n")
             ret.update({'comment': comt, 'result': False})
-            self.assertDictEqual(mysql_query.run(name, database, query,
-                                                 output='grain'), ret)
+            assert mysql_query.run(name, database, query,
+                                                 output='grain') == ret
 
             with patch.object(os.path, 'isfile', mock_t):
                 comt = ('No execution needed. File salt already set')
                 ret.update({'comment': comt, 'result': True})
-                self.assertDictEqual(mysql_query.run(name, database, query,
+                assert mysql_query.run(name, database, query,
                                                      output='salt',
                                                      grain='grain',
-                                                     overwrite=False), ret)
+                                                     overwrite=False) == ret
 
             with patch.dict(mysql_query.__opts__, {'test': False}):
                 ret.update({'comment': 'salt',
                             'changes': {'query': 'Executed'}})
-                self.assertDictEqual(mysql_query.run(name, database, query),
-                                     ret)
+                assert mysql_query.run(name, database, query) == \
+                                     ret

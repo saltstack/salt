@@ -47,38 +47,38 @@ class LvsServiceTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(lvs_service.__opts__, {'test': True}):
                 comt = ('LVS Service lvsrs is present')
                 ret.update({'comment': comt})
-                self.assertDictEqual(lvs_service.present(name), ret)
+                assert lvs_service.present(name) == ret
 
                 comt = ('LVS Service lvsrs is present but some '
                         'options should update')
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(lvs_service.present(name), ret)
+                assert lvs_service.present(name) == ret
 
             with patch.dict(lvs_service.__opts__, {'test': False}):
                 comt = ('LVS Service lvsrs has been updated')
                 ret.update({'comment': comt, 'result': True,
                             'changes': {'lvsrs': 'Update'}})
-                self.assertDictEqual(lvs_service.present(name), ret)
+                assert lvs_service.present(name) == ret
 
                 comt = ('LVS Service lvsrs update failed')
                 ret.update({'comment': comt, 'result': False, 'changes': {}})
-                self.assertDictEqual(lvs_service.present(name), ret)
+                assert lvs_service.present(name) == ret
 
             with patch.dict(lvs_service.__opts__, {'test': True}):
                 comt = ('LVS Service lvsrs is not present and needs'
                         ' to be created')
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(lvs_service.present(name), ret)
+                assert lvs_service.present(name) == ret
 
             with patch.dict(lvs_service.__opts__, {'test': False}):
                 comt = ('LVS Service lvsrs has been created')
                 ret.update({'comment': comt, 'result': True,
                             'changes': {'lvsrs': 'Present'}})
-                self.assertDictEqual(lvs_service.present(name), ret)
+                assert lvs_service.present(name) == ret
 
                 comt = ('LVS Service lvsrs create failed(False)')
                 ret.update({'comment': comt, 'result': False, 'changes': {}})
-                self.assertDictEqual(lvs_service.present(name), ret)
+                assert lvs_service.present(name) == ret
 
     # 'absent' function tests: 1
 
@@ -101,18 +101,18 @@ class LvsServiceTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(lvs_service.__opts__, {'test': True}):
                 comt = ('LVS Service lvsrs is present and needs to be removed')
                 ret.update({'comment': comt})
-                self.assertDictEqual(lvs_service.absent(name), ret)
+                assert lvs_service.absent(name) == ret
 
             with patch.dict(lvs_service.__opts__, {'test': False}):
                 comt = ('LVS Service lvsrs has been removed')
                 ret.update({'comment': comt, 'result': True,
                             'changes': {'lvsrs': 'Absent'}})
-                self.assertDictEqual(lvs_service.absent(name), ret)
+                assert lvs_service.absent(name) == ret
 
                 comt = ('LVS Service lvsrs removed failed(False)')
                 ret.update({'comment': comt, 'result': False, 'changes': {}})
-                self.assertDictEqual(lvs_service.absent(name), ret)
+                assert lvs_service.absent(name) == ret
 
             comt = ('LVS Service lvsrs is not present, so it cannot be removed')
             ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(lvs_service.absent(name), ret)
+            assert lvs_service.absent(name) == ret

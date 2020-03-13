@@ -54,14 +54,14 @@ class PkgTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(pkg.__opts__, {'test': False}):
 
                 ret = pkg.uptodate('dummy', test=True)
-                self.assertTrue(ret['result'])
-                self.assertDictEqual(ret['changes'], self.pkgs)
+                assert ret['result']
+                assert ret['changes'] == self.pkgs
 
             # Run state with test=true
             with patch.dict(pkg.__opts__, {'test': True}):
                 ret = pkg.uptodate('dummy', test=True)
-                self.assertIsNone(ret['result'])
-                self.assertDictEqual(ret['changes'], self.pkgs)
+                assert ret['result'] is None
+                assert ret['changes'] == self.pkgs
 
     def test_uptodate_with_pkgs_with_changes(self):
         '''
@@ -87,14 +87,14 @@ class PkgTestCase(TestCase, LoaderModuleMockMixin):
             # Run state with test=false
             with patch.dict(pkg.__opts__, {'test': False}):
                 ret = pkg.uptodate('dummy', test=True, pkgs=[pkgname for pkgname in six.iterkeys(self.pkgs)])
-                self.assertTrue(ret['result'])
-                self.assertDictEqual(ret['changes'], pkgs)
+                assert ret['result']
+                assert ret['changes'] == pkgs
 
             # Run state with test=true
             with patch.dict(pkg.__opts__, {'test': True}):
                 ret = pkg.uptodate('dummy', test=True, pkgs=[pkgname for pkgname in six.iterkeys(self.pkgs)])
-                self.assertIsNone(ret['result'])
-                self.assertDictEqual(ret['changes'], pkgs)
+                assert ret['result'] is None
+                assert ret['changes'] == pkgs
 
     def test_uptodate_no_changes(self):
         '''
@@ -111,14 +111,14 @@ class PkgTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(pkg.__opts__, {'test': False}):
 
                 ret = pkg.uptodate('dummy', test=True)
-                self.assertTrue(ret['result'])
-                self.assertDictEqual(ret['changes'], {})
+                assert ret['result']
+                assert ret['changes'] == {}
 
             # Run state with test=true
             with patch.dict(pkg.__opts__, {'test': True}):
                 ret = pkg.uptodate('dummy', test=True)
-                self.assertTrue(ret['result'])
-                self.assertDictEqual(ret['changes'], {})
+                assert ret['result']
+                assert ret['changes'] == {}
 
     def test_uptodate_with_pkgs_no_changes(self):
         '''
@@ -133,14 +133,14 @@ class PkgTestCase(TestCase, LoaderModuleMockMixin):
             # Run state with test=false
             with patch.dict(pkg.__opts__, {'test': False}):
                 ret = pkg.uptodate('dummy', test=True, pkgs=[pkgname for pkgname in six.iterkeys(self.pkgs)])
-                self.assertTrue(ret['result'])
-                self.assertDictEqual(ret['changes'], {})
+                assert ret['result']
+                assert ret['changes'] == {}
 
             # Run state with test=true
             with patch.dict(pkg.__opts__, {'test': True}):
                 ret = pkg.uptodate('dummy', test=True, pkgs=[pkgname for pkgname in six.iterkeys(self.pkgs)])
-                self.assertTrue(ret['result'])
-                self.assertDictEqual(ret['changes'], {})
+                assert ret['result']
+                assert ret['changes'] == {}
 
     def test_uptodate_with_failed_changes(self):
         '''
@@ -166,14 +166,14 @@ class PkgTestCase(TestCase, LoaderModuleMockMixin):
             # Run state with test=false
             with patch.dict(pkg.__opts__, {'test': False}):
                 ret = pkg.uptodate('dummy', test=True, pkgs=[pkgname for pkgname in six.iterkeys(self.pkgs)])
-                self.assertFalse(ret['result'])
-                self.assertDictEqual(ret['changes'], {})
+                assert not ret['result']
+                assert ret['changes'] == {}
 
             # Run state with test=true
             with patch.dict(pkg.__opts__, {'test': True}):
                 ret = pkg.uptodate('dummy', test=True, pkgs=[pkgname for pkgname in six.iterkeys(self.pkgs)])
-                self.assertIsNone(ret['result'])
-                self.assertDictEqual(ret['changes'], pkgs)
+                assert ret['result'] is None
+                assert ret['changes'] == pkgs
 
     def test_parse_version_string(self):
         test_parameters = [
@@ -188,13 +188,11 @@ class PkgTestCase(TestCase, LoaderModuleMockMixin):
         ]
         for version_string, expected_version_conditions in test_parameters:
             version_conditions = pkg._parse_version_string(version_string)
-            self.assertEqual(len(expected_version_conditions),
-                             len(version_conditions))
+            assert len(expected_version_conditions) == \
+                             len(version_conditions)
             for expected_version_condition, version_condition in zip(expected_version_conditions, version_conditions):
-                self.assertEqual(
-                    expected_version_condition[0], version_condition[0])
-                self.assertEqual(
-                    expected_version_condition[1], version_condition[1])
+                assert expected_version_condition[0] == version_condition[0]
+                assert expected_version_condition[1] == version_condition[1]
 
     def test_fulfills_version_string(self):
         test_parameters = [
@@ -216,7 +214,7 @@ class PkgTestCase(TestCase, LoaderModuleMockMixin):
         ]
         for version_string, installed_versions, expected_result in test_parameters:
             msg = "version_string: {}, installed_versions: {}, expected_result: {}".format(version_string, installed_versions, expected_result)
-            self.assertEqual(expected_result, pkg._fulfills_version_string(installed_versions, version_string), msg)
+            assert expected_result == pkg._fulfills_version_string(installed_versions, version_string), msg
 
     def test_fulfills_version_spec(self):
         test_parameters = [
@@ -232,4 +230,4 @@ class PkgTestCase(TestCase, LoaderModuleMockMixin):
         ]
         for installed_versions, operator, version, expected_result in test_parameters:
             msg = "installed_versions: {}, operator: {}, version: {}, expected_result: {}".format(installed_versions, operator, version, expected_result)
-            self.assertEqual(expected_result, pkg._fulfills_version_spec(installed_versions, operator, version), msg)
+            assert expected_result == pkg._fulfills_version_spec(installed_versions, operator, version), msg

@@ -17,6 +17,7 @@ from tests.unit.utils.scheduler.base import SchedulerTestsBase
 # Import Salt Libs
 import salt.config
 from salt.utils.schedule import Schedule
+import pytest
 
 # pylint: disable=import-error,unused-import
 try:
@@ -42,18 +43,18 @@ class ScheduleTestCase(SchedulerTestsBase):
         Tests ensuring the job exists and deleting it
         '''
         self.schedule.opts.update({'schedule': {'foo': 'bar'}, 'pillar': {}})
-        self.assertIn('foo', self.schedule.opts['schedule'])
+        assert 'foo' in self.schedule.opts['schedule']
         self.schedule.delete_job('foo')
-        self.assertNotIn('foo', self.schedule.opts['schedule'])
+        assert 'foo' not in self.schedule.opts['schedule']
 
     def test_delete_job_in_pillar(self):
         '''
         Tests ignoring deletion job from pillar
         '''
         self.schedule.opts.update({'pillar': {'schedule': {'foo': 'bar'}}, 'schedule': {}})
-        self.assertIn('foo', self.schedule.opts['pillar']['schedule'])
+        assert 'foo' in self.schedule.opts['pillar']['schedule']
         self.schedule.delete_job('foo')
-        self.assertIn('foo', self.schedule.opts['pillar']['schedule'])
+        assert 'foo' in self.schedule.opts['pillar']['schedule']
 
     def test_delete_job_intervals(self):
         '''
@@ -62,7 +63,7 @@ class ScheduleTestCase(SchedulerTestsBase):
         self.schedule.opts.update({'pillar': {}, 'schedule': {}})
         self.schedule.intervals = {'foo': 'bar'}
         self.schedule.delete_job('foo')
-        self.assertNotIn('foo', self.schedule.intervals)
+        assert 'foo' not in self.schedule.intervals
 
     def test_delete_job_prefix(self):
         '''
@@ -74,7 +75,7 @@ class ScheduleTestCase(SchedulerTestsBase):
         del ret['schedule']['foobar']
         del ret['schedule']['foobaz']
         self.schedule.delete_job_prefix('fooba')
-        self.assertEqual(self.schedule.opts, ret)
+        assert self.schedule.opts == ret
 
     def test_delete_job_prefix_in_pillar(self):
         '''
@@ -84,7 +85,7 @@ class ScheduleTestCase(SchedulerTestsBase):
                                    'schedule': {}})
         ret = copy.deepcopy(self.schedule.opts)
         self.schedule.delete_job_prefix('fooba')
-        self.assertEqual(self.schedule.opts, ret)
+        assert self.schedule.opts == ret
 
     # add_job tests
 
@@ -93,14 +94,14 @@ class ScheduleTestCase(SchedulerTestsBase):
         Tests if data is a dictionary
         '''
         data = 'foo'
-        self.assertRaises(ValueError, Schedule.add_job, self.schedule, data)
+        pytest.raises(ValueError, Schedule.add_job, self.schedule, data)
 
     def test_add_job_multiple_jobs(self):
         '''
         Tests if more than one job is scheduled at a time
         '''
         data = {'key1': 'value1', 'key2': 'value2'}
-        self.assertRaises(ValueError, Schedule.add_job, self.schedule, data)
+        pytest.raises(ValueError, Schedule.add_job, self.schedule, data)
 
     def test_add_job(self):
         '''
@@ -114,7 +115,7 @@ class ScheduleTestCase(SchedulerTestsBase):
         self.schedule.opts.update({'schedule': {'hello': {'world': 'peace', 'enabled': True}},
                                    'pillar': {}})
         Schedule.add_job(self.schedule, data)
-        self.assertEqual(self.schedule.opts, ret)
+        assert self.schedule.opts == ret
 
     # enable_job tests
 
@@ -124,7 +125,7 @@ class ScheduleTestCase(SchedulerTestsBase):
         '''
         self.schedule.opts.update({'schedule': {'name': {'enabled': 'foo'}}})
         Schedule.enable_job(self.schedule, 'name')
-        self.assertTrue(self.schedule.opts['schedule']['name']['enabled'])
+        assert self.schedule.opts['schedule']['name']['enabled']
 
     def test_enable_job_pillar(self):
         '''
@@ -132,7 +133,7 @@ class ScheduleTestCase(SchedulerTestsBase):
         '''
         self.schedule.opts.update({'pillar': {'schedule': {'name': {'enabled': False}}}})
         Schedule.enable_job(self.schedule, 'name', persist=False)
-        self.assertFalse(self.schedule.opts['pillar']['schedule']['name']['enabled'])
+        assert not self.schedule.opts['pillar']['schedule']['name']['enabled']
 
     # disable_job tests
 
@@ -142,7 +143,7 @@ class ScheduleTestCase(SchedulerTestsBase):
         '''
         self.schedule.opts.update({'schedule': {'name': {'enabled': 'foo'}}, 'pillar': {}})
         Schedule.disable_job(self.schedule, 'name')
-        self.assertFalse(self.schedule.opts['schedule']['name']['enabled'])
+        assert not self.schedule.opts['schedule']['name']['enabled']
 
     def test_disable_job_pillar(self):
         '''
@@ -150,7 +151,7 @@ class ScheduleTestCase(SchedulerTestsBase):
         '''
         self.schedule.opts.update({'pillar': {'schedule': {'name': {'enabled': True}}}, 'schedule': {}})
         Schedule.disable_job(self.schedule, 'name', persist=False)
-        self.assertTrue(self.schedule.opts['pillar']['schedule']['name']['enabled'])
+        assert self.schedule.opts['pillar']['schedule']['name']['enabled']
 
     # modify_job tests
 
@@ -163,7 +164,7 @@ class ScheduleTestCase(SchedulerTestsBase):
         ret = copy.deepcopy(self.schedule.opts)
         ret.update({'schedule': {'name': {'foo': 'bar'}}})
         Schedule.modify_job(self.schedule, 'name', schedule)
-        self.assertEqual(self.schedule.opts, ret)
+        assert self.schedule.opts == ret
 
     def test_modify_job_not_exists(self):
         '''
@@ -174,7 +175,7 @@ class ScheduleTestCase(SchedulerTestsBase):
         ret = copy.deepcopy(self.schedule.opts)
         ret.update({'schedule': {'name':  {'foo': 'bar'}}})
         Schedule.modify_job(self.schedule, 'name', schedule)
-        self.assertEqual(self.schedule.opts, ret)
+        assert self.schedule.opts == ret
 
     def test_modify_job_pillar(self):
         '''
@@ -184,7 +185,7 @@ class ScheduleTestCase(SchedulerTestsBase):
         self.schedule.opts.update({'schedule': {}, 'pillar': {'schedule': {'name': 'baz'}}})
         ret = copy.deepcopy(self.schedule.opts)
         Schedule.modify_job(self.schedule, 'name', schedule, persist=False)
-        self.assertEqual(self.schedule.opts, ret)
+        assert self.schedule.opts == ret
 
     maxDiff = None
 
@@ -197,7 +198,7 @@ class ScheduleTestCase(SchedulerTestsBase):
         with patch('salt.utils.schedule.Schedule.persist', MagicMock(return_value=None)) as persist_mock:
             self.schedule.opts.update({'schedule': {'enabled': 'foo'}, 'pillar': {}})
             Schedule.enable_schedule(self.schedule)
-            self.assertTrue(self.schedule.opts['schedule']['enabled'])
+            assert self.schedule.opts['schedule']['enabled']
 
         persist_mock.assert_called()
 
@@ -210,7 +211,7 @@ class ScheduleTestCase(SchedulerTestsBase):
         with patch('salt.utils.schedule.Schedule.persist', MagicMock(return_value=None)) as persist_mock:
             self.schedule.opts.update({'schedule': {'enabled': 'foo'}, 'pillar': {}})
             Schedule.disable_schedule(self.schedule)
-            self.assertFalse(self.schedule.opts['schedule']['enabled'])
+            assert not self.schedule.opts['schedule']['enabled']
 
         persist_mock.assert_called()
 
@@ -226,7 +227,7 @@ class ScheduleTestCase(SchedulerTestsBase):
         ret.update({'schedule': {'foo': 'bar', 'hello': 'world'}})
         self.schedule.opts.update({'schedule': {'hello': 'world'}})
         Schedule.reload(self.schedule, saved)
-        self.assertEqual(self.schedule.opts, ret)
+        assert self.schedule.opts == ret
 
     def test_reload_update_schedule_no_key(self):
         '''
@@ -238,7 +239,7 @@ class ScheduleTestCase(SchedulerTestsBase):
         ret.update({'schedule': {'foo': 'bar', 'hello': 'world'}})
         self.schedule.opts.update({'schedule': {'hello': 'world'}})
         Schedule.reload(self.schedule, saved)
-        self.assertEqual(self.schedule.opts, ret)
+        assert self.schedule.opts == ret
 
     def test_reload_no_schedule_in_opts(self):
         '''
@@ -250,7 +251,7 @@ class ScheduleTestCase(SchedulerTestsBase):
         ret['schedule'] = {'foo': 'bar'}
         self.schedule.opts.pop('schedule', None)
         Schedule.reload(self.schedule, saved)
-        self.assertEqual(self.schedule.opts, ret)
+        assert self.schedule.opts == ret
 
     def test_reload_schedule_in_saved_but_not_opts(self):
         '''
@@ -262,7 +263,7 @@ class ScheduleTestCase(SchedulerTestsBase):
         ret['schedule'] = {'foo': 'bar'}
         self.schedule.opts.pop('schedule', None)
         Schedule.reload(self.schedule, saved)
-        self.assertEqual(self.schedule.opts, ret)
+        assert self.schedule.opts == ret
 
     # eval tests
 
@@ -271,14 +272,14 @@ class ScheduleTestCase(SchedulerTestsBase):
         Tests eval if the schedule is not a dictionary
         '''
         self.schedule.opts.update({'schedule': '', 'pillar': {'schedule': {}}})
-        self.assertRaises(ValueError, Schedule.eval, self.schedule)
+        pytest.raises(ValueError, Schedule.eval, self.schedule)
 
     def test_eval_schedule_is_not_dict_in_pillar(self):
         '''
         Tests eval if the schedule from pillar is not a dictionary
         '''
         self.schedule.opts.update({'schedule': {}, 'pillar': {'schedule': ''}})
-        self.assertRaises(ValueError, Schedule.eval, self.schedule)
+        pytest.raises(ValueError, Schedule.eval, self.schedule)
 
     def test_eval_schedule_time(self):
         '''
@@ -288,7 +289,7 @@ class ScheduleTestCase(SchedulerTestsBase):
         self.schedule.opts.update({'schedule': {'testjob': {'function': 'test.true', 'seconds': 60}}})
         now = datetime.datetime.now()
         self.schedule.eval()
-        self.assertTrue(self.schedule.opts['schedule']['testjob']['_next_fire_time'] > now)
+        assert self.schedule.opts['schedule']['testjob']['_next_fire_time'] > now
 
     def test_eval_schedule_time_eval(self):
         '''
@@ -299,7 +300,7 @@ class ScheduleTestCase(SchedulerTestsBase):
             {'schedule': {'testjob': {'function': 'test.true', 'seconds': 60, 'splay': 5}}})
         now = datetime.datetime.now()
         self.schedule.eval()
-        self.assertTrue(self.schedule.opts['schedule']['testjob']['_splay'] - now > datetime.timedelta(seconds=60))
+        assert self.schedule.opts['schedule']['testjob']['_splay'] - now > datetime.timedelta(seconds=60)
 
     @skipIf(not _CRON_SUPPORTED, 'croniter module not installed')
     def test_eval_schedule_cron(self):
@@ -310,7 +311,7 @@ class ScheduleTestCase(SchedulerTestsBase):
         self.schedule.opts.update({'schedule': {'testjob': {'function': 'test.true', 'cron': '* * * * *'}}})
         now = datetime.datetime.now()
         self.schedule.eval()
-        self.assertTrue(self.schedule.opts['schedule']['testjob']['_next_fire_time'] > now)
+        assert self.schedule.opts['schedule']['testjob']['_next_fire_time'] > now
 
     @skipIf(not _CRON_SUPPORTED, 'croniter module not installed')
     def test_eval_schedule_cron_splay(self):
@@ -321,7 +322,7 @@ class ScheduleTestCase(SchedulerTestsBase):
         self.schedule.opts.update(
             {'schedule': {'testjob': {'function': 'test.true', 'cron': '* * * * *', 'splay': 5}}})
         self.schedule.eval()
-        self.assertTrue(self.schedule.opts['schedule']['testjob']['_splay'] >
+        assert (self.schedule.opts['schedule']['testjob']['_splay'] >
                         self.schedule.opts['schedule']['testjob']['_next_fire_time'])
 
     def test_handle_func_schedule_minion_blackout(self):
@@ -361,4 +362,4 @@ class ScheduleTestCase(SchedulerTestsBase):
             with patch('salt.utils.process.daemonize'), \
                 patch('sys.platform', 'linux2'):
                 self.schedule.handle_func(False, 'test.ping', data)
-                self.assertTrue(log_mock.exception.called)
+                assert log_mock.exception.called

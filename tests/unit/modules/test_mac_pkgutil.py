@@ -45,4 +45,4 @@ class MacPkgutilTestCase(TestCase, LoaderModuleMockMixin):
                 mac_pkgutil.install(source, package_id)
 
         # Then
-        self.assertEqual(_install_from_path.called, 0)
+        assert _install_from_path.called == 0

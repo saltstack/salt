@@ -39,7 +39,7 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(nftables.__salt__, {'nftables.check_chain': mock}):
             ret.update({'comment': 'nftables salt chain is already'
                         ' exist in filter table for ipv4'})
-            self.assertDictEqual(nftables.chain_present('salt'), ret)
+            assert nftables.chain_present('salt') == ret
 
             mock = MagicMock(side_effect=[{'result': True, 'comment': ''},
                                           {'result': False, 'comment': ''}])
@@ -47,13 +47,13 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update({'changes': {'locale': 'salt'},
                             'comment': 'nftables salt chain in filter'
                             ' table create success for ipv4'})
-                self.assertDictEqual(nftables.chain_present('salt'), ret)
+                assert nftables.chain_present('salt') == ret
 
                 ret.update({'changes': {},
                             'comment': 'Failed to create salt chain'
                             ' in filter table:  for ipv4',
                             'result': False})
-                self.assertDictEqual(nftables.chain_present('salt'), ret)
+                assert nftables.chain_present('salt') == ret
 
     def test_chain_absent(self):
         '''
@@ -67,14 +67,14 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(nftables.__salt__, {'nftables.check_chain': mock}):
             ret.update({'comment': 'nftables salt chain is already absent'
                         ' in filter table for ipv4'})
-            self.assertDictEqual(nftables.chain_absent('salt'), ret)
+            assert nftables.chain_absent('salt') == ret
 
             mock = MagicMock(return_value='')
             with patch.dict(nftables.__salt__, {'nftables.flush': mock}):
                 ret.update({'result': False,
                             'comment': 'Failed to flush salt chain'
                             ' in filter table:  for ipv4'})
-                self.assertDictEqual(nftables.chain_absent('salt'), ret)
+                assert nftables.chain_absent('salt') == ret
 
     def test_append(self):
         '''
@@ -97,15 +97,15 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.dict(nftables.__salt__, {'nftables.check': mock}):
                     ret.update({'comment': 'nftables rule for salt'
                                 ' already set (a) for ipv4'})
-                    self.assertDictEqual(nftables.append('salt', table='',
-                                                         chain=''), ret)
+                    assert nftables.append('salt', table='',
+                                                         chain='') == ret
 
                     with patch.dict(nftables.__opts__, {'test': True}):
                         ret.update({'result': None,
                                     'comment': 'nftables rule for salt needs'
                                     ' to be set (a) for ipv4'})
-                        self.assertDictEqual(nftables.append('salt', table='',
-                                                             chain=''), ret)
+                        assert nftables.append('salt', table='',
+                                                             chain='') == ret
 
                     with patch.dict(nftables.__opts__, {'test': False}):
                         mock = MagicMock(side_effect=[{'result': True,
@@ -118,19 +118,19 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
                                         'comment': 'Set nftables rule for salt'
                                         ' to: a for ipv4',
                                         'result': True})
-                            self.assertDictEqual(nftables.append('salt',
+                            assert nftables.append('salt',
                                                                  table='',
-                                                                 chain=''),
-                                                 ret)
+                                                                 chain='') == \
+                                                 ret
 
                             ret.update({'changes': {},
                                         'comment': 'Failed to set nftables'
                                         ' rule for salt.\nAttempted rule was'
                                         ' a for ipv4.\n', 'result': False})
-                            self.assertDictEqual(nftables.append('salt',
+                            assert nftables.append('salt',
                                                                  table='',
-                                                                 chain=''),
-                                                 ret)
+                                                                 chain='') == \
+                                                 ret
 
     def test_insert(self):
         '''
@@ -153,15 +153,15 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.dict(nftables.__salt__, {'nftables.check': mock}):
                     ret.update({'comment': 'nftables rule for salt already'
                                 ' set for ipv4 (a)'})
-                    self.assertDictEqual(nftables.insert('salt', table='',
-                                                         chain=''), ret)
+                    assert nftables.insert('salt', table='',
+                                                         chain='') == ret
 
                     with patch.dict(nftables.__opts__, {'test': True}):
                         ret.update({'result': None,
                                     'comment': 'nftables rule for salt'
                                     ' needs to be set for ipv4 (a)'})
-                        self.assertDictEqual(nftables.insert('salt', table='',
-                                                             chain=''), ret)
+                        assert nftables.insert('salt', table='',
+                                                             chain='') == ret
 
                     with patch.dict(nftables.__opts__, {'test': False}):
                         mock = MagicMock(side_effect=[{'result': True,
@@ -174,21 +174,21 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
                                         'comment': 'Set nftables rule for'
                                         ' salt to: a for ipv4',
                                         'result': True})
-                            self.assertDictEqual(nftables.insert('salt',
+                            assert nftables.insert('salt',
                                                                  table='',
                                                                  chain='',
-                                                                 position=''),
-                                                 ret)
+                                                                 position='') == \
+                                                 ret
 
                             ret.update({'changes': {},
                                         'comment': 'Failed to set nftables'
                                         ' rule for salt.\nAttempted rule was'
                                         ' a', 'result': False})
-                            self.assertDictEqual(nftables.insert('salt',
+                            assert nftables.insert('salt',
                                                                  table='',
                                                                  chain='',
-                                                                 position=''),
-                                                 ret)
+                                                                 position='') == \
+                                                 ret
 
     def test_delete(self):
         '''
@@ -213,17 +213,17 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
                     ret.update({'comment': 'nftables rule for salt'
                                 ' already absent for ipv4 (a)',
                                 'result': True})
-                    self.assertDictEqual(nftables.delete('salt',
-                                                         table='', chain=''),
-                                         ret)
+                    assert nftables.delete('salt',
+                                                         table='', chain='') == \
+                                         ret
 
                     with patch.dict(nftables.__opts__, {'test': True}):
                         ret.update({'result': None,
                                     'comment': 'nftables rule for salt needs'
                                     ' to be deleted for ipv4 (a)'})
-                        self.assertDictEqual(nftables.delete('salt',
+                        assert nftables.delete('salt',
                                                              table='',
-                                                             chain=''), ret)
+                                                             chain='') == ret
 
                     with patch.dict(nftables.__opts__, {'test': False}):
                         mock = MagicMock(side_effect=[{'result': True,
@@ -236,22 +236,22 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
                                         'changes': {'locale': 'salt'},
                                         'comment': 'Delete nftables rule'
                                         ' for salt a'})
-                            self.assertDictEqual(nftables.delete('salt',
+                            assert nftables.delete('salt',
                                                                  table='',
                                                                  chain='',
-                                                                 position=''),
-                                                 ret)
+                                                                 position='') == \
+                                                 ret
 
                             ret.update({'result': False,
                                         'changes': {},
                                         'comment': 'Failed to delete nftables'
                                         ' rule for salt.\nAttempted rule was a'
                                         })
-                            self.assertDictEqual(nftables.delete('salt',
+                            assert nftables.delete('salt',
                                                                  table='',
                                                                  chain='',
-                                                                 position=''),
-                                                 ret)
+                                                                 position='') == \
+                                                 ret
 
     def test_flush(self):
         '''
@@ -271,9 +271,9 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update({'comment': 'Failed to flush table  in family'
                             ' ipv4, table does not exist.',
                             'result': False})
-                self.assertDictEqual(nftables.flush('salt',
-                                                    table='', chain=''),
-                                     ret)
+                assert nftables.flush('salt',
+                                                    table='', chain='') == \
+                                     ret
 
                 mock = MagicMock(side_effect=[{'result': False, 'comment': ''},
                                               {'result': True, 'comment': ''},
@@ -282,8 +282,8 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
                                 {'nftables.check_chain': mock}):
                     ret.update({'comment': 'Failed to flush chain  in table'
                                 '  in family ipv4, chain does not exist.'})
-                    self.assertDictEqual(nftables.flush('salt', table='',
-                                                        chain=''), ret)
+                    assert nftables.flush('salt', table='',
+                                                        chain='') == ret
 
                     mock = MagicMock(side_effect=[{'result': True,
                                                    'comment': ''},
@@ -295,12 +295,12 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
                                     'comment': 'Flush nftables rules in  table'
                                     '  chain ipv4 family',
                                     'result': True})
-                        self.assertDictEqual(nftables.flush('salt', table='',
-                                                            chain=''), ret)
+                        assert nftables.flush('salt', table='',
+                                                            chain='') == ret
 
                         ret.update({'changes': {},
                                     'comment': 'Failed to flush'
                                     ' nftables rules',
                                     'result': False})
-                        self.assertDictEqual(nftables.flush('salt', table='',
-                                                            chain=''), ret)
+                        assert nftables.flush('salt', table='',
+                                                            chain='') == ret

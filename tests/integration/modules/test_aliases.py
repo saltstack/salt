@@ -22,11 +22,11 @@ class AliasesTest(ModuleCase):
                 'aliases.set_target',
                 alias='fred',
                 target='bob')
-        self.assertTrue(set_ret)
+        assert set_ret
         tgt_ret = self.run_function(
                 'aliases.get_target',
                 alias='fred')
-        self.assertEqual(tgt_ret, 'bob')
+        assert tgt_ret == 'bob'
 
     def test_has_target(self):
         '''
@@ -36,12 +36,12 @@ class AliasesTest(ModuleCase):
                 'aliases.set_target',
                 alias='fred',
                 target='bob')
-        self.assertTrue(set_ret)
+        assert set_ret
         tgt_ret = self.run_function(
                 'aliases.has_target',
                 alias='fred',
                 target='bob')
-        self.assertTrue(tgt_ret)
+        assert tgt_ret
 
     def test_list_aliases(self):
         '''
@@ -51,11 +51,11 @@ class AliasesTest(ModuleCase):
                 'aliases.set_target',
                 alias='fred',
                 target='bob')
-        self.assertTrue(set_ret)
+        assert set_ret
         tgt_ret = self.run_function(
                 'aliases.list_aliases')
-        self.assertIsInstance(tgt_ret, dict)
-        self.assertIn('fred', tgt_ret)
+        assert isinstance(tgt_ret, dict)
+        assert 'fred' in tgt_ret
 
     def test_rm_alias(self):
         '''
@@ -65,11 +65,11 @@ class AliasesTest(ModuleCase):
                 'aliases.set_target',
                 alias='frank',
                 target='greg')
-        self.assertTrue(set_ret)
+        assert set_ret
         self.run_function(
             'aliases.rm_alias',
             alias='frank')
         tgt_ret = self.run_function(
                 'aliases.list_aliases')
-        self.assertIsInstance(tgt_ret, dict)
-        self.assertNotIn('alias=frank', tgt_ret)
+        assert isinstance(tgt_ret, dict)
+        assert 'alias=frank' not in tgt_ret

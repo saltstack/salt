@@ -42,4 +42,4 @@ class EselectTestCase(TestCase, LoaderModuleMockMixin):
             comt = ('Target \'{0}\' is already set on \'{1}\' module.'
                     .format(target, name))
             ret.update({'comment': comt})
-            self.assertDictEqual(eselect.set_(name, target), ret)
+            assert eselect.set_(name, target) == ret

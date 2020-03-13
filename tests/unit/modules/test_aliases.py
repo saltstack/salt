@@ -14,6 +14,7 @@ from salt.exceptions import SaltInvocationError
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 from tests.support.mock import MagicMock, patch
+import pytest
 
 
 class AliasesTestCase(TestCase, LoaderModuleMockMixin):
@@ -35,7 +36,7 @@ class AliasesTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.modules.aliases.__parse_aliases',
                    MagicMock(return_value=self.mock_alias)):
             ret = {'foo': 'bar@example.com'}
-            self.assertEqual(aliases.list_aliases(), ret)
+            assert aliases.list_aliases() == ret
 
     def test_list_aliases_mult(self):
         '''
@@ -45,7 +46,7 @@ class AliasesTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value=self.mock_alias_mult)):
             ret = {'foo': 'bar@example.com',
                    'hello': 'world@earth.com, earth@world.com'}
-            self.assertEqual(aliases.list_aliases(), ret)
+            assert aliases.list_aliases() == ret
 
     def test_get_target(self):
         '''
@@ -54,7 +55,7 @@ class AliasesTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.modules.aliases.__parse_aliases',
                    MagicMock(return_value=self.mock_alias)):
             ret = 'bar@example.com'
-            self.assertEqual(aliases.get_target('foo'), ret)
+            assert aliases.get_target('foo') == ret
 
     def test_get_target_mult(self):
         '''
@@ -63,7 +64,7 @@ class AliasesTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.modules.aliases.__parse_aliases',
                    MagicMock(return_value=self.mock_alias_mult)):
             ret = 'world@earth.com, earth@world.com'
-            self.assertEqual(aliases.get_target('hello'), ret)
+            assert aliases.get_target('hello') == ret
 
     def test_get_target_no_alias(self):
         '''
@@ -71,7 +72,7 @@ class AliasesTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.aliases.__parse_aliases',
                    MagicMock(return_value=self.mock_alias)):
-            self.assertEqual(aliases.get_target('pizza'), '')
+            assert aliases.get_target('pizza') == ''
 
     def test_has_target(self):
         '''
@@ -80,7 +81,7 @@ class AliasesTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.modules.aliases.__parse_aliases',
                    MagicMock(return_value=self.mock_alias)):
             ret = aliases.has_target('foo', 'bar@example.com')
-            self.assertTrue(ret)
+            assert ret
 
     def test_has_target_no_alias(self):
         '''
@@ -89,13 +90,14 @@ class AliasesTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.modules.aliases.__parse_aliases',
                    MagicMock(return_value=self.mock_alias)):
             ret = aliases.has_target('', 'bar@example.com')
-            self.assertFalse(ret)
+            assert not ret
 
     def test_has_target_no_target(self):
         '''
         Tests return of known alias and empty target
         '''
-        self.assertRaises(SaltInvocationError, aliases.has_target, 'foo', '')
+        with pytest.raises(SaltInvocationError):
+            aliases.has_target('foo', '')
 
     def test_has_target_mult(self):
         '''
@@ -105,7 +107,7 @@ class AliasesTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value=self.mock_alias_mult)):
             ret = aliases.has_target('hello',
                                      'world@earth.com, earth@world.com')
-            self.assertTrue(ret)
+            assert ret
 
     def test_has_target_mult_differs(self):
         '''
@@ -115,7 +117,7 @@ class AliasesTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value=self.mock_alias_mult)):
             ret = aliases.has_target('hello',
                                      'earth@world.com, world@earth.com')
-            self.assertFalse(ret)
+            assert not ret
 
     def test_has_target_list_mult(self):
         '''
@@ -125,7 +127,7 @@ class AliasesTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value=self.mock_alias_mult)):
             ret = aliases.has_target('hello', ['world@earth.com',
                                                'earth@world.com'])
-            self.assertTrue(ret)
+            assert ret
 
     def test_has_target_list_mult_differs(self):
         '''
@@ -135,7 +137,7 @@ class AliasesTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value=self.mock_alias_mult)):
             ret = aliases.has_target('hello', ['world@earth.com',
                                                'mars@space.com'])
-            self.assertFalse(ret)
+            assert not ret
 
     def test_set_target_equal(self):
         '''
@@ -145,19 +147,21 @@ class AliasesTestCase(TestCase, LoaderModuleMockMixin):
             alias = 'foo'
             target = 'bar@example.com'
             ret = aliases.set_target(alias, target)
-            self.assertTrue(ret)
+            assert ret
 
     def test_set_target_empty_alias(self):
         '''
         Tests return of empty alias
         '''
-        self.assertRaises(SaltInvocationError, aliases.set_target, '', 'foo')
+        with pytest.raises(SaltInvocationError):
+            aliases.set_target('', 'foo')
 
     def test_set_target_empty_target(self):
         '''
         Tests return of known alias and empty target
         '''
-        self.assertRaises(SaltInvocationError, aliases.set_target, 'foo', '')
+        with pytest.raises(SaltInvocationError):
+            aliases.set_target('foo', '')
 
     def test_rm_alias_absent(self):
         '''
@@ -165,4 +169,4 @@ class AliasesTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.aliases.get_target', MagicMock(return_value='')):
             ret = aliases.rm_alias('foo')
-            self.assertTrue(ret)
+            assert ret

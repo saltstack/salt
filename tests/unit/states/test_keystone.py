@@ -46,8 +46,8 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(keystone.__salt__, {'keystone.tenant_get': mock_lst}):
             comt = ('Tenant / project "{0}" does not exist'.format(tenant))
             ret.update({'comment': comt})
-            self.assertDictEqual(keystone.user_present(name, password, email,
-                                                       tenant), ret)
+            assert keystone.user_present(name, password, email,
+                                                       tenant) == ret
 
         mock_dict = MagicMock(side_effect=[{name: {'email': 'a@a.com'}},
                                            {name: {'email': email,
@@ -70,38 +70,38 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
                             'changes': {'Email': 'Will be updated',
                                         'Enabled': 'Will be True',
                                         'Password': 'Will be updated'}})
-                self.assertDictEqual(keystone.user_present(name, password,
-                                                           email), ret)
+                assert keystone.user_present(name, password,
+                                                           email) == ret
 
                 ret.update({'comment': comt, 'result': None,
                             'changes': {'Enabled': 'Will be True',
                                         'Password': 'Will be updated'}})
-                self.assertDictEqual(keystone.user_present(name, password,
-                                                           email), ret)
+                assert keystone.user_present(name, password,
+                                                           email) == ret
 
                 ret.update({'comment': comt, 'result': None,
                             'changes': {'Tenant': 'Will be added to "demo" tenant',
                                         'Password': 'Will be updated'}})
-                self.assertDictEqual(keystone.user_present(name, password,
-                                                           email, tenant), ret)
+                assert keystone.user_present(name, password,
+                                                           email, tenant) == ret
 
                 ret.update({'comment': comt, 'result': None,
                             'changes': {'Password': 'Will be updated'}})
-                self.assertDictEqual(keystone.user_present(name, password,
-                                                           email), ret)
+                assert keystone.user_present(name, password,
+                                                           email) == ret
 
                 comt = ('Keystone user "nova" will be added')
                 ret.update({'comment': comt, 'result': None,
                             'changes': {'User': 'Will be created'}})
-                self.assertDictEqual(keystone.user_present(name, password,
-                                                           email), ret)
+                assert keystone.user_present(name, password,
+                                                           email) == ret
 
             with patch.dict(keystone.__opts__, {'test': False}):
                 comt = ('Keystone user {0} has been added'.format(name))
                 ret.update({'comment': comt, 'result': True,
                             'changes': {'User': 'Created'}})
-                self.assertDictEqual(keystone.user_present(name, password,
-                                                           email), ret)
+                assert keystone.user_present(name, password,
+                                                           email) == ret
 
     # 'user_absent' function tests: 1
 
@@ -118,12 +118,12 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
         mock_lst = MagicMock(side_effect=[['Error'], []])
         with patch.dict(keystone.__salt__, {'keystone.user_get': mock_lst}):
-            self.assertDictEqual(keystone.user_absent(name), ret)
+            assert keystone.user_absent(name) == ret
 
             with patch.dict(keystone.__opts__, {'test': True}):
                 comt = 'User "{0}" will be deleted'.format(name)
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(keystone.user_absent(name), ret)
+                assert keystone.user_absent(name) == ret
 
     # 'tenant_present' function tests: 1
 
@@ -151,24 +151,24 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
                 comt = ('Tenant / project "{0}" will be updated'.format(name))
                 ret.update({'comment': comt, 'result': None,
                             'changes': {'Description': 'Will be updated'}})
-                self.assertDictEqual(keystone.tenant_present(name), ret)
+                assert keystone.tenant_present(name) == ret
 
                 comt = ('Tenant / project "{0}" will be updated'.format(name))
                 ret.update({'comment': comt, 'result': None,
                             'changes': {'Enabled': 'Will be True'}})
-                self.assertDictEqual(keystone.tenant_present(name,
-                                                             description), ret)
+                assert keystone.tenant_present(name,
+                                                             description) == ret
 
                 comt = ('Tenant / project "{0}" will be added'.format(name))
                 ret.update({'comment': comt, 'result': None,
                             'changes': {'Tenant': 'Will be created'}})
-                self.assertDictEqual(keystone.tenant_present(name), ret)
+                assert keystone.tenant_present(name) == ret
 
             with patch.dict(keystone.__opts__, {'test': False}):
                 comt = ('Tenant / project "{0}" has been added'.format(name))
                 ret.update({'comment': comt, 'result': True,
                             'changes': {'Tenant': 'Created'}})
-                self.assertDictEqual(keystone.tenant_present(name), ret)
+                assert keystone.tenant_present(name) == ret
 
     # 'tenant_absent' function tests: 1
 
@@ -185,12 +185,12 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
         mock_lst = MagicMock(side_effect=[['Error'], []])
         with patch.dict(keystone.__salt__, {'keystone.tenant_get': mock_lst}):
-            self.assertDictEqual(keystone.tenant_absent(name), ret)
+            assert keystone.tenant_absent(name) == ret
 
             with patch.dict(keystone.__opts__, {'test': True}):
                 comt = 'Tenant / project "{0}" will be deleted'.format(name)
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(keystone.tenant_absent(name), ret)
+                assert keystone.tenant_absent(name) == ret
 
     # 'role_present' function tests: 1
 
@@ -207,12 +207,12 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
         mock_lst = MagicMock(side_effect=[[], ['Error']])
         with patch.dict(keystone.__salt__, {'keystone.role_get': mock_lst}):
-            self.assertDictEqual(keystone.role_present(name), ret)
+            assert keystone.role_present(name) == ret
 
             with patch.dict(keystone.__opts__, {'test': True}):
                 comt = ('Role "{0}" will be added'.format(name))
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(keystone.role_present(name), ret)
+                assert keystone.role_present(name) == ret
 
     # 'role_absent' function tests: 1
 
@@ -229,12 +229,12 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
         mock_lst = MagicMock(side_effect=[['Error'], []])
         with patch.dict(keystone.__salt__, {'keystone.role_get': mock_lst}):
-            self.assertDictEqual(keystone.role_absent(name), ret)
+            assert keystone.role_absent(name) == ret
 
             with patch.dict(keystone.__opts__, {'test': True}):
                 comt = 'Role "{0}" will be deleted'.format(name)
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(keystone.role_absent(name), ret)
+                assert keystone.role_absent(name) == ret
 
     # 'service_present' function tests: 1
 
@@ -252,15 +252,15 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
         mock_lst = MagicMock(side_effect=[[], ['Error']])
         with patch.dict(keystone.__salt__, {'keystone.service_get': mock_lst}):
-            self.assertDictEqual(keystone.service_present(name, service_type),
-                                 ret)
+            assert keystone.service_present(name, service_type) == \
+                                 ret
 
             with patch.dict(keystone.__opts__, {'test': True}):
                 comt = ('Service "{0}" will be added'.format(name))
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(keystone.service_present(name,
-                                                              service_type),
-                                     ret)
+                assert keystone.service_present(name,
+                                                              service_type) == \
+                                     ret
 
     # 'service_absent' function tests: 1
 
@@ -277,12 +277,12 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
         mock_lst = MagicMock(side_effect=[['Error'], []])
         with patch.dict(keystone.__salt__, {'keystone.service_get': mock_lst}):
-            self.assertDictEqual(keystone.service_absent(name), ret)
+            assert keystone.service_absent(name) == ret
 
             with patch.dict(keystone.__opts__, {'test': True}):
                 comt = 'Service "{0}" will be deleted'.format(name)
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(keystone.service_absent(name), ret)
+                assert keystone.service_absent(name) == ret
 
     # 'endpoint_present' function tests: 1
 
@@ -312,21 +312,21 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
             comt = ('Endpoint for service "{0}" already exists'.format(name))
             ret.update({'comment': comt, 'result': True, 'changes': {}})
-            self.assertDictEqual(keystone.endpoint_present(name), ret)
+            assert keystone.endpoint_present(name) == ret
 
             with patch.dict(keystone.__opts__, {'test': True}):
                 comt = ('Endpoint for service "{0}" will be added'.format(name))
                 ret.update({'comment': comt, 'result': None, 'changes': {'Endpoint': 'Will be created'}})
-                self.assertDictEqual(keystone.endpoint_present(name), ret)
+                assert keystone.endpoint_present(name) == ret
 
                 comt = ('Endpoint for service "{0}" already exists'.format(name))
                 ret.update({'comment': comt, 'result': True, 'changes': {}})
-                self.assertDictEqual(keystone.endpoint_present(name), ret)
+                assert keystone.endpoint_present(name) == ret
 
             with patch.dict(keystone.__opts__, {'test': False}):
                 comt = ('Endpoint for service "{0}" has been added'.format(name))
                 ret.update({'comment': comt, 'result': True, 'changes': True})
-                self.assertDictEqual(keystone.endpoint_present(name), ret)
+                assert keystone.endpoint_present(name) == ret
 
     # 'endpoint_absent' function tests: 1
 
@@ -345,10 +345,10 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
         mock_lst = MagicMock(side_effect=[[], ['Error']])
         with patch.dict(keystone.__salt__, {'keystone.endpoint_get': mock_lst}):
-            self.assertDictEqual(keystone.endpoint_absent(name, region), ret)
+            assert keystone.endpoint_absent(name, region) == ret
 
             with patch.dict(keystone.__opts__, {'test': True}):
                 comt = ('Endpoint for service "{0}" will be deleted'
                         .format(name))
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(keystone.endpoint_absent(name, region), ret)
+                assert keystone.endpoint_absent(name, region) == ret

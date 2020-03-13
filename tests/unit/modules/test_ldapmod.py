@@ -57,7 +57,7 @@ class LdapmodTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(ldapmod, '_connect',
                               MagicMock(return_value=MockConnect())):
                 with patch.object(time, 'time', MagicMock(return_value=8e-04)):
-                    self.assertDictEqual(ldapmod.search(filter='myhost'),
+                    assert ldapmod.search(filter='myhost') == \
                                          {'count': 4, 'results': 'SALT',
                                           'time': {'raw': '0.0',
-                                                   'human': '0.0ms'}})
+                                                   'human': '0.0ms'}}

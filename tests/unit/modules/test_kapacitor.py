@@ -41,14 +41,14 @@ class KapacitorTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.utils.http.query', return_value=query_ret) as http_mock:
             task = kapacitor.get_task('taskname')
         http_mock.assert_called_once_with('http://localhost:9092/kapacitor/v1/tasks/taskname?skip-format=true', status=True)
-        self.assertEqual('test', task['script'])
+        assert 'test' == task['script']
 
     def test_get_task_not_found(self):
         query_ret = {'body': '{"Error":"unknown task taskname"}', 'status': 404}
         with patch('salt.utils.http.query', return_value=query_ret) as http_mock:
             task = kapacitor.get_task('taskname')
         http_mock.assert_called_once_with('http://localhost:9092/kapacitor/v1/tasks/taskname?skip-format=true', status=True)
-        self.assertEqual(None, task)
+        assert task is None
 
     def test_define_task(self):
         cmd_mock = Mock(return_value={'retcode': 0})

@@ -66,8 +66,8 @@ class CMDTest(ModuleCase, SaltReturnAssertsMixin):
             hide_output=True)
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertEqual(ret['changes']['stdout'], '')
-        self.assertEqual(ret['changes']['stderr'], '')
+        assert ret['changes']['stdout'] == ''
+        assert ret['changes']['stderr'] == ''
 
 
 class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
@@ -122,7 +122,7 @@ class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
                 '''.format(self.test_tmp_path, self.test_file))))
 
         ret = self.run_function('state.sls', [self.state_name])
-        self.assertTrue(ret[state_key]['result'])
+        assert ret[state_key]['result']
 
     def test_run_unless_multiple_cmds(self):
         '''
@@ -137,8 +137,8 @@ class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
         # command in the state. If the comment reads "unless condition is true", or similar,
         # then the unless state run bailed out after the first unless command succeeded,
         # which is the bug we're regression testing for.
-        self.assertEqual(sls['cmd_|-cmd_run_unless_multiple_|-echo "hello"_|-run']['comment'],
-                         'Command "echo "hello"" run')
+        assert sls['cmd_|-cmd_run_unless_multiple_|-echo "hello"_|-run']['comment'] == \
+                         'Command "echo "hello"" run'
 
     def test_run_creates_exists(self):
         '''
@@ -153,8 +153,8 @@ class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
                 '''.format(self.test_file))))
 
         ret = self.run_function('state.sls', [self.state_name])
-        self.assertTrue(ret[state_key]['result'])
-        self.assertEqual(len(ret[state_key]['changes']), 0)
+        assert ret[state_key]['result']
+        assert len(ret[state_key]['changes']) == 0
 
     def test_run_creates_new(self):
         '''
@@ -170,8 +170,8 @@ class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
                 '''.format(self.test_file))))
 
         ret = self.run_function('state.sls', [self.state_name])
-        self.assertTrue(ret[state_key]['result'])
-        self.assertEqual(len(ret[state_key]['changes']), 4)
+        assert ret[state_key]['result']
+        assert len(ret[state_key]['changes']) == 4
 
     def test_run_redirect(self):
         '''
@@ -185,7 +185,7 @@ class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
                 '''.format(self.test_file))))
 
         ret = self.run_function('state.sls', [self.state_name])
-        self.assertTrue(ret[state_key]['result'])
+        assert ret[state_key]['result']
 
 
 class CMDRunWatchTest(ModuleCase, SaltReturnAssertsMixin):
@@ -226,5 +226,5 @@ class CMDRunWatchTest(ModuleCase, SaltReturnAssertsMixin):
                 ''')))
 
         ret = self.run_function('state.sls', [self.state_name])
-        self.assertTrue(ret[saltines_key]['result'])
-        self.assertTrue(ret[biscuits_key]['result'])
+        assert ret[saltines_key]['result']
+        assert ret[biscuits_key]['result']

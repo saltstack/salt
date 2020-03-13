@@ -46,8 +46,8 @@ class EngineSqsEventTestCase(TestCase, LoaderModuleMockMixin):
                 q_name = 'mysqs'
                 mock_fire = MagicMock(return_value=True)
                 sqs_events._process_queue(q, q_name, mock_fire)
-                self.assertTrue(mock_logging.warning.called)
-                self.assertFalse(self.mock_sqs.queue.Queue().get_messages.called)
+                assert mock_logging.warning.called
+                assert not self.mock_sqs.queue.Queue().get_messages.called
 
     def test_minion_message_fires(self):
         '''
@@ -61,8 +61,8 @@ class EngineSqsEventTestCase(TestCase, LoaderModuleMockMixin):
         mock_fire = MagicMock(return_value=True)
         with patch.dict(sqs_events.__salt__, {'event.send': mock_event}):
             sqs_events._process_queue(q, q_name, mock_fire)
-            self.assertTrue(self.mock_sqs.queue.Queue().get_messages.called)
-            self.assertTrue(all(x.delete.called for x in msgs))
+            assert self.mock_sqs.queue.Queue().get_messages.called
+            assert all(x.delete.called for x in msgs)
 
     def test_master_message_fires(self):
         '''
@@ -74,5 +74,5 @@ class EngineSqsEventTestCase(TestCase, LoaderModuleMockMixin):
         q_name = 'mysqs'
         mock_fire = MagicMock(return_value=True)
         sqs_events._process_queue(q, q_name, mock_fire)
-        self.assertTrue(self.mock_sqs.queue.Queue().get_messages.called, len(msgs))
-        self.assertTrue(mock_fire.called, len(msgs))
+        assert self.mock_sqs.queue.Queue().get_messages.called, len(msgs)
+        assert mock_fire.called, len(msgs)

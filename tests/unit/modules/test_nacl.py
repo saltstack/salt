@@ -45,8 +45,8 @@ class NaclTest(TestCase, LoaderModuleMockMixin):
     def setUp(self):
         # Generate the keys
         ret = nacl.keygen()
-        self.assertIn('pk', ret)
-        self.assertIn('sk', ret)
+        assert 'pk' in ret
+        assert 'sk' in ret
         self.pk = ret['pk']
         self.sk = ret['sk']
 
@@ -54,8 +54,8 @@ class NaclTest(TestCase, LoaderModuleMockMixin):
         '''
         Test keygen
         '''
-        self.assertEqual(len(self.pk), 44)
-        self.assertEqual(len(self.sk), 44)
+        assert len(self.pk) == 44
+        assert len(self.sk) == 44
 
     def test_enc_dec(self):
         '''
@@ -66,7 +66,7 @@ class NaclTest(TestCase, LoaderModuleMockMixin):
 
         # Decrypt with sk
         decrypted_data = nacl.dec(data=encrypted_data, sk=self.sk)
-        self.assertEqual(self.unencrypted_data, decrypted_data)
+        assert self.unencrypted_data == decrypted_data
 
     def test_sealedbox_enc_dec(self):
         '''
@@ -80,7 +80,7 @@ class NaclTest(TestCase, LoaderModuleMockMixin):
         decrypted_data = nacl.sealedbox_decrypt(
             data=encrypted_data, sk=self.sk)
 
-        self.assertEqual(self.unencrypted_data, decrypted_data)
+        assert self.unencrypted_data == decrypted_data
 
     def test_secretbox_enc_dec(self):
         '''
@@ -94,4 +94,4 @@ class NaclTest(TestCase, LoaderModuleMockMixin):
         decrypted_data = nacl.secretbox_decrypt(
             data=encrypted_data, sk=self.sk)
 
-        self.assertEqual(self.unencrypted_data, decrypted_data)
+        assert self.unencrypted_data == decrypted_data

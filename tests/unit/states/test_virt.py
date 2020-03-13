@@ -80,19 +80,19 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(virt.__salt__, {'pillar.ext': mock}):
                 comt = ('All keys are correct')
                 ret.update({'comment': comt})
-                self.assertDictEqual(virt.keys(name, basepath=self.pki_dir), ret)
+                assert virt.keys(name, basepath=self.pki_dir) == ret
 
                 with patch.dict(virt.__opts__, {'test': True}):
                     comt = ('Libvirt keys are set to be updated')
                     ret.update({'comment': comt, 'result': None})
-                    self.assertDictEqual(virt.keys(name, basepath=self.pki_dir), ret)
+                    assert virt.keys(name, basepath=self.pki_dir) == ret
 
                 with patch.dict(virt.__opts__, {'test': False}):
                     with patch.object(salt.utils.files, 'fopen', MagicMock(mock_open())):
                         comt = ('Updated libvirt certs and keys')
                         ret.update({'comment': comt, 'result': True,
                                     'changes': {'servercert': 'new'}})
-                        self.assertDictEqual(virt.keys(name, basepath=self.pki_dir), ret)
+                        assert virt.keys(name, basepath=self.pki_dir) == ret
 
     def test_keys_with_expiration_days(self):
         '''
@@ -111,25 +111,25 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(virt.__salt__, {'pillar.ext': mock}):
                 comt = ('All keys are correct')
                 ret.update({'comment': comt})
-                self.assertDictEqual(virt.keys(name,
+                assert virt.keys(name,
                                                basepath=self.pki_dir,
-                                               expiration_days=700), ret)
+                                               expiration_days=700) == ret
 
                 with patch.dict(virt.__opts__, {'test': True}):
                     comt = ('Libvirt keys are set to be updated')
                     ret.update({'comment': comt, 'result': None})
-                    self.assertDictEqual(virt.keys(name,
+                    assert virt.keys(name,
                                                    basepath=self.pki_dir,
-                                                   expiration_days=700), ret)
+                                                   expiration_days=700) == ret
 
                 with patch.dict(virt.__opts__, {'test': False}):
                     with patch.object(salt.utils.files, 'fopen', MagicMock(mock_open())):
                         comt = ('Updated libvirt certs and keys')
                         ret.update({'comment': comt, 'result': True,
                                     'changes': {'servercert': 'new'}})
-                        self.assertDictEqual(virt.keys(name,
+                        assert virt.keys(name,
                                                        basepath=self.pki_dir,
-                                                       expiration_days=700), ret)
+                                                       expiration_days=700) == ret
 
     def test_keys_with_state(self):
         '''
@@ -148,25 +148,25 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(virt.__salt__, {'pillar.ext': mock}):
                 comt = ('All keys are correct')
                 ret.update({'comment': comt})
-                self.assertDictEqual(virt.keys(name,
+                assert virt.keys(name,
                                                basepath=self.pki_dir,
-                                               st='California'), ret)
+                                               st='California') == ret
 
                 with patch.dict(virt.__opts__, {'test': True}):
                     comt = ('Libvirt keys are set to be updated')
                     ret.update({'comment': comt, 'result': None})
-                    self.assertDictEqual(virt.keys(name,
+                    assert virt.keys(name,
                                                    basepath=self.pki_dir,
-                                                   st='California'), ret)
+                                                   st='California') == ret
 
                 with patch.dict(virt.__opts__, {'test': False}):
                     with patch.object(salt.utils.files, 'fopen', MagicMock(mock_open())):
                         comt = ('Updated libvirt certs and keys')
                         ret.update({'comment': comt, 'result': True,
                                     'changes': {'servercert': 'new'}})
-                        self.assertDictEqual(virt.keys(name,
+                        assert virt.keys(name,
                                                        basepath=self.pki_dir,
-                                                       st='California'), ret)
+                                                       st='California') == ret
 
     def test_keys_with_all_options(self):
         '''
@@ -185,37 +185,37 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(virt.__salt__, {'pillar.ext': mock}):
                 comt = ('All keys are correct')
                 ret.update({'comment': comt})
-                self.assertDictEqual(virt.keys(name,
+                assert virt.keys(name,
                                                basepath=self.pki_dir,
                                                country='USA',
                                                st='California',
                                                locality='Los_Angeles',
                                                organization='SaltStack',
-                                               expiration_days=700), ret)
+                                               expiration_days=700) == ret
 
                 with patch.dict(virt.__opts__, {'test': True}):
                     comt = ('Libvirt keys are set to be updated')
                     ret.update({'comment': comt, 'result': None})
-                    self.assertDictEqual(virt.keys(name,
+                    assert virt.keys(name,
                                                    basepath=self.pki_dir,
                                                    country='USA',
                                                    st='California',
                                                    locality='Los_Angeles',
                                                    organization='SaltStack',
-                                                   expiration_days=700), ret)
+                                                   expiration_days=700) == ret
 
                 with patch.dict(virt.__opts__, {'test': False}):
                     with patch.object(salt.utils.files, 'fopen', MagicMock(mock_open())):
                         comt = ('Updated libvirt certs and keys')
                         ret.update({'comment': comt, 'result': True,
                                     'changes': {'servercert': 'new'}})
-                        self.assertDictEqual(virt.keys(name,
+                        assert virt.keys(name,
                                                        basepath=self.pki_dir,
                                                        country='USA',
                                                        st='California',
                                                        locality='Los_Angeles',
                                                        organization='SaltStack',
-                                                       expiration_days=700), ret)
+                                                       expiration_days=700) == ret
 
     def test_running(self):
         '''
@@ -231,7 +231,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                 }):
             ret.update({'changes': {'myvm': 'Domain started'},
                         'comment': 'Domain myvm started'})
-            self.assertDictEqual(virt.running('myvm'), ret)
+            assert virt.running('myvm') == ret
 
         init_mock = MagicMock(return_value=True)
         with patch.dict(virt.__salt__, {  # pylint: disable=no-member
@@ -241,10 +241,10 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                 }):
             ret.update({'changes': {'myvm': 'Domain defined and started'},
                         'comment': 'Domain myvm defined and started'})
-            self.assertDictEqual(virt.running('myvm',
+            assert virt.running('myvm',
                                               cpu=2,
                                               mem=2048,
-                                              image='/path/to/img.qcow2'), ret)
+                                              image='/path/to/img.qcow2') == ret
             init_mock.assert_called_with('myvm', cpu=2, mem=2048, image='/path/to/img.qcow2',
                                          os_type=None, arch=None, boot=None,
                                          disk=None, disks=None, nic=None, interfaces=None,
@@ -280,7 +280,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                          'source': 'admin'
                       }]
             graphics = {'type': 'spice', 'listen': {'type': 'address', 'address': '192.168.0.1'}}
-            self.assertDictEqual(virt.running('myvm',
+            assert virt.running('myvm',
                                               cpu=2,
                                               mem=2048,
                                               os_type='linux',
@@ -297,7 +297,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                                               priv_key='/path/to/key',
                                               connection='someconnection',
                                               username='libvirtuser',
-                                              password='supersecret'), ret)
+                                              password='supersecret') == ret
             init_mock.assert_called_with('myvm',
                                          cpu=2,
                                          mem=2048,
@@ -324,7 +324,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     'virt.start': MagicMock(side_effect=[self.mock_libvirt.libvirtError('libvirt error msg')])
                 }):
             ret.update({'changes': {}, 'result': False, 'comment': 'libvirt error msg'})
-            self.assertDictEqual(virt.running('myvm'), ret)
+            assert virt.running('myvm') == ret
 
         # Working update case when running
         with patch.dict(virt.__salt__, {  # pylint: disable=no-member
@@ -334,7 +334,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             ret.update({'changes': {'myvm': {'definition': True, 'cpu': True}},
                         'result': True,
                         'comment': 'Domain myvm updated, restart to fully apply the changes'})
-            self.assertDictEqual(virt.running('myvm', update=True, cpu=2), ret)
+            assert virt.running('myvm', update=True, cpu=2) == ret
 
         # Working update case when running with boot params
         boot = {
@@ -350,7 +350,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             ret.update({'changes': {'myvm': {'definition': True, 'cpu': True}},
                         'result': True,
                         'comment': 'Domain myvm updated, restart to fully apply the changes'})
-            self.assertDictEqual(virt.running('myvm', update=True, boot=boot), ret)
+            assert virt.running('myvm', update=True, boot=boot) == ret
 
         # Working update case when stopped
         with patch.dict(virt.__salt__, {  # pylint: disable=no-member
@@ -361,7 +361,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             ret.update({'changes': {'myvm': 'Domain updated and started'},
                         'result': True,
                         'comment': 'Domain myvm updated and started'})
-            self.assertDictEqual(virt.running('myvm', update=True, cpu=2), ret)
+            assert virt.running('myvm', update=True, cpu=2) == ret
 
         # Failed live update case
         with patch.dict(virt.__salt__, {  # pylint: disable=no-member
@@ -371,7 +371,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             ret.update({'changes': {'myvm': {'definition': True, 'cpu': False, 'errors': ['some error']}},
                         'result': True,
                         'comment': 'Domain myvm updated, but some live update(s) failed'})
-            self.assertDictEqual(virt.running('myvm', update=True, cpu=2), ret)
+            assert virt.running('myvm', update=True, cpu=2) == ret
 
         # Failed definition update case
         with patch.dict(virt.__salt__, {  # pylint: disable=no-member
@@ -381,7 +381,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             ret.update({'changes': {},
                         'result': False,
                         'comment': 'error message'})
-            self.assertDictEqual(virt.running('myvm', update=True, cpu=2), ret)
+            assert virt.running('myvm', update=True, cpu=2) == ret
 
     def test_stopped(self):
         '''
@@ -403,7 +403,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                             'stopped': [{'domain': 'myvm', 'shutdown': True}]
                         },
                         'comment': 'Machine has been shut down'})
-            self.assertDictEqual(virt.stopped('myvm'), ret)
+            assert virt.stopped('myvm') == ret
             shutdown_mock.assert_called_with('myvm', connection=None, username=None, password=None)
 
         # Normal case with user-provided connection parameters
@@ -412,10 +412,10 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     'virt.vm_state': MagicMock(return_value={'myvm': 'running'}),
                     'virt.shutdown': shutdown_mock,
                 }):
-            self.assertDictEqual(virt.stopped('myvm',
+            assert virt.stopped('myvm',
                                               connection='myconnection',
                                               username='user',
-                                              password='secret'), ret)
+                                              password='secret') == ret
             shutdown_mock.assert_called_with('myvm', connection='myconnection', username='user', password='secret')
 
         # Case where an error occurred during the shutdown
@@ -427,12 +427,12 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             ret.update({'changes': {'ignored': [{'domain': 'myvm', 'issue': 'Some error'}]},
                         'result': False,
                         'comment': 'No changes had happened'})
-            self.assertDictEqual(virt.stopped('myvm'), ret)
+            assert virt.stopped('myvm') == ret
 
         # Case there the domain doesn't exist
         with patch.dict(virt.__salt__, {'virt.list_domains': MagicMock(return_value=[])}):  # pylint: disable=no-member
             ret.update({'changes': {}, 'result': False, 'comment': 'No changes had happened'})
-            self.assertDictEqual(virt.stopped('myvm'), ret)
+            assert virt.stopped('myvm') == ret
 
         # Case where the domain is already stopped
         with patch.dict(virt.__salt__, {  # pylint: disable=no-member
@@ -442,7 +442,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             ret.update({'changes': {},
                         'result': True,
                         'comment': 'No changes had happened'})
-            self.assertDictEqual(virt.stopped('myvm'), ret)
+            assert virt.stopped('myvm') == ret
 
     def test_powered_off(self):
         '''
@@ -464,7 +464,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                             'unpowered': [{'domain': 'myvm', 'stop': True}]
                         },
                         'comment': 'Machine has been powered off'})
-            self.assertDictEqual(virt.powered_off('myvm'), ret)
+            assert virt.powered_off('myvm') == ret
             stop_mock.assert_called_with('myvm', connection=None, username=None, password=None)
 
         # Normal case with user-provided connection parameters
@@ -473,10 +473,10 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     'virt.vm_state': MagicMock(return_value={'myvm': 'running'}),
                     'virt.stop': stop_mock,
                 }):
-            self.assertDictEqual(virt.powered_off('myvm',
+            assert virt.powered_off('myvm',
                                                   connection='myconnection',
                                                   username='user',
-                                                  password='secret'), ret)
+                                                  password='secret') == ret
             stop_mock.assert_called_with('myvm', connection='myconnection', username='user', password='secret')
 
         # Case where an error occurred during the poweroff
@@ -488,12 +488,12 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             ret.update({'changes': {'ignored': [{'domain': 'myvm', 'issue': 'Some error'}]},
                         'result': False,
                         'comment': 'No changes had happened'})
-            self.assertDictEqual(virt.powered_off('myvm'), ret)
+            assert virt.powered_off('myvm') == ret
 
         # Case there the domain doesn't exist
         with patch.dict(virt.__salt__, {'virt.list_domains': MagicMock(return_value=[])}):  # pylint: disable=no-member
             ret.update({'changes': {}, 'result': False, 'comment': 'No changes had happened'})
-            self.assertDictEqual(virt.powered_off('myvm'), ret)
+            assert virt.powered_off('myvm') == ret
 
         # Case where the domain is already stopped
         with patch.dict(virt.__salt__, {  # pylint: disable=no-member
@@ -503,7 +503,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             ret.update({'changes': {},
                         'result': True,
                         'comment': 'No changes had happened'})
-            self.assertDictEqual(virt.powered_off('myvm'), ret)
+            assert virt.powered_off('myvm') == ret
 
     def test_snapshot(self):
         '''
@@ -522,18 +522,18 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                             'saved': [{'domain': 'myvm', 'snapshot': True}]
                         },
                         'comment': 'Snapshot has been taken'})
-            self.assertDictEqual(virt.snapshot('myvm'), ret)
+            assert virt.snapshot('myvm') == ret
             snapshot_mock.assert_called_with('myvm', suffix=None, connection=None, username=None, password=None)
 
         with patch.dict(virt.__salt__, {  # pylint: disable=no-member
                     'virt.list_domains': MagicMock(return_value=['myvm', 'vm1']),
                     'virt.snapshot': snapshot_mock,
                 }):
-            self.assertDictEqual(virt.snapshot('myvm',
+            assert virt.snapshot('myvm',
                                                suffix='snap',
                                                connection='myconnection',
                                                username='user',
-                                               password='secret'), ret)
+                                               password='secret') == ret
             snapshot_mock.assert_called_with('myvm',
                                              suffix='snap',
                                              connection='myconnection',
@@ -547,11 +547,11 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             ret.update({'changes': {'ignored': [{'domain': 'myvm', 'issue': 'Some error'}]},
                         'result': False,
                         'comment': 'No changes had happened'})
-            self.assertDictEqual(virt.snapshot('myvm'), ret)
+            assert virt.snapshot('myvm') == ret
 
         with patch.dict(virt.__salt__, {'virt.list_domains': MagicMock(return_value=[])}):  # pylint: disable=no-member
             ret.update({'changes': {}, 'result': False, 'comment': 'No changes had happened'})
-            self.assertDictEqual(virt.snapshot('myvm'), ret)
+            assert virt.snapshot('myvm') == ret
 
     def test_rebooted(self):
         '''
@@ -570,17 +570,17 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                             'rebooted': [{'domain': 'myvm', 'reboot': True}]
                         },
                         'comment': 'Machine has been rebooted'})
-            self.assertDictEqual(virt.rebooted('myvm'), ret)
+            assert virt.rebooted('myvm') == ret
             reboot_mock.assert_called_with('myvm', connection=None, username=None, password=None)
 
         with patch.dict(virt.__salt__, {  # pylint: disable=no-member
                     'virt.list_domains': MagicMock(return_value=['myvm', 'vm1']),
                     'virt.reboot': reboot_mock,
                 }):
-            self.assertDictEqual(virt.rebooted('myvm',
+            assert virt.rebooted('myvm',
                                                connection='myconnection',
                                                username='user',
-                                               password='secret'), ret)
+                                               password='secret') == ret
             reboot_mock.assert_called_with('myvm',
                                            connection='myconnection',
                                            username='user',
@@ -593,11 +593,11 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             ret.update({'changes': {'ignored': [{'domain': 'myvm', 'issue': 'Some error'}]},
                         'result': False,
                         'comment': 'No changes had happened'})
-            self.assertDictEqual(virt.rebooted('myvm'), ret)
+            assert virt.rebooted('myvm') == ret
 
         with patch.dict(virt.__salt__, {'virt.list_domains': MagicMock(return_value=[])}):  # pylint: disable=no-member
             ret.update({'changes': {}, 'result': False, 'comment': 'No changes had happened'})
-            self.assertDictEqual(virt.rebooted('myvm'), ret)
+            assert virt.rebooted('myvm') == ret
 
     def test_network_running(self):
         '''
@@ -611,7 +611,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                 }):
             ret.update({'changes': {'mynet': 'Network defined and started'},
                         'comment': 'Network mynet defined and started'})
-            self.assertDictEqual(virt.network_running('mynet',
+            assert virt.network_running('mynet',
                                                       'br2',
                                                       'bridge',
                                                       vport='openvswitch',
@@ -632,7 +632,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                                                       autostart=False,
                                                       connection='myconnection',
                                                       username='user',
-                                                      password='secret'), ret)
+                                                      password='secret') == ret
             define_mock.assert_called_with('mynet',
                                            'br2',
                                            'bridge',
@@ -662,7 +662,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     'virt.network_define': define_mock,
                 }):
             ret.update({'changes': {}, 'comment': 'Network mynet exists and is running'})
-            self.assertDictEqual(virt.network_running('mynet', 'br2', 'bridge'), ret)
+            assert virt.network_running('mynet', 'br2', 'bridge') == ret
 
         start_mock = MagicMock(return_value=True)
         with patch.dict(virt.__salt__, {  # pylint: disable=no-member
@@ -671,12 +671,12 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     'virt.network_define': define_mock,
                 }):
             ret.update({'changes': {'mynet': 'Network started'}, 'comment': 'Network mynet started'})
-            self.assertDictEqual(virt.network_running('mynet',
+            assert virt.network_running('mynet',
                                                       'br2',
                                                       'bridge',
                                                       connection='myconnection',
                                                       username='user',
-                                                      password='secret'), ret)
+                                                      password='secret') == ret
             start_mock.assert_called_with('mynet', connection='myconnection', username='user', password='secret')
 
         with patch.dict(virt.__salt__, {  # pylint: disable=no-member
@@ -684,7 +684,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     'virt.network_define': MagicMock(side_effect=self.mock_libvirt.libvirtError('Some error'))
                 }):
             ret.update({'changes': {}, 'comment': 'Some error', 'result': False})
-            self.assertDictEqual(virt.network_running('mynet', 'br2', 'bridge'), ret)
+            assert virt.network_running('mynet', 'br2', 'bridge') == ret
 
     def test_pool_running(self):
         '''
@@ -702,7 +702,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     }):
                 ret.update({'changes': {'mypool': 'Pool defined, started and marked for autostart'},
                             'comment': 'Pool mypool defined, started and marked for autostart'})
-                self.assertDictEqual(virt.pool_running('mypool',
+                assert virt.pool_running('mypool',
                                                        ptype='logical',
                                                        target='/dev/base',
                                                        permissions={'mode': '0770',
@@ -714,7 +714,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                                                        autostart=True,
                                                        connection='myconnection',
                                                        username='user',
-                                                       password='secret'), ret)
+                                                       password='secret') == ret
                 mocks['define'].assert_called_with('mypool',
                                                    ptype='logical',
                                                    target='/dev/base',
@@ -755,10 +755,10 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                         'virt.pool_update': MagicMock(return_value=False),
                     }):
                 ret.update({'changes': {}, 'comment': 'Pool mypool unchanged and is running'})
-                self.assertDictEqual(virt.pool_running('mypool',
+                assert virt.pool_running('mypool',
                                                        ptype='logical',
                                                        target='/dev/base',
-                                                       source={'devices': [{'path': '/dev/sda'}]}), ret)
+                                                       source={'devices': [{'path': '/dev/sda'}]}) == ret
 
             for mock in mocks:
                 mocks[mock].reset_mock()
@@ -769,10 +769,10 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                         'virt.pool_start': mocks['start']
                     }):
                 ret.update({'changes': {'mypool': 'Pool started'}, 'comment': 'Pool mypool started'})
-                self.assertDictEqual(virt.pool_running('mypool',
+                assert virt.pool_running('mypool',
                                                        ptype='logical',
                                                        target='/dev/base',
-                                                       source={'devices': [{'path': '/dev/sda'}]}), ret)
+                                                       source={'devices': [{'path': '/dev/sda'}]}) == ret
                 mocks['start'].assert_called_with('mypool', connection=None, username=None, password=None)
                 mocks['build'].assert_not_called()
 
@@ -781,10 +781,10 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                         'virt.pool_define': MagicMock(side_effect=self.mock_libvirt.libvirtError('Some error'))
                     }):
                 ret.update({'changes': {}, 'comment': 'Some error', 'result': False})
-                self.assertDictEqual(virt.pool_running('mypool',
+                assert virt.pool_running('mypool',
                                                        ptype='logical',
                                                        target='/dev/base',
-                                                       source={'devices': [{'path': '/dev/sda'}]}), ret)
+                                                       source={'devices': [{'path': '/dev/sda'}]}) == ret
 
             # Test case with update and autostart change on stopped pool
             for mock in mocks:
@@ -800,7 +800,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update({'changes': {'mypool': 'Pool updated, built, autostart flag changed and started'},
                             'comment': 'Pool mypool updated, built, autostart flag changed and started',
                             'result': True})
-                self.assertDictEqual(virt.pool_running('mypool',
+                assert virt.pool_running('mypool',
                                                        ptype='logical',
                                                        target='/dev/base',
                                                        autostart=False,
@@ -808,7 +808,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                                                                     'owner': 1000,
                                                                     'group': 100,
                                                                     'label': 'seclabel'},
-                                                       source={'devices': [{'path': '/dev/sda'}]}), ret)
+                                                       source={'devices': [{'path': '/dev/sda'}]}) == ret
                 mocks['start'].assert_called_with('mypool', connection=None, username=None, password=None)
                 mocks['build'].assert_called_with('mypool', connection=None, username=None, password=None)
                 mocks['autostart'].assert_called_with('mypool', state='off',
@@ -845,7 +845,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update({'changes': {'mypool': 'Pool updated, built and restarted'},
                             'comment': 'Pool mypool updated, built and restarted',
                             'result': True})
-                self.assertDictEqual(virt.pool_running('mypool',
+                assert virt.pool_running('mypool',
                                                        ptype='logical',
                                                        target='/dev/base',
                                                        autostart=False,
@@ -853,7 +853,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                                                                     'owner': 1000,
                                                                     'group': 100,
                                                                     'label': 'seclabel'},
-                                                       source={'devices': [{'path': '/dev/sda'}]}), ret)
+                                                       source={'devices': [{'path': '/dev/sda'}]}) == ret
                 mocks['stop'].assert_called_with('mypool', connection=None, username=None, password=None)
                 mocks['start'].assert_called_with('mypool', connection=None, username=None, password=None)
                 mocks['build'].assert_called_with('mypool', connection=None, username=None, password=None)
@@ -884,10 +884,10 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     }):
                 ret.update({'changes': {}, 'comment': 'Pool mypool unchanged and is running',
                             'result': True})
-                self.assertDictEqual(virt.pool_running('mypool',
+                assert virt.pool_running('mypool',
                                                        ptype='logical',
                                                        target='/dev/base',
-                                                       source={'devices': [{'path': '/dev/sda'}]}), ret)
+                                                       source={'devices': [{'path': '/dev/sda'}]}) == ret
 
             # test case with test=True and started
             for mock in mocks:
@@ -900,10 +900,10 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update({'changes': {'mypool': 'Pool started'},
                             'comment': 'Pool mypool started',
                             'result': None})
-                self.assertDictEqual(virt.pool_running('mypool',
+                assert virt.pool_running('mypool',
                                                        ptype='logical',
                                                        target='/dev/base',
-                                                       source={'devices': [{'path': '/dev/sda'}]}), ret)
+                                                       source={'devices': [{'path': '/dev/sda'}]}) == ret
 
     def test_pool_deleted(self):
         '''
@@ -927,11 +927,11 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             }
 
             with patch.dict(virt.__opts__, {'test': False}):
-                self.assertDictEqual(expected, virt.pool_deleted('test01'))
+                assert expected == virt.pool_deleted('test01')
 
             with patch.dict(virt.__opts__, {'test': True}):
                 expected['result'] = None
-                self.assertDictEqual(expected, virt.pool_deleted('test01'))
+                assert expected == virt.pool_deleted('test01')
 
         # purge=False test case
         with patch.dict(virt.__salt__, {
@@ -952,11 +952,11 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             }
 
             with patch.dict(virt.__opts__, {'test': False}):
-                self.assertDictEqual(expected, virt.pool_deleted('test01'))
+                assert expected == virt.pool_deleted('test01')
 
             with patch.dict(virt.__opts__, {'test': True}):
                 expected['result'] = None
-                self.assertDictEqual(expected, virt.pool_deleted('test01'))
+                assert expected == virt.pool_deleted('test01')
 
         # purge=True test case
 
@@ -982,11 +982,11 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             }
 
             with patch.dict(virt.__opts__, {'test': False}):
-                self.assertDictEqual(expected, virt.pool_deleted('test01', purge=True))
+                assert expected == virt.pool_deleted('test01', purge=True)
 
             with patch.dict(virt.__opts__, {'test': True}):
                 expected['result'] = None
-                self.assertDictEqual(expected, virt.pool_deleted('test01', purge=True))
+                assert expected == virt.pool_deleted('test01', purge=True)
 
         # Case of backend not unsupporting delete operations
         with patch.dict(virt.__salt__, {
@@ -1007,8 +1007,8 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             }
 
             with patch.dict(virt.__opts__, {'test': False}):
-                self.assertDictEqual(expected, virt.pool_deleted('test01', purge=True))
+                assert expected == virt.pool_deleted('test01', purge=True)
 
             with patch.dict(virt.__opts__, {'test': True}):
                 expected['result'] = None
-                self.assertDictEqual(expected, virt.pool_deleted('test01', purge=True))
+                assert expected == virt.pool_deleted('test01', purge=True)

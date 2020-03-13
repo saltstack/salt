@@ -42,4 +42,4 @@ class TelegramReturnerTestCase(TestCase, LoaderModuleMockMixin):
                 patch.dict('salt.returners.telegram_return.__salt__',
                     {'telegram.post_message': MagicMock(return_value=True)}
                 ):
-            self.assertTrue(telegram.returner(ret))
+            assert telegram.returner(ret)

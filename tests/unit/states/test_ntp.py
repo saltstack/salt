@@ -41,14 +41,14 @@ class NtpTestCase(TestCase, LoaderModuleMockMixin):
                                        'ntp.set_servers': mock_lst}):
             comt = ('NTP servers already configured as specified')
             ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(ntp.managed(name, []), ret)
+            assert ntp.managed(name, []) == ret
 
             with patch.dict(ntp.__opts__, {'test': True}):
                 comt = ('NTP servers will be updated to: coffee-script')
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(ntp.managed(name, [name]), ret)
+                assert ntp.managed(name, [name]) == ret
 
             with patch.dict(ntp.__opts__, {'test': False}):
                 comt = ('Failed to update NTP servers')
                 ret.update({'comment': comt, 'result': False})
-                self.assertDictEqual(ntp.managed(name, [name]), ret)
+                assert ntp.managed(name, [name]) == ret

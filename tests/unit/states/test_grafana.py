@@ -17,6 +17,7 @@ from tests.support.mock import (
 import salt.utils.json
 import salt.states.grafana as grafana
 from salt.exceptions import SaltInvocationError
+import pytest
 
 
 class GrafanaTestCase(TestCase, LoaderModuleMockMixin):
@@ -43,10 +44,12 @@ class GrafanaTestCase(TestCase, LoaderModuleMockMixin):
 
         comt1 = ('Dashboard myservice is set to be updated. The following rows '
                  'set to be updated: {0}'.format(['systemhealth']))
-        self.assertRaises(SaltInvocationError, grafana.dashboard_present, name,
+        with pytest.raises(SaltInvocationError):
+            grafana.dashboard_present(name,
                           profile=False)
 
-        self.assertRaises(SaltInvocationError, grafana.dashboard_present, name,
+        with pytest.raises(SaltInvocationError):
+            grafana.dashboard_present(name,
                           True, True)
 
         mock = MagicMock(side_effect=[{'hosts': True, 'index': False},
@@ -66,35 +69,35 @@ class GrafanaTestCase(TestCase, LoaderModuleMockMixin):
                                            'pillar.get': mock_t,
                                            'elasticsearch.get': mock_dict,
                                            'elasticsearch.index': mock_i}):
-            self.assertRaises(SaltInvocationError, grafana.dashboard_present,
-                              name)
+            with pytest.raises(SaltInvocationError):
+                grafana.dashboard_present(name)
 
             with patch.dict(grafana.__opts__, {'test': True}):
-                self.assertRaises(SaltInvocationError, grafana.dashboard_present,
-                                  name)
+                with pytest.raises(SaltInvocationError):
+                    grafana.dashboard_present(name)
 
                 comt = ('Dashboard {0} is set to be created.'.format(name))
                 ret.update({'comment': comt})
-                self.assertDictEqual(grafana.dashboard_present(name, True), ret)
+                assert grafana.dashboard_present(name, True) == ret
 
                 mock = MagicMock(return_value={'rows':
                                                [{'panels': 'b',
                                                  'title': 'systemhealth'}]})
                 with patch.object(salt.utils.json, 'loads', mock):
                     ret.update({'comment': comt1, 'result': None})
-                    self.assertDictEqual(grafana.dashboard_present(name, True,
-                                                                   rows=row),
-                                         ret)
+                    assert grafana.dashboard_present(name, True,
+                                                                   rows=row) == \
+                                         ret
 
             with patch.object(salt.utils.json, 'loads',
                               MagicMock(return_value={'rows': {}})):
-                self.assertRaises(SaltInvocationError,
-                                  grafana.dashboard_present, name,
+                with pytest.raises(SaltInvocationError):
+                    grafana.dashboard_present(name,
                                   rows_from_pillar=rows)
 
                 comt = ('Dashboard myservice is up to date')
                 ret.update({'comment': comt, 'result': True})
-                self.assertDictEqual(grafana.dashboard_present(name, True), ret)
+                assert grafana.dashboard_present(name, True) == ret
 
             mock = MagicMock(return_value={'rows': [{'panels': 'b',
                                                      'title': 'systemhealth'}]})
@@ -102,9 +105,9 @@ class GrafanaTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(salt.utils.json, 'loads', mock):
                     comt = ('Failed to update dashboard myservice.')
                     ret.update({'comment': comt, 'result': False})
-                    self.assertDictEqual(grafana.dashboard_present(name, True,
-                                                                   rows=row),
-                                         ret)
+                    assert grafana.dashboard_present(name, True,
+                                                                   rows=row) == \
+                                         ret
 
     # 'dashboard_absent' function tests: 1
 
@@ -125,14 +128,14 @@ class GrafanaTestCase(TestCase, LoaderModuleMockMixin):
         mock_f = MagicMock(side_effect=[True, False])
         with patch.dict(grafana.__salt__, {'config.option': mock,
                                            'elasticsearch.exists': mock_f}):
-            self.assertRaises(SaltInvocationError, grafana.dashboard_absent,
-                              name)
+            with pytest.raises(SaltInvocationError):
+                grafana.dashboard_absent(name)
 
             with patch.dict(grafana.__opts__, {'test': True}):
                 comt = ('Dashboard myservice is set to be removed.')
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(grafana.dashboard_absent(name), ret)
+                assert grafana.dashboard_absent(name) == ret
 
             comt = ('Dashboard myservice does not exist.')
             ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(grafana.dashboard_absent(name), ret)
+            assert grafana.dashboard_absent(name) == ret

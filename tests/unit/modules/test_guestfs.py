@@ -37,7 +37,7 @@ class GuestfsTestCase(TestCase, LoaderModuleMockMixin):
                 patch('os.makedirs', MagicMock()) as makedirs_mock, \
                 patch('os.listdir', MagicMock(return_value=False)), \
                 patch.dict(guestfs.__salt__, {'cmd.run': run_mock}):
-            self.assertTrue(guestfs.mount('/srv/images/fedora.qcow'))
+            assert guestfs.mount('/srv/images/fedora.qcow')
             run_mock.assert_called_once_with('guestmount -i -a /srv/images/fedora.qcow --rw /tmp/guest/fedora.qcow',
                                              python_shell=False)
             makedirs_mock.assert_called_once()
@@ -49,7 +49,7 @@ class GuestfsTestCase(TestCase, LoaderModuleMockMixin):
                 patch('os.makedirs', MagicMock()) as makedirs_mock, \
                 patch('os.listdir', MagicMock(return_value=False)), \
                 patch.dict(guestfs.__salt__, {'cmd.run': run_mock}):
-            self.assertTrue(guestfs.mount('/srv/images/fedora.qcow'))
+            assert guestfs.mount('/srv/images/fedora.qcow')
             run_mock.assert_called_once_with('guestmount -i -a /srv/images/fedora.qcow --rw /tmp/guest/fedora.qcow',
                                              python_shell=False)
             makedirs_mock.assert_not_called()
@@ -61,7 +61,7 @@ class GuestfsTestCase(TestCase, LoaderModuleMockMixin):
                 patch('os.makedirs', MagicMock()) as makedirs_mock, \
                 patch('os.listdir', MagicMock(side_effect=[True, False])), \
                 patch.dict(guestfs.__salt__, {'cmd.run': run_mock}):
-            self.assertTrue(guestfs.mount('/srv/images/fedora.qcow'))
+            assert guestfs.mount('/srv/images/fedora.qcow')
             run_mock.assert_called_once_with('guestmount -i -a /srv/images/fedora.qcow --rw /tmp/guest/fedora.qcowabc',
                                              python_shell=False)
             makedirs_mock.assert_called_once()

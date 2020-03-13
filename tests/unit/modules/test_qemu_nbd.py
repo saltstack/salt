@@ -38,8 +38,8 @@ class QemuNbdTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(qemu_nbd.__salt__, {'cmd.run': mock}):
             with patch.object(os.path, 'isfile',
                               MagicMock(return_value=False)):
-                self.assertEqual(qemu_nbd.connect('/tmp/image.raw'), '')
-                self.assertEqual(qemu_nbd.connect('/tmp/image.raw'), '')
+                assert qemu_nbd.connect('/tmp/image.raw') == ''
+                assert qemu_nbd.connect('/tmp/image.raw') == ''
 
         with patch.object(os.path, 'isfile', mock):
             with patch.object(glob, 'glob',
@@ -47,13 +47,13 @@ class QemuNbdTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.dict(qemu_nbd.__salt__,
                                 {'cmd.run': mock,
                                  'cmd.retcode': MagicMock(side_effect=[1, 0])}):
-                    self.assertEqual(qemu_nbd.connect('/tmp/image.raw'),
-                                     '/dev/nbd0')
+                    assert qemu_nbd.connect('/tmp/image.raw') == \
+                                     '/dev/nbd0'
 
                 with patch.dict(qemu_nbd.__salt__,
                                 {'cmd.run': mock,
                                  'cmd.retcode': MagicMock(return_value=False)}):
-                    self.assertEqual(qemu_nbd.connect('/tmp/image.raw'), '')
+                    assert qemu_nbd.connect('/tmp/image.raw') == ''
 
     # 'mount' function tests: 1
 
@@ -64,7 +64,7 @@ class QemuNbdTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=True)
         with patch.dict(qemu_nbd.__salt__, {'cmd.run': mock}):
-            self.assertDictEqual(qemu_nbd.mount('/dev/nbd0'), {})
+            assert qemu_nbd.mount('/dev/nbd0') == {}
 
     # 'init' function tests: 1
 
@@ -75,7 +75,7 @@ class QemuNbdTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=True)
         with patch.dict(qemu_nbd.__salt__, {'cmd.run': mock}):
-            self.assertEqual(qemu_nbd.init('/srv/image.qcow2'), '')
+            assert qemu_nbd.init('/srv/image.qcow2') == ''
 
         with patch.object(os.path, 'isfile', mock),\
                 patch.object(glob, 'glob', MagicMock(return_value=['/dev/nbd0'])),\
@@ -84,7 +84,7 @@ class QemuNbdTestCase(TestCase, LoaderModuleMockMixin):
                             'mount.mount': mock,
                             'cmd.retcode': MagicMock(side_effect=[1, 0])}):
             expected = {os.sep.join([tempfile.gettempdir(), 'nbd', 'nbd0', 'nbd0']): '/dev/nbd0'}
-            self.assertDictEqual(qemu_nbd.init('/srv/image.qcow2'), expected)
+            assert qemu_nbd.init('/srv/image.qcow2') == expected
 
     # 'clear' function tests: 1
 
@@ -97,7 +97,7 @@ class QemuNbdTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(qemu_nbd.__salt__,
                         {'cmd.run': mock_run,
                          'mount.umount': MagicMock(side_effect=[False, True])}):
-            self.assertDictEqual(qemu_nbd.clear({"/mnt/foo": "/dev/nbd0p1"}),
-                                 {'/mnt/foo': '/dev/nbd0p1'})
-            self.assertDictEqual(qemu_nbd.clear({"/mnt/foo": "/dev/nbd0p1"}),
-                                 {})
+            assert qemu_nbd.clear({"/mnt/foo": "/dev/nbd0p1"}) == \
+                                 {'/mnt/foo': '/dev/nbd0p1'}
+            assert qemu_nbd.clear({"/mnt/foo": "/dev/nbd0p1"}) == \
+                                 {}

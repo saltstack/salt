@@ -68,11 +68,11 @@ class ShadowModuleTest(ModuleCase):
 
         # Correct Functionality
         ret = self.run_function('shadow.info', [self._test_user])
-        self.assertEqual(ret['name'], self._test_user)
+        assert ret['name'] == self._test_user
 
         # User does not exist
         ret = self.run_function('shadow.info', [self._no_user])
-        self.assertEqual(ret['name'], '')
+        assert ret['name'] == ''
 
     @pytest.mark.destructive_test
     def test_del_password(self):
@@ -83,12 +83,11 @@ class ShadowModuleTest(ModuleCase):
         self.run_function('user.add', [self._test_user])
 
         # Correct Functionality
-        self.assertTrue(self.run_function('shadow.del_password', [self._test_user]))
-        self.assertEqual(
-            self.run_function('shadow.info', [self._test_user])['passwd'], '')
+        assert self.run_function('shadow.del_password', [self._test_user])
+        assert self.run_function('shadow.info', [self._test_user])['passwd'] == ''
 
         # User does not exist
-        self.assertFalse(self.run_function('shadow.del_password', [self._no_user]))
+        assert not self.run_function('shadow.del_password', [self._no_user])
 
     @pytest.mark.destructive_test
     def test_set_password(self):
@@ -99,10 +98,10 @@ class ShadowModuleTest(ModuleCase):
         self.run_function('user.add', [self._test_user])
 
         # Correct Functionality
-        self.assertTrue(self.run_function('shadow.set_password', [self._test_user, self._password]))
+        assert self.run_function('shadow.set_password', [self._test_user, self._password])
 
         # User does not exist
-        self.assertFalse(self.run_function('shadow.set_password', [self._no_user, self._password]))
+        assert not self.run_function('shadow.set_password', [self._no_user, self._password])
 
     @pytest.mark.destructive_test
     def test_set_inactdays(self):
@@ -113,10 +112,10 @@ class ShadowModuleTest(ModuleCase):
         self.run_function('user.add', [self._test_user])
 
         # Correct Functionality
-        self.assertTrue(self.run_function('shadow.set_inactdays', [self._test_user, 12]))
+        assert self.run_function('shadow.set_inactdays', [self._test_user, 12])
 
         # User does not exist (set_inactdays return None is user does not exist)
-        self.assertFalse(self.run_function('shadow.set_inactdays', [self._no_user, 12]))
+        assert not self.run_function('shadow.set_inactdays', [self._no_user, 12])
 
     @pytest.mark.destructive_test
     def test_set_maxdays(self):
@@ -127,10 +126,10 @@ class ShadowModuleTest(ModuleCase):
         self.run_function('user.add', [self._test_user])
 
         # Correct Functionality
-        self.assertTrue(self.run_function('shadow.set_maxdays', [self._test_user, 12]))
+        assert self.run_function('shadow.set_maxdays', [self._test_user, 12])
 
         # User does not exist (set_inactdays return None is user does not exist)
-        self.assertFalse(self.run_function('shadow.set_maxdays', [self._no_user, 12]))
+        assert not self.run_function('shadow.set_maxdays', [self._no_user, 12])
 
     @pytest.mark.destructive_test
     def test_set_mindays(self):
@@ -141,10 +140,10 @@ class ShadowModuleTest(ModuleCase):
         self.run_function('user.add', [self._test_user])
 
         # Correct Functionality
-        self.assertTrue(self.run_function('shadow.set_mindays', [self._test_user, 12]))
+        assert self.run_function('shadow.set_mindays', [self._test_user, 12])
 
         # User does not exist (set_inactdays return None is user does not exist)
-        self.assertFalse(self.run_function('shadow.set_mindays', [self._no_user, 12]))
+        assert not self.run_function('shadow.set_mindays', [self._no_user, 12])
 
     @pytest.mark.flaky(max_runs=4)
     @pytest.mark.destructive_test
@@ -157,10 +156,10 @@ class ShadowModuleTest(ModuleCase):
         self.run_function('shadow.set_password', [self._test_user, self._password])
 
         # Correct Functionality
-        self.assertTrue(self.run_function('shadow.lock_password', [self._test_user]))
+        assert self.run_function('shadow.lock_password', [self._test_user])
 
         # User does not exist (set_inactdays return None is user does not exist)
-        self.assertFalse(self.run_function('shadow.lock_password', [self._no_user]))
+        assert not self.run_function('shadow.lock_password', [self._no_user])
 
     @pytest.mark.destructive_test
     def test_unlock_password(self):
@@ -172,10 +171,10 @@ class ShadowModuleTest(ModuleCase):
         self.run_function('shadow.set_password', [self._test_user, self._password])
 
         # Correct Functionality
-        self.assertTrue(self.run_function('shadow.unlock_password', [self._test_user]))
+        assert self.run_function('shadow.unlock_password', [self._test_user])
 
         # User does not exist (set_inactdays return None is user does not exist)
-        self.assertFalse(self.run_function('shadow.unlock_password', [self._no_user]))
+        assert not self.run_function('shadow.unlock_password', [self._no_user])
 
     @pytest.mark.destructive_test
     def test_set_warndays(self):
@@ -186,10 +185,10 @@ class ShadowModuleTest(ModuleCase):
         self.run_function('user.add', [self._test_user])
 
         # Correct Functionality
-        self.assertTrue(self.run_function('shadow.set_warndays', [self._test_user, 12]))
+        assert self.run_function('shadow.set_warndays', [self._test_user, 12])
 
         # User does not exist (set_inactdays return None is user does not exist)
-        self.assertFalse(self.run_function('shadow.set_warndays', [self._no_user, 12]))
+        assert not self.run_function('shadow.set_warndays', [self._no_user, 12])
 
     @pytest.mark.destructive_test
     def test_set_date(self):
@@ -200,10 +199,10 @@ class ShadowModuleTest(ModuleCase):
         self.run_function('user.add', [self._test_user])
 
         # Correct Functionality
-        self.assertTrue(self.run_function('shadow.set_date', [self._test_user, '2016-08-19']))
+        assert self.run_function('shadow.set_date', [self._test_user, '2016-08-19'])
 
         # User does not exist (set_inactdays return None is user does not exist)
-        self.assertFalse(self.run_function('shadow.set_date', [self._no_user, '2016-08-19']))
+        assert not self.run_function('shadow.set_date', [self._no_user, '2016-08-19'])
 
     @pytest.mark.destructive_test
     def test_set_expire(self):
@@ -214,10 +213,10 @@ class ShadowModuleTest(ModuleCase):
         self.run_function('user.add', [self._test_user])
 
         # Correct Functionality
-        self.assertTrue(self.run_function('shadow.set_expire', [self._test_user, '2016-08-25']))
+        assert self.run_function('shadow.set_expire', [self._test_user, '2016-08-25'])
 
         # User does not exist (set_inactdays return None is user does not exist)
-        self.assertFalse(self.run_function('shadow.set_expire', [self._no_user, '2016-08-25']))
+        assert not self.run_function('shadow.set_expire', [self._no_user, '2016-08-25'])
 
     @pytest.mark.destructive_test
     def test_set_del_root_password(self):
@@ -238,8 +237,8 @@ class ShadowModuleTest(ModuleCase):
         self.addCleanup(restore_shadow_file, contents)
 
         # set root password
-        self.assertTrue(self.run_function('shadow.set_password', ['root', self._password]))
-        self.assertEqual(self.run_function('shadow.info', ['root'])['passwd'], self._password)
+        assert self.run_function('shadow.set_password', ['root', self._password])
+        assert self.run_function('shadow.info', ['root'])['passwd'] == self._password
         # delete root password
-        self.assertTrue(self.run_function('shadow.del_password', ['root']))
-        self.assertEqual(self.run_function('shadow.info', ['root'])['passwd'], '')
+        assert self.run_function('shadow.del_password', ['root'])
+        assert self.run_function('shadow.info', ['root'])['passwd'] == ''

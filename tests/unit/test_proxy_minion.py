@@ -49,8 +49,8 @@ class ProxyMinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         proxy_minion = salt.minion.ProxyMinion(mock_opts, jid_queue=copy.copy(mock_jid_queue), io_loop=salt.ext.tornado.ioloop.IOLoop())
         try:
             ret = proxy_minion._handle_decoded_payload(mock_data).result()
-            self.assertEqual(proxy_minion.jid_queue, mock_jid_queue)
-            self.assertIsNone(ret)
+            assert proxy_minion.jid_queue == mock_jid_queue
+            assert ret is None
             self.assert_called_once(salt.minion._metaproxy_call)
         finally:
             proxy_minion.destroy()
@@ -66,8 +66,8 @@ class ProxyMinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         proxy_minion = salt.minion.ProxyMinion(mock_opts, jid_queue=copy.copy(mock_jid_queue), io_loop=salt.ext.tornado.ioloop.IOLoop())
         try:
             ret = proxy_minion._handle_decoded_payload(mock_data).result()
-            self.assertEqual(proxy_minion.jid_queue, mock_jid_queue)
-            self.assertIsNone(ret)
+            assert proxy_minion.jid_queue == mock_jid_queue
+            assert ret is None
             self.assert_called_once(salt.minion._metaproxy_call)
         finally:
             proxy_minion.destroy()

@@ -62,58 +62,49 @@ class IniManageTestCase(TestCase):
         '''
         Test get_option method.
         '''
-        self.assertEqual(
-            ini.get_option(self.tfile.name, 'main', 'test1'),
-            'value 1')
-        self.assertEqual(
-            ini.get_option(self.tfile.name, 'main', 'test2'),
-            'value 2')
-        self.assertEqual(
-            ini.get_option(self.tfile.name, 'SectionB', 'test1'),
-            'value 1B')
-        self.assertEqual(
-            ini.get_option(self.tfile.name, 'SectionB', 'test3'),
-            'value 3B')
-        self.assertEqual(
-            ini.get_option(self.tfile.name, 'SectionC', 'empty_option'),
-            '')
+        assert ini.get_option(self.tfile.name, 'main', 'test1') == \
+            'value 1'
+        assert ini.get_option(self.tfile.name, 'main', 'test2') == \
+            'value 2'
+        assert ini.get_option(self.tfile.name, 'SectionB', 'test1') == \
+            'value 1B'
+        assert ini.get_option(self.tfile.name, 'SectionB', 'test3') == \
+            'value 3B'
+        assert ini.get_option(self.tfile.name, 'SectionC', 'empty_option') == \
+            ''
 
     def test_get_section(self):
         '''
         Test get_section method.
         '''
-        self.assertEqual(
-            ini.get_section(self.tfile.name, 'SectionB'),
-            {'test1': 'value 1B', 'test3': 'value 3B'})
+        assert ini.get_section(self.tfile.name, 'SectionB') == \
+            {'test1': 'value 1B', 'test3': 'value 3B'}
 
     def test_remove_option(self):
         '''
         Test remove_option method.
         '''
-        self.assertEqual(
-            ini.remove_option(self.tfile.name, 'SectionB', 'test1'),
-            'value 1B')
-        self.assertIsNone(ini.get_option(self.tfile.name, 'SectionB', 'test1'))
+        assert ini.remove_option(self.tfile.name, 'SectionB', 'test1') == \
+            'value 1B'
+        assert ini.get_option(self.tfile.name, 'SectionB', 'test1') is None
 
     def test_remove_section(self):
         '''
         Test remove_section method.
         '''
-        self.assertEqual(
-            ini.remove_section(self.tfile.name, 'SectionB'),
-            {'test1': 'value 1B', 'test3': 'value 3B'})
-        self.assertEqual(ini.get_section(self.tfile.name, 'SectionB'), {})
+        assert ini.remove_section(self.tfile.name, 'SectionB') == \
+            {'test1': 'value 1B', 'test3': 'value 3B'}
+        assert ini.get_section(self.tfile.name, 'SectionB') == {}
 
     def test_get_ini(self):
         '''
         Test get_ini method.
         '''
-        self.assertEqual(
-            dict(ini.get_ini(self.tfile.name)), {
+        assert dict(ini.get_ini(self.tfile.name)) == {
                 'SectionC': {'empty_option': ''},
                 'SectionB': {'test1': 'value 1B', 'test3': 'value 3B'},
                 'main': {'test1': 'value 1', 'test2': 'value 2'},
-                'option2': 'main2', 'option1': 'main1'})
+                'option2': 'main2', 'option1': 'main1'}
 
     def test_set_option(self):
         '''
@@ -128,21 +119,19 @@ class IniManageTestCase(TestCase):
                 'test_set_option2': 'test_set_value1'
             }
         })
-        self.assertEqual(result, {
+        assert result == {
             'SectionB': {'test3': {'after': 'new value 3B',
                                    'before': 'value 3B'},
                          'test_set_option': {'after': 'test_set_value',
                                              'before': None}},
             'SectionD': {'after': {'test_set_option2': 'test_set_value1'},
-                         'before': None}})
+                         'before': None}}
         # Check existing option updated
-        self.assertEqual(
-            ini.get_option(self.tfile.name, 'SectionB', 'test3'),
-            'new value 3B')
+        assert ini.get_option(self.tfile.name, 'SectionB', 'test3') == \
+            'new value 3B'
         # Check new section and option added
-        self.assertEqual(
-            ini.get_option(self.tfile.name, 'SectionD', 'test_set_option2'),
-            'test_set_value1')
+        assert ini.get_option(self.tfile.name, 'SectionD', 'test_set_option2') == \
+            'test_set_value1'
 
     def test_empty_value(self):
         '''
@@ -154,7 +143,7 @@ class IniManageTestCase(TestCase):
         with salt.utils.files.fopen(self.tfile.name, 'r') as fp_:
             file_content = salt.utils.stringutils.to_unicode(fp_.read())
         expected = '{0}{1}{0}'.format(os.linesep, 'empty_option = ')
-        self.assertIn(expected, file_content, 'empty_option was not preserved')
+        assert expected in file_content, 'empty_option was not preserved'
 
     def test_empty_lines(self):
         '''
@@ -191,7 +180,7 @@ class IniManageTestCase(TestCase):
         ])
         with salt.utils.files.fopen(self.tfile.name, 'r') as fp_:
             file_content = salt.utils.stringutils.to_unicode(fp_.read())
-        self.assertEqual(expected, file_content)
+        assert expected == file_content
 
     def test_empty_lines_multiple_edits(self):
         '''

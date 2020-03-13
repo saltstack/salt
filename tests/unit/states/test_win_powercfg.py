@@ -44,7 +44,7 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
                         {"powercfg.get_monitor_timeout": get_monitor_side_effect,
                          "powercfg.set_monitor_timeout": MagicMock(return_value=True)}):
             with patch.dict(powercfg.__opts__, {"test": False}):
-                self.assertEqual(powercfg.set_timeout("monitor", 0), ret)
+                assert powercfg.set_timeout("monitor", 0) == ret
 
     def test_set_monitor_already_set(self):
         '''
@@ -56,7 +56,7 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
                'result': True}
         monitor_val = MagicMock(return_value={"ac": 0, "dc": 0})
         with patch.dict(powercfg.__salt__, {"powercfg.get_monitor_timeout": monitor_val}):
-            self.assertEqual(powercfg.set_timeout("monitor", 0), ret)
+            assert powercfg.set_timeout("monitor", 0) == ret
 
     def test_set_monitor_test_true_with_change(self):
         '''
@@ -70,7 +70,7 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
         get_monitor_return_value = MagicMock(return_value={"ac": 45, "dc": 22})
         with patch.dict(powercfg.__salt__, {"powercfg.get_monitor_timeout": get_monitor_return_value}):
             with patch.dict(powercfg.__opts__, {"test": True}):
-                self.assertEqual(powercfg.set_timeout("monitor", 0), ret)
+                assert powercfg.set_timeout("monitor", 0) == ret
 
     def test_fail_invalid_setting(self):
         '''
@@ -80,7 +80,7 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
                'comment': '"fakesetting" is not a valid setting',
                'name': 'fakesetting',
                'result': False}
-        self.assertEqual(powercfg.set_timeout("fakesetting", 0), ret)
+        assert powercfg.set_timeout("fakesetting", 0) == ret
 
     def test_fail_invalid_power(self):
         '''
@@ -90,5 +90,5 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
                'comment': '"fakepower" is not a power type',
                'name': 'monitor',
                'result': False}
-        self.assertEqual(powercfg.set_timeout("monitor", 0, power="fakepower"),
-                         ret)
+        assert powercfg.set_timeout("monitor", 0, power="fakepower") == \
+                         ret

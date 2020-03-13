@@ -53,9 +53,9 @@ class TomcatTestCase(TestCase, LoaderModuleMockMixin):
                                           'tomcat.deploy_war': mock_deploy}):
             ret.update({'comment': 'salt with version 1.20.4'
                                    ' is already deployed'})
-            self.assertDictEqual(tomcat.war_deployed('salt',
+            assert tomcat.war_deployed('salt',
                                                      'salt://jenkins'
-                                                     '-1.20.4.war'), ret)
+                                                     '-1.20.4.war') == ret
 
             with patch.dict(tomcat.__opts__, {"test": True}):
                 ret.update({'changes': {'deploy': 'will deploy salt'
@@ -63,32 +63,32 @@ class TomcatTestCase(TestCase, LoaderModuleMockMixin):
                                         'undeploy': 'undeployed salt'
                                                     ' with version 1'},
                             'result': None, 'comment': ''})
-                self.assertDictEqual(tomcat.war_deployed('salt',
+                assert tomcat.war_deployed('salt',
                                                          'salt://jenkins'
-                                                         '-1.2.4.war'), ret)
+                                                         '-1.2.4.war') == ret
 
             with patch.dict(tomcat.__opts__, {"test": False}):
                 ret.update({'changes': {'start': 'starting salt'},
                             'comment': 'saltstack', 'result': False})
-                self.assertDictEqual(tomcat.war_deployed('salt',
+                assert tomcat.war_deployed('salt',
                                                          'salt://jenkins'
-                                                         '-1.2.4.war'), ret)
+                                                         '-1.2.4.war') == ret
 
                 ret.update({'changes': {'deploy': 'will deploy salt with'
                                                   ' version 1.2.4',
                                         'undeploy': 'undeployed salt with'
                                                     ' version 1'},
                             'comment': 'FAIL'})
-                self.assertDictEqual(tomcat.war_deployed('salt',
+                assert tomcat.war_deployed('salt',
                                                          'salt://jenkins'
-                                                         '-1.2.4.war'), ret)
+                                                         '-1.2.4.war') == ret
 
                 ret.update({'changes': {'undeploy': 'undeployed salt'
                                                     ' with version 1'},
                             'comment': 'deploy'})
-                self.assertDictEqual(tomcat.war_deployed('salt',
+                assert tomcat.war_deployed('salt',
                                                          'salt://jenkins'
-                                                         '-1.2.4.war'), ret)
+                                                         '-1.2.4.war') == ret
 
     def test_war_deployed_no_version(self):
         '''
@@ -119,9 +119,9 @@ class TomcatTestCase(TestCase, LoaderModuleMockMixin):
                                 {'deploy': 'will deploy salt with no version',
                                  'undeploy': 'undeployed salt with version 1.2.4'},
                             })
-                self.assertDictEqual(tomcat.war_deployed('salt',
-                                                         'salt://jenkins.war'),
-                                     ret)
+                assert tomcat.war_deployed('salt',
+                                                         'salt://jenkins.war') == \
+                                     ret
 
             with patch.dict(tomcat.__salt__,
                             {"tomcat.ls": mock_ls_no_version,
@@ -133,28 +133,28 @@ class TomcatTestCase(TestCase, LoaderModuleMockMixin):
                                 {'deploy': 'will deploy salt with version 1.2.4',
                                  'undeploy': 'undeployed salt with no version'},
                             })
-                self.assertDictEqual(tomcat.war_deployed('salt',
+                assert tomcat.war_deployed('salt',
                                                          'salt://jenkins.war',
-                                                         version='1.2.4'),
-                                     ret)
+                                                         version='1.2.4') == \
+                                     ret
                 # Deploy from none to extracted version
-                self.assertDictEqual(tomcat.war_deployed('salt',
-                                                         'salt://jenkins-1.2.4.war'),
-                                     ret)
+                assert tomcat.war_deployed('salt',
+                                                         'salt://jenkins-1.2.4.war') == \
+                                     ret
                 # Don't deploy from no version to no version
                 ret.update({'changes': {},
                             'comment': 'salt with no version is already deployed',
                             'result': True
                             })
                 # Don't deploy from blank to blank version
-                self.assertDictEqual(tomcat.war_deployed('salt',
-                                                         'salt://jenkins.war'),
-                                     ret)
+                assert tomcat.war_deployed('salt',
+                                                         'salt://jenkins.war') == \
+                                     ret
                 # Don't deploy from blank to false version
-                self.assertDictEqual(tomcat.war_deployed('salt',
+                assert tomcat.war_deployed('salt',
                                                          'salt://jenkins-1.2.4.war',
-                                                         version=False),
-                                     ret)
+                                                         version=False) == \
+                                     ret
 
     def test_wait(self):
         '''
@@ -167,7 +167,7 @@ class TomcatTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value=True)
         with patch.dict(tomcat.__salt__, {"tomcat.status": mock,
                                           "tomcat.extract_war_version": tomcatmod.extract_war_version}):
-            self.assertDictEqual(tomcat.wait('salt'), ret)
+            assert tomcat.wait('salt') == ret
 
     def test_mod_watch(self):
         '''
@@ -181,7 +181,7 @@ class TomcatTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(tomcat.__salt__, {"tomcat.reload": mock,
                                           "tomcat.extract_war_version": tomcatmod.extract_war_version}):
             ret.update({'changes': {'salt': False}})
-            self.assertDictEqual(tomcat.mod_watch('salt'), ret)
+            assert tomcat.mod_watch('salt') == ret
 
     def test_undeployed(self):
         '''
@@ -202,20 +202,20 @@ class TomcatTestCase(TestCase, LoaderModuleMockMixin):
                                           "tomcat.ls": mock1,
                                           "tomcat.undeploy": mock2}):
             ret.update({'comment': 'Tomcat Manager does not respond'})
-            self.assertDictEqual(tomcat.undeployed('salt'), ret)
+            assert tomcat.undeployed('salt') == ret
 
             ret.update({'comment': '', 'result': True})
-            self.assertDictEqual(tomcat.undeployed('salt'), ret)
+            assert tomcat.undeployed('salt') == ret
 
             with patch.dict(tomcat.__opts__, {"test": True}):
                 ret.update({'changes': {'undeploy': 1}, 'result': None})
-                self.assertDictEqual(tomcat.undeployed('salt'), ret)
+                assert tomcat.undeployed('salt') == ret
 
             with patch.dict(tomcat.__opts__, {"test": False}):
                 ret.update({'changes': {'undeploy': 1},
                             'comment': 'FAIL', 'result': False})
-                self.assertDictEqual(tomcat.undeployed('salt'), ret)
+                assert tomcat.undeployed('salt') == ret
 
                 ret.update({'changes': {'undeploy': 1},
                             'comment': '', 'result': True})
-                self.assertDictEqual(tomcat.undeployed('salt'), ret)
+                assert tomcat.undeployed('salt') == ret

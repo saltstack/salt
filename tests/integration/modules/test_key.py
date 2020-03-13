@@ -18,7 +18,7 @@ class KeyModuleTest(ModuleCase):
         '''
         out = self.run_function('key.finger')
         match = re.match("([0-9a-z]{2}:){15,}[0-9a-z]{2}$", out)
-        self.assertTrue(match)
+        assert match
 
     def test_key_finger_master(self):
         '''
@@ -26,4 +26,4 @@ class KeyModuleTest(ModuleCase):
         '''
         out = self.run_function('key.finger_master')
         match = re.match("([0-9a-z]{2}:){15,}[0-9a-z]{2}$", out)
-        self.assertTrue(match)
+        assert match

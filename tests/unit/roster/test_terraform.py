@@ -71,7 +71,7 @@ class TerraformTestCase(TestCase, LoaderModuleMockMixin):
             }
 
             ret = terraform.targets('*')
-            self.assertDictEqual(expected_result, ret)
+            assert expected_result == ret
 
     def test_default_matching(self):
         '''
@@ -98,4 +98,4 @@ class TerraformTestCase(TestCase, LoaderModuleMockMixin):
             }
 
             ret = terraform.targets('*web*')
-            self.assertDictEqual(expected_result, ret)
+            assert expected_result == ret

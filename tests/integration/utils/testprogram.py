@@ -962,9 +962,8 @@ class TestProgramCase(TestCase):
         _message = '' if not message else ' ({0})'.format(message)
         _stdout = '' if not stdout else '\nstdout: {0}'.format(stdout)
         _stderr = '' if not stderr else '\nstderr: {0}'.format(stderr)
-        self.assertEqual(
-            status,
-            ex_val,
+        assert status == \
+            ex_val, \
             'Exit status was {0}, must be {1} (salt.default.exitcodes.{2}){3}{4}{5}'.format(
                 status,
                 ex_val,
@@ -973,4 +972,3 @@ class TestProgramCase(TestCase):
                 _stdout,
                 _stderr,
             )
-        )

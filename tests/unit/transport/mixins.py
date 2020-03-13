@@ -7,6 +7,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import salt.transport.client
 
 # Import 3rd-party libs
+import pytest
 from salt.ext import six
 import salt.ext.tornado.gen
 
@@ -43,7 +44,7 @@ class ReqChannelMixin(object):
         ]
         for msg in msgs:
             ret = self.channel.send(msg, timeout=2, tries=1)
-            self.assertEqual(ret['load'], msg)
+            assert ret['load'] == msg
 
     def test_normalization(self):
         '''
@@ -58,7 +59,7 @@ class ReqChannelMixin(object):
         for msg in msgs:
             ret = self.channel.send(msg, timeout=2, tries=1)
             for k, v in six.iteritems(ret['load']):
-                self.assertEqual(types[k], type(v))
+                assert types[k] == type(v)
 
     def test_badload(self):
         '''
@@ -67,7 +68,7 @@ class ReqChannelMixin(object):
         msgs = ['', [], tuple()]
         for msg in msgs:
             ret = self.channel.send(msg, timeout=2, tries=1)
-            self.assertEqual(ret, 'payload and load must be a dict')
+            assert ret == 'payload and load must be a dict'
 
 
 class PubChannelMixin(object):
@@ -93,10 +94,10 @@ class PubChannelMixin(object):
         }
         self.server_channel.publish(load)
         self.wait()
-        self.assertEqual(self.pub['load'], load)
+        assert self.pub['load'] == load
         self.pub_channel.on_recv(None)
         self.server_channel.publish(load)
-        with self.assertRaises(self.failureException):
+        with pytest.raises(self.failureException):
             self.wait(timeout=0.5)
 
         # close our pub_channel, to pass our FD checks

@@ -30,7 +30,7 @@ class StatusModuleTest(ModuleCase):
         grab_pids = status_pid.split()[:10]
         random_pid = random.choice(grab_pids)
         grep_salt = self.run_function('cmd.run', ['pgrep -f salt'])
-        self.assertIn(random_pid, grep_salt)
+        assert random_pid in grep_salt
 
     @skipIf(not salt.utils.platform.is_windows(), 'windows only test')
     def test_status_cpuload(self):
@@ -38,7 +38,7 @@ class StatusModuleTest(ModuleCase):
         status.cpuload
         '''
         ret = self.run_function('status.cpuload')
-        self.assertTrue(isinstance(ret, float))
+        assert isinstance(ret, float)
 
     @skipIf(not salt.utils.platform.is_windows(), 'windows only test')
     def test_status_saltmem(self):
@@ -46,7 +46,7 @@ class StatusModuleTest(ModuleCase):
         status.saltmem
         '''
         ret = self.run_function('status.saltmem')
-        self.assertTrue(isinstance(ret, int))
+        assert isinstance(ret, int)
 
     def test_status_diskusage(self):
         '''
@@ -54,12 +54,12 @@ class StatusModuleTest(ModuleCase):
         '''
         ret = self.run_function('status.diskusage')
         if salt.utils.platform.is_darwin():
-            self.assertIn('not yet supported on this platform', ret)
+            assert 'not yet supported on this platform' in ret
         elif salt.utils.platform.is_windows():
-            self.assertTrue(isinstance(ret['percent'], float))
+            assert isinstance(ret['percent'], float)
         else:
-            self.assertIn('total', str(ret))
-            self.assertIn('available', str(ret))
+            assert 'total' in str(ret)
+            assert 'available' in str(ret)
 
     def test_status_procs(self):
         '''
@@ -67,7 +67,7 @@ class StatusModuleTest(ModuleCase):
         '''
         ret = self.run_function('status.procs')
         for x, y in six.iteritems(ret):
-            self.assertIn('cmd', y)
+            assert 'cmd' in y
 
     def test_status_uptime(self):
         '''
@@ -76,6 +76,6 @@ class StatusModuleTest(ModuleCase):
         ret = self.run_function('status.uptime')
 
         if salt.utils.platform.is_windows():
-            self.assertTrue(isinstance(ret, float))
+            assert isinstance(ret, float)
         else:
-            self.assertTrue(isinstance(ret['days'], int))
+            assert isinstance(ret['days'], int)

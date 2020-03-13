@@ -33,8 +33,8 @@ class IscsiGrainsTestCase(TestCase):
             with patch('salt.modules.cmdmod.run_all', cmd_run_mock):
                 _grains['iscsi_iqn'] = iscsi._windows_iqn()
 
-        self.assertEqual(_grains.get('iscsi_iqn'),
-                         ['iqn.1991-05.com.microsoft:simon-x1'])
+        assert _grains.get('iscsi_iqn') == \
+                         ['iqn.1991-05.com.microsoft:simon-x1']
 
     def test_aix_iscsi_iqn_grains(self):
         cmd_run_mock = MagicMock(
@@ -45,8 +45,8 @@ class IscsiGrainsTestCase(TestCase):
         with patch('salt.modules.cmdmod.run', cmd_run_mock):
             _grains['iscsi_iqn'] = iscsi._aix_iqn()
 
-        self.assertEqual(_grains.get('iscsi_iqn'),
-                         ['iqn.localhost.hostid.7f000001'])
+        assert _grains.get('iscsi_iqn') == \
+                         ['iqn.localhost.hostid.7f000001']
 
     def test_linux_iscsi_iqn_grains(self):
         _iscsi_file = textwrap.dedent('''\

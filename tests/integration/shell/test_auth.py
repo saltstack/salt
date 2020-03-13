@@ -80,7 +80,7 @@ class UserAuthTest(ModuleCase, SaltReturnAssertsMixin, ShellCase):
         cmd = ('-a pam "*" test.ping --username {0} --password {1}'.format(self.user, password))
         resp = self.run_salt(cmd)
         log.debug('resp = %s', resp)
-        self.assertIn('minion', [r.strip(': ') for r in resp])
+        assert 'minion' in [r.strip(': ') for r in resp]
 
     def test_pam_auth_invalid_user(self):
         '''
@@ -89,7 +89,7 @@ class UserAuthTest(ModuleCase, SaltReturnAssertsMixin, ShellCase):
         cmd = ('-a pam "*" test.ping '
                '--username nouser --password {0}'.format('abcd1234'))
         resp = self.run_salt(cmd)
-        self.assertIn('Authentication error occurred', ''.join(resp))
+        assert 'Authentication error occurred' in ''.join(resp)
 
 
 @skipIf(pwd is None or grp is None, 'No pwd or grp module available')
@@ -137,4 +137,4 @@ class GroupAuthTest(ModuleCase, SaltReturnAssertsMixin, ShellCase):
         # external_auth, but saltops is and saldadm is a member of saltops
         cmd = ('-a pam "*" test.ping --username {0} --password {1}'.format(self.user, password))
         resp = self.run_salt(cmd)
-        self.assertIn('minion', [r.strip(': ') for r in resp])
+        assert 'minion' in [r.strip(': ') for r in resp]

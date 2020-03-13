@@ -38,7 +38,7 @@ class AssistiveTestCase(TestCase, LoaderModuleMockMixin):
             out = assistive.installed('com.apple.Chess')
             installed_mock.assert_called_once_with('com.apple.Chess')
             install_mock.assert_called_once_with('com.apple.Chess', True)
-            self.assertEqual(out, expected)
+            assert out == expected
 
     def test_installed_not_enabled(self):
         '''
@@ -64,7 +64,7 @@ class AssistiveTestCase(TestCase, LoaderModuleMockMixin):
             enabled_mock.assert_called_once_with('com.apple.Chess')
             enable_mock.assert_called_once_with('com.apple.Chess', True)
             assert not install_mock.called
-            self.assertEqual(out, expected)
+            assert out == expected
 
     def test_installed_enabled(self):
         '''
@@ -90,7 +90,7 @@ class AssistiveTestCase(TestCase, LoaderModuleMockMixin):
             enabled_mock.assert_called_once_with('com.apple.Chess')
             assert not enable_mock.called
             assert not install_mock.called
-            self.assertEqual(out, expected)
+            assert out == expected
 
     def test_installed_not_disabled(self):
         '''
@@ -116,4 +116,4 @@ class AssistiveTestCase(TestCase, LoaderModuleMockMixin):
             enabled_mock.assert_called_once_with('com.apple.Chess')
             enable_mock.assert_called_once_with('com.apple.Chess', False)
             assert not install_mock.called
-            self.assertEqual(out, expected)
+            assert out == expected

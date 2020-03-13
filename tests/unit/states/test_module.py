@@ -153,10 +153,8 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.utils.args.get_function_argspec', MagicMock(return_value=self.bspec)):
             ret = module._run(CMD, m_names='anyname')
-        self.assertEqual(
-            ret['comment'],
+        assert ret['comment'] == \
             "'names' must be a list."
-        )
 
     def test_run_testmode(self):
         '''
@@ -177,10 +175,8 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
                 patch.dict(module.__salt__, {CMD: _mocked_func_named}), \
                 patch.dict(module.__opts__, {'use_superseded': ['module.run']}):
             ret = module.run(**{CMD: None})
-        self.assertEqual(
-            ret['comment'],
+        assert ret['comment'] == \
             "'{}' failed: Missing arguments: name".format(CMD)
-        )
 
     def test_run_correct_arg(self):
         '''
@@ -203,7 +199,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
                 patch.dict(module.__salt__, {"state.apply": MagicMock(return_value=STATE_APPLY_RET)}), \
                 patch.dict(module.__opts__, {'use_deprecated': ['module.run']}):
             ret = module.run(**{"name": "state.apply", 'mods': 'test2'})
-        self.assertFalse(ret['result'])
+        assert not ret['result']
 
     def test_run_unexpected_keywords(self):
         with \
@@ -211,12 +207,10 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
                 patch.dict(module.__opts__, {'use_superseded': ['module.run']}):
             ret = module.run(**{CMD: [{'foo': 'bar'}]})
             module_function = module.__salt__[CMD].__name__
-        self.assertEqual(
-            ret['comment'],
+        assert ret['comment'] == \
             ("'{0}' failed: {1}() got an unexpected keyword argument "
              "'foo'".format(CMD, module_function))
-        )
-        self.assertFalse(ret['result'])
+        assert not ret['result']
 
     def test_run_args(self):
         '''
@@ -227,11 +221,9 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
                 patch.dict(module.__salt__, {CMD: _mocked_func_args}), \
                 patch.dict(module.__opts__, {'use_superseded': ['module.run']}):
             ret = module.run(**{CMD: ['foo', 'bar']})
-        self.assertTrue(ret['result'])
-        self.assertEqual(
-            ret['changes'],
+        assert ret['result']
+        assert ret['changes'] == \
             {CMD: {'args': ('foo', 'bar')}}
-        )
 
     def test_run_42270(self):
         '''
@@ -243,11 +235,9 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
                 patch.dict(module.__salt__, {CMD: test_func}), \
                 patch.dict(module.__opts__, {'use_superseded': ['module.run']}):
             ret = module.run(**{CMD: ['bla', {'example': 'bla'}]})
-        self.assertFalse(ret['result'])
-        self.assertEqual(
-            ret['comment'],
+        assert not ret['result']
+        assert ret['comment'] == \
             "'{}' failed: Missing arguments: arg2".format(CMD)
-        )
 
     def test_run_42270_kwargs_to_args(self):
         '''
@@ -260,11 +250,9 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
                 patch.dict(module.__salt__, {CMD: test_func}), \
                 patch.dict(module.__opts__, {'use_superseded': ['module.run']}):
             ret = module.run(**{CMD: ['foo', 'bar', {'arg3': 'baz'}, {'foo': 'bar'}]})
-        self.assertTrue(ret['result'])
-        self.assertEqual(
-            ret['changes'],
+        assert ret['result']
+        assert ret['changes'] == \
             {CMD: {'args': ['foo', 'bar', 'baz'], 'kwargs': {'foo': 'bar'}}}
-        )
 
     def test_run_none_return(self):
         '''
@@ -275,11 +263,9 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
                 patch.dict(module.__salt__, {CMD: _mocked_none_return}), \
                 patch.dict(module.__opts__, {'use_superseded': ['module.run']}):
             ret = module.run(**{CMD: None})
-        self.assertTrue(ret['result'])
-        self.assertEqual(
-            ret['changes'],
+        assert ret['result']
+        assert ret['changes'] == \
             {CMD: None}
-        )
 
     def test_run_typed_return(self):
         '''
@@ -292,7 +278,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
                     patch.dict(module.__opts__, {'use_superseded': ['module.run']}):
                 log.debug('test_run_typed_return: trying %s', val)
                 ret = module.run(**{CMD: [{'ret': val}]})
-            self.assertTrue(ret['result'])
+            assert ret['result']
 
     def test_run_batch_call(self):
         '''
@@ -309,7 +295,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             for f_name in module.__salt__:
                 log.debug('test_run_batch_call: trying %s', f_name)
                 ret = module.run(**{f_name: None})
-                self.assertTrue(ret['result'])
+                assert ret['result']
 
     def test_module_run_module_not_available(self):
         '''
@@ -318,11 +304,9 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(module.__salt__, {}, clear=True):
             ret = module._run(CMD)
-        self.assertFalse(ret['result'])
-        self.assertEqual(
-            ret['comment'],
+        assert not ret['result']
+        assert ret['comment'] == \
             'Module function {0} is not available'.format(CMD)
-        )
 
     def test_module_run_test_true(self):
         '''
@@ -330,10 +314,8 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(module.__opts__, {'test': True}):
             ret = module._run(CMD)
-        self.assertEqual(
-            ret['comment'],
+        assert ret['comment'] == \
             'Module function {0} is set to execute'.format(CMD)
-        )
 
     def test_module_run_missing_arg(self):
         '''
@@ -341,12 +323,10 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.utils.args.get_function_argspec', MagicMock(return_value=self.aspec)):
             ret = module._run(CMD)
-        self.assertIn(
-            'The following arguments are missing:',
+        assert 'The following arguments are missing:' in \
             ret['comment']
-        )
-        self.assertIn('world', ret['comment'])
-        self.assertIn('hello', ret['comment'])
+        assert 'world' in ret['comment']
+        assert 'hello' in ret['comment']
 
     def test_call_function_named_args(self):
         '''
@@ -356,25 +336,17 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(module.__salt__,
                         {'testfunc': lambda a, b, c, *args, **kwargs: (a, b, c, args, kwargs)}, clear=True):
-            self.assertEqual(
-                module._call_function('testfunc', func_args=[{'a': 1}, {'b': 2}, {'c': 3}]),
+            assert module._call_function('testfunc', func_args=[{'a': 1}, {'b': 2}, {'c': 3}]) == \
                 (1, 2, 3, (), {})
-            )
-            self.assertEqual(
-                module._call_function('testfunc', func_args=[{'c': 3}, {'a': 1}, {'b': 2}]),
+            assert module._call_function('testfunc', func_args=[{'c': 3}, {'a': 1}, {'b': 2}]) == \
                 (1, 2, 3, (), {})
-            )
 
         with patch.dict(module.__salt__,
                         {'testfunc': lambda c, a, b, *args, **kwargs: (a, b, c, args, kwargs)}, clear=True):
-            self.assertEqual(
-                module._call_function('testfunc', func_args=[{'a': 1}, {'b': 2}, {'c': 3}]),
+            assert module._call_function('testfunc', func_args=[{'a': 1}, {'b': 2}, {'c': 3}]) == \
                 (1, 2, 3, (), {})
-            )
-            self.assertEqual(
-                module._call_function('testfunc', func_args=[{'c': 3}, {'a': 1}, {'b': 2}]),
+            assert module._call_function('testfunc', func_args=[{'c': 3}, {'a': 1}, {'b': 2}]) == \
                 (1, 2, 3, (), {})
-            )
 
     def test_call_function_ordered_args(self):
         '''
@@ -384,11 +356,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(module.__salt__,
                         {'testfunc': lambda a, b, c, *args, **kwargs: (a, b, c, args, kwargs)}, clear=True):
-            self.assertEqual(
-                module._call_function('testfunc', func_args=[1, 2, 3]),
+            assert module._call_function('testfunc', func_args=[1, 2, 3]) == \
                 (1, 2, 3, (), {})
-            )
-            self.assertEqual(
-                module._call_function('testfunc', func_args=[3, 1, 2]),
+            assert module._call_function('testfunc', func_args=[3, 1, 2]) == \
                 (3, 1, 2, (), {})
-            )

@@ -61,10 +61,10 @@ class OpenbsdpkgTestCase(TestCase, LoaderModuleMockMixin):
         }
         with patch.dict(openbsdpkg.__salt__, patches):
             pkgs = openbsdpkg.list_pkgs()
-            self.assertDictEqual(pkgs, {
+            assert pkgs == {
                 'png': '1.6.23',
                 'vim--gtk2': '7.4.1467p1',
-                'ruby': '2.3.1p1'})
+                'ruby': '2.3.1p1'}
         run_stdout_mock.assert_called_once_with('pkg_info -q -a',
                                                 output_loglevel='trace')
 
@@ -100,14 +100,14 @@ class OpenbsdpkgTestCase(TestCase, LoaderModuleMockMixin):
                     'png': {'new': '1.6.23', 'old': ''},
                     'ruby': {'new': '2.3.1p1', 'old': ''}
                 }
-                self.assertDictEqual(added, expected)
+                assert added == expected
         expected_calls = [
             call('pkg_add -x -I png--%', output_loglevel='trace', python_shell=False),
             call('pkg_add -x -I ruby--%2.3', output_loglevel='trace', python_shell=False),
             call('pkg_add -x -I vim--gtk2%', output_loglevel='trace', python_shell=False),
         ]
         run_all_mock.assert_has_calls(expected_calls, any_order=True)
-        self.assertEqual(run_all_mock.call_count, 3)
+        assert run_all_mock.call_count == 3
 
     def test_upgrade_available(self):
         '''
@@ -115,7 +115,7 @@ class OpenbsdpkgTestCase(TestCase, LoaderModuleMockMixin):
         '''
         ret = MagicMock(return_value='5.4.2p0')
         with patch('salt.modules.openbsdpkg.latest_version', ret):
-            self.assertTrue(openbsdpkg.upgrade_available('zsh'))
+            assert openbsdpkg.upgrade_available('zsh')
 
     def test_upgrade_not_available(self):
         '''
@@ -123,7 +123,7 @@ class OpenbsdpkgTestCase(TestCase, LoaderModuleMockMixin):
         '''
         ret = MagicMock(return_value='')
         with patch('salt.modules.openbsdpkg.latest_version', ret):
-            self.assertFalse(openbsdpkg.upgrade_available('zsh'))
+            assert not openbsdpkg.upgrade_available('zsh')
 
     def test_upgrade(self):
         '''
@@ -144,4 +144,4 @@ class OpenbsdpkgTestCase(TestCase, LoaderModuleMockMixin):
                     'png': {'new': '1.6.23', 'old': ''},
                     'ruby': {'new': '2.3.1p1', 'old': ''}
                 }
-                self.assertDictEqual(upgraded, expected)
+                assert upgraded == expected

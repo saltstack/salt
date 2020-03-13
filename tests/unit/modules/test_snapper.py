@@ -23,6 +23,7 @@ from tests.support.mock import (
 from salt.ext import six
 from salt.exceptions import CommandExecutionError
 import salt.modules.snapper as snapper
+import pytest
 
 DBUS_RET = {
     'ListSnapshots': [
@@ -153,50 +154,50 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
 
     def test__snapshot_to_data(self):
         data = snapper._snapshot_to_data(DBUS_RET['ListSnapshots'][0])  # pylint: disable=protected-access
-        self.assertEqual(data['id'], 42)
-        self.assertNotIn('pre', data)
-        self.assertEqual(data['type'], 'pre')
-        self.assertEqual(data['user'], 'root')
-        self.assertEqual(data['timestamp'], 1457006571)
-        self.assertEqual(data['description'], 'Some description')
-        self.assertEqual(data['cleanup'], '')
-        self.assertEqual(data['userdata']['userdata1'], 'userval1')
+        assert data['id'] == 42
+        assert 'pre' not in data
+        assert data['type'] == 'pre'
+        assert data['user'] == 'root'
+        assert data['timestamp'] == 1457006571
+        assert data['description'] == 'Some description'
+        assert data['cleanup'] == ''
+        assert data['userdata']['userdata1'] == 'userval1'
 
     def test_list_snapshots(self):
         with patch('salt.modules.snapper.snapper.ListSnapshots', MagicMock(return_value=DBUS_RET['ListSnapshots'])):
-            self.assertEqual(snapper.list_snapshots(), MODULE_RET["SNAPSHOTS"])
+            assert snapper.list_snapshots() == MODULE_RET["SNAPSHOTS"]
 
     def test_get_snapshot(self):
         with patch('salt.modules.snapper.snapper.GetSnapshot', MagicMock(return_value=DBUS_RET['ListSnapshots'][0])):
-            self.assertEqual(snapper.get_snapshot(), MODULE_RET["SNAPSHOTS"][0])
-            self.assertEqual(snapper.get_snapshot(number=42), MODULE_RET["SNAPSHOTS"][0])
-            self.assertNotEqual(snapper.get_snapshot(number=42), MODULE_RET["SNAPSHOTS"][1])
+            assert snapper.get_snapshot() == MODULE_RET["SNAPSHOTS"][0]
+            assert snapper.get_snapshot(number=42) == MODULE_RET["SNAPSHOTS"][0]
+            assert snapper.get_snapshot(number=42) != MODULE_RET["SNAPSHOTS"][1]
 
     def test_list_configs(self):
         with patch('salt.modules.snapper.snapper.ListConfigs', MagicMock(return_value=DBUS_RET['ListConfigs'])):
-            self.assertEqual(snapper.list_configs(), MODULE_RET["LISTCONFIGS"])
+            assert snapper.list_configs() == MODULE_RET["LISTCONFIGS"]
 
     def test_get_config(self):
         with patch('salt.modules.snapper.snapper.GetConfig', MagicMock(return_value=DBUS_RET['ListConfigs'][0])):
-            self.assertEqual(snapper.get_config(), DBUS_RET["ListConfigs"][0])
+            assert snapper.get_config() == DBUS_RET["ListConfigs"][0]
 
     def test_set_config(self):
         with patch('salt.modules.snapper.snapper.SetConfig', MagicMock()):
             opts = {'sync_acl': True, 'dummy': False, 'foobar': 1234}
-            self.assertEqual(snapper.set_config(opts), True)
+            assert snapper.set_config(opts) is True
 
     def test_status_to_string(self):
-        self.assertEqual(snapper.status_to_string(1), ["created"])
-        self.assertEqual(snapper.status_to_string(2), ["deleted"])
-        self.assertEqual(snapper.status_to_string(4), ["type changed"])
-        self.assertEqual(snapper.status_to_string(8), ["modified"])
-        self.assertEqual(snapper.status_to_string(16), ["permission changed"])
-        self.assertListEqual(snapper.status_to_string(24), ["modified", "permission changed"])
-        self.assertEqual(snapper.status_to_string(32), ["owner changed"])
-        self.assertEqual(snapper.status_to_string(64), ["group changed"])
-        self.assertListEqual(snapper.status_to_string(97), ["created", "owner changed", "group changed"])
-        self.assertEqual(snapper.status_to_string(128), ["extended attributes changed"])
-        self.assertEqual(snapper.status_to_string(256), ["ACL info changed"])
+        assert snapper.status_to_string(1) == ["created"]
+        assert snapper.status_to_string(2) == ["deleted"]
+        assert snapper.status_to_string(4) == ["type changed"]
+        assert snapper.status_to_string(8) == ["modified"]
+        assert snapper.status_to_string(16) == ["permission changed"]
+        assert snapper.status_to_string(24) == ["modified", "permission changed"]
+        assert snapper.status_to_string(32) == ["owner changed"]
+        assert snapper.status_to_string(64) == ["group changed"]
+        assert snapper.status_to_string(97) == ["created", "owner changed", "group changed"]
+        assert snapper.status_to_string(128) == ["extended attributes changed"]
+        assert snapper.status_to_string(256) == ["ACL info changed"]
 
     def test_create_config(self):
         with patch('salt.modules.snapper.snapper.CreateConfig', MagicMock()), \
@@ -209,14 +210,15 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
                 'extra_opts': {"NUMBER_CLEANUP": False},
             }
             with patch('salt.modules.snapper.set_config', MagicMock()) as set_config_mock:
-                self.assertEqual(snapper.create_config(**opts), DBUS_RET['ListConfigs'][0])
+                assert snapper.create_config(**opts) == DBUS_RET['ListConfigs'][0]
                 set_config_mock.assert_called_with("testconfig", **opts['extra_opts'])
 
             with patch('salt.modules.snapper.set_config', MagicMock()) as set_config_mock:
                 del opts['extra_opts']
-                self.assertEqual(snapper.create_config(**opts), DBUS_RET['ListConfigs'][0])
+                assert snapper.create_config(**opts) == DBUS_RET['ListConfigs'][0]
                 assert not set_config_mock.called
-                self.assertRaises(CommandExecutionError, snapper.create_config)
+                with pytest.raises(CommandExecutionError):
+                    snapper.create_config()
 
     def test_create_snapshot(self):
         with patch('salt.modules.snapper.snapper.CreateSingleSnapshot', MagicMock(return_value=1234)), \
@@ -230,21 +232,24 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
                     'cleanup_algorithm': 'number',
                     'pre_number': 23,
                 }
-                self.assertEqual(snapper.create_snapshot(**opts), 1234)
+                assert snapper.create_snapshot(**opts) == 1234
 
     def test_delete_snapshot_id_success(self):
         with patch('salt.modules.snapper.snapper.DeleteSnapshots', MagicMock()), \
                 patch('salt.modules.snapper.snapper.ListSnapshots', MagicMock(return_value=DBUS_RET['ListSnapshots'])):
-            self.assertEqual(snapper.delete_snapshot(snapshots_ids=43), {"root": {"ids": [43], "status": "deleted"}})
-            self.assertEqual(snapper.delete_snapshot(snapshots_ids=[42, 43]),
-                             {"root": {"ids": [42, 43], "status": "deleted"}})
+            assert snapper.delete_snapshot(snapshots_ids=43) == {"root": {"ids": [43], "status": "deleted"}}
+            assert snapper.delete_snapshot(snapshots_ids=[42, 43]) == \
+                             {"root": {"ids": [42, 43], "status": "deleted"}}
 
     def test_delete_snapshot_id_fail(self):
         with patch('salt.modules.snapper.snapper.DeleteSnapshots', MagicMock()), \
                 patch('salt.modules.snapper.snapper.ListSnapshots', MagicMock(return_value=DBUS_RET['ListSnapshots'])):
-            self.assertRaises(CommandExecutionError, snapper.delete_snapshot)
-            self.assertRaises(CommandExecutionError, snapper.delete_snapshot, snapshots_ids=1)
-            self.assertRaises(CommandExecutionError, snapper.delete_snapshot, snapshots_ids=[1, 2])
+            with pytest.raises(CommandExecutionError):
+                snapper.delete_snapshot()
+            with pytest.raises(CommandExecutionError):
+                snapper.delete_snapshot(snapshots_ids=1)
+            with pytest.raises(CommandExecutionError):
+                snapper.delete_snapshot(snapshots_ids=[1, 2])
 
     def test_modify_snapshot(self):
         with patch('salt.modules.snapper.snapper.SetSnapshot', MagicMock()):
@@ -261,13 +266,13 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
                 'userdata': {'userdata2': 'uservalue2'},
             }
             with patch('salt.modules.snapper.get_snapshot', MagicMock(side_effect=[DBUS_RET['ListSnapshots'][0], _ret])):
-                self.assertDictEqual(snapper.modify_snapshot(**_opts), _ret)
+                assert snapper.modify_snapshot(**_opts) == _ret
 
     def test__get_num_interval(self):
         with patch('salt.modules.snapper._get_last_snapshot', MagicMock(return_value={'id': 42})):
-            self.assertEqual(snapper._get_num_interval(config=None, num_pre=None, num_post=None), (42, 0))  # pylint: disable=protected-access
-            self.assertEqual(snapper._get_num_interval(config=None, num_pre=None, num_post=50), (42, 50))  # pylint: disable=protected-access
-            self.assertEqual(snapper._get_num_interval(config=None, num_pre=42, num_post=50), (42, 50))  # pylint: disable=protected-access
+            assert snapper._get_num_interval(config=None, num_pre=None, num_post=None) == (42, 0)  # pylint: disable=protected-access
+            assert snapper._get_num_interval(config=None, num_pre=None, num_post=50) == (42, 50)  # pylint: disable=protected-access
+            assert snapper._get_num_interval(config=None, num_pre=42, num_post=50) == (42, 50)  # pylint: disable=protected-access
 
     def test_run(self):
         patch_dict = {
@@ -275,8 +280,9 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
             'test.ping': MagicMock(return_value=True),
         }
         with patch.dict(snapper.__salt__, patch_dict):
-            self.assertEqual(snapper.run("test.ping"), True)
-            self.assertRaises(CommandExecutionError, snapper.run, "unknown.func")
+            assert snapper.run("test.ping") is True
+            with pytest.raises(CommandExecutionError):
+                snapper.run("unknown.func")
 
     def test_status(self):
         with patch('salt.modules.snapper._get_num_interval', MagicMock(return_value=(42, 43))), \
@@ -296,7 +302,7 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_changed_files(self):
         with patch('salt.modules.snapper.status', MagicMock(return_value=MODULE_RET['GETFILES'])):
-            self.assertEqual(snapper.changed_files(), MODULE_RET['GETFILES'].keys())
+            assert snapper.changed_files() == MODULE_RET['GETFILES'].keys()
 
     def test_undo(self):
         with patch('salt.modules.snapper._get_num_interval', MagicMock(return_value=(42, 43))), \
@@ -304,29 +310,27 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
             cmd_ret = 'create:0 modify:1 delete:0'
             with patch.dict(snapper.__salt__, {'cmd.run': MagicMock(return_value=cmd_ret)}):
                 module_ret = {'create': '0', 'delete': '0', 'modify': '1'}
-                self.assertEqual(snapper.undo(files=['/tmp/foo']), module_ret)
+                assert snapper.undo(files=['/tmp/foo']) == module_ret
 
             cmd_ret = 'create:1 modify:1 delete:0'
             with patch.dict(snapper.__salt__, {'cmd.run': MagicMock(return_value=cmd_ret)}):
                 module_ret = {'create': '1', 'delete': '0', 'modify': '1'}
-                self.assertEqual(snapper.undo(files=['/tmp/foo', '/tmp/foo2']), module_ret)
+                assert snapper.undo(files=['/tmp/foo', '/tmp/foo2']) == module_ret
 
             cmd_ret = 'create:1 modify:1 delete:1'
             with patch.dict(snapper.__salt__, {'cmd.run': MagicMock(return_value=cmd_ret)}):
                 module_ret = {'create': '1', 'delete': '1', 'modify': '1'}
-                self.assertEqual(snapper.undo(files=['/tmp/foo', '/tmp/foo2', '/tmp/foo3']), module_ret)
+                assert snapper.undo(files=['/tmp/foo', '/tmp/foo2', '/tmp/foo3']) == module_ret
 
     def test__get_jid_snapshots(self):
         with patch('salt.modules.snapper.list_snapshots', MagicMock(return_value=MODULE_RET['SNAPSHOTS'])):
-            self.assertEqual(
-                snapper._get_jid_snapshots("20160607130930720112"),  # pylint: disable=protected-access
-                (MODULE_RET['SNAPSHOTS'][0]['id'], MODULE_RET['SNAPSHOTS'][1]['id'])
-            )
+            assert snapper._get_jid_snapshots("20160607130930720112") == \
+                    (MODULE_RET['SNAPSHOTS'][0]['id'], MODULE_RET['SNAPSHOTS'][1]['id'])  # pylint: disable=protected-access
 
     def test_undo_jid(self):
         with patch('salt.modules.snapper._get_jid_snapshots', MagicMock(return_value=(42, 43))), \
                 patch('salt.modules.snapper.undo', MagicMock(return_value='create:1 modify:1 delete:1')):
-            self.assertEqual(snapper.undo_jid(20160607130930720112), 'create:1 modify:1 delete:1')
+            assert snapper.undo_jid(20160607130930720112) == 'create:1 modify:1 delete:1'
 
     def test_diff_text_file(self):
         with patch('salt.modules.snapper._get_num_interval', MagicMock(return_value=(42, 43))), \
@@ -340,9 +344,9 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
                 patch('salt.utils.files.fopen', mock_open(read_data=FILE_CONTENT["/tmp/foo2"]['post'])), \
                 patch('salt.modules.snapper.snapper.ListConfigs', MagicMock(return_value=DBUS_RET['ListConfigs'])):
             if sys.version_info < (2, 7):
-                self.assertEqual(snapper.diff(), {"/tmp/foo2": MODULE_RET['DIFF']['/tmp/foo26']})
+                assert snapper.diff() == {"/tmp/foo2": MODULE_RET['DIFF']['/tmp/foo26']}
             else:
-                self.assertEqual(snapper.diff(), {"/tmp/foo2": MODULE_RET['DIFF']['/tmp/foo2']})
+                assert snapper.diff() == {"/tmp/foo2": MODULE_RET['DIFF']['/tmp/foo2']}
 
     @skipIf(sys.version_info < (2, 7), 'Python 2.7 required to compare diff properly')
     def test_diff_text_files(self):
@@ -367,7 +371,7 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
                     "/tmp/foo": MODULE_RET['DIFF']["/tmp/foo"],
                     "/tmp/foo2": MODULE_RET['DIFF']["/tmp/foo2"],
                 }
-                self.assertEqual(snapper.diff(), module_ret)
+                assert snapper.diff() == module_ret
 
     def test_diff_binary_files(self):
         with patch('salt.modules.snapper._get_num_interval', MagicMock(return_value=(55, 0))), \
@@ -389,4 +393,4 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
                 module_ret = {
                     "/tmp/foo3": MODULE_RET['DIFF']["/tmp/foo3"],
                 }
-                self.assertEqual(snapper.diff(), module_ret)
+                assert snapper.diff() == module_ret

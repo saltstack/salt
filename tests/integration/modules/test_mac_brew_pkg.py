@@ -41,7 +41,7 @@ class BrewModuleTest(ModuleCase):
             self.run_function('pkg.install', [ADD_PKG])
             pkg_list = self.run_function('pkg.list_pkgs')
             try:
-                self.assertIn(ADD_PKG, pkg_list)
+                assert ADD_PKG in pkg_list
             except AssertionError:
                 self.run_function('pkg.remove', [ADD_PKG])
                 raise
@@ -64,7 +64,7 @@ class BrewModuleTest(ModuleCase):
             # Now remove the installed package
             self.run_function('pkg.remove', [DEL_PKG])
             del_list = self.run_function('pkg.list_pkgs')
-            self.assertNotIn(DEL_PKG, del_list)
+            assert DEL_PKG not in del_list
         except CommandExecutionError:
             self.run_function('pkg.remove', [DEL_PKG])
             raise
@@ -79,18 +79,18 @@ class BrewModuleTest(ModuleCase):
             pkg_list = self.run_function('pkg.list_pkgs')
             version = self.run_function('pkg.version', [ADD_PKG])
             try:
-                self.assertTrue(version,
-                                msg=('version: {0} is empty,\
-                                or other issue is present'.format(version)))
-                self.assertIn(ADD_PKG, pkg_list,
-                              msg=('package: {0} is not in\
+                assert version, \
+                                ('version: {0} is empty,\
+                                or other issue is present'.format(version))
+                assert ADD_PKG in pkg_list, \
+                              ('package: {0} is not in\
                               the list of installed packages: {1}'
-                              .format(ADD_PKG, pkg_list)))
+                              .format(ADD_PKG, pkg_list))
                 #make sure the version is accurate and is listed in the pkg_list
-                self.assertIn(version, six.text_type(pkg_list[ADD_PKG]),
-                              msg=('The {0} version: {1} is \
+                assert version in six.text_type(pkg_list[ADD_PKG]), \
+                              ('The {0} version: {1} is \
                               not listed in the pkg_list: {2}'
-                              .format(ADD_PKG, version, pkg_list[ADD_PKG])))
+                              .format(ADD_PKG, version, pkg_list[ADD_PKG]))
             except AssertionError:
                 self.run_function('pkg.remove', [ADD_PKG])
                 raise
@@ -114,8 +114,8 @@ class BrewModuleTest(ModuleCase):
             installed_latest = self.run_function('pkg.latest_version', [ADD_PKG])
             version = self.run_function('pkg.version', [ADD_PKG])
             try:
-                self.assertTrue(isinstance(uninstalled_latest, six.string_types))
-                self.assertEqual(installed_latest, version)
+                assert isinstance(uninstalled_latest, six.string_types)
+                assert installed_latest == version
             except AssertionError:
                 self.run_function('pkg.remove', [ADD_PKG])
                 raise
@@ -128,7 +128,7 @@ class BrewModuleTest(ModuleCase):
         Integration test to ensure pkg.refresh_db works with brew
         '''
         refresh_brew = self.run_function('pkg.refresh_db')
-        self.assertTrue(refresh_brew)
+        assert refresh_brew
 
     def test_list_upgrades(self):
         '''
@@ -138,11 +138,11 @@ class BrewModuleTest(ModuleCase):
         try:
             upgrades = self.run_function('pkg.list_upgrades')
             try:
-                self.assertTrue(isinstance(upgrades, dict))
+                assert isinstance(upgrades, dict)
                 if upgrades:
                     for name in upgrades:
-                        self.assertTrue(isinstance(name, six.string_types))
-                        self.assertTrue(isinstance(upgrades[name], six.string_types))
+                        assert isinstance(name, six.string_types)
+                        assert isinstance(upgrades[name], six.string_types)
             except AssertionError:
                 self.run_function('pkg.remove', [ADD_PKG])
                 raise
@@ -159,10 +159,10 @@ class BrewModuleTest(ModuleCase):
             self.run_function('pkg.install', [ADD_PKG])
             info = self.run_function('pkg.info_installed', [ADD_PKG])
             try:
-                self.assertTrue(ADD_PKG in info)
-                self.assertTrue('versions' in info[ADD_PKG])
-                self.assertTrue('revision' in info[ADD_PKG])
-                self.assertTrue('stable' in info[ADD_PKG]['versions'])
+                assert ADD_PKG in info
+                assert 'versions' in info[ADD_PKG]
+                assert 'revision' in info[ADD_PKG]
+                assert 'stable' in info[ADD_PKG]['versions']
             except AssertionError:
                 self.run_function('pkg.remove', [ADD_PKG])
                 raise

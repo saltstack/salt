@@ -32,7 +32,7 @@ class StdTest(ModuleCase):
                 timeout=20,
                 )
         for ret in cmd_iter:
-            self.assertTrue(ret['minion'])
+            assert ret['minion']
 
         # make sure that the iter waits for long running jobs too
         cmd_iter = self.client.cmd_cli(
@@ -44,7 +44,7 @@ class StdTest(ModuleCase):
         num_ret = 0
         for ret in cmd_iter:
             num_ret += 1
-            self.assertTrue(ret['minion'])
+            assert ret['minion']
         assert num_ret > 0
 
         # ping a minion that doesn't exist, to make sure that it doesn't hang forever
@@ -63,7 +63,7 @@ class StdTest(ModuleCase):
             num_ret = 0
             for ret in cmd_iter:
                 num_ret += 1
-                self.assertTrue(ret['minion'])
+                assert ret['minion']
             assert num_ret == 0
         finally:
             os.unlink(key_file)
@@ -77,7 +77,7 @@ class StdTest(ModuleCase):
                 'test.ping',
                 )
         for ret in cmd_iter:
-            self.assertTrue(ret['minion'])
+            assert ret['minion']
 
     def test_iter_no_block(self):
         '''
@@ -90,7 +90,7 @@ class StdTest(ModuleCase):
         for ret in cmd_iter:
             if ret is None:
                 continue
-            self.assertTrue(ret['minion'])
+            assert ret['minion']
 
     def test_batch(self):
         '''
@@ -101,7 +101,7 @@ class StdTest(ModuleCase):
             'test.ping',
         )
         for ret in cmd_batch:
-            self.assertTrue(ret['minion'])
+            assert ret['minion']
 
     def test_batch_raw(self):
         '''
@@ -113,7 +113,7 @@ class StdTest(ModuleCase):
             raw=True,
         )
         for ret in cmd_batch:
-            self.assertTrue(ret['data']['success'])
+            assert ret['data']['success']
 
     def test_full_returns(self):
         '''
@@ -124,8 +124,8 @@ class StdTest(ModuleCase):
                 'test.ping',
                 timeout=20,
                 )
-        self.assertIn('minion', ret)
-        self.assertEqual({'ret': True, 'success': True}, ret['minion'])
+        assert 'minion' in ret
+        assert {'ret': True, 'success': True} == ret['minion']
 
     def test_disconnected_return(self):
         '''
@@ -149,11 +149,11 @@ class StdTest(ModuleCase):
             num_ret = 0
             for ret in cmd_iter:
                 num_ret += 1
-                self.assertEqual(ret['disconnected']['ret'], test_ret['ret'])
-                self.assertEqual(ret['disconnected']['out'], test_ret['out'])
+                assert ret['disconnected']['ret'] == test_ret['ret']
+                assert ret['disconnected']['out'] == test_ret['out']
 
             # Ensure that we entered the loop above
-            self.assertEqual(num_ret, 1)
+            assert num_ret == 1
 
         finally:
             os.unlink(key_file)
@@ -168,11 +168,11 @@ class StdTest(ModuleCase):
                 tgt_type='list',
                 timeout=self.TIMEOUT
                 )
-        self.assertIn('minion', ret)
-        self.assertIn('ghostminion', ret)
-        self.assertEqual(True, ret['minion'])
-        self.assertEqual(u'Minion did not return. [No response]',
-                         ret['ghostminion'])
+        assert 'minion' in ret
+        assert 'ghostminion' in ret
+        assert ret['minion'] is True
+        assert u'Minion did not return. [No response]' == \
+                         ret['ghostminion']
 
     def test_missing_minion_nodegroup(self):
         '''
@@ -183,8 +183,8 @@ class StdTest(ModuleCase):
                 'test.ping',
                 tgt_type='nodegroup'
                 )
-        self.assertIn('minion', ret)
-        self.assertIn('ghostminion', ret)
-        self.assertEqual(True, ret['minion'])
-        self.assertEqual(u'Minion did not return. [No response]',
-                         ret['ghostminion'])
+        assert 'minion' in ret
+        assert 'ghostminion' in ret
+        assert ret['minion'] is True
+        assert u'Minion did not return. [No response]' == \
+                         ret['ghostminion']

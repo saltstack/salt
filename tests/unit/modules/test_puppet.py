@@ -22,6 +22,7 @@ import salt.utils.args
 import salt.utils.files
 import salt.modules.puppet as puppet
 from salt.exceptions import CommandExecutionError
+import pytest
 
 
 class PuppetTestCase(TestCase, LoaderModuleMockMixin):
@@ -40,7 +41,7 @@ class PuppetTestCase(TestCase, LoaderModuleMockMixin):
             mock = MagicMock(return_value={'retcode': 0})
             mock_lst = MagicMock(return_value=[])
             with patch.dict(puppet.__salt__, {'cmd.run_all': mock, 'cmd.run': mock_lst}):
-                self.assertTrue(puppet.run())
+                assert puppet.run()
 
     def test_noop(self):
         '''
@@ -48,7 +49,7 @@ class PuppetTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={"stderr": "A", "stdout": "B"})
         with patch.object(puppet, 'run', mock):
-            self.assertDictEqual(puppet.noop(), {'stderr': 'A', 'stdout': 'B'})
+            assert puppet.noop() == {'stderr': 'A', 'stdout': 'B'}
 
     def test_enable(self):
         '''
@@ -60,11 +61,12 @@ class PuppetTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(os.path, 'isfile', mock):
                 mock = MagicMock(return_value=True)
                 with patch.object(os, 'remove', mock):
-                    self.assertTrue(puppet.enable())
+                    assert puppet.enable()
                 with patch.object(os, 'remove', MagicMock(side_effect=IOError)):
-                    self.assertRaises(CommandExecutionError, puppet.enable)
+                    with pytest.raises(CommandExecutionError):
+                        puppet.enable()
 
-            self.assertFalse(puppet.enable())
+            assert not puppet.enable()
 
     def test_disable(self):
         '''
@@ -74,15 +76,16 @@ class PuppetTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(puppet.__salt__, {'cmd.run': mock_lst}):
             mock = MagicMock(side_effect=[True, False])
             with patch.object(os.path, 'isfile', mock):
-                self.assertFalse(puppet.disable())
+                assert not puppet.disable()
 
                 with patch('salt.utils.files.fopen', mock_open()):
-                    self.assertTrue(puppet.disable())
+                    assert puppet.disable()
 
                 try:
                     with patch('salt.utils.files.fopen', mock_open()) as m_open:
                         m_open.side_effect = IOError(13, 'Permission denied:', '/file')
-                        self.assertRaises(CommandExecutionError, puppet.disable)
+                        with pytest.raises(CommandExecutionError):
+                            puppet.disable()
                 except StopIteration:
                     pass
 
@@ -94,39 +97,39 @@ class PuppetTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(puppet.__salt__, {'cmd.run': mock_lst}):
             mock = MagicMock(side_effect=[True])
             with patch.object(os.path, 'isfile', mock):
-                self.assertEqual(puppet.status(), "Administratively disabled")
+                assert puppet.status() == "Administratively disabled"
 
             mock = MagicMock(side_effect=[False, True])
             with patch.object(os.path, 'isfile', mock):
                 with patch('salt.utils.files.fopen', mock_open(read_data="1")):
                     mock = MagicMock(return_value=True)
                     with patch.object(os, 'kill', mock):
-                        self.assertEqual(puppet.status(), "Applying a catalog")
+                        assert puppet.status() == "Applying a catalog"
 
             mock = MagicMock(side_effect=[False, True])
             with patch.object(os.path, 'isfile', mock):
                 with patch('salt.utils.files.fopen', mock_open()):
                     mock = MagicMock(return_value=True)
                     with patch.object(os, 'kill', mock):
-                        self.assertEqual(puppet.status(), "Stale lockfile")
+                        assert puppet.status() == "Stale lockfile"
 
             mock = MagicMock(side_effect=[False, False, True])
             with patch.object(os.path, 'isfile', mock):
                 with patch('salt.utils.files.fopen', mock_open(read_data="1")):
                     mock = MagicMock(return_value=True)
                     with patch.object(os, 'kill', mock):
-                        self.assertEqual(puppet.status(), "Idle daemon")
+                        assert puppet.status() == "Idle daemon"
 
             mock = MagicMock(side_effect=[False, False, True])
             with patch.object(os.path, 'isfile', mock):
                 with patch('salt.utils.files.fopen', mock_open()):
                     mock = MagicMock(return_value=True)
                     with patch.object(os, 'kill', mock):
-                        self.assertEqual(puppet.status(), "Stale pidfile")
+                        assert puppet.status() == "Stale pidfile"
 
             mock = MagicMock(side_effect=[False, False, False])
             with patch.object(os.path, 'isfile', mock):
-                self.assertEqual(puppet.status(), "Stopped")
+                assert puppet.status() == "Stopped"
 
     def test_summary(self):
         '''
@@ -136,12 +139,13 @@ class PuppetTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(puppet.__salt__, {'cmd.run': mock_lst}):
             with patch('salt.utils.files.fopen',
                         mock_open(read_data="resources: 1")):
-                self.assertDictEqual(puppet.summary(), {'resources': 1})
+                assert puppet.summary() == {'resources': 1}
 
             permission_error = IOError(errno.EACCES, 'Permission denied:', '/file')
             with patch('salt.utils.files.fopen',
                        mock_open(read_data=permission_error)) as m_open:
-                self.assertRaises(CommandExecutionError, puppet.summary)
+                with pytest.raises(CommandExecutionError):
+                    puppet.summary()
 
     def test_plugin_sync(self):
         '''
@@ -151,9 +155,9 @@ class PuppetTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(puppet.__salt__, {'cmd.run': mock_lst}):
             mock_lst = MagicMock(side_effect=[False, True])
             with patch.dict(puppet.__salt__, {'cmd.run': mock_lst}):
-                self.assertEqual(puppet.plugin_sync(), "")
+                assert puppet.plugin_sync() == ""
 
-                self.assertTrue(puppet.plugin_sync())
+                assert puppet.plugin_sync()
 
     def test_facts(self):
         '''
@@ -169,7 +173,7 @@ class PuppetTestCase(TestCase, LoaderModuleMockMixin):
                 ['c', 'd'],
             ])
             with patch.object(puppet, '_format_fact', mock):
-                self.assertDictEqual(puppet.facts(), {'a': 'b', 'c': 'd'})
+                assert puppet.facts() == {'a': 'b', 'c': 'd'}
 
     def test_fact(self):
         '''
@@ -180,6 +184,6 @@ class PuppetTestCase(TestCase, LoaderModuleMockMixin):
             {'retcode': 0, 'stdout': True},
         ])
         with patch.dict(puppet.__salt__, {'cmd.run_all': mock}):
-            self.assertEqual(puppet.fact('salt'), '')
+            assert puppet.fact('salt') == ''
 
-            self.assertTrue(puppet.fact('salt'))
+            assert puppet.fact('salt')

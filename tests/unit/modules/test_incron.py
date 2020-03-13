@@ -35,8 +35,7 @@ class IncronTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(incron.__salt__, {'cmd.retcode': mock}), \
                patch('salt.modules.incron._get_incron_cmdstr',
                      MagicMock(return_value='incrontab')):
-            self.assertTrue(incron.write_incron_file('cybage',
-                                                     '/home/cybage/new_cron'))
+            assert incron.write_incron_file('cybage', '/home/cybage/new_cron')
 
     # 'write_cron_file_verbose' function tests: 1
 
@@ -49,8 +48,7 @@ class IncronTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(incron.__salt__, {'cmd.run_all': mock}), \
                 patch('salt.modules.incron._get_incron_cmdstr',
                       MagicMock(return_value='incrontab')):
-            self.assertTrue(incron.write_incron_file_verbose
-                            ('cybage', '/home/cybage/new_cron'))
+            assert incron.write_incron_file_verbose('cybage', '/home/cybage/new_cron')
 
     # 'raw_system_incron' function tests: 1
 
@@ -60,7 +58,7 @@ class IncronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.incron._read_file',
                    MagicMock(return_value='salt')):
-            self.assertEqual(incron.raw_system_incron(), 'salt')
+            assert incron.raw_system_incron() == 'salt'
 
     # 'raw_incron' function tests: 1
 
@@ -72,7 +70,7 @@ class IncronTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(incron.__grains__, {'os_family': mock}):
             mock = MagicMock(return_value='salt')
             with patch.dict(incron.__salt__, {'cmd.run_stdout': mock}):
-                self.assertEqual(incron.raw_incron('cybage'), 'salt')
+                assert incron.raw_incron('cybage') == 'salt'
 
     # 'list_tab' function tests: 1
 
@@ -84,8 +82,8 @@ class IncronTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(incron.__grains__, {'os_family': mock}):
             mock = MagicMock(return_value='salt')
             with patch.dict(incron.__salt__, {'cmd.run_stdout': mock}):
-                self.assertDictEqual(incron.list_tab('cybage'),
-                                     {'pre': ['salt'], 'crons': []})
+                assert incron.list_tab('cybage') == \
+                                     {'pre': ['salt'], 'crons': []}
 
     # 'set_job' function tests: 1
 
@@ -93,18 +91,18 @@ class IncronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it sets a cron job up for a specified user.
         '''
-        self.assertEqual(incron.set_job('cybage', '/home/cybage', 'TO_MODIFY',
-                                        'echo "$$ $@ $# $% $&"'),
-                         'Invalid mask type: TO_MODIFY')
+        assert incron.set_job('cybage', '/home/cybage', 'TO_MODIFY',
+                                        'echo "$$ $@ $# $% $&"') == \
+                         'Invalid mask type: TO_MODIFY'
 
         val = {'pre': [], 'crons': [{'path': '/home/cybage',
                                      'mask': 'IN_MODIFY',
                                      'cmd': 'echo "SALT"'}]}
         with patch.object(incron, 'list_tab',
                           MagicMock(return_value=val)):
-            self.assertEqual(incron.set_job('cybage', '/home/cybage',
+            assert incron.set_job('cybage', '/home/cybage',
                                             'IN_MODIFY',
-                                            'echo "SALT"'), 'present')
+                                            'echo "SALT"') == 'present'
 
         with patch.object(incron, 'list_tab',
                           MagicMock(return_value={'pre': ['salt'],
@@ -114,9 +112,9 @@ class IncronTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(incron, '_write_incron_lines',
                                   MagicMock(return_value={'retcode': True,
                                                           'stderr': 'error'})):
-                    self.assertEqual(incron.set_job('cybage', '/home/cybage',
+                    assert incron.set_job('cybage', '/home/cybage',
                                                     'IN_MODIFY',
-                                                    'echo "SALT"'), 'error')
+                                                    'echo "SALT"') == 'error'
 
         with patch.object(incron, 'list_tab',
                           MagicMock(return_value={'pre': ['salt'],
@@ -126,9 +124,9 @@ class IncronTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(incron, '_write_incron_lines',
                                   MagicMock(return_value={'retcode': False,
                                                           'stderr': 'error'})):
-                    self.assertEqual(incron.set_job('cybage', '/home/cybage',
+                    assert incron.set_job('cybage', '/home/cybage',
                                                     'IN_MODIFY',
-                                                    'echo "SALT"'), 'new')
+                                                    'echo "SALT"') == 'new'
 
         val = {'pre': [], 'crons': [{'path': '/home/cybage',
                                      'mask': 'IN_MODIFY,IN_DELETE',
@@ -140,9 +138,9 @@ class IncronTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(incron, '_write_incron_lines',
                                   MagicMock(return_value={'retcode': False,
                                                           'stderr': 'error'})):
-                    self.assertEqual(incron.set_job('cybage', '/home/cybage',
+                    assert incron.set_job('cybage', '/home/cybage',
                                                     'IN_DELETE',
-                                                    'echo "SALT"'), 'updated')
+                                                    'echo "SALT"') == 'updated'
 
     # 'rm_job' function tests: 1
 
@@ -152,9 +150,9 @@ class IncronTestCase(TestCase, LoaderModuleMockMixin):
         day/time params are specified, the job will only be removed if
         the specified params match.
         '''
-        self.assertEqual(incron.rm_job('cybage', '/home/cybage', 'TO_MODIFY',
-                                       'echo "$$ $@ $# $% $&"'),
-                         'Invalid mask type: TO_MODIFY')
+        assert incron.rm_job('cybage', '/home/cybage', 'TO_MODIFY',
+                                       'echo "$$ $@ $# $% $&"') == \
+                         'Invalid mask type: TO_MODIFY'
 
         with patch.object(incron, 'list_tab',
                           MagicMock(return_value={'pre': ['salt'],
@@ -164,9 +162,9 @@ class IncronTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(incron, '_write_incron_lines',
                                   MagicMock(return_value={'retcode': True,
                                                           'stderr': 'error'})):
-                    self.assertEqual(incron.rm_job('cybage', '/home/cybage',
+                    assert incron.rm_job('cybage', '/home/cybage',
                                                    'IN_MODIFY',
-                                                   'echo "SALT"'), 'error')
+                                                   'echo "SALT"') == 'error'
 
         with patch.object(incron, 'list_tab',
                           MagicMock(return_value={'pre': ['salt'],
@@ -176,6 +174,6 @@ class IncronTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(incron, '_write_incron_lines',
                                   MagicMock(return_value={'retcode': False,
                                                           'stderr': 'error'})):
-                    self.assertEqual(incron.rm_job('cybage', '/home/cybage',
+                    assert incron.rm_job('cybage', '/home/cybage',
                                                    'IN_MODIFY',
-                                                   'echo "SALT"'), 'absent')
+                                                   'echo "SALT"') == 'absent'

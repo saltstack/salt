@@ -38,4 +38,4 @@ class PkgngTestCase(TestCase, LoaderModuleMockMixin):
 
         mock_t = MagicMock(return_value=True)
         with patch.dict(pkgng.__salt__, {'pkgng.update_package_site': mock_t}):
-            self.assertDictEqual(pkgng.update_packaging_site(name), ret)
+            assert pkgng.update_packaging_site(name) == ret

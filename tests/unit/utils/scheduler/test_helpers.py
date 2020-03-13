@@ -38,4 +38,4 @@ class SchedulerHelpersTest(SchedulerTestsBase):
         self.schedule.opts.update(job)
 
         ret = self.schedule._get_schedule(remove_hidden=True)
-        self.assertEqual(job['schedule'], ret)
+        assert job['schedule'] == ret

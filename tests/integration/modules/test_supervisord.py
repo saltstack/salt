@@ -93,8 +93,8 @@ class SupervisordModuleTest(ModuleCase):
         ret = self.run_function(
             'supervisord.start', [], conf_file=self.supervisor_conf,
             bin_env=self.venv_dir)
-        self.assertIn('sleep_service: started', ret)
-        self.assertIn('sleep_service2: started', ret)
+        assert 'sleep_service: started' in ret
+        assert 'sleep_service2: started' in ret
 
     def test_start_all_already_running(self):
         '''
@@ -105,7 +105,7 @@ class SupervisordModuleTest(ModuleCase):
             'supervisord.start', [], conf_file=self.supervisor_conf,
             bin_env=self.venv_dir
         )
-        self.assertEqual(ret, '')
+        assert ret == ''
 
     def test_start_one(self):
         '''
@@ -115,7 +115,7 @@ class SupervisordModuleTest(ModuleCase):
         ret = self.run_function(
             'supervisord.start', ['sleep_service'],
             conf_file=self.supervisor_conf, bin_env=self.venv_dir)
-        self.assertEqual(ret, 'sleep_service: started')
+        assert ret == 'sleep_service: started'
 
     def test_start_one_already_running(self):
         '''
@@ -125,7 +125,7 @@ class SupervisordModuleTest(ModuleCase):
         ret = self.run_function(
             'supervisord.start', ['sleep_service'],
             conf_file=self.supervisor_conf, bin_env=self.venv_dir)
-        self.assertEqual(ret, 'sleep_service: ERROR (already started)')
+        assert ret == 'sleep_service: ERROR (already started)'
 
     def test_restart_all(self):
         '''
@@ -135,10 +135,10 @@ class SupervisordModuleTest(ModuleCase):
         ret = self.run_function(
             'supervisord.restart', [], conf_file=self.supervisor_conf,
             bin_env=self.venv_dir)
-        self.assertIn('sleep_service: stopped', ret)
-        self.assertIn('sleep_service2: stopped', ret)
-        self.assertIn('sleep_service: started', ret)
-        self.assertIn('sleep_service2: started', ret)
+        assert 'sleep_service: stopped' in ret
+        assert 'sleep_service2: stopped' in ret
+        assert 'sleep_service: started' in ret
+        assert 'sleep_service2: started' in ret
 
     def test_restart_all_not_running(self):
         '''
@@ -149,8 +149,8 @@ class SupervisordModuleTest(ModuleCase):
             'supervisord.restart', [], conf_file=self.supervisor_conf,
             bin_env=self.venv_dir)
         # These 2 services might return in different orders so test separately
-        self.assertIn('sleep_service: started', ret)
-        self.assertIn('sleep_service2: started', ret)
+        assert 'sleep_service: started' in ret
+        assert 'sleep_service2: started' in ret
 
     def test_restart_one(self):
         '''
@@ -160,7 +160,7 @@ class SupervisordModuleTest(ModuleCase):
         ret = self.run_function(
             'supervisord.restart', ['sleep_service'],
             conf_file=self.supervisor_conf, bin_env=self.venv_dir)
-        self.assertEqual(ret, 'sleep_service: stopped\nsleep_service: started')
+        assert ret == 'sleep_service: stopped\nsleep_service: started'
 
     def test_restart_one_not_running(self):
         '''
@@ -170,8 +170,8 @@ class SupervisordModuleTest(ModuleCase):
         ret = self.run_function(
             'supervisord.restart', ['sleep_service'],
             conf_file=self.supervisor_conf, bin_env=self.venv_dir)
-        self.assertIn('sleep_service: ERROR (not running)', ret)
-        self.assertIn('sleep_service: started', ret)
+        assert 'sleep_service: ERROR (not running)' in ret
+        assert 'sleep_service: started' in ret
 
     def test_stop_all(self):
         '''
@@ -181,8 +181,8 @@ class SupervisordModuleTest(ModuleCase):
         ret = self.run_function(
             'supervisord.stop', [], conf_file=self.supervisor_conf,
             bin_env=self.venv_dir)
-        self.assertIn('sleep_service: stopped', ret)
-        self.assertIn('sleep_service2: stopped', ret)
+        assert 'sleep_service: stopped' in ret
+        assert 'sleep_service2: stopped' in ret
 
     def test_stop_all_not_running(self):
         '''
@@ -192,7 +192,7 @@ class SupervisordModuleTest(ModuleCase):
         ret = self.run_function(
             'supervisord.stop', [], conf_file=self.supervisor_conf,
             bin_env=self.venv_dir)
-        self.assertEqual(ret, '')
+        assert ret == ''
 
     def test_stop_one(self):
         '''
@@ -202,7 +202,7 @@ class SupervisordModuleTest(ModuleCase):
         ret = self.run_function(
             'supervisord.stop', ['sleep_service'],
             conf_file=self.supervisor_conf, bin_env=self.venv_dir)
-        self.assertEqual(ret, 'sleep_service: stopped')
+        assert ret == 'sleep_service: stopped'
 
     def test_stop_one_not_running(self):
         '''
@@ -212,7 +212,7 @@ class SupervisordModuleTest(ModuleCase):
         ret = self.run_function(
             'supervisord.stop', ['sleep_service'],
             conf_file=self.supervisor_conf, bin_env=self.venv_dir)
-        self.assertEqual(ret, 'sleep_service: ERROR (not running)')
+        assert ret == 'sleep_service: ERROR (not running)'
 
     def test_status_all(self):
         '''
@@ -222,7 +222,7 @@ class SupervisordModuleTest(ModuleCase):
         ret = self.run_function(
             'supervisord.status', [], conf_file=self.supervisor_conf,
             bin_env=self.venv_dir)
-        self.assertEqual(sorted(ret), ['sleep_service', 'sleep_service2'])
+        assert sorted(ret) == ['sleep_service', 'sleep_service2']
 
     def test_status_one(self):
         '''
@@ -232,4 +232,4 @@ class SupervisordModuleTest(ModuleCase):
         ret = self.run_function(
             'supervisord.status', ['sleep_service'],
             conf_file=self.supervisor_conf, bin_env=self.venv_dir)
-        self.assertTrue(ret)
+        assert ret

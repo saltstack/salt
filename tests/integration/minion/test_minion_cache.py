@@ -44,10 +44,10 @@ class BasePillarTest(ModuleCase):
             "salt.minion.ZMQDefaultLoop.current"
         ):
             minion = salt.minion.SMinion(opts)
-            self.assertTrue("pillar" in os.listdir(tempdir))
+            assert "pillar" in os.listdir(tempdir)
             pillar_cache = os.path.join(tempdir, "pillar")
-            self.assertTrue("top.sls" in os.listdir(pillar_cache))
-            self.assertTrue("cache.sls" in os.listdir(pillar_cache))
+            assert "top.sls" in os.listdir(pillar_cache)
+            assert "cache.sls" in os.listdir(pillar_cache)
             with fopen(os.path.join(pillar_cache, "cache.sls"), "rb") as f:
                 cached_data = salt.utils.yaml.safe_load(f)
                 assert cached_data == pillar

@@ -17,6 +17,7 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.modules.supervisord as supervisord
 from salt.exceptions import CommandExecutionError
+import pytest
 
 
 class SupervisordTestCase(TestCase, LoaderModuleMockMixin):
@@ -48,7 +49,7 @@ class SupervisordTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(supervisord.__salt__, {'cmd.run_all': self._m_all(),
                                                'cmd.which_bin': self._m_bin()}):
-            self.assertTrue(supervisord.start())
+            assert supervisord.start()
 
     # 'restart' function tests: 1
 
@@ -58,7 +59,7 @@ class SupervisordTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(supervisord.__salt__, {'cmd.run_all': self._m_all(),
                                                'cmd.which_bin': self._m_bin()}):
-            self.assertTrue(supervisord.restart())
+            assert supervisord.restart()
 
     # 'stop' function tests: 1
 
@@ -68,7 +69,7 @@ class SupervisordTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(supervisord.__salt__, {'cmd.run_all': self._m_all(),
                                                'cmd.which_bin': self._m_bin()}):
-            self.assertTrue(supervisord.stop())
+            assert supervisord.stop()
 
     # 'add' function tests: 1
 
@@ -78,7 +79,7 @@ class SupervisordTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(supervisord.__salt__, {'cmd.run_all': self._m_all(),
                                                'cmd.which_bin': self._m_bin()}):
-            self.assertTrue(supervisord.add('salt'))
+            assert supervisord.add('salt')
 
     # 'remove' function tests: 1
 
@@ -88,7 +89,7 @@ class SupervisordTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(supervisord.__salt__, {'cmd.run_all': self._m_all(),
                                                'cmd.which_bin': self._m_bin()}):
-            self.assertTrue(supervisord.remove('salt'))
+            assert supervisord.remove('salt')
 
     # 'reread' function tests: 1
 
@@ -98,7 +99,7 @@ class SupervisordTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(supervisord.__salt__, {'cmd.run_all': self._m_all(),
                                                'cmd.which_bin': self._m_bin()}):
-            self.assertTrue(supervisord.reread())
+            assert supervisord.reread()
 
     # 'update' function tests: 1
 
@@ -108,7 +109,7 @@ class SupervisordTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(supervisord.__salt__, {'cmd.run_all': self._m_all(),
                                                'cmd.which_bin': self._m_bin()}):
-            self.assertTrue(supervisord.update())
+            assert supervisord.update()
 
     # 'status' function tests: 1
 
@@ -119,8 +120,8 @@ class SupervisordTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(supervisord.__salt__, {'cmd.run_all': self._m_all
                                                ('salt running'),
                                                'cmd.which_bin': self._m_bin()}):
-            self.assertDictEqual(supervisord.status(),
-                                 {'salt': {'state': 'running', 'reason': ''}})
+            assert supervisord.status() == \
+                                 {'salt': {'state': 'running', 'reason': ''}}
 
     # 'status_raw' function tests: 1
 
@@ -130,7 +131,7 @@ class SupervisordTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(supervisord.__salt__, {'cmd.run_all': self._m_all(),
                                                'cmd.which_bin': self._m_bin()}):
-            self.assertTrue(supervisord.status_raw())
+            assert supervisord.status_raw()
 
     # 'custom' function tests: 1
 
@@ -140,7 +141,7 @@ class SupervisordTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(supervisord.__salt__, {'cmd.run_all': self._m_all(),
                                                'cmd.which_bin': self._m_bin()}):
-            self.assertTrue(supervisord.custom("mstop '*gunicorn*'"))
+            assert supervisord.custom("mstop '*gunicorn*'")
 
     # 'options' function tests: 1
 
@@ -176,8 +177,8 @@ class SupervisordTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(supervisord, '_read_config',
                           MagicMock(return_value=MockConfig())):
             MockConfig.flag = 1
-            self.assertRaises(CommandExecutionError, supervisord.options,
-                              'salt')
+            with pytest.raises(CommandExecutionError):
+                supervisord.options('salt')
 
             MockConfig.flag = 0
-            self.assertDictEqual(supervisord.options('salt'), {'salt': True})
+            assert supervisord.options('salt') == {'salt': True}

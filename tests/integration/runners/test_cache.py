@@ -29,14 +29,14 @@ class ManageTest(ShellCase):
         )
         # Make sure we can see the new key
         ret = self.run_run_plus('cache.list', bank='cachetest/runner')
-        self.assertIn('test_cache', ret['return'])
+        assert 'test_cache' in ret['return']
         # Make sure we can see the new data
         ret = self.run_run_plus('cache.fetch', bank='cachetest/runner', key='test_cache')
-        self.assertIn('The time has come the walrus said', ret['return'])
+        assert 'The time has come the walrus said' in ret['return']
         # Make sure we can delete the data
         ret = self.run_run_plus('cache.flush', bank='cachetest/runner', key='test_cache')
         ret = self.run_run_plus('cache.list', bank='cachetest/runner')
-        self.assertNotIn('test_cache', ret['return'])
+        assert 'test_cache' not in ret['return']
 
     def test_cache_invalid(self):
         '''
@@ -48,7 +48,7 @@ class ManageTest(ShellCase):
         )
         # Make sure we can see the new key
         expected = 'Passed invalid arguments:'
-        self.assertIn(expected, ret['return'])
+        assert expected in ret['return']
 
     def test_grains(self):
         '''
@@ -60,7 +60,7 @@ class ManageTest(ShellCase):
             tgt='minion'
         )
 
-        self.assertIn('minion', ret['return'])
+        assert 'minion' in ret['return']
 
     def test_pillar(self):
         '''
@@ -123,4 +123,4 @@ class ManageTest(ShellCase):
             tgt='minion'
         )
 
-        self.assertIn('minion', ret['return'])
+        assert 'minion' in ret['return']

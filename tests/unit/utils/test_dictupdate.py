@@ -11,6 +11,7 @@ from tests.support.unit import TestCase
 import salt.utils.dictupdate as dictupdate
 from salt.utils.odict import OrderedDict
 from salt.exceptions import SaltInvocationError
+import pytest
 
 
 class UtilDictupdateTestCase(TestCase):
@@ -23,7 +24,7 @@ class UtilDictupdateTestCase(TestCase):
         mdict = copy.deepcopy(self.dict1)
         mdict['A'] = 'Z'
         res = dictupdate.update(copy.deepcopy(self.dict1), {'A': 'Z'})
-        self.assertEqual(res, mdict)
+        assert res == mdict
 
         # level 1 value changes (list replacement)
         mdict = copy.deepcopy(self.dict1)
@@ -31,7 +32,7 @@ class UtilDictupdateTestCase(TestCase):
         res = dictupdate.update(copy.deepcopy(mdict), {'A': [2, 3]},
                                 merge_lists=False)
         mdict['A'] = [2, 3]
-        self.assertEqual(res, mdict)
+        assert res == mdict
 
         # level 1 value changes (list merge)
         mdict = copy.deepcopy(self.dict1)
@@ -39,7 +40,7 @@ class UtilDictupdateTestCase(TestCase):
         res = dictupdate.update(copy.deepcopy(mdict), {'A': [3, 4]},
                                 merge_lists=True)
         mdict['A'] = [1, 2, 3, 4]
-        self.assertEqual(res, mdict)
+        assert res == mdict
 
         # level 1 value changes (list merge, remove duplicates, preserve order)
         mdict = copy.deepcopy(self.dict1)
@@ -47,13 +48,13 @@ class UtilDictupdateTestCase(TestCase):
         res = dictupdate.update(copy.deepcopy(mdict), {'A': [4, 3, 2, 1]},
                                 merge_lists=True)
         mdict['A'] = [1, 2, 4, 3]
-        self.assertEqual(res, mdict)
+        assert res == mdict
 
         # level 2 value changes
         mdict = copy.deepcopy(self.dict1)
         mdict['C']['D'] = 'Z'
         res = dictupdate.update(copy.deepcopy(self.dict1), {'C': {'D': 'Z'}})
-        self.assertEqual(res, mdict)
+        assert res == mdict
 
         # level 2 value changes (list replacement)
         mdict = copy.deepcopy(self.dict1)
@@ -61,7 +62,7 @@ class UtilDictupdateTestCase(TestCase):
         res = dictupdate.update(copy.deepcopy(mdict), {'C': {'D': ['c', 'd']}},
                                 merge_lists=False)
         mdict['C']['D'] = ['c', 'd']
-        self.assertEqual(res, mdict)
+        assert res == mdict
 
         # level 2 value changes (list merge)
         mdict = copy.deepcopy(self.dict1)
@@ -69,7 +70,7 @@ class UtilDictupdateTestCase(TestCase):
         res = dictupdate.update(copy.deepcopy(mdict), {'C': {'D': ['c', 'd']}},
                                 merge_lists=True)
         mdict['C']['D'] = ['a', 'b', 'c', 'd']
-        self.assertEqual(res, mdict)
+        assert res == mdict
 
         # level 2 value changes (list merge, remove duplicates, preserve order)
         mdict = copy.deepcopy(self.dict1)
@@ -78,7 +79,7 @@ class UtilDictupdateTestCase(TestCase):
                                 {'C': {'D': ['d', 'c', 'b', 'a']}},
                                 merge_lists=True)
         mdict['C']['D'] = ['a', 'b', 'd', 'c']
-        self.assertEqual(res, mdict)
+        assert res == mdict
 
         # level 3 value changes
         mdict = copy.deepcopy(self.dict1)
@@ -87,7 +88,7 @@ class UtilDictupdateTestCase(TestCase):
             copy.deepcopy(self.dict1),
             {'C': {'F': {'G': 'Z'}}}
         )
-        self.assertEqual(res, mdict)
+        assert res == mdict
 
         # level 3 value changes (list replacement)
         mdict = copy.deepcopy(self.dict1)
@@ -96,7 +97,7 @@ class UtilDictupdateTestCase(TestCase):
                                 {'C': {'F': {'G': ['c', 'd']}}},
                                 merge_lists=False)
         mdict['C']['F']['G'] = ['c', 'd']
-        self.assertEqual(res, mdict)
+        assert res == mdict
 
         # level 3 value changes (list merge)
         mdict = copy.deepcopy(self.dict1)
@@ -105,7 +106,7 @@ class UtilDictupdateTestCase(TestCase):
                                 {'C': {'F': {'G': ['c', 'd']}}},
                                 merge_lists=True)
         mdict['C']['F']['G'] = ['a', 'b', 'c', 'd']
-        self.assertEqual(res, mdict)
+        assert res == mdict
 
         # level 3 value changes (list merge, remove duplicates, preserve order)
         mdict = copy.deepcopy(self.dict1)
@@ -114,25 +115,25 @@ class UtilDictupdateTestCase(TestCase):
                                 {'C': {'F': {'G': ['d', 'c', 'b', 'a']}}},
                                 merge_lists=True)
         mdict['C']['F']['G'] = ['a', 'b', 'd', 'c']
-        self.assertEqual(res, mdict)
+        assert res == mdict
 
         # replace a sub-dictionary
         mdict = copy.deepcopy(self.dict1)
         mdict['C'] = 'Z'
         res = dictupdate.update(copy.deepcopy(self.dict1), {'C': 'Z'})
-        self.assertEqual(res, mdict)
+        assert res == mdict
 
         # add a new scalar value
         mdict = copy.deepcopy(self.dict1)
         mdict['Z'] = 'Y'
         res = dictupdate.update(copy.deepcopy(self.dict1), {'Z': 'Y'})
-        self.assertEqual(res, mdict)
+        assert res == mdict
 
         # add a dictionary
         mdict = copy.deepcopy(self.dict1)
         mdict['Z'] = {'Y': 'X'}
         res = dictupdate.update(copy.deepcopy(self.dict1), {'Z': {'Y': 'X'}})
-        self.assertEqual(res, mdict)
+        assert res == mdict
 
         # add a nested dictionary
         mdict = copy.deepcopy(self.dict1)
@@ -141,7 +142,7 @@ class UtilDictupdateTestCase(TestCase):
             copy.deepcopy(self.dict1),
             {'Z': {'Y': {'X': 'W'}}}
         )
-        self.assertEqual(res, mdict)
+        assert res == mdict
 
 
 class UtilDictMergeTestCase(TestCase):
@@ -155,7 +156,7 @@ class UtilDictMergeTestCase(TestCase):
         mdict = copy.deepcopy(self.dict1)
         mdict['A'] = 'b'
         ret = dictupdate.merge_overwrite(copy.deepcopy(self.dict1), {'A': 'b'})
-        self.assertEqual(mdict, ret)
+        assert mdict == ret
 
     def test_merge_overwrite_missing_source_key(self):
         '''
@@ -165,7 +166,7 @@ class UtilDictMergeTestCase(TestCase):
         mdict = copy.deepcopy(self.dict1)
         mdict['D'] = 'new'
         ret = dictupdate.merge_overwrite(copy.deepcopy(self.dict1), {'D': 'new'})
-        self.assertEqual(mdict, ret)
+        assert mdict == ret
 
     def test_merge_aggregate_traditional(self):
         '''
@@ -175,7 +176,7 @@ class UtilDictMergeTestCase(TestCase):
         mdict = copy.deepcopy(self.dict1)
         mdict['A'] = 'b'
         ret = dictupdate.merge_overwrite(copy.deepcopy(self.dict1), {'A': 'b'})
-        self.assertEqual(mdict, ret)
+        assert mdict == ret
 
     def test_merge_list_traditional(self):
         '''
@@ -185,7 +186,7 @@ class UtilDictMergeTestCase(TestCase):
         mdict = copy.deepcopy(self.dict1)
         mdict['A'] = ['B', 'b']
         ret = dictupdate.merge_list(copy.deepcopy(self.dict1), {'A': 'b'})
-        self.assertEqual(mdict, ret)
+        assert mdict == ret
 
     def test_merge_list_append(self):
         '''
@@ -199,7 +200,7 @@ class UtilDictMergeTestCase(TestCase):
         mdict1 = copy.deepcopy(self.dict1)
         mdict1['A'] = ['B']
         ret = dictupdate.merge_list(mdict1, {'A': ['b', 'c']})
-        self.assertEqual({'A': [['B'], ['b', 'c']], 'C': {'D': 'E', 'F': {'I': 'J', 'G': 'H'}}}, ret)
+        assert {'A': [['B'], ['b', 'c']], 'C': {'D': 'E', 'F': {'I': 'J', 'G': 'H'}}} == ret
 
 
 class UtilDeepDictUpdateTestCase(TestCase):
@@ -212,17 +213,17 @@ class UtilDeepDictUpdateTestCase(TestCase):
         '''
         mdict = copy.deepcopy(self.dict1)
         res = dictupdate.set_dict_key_value(mdict, 'C:F', 'foo')
-        self.assertEqual({'A': 'B', 'C': {'D': 'E', 'F': 'foo'}}, res)
+        assert {'A': 'B', 'C': {'D': 'E', 'F': 'foo'}} == res
         # Verify modify-in-place
-        self.assertEqual({'A': 'B', 'C': {'D': 'E', 'F': 'foo'}}, mdict)
+        assert {'A': 'B', 'C': {'D': 'E', 'F': 'foo'}} == mdict
 
         # Test using alternative delimiter
         res = dictupdate.set_dict_key_value(mdict, 'C/F', {'G': 'H', 'I': 'J'}, delimiter='/')
-        self.assertEqual(self.dict1, res)
+        assert self.dict1 == res
 
         # Test without using a delimiter in the keys
         res = dictupdate.set_dict_key_value(mdict, 'C', None)
-        self.assertEqual({'A': 'B', 'C': None}, res)
+        assert {'A': 'B', 'C': None} == res
 
     def test_deep_set_create(self):
         '''
@@ -230,14 +231,14 @@ class UtilDeepDictUpdateTestCase(TestCase):
         '''
         mdict = copy.deepcopy(self.dict1)
         res = dictupdate.set_dict_key_value(mdict, 'K:L:M', 'Q')
-        self.assertEqual({'A': 'B', 'C': {'D': 'E', 'F': {'G': 'H', 'I': 'J'}}, 'K': {'L': {'M': 'Q'}}}, res)
+        assert {'A': 'B', 'C': {'D': 'E', 'F': {'G': 'H', 'I': 'J'}}, 'K': {'L': {'M': 'Q'}}} == res
 
     def test_deep_set_ordered_dicts(self):
         '''
         Test creating new nested ordereddicts.
         '''
         res = dictupdate.set_dict_key_value({}, 'A:B', 'foo', ordered_dict=True)
-        self.assertEqual({'A': OrderedDict([('B', 'foo')])}, res)
+        assert {'A': OrderedDict([('B', 'foo')])} == res
 
     def test_deep_append(self):
         '''
@@ -245,13 +246,13 @@ class UtilDeepDictUpdateTestCase(TestCase):
         '''
         sdict = {'bar': {'baz': [1, 2]}}
         res = dictupdate.append_dict_key_value(sdict, 'bar:baz', 42)
-        self.assertEqual({'bar': {'baz': [1, 2, 42]}}, res)
+        assert {'bar': {'baz': [1, 2, 42]}} == res
         # Append with alternate delimiter
         res = dictupdate.append_dict_key_value(sdict, 'bar~baz', 43, delimiter='~')
-        self.assertEqual({'bar': {'baz': [1, 2, 42, 43]}}, res)
+        assert {'bar': {'baz': [1, 2, 42, 43]}} == res
         # Append to a not-yet existing list
         res = dictupdate.append_dict_key_value({}, 'foo:bar:baz', 42)
-        self.assertEqual({'foo': {'bar': {'baz': [42]}}}, res)
+        assert {'foo': {'bar': {'baz': [42]}}} == res
 
     def test_deep_extend(self):
         '''
@@ -261,15 +262,15 @@ class UtilDeepDictUpdateTestCase(TestCase):
         '''
         sdict = {'bar': {'baz': [1, 2]}}
         res = dictupdate.extend_dict_key_value(sdict, 'bar:baz', [42, 42])
-        self.assertEqual({'bar': {'baz': [1, 2, 42, 42]}}, res)
+        assert {'bar': {'baz': [1, 2, 42, 42]}} == res
 
         # Extend a not-yet existing list
         res = dictupdate.extend_dict_key_value({}, 'bar:baz:qux', [42])
-        self.assertEqual({'bar': {'baz': {'qux': [42]}}}, res)
+        assert {'bar': {'baz': {'qux': [42]}}} == res
 
         # Extend with a dict (remember, foo has been updated in the first test)
         res = dictupdate.extend_dict_key_value(sdict, 'bar:baz', {'qux': 'quux'})
-        self.assertEqual({'bar': {'baz': [1, 2, 42, 42, 'qux']}}, res)
+        assert {'bar': {'baz': [1, 2, 42, 42, 'qux']}} == res
 
     def test_deep_extend_illegal_addition(self):
         '''
@@ -277,8 +278,7 @@ class UtilDeepDictUpdateTestCase(TestCase):
         '''
         # Extend with an illegal type
         for extend_with in [42, None]:
-            with self.assertRaisesRegex(SaltInvocationError,
-                                        r"Cannot extend {} with a {}."
+            with pytest.raises(SaltInvocationError, match=r"Cannot extend {} with a {}."
                                         "".format(type([]), type(extend_with))):
                 dictupdate.extend_dict_key_value({}, 'foo', extend_with)
 
@@ -288,8 +288,7 @@ class UtilDeepDictUpdateTestCase(TestCase):
         '''
         # Extend an illegal type
         for extend_this in [{}, 42, 'bar']:
-            with self.assertRaisesRegex(SaltInvocationError,
-                                        r"The last key contains a {}, which cannot extend."
+            with pytest.raises(SaltInvocationError, match=r"The last key contains a {}, which cannot extend."
                                         "".format(type(extend_this))):
                 dictupdate.extend_dict_key_value({'foo': extend_this}, 'foo', [42])
 
@@ -299,14 +298,14 @@ class UtilDeepDictUpdateTestCase(TestCase):
         '''
         mdict = copy.deepcopy(self.dict1)
         res = dictupdate.update_dict_key_value(mdict, 'C:F', {'foo': 'bar', 'qux': 'quux'})
-        self.assertEqual({'A': 'B', 'C': {'D': 'E', 'F': {'G': 'H', 'I': 'J', 'foo': 'bar', 'qux': 'quux'}}}, res)
+        assert {'A': 'B', 'C': {'D': 'E', 'F': {'G': 'H', 'I': 'J', 'foo': 'bar', 'qux': 'quux'}}} == res
 
         # Test updating a non-existing subkey
         res = dictupdate.update_dict_key_value({}, 'foo:bar:baz', {'qux': 'quux'})
-        self.assertEqual({'foo': {'bar': {'baz': {'qux': 'quux'}}}}, res)
+        assert {'foo': {'bar': {'baz': {'qux': 'quux'}}}} == res
         # Test updating a non-existing subkey, with a different delimiter
         res = dictupdate.update_dict_key_value({}, 'foo bar baz', {'qux': 'quux'}, delimiter=' ')
-        self.assertEqual({'foo': {'bar': {'baz': {'qux': 'quux'}}}}, res)
+        assert {'foo': {'bar': {'baz': {'qux': 'quux'}}}} == res
 
     def test_deep_update_illegal_update(self):
         '''
@@ -314,13 +313,11 @@ class UtilDeepDictUpdateTestCase(TestCase):
         '''
         # Update with an illegal type
         for update_with in [42, None, [42], 'bar']:
-            with self.assertRaisesRegex(SaltInvocationError,
-                                        r"Cannot update {} with a {}."
+            with pytest.raises(SaltInvocationError, match=r"Cannot update {} with a {}."
                                         "".format(type({}), type(update_with))):
                 dictupdate.update_dict_key_value({}, 'foo', update_with)
         # Again, but now using OrderedDicts
         for update_with in [42, None, [42], 'bar']:
-            with self.assertRaisesRegex(SaltInvocationError,
-                                        r"Cannot update {} with a {}."
+            with pytest.raises(SaltInvocationError, match=r"Cannot update {} with a {}."
                                         "".format(type(OrderedDict()), type(update_with))):
                 dictupdate.update_dict_key_value({}, 'foo', update_with, ordered_dict=True)

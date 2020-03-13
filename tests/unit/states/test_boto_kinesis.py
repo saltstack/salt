@@ -68,14 +68,14 @@ class BotoKinesisTestCase(TestCase, LoaderModuleMockMixin):
                     'Kinesis stream {0}: did not require resharding, remains at {3} shards'
                     .format(name, retention_hours, enhanced_monitoring, num_shards))
             ret.update({'comment': comt})
-            self.assertDictEqual(boto_kinesis.present(name, retention_hours, enhanced_monitoring, num_shards), ret)
+            assert boto_kinesis.present(name, retention_hours, enhanced_monitoring, num_shards) == ret
 
             with patch.dict(boto_kinesis.__opts__, {'test': True}):
                 # not present, test environment (dry run)
                 comt = ('Kinesis stream {0} would be created'
                         .format(name))
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(boto_kinesis.present(name, retention_hours, enhanced_monitoring, num_shards), ret)
+                assert boto_kinesis.present(name, retention_hours, enhanced_monitoring, num_shards) == ret
 
                 # already present, changes required, test environment (dry run)
                 comt = ('Kinesis stream {0} already exists,\n'
@@ -86,8 +86,8 @@ class BotoKinesisTestCase(TestCase, LoaderModuleMockMixin):
                         .format(name, retention_hours+1, different_enhanced_monitoring,
                                 enhanced_monitoring, num_shards, num_shards+1))
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(boto_kinesis.present(name, retention_hours+1, different_enhanced_monitoring,
-                                                          num_shards+1), ret)
+                assert boto_kinesis.present(name, retention_hours+1, different_enhanced_monitoring,
+                                                          num_shards+1) == ret
 
             # not present, create and configure
             changes = {'new': {'name': name,
@@ -101,7 +101,7 @@ class BotoKinesisTestCase(TestCase, LoaderModuleMockMixin):
                         .format(name, retention_hours, enhanced_monitoring, num_shards))
                 ret.update({'comment': comt, 'result': True,
                             'changes': changes})
-                self.assertDictEqual(ret, boto_kinesis.present(name, retention_hours, enhanced_monitoring, num_shards))
+                assert ret == boto_kinesis.present(name, retention_hours, enhanced_monitoring, num_shards)
 
     # 'absent' function tests: 1
 
@@ -123,12 +123,12 @@ class BotoKinesisTestCase(TestCase, LoaderModuleMockMixin):
                          'boto_kinesis.delete_stream': mock_bool}):
             comt = ('Kinesis stream {0} does not exist'.format(name))
             ret.update({'comment': comt})
-            self.assertDictEqual(boto_kinesis.absent(name), ret)
+            assert boto_kinesis.absent(name) == ret
 
             with patch.dict(boto_kinesis.__opts__, {'test': True}):
                 comt = ('Kinesis stream {0} would be deleted'.format(name))
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(boto_kinesis.absent(name), ret)
+                assert boto_kinesis.absent(name) == ret
 
             changes = {'new': 'Stream {0} deleted'.format(name),
                        'old': 'Stream {0} exists'.format(name)}
@@ -137,4 +137,4 @@ class BotoKinesisTestCase(TestCase, LoaderModuleMockMixin):
                 comt = ('Deleted stream {0}'.format(name))
                 ret.update({'comment': comt, 'result': True,
                             'changes': changes})
-                self.assertDictEqual(boto_kinesis.absent(name), ret)
+                assert boto_kinesis.absent(name) == ret

@@ -19,6 +19,7 @@ from salt.exceptions import SaltInvocationError
 import salt.states.test as test
 from salt.utils.odict import OrderedDict
 from salt.ext import six
+import pytest
 
 
 class TestTestCase(TestCase, LoaderModuleMockMixin):
@@ -38,7 +39,7 @@ class TestTestCase(TestCase, LoaderModuleMockMixin):
                'comment': ''}
         with patch.dict(test.__opts__, {"test": False}):
             ret.update({'comment': 'Success!'})
-            self.assertDictEqual(test.succeed_without_changes('salt'), ret)
+            assert test.succeed_without_changes('salt') == ret
 
     def test_fail_without_changes(self):
         '''
@@ -50,7 +51,7 @@ class TestTestCase(TestCase, LoaderModuleMockMixin):
                'comment': ''}
         with patch.dict(test.__opts__, {"test": False}):
             ret.update({'comment': 'Failure!'})
-            self.assertDictEqual(test.fail_without_changes('salt'), ret)
+            assert test.fail_without_changes('salt') == ret
 
     def test_succeed_with_changes(self):
         '''
@@ -65,7 +66,7 @@ class TestTestCase(TestCase, LoaderModuleMockMixin):
                                                 ' to change',
                                                 'old': 'Unchanged'}},
                         'comment': 'Success!', 'result': True})
-            self.assertDictEqual(test.succeed_with_changes('salt'), ret)
+            assert test.succeed_with_changes('salt') == ret
 
     def test_fail_with_changes(self):
         '''
@@ -81,7 +82,7 @@ class TestTestCase(TestCase, LoaderModuleMockMixin):
                                                 'old': 'Unchanged'}},
                         'comment': 'Success!',
                         'result': True})
-            self.assertDictEqual(test.succeed_with_changes('salt'), ret)
+            assert test.succeed_with_changes('salt') == ret
 
     def test_configurable_test_state(self):
         '''
@@ -104,7 +105,7 @@ class TestTestCase(TestCase, LoaderModuleMockMixin):
                         'result': True,
                         'comment': ''}
             ret = test.configurable_test_state(mock_name)
-            self.assertDictEqual(ret, mock_ret)
+            assert ret == mock_ret
 
         # Test default state without comment
         with patch.dict(test.__opts__, {'test': False}):
@@ -114,7 +115,7 @@ class TestTestCase(TestCase, LoaderModuleMockMixin):
                         'comment': mock_comment}
             ret = test.configurable_test_state(mock_name,
                                                comment=mock_comment)
-            self.assertDictEqual(ret, mock_ret)
+            assert ret == mock_ret
 
     def test_configurable_test_state_changes(self):
         '''
@@ -136,10 +137,10 @@ class TestTestCase(TestCase, LoaderModuleMockMixin):
             ret = test.configurable_test_state(mock_name,
                                                changes='Random',
                                                comment=mock_comment)
-            self.assertEqual(ret['name'], mock_name)
-            self.assertIn(ret['changes'], [mock_changes, {}])
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['comment'], mock_comment)
+            assert ret['name'] == mock_name
+            assert ret['changes'] in [mock_changes, {}]
+            assert ret['result'] is True
+            assert ret['comment'] == mock_comment
 
         # Test changes=True and comment
         with patch.dict(test.__opts__, {'test': False}):
@@ -150,7 +151,7 @@ class TestTestCase(TestCase, LoaderModuleMockMixin):
             ret = test.configurable_test_state(mock_name,
                                                changes=True,
                                                comment=mock_comment)
-            self.assertDictEqual(ret, mock_ret)
+            assert ret == mock_ret
 
         # Test changes=False and comment
         with patch.dict(test.__opts__, {'test': False}):
@@ -161,13 +162,12 @@ class TestTestCase(TestCase, LoaderModuleMockMixin):
             ret = test.configurable_test_state(mock_name,
                                                changes=False,
                                                comment=mock_comment)
-            self.assertDictEqual(ret, mock_ret)
+            assert ret == mock_ret
 
         # Test changes=Cheese
         with patch.dict(test.__opts__, {'test': False}):
-            self.assertRaises(SaltInvocationError,
-                              test.configurable_test_state,
-                              mock_name,
+            with pytest.raises(SaltInvocationError):
+                test.configurable_test_state(mock_name,
                               changes='Cheese')
 
     def test_configurable_test_state_result(self):
@@ -190,10 +190,10 @@ class TestTestCase(TestCase, LoaderModuleMockMixin):
             ret = test.configurable_test_state(mock_name,
                                                result='Random',
                                                comment=mock_comment)
-            self.assertEqual(ret['name'], mock_name)
-            self.assertEqual(ret['changes'], mock_changes)
-            self.assertIn(ret['result'], [True, False])
-            self.assertEqual(ret['comment'], mock_comment)
+            assert ret['name'] == mock_name
+            assert ret['changes'] == mock_changes
+            assert ret['result'] in [True, False]
+            assert ret['comment'] == mock_comment
 
         # Test result=True and comment
         with patch.dict(test.__opts__, {'test': False}):
@@ -204,7 +204,7 @@ class TestTestCase(TestCase, LoaderModuleMockMixin):
             ret = test.configurable_test_state(mock_name,
                                                result=True,
                                                comment=mock_comment)
-            self.assertDictEqual(ret, mock_ret)
+            assert ret == mock_ret
 
         # Test result=False and comment
         with patch.dict(test.__opts__, {'test': False}):
@@ -215,13 +215,12 @@ class TestTestCase(TestCase, LoaderModuleMockMixin):
             ret = test.configurable_test_state(mock_name,
                                                result=False,
                                                comment=mock_comment)
-            self.assertDictEqual(ret, mock_ret)
+            assert ret == mock_ret
 
         # Test result=Cheese
         with patch.dict(test.__opts__, {'test': False}):
-            self.assertRaises(SaltInvocationError,
-                              test.configurable_test_state,
-                              mock_name,
+            with pytest.raises(SaltInvocationError):
+                test.configurable_test_state(mock_name,
                               result='Cheese')
 
     def test_configurable_test_state_warnings(self):
@@ -250,7 +249,7 @@ class TestTestCase(TestCase, LoaderModuleMockMixin):
                         'result': True,
                         'comment': ''}
             ret = test.configurable_test_state(mock_name)
-            self.assertDictEqual(ret, mock_ret)
+            assert ret == mock_ret
 
         # Test default state with warnings (string)
         with patch.dict(test.__opts__, {'test': False}):
@@ -261,7 +260,7 @@ class TestTestCase(TestCase, LoaderModuleMockMixin):
                         'warnings': mock_warning_list}
             ret = test.configurable_test_state(mock_name,
                                                warnings=mock_warning_list)
-            self.assertDictEqual(ret, mock_ret)
+            assert ret == mock_ret
 
         # Test default state with warnings (list)
         with patch.dict(test.__opts__, {'test': False}):
@@ -273,7 +272,7 @@ class TestTestCase(TestCase, LoaderModuleMockMixin):
             ret = test.configurable_test_state(mock_name,
                                                warnings=mock_warning)
 
-            self.assertDictEqual(ret, mock_ret)
+            assert ret == mock_ret
 
     def test_configurable_test_state_test(self):
         '''
@@ -297,7 +296,7 @@ class TestTestCase(TestCase, LoaderModuleMockMixin):
                         'result': None,
                         'comment': 'This is a test'}
             ret = test.configurable_test_state(mock_name)
-            self.assertDictEqual(ret, mock_ret)
+            assert ret == mock_ret
 
         # Test test=True with comment
         with patch.dict(test.__opts__, {'test': True}):
@@ -307,7 +306,7 @@ class TestTestCase(TestCase, LoaderModuleMockMixin):
                         'comment': mock_comment}
             ret = test.configurable_test_state(mock_name,
                                                comment=mock_comment)
-            self.assertDictEqual(ret, mock_ret)
+            assert ret == mock_ret
 
         # Test test=True and changes=True with comment
         with patch.dict(test.__opts__, {'test': True}):
@@ -318,7 +317,7 @@ class TestTestCase(TestCase, LoaderModuleMockMixin):
             ret = test.configurable_test_state(mock_name,
                                                changes=True,
                                                comment=mock_comment)
-            self.assertDictEqual(ret, mock_ret)
+            assert ret == mock_ret
 
         # Test test=True and changes=False with comment
         with patch.dict(test.__opts__, {'test': True}):
@@ -329,7 +328,7 @@ class TestTestCase(TestCase, LoaderModuleMockMixin):
             ret = test.configurable_test_state(mock_name,
                                                changes=False,
                                                comment=mock_comment)
-            self.assertDictEqual(ret, mock_ret)
+            assert ret == mock_ret
 
     def test_mod_watch(self):
         '''
@@ -341,7 +340,7 @@ class TestTestCase(TestCase, LoaderModuleMockMixin):
                'comment': ''}
         ret.update({'changes': {'Requisites with changes': []},
                     'comment': 'Watch statement fired.'})
-        self.assertDictEqual(test.mod_watch('salt'), ret)
+        assert test.mod_watch('salt') == ret
 
     def test_check_pillar_present(self):
         '''
@@ -358,7 +357,7 @@ class TestTestCase(TestCase, LoaderModuleMockMixin):
         pillar_return = 'I am a pillar.'
         pillar_mock = MagicMock(return_value=pillar_return)
         with patch.dict(test.__salt__, {'pillar.get': pillar_mock}):
-            self.assertEqual(test.check_pillar('salt', present='my_pillar'), ret)
+            assert test.check_pillar('salt', present='my_pillar') == ret
 
     def test_check_pillar_string(self):
         '''
@@ -375,32 +374,32 @@ class TestTestCase(TestCase, LoaderModuleMockMixin):
         pillar_return = 'I am a pillar.'
         pillar_mock = MagicMock(return_value=pillar_return)
         with patch.dict(test.__salt__, {'pillar.get': pillar_mock}):
-            self.assertEqual(test.check_pillar('salt', string='my_pillar'), ret)
+            assert test.check_pillar('salt', string='my_pillar') == ret
         # With unicode (py2) or str (py3) strings
         pillar_return = six.text_type('I am a pillar.')
         pillar_mock = MagicMock(return_value=pillar_return)
         with patch.dict(test.__salt__, {'pillar.get': pillar_mock}):
-            self.assertEqual(test.check_pillar('salt', string='my_pillar'), ret)
+            assert test.check_pillar('salt', string='my_pillar') == ret
         # With a dict
         pillar_return = {'this': 'dictionary'}
         pillar_mock = MagicMock(return_value=pillar_return)
         with patch.dict(test.__salt__, {'pillar.get': pillar_mock}):
-            self.assertFalse(test.check_pillar('salt', string='my_pillar')['result'])
+            assert not test.check_pillar('salt', string='my_pillar')['result']
         # With a list
         pillar_return = ['I am a pillar.']
         pillar_mock = MagicMock(return_value=pillar_return)
         with patch.dict(test.__salt__, {'pillar.get': pillar_mock}):
-            self.assertFalse(test.check_pillar('salt', string='my_pillar')['result'])
+            assert not test.check_pillar('salt', string='my_pillar')['result']
         # With a boolean
         pillar_return = True
         pillar_mock = MagicMock(return_value=pillar_return)
         with patch.dict(test.__salt__, {'pillar.get': pillar_mock}):
-            self.assertFalse(test.check_pillar('salt', string='my_pillar')['result'])
+            assert not test.check_pillar('salt', string='my_pillar')['result']
         # With an int
         pillar_return = 1
         pillar_mock = MagicMock(return_value=pillar_return)
         with patch.dict(test.__salt__, {'pillar.get': pillar_mock}):
-            self.assertFalse(test.check_pillar('salt', string='my_pillar')['result'])
+            assert not test.check_pillar('salt', string='my_pillar')['result']
 
     def test_check_pillar_dictionary(self):
         '''
@@ -417,29 +416,29 @@ class TestTestCase(TestCase, LoaderModuleMockMixin):
         pillar_return = {'this': 'dictionary'}
         pillar_mock = MagicMock(return_value=pillar_return)
         with patch.dict(test.__salt__, {'pillar.get': pillar_mock}):
-            self.assertEqual(test.check_pillar('salt', dictionary='my_pillar'), ret)
+            assert test.check_pillar('salt', dictionary='my_pillar') == ret
         # With an ordered dict
         pillar_return = OrderedDict({'this': 'dictionary'})
         pillar_mock = MagicMock(return_value=pillar_return)
         with patch.dict(test.__salt__, {'pillar.get': pillar_mock}):
-            self.assertEqual(test.check_pillar('salt', dictionary='my_pillar'), ret)
+            assert test.check_pillar('salt', dictionary='my_pillar') == ret
         # With a string
         pillar_return = 'I am a pillar.'
         pillar_mock = MagicMock(return_value=pillar_return)
         with patch.dict(test.__salt__, {'pillar.get': pillar_mock}):
-            self.assertFalse(test.check_pillar('salt', dictionary='my_pillar')['result'])
+            assert not test.check_pillar('salt', dictionary='my_pillar')['result']
         # With a list
         pillar_return = ['I am a pillar.']
         pillar_mock = MagicMock(return_value=pillar_return)
         with patch.dict(test.__salt__, {'pillar.get': pillar_mock}):
-            self.assertFalse(test.check_pillar('salt', dictionary='my_pillar')['result'])
+            assert not test.check_pillar('salt', dictionary='my_pillar')['result']
         # With a boolean
         pillar_return = True
         pillar_mock = MagicMock(return_value=pillar_return)
         with patch.dict(test.__salt__, {'pillar.get': pillar_mock}):
-            self.assertFalse(test.check_pillar('salt', dictionary='my_pillar')['result'])
+            assert not test.check_pillar('salt', dictionary='my_pillar')['result']
         # With an int
         pillar_return = 1
         pillar_mock = MagicMock(return_value=pillar_return)
         with patch.dict(test.__salt__, {'pillar.get': pillar_mock}):
-            self.assertFalse(test.check_pillar('salt', dictionary='my_pillar')['result'])
+            assert not test.check_pillar('salt', dictionary='my_pillar')['result']

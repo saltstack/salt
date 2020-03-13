@@ -31,13 +31,13 @@ class WinTaskTestCase(TestCase):
                                        trigger_enabled=True,
                                        repeat_duration='30 minutes',
                                        repeat_interval='30 minutes')
-            self.assertTrue(ret)
+            assert ret
 
             ret = win_task.info(task_name)
-            self.assertEqual(ret['triggers'][0]['trigger_type'], 'Daily')
+            assert ret['triggers'][0]['trigger_type'] == 'Daily'
         finally:
             ret = win_task.delete_task(task_name)
-            self.assertTrue(ret)
+            assert ret
 
     def test_repeat_interval_and_indefinitely(self):
         task_name = 'SaltTest2'
@@ -51,10 +51,10 @@ class WinTaskTestCase(TestCase):
                                        trigger_enabled=True,
                                        repeat_duration='Indefinitely',
                                        repeat_interval='30 minutes')
-            self.assertTrue(ret)
+            assert ret
 
             ret = win_task.info(task_name)
-            self.assertEqual(ret['triggers'][0]['trigger_type'], 'Daily')
+            assert ret['triggers'][0]['trigger_type'] == 'Daily'
         finally:
             ret = win_task.delete_task(task_name)
-            self.assertTrue(ret)
+            assert ret

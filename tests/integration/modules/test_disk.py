@@ -35,7 +35,7 @@ class DiskModuleVirtualizationTest(ModuleCase):
 
     def test_no_mtab(self):
         ret = self.run_function('disk.usage')
-        self.assertDictEqual(ret, {})
+        assert ret == {}
 
     def tearDown(self):
         if os.path.isfile('/tmp/mtab'):
@@ -52,26 +52,26 @@ class DiskModuleTest(ModuleCase):
         disk.usage
         '''
         ret = self.run_function('disk.usage')
-        self.assertTrue(isinstance(ret, dict))
+        assert isinstance(ret, dict)
         if not isinstance(ret, dict):
             return
         if salt.utils.platform.is_darwin():
             for key, val in six.iteritems(ret):
-                self.assertTrue('filesystem' in val)
-                self.assertTrue('512-blocks' in val)
-                self.assertTrue('used' in val)
-                self.assertTrue('available' in val)
-                self.assertTrue('capacity' in val)
-                self.assertTrue('iused' in val)
-                self.assertTrue('ifree' in val)
-                self.assertTrue('%iused' in val)
+                assert 'filesystem' in val
+                assert '512-blocks' in val
+                assert 'used' in val
+                assert 'available' in val
+                assert 'capacity' in val
+                assert 'iused' in val
+                assert 'ifree' in val
+                assert '%iused' in val
         else:
             for key, val in six.iteritems(ret):
-                self.assertTrue('filesystem' in val)
-                self.assertTrue('1K-blocks' in val)
-                self.assertTrue('used' in val)
-                self.assertTrue('available' in val)
-                self.assertTrue('capacity' in val)
+                assert 'filesystem' in val
+                assert '1K-blocks' in val
+                assert 'used' in val
+                assert 'available' in val
+                assert 'capacity' in val
 
     @skipIf(salt.utils.platform.is_windows(), 'inode info not available on Windows')
     def test_inodeusage(self):
@@ -79,12 +79,12 @@ class DiskModuleTest(ModuleCase):
         disk.inodeusage
         '''
         ret = self.run_function('disk.inodeusage')
-        self.assertTrue(isinstance(ret, dict))
+        assert isinstance(ret, dict)
         if not isinstance(ret, dict):
             return
         for key, val in six.iteritems(ret):
-            self.assertTrue('inodes' in val)
-            self.assertTrue('used' in val)
-            self.assertTrue('free' in val)
-            self.assertTrue('use' in val)
-            self.assertTrue('filesystem' in val)
+            assert 'inodes' in val
+            assert 'used' in val
+            assert 'free' in val
+            assert 'use' in val
+            assert 'filesystem' in val

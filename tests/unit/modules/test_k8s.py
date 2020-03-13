@@ -35,7 +35,7 @@ class TestK8SNamespace(TestCase):
         proc = Popen(["kubectl", "get", "namespaces", "-o", "json"], stdout=PIPE)
         kubectl_out = salt.utils.json.loads(proc.communicate()[0])
         b = len(kubectl_out.get("items"))
-        self.assertEqual(a, b)
+        assert a == b
 
     def test_get_one_namespace(self):
         res = k8s.get_namespaces("default", apiserver_url="http://127.0.0.1:8080")
@@ -43,7 +43,7 @@ class TestK8SNamespace(TestCase):
         proc = Popen(["kubectl", "get", "namespaces", "default", "-o", "json"], stdout=PIPE)
         kubectl_out = salt.utils.json.loads(proc.communicate()[0])
         b = kubectl_out.get("metadata", {}).get("name", "b")
-        self.assertEqual(a, b)
+        assert a == b
 
     def test_create_namespace(self):
         hash = hashlib.sha1()
@@ -53,7 +53,7 @@ class TestK8SNamespace(TestCase):
         proc = Popen(["kubectl", "get", "namespaces", nsname, "-o", "json"], stdout=PIPE)
         kubectl_out = salt.utils.json.loads(proc.communicate()[0])
         # if creation is failed, kubernetes return non json error message
-        self.assertTrue(isinstance(kubectl_out, dict))
+        assert isinstance(kubectl_out, dict)
 
 
 @pytest.mark.skip_if_binaries_missing('kubectl')
@@ -82,7 +82,7 @@ class TestK8SSecrets(TestCase):
         proc = Popen(["kubectl", "--namespace=default", "get", "secrets", "-o", "json"], stdout=PIPE)
         kubectl_out = salt.utils.json.loads(proc.communicate()[0])
         b = len(kubectl_out.get("items", []))
-        self.assertEqual(a, b)
+        assert a == b
 
     def test_get_one_secret(self):
         name = self.name
@@ -98,7 +98,7 @@ class TestK8SSecrets(TestCase):
         proc = Popen(["kubectl", "--namespace=default", "get", "secrets", name, "-o", "json"], stdout=PIPE)
         kubectl_out = salt.utils.json.loads(proc.communicate()[0])
         b = kubectl_out.get("metadata", {}).get("name", "b")
-        self.assertEqual(a, b)
+        assert a == b
 
     def test_get_decoded_secret(self):
         name = self.name
@@ -111,7 +111,7 @@ class TestK8SSecrets(TestCase):
         time.sleep(0.1)
         res = k8s.get_secrets("default", name, apiserver_url="http://127.0.0.1:8080", decode=True)
         a = res.get("data", {}).get("testsecret", )
-        self.assertEqual(a, "teststring")
+        assert a == "teststring"
 
     def test_create_secret(self):
         name = self.name
@@ -127,8 +127,8 @@ class TestK8SSecrets(TestCase):
         kubectl_out = salt.utils.json.loads(proc.communicate()[0])
         # if creation is failed, kubernetes return non json error message
         b = kubectl_out.get("data", {})
-        self.assertTrue(isinstance(kubectl_out, dict))
-        self.assertEqual(expected_data, b)
+        assert isinstance(kubectl_out, dict)
+        assert expected_data == b
 
     def test_update_secret(self):
         name = self.name
@@ -153,8 +153,8 @@ class TestK8SSecrets(TestCase):
         kubectl_out = salt.utils.json.loads(proc.communicate()[0])
         # if creation is failed, kubernetes return non json error message
         b = kubectl_out.get("data", {})
-        self.assertTrue(isinstance(kubectl_out, dict))
-        self.assertEqual(expected_data, b)
+        assert isinstance(kubectl_out, dict)
+        assert expected_data == b
 
     def test_delete_secret(self):
         name = self.name
@@ -170,8 +170,8 @@ class TestK8SSecrets(TestCase):
         proc = Popen(["kubectl", "--namespace=default", "get", "secrets", name, "-o", "json"], stdout=PIPE, stderr=PIPE)
         kubectl_out, err = proc.communicate()
         # stdout is empty, stderr is showing something like "not found"
-        self.assertEqual('', kubectl_out)
-        self.assertEqual('Error from server: secrets "{0}" not found\n'.format(name), err)
+        assert '' == kubectl_out
+        assert 'Error from server: secrets "{0}" not found\n'.format(name) == err
 
 
 @pytest.mark.skip_if_binaries_missing('kubectl')
@@ -217,7 +217,7 @@ spec:
         proc = Popen(["kubectl", "--namespace={0}".format(namespace), "get", "quota", "-o", "json"], stdout=PIPE)
         kubectl_out = salt.utils.json.loads(proc.communicate()[0])
         b = len(kubectl_out.get("items", []))
-        self.assertEqual(a, b)
+        assert a == b
 
     def test_get_one_resource_quota(self):
         name = self.name
@@ -251,7 +251,7 @@ spec:
         proc = Popen(["kubectl", "--namespace={0}".format(namespace), "get", "quota", name, "-o", "json"], stdout=PIPE)
         kubectl_out = salt.utils.json.loads(proc.communicate()[0])
         b = kubectl_out.get("metadata", {}).get("name", "b")
-        self.assertEqual(a, b)
+        assert a == b
 
     def test_create_resource_quota(self):
         name = self.name
@@ -264,7 +264,7 @@ spec:
         res = k8s.create_resource_quota(namespace, quota, name=name, apiserver_url="http://127.0.0.1:8080")
         proc = Popen(["kubectl", "--namespace={0}".format(namespace), "get", "quota", name, "-o", "json"], stdout=PIPE)
         kubectl_out = salt.utils.json.loads(proc.communicate()[0])
-        self.assertTrue(isinstance(kubectl_out, dict))
+        assert isinstance(kubectl_out, dict)
 
     def test_update_resource_quota(self):
         name = self.name
@@ -301,7 +301,7 @@ spec:
         proc = Popen(["kubectl", "--namespace={0}".format(namespace), "get", "quota", name, "-o", "json"], stdout=PIPE)
         kubectl_out = salt.utils.json.loads(proc.communicate()[0])
         limit = kubectl_out.get("spec").get("hard").get("memory")
-        self.assertEqual("2Gi", limit)
+        assert "2Gi" == limit
 
 
 @pytest.mark.skip_if_binaries_missing('kubectl')
@@ -326,7 +326,7 @@ class TestK8SLimitRange(TestCase):
         res = k8s.create_limit_range("default", limits, name=name, apiserver_url="http://127.0.0.1:8080")
         proc = Popen(["kubectl", "--namespace=default", "get", "limits", name, "-o", "json"], stdout=PIPE)
         kubectl_out = salt.utils.json.loads(proc.communicate()[0])
-        self.assertTrue(isinstance(kubectl_out, dict))
+        assert isinstance(kubectl_out, dict)
 
     def test_update_limit_range(self):
         name = self.name
@@ -363,7 +363,7 @@ spec:
         proc = Popen(["kubectl", "--namespace=default", "get", "limits", name, "-o", "json"], stdout=PIPE)
         kubectl_out = salt.utils.json.loads(proc.communicate()[0])
         limit = kubectl_out.get("spec").get("limits")[0].get("defaultRequest").get("cpu")
-        self.assertEqual("100m", limit)
+        assert "100m" == limit
 
     def test_get_limit_ranges(self):
         res = k8s.get_limit_ranges("default", apiserver_url="http://127.0.0.1:8080")
@@ -371,7 +371,7 @@ spec:
         proc = Popen(["kubectl", "--namespace=default", "get", "limits", "-o", "json"], stdout=PIPE)
         kubectl_out = salt.utils.json.loads(proc.communicate()[0])
         b = len(kubectl_out.get("items", []))
-        self.assertEqual(a, b)
+        assert a == b
 
     def test_get_one_limit_range(self):
         name = self.name
@@ -402,4 +402,4 @@ spec:
         proc = Popen(["kubectl", "--namespace=default", "get", "limits", name, "-o", "json"], stdout=PIPE)
         kubectl_out = salt.utils.json.loads(proc.communicate()[0])
         b = kubectl_out.get("metadata", {}).get("name", "b")
-        self.assertEqual(a, b)
+        assert a == b

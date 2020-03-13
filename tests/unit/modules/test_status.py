@@ -18,6 +18,7 @@ from tests.support.mock import (
     patch,
     mock_open,
 )
+import pytest
 
 
 class StatusTestCase(TestCase, LoaderModuleMockMixin):
@@ -89,9 +90,9 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
 
             with patch('salt.utils.files.fopen', mock_open(read_data=proc_uptime)):
                 ret = status.uptime()
-                self.assertDictEqual(ret, m.ret)
+                assert ret == m.ret
             with patch('os.path.exists', MagicMock(return_value=False)):
-                with self.assertRaises(CommandExecutionError):
+                with pytest.raises(CommandExecutionError):
                     status.uptime()
 
     def test_uptime_sunos(self):
@@ -112,7 +113,7 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
                                              'cmd.run_all': MagicMock(return_value=m2.ret)}), \
                 patch('time.time', MagicMock(return_value=m.now)):
             ret = status.uptime()
-            self.assertDictEqual(ret, m.ret)
+            assert ret == m.ret
 
     def test_uptime_macos(self):
         '''
@@ -135,10 +136,10 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
                 patch('time.time', MagicMock(return_value=m.now)):
 
             ret = status.uptime()
-            self.assertDictEqual(ret, m.ret)
+            assert ret == m.ret
 
             with patch.dict(status.__salt__, {'sysctl.get': MagicMock(return_value='')}):
-                with self.assertRaises(CommandExecutionError):
+                with pytest.raises(CommandExecutionError):
                     status.uptime()
 
     def test_uptime_return_success_not_supported(self):
@@ -153,7 +154,7 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
                             is_openbsd=MagicMock(return_value=False),
                             is_netbsd=MagicMock(return_value=False)):
             exc_mock = MagicMock(side_effect=CommandExecutionError)
-            with self.assertRaises(CommandExecutionError):
+            with pytest.raises(CommandExecutionError):
                 with patch.dict(status.__salt__, {'cmd.run': exc_mock}):
                     status.uptime()
 
@@ -202,7 +203,7 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
                     patch.dict(status.__grains__, {'kernel': 'OpenBSD'}), \
                     patch.dict(status.__salt__, {'cmd.run': MagicMock(return_value=systat)}):
             ret = status.cpustats()
-            self.assertDictEqual(ret, m.ret)
+            assert ret == m.ret
 
     def _set_up_test_cpuinfo_bsd(self):
         class MockData(object):
@@ -225,7 +226,7 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(status.__grains__, {'kernel': 'FreeBSD'}):
             with patch.dict(status.__salt__, {'cmd.run': MagicMock(return_value=sysctl)}):
                 ret = status.cpuinfo()
-                self.assertDictEqual(ret, m.ret)
+                assert ret == m.ret
 
     def test_cpuinfo_openbsd(self):
         m = self._set_up_test_cpuinfo_bsd()
@@ -235,7 +236,7 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(status.__grains__, {'kernel': bsd}):
                 with patch.dict(status.__salt__, {'cmd.run': MagicMock(return_value=sysctl)}):
                     ret = status.cpuinfo()
-                    self.assertDictEqual(ret, m.ret)
+                    assert ret == m.ret
 
     def _set_up_test_meminfo_openbsd(self):
         class MockData(object):
@@ -266,7 +267,7 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(status.__grains__, {'kernel': 'OpenBSD'}):
             with patch.dict(status.__salt__, {'cmd.run': MagicMock(return_value=vmstat)}):
                 ret = status.meminfo()
-                self.assertDictEqual(ret, m.ret)
+                assert ret == m.ret
 
     def _set_up_test_w_linux(self):
         '''
@@ -318,7 +319,7 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(status.__grains__, {'kernel': 'Linux'}):
             with patch.dict(status.__salt__, {'cmd.run': MagicMock(return_value=w_output)}):
                 ret = status.w()
-                self.assertListEqual(ret, m.ret)
+                assert ret == m.ret
 
     def test_w_bsd(self):
         m = self._set_up_test_w_bsd()
@@ -328,4 +329,4 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(status.__grains__, {'kernel': bsd}):
                 with patch.dict(status.__salt__, {'cmd.run': MagicMock(return_value=w_output)}):
                     ret = status.w()
-                    self.assertListEqual(ret, m.ret)
+                    assert ret == m.ret

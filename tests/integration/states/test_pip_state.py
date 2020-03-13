@@ -58,12 +58,10 @@ class VirtualEnv(object):
 
     def __enter__(self):
         ret = self.test._create_virtualenv(self.venv_dir)
-        self.test.assertEqual(
-            ret['retcode'], 0,
-            msg='Expected \'retcode\' key did not match. Full return dictionary:\n{}'.format(
-                pprint.pformat(ret)
-            )
-        )
+        assert ret['retcode'] == 0, (
+                'Expected \'retcode\' key did not match. Full return dictionary:\n{}'.format(
+                    pprint.pformat(ret)
+                ))
 
     def __exit__(self, *args):
         pass
@@ -156,7 +154,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
 
             # We now create the missing virtualenv
             ret = self.run_function('virtualenv.create', [venv_dir])
-            self.assertEqual(ret['retcode'], 0)
+            assert ret['retcode'] == 0
 
             # The state should not have any issues running now
             ret = self.run_function('state.sls', mods='pip-installed-errors')
@@ -207,14 +205,12 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             # We cannot use assertInSaltComment here because we need to skip
             # some of the state return parts
             for key in six.iterkeys(ret):
-                self.assertTrue(ret[key]['result'])
+                assert ret[key]['result']
                 if ret[key]['name'] != 'carbon < 1.1':
                     continue
-                self.assertEqual(
-                    ret[key]['comment'],
-                    'There was no error installing package \'carbon < 1.1\' '
+                assert ret[key]['comment'] == \
+                    'There was no error installing package \'carbon < 1.1\' ' \
                     'although it does not show when calling \'pip.freeze\'.'
-                )
                 break
             else:
                 raise Exception('Expected state did not run')
@@ -235,9 +231,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             pep8_bin = os.path.join(venv_dir, 'Scripts', 'pep8.exe')
 
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(
-            os.path.isfile(pep8_bin)
-        )
+        assert os.path.isfile(pep8_bin)
 
     def test_issue_2087_missing_pip(self):
         venv_dir = os.path.join(
@@ -246,12 +240,10 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
 
         # Let's create the testing virtualenv
         ret = self._create_virtualenv(venv_dir)
-        self.assertEqual(
-            ret['retcode'], 0,
-            msg='Expected \'retcode\' key did not match. Full return dictionary:\n{}'.format(
+        assert ret['retcode'] == 0, \
+            'Expected \'retcode\' key did not match. Full return dictionary:\n{}'.format(
                 pprint.pformat(ret)
             )
-        )
 
         # Let's remove the pip binary
         pip_bin = os.path.join(venv_dir, 'bin', 'pip')
@@ -294,9 +286,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
 
         try:
             self.assertSaltTrueReturn(ret)
-            self.assertTrue(
-                os.path.isfile(os.path.join(venv_dir, 'bin', 'pep8'))
-            )
+            assert os.path.isfile(os.path.join(venv_dir, 'bin', 'pep8'))
         except (AssertionError, CommandExecutionError):
             pip_version = self.run_function('pip.version', [venv_dir])
             if salt.utils.versions.compare(ver1=pip_version, oper='>=', ver2='7.0.0'):
@@ -338,10 +328,9 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
                           os.path.join(venv_dir, '*', '*', '**', 'pep8*')):
             for path in glob.glob(globmatch):
                 if HAS_PWD:
-                    self.assertEqual(uid, os.stat(path).st_uid)
+                    assert uid == os.stat(path).st_uid
                 elif salt.utils.platform.is_windows():
-                    self.assertEqual(
-                        salt.utils.win_dacl.get_owner(path), username)
+                    assert salt.utils.win_dacl.get_owner(path) == username
 
     @pytest.mark.destructive_test
     @pytest.mark.skip_if_not_root
@@ -387,10 +376,9 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
                           os.path.join(venv_dir, '*', '*', '**', 'pep8*')):
             for path in glob.glob(globmatch):
                 if HAS_PWD:
-                    self.assertEqual(uid, os.stat(path).st_uid)
+                    assert uid == os.stat(path).st_uid
                 elif salt.utils.platform.is_windows():
-                    self.assertEqual(
-                        salt.utils.win_dacl.get_owner(path), username)
+                    assert salt.utils.win_dacl.get_owner(path) == username
 
     def test_issue_6833_pip_upgrade_pip(self):
         # Create the testing virtualenv
@@ -399,23 +387,15 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         )
         ret = self._create_virtualenv(venv_dir)
 
-        self.assertEqual(
-            ret['retcode'], 0,
-            msg='Expected \'retcode\' key did not match. Full return dictionary:\n{}'.format(
-                pprint.pformat(ret)
-            )
-        )
+        assert ret['retcode'] == 0, \
+                'Expected \'retcode\' key did not match. Full return dictionary:\n{}'.format(pprint.pformat(ret))
+
         import salt.modules.virtualenv_mod
         msg = 'New python executable'
         if salt.modules.virtualenv_mod.virtualenv_ver(venv_dir) >= (20, 0, 2):
             msg = 'created virtual environment'
-        self.assertIn(
-            msg,
-            ret['stdout'],
-            msg='Expected STDOUT did not match. Full return dictionary:\n{}'.format(
-                pprint.pformat(ret)
-            )
-        )
+        assert msg in ret['stdout'], \
+                'Expected STDOUT did not match. Full return dictionary:\n{}'.format(pprint.pformat(ret))
 
         # Let's install a fixed version pip over whatever pip was
         # previously installed
@@ -429,17 +409,11 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
                 'The \'pip.install\' command did not return the excepted dictionary. Output:\n{}'.format(ret)
             )
 
-        self.assertEqual(ret['retcode'], 0)
-        self.assertIn(
-            'Successfully installed pip',
-            ret['stdout']
-        )
+        assert ret['retcode'] == 0
+        assert 'Successfully installed pip' in ret['stdout']
 
         # Let's make sure we have pip 8.0 installed
-        self.assertEqual(
-            self.run_function('pip.list', ['pip'], bin_env=venv_dir),
-            {'pip': '8.0.0'}
-        )
+        assert self.run_function('pip.list', ['pip'], bin_env=venv_dir) == {'pip': '8.0.0'}
 
         # Now the actual pip upgrade pip test
         ret = self.run_state(
@@ -528,7 +502,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
                 'pip.installed', name='pep8', bin_env=venv_dir, unless=false_cmd, timeout=600
             )
             self.assertSaltTrueReturn(ret)
-            self.assertNotIn('warnings', next(six.itervalues(ret)))
+            assert 'warnings' not in next(six.itervalues(ret))
         finally:
             if os.path.isdir(venv_dir):
                 shutil.rmtree(venv_dir, ignore_errors=True)
@@ -573,13 +547,11 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             )
             self.assertSaltTrueReturn(ret)
             for key in six.iterkeys(ret):
-                self.assertTrue(ret[key]['result'])
+                assert ret[key]['result']
                 if ret[key]['name'] != 'carbon < 1.3':
                     continue
-                self.assertEqual(
-                    ret[key]['comment'],
+                assert ret[key]['comment'] == \
                     'All packages were successfully installed'
-                )
                 break
             else:
                 raise Exception('Expected state did not run')
@@ -592,14 +564,13 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             # We cannot use assertInSaltComment here because we need to skip
             # some of the state return parts
             for key in six.iterkeys(ret):
-                self.assertTrue(ret[key]['result'])
+                assert ret[key]['result']
                 # As we are re-running the formula, some states will not be run
                 # and "name" may or may not be present, so we use .get() pattern
                 if ret[key].get('name', '') != 'carbon < 1.3':
                     continue
-                self.assertEqual(
-                    ret[key]['comment'],
-                    ('All packages were successfully installed'))
+                assert ret[key]['comment'] == \
+                    ('All packages were successfully installed')
                 break
             else:
                 raise Exception('Expected state did not run')
