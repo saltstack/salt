@@ -16,3 +16,13 @@ also support the syntax used in :py:mod:`module.run <salt.states.module.run>`.
 The old syntax for the mine_function - as a dict, or as a list with dicts that
 contain more than exactly one key - is still supported but discouraged in favor
 of the more uniform syntax of module.run.
+
+
+New Grains
+==========
+
+systempath
+----------
+
+This grain provides the same information as the ``path`` grain, only formatted
+as a list of directories.
