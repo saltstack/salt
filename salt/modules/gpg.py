@@ -678,7 +678,7 @@ def import_key(text=None, filename=None, user=None, gnupghome=None):
             ret['result'] = True
             ret['message'] = 'Successfully imported key(s).'
             ret['fingerprints'] = res.fingerprints
-        elif res.unchanged:
+        elif res.unchanged or res.sec_dups:
             ret['result'] = True
             ret['message'] = 'Key(s) already exist in keychain.'
         elif res.not_imported or not res.count:
@@ -1003,7 +1003,8 @@ def sign(
             output
             if salt.utils.versions.version_cmp(gnupg.__version__, '0.3.7') >= 0 else None,
     })
-    if salt.utils.versions.version_cmp(gnupg.__version__, '0.4.1') >= 0:
+    if (salt.utils.versions.version_cmp(gnupg.__version__, '0.4.1') >= 0
+            and salt.utils.versions.version_cmp(GPG_VERSION, '2.0') >= 0):
         # Avoid getting a popup asking for a password
         call_kwargs.update({'extra_args': ['--pinentry-mode', 'loopback']})
     if text:
@@ -1012,7 +1013,7 @@ def sign(
         with salt.utils.files.flopen(filename, 'rb') as _fp:
             res = gpg.sign_file(_fp, **call_kwargs)
     if isinstance(res, gnupg.Sign):
-        if res.status:
+        if res.status == 'signature created':
             ret['result'] = True
             if (salt.utils.versions.version_cmp(gnupg.__version__, '0.3.7') < 0 and output):
                 with salt.utils.files.flopen(output, 'wb') as fout:
