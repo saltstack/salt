@@ -490,6 +490,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
         with \
                 patch.dict(gpg.__salt__, {'user.info': MagicMock(return_value=self.user_mock)}), \
                 patch.dict(gpg.__salt__, {'config.option': MagicMock(return_value='root')}), \
+                patch.object(gpg, 'GPG_VERSION', '2.1'), \
                 patch.dict(gpg.__salt__, {'pillar.get': MagicMock(return_value=None)}), \
                 patch.object(gpg, '_create_gpg', return_value=self.gpgobject), \
                 patch.object(self.gpgobject, 'gen_key', MagicMock(return_value=False)):
@@ -789,25 +790,6 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
             )
         self.assertEqual(res, {'result': True, 'message': export_key_result}, )
 
-    def test_export_secret_key_passphrase_req(self):
-        '''
-        Test exporting a secret key.
-        Except we did not supply a passphrase and are using GNUPG >= 2.1 where it is required.
-        '''
-        with \
-                patch.dict(gpg.__salt__, {'user.info': MagicMock(return_value=self.user_mock)}), \
-                patch.dict(gpg.__salt__, {'config.option': MagicMock(return_value='root')}), \
-                patch.object(gpg, 'GPG_VERSION', '2.1'), \
-                patch.object(gpg, '_create_gpg', return_value=self.gpgobject):
-            self.assertRaisesRegex(
-                ValueError,
-                'For GnuPG >= 2.1, exporting secret keys needs a passphrase to be provided',
-                gpg.export_key,
-                keyids='randomkey',
-                gnupghome=self.gnupghome,
-                secret=True,
-            )
-
     def test_trust_key_happy(self):
         '''
         Test trust key, happy path.
@@ -918,7 +900,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test signing a message. Happy paths.
         '''
-        signed_data = MagicMock(spec=gnupg.Sign, status='OK', data='Signed X', )
+        signed_data = MagicMock(spec=gnupg.Sign, status='signature created', data='Signed X', )
         outputfile = os.path.join(RUNTIME_VARS.TMP, 'foobar')
         m_open = mock_open()
         with \
@@ -969,7 +951,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
         Test signing a file.
         '''
         inputfile = os.path.join(RUNTIME_VARS.TMP, 'foobar')
-        signed_data = MagicMock(spec=gnupg.Sign, status='OK', data='Signed X', )
+        signed_data = MagicMock(spec=gnupg.Sign, status='signature created', data='Signed X', )
         m_open = mock_open(read_data='Data to sign')
         with \
                 patch.object(gpg, '_create_gpg', return_value=self.gpgobject), \
@@ -989,7 +971,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test signing a message, pretending we have gnupg < 0.3.7
         '''
-        signed_data = MagicMock(spec=gnupg.Sign, status='OK', data='Signed X', )
+        signed_data = MagicMock(spec=gnupg.Sign, status='signature created', data='Signed X', )
         outputfile = os.path.join(RUNTIME_VARS.TMP, 'foobar')
         m_open = mock_open()
         with \
@@ -1011,7 +993,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test signing a message, returning bare result
         '''
-        signed_data = MagicMock(spec=gnupg.Sign, status='OK', data='Signed X', )
+        signed_data = MagicMock(spec=gnupg.Sign, status='signature created', data='Signed X', )
         outputfile = os.path.join(RUNTIME_VARS.TMP, 'foobar')
         m_open = mock_open()
         with \
