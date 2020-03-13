@@ -679,11 +679,16 @@ class Build(build):
     def run(self):
         # Run build.run function
         build.run(self)
+        salt_build_ver_file = os.path.join(self.build_lib, 'salt', '_version.py')
+
         if getattr(self.distribution, 'with_salt_version', False):
             # Write the hardcoded salt version module salt/_version.py
-            self.distribution.salt_version_hardcoded_path = os.path.join(
-                self.build_lib, 'salt', '_version.py'
-            )
+            self.distribution.salt_version_hardcoded_path = salt_build_ver_file
+            self.run_command('write_salt_version')
+
+        if getattr(self.distribution, 'build_wheel', False):
+            # we are building a wheel package. need to include _version.py
+            self.distribution.salt_version_hardcoded_path = salt_build_ver_file
             self.run_command('write_salt_version')
 
         if getattr(self.distribution, 'running_salt_install', False):
@@ -1223,6 +1228,9 @@ class SaltDistribution(distutils.dist.Distribution):
 
         if not self.ssh_packaging and PACKAGED_FOR_SALT_SSH:
             self.ssh_packaging = 1
+
+        if 'bdist_wheel' in sys.argv:
+            self.build_wheel = True
 
         if self.ssh_packaging:
             self.metadata.name = 'salt-ssh'
