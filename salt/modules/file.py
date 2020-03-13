@@ -1292,8 +1292,7 @@ def psed(path,
     before = six.text_type(before)
     after = six.text_type(after)
     before = _sed_esc(before, escape_all)
-    # The pattern to replace with does not need to be escaped!!!
-    # after = _sed_esc(after, escape_all)
+    # The pattern to replace with does not need to be escaped
     limit = _sed_esc(limit, escape_all)
 
     shutil.copy2(path, '{0}{1}'.format(path, backup))
@@ -3890,7 +3889,7 @@ def set_selinux_context(path,
                         range=None,   # pylint: disable=W0622
                         persist=False):
     '''
-    .. versionchanged:: Neon
+    .. versionchanged:: Sodium
 
         Added persist option
 
@@ -4547,7 +4546,7 @@ def extract_hash(hash_fn,
 def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False, seuser=None,
                 serole=None, setype=None, serange=None):
     '''
-    .. versionchanged:: Neon
+    .. versionchanged:: Sodium
 
         Added selinux options
 
@@ -4932,7 +4931,7 @@ def check_managed_changes(
     '''
     Return a dictionary of what changes need to be made for a file
 
-    .. versionchanged:: Neon
+    .. versionchanged:: Sodium
 
         selinux attributes added
 
@@ -5057,22 +5056,22 @@ def check_file_meta(
     seuser
         selinux user attribute
 
-        .. versionadded:: Neon
+        .. versionadded:: Sodium
 
     serole
         selinux role attribute
 
-        .. versionadded:: Neon
+        .. versionadded:: Sodium
 
     setype
         selinux type attribute
 
-        .. versionadded:: Neon
+        .. versionadded:: Sodium
 
     serange
         selinux range attribute
 
-        .. versionadded:: Neon
+        .. versionadded:: Sodium
     '''
     changes = {}
     if not source_sum:
@@ -5423,22 +5422,22 @@ def manage_file(name,
     seuser
         selinux user attribute
 
-        .. versionadded:: Neon
+        .. versionadded:: Sodium
 
     serange
         selinux range attribute
 
-        .. versionadded:: Neon
+        .. versionadded:: Sodium
 
     setype
         selinux type attribute
 
-        .. versionadded:: Neon
+        .. versionadded:: Sodium
 
     serange
         selinux range attribute
 
-        .. versionadded:: Neon
+        .. versionadded:: Sodium
 
     CLI Example:
 
