@@ -93,6 +93,6 @@ def get(key, profile=None):
         data = response.json()['data']
 
         return data
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         log.error('Failed to read secret! %s: %s', type(e).__name__, e)
         raise salt.exceptions.CommandExecutionError(e)
