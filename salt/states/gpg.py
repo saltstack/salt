@@ -99,28 +99,30 @@ def present(
                     'already in keychain.'
                     ''.format(fingerprint)
                 )
-                return ret
         # Just (try to) import it
-        if __opts__['test']:
+        if ret['result'] is not True and __opts__['test']:
             ret['result'] = None
             ret['comment'].append('GPG key would have been imported.')
             salt.utils.dictupdate.update_dict_key_value(ret, 'changes:old', {'key': None})
             salt.utils.dictupdate.update_dict_key_value(
                 ret, 'changes:new', {'key': 'Imported'}
             )
-        else:
+        elif ret['result'] is not True:
             res = __salt__['gpg.import_key'](text=keydata, user=user, gnupghome=gnupghome)
             if res['result']:
                 ret['result'] = True
-                ret['comment'].append('GPG key from keydata added to GPG keychain.')
-                trust_keys.extend(list(set(res['fingerprints'])))
-                for fingerprint in res['fingerprints']:
-                    salt.utils.dictupdate.set_dict_key_value(
-                        ret, 'changes:old', {fingerprint: None},
-                    )
-                    salt.utils.dictupdate.update_dict_key_value(
-                        ret, 'changes:new', {fingerprint: {} if trust else 'present'}
-                    )
+                if res['message'] == 'Key(s) already exist in keychain.':
+                    ret['comment'].append('GPG key from keydata already in keychain.')
+                else:
+                    ret['comment'].append('GPG key from keydata added to GPG keychain.')
+                    trust_keys.extend(list(set(res['fingerprints'])))
+                    for fingerprint in res['fingerprints']:
+                        salt.utils.dictupdate.set_dict_key_value(
+                            ret, 'changes:old', {fingerprint: None},
+                        )
+                        salt.utils.dictupdate.update_dict_key_value(
+                            ret, 'changes:new', {fingerprint: {} if trust else 'present'}
+                        )
             else:
                 ret['result'] = False
                 ret['comment'].append(res['message'])
