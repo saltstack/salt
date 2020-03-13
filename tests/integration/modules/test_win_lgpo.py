@@ -507,6 +507,22 @@ class WinLgpoTest(ModuleCase):
             [r'; Source file:  c:\\windows\\system32\\grouppolicy\\machine\\registry.pol[\s]*; PARSING COMPLETED.'])
 
     @destructiveTest
+    def test_set_computer_policy_GuestAccountStatus(self):
+        '''
+        Test setting/unsetting/changing GuestAccountStatus
+        '''
+        # disable GuestAccountStatus
+        self._testSeceditPolicy(
+            'GuestAccountStatus',
+            'Disabled',
+            [r'^EnableGuestAccount = 0'])
+        # enable GuestAccountStatus
+        self._testSeceditPolicy(
+            'GuestAccountStatus',
+            'Enabled',
+            [r'^EnableGuestAccount = 1'])
+
+    @destructiveTest
     def test_set_computer_policy_PasswordComplexity(self):
         '''
         Test setting/unsetting/changing PasswordComplexity
