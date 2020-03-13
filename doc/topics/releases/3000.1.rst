@@ -134,7 +134,7 @@ Changelog for v3000..v3000.1
 
   * 224629bdeb Handle Adapter Type 53 and Undefined Types
 
-* **PR** `#56060`_: (`twangboy`_) Fix regex string for **Del and **DelVals
+* **PR** `#56060`_: (`twangboy`_) Fix regex string for \*\*Del and \*\*DelVals
   @ *2020-03-11 22:05:43 UTC*
 
   * e551ff6a31 Merge pull request `#56060`_ from twangboy/fix_lgpo_regex
@@ -143,7 +143,7 @@ Changelog for v3000..v3000.1
 
   * 7c81874a5b Add some tests
 
-  * 944b022f33 Fix regex string for **Del and **DelVals
+  * 944b022f33 Fix regex string for \*\*Del and \*\*DelVals
 
 * **ISSUE** `#56131`_: (`thusoy`_) Salt v3000 crashes with unless clause if pip is missing (refs: `#56215`_)
 
