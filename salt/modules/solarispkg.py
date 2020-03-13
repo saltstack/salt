@@ -172,6 +172,7 @@ def latest_version(*names, **kwargs):
         return ret[names[0]]
     return ret
 
+
 # available_version is being deprecated
 available_version = salt.utils.functools.alias_function(
     latest_version, "available_version"
@@ -337,7 +338,7 @@ def install(name=None, sources=None, saltenv="base", **kwargs):
         ``sources`` parameter.
 
     If the package has an interactive script that requires a response file, supply the
-    response file with the 'response_source' parameter.  Like the admin_source option, 
+    response file with the 'response_source' parameter.  Like the admin_source option,
     this option makes use of the response_source_hash, response_source_hash_name, and
     response_source_skip_verify can be suppplied to provide hash verification information
     for the response_source file.  These correspond to the 'source_hash', 'source_hash_name', and
