@@ -10,8 +10,8 @@ grains modules
     :toctree:
     :template: autosummary.rst.tmpl
 
-    cimc
     chronos
+    cimc
     core
     disks
     esxi
@@ -31,7 +31,7 @@ grains modules
     opts
     panos
     philips_hue
+    rest_sample
     smartos
     ssh_sample
-    rest_sample
     zfs

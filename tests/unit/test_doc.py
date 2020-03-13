@@ -9,6 +9,7 @@ from __future__ import absolute_import
 import os
 import re
 import logging
+import collections
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase
@@ -119,6 +120,13 @@ class DocTestCase(TestCase):
                 module_name = os.path.splitext(file)[0]
                 if module_name not in skip_module_files:
                     module_files.append(module_name)
+            # Capture modules in subdirectories like inspectlib and rest_cherrypy
+            elif (os.path.isdir(os.path.join(full_module_dir, file)) and
+                    not file.startswith('_') and
+                    os.path.isfile(os.path.join(full_module_dir, file, '__init__.py'))):
+                module_name = file
+                if module_name not in skip_module_files:
+                    module_files.append(module_name)
 
         # Build list of documentation files
         module_docs = []
@@ -133,12 +141,35 @@ class DocTestCase(TestCase):
                 if doc_name not in skip_doc_files:
                     module_docs.append(doc_name)
 
+        module_index_file = os.path.join(full_module_doc_dir, 'index.rst')
+        with salt.utils.files.fopen(module_index_file, 'rb') as fp:
+            module_index_contents = fp.read().decode('utf-8')
+
+        module_index_block = re.search(r"""
+            \.\.\s+autosummary::\s*\n
+            (\s+:[a-z]+:.*\n)*
+            (\s*\n)+
+            (?P<mods>(\s*[a-z0-9_\.]+\s*\n)+)
+        """, module_index_contents, flags=re.VERBOSE)
+
+        module_index = re.findall(
+            r"""\s*([a-z0-9_\.]+)\s*\n""",
+            module_index_block.group('mods')
+        )
+
         # Check that every module has associated documentation file
         for module in module_files:
             self.assertIn(module,
                           module_docs,
                           'module file {0} is missing documentation in {1}'.format(module,
                                                                                    full_module_doc_dir))
+
+            # Check that every module is listed in the index file
+            self.assertIn(
+                module,
+                module_index,
+                'module file {0} is missing in {1}'.format(module, module_index_file)
+            )
 
             # Check if .rst file for this module contains the text
             # ".. _virtual" indicating it is a virtual doc page
@@ -155,6 +186,27 @@ class DocTestCase(TestCase):
                           module_files,
                           'Doc file {0} is missing associated module in {1}'.format(doc_file,
                                                                                     full_module_dir))
+        # Check that a module index is sorted
+        sorted_module_index = sorted(module_index)
+        self.assertEqual(
+            module_index,
+            sorted_module_index,
+            msg='Module index is not sorted: {}'.format(module_index_file)
+        )
+
+        # Check for duplicates inside of a module index
+        module_index_duplicates = [mod for mod, count in collections.Counter(module_index).items() if count > 1]
+        if module_index_duplicates:
+            self.fail('Module index {0} contains duplicates: {1}'.format(module_index_file, module_index_duplicates))
+
+        # Check for stray module docs
+        # Do not check files listed in doc_skip
+        stray_modules = set(module_index).difference(module_files + doc_skip)
+        if stray_modules:
+            self.fail('Stray module names {0} in the doc index {1}'.format(sorted(list(stray_modules)), module_index_file))
+        stray_modules = set(module_docs).difference(module_files)
+        if stray_modules:
+            self.fail('Stray module doc files {0} in the doc folder {1}'.format(sorted(list(stray_modules)), full_module_doc_dir))
 
     def test_auth_doc_files(self):
         '''
@@ -226,6 +278,20 @@ class DocTestCase(TestCase):
         doc_dir = ['doc', 'ref', 'engines', 'all']
         self._check_doc_files(skip_module_files, module_dir, skip_doc_files, doc_dir)
 
+    def test_executors_doc_files(self):
+        '''
+        Ensure executor modules have associated documentation
+
+        doc example: doc/ref/executors/all/salt.executors.docker.rst
+        engine module example: salt/executors/docker.py
+        '''
+
+        skip_module_files = ['__init__']
+        module_dir = ['salt', 'executors']
+        skip_doc_files = ['index', 'all']
+        doc_dir = ['doc', 'ref', 'executors', 'all']
+        self._check_doc_files(skip_module_files, module_dir, skip_doc_files, doc_dir)
+
     def test_fileserver_doc_files(self):
         '''
         Ensure fileserver modules have associated documentation
@@ -264,11 +330,25 @@ class DocTestCase(TestCase):
 
         skip_module_files = ['__init__']
         module_dir = ['salt', 'modules']
-        skip_doc_files = ['index', 'group', 'inspectlib', 'inspectlib.collector', 'inspectlib.dbhandle',
+        skip_doc_files = ['index', 'group', 'inspectlib.collector', 'inspectlib.dbhandle',
                           'inspectlib.entities', 'inspectlib.exceptions', 'inspectlib.fsdb',
                           'inspectlib.kiwiproc', 'inspectlib.query', 'kernelpkg', 'pkg', 'user',
                           'service', 'shadow']
         doc_dir = ['doc', 'ref', 'modules', 'all']
+        self._check_doc_files(skip_module_files, module_dir, skip_doc_files, doc_dir)
+
+    def test_netapi_doc_files(self):
+        '''
+        Ensure netapi modules have associated documentation
+
+        doc example: doc/ref/netapi/all/salt.netapi.rest_cherrypy.rst
+        module example: salt/netapi/rest_cherrypy
+        '''
+
+        skip_module_files = ['__init__']
+        module_dir = ['salt', 'netapi']
+        skip_doc_files = ['index', 'all']
+        doc_dir = ['doc', 'ref', 'netapi', 'all']
         self._check_doc_files(skip_module_files, module_dir, skip_doc_files, doc_dir)
 
     def test_output_doc_files(self):
@@ -423,6 +503,20 @@ class DocTestCase(TestCase):
         module_dir = ['salt', 'thorium']
         skip_doc_files = ['index', 'all']
         doc_dir = ['doc', 'ref', 'thorium', 'all']
+        self._check_doc_files(skip_module_files, module_dir, skip_doc_files, doc_dir)
+
+    def test_token_doc_files(self):
+        '''
+        Ensure token modules have associated documentation
+
+        doc example: doc/ref/tokens/all/salt.tokens.localfs.rst
+        module example: salt/tokens/localfs.py
+        '''
+
+        skip_module_files = ['__init__']
+        module_dir = ['salt', 'tokens']
+        skip_doc_files = ['index', 'all']
+        doc_dir = ['doc', 'ref', 'tokens', 'all']
         self._check_doc_files(skip_module_files, module_dir, skip_doc_files, doc_dir)
 
     def test_tops_doc_files(self):

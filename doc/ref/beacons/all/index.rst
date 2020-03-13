@@ -14,8 +14,8 @@ beacon modules
     aix_account
     avahi_announce
     bonjour_announce
-    cert_info
     btmp
+    cert_info
     diskusage
     glxinfo
     haproxy

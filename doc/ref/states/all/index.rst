@@ -95,12 +95,12 @@ state modules
     elasticsearch_index_template
     environ
     eselect
-    etcd_mod
-    ethtool
     esxcluster
     esxdatacenter
     esxi
     esxvm
+    etcd_mod
+    ethtool
     event
     file
     firewall
@@ -182,10 +182,10 @@ state modules
     lxd_image
     lxd_profile
     mac_assistive
-    macdefaults
     mac_keychain
-    macpackage
     mac_xattr
+    macdefaults
+    macpackage
     makeconf
     marathon_app
     mdadm_raid
@@ -206,13 +206,13 @@ state modules
     mysql_grants
     mysql_query
     mysql_user
+    net_napalm_yang
     netacl
     netconfig
     netntp
     netsnmp
     netusers
     network
-    net_napalm_yang
     neutron_network
     neutron_secgroup
     neutron_secgroup_rule
@@ -235,8 +235,8 @@ state modules
     panos
     pbm
     pcs
-    pecl
     pdbedit
+    pecl
     pip_state
     pkg
     pkgbuild
@@ -351,8 +351,8 @@ state modules
     zabbix_valuemap
     zcbuildout
     zenoss
-    zk_concurrency
     zfs
+    zk_concurrency
     zone
     zookeeper
     zpool
