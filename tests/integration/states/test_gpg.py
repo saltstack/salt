@@ -19,8 +19,17 @@ from tests.support.mixins import SaltReturnAssertsMixin
 # Import salt libs
 import salt.utils.files
 
+try:
+    import gnupg
+    GPG_VERSION = '.'.join(map(str, gnupg.GPG().version))
+    HAS_GPG = True
+except ImportError:
+    HAS_GPG = False
 
-class HostTest(ModuleCase, SaltReturnAssertsMixin):
+
+@skipIf(not salt.utils.path.which('gpg'), 'GPG not installed. Skipping')
+@skipIf(not HAS_GPG, 'GPG Module Unavailable')
+class GPGTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the host state
     '''
@@ -52,6 +61,8 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
             -----END PGP PRIVATE KEY BLOCK-----
             '''
         )
+        cls.passphrase = 'foo'
+        cls.keyid = '857C86FCF8A3FB11'
         cls.top_pillar = os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, 'top.sls')
         cls.minion_pillar = os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, 'gpg.sls')
         with salt.utils.files.fopen(cls.minion_pillar, 'w') as fp:
@@ -86,6 +97,8 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
                 raise
         del cls.gnupghome
         del cls.secret_key
+        del cls.passphrase
+        del cls.keyid
         salt.utils.files.remove(cls.top_pillar)
         salt.utils.files.remove(cls.minion_pillar)
         del cls.top_pillar
@@ -119,16 +132,19 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(ret, {})
-        self.assertInSaltComment(
-            'GPG key with fingerprint "1B52281BF159856CA76A04F5857C86FCF8A3FB11" from keydata already in keychain.',
-            ret,
-        )
+        if salt.utils.versions.version_cmp(GPG_VERSION, '2.0') >= 0:
+            self.assertInSaltComment(
+                'GPG key with fingerprint "1B52281BF159856CA76A04F5857C86FCF8A3FB11" from keydata already in keychain.',
+                ret
+            )
+        else:
+            self.assertInSaltComment('GPG key from keydata already in keychain.', ret)
 
         # Test gpg.absent by removing the key imported above.
         ret = self.run_state(
             'gpg.absent',
             name='1B52281BF159856CA76A04F5857C86FCF8A3FB11',
-            passphrases='foo',
+            passphrases=self.passphrase,
             gnupghome=self.gnupghome,
         )
         self.assertSaltTrueReturn(ret)
@@ -139,14 +155,14 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state(
             'gpg.absent',
             name='1B52281BF159856CA76A04F5857C86FCF8A3FB11',
-            passphrases='foo',
+            passphrases=self.passphrase,
             gnupghome=self.gnupghome,
         )
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(ret, {})
         self.assertInSaltComment(
             'Key "1B52281BF159856CA76A04F5857C86FCF8A3FB11" already not in GPG keychain',
-            ret,
+            ret
         )
 
     # Running this test as part of the standard testsuite might be considered a DDOS,
@@ -209,7 +225,7 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         self.assertInSaltComment(
-            'Encrypted data has been written to {}'.format(encrypted_file), ret,
+            'Encrypted data has been written to {}'.format(encrypted_file), ret
         )
         self.assertSaltStateChangesEqual(
             ret, {
@@ -226,7 +242,7 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(ret, {})
-        self.assertInSaltComment('File already contains encrypted data', ret, )
+        self.assertInSaltComment('File already contains encrypted data', ret)
 
         # Get encrypted data
         with salt.utils.files.flopen(encrypted_file, 'rb') as _fp:
@@ -237,12 +253,12 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
             'gpg.data_decrypted',
             name=decrypted_file,
             contents=encrypted_data,
-            passphrase='foo',
+            passphrase=self.passphrase,
             gnupghome=self.gnupghome,
         )
         self.assertSaltTrueReturn(ret)
         self.assertInSaltComment(
-            'Decrypted data has been written to {}'.format(decrypted_file), ret,
+            'Decrypted data has been written to {}'.format(decrypted_file), ret
         )
         self.assertSaltStateChangesEqual(
             ret, {
@@ -258,13 +274,13 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
             'gpg.data_decrypted',
             name=decrypted_file,
             source=encrypted_file,
-            passphrase='foo',
+            passphrase=self.passphrase,
             gnupghome=self.gnupghome,
         )
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(ret, {})
         self.assertInSaltComment(
-            'Target file already exists. Not forcing overwrite.', ret,
+            'Target file already exists. Not forcing overwrite.', ret
         )
 
     def test_04_encrypt_decrypt_from_contents_pillar(self):
@@ -295,7 +311,7 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         self.assertInSaltComment(
-            'Encrypted data has been written to {}'.format(encrypted_file), ret,
+            'Encrypted data has been written to {}'.format(encrypted_file), ret
         )
         self.assertSaltStateChangesEqual(
             ret, {
@@ -312,7 +328,7 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(ret, {})
-        self.assertInSaltComment('File already contains encrypted data', ret, )
+        self.assertInSaltComment('File already contains encrypted data', ret)
 
         # Get encrypted data
         with salt.utils.files.flopen(encrypted_file, 'rb') as _fp:
@@ -323,12 +339,12 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
             'gpg.data_decrypted',
             name=decrypted_file,
             contents=encrypted_data,
-            passphrase='foo',
+            passphrase=self.passphrase,
             gnupghome=self.gnupghome,
         )
         self.assertSaltTrueReturn(ret)
         self.assertInSaltComment(
-            'Decrypted data has been written to {}'.format(decrypted_file), ret,
+            'Decrypted data has been written to {}'.format(decrypted_file), ret
         )
         self.assertSaltStateChangesEqual(
             ret, {
@@ -361,7 +377,7 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         self.assertInSaltComment(
-            'Encrypted data has been written to {}'.format(encrypted_file), ret,
+            'Encrypted data has been written to {}'.format(encrypted_file), ret
         )
         self.assertSaltStateChangesEqual(
             ret, {
@@ -378,19 +394,19 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(ret, {})
-        self.assertInSaltComment('File already contains encrypted data', ret, )
+        self.assertInSaltComment('File already contains encrypted data', ret)
 
         # Test decrypting the encrypted file
         ret = self.run_state(
             'gpg.data_decrypted',
             name=decrypted_file,
             source=encrypted_file,
-            passphrase='foo',
+            passphrase=self.passphrase,
             gnupghome=self.gnupghome,
         )
         self.assertSaltTrueReturn(ret)
         self.assertInSaltComment(
-            'Decrypted data has been written to {}'.format(decrypted_file), ret,
+            'Decrypted data has been written to {}'.format(decrypted_file), ret
         )
         self.assertSaltStateChangesEqual(
             ret, {
@@ -406,13 +422,13 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
             'gpg.data_decrypted',
             name=decrypted_file,
             source=encrypted_file,
-            passphrase='foo',
+            passphrase=self.passphrase,
             gnupghome=self.gnupghome,
         )
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(ret, {})
         self.assertInSaltComment(
-            'Target file already exists. Not forcing overwrite.', ret,
+            'Target file already exists. Not forcing overwrite.', ret
         )
 
     def test_06_sign_verify_contents(self):
@@ -427,12 +443,13 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
             'gpg.data_signed',
             name=signed_file,
             contents='data to sign 06',
-            keyid='857C86FCF8A3FB11',
+            keyid=self.keyid,
+            passphrase=self.passphrase,
             gnupghome=self.gnupghome,
         )
         self.assertSaltTrueReturn(ret)
         self.assertInSaltComment(
-            'Signed data has been written to {}'.format(signed_file), ret,
+            'Signed data has been written to {}'.format(signed_file), ret
         )
         self.assertSaltStateChangesEqual(
             ret, {'old': {signed_file: None}, 'new': {signed_file: 'signed data'}}
@@ -442,13 +459,14 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
             'gpg.data_signed',
             name=signed_file,
             contents='data to sign 06',
-            keyid='857C86FCF8A3FB11',
+            keyid=self.keyid,
+            passphrase=self.passphrase,
             gnupghome=self.gnupghome,
         )
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(ret, {})
         self.assertInSaltComment(
-            'Target file already exists. Not forcing overwrite.', ret,
+            'Target file already exists. Not forcing overwrite.', ret
         )
 
         # Get signed data
@@ -461,7 +479,7 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
             gnupghome=self.gnupghome,
         )
         self.assertSaltTrueReturn(ret)
-        self.assertInSaltComment('The signature is verified.', ret, )
+        self.assertInSaltComment('The signature is verified.', ret)
         self.assertSaltStateChangesEqual(ret, {})
 
     def test_07_sign_verify_contents_from_pillar(self):
@@ -475,12 +493,13 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
             'gpg.data_signed',
             name=signed_file,
             contents_pillar='data_to_sign',
-            keyid='857C86FCF8A3FB11',
+            keyid=self.keyid,
+            passphrase=self.passphrase,
             gnupghome=self.gnupghome,
         )
         self.assertSaltTrueReturn(ret)
         self.assertInSaltComment(
-            'Signed data has been written to {}'.format(signed_file), ret,
+            'Signed data has been written to {}'.format(signed_file), ret
         )
         self.assertSaltStateChangesEqual(
             ret, {'old': {signed_file: None}, 'new': {signed_file: 'signed data'}}
@@ -490,13 +509,14 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
             'gpg.data_signed',
             name=signed_file,
             contents_pillar='data_to_sign',
-            keyid='857C86FCF8A3FB11',
+            keyid=self.keyid,
+            passphrase=self.passphrase,
             gnupghome=self.gnupghome,
         )
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(ret, {})
         self.assertInSaltComment(
-            'Target file already exists. Not forcing overwrite.', ret,
+            'Target file already exists. Not forcing overwrite.', ret
         )
         # Get signed data
         with salt.utils.files.flopen(signed_file, 'rb') as _fp:
@@ -508,7 +528,7 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
             gnupghome=self.gnupghome,
         )
         self.assertSaltTrueReturn(ret)
-        self.assertInSaltComment('The signature is verified.', ret, )
+        self.assertInSaltComment('The signature is verified.', ret)
         self.assertSaltStateChangesEqual(ret, {})
 
     def test_08_sign_verify_source(self):
@@ -527,12 +547,13 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
             'gpg.data_signed',
             name=signed_file,
             source=plaintext_file,
-            keyid='857C86FCF8A3FB11',
+            keyid=self.keyid,
+            passphrase=self.passphrase,
             gnupghome=self.gnupghome,
         )
         self.assertSaltTrueReturn(ret)
         self.assertInSaltComment(
-            'Signed data has been written to {}'.format(signed_file), ret,
+            'Signed data has been written to {}'.format(signed_file), ret
         )
         self.assertSaltStateChangesEqual(
             ret, {'old': {signed_file: None}, 'new': {signed_file: 'signed data'}}
@@ -542,13 +563,14 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
             'gpg.data_signed',
             name=signed_file,
             source=plaintext_file,
-            keyid='857C86FCF8A3FB11',
+            keyid=self.keyid,
+            passphrase=self.passphrase,
             gnupghome=self.gnupghome,
         )
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(ret, {})
         self.assertInSaltComment(
-            'Target file already exists. Not forcing overwrite.', ret,
+            'Target file already exists. Not forcing overwrite.', ret
         )
 
         # Verify signed data
@@ -556,7 +578,7 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
             'gpg.data_verified', name=signed_file, gnupghome=self.gnupghome,
         )
         self.assertSaltTrueReturn(ret)
-        self.assertInSaltComment('The signature is verified.', ret, )
+        self.assertInSaltComment('The signature is verified.', ret)
         self.assertSaltStateChangesEqual(ret, {})
 
     def test_09_sign_verify_contents_detached(self):
@@ -572,13 +594,14 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
             'gpg.data_signed',
             name=signature_file,
             contents='data to sign 09',
-            keyid='857C86FCF8A3FB11',
+            keyid=self.keyid,
+            passphrase=self.passphrase,
             gnupghome=self.gnupghome,
             detach=True,
         )
         self.assertSaltTrueReturn(ret)
         self.assertInSaltComment(
-            'Signature has been written to {}'.format(signature_file), ret,
+            'Signature has been written to {}'.format(signature_file), ret
         )
         self.assertSaltStateChangesEqual(
             ret, {'old': {signature_file: None}, 'new': {signature_file: 'signature'}}
@@ -588,14 +611,15 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
             'gpg.data_signed',
             name=signature_file,
             contents='data to sign 09',
-            keyid='857C86FCF8A3FB11',
+            keyid=self.keyid,
+            passphrase=self.passphrase,
             gnupghome=self.gnupghome,
             detach=True,
         )
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(ret, {})
         self.assertInSaltComment(
-            'Target file already exists. Not forcing overwrite.', ret,
+            'Target file already exists. Not forcing overwrite.', ret
         )
 
         # Get signature data
@@ -609,7 +633,7 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
             gnupghome=self.gnupghome,
         )
         self.assertSaltTrueReturn(ret)
-        self.assertInSaltComment('The signature is verified.', ret, )
+        self.assertInSaltComment('The signature is verified.', ret)
         self.assertSaltStateChangesEqual(ret, {})
 
     def test_10_sign_verify_contents_pillar_detached(self):
@@ -625,13 +649,14 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
             'gpg.data_signed',
             name=signature_file,
             contents_pillar='data_to_sign_10',
-            keyid='857C86FCF8A3FB11',
+            keyid=self.keyid,
+            passphrase=self.passphrase,
             gnupghome=self.gnupghome,
             detach=True,
         )
         self.assertSaltTrueReturn(ret)
         self.assertInSaltComment(
-            'Signature has been written to {}'.format(signature_file), ret,
+            'Signature has been written to {}'.format(signature_file), ret
         )
         self.assertSaltStateChangesEqual(
             ret, {'old': {signature_file: None}, 'new': {signature_file: 'signature'}}
@@ -641,14 +666,15 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
             'gpg.data_signed',
             name=signature_file,
             contents_pillar='data_to_sign_10',
-            keyid='857C86FCF8A3FB11',
+            keyid=self.keyid,
+            passphrase=self.passphrase,
             gnupghome=self.gnupghome,
             detach=True,
         )
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(ret, {})
         self.assertInSaltComment(
-            'Target file already exists. Not forcing overwrite.', ret,
+            'Target file already exists. Not forcing overwrite.', ret
         )
 
         # Get signature data
@@ -662,5 +688,5 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
             gnupghome=self.gnupghome,
         )
         self.assertSaltTrueReturn(ret)
-        self.assertInSaltComment('The signature is verified.', ret, )
+        self.assertInSaltComment('The signature is verified.', ret)
         self.assertSaltStateChangesEqual(ret, {})
