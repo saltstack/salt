@@ -21,6 +21,7 @@ import os
 import re
 import time
 import errno
+import tempfile
 
 # Import salt libs
 import salt.utils.files
@@ -1420,10 +1421,19 @@ def get_fingerprint_from_data(keydata, secret=False):
     key is returned.
     Note2: This will only work for GNUPG 2.1 or greater.
     '''
-    res = __salt__['cmd.run_stdout'](
-        'gpg --dry-run --import-options import-show --import --with-colons',
-        stdin=keydata,
-    )
+    try:
+        # Note: Sometimes, the user running salt does not have a .gnupg in its
+        # homedir. Therefor always make a tempdir to contain the temporary keyring
+        # that GPG always seems to create even though this is a dry-run
+        temp_gnupghome = tempfile.mkdtemp(prefix='saltgpg')
+        res = __salt__['cmd.run_stdout'](
+            'gpg --dry-run --homedir {} --import-options import-show --import --with-colons'
+            .format(temp_gnupghome),
+            stdin=keydata,
+        )
+    finally:
+        salt.utils.files.rm_rf(temp_gnupghome)
+
     fingerprint = re.match('^.*?(?:pub|sec):.*?fpr:{9}([0-9A-F]*):.*$', res, re.DOTALL)
     try:
         fingerprint = fingerprint.group(1)
