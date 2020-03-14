@@ -434,6 +434,15 @@ def _make_regex(pem_type):
     )
 
 
+def _is_valid_pem(pem, pem_type=None):
+    pem_type = '[0-9A-Z ]+' if pem_type is None else pem_type
+    _dregex = _make_regex(pem_type)
+    for _match in _dregex.finditer(pem):
+        if _match:
+            return True
+    return False
+
+
 def _match_minions(test, minion):
     if '@' in test:
         match = __salt__['publish.publish'](
@@ -490,18 +499,14 @@ def get_pem_entry(text, pem_type=None):
                     pem_temp = pem_temp[pem_temp.index('-'):]
         text = "\n".join(pem_fixed)
 
-    _dregex = _make_regex('[0-9A-Z ]+')
     errmsg = 'PEM text not valid:\n{0}'.format(text)
     if pem_type:
-        _dregex = _make_regex(pem_type)
         errmsg = ('PEM does not contain a single entry of type {0}:\n'
                   '{1}'.format(pem_type, text))
 
-    for _match in _dregex.finditer(text):
-        if _match:
-            break
-    if not _match:
+    if not _is_valid_pem(text, pem_type):
         raise salt.exceptions.SaltInvocationError(errmsg)
+
     _match_dict = _match.groupdict()
     pem_header = _match_dict['pem_header']
     proc_type = _match_dict['proc_type']
@@ -1426,6 +1431,9 @@ def create_certificate(
                     ' call the sign_remote_certificate function.')
 
         cert_txt = certs[ca_server]
+        if isinstance(cert_txt, str):
+            if not _is_valid_pem(cert_txt, 'CERTIFICATE'):
+                raise salt.exceptions.SaltInvocationError(cert_txt)
 
         if path:
             return write_pem(
