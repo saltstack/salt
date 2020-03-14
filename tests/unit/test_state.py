@@ -25,6 +25,7 @@ from salt.utils.odict import OrderedDict
 from salt.utils.decorators import state as statedecorators
 import salt.utils.files
 import salt.utils.platform
+from salt.exceptions import CommandExecutionError
 
 try:
     import pytest
@@ -104,6 +105,60 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             state_obj = salt.state.State(minion_opts)
             return_result = state_obj._run_check_onlyif(low_data, '')
             self.assertEqual(expected_result, return_result)
+
+    def test_verify_onlyif_cmd_error(self):
+        '''
+        Simulates a failure in cmd.retcode from onlyif
+        This could occur is runas is specified with a user that does not exist
+        '''
+        low_data = {
+            "onlyif": "somecommand",
+            "runas" "doesntexist"
+            "name": "echo something",
+            "state": "cmd",
+            "__id__": "this is just a test",
+            "fun": "run",
+            "__env__": "base",
+            "__sls__": "sometest",
+            "order": 10000
+        }
+        expected_result = {'comment': 'onlyif condition is false', 'result': True, 'skip_watch': True}
+
+        with patch('salt.state.State._gather_pillar') as state_patch:
+            minion_opts = self.get_temp_config('minion')
+            state_obj = salt.state.State(minion_opts)
+            mock = MagicMock(side_effect=CommandExecutionError('Boom!'))
+            with patch.dict(state_obj.functions, {'cmd.retcode': mock}):
+                #  The mock handles the exception, but the runas dict is being passed as it would actually be
+                return_result = state_obj._run_check_onlyif(low_data, {'runas': 'doesntexist'})
+                self.assertEqual(expected_result, return_result)
+
+    def test_verify_unless_cmd_error(self):
+        '''
+        Simulates a failure in cmd.retcode from unless
+        This could occur is runas is specified with a user that does not exist
+        '''
+        low_data = {
+            "unless": "somecommand",
+            "runas" "doesntexist"
+            "name": "echo something",
+            "state": "cmd",
+            "__id__": "this is just a test",
+            "fun": "run",
+            "__env__": "base",
+            "__sls__": "sometest",
+            "order": 10000
+        }
+        expected_result = {'comment': 'unless condition is true', 'result': True, 'skip_watch': True}
+
+        with patch('salt.state.State._gather_pillar') as state_patch:
+            minion_opts = self.get_temp_config('minion')
+            state_obj = salt.state.State(minion_opts)
+            mock = MagicMock(side_effect=CommandExecutionError('Boom!'))
+            with patch.dict(state_obj.functions, {'cmd.retcode': mock}):
+                #  The mock handles the exception, but the runas dict is being passed as it would actually be
+                return_result = state_obj._run_check_unless(low_data, {'runas': 'doesntexist'})
+                self.assertEqual(expected_result, return_result)
 
     def test_verify_unless_parse(self):
         low_data = {

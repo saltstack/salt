@@ -911,8 +911,8 @@ class State(object):
                     cmd = self.functions['cmd.retcode'](
                         entry, ignore_retcode=True, python_shell=True, **cmd_opts)
                 except CommandExecutionError:
-                    cmd = {'comment': 'Error running command',
-                           'result': False}
+                    # Command failed, notify onlyif to skip running the item
+                    cmd = 100
                 log.debug('Last command return code: %s', cmd)
                 _check_cmd(cmd)
             elif isinstance(entry, dict):
@@ -961,8 +961,8 @@ class State(object):
                     cmd = self.functions['cmd.retcode'](entry, ignore_retcode=True, python_shell=True, **cmd_opts)
                     log.debug('Last command return code: %s', cmd)
                 except CommandExecutionError:
-                    cmd = {'comment': 'Error running command',
-                           'result': False}
+                    # Command failed, so notify unless to skip the item
+                    cmd = 0
                 _check_cmd(cmd)
             elif isinstance(entry, dict):
                 if 'fun' not in entry:
