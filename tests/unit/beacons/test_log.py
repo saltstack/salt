@@ -9,7 +9,7 @@ from tests.support.mock import patch, mock_open
 from tests.support.mixins import LoaderModuleMockMixin
 
 # Salt libs
-import salt.beacons.log_beacon as log_beacon
+import salt.beacons.log as log_beacon
 
 import logging
 log = logging.getLogger(__name__)

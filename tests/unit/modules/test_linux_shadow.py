@@ -14,7 +14,7 @@ from tests.support.helpers import skip_if_not_root
 
 # Import salt libs
 try:
-    import salt.modules.shadow as shadow
+    import salt.modules.linux_shadow as shadow
     HAS_SHADOW = True
 except ImportError:
     HAS_SHADOW = False
