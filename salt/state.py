@@ -48,10 +48,7 @@ import salt.syspaths as syspaths
 import salt.transport.client
 from salt.serializers.msgpack import serialize as msgpack_serialize, deserialize as msgpack_deserialize
 from salt.template import compile_template, compile_template_str
-from salt.exceptions import (
-    SaltRenderError,
-    SaltReqTimeoutError
-)
+from salt.exceptions import CommandExecutionError, SaltRenderError, SaltReqTimeoutError
 from salt.utils.odict import OrderedDict, DefaultOrderedDict
 # Explicit late import to avoid circular import. DO NOT MOVE THIS.
 import salt.utils.yamlloader as yamlloader
@@ -910,8 +907,12 @@ class State(object):
 
         for entry in low_data_onlyif:
             if isinstance(entry, six.string_types):
-                cmd = self.functions['cmd.retcode'](
-                    entry, ignore_retcode=True, python_shell=True, **cmd_opts)
+                try:
+                    cmd = self.functions['cmd.retcode'](
+                        entry, ignore_retcode=True, python_shell=True, **cmd_opts)
+                except CommandExecutionError:
+                    cmd = {'comment': 'Error running command',
+                           'result': False}
                 log.debug('Last command return code: %s', cmd)
                 _check_cmd(cmd)
             elif isinstance(entry, dict):
@@ -956,8 +957,12 @@ class State(object):
 
         for entry in low_data_unless:
             if isinstance(entry, six.string_types):
-                cmd = self.functions['cmd.retcode'](entry, ignore_retcode=True, python_shell=True, **cmd_opts)
-                log.debug('Last command return code: %s', cmd)
+                try:
+                    cmd = self.functions['cmd.retcode'](entry, ignore_retcode=True, python_shell=True, **cmd_opts)
+                    log.debug('Last command return code: %s', cmd)
+                except CommandExecutionError:
+                    cmd = {'comment': 'Error running command',
+                           'result': False}
                 _check_cmd(cmd)
             elif isinstance(entry, dict):
                 if 'fun' not in entry:
