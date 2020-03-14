@@ -247,7 +247,7 @@ def create_object_model(module_name, object_name, **kwargs):
     if '_attribute_map' in dir(Model):
         for attr, items in Model._attribute_map.items():
             param = kwargs.get(attr)
-            if param:
+            if param is not None:
                 if items['type'][0].isupper() and isinstance(param, dict):
                     object_kwargs[attr] = create_object_model(module_name, items['type'], **param)
                 elif items['type'][0] == '{' and isinstance(param, dict):
