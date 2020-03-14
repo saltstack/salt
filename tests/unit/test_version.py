@@ -305,3 +305,18 @@ class VersionTestCase(TestCase):
         assert ret.info == (3000, 1)
         assert ret.minor == 1
         assert ret.bugfix is None
+
+    def test_version_repr(self):
+        '''
+        Test SaltStackVersion repr for both date
+        and new versioning scheme
+        '''
+        expect = (
+            ((3000, 1, None, None, '', 0, 0, None), "<SaltStackVersion name='Neon' major=3000 minor=1>"),
+            ((3000, 0, None, None, '', 0, 0, None), "<SaltStackVersion name='Neon' major=3000>"),
+            ((2019, 2, 3, None, '', 0, 0, None), "<SaltStackVersion name='Fluorine' major=2019 minor=2 bugfix=3>"),
+            ((2019, 2, 3, None, 'rc', 1, 0, None), "<SaltStackVersion name='Fluorine' major=2019 minor=2 bugfix=3 rc=1>")
+            )
+
+        for ver, repr_ret in expect:
+            assert repr(SaltStackVersion(*ver)) == repr_ret

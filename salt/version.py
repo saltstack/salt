@@ -272,6 +272,8 @@ class SaltStackVersion(object):
         self.pre_type = pre_type
         self.pre_num = pre_num
         self.name = self.VNAMES.get((major, minor), None)
+        if self.new_version(major):
+            self.name = self.VNAMES.get((major,), None)
         self.noc = noc
         self.sha = sha
 
