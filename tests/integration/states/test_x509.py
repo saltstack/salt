@@ -137,7 +137,7 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
     @staticmethod
     def _file_checksum(path):
         hash = hashlib.sha1()
-        with open(path, 'rb') as f:
+        with salt.utils.fopen(path, 'rb') as f:
             for block in iter(lambda: f.read(4096), b""):
                 hash.update(block)
         return hash.hexdigest()
