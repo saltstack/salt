@@ -33,17 +33,6 @@ class SetupTest(VirtualEnvHelper):
         '''
         # Let's create the testing virtualenv
         self._create_virtualenv(self.venv_dir)
-
-        # Let's remove the pip binary
-        pip_bin = os.path.join(self.venv_dir, 'bin', 'pip')
-        site_dir = self.run_function('virtualenv.get_distribution_path', [self.venv_dir, 'pip'])
-        if salt.utils.platform.is_windows():
-            pip_bin = os.path.join(self.venv_dir, 'Scripts', 'pip.exe')
-            site_dir = os.path.join(self.venv_dir, 'lib', 'site-packages')
-        if not os.path.isfile(pip_bin):
-            self.skipTest(
-                'Failed to find the pip binary to the test virtualenv'
-            )
         ret = self.run_function('cmd.run', ['python setup.py bdist_wheel --dist-dir={0}'.format(self.venv_dir)], cwd=RUNTIME_VARS.CODE_DIR)
 
         for _file in os.listdir(self.venv_dir):

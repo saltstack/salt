@@ -234,7 +234,6 @@ class VersionTestCase(TestCase):
             ('v4518.1', (4518, 1, None, 0, '', 0, 0, None)),
             ('v3000rc1', (3000, None, None, 0, 'rc', 2, 0, None)),
             ('v3000rc1-n/a-abcdefff', (3000, None, None, 0, 'rc', 1, -1, 'abcdefff')),
-
         )
 
         for vstr, full_info in expect:
