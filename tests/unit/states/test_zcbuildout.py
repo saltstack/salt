@@ -8,11 +8,12 @@ import os
 from tests.support.helpers import requires_network
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
+from tests.unit.modules.test_zcbuildout import Base, KNOWN_VIRTUALENV_BINARY_NAMES
 
 # Import Salt libs
 import salt.utils.path
-from tests.unit.modules.test_zcbuildout import Base, KNOWN_VIRTUALENV_BINARY_NAMES
 import salt.modules.zcbuildout as modbuildout
+import salt.modules.virtualenv_mod
 import salt.states.zcbuildout as buildout
 import salt.modules.cmdmod as cmd
 
@@ -60,6 +61,8 @@ class BuildoutTestCase(Base):
 
     @requires_network()
     def test_installed(self):
+        if salt.modules.virtualenv_mod.virtualenv_ver(self.ppy_st) >= (20, 0, 0):
+            self.skipTest("Skiping until upstream resolved https://github.com/pypa/virtualenv/issues/1715")
         b_dir = os.path.join(self.tdir, 'b')
         ret = buildout.installed(b_dir,
                                  python=self.py_st,

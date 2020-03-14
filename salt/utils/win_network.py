@@ -58,6 +58,7 @@ enum_adapter_types = {
     28: 'Slip',
     37: 'ATM',
     48: 'GenericModem',
+    53: 'TAPAdapter',  # Not in MSDN Defined enumeration
     62: 'FastEthernetT',
     63: 'ISDN',
     69: 'FastEthernetFx',
@@ -108,12 +109,16 @@ def __virtual__():
 
 def _get_base_properties(i_face):
     raw_mac = i_face.GetPhysicalAddress().ToString()
+    try:
+        i_face_type = enum_adapter_types[i_face.NetworkInterfaceType]
+    except KeyError:
+        i_face_type = i_face.Description
     return {
         'alias': i_face.Name,
         'description': i_face.Description,
         'id': i_face.Id,
         'receive_only': i_face.IsReceiveOnly,
-        'type': enum_adapter_types[i_face.NetworkInterfaceType],
+        'type': i_face_type,
         'status': enum_operational_status[i_face.OperationalStatus],
         'physical_address': ':'.join(raw_mac[i:i+2] for i in range(0, 12, 2))}
 
