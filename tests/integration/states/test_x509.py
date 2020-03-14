@@ -2,6 +2,7 @@
 from __future__ import absolute_import, unicode_literals
 import os
 import logging
+import hashlib
 
 import salt.utils.files
 from salt.ext import six
@@ -38,6 +39,18 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
                 x509_signing_policies:
                   ca_policy:
                     - minions: '*'
+                    - signing_private_key: {0}/pki/ca.key
+                    - signing_cert: {0}/pki/ca.crt
+                    - O: Test Company
+                    - basicConstraints: "CA:false"
+                    - keyUsage: "critical digitalSignature, keyEncipherment"
+                    - extendedKeyUsage: "critical serverAuth, clientAuth"
+                    - subjectKeyIdentifier: hash
+                    - authorityKeyIdentifier: keyid
+                    - days_valid: 730
+                    - copypath: {0}/pki
+                  restricted_policy:
+                    - minions: 'no-such-minion'
                     - signing_private_key: {0}/pki/ca.key
                     - signing_cert: {0}/pki/ca.crt
                     - O: Test Company
@@ -103,3 +116,28 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
         assert 'changes' in ret[key]
         assert 'Certificate' in ret[key]['changes']
         assert 'New' in ret[key]['changes']['Certificate']
+
+    @with_tempfile(suffix='.crt', create=False)
+    @with_tempfile(suffix='.key', create=False)
+    def test_issue_41858(self, keyfile, crtfile):
+        ret = self.run_function(
+            'state.apply',
+            ['issue-41858.gen_cert'],
+            pillar={'keyfile': keyfile, 'crtfile': crtfile})
+        self.assertSaltTrueReturn(ret)
+
+        cert_sum = self._file_checksum(crtfile)
+        ret = self.run_function(
+            'state.apply',
+            ['issue-41858.unauthz_cert'],
+            pillar={'keyfile': keyfile, 'crtfile': crtfile})
+        self.assertSaltFalseReturn(ret)
+        self.assertEquals(self._file_checksum(crtfile), cert_sum)
+
+    @staticmethod
+    def _file_checksum(path):
+        hash = hashlib.sha1()
+        with open(path, 'rb') as f:
+            for block in iter(lambda: f.read(4096), b""):
+                hash.update(block)
+        return hash.hexdigest()
