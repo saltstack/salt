@@ -241,7 +241,10 @@ class SaltStackVersion(object):
         if bugfix is None and not self.new_version(major=major):
             bugfix = 0
         elif isinstance(bugfix, string_types):
-            bugfix = int(bugfix)
+            if not bugfix:
+                bugfix = None
+            else:
+                bugfix = int(bugfix)
 
         if mbugfix is None:
             mbugfix = 0
@@ -363,6 +366,23 @@ class SaltStackVersion(object):
         return tuple(info)
 
     @property
+    def full_info_all_versions(self):
+        '''
+        Return the full info regardless
+        of which versioning scheme we
+        are using.
+        '''
+        info = [self.major,
+                self.minor,
+                self.bugfix,
+                self.mbugfix,
+                self.pre_type,
+                self.pre_num,
+                self.noc,
+                self.sha]
+        return tuple(info)
+
+    @property
     def string(self):
         if self.new_version(self.major):
             version_string = '{0}'.format(self.major)
@@ -477,8 +497,16 @@ class SaltStackVersion(object):
         parts.extend([
             'major={0}'.format(self.major),
             'minor={0}'.format(self.minor),
-            'bugfix={0}'.format(self.bugfix)
-        ])
+            ])
+
+        if self.new_version(self.major):
+            if not self.minor:
+                parts.remove(''.join([x for x in parts if re.search('^minor*', x)]))
+        else:
+            parts.extend([
+                'bugfix={0}'.format(self.bugfix)
+            ])
+
         if self.mbugfix:
             parts.append('minor-bugfix={0}'.format(self.mbugfix))
         if self.pre_type:

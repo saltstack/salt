@@ -256,7 +256,7 @@ class WriteSaltVersion(Command):
             open(self.distribution.salt_version_hardcoded_path, 'w').write(
                 INSTALL_VERSION_TEMPLATE.format(
                     date=DATE,
-                    full_version_info=salt_version.full_info
+                    full_version_info=salt_version.full_info_all_versions
                 )
             )
             # pylint: enable=E0602
