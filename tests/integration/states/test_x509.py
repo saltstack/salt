@@ -83,6 +83,14 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
         log.debug('ret = %s', ret)
         return ret
 
+    @staticmethod
+    def file_checksum(path):
+        hash = hashlib.sha1()
+        with salt.utils.fopen(path, 'rb') as f:
+            for block in iter(lambda: f.read(4096), b""):
+                hash.update(block)
+        return hash.hexdigest()
+
     @with_tempfile(suffix='.pem', create=False)
     def test_issue_49027(self, pemfile):
         ret = self.run_state(
@@ -120,24 +128,18 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
     @with_tempfile(suffix='.crt', create=False)
     @with_tempfile(suffix='.key', create=False)
     def test_issue_41858(self, keyfile, crtfile):
+        signing_policy = 'no_such_policy'
         ret = self.run_function(
             'state.apply',
             ['issue-41858.gen_cert'],
             pillar={'keyfile': keyfile, 'crtfile': crtfile})
         self.assertSaltTrueReturn(ret)
+        cert_sum = self.file_checksum(crtfile)
 
-        cert_sum = self._file_checksum(crtfile)
         ret = self.run_function(
             'state.apply',
-            ['issue-41858.unauthz_cert'],
-            pillar={'keyfile': keyfile, 'crtfile': crtfile})
+            ['issue-41858.check'],
+            pillar={'keyfile': keyfile, 'crtfile': crtfile, 'signing_policy': signing_policy})
         self.assertSaltFalseReturn(ret)
-        self.assertEquals(self._file_checksum(crtfile), cert_sum)
-
-    @staticmethod
-    def _file_checksum(path):
-        hash = hashlib.sha1()
-        with salt.utils.fopen(path, 'rb') as f:
-            for block in iter(lambda: f.read(4096), b""):
-                hash.update(block)
-        return hash.hexdigest()
+        self.assertSaltCommentRegexpMatches(ret, 'Signing policy {0} Signing policy'.format(signing_policy))
+        self.assertEquals(self.file_checksum(crtfile), cert_sum)
