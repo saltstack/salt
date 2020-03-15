@@ -90,7 +90,7 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
     @staticmethod
     def file_checksum(path):
         hash = hashlib.sha1()
-        with salt.utils.fopen(path, 'rb') as f:
+        with salt.utils.files.fopen(path, 'rb') as f:
             for block in iter(lambda: f.read(4096), b""):
                 hash.update(block)
         return hash.hexdigest()
@@ -145,8 +145,8 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
             ['issue-41858.check'],
             pillar={'keyfile': keyfile, 'crtfile': crtfile, 'signing_policy': signing_policy})
         self.assertFalse(ret[ret_key]['result'])
-        self.assertSaltCommentRegexpMatches(ret[ret_key], 'Signing policy {0} does not exist'.format(signing_policy))
-        self.assertEquals(self.file_checksum(crtfile), cert_sum)
+        # self.assertSaltCommentRegexpMatches(ret[ret_key], 'Signing policy {0} does not exist'.format(signing_policy))
+        self.assertEqual(self.file_checksum(crtfile), cert_sum)
 
     @with_tempfile(suffix='.crt', create=False)
     @with_tempfile(suffix='.key', create=False)
