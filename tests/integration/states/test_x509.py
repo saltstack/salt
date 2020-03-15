@@ -132,31 +132,31 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
     @with_tempfile(suffix='.crt', create=False)
     @with_tempfile(suffix='.key', create=False)
     def test_issue_41858(self, keyfile, crtfile):
+        ret_key = 'x509_|-test_crt_|-{0}_|-certificate_managed'.format(crtfile)
         signing_policy = 'no_such_policy'
         ret = self.run_function(
             'state.apply',
             ['issue-41858.gen_cert'],
             pillar={'keyfile': keyfile, 'crtfile': crtfile, 'tmp_dir': RUNTIME_VARS.TMP})
-        self.assertSaltTrueReturn(ret)
         cert_sum = self.file_checksum(crtfile)
 
         ret = self.run_function(
             'state.apply',
             ['issue-41858.check'],
             pillar={'keyfile': keyfile, 'crtfile': crtfile, 'signing_policy': signing_policy})
-        self.assertSaltFalseReturn(ret)
-        self.assertSaltCommentRegexpMatches(ret, 'Signing policy {0} does not exist'.format(signing_policy))
+        self.assertFalse(ret[ret_key]['result'])
+        self.assertSaltCommentRegexpMatches(ret[ret_key], 'Signing policy {0} does not exist'.format(signing_policy))
         self.assertEquals(self.file_checksum(crtfile), cert_sum)
 
     @with_tempfile(suffix='.crt', create=False)
     @with_tempfile(suffix='.key', create=False)
     def test_compound_match(self, keyfile, crtfile):
+        ret_key = 'x509_|-test_crt_|-{0}_|-certificate_managed'.format(crtfile)
         signing_policy = 'compound_match'
         ret = self.run_function(
             'state.apply',
             ['x509_compound_match.gen_ca'],
             pillar={'tmp_dir': RUNTIME_VARS.TMP})
-        self.assertSaltTrueReturn(ret)
 
         # sub_minion have grain set and CA is on other minion
         # CA minion have same grain with incorrect value
@@ -165,7 +165,7 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
             ['x509_compound_match.check'],
             minion_tgt='sub_minion',
             pillar={'keyfile': keyfile, 'crtfile': crtfile, 'signing_policy': signing_policy})
-        self.assertSaltTrueReturn(ret)
+        self.assertTrue(ret[ret_key]['result'])
 
         # minion have grain set with incorrect value
         ret = self.run_function(
@@ -173,5 +173,5 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
             ['x509_compound_match.check'],
             minion_tgt='minion',
             pillar={'keyfile': keyfile, 'crtfile': crtfile, 'signing_policy': signing_policy})
-        self.assertSaltFalseReturn(ret)
-        self.assertSaltCommentRegexpMatches(ret, 'not permitted to use signing policy {0}'.format(signing_policy))
+        self.assertFalse(ret[ret_key]['result'])
+        self.assertSaltCommentRegexpMatches(ret[ret_key], 'not permitted to use signing policy {0}'.format(signing_policy))
