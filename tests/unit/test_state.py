@@ -221,6 +221,39 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             return_result = state_obj._run_check_unless(low_data, '')
             self.assertEqual(expected_result, return_result)
 
+    def test_verify_retry_parsing(self):
+        low_data = {
+            "state": "file",
+            "name": "/tmp/saltstack.README.rst",
+            "__sls__": "demo.download",
+            "__env__": "base",
+            "__id__": "download sample data",
+            "retry": {
+                "attempts": 5,
+                "interval": 5
+            },
+            "unless": [
+                "test -f /tmp/saltstack.README.rst"
+            ],
+            "source": [
+                "https://raw.githubusercontent.com/saltstack/salt/develop/README.rst"
+            ],
+            "source_hash": "f2bc8c0aa2ae4f5bb5c2051686016b48",
+            "order": 10000,
+            "fun": "managed"
+        }
+        expected_result = {'some': 'result'}
+
+        with patch('salt.state.State._gather_pillar') as state_patch:
+            minion_opts = self.get_temp_config('minion')
+            minion_opts['test'] = True
+            minion_opts['file_client'] = 'local'
+            state_obj = salt.state.State(minion_opts)
+            mock = {'result': True, 'comment': ['unless condition is true'], 'skip_watch': True}
+            with patch.object(state_obj, '_run_check', return_value=mock):
+                with self.assertRaises(salt.exceptions.SaltRenderError):
+                    self.assertEqual(state_obj.call(low_data), expected_result)
+
 
 class HighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     def setUp(self):

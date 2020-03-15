@@ -2074,7 +2074,7 @@ class State(object):
                             ret['start_time'] = orig_ret['start_time']
             else:
                 ret['comment'] = '  '.join(
-                        ['' if not ret['comment'] else ret['comment'],
+                        ['' if not ret['comment'] else str(ret['comment']),
                          ('The state would be retried every {1} seconds '
                           '(with a splay of up to {3} seconds) '
                           'a maximum of {0} times or until a result of {2} '
