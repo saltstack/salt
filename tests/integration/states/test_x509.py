@@ -155,7 +155,7 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_function(
             'state.apply',
             ['x509_compound_match.gen_ca'],
-            pillar={'keyfile': keyfile, 'crtfile': crtfile, 'tmp_dir': RUNTIME_VARS.TMP})
+            pillar={'tmp_dir': RUNTIME_VARS.TMP})
         self.assertSaltTrueReturn(ret)
 
         # sub_minion have grain set and CA is on other minion
