@@ -434,13 +434,13 @@ def _make_regex(pem_type):
     )
 
 
-def _is_valid_pem(pem, pem_type=None):
+def _valid_pem(pem, pem_type=None):
     pem_type = '[0-9A-Z ]+' if pem_type is None else pem_type
     _dregex = _make_regex(pem_type)
     for _match in _dregex.finditer(pem):
         if _match:
-            return True
-    return False
+            return _match
+    return None
 
 
 def _match_minions(test, minion):
@@ -477,8 +477,6 @@ def get_pem_entry(text, pem_type=None):
     # Replace encoded newlines
     text = text.replace('\\n', '\n')
 
-    _match = None
-
     if len(text.splitlines()) == 1 and text.startswith(
             '-----') and text.endswith('-----'):
         # mine.get returns the PEM on a single line, we fix this
@@ -504,7 +502,8 @@ def get_pem_entry(text, pem_type=None):
         errmsg = ('PEM does not contain a single entry of type {0}:\n'
                   '{1}'.format(pem_type, text))
 
-    if not _is_valid_pem(text, pem_type):
+    _match = _valid_pem(text, pem_type)
+    if not _match:
         raise salt.exceptions.SaltInvocationError(errmsg)
 
     _match_dict = _match.groupdict()
@@ -1432,7 +1431,7 @@ def create_certificate(
 
         cert_txt = certs[ca_server]
         if isinstance(cert_txt, str):
-            if not _is_valid_pem(cert_txt, 'CERTIFICATE'):
+            if not _valid_pem(cert_txt, 'CERTIFICATE'):
                 raise salt.exceptions.SaltInvocationError(cert_txt)
 
         if path:
