@@ -775,7 +775,9 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
             'file.chgrp',
             'pkg.refresh_db',
             'ssh.recv_known_host_entries',
-            'time.sleep'
+            'time.sleep',
+            'grains.delkey',
+            'grains.delval'
         )
         if 'f_arg' in kwargs:
             kwargs['arg'] = kwargs.pop('f_arg')
