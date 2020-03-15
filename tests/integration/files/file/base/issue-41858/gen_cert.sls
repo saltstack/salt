@@ -56,4 +56,3 @@ test_crt:
         backup: True
     - require:
         - {{ tmp_dir  }}/pki/ca.crt
-        - {{ tmp_dir  }}/pki/test.key
