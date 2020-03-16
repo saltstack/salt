@@ -70,13 +70,13 @@ Example configuration (to be written in master config file)
 For junos_syslog engine to receive events, syslog must be set on the junos device.
 This can be done via following configuration:
 
-.. code-block:: shell
+.. code-block:: bash
 
     set system syslog host <ip-of-the-salt-device> port 516 any any
 
 Below is a sample syslog event which is received from the junos device:
 
-.. code-block:: shell
+.. code-block:: bash
 
     '<30>May 29 05:18:12 bng-ui-vm-9 mspd[1492]: No chassis configuration found'
 

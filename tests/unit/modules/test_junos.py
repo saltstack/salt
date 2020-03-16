@@ -1623,7 +1623,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
 
     def test_rpc_write_file_format_json(self):
         with patch('jnpr.junos.device.Device.execute') as mock_execute, \
-             patch('salt.utils.json.dumps') as mock_dumps:
+                patch('salt.utils.json.dumps') as mock_dumps:
             mock_dumps.return_value = 'json rpc reply'
             with patch('salt.utils.files.fopen', mock_open(), create=True) as m_open:
                 junos.rpc('get-chassis-inventory', dest='/path/to/file', format='json')
@@ -1880,7 +1880,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         table = 'ModuleTable'
         file = 'inventory.yml'
         with patch('jnpr.junos.device.Device.execute') as mock_execute, \
-            patch('salt.utils.json.dumps') as mock_dumps:
+                patch('salt.utils.json.dumps') as mock_dumps:
             mock_dumps.return_value = 'json rpc reply'
             m = mock_open()
             ret = junos.get_table(table, file)
