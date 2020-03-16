@@ -425,8 +425,8 @@ class SSHThinTestCase(TestCase):
         type(str("backports_abc"), (), {"__file__": "/site-packages/backports_abc"}),
     )
     @patch(
-        "salt.utils.thin.concurrent",
-        type(str("concurrent"), (), {"__file__": "/site-packages/concurrent"}),
+        "salt.utils.thin.futures",
+        type(str("futures"), (), {"__file__": "/site-packages/futures"}),
     )
     @patch("salt.utils.thin.log", MagicMock())
     def test_get_tops(self):
@@ -447,7 +447,7 @@ class SSHThinTestCase(TestCase):
             "/site-packages/ssl_mh",
             "/site-packages/markupsafe",
             "/site-packages/backports_abc",
-            "/site-packages/concurrent",
+            "/site-packages/futures",
         ]
 
         tops = thin.get_tops()
@@ -503,8 +503,8 @@ class SSHThinTestCase(TestCase):
         type(str("backports_abc"), (), {"__file__": "/site-packages/backports_abc"}),
     )
     @patch(
-        "salt.utils.thin.concurrent",
-        type(str("concurrent"), (), {"__file__": "/site-packages/concurrent"}),
+        "salt.utils.thin.futures",
+        type(str("futures"), (), {"__file__": "/site-packages/futures"}),
     )
     @patch("salt.utils.thin.log", MagicMock())
     def test_get_tops_extra_mods(self):
@@ -523,7 +523,7 @@ class SSHThinTestCase(TestCase):
             "/site-packages/sdp",
             "/site-packages/sdp_hlp",
             "/site-packages/ssl_mh",
-            "/site-packages/concurrent",
+            "/site-packages/futures",
             "/site-packages/markupsafe",
             "/site-packages/backports_abc",
             os.sep + os.path.join("custom", "foo"),
@@ -591,8 +591,8 @@ class SSHThinTestCase(TestCase):
         type(str("backports_abc"), (), {"__file__": "/site-packages/backports_abc"}),
     )
     @patch(
-        "salt.utils.thin.concurrent",
-        type(str("concurrent"), (), {"__file__": "/site-packages/concurrent"}),
+        "salt.utils.thin.futures",
+        type(str("futures"), (), {"__file__": "/site-packages/futures"}),
     )
     @patch("salt.utils.thin.log", MagicMock())
     def test_get_tops_so_mods(self):
@@ -611,7 +611,7 @@ class SSHThinTestCase(TestCase):
             "/site-packages/sdp",
             "/site-packages/sdp_hlp",
             "/site-packages/ssl_mh",
-            "/site-packages/concurrent",
+            "/site-packages/futures",
             "/site-packages/markupsafe",
             "/site-packages/backports_abc",
             "/custom/foo.so",
@@ -1146,7 +1146,7 @@ class SSHThinTestCase(TestCase):
                 ret = thin.get_tops_python("python2.7")
                 assert ret == self.exp_ret
                 assert (
-                    "ERROR:Could not auto detect file location for module concurrent for python version python2.7"
+                    "ERROR:Could not auto detect file location for module futures for python version python2.7"
                     in log_handler.messages
                 )
 

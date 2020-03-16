@@ -75,9 +75,12 @@ except ImportError:
 
 
 if _six.PY2:
-    import concurrent
+    try:
+        from concurrent import futures
+    except ImportError:
+        futures = None
 else:
-    concurrent = None
+    futures = None
 
 
 log = logging.getLogger(__name__)
@@ -198,7 +201,7 @@ def get_tops_python(py_ver, exclude=None):
         "msgpack",
         "certifi",
         "singledispatch",
-        "concurrent",
+        "futures",
         "singledispatch_helpers",
         "ssl_match_hostname",
         "markupsafe",
@@ -340,7 +343,7 @@ def get_tops(extra_mods="", so_mods=""):
         msgpack,
         certifi,
         singledispatch,
-        concurrent,
+        futures,
         singledispatch_helpers,
         ssl_match_hostname,
         markupsafe,
