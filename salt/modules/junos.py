@@ -852,7 +852,7 @@ def install_config(path=None, **kwargs):
     diffs_file
       Path to the file where the diff (difference in old configuration and the
       committed configuration) will be stored. Note that the file will be
-      stored on the proxy minion. To push the files to the 
+      stored on the proxy minion. To push the files to the master
       
       use
       :py:func:`cp.push <salt.modules.cp.push>`.
@@ -1036,12 +1036,11 @@ def zeroize():
     Resets the device to default factory settings
 
     .. note::
-    In case of non-root user, proxy_reconnect will not be able
-    to re-connect to the device as zeroize will delete the local
-    user's configuration.
-
-    For more details on zeroize functionality, please refer
-    https://www.juniper.net/documentation/en_US/junos/topics/reference/command-summary/request-system-zeroize.html
+        In case of non-root user, proxy_reconnect will not be able
+        to re-connect to the device as zeroize will delete the local
+        user's configuration.
+        For more details on zeroize functionality, please refer
+        https://www.juniper.net/documentation/en_US/junos/topics/reference/command-summary/request-system-zeroize.html
 
     CLI Example:
 
@@ -1113,9 +1112,9 @@ def install_os(path=None, **kwargs):
         device. When False, execute the software install only on the current Routing Engine.
 
     .. note::
-    Any additional keyword arguments specified are passed down to PyEZ sw.install() as is.
-    Please refer to below URl for PyEZ sw.install() documentaion:
-    https://pyez.readthedocs.io/en/latest/jnpr.junos.utils.html#jnpr.junos.utils.sw.SW.install
+        Any additional keyword arguments specified are passed down to PyEZ sw.install() as is.
+        Please refer to below URl for PyEZ sw.install() documentaion:
+        https://pyez.readthedocs.io/en/latest/jnpr.junos.utils.html#jnpr.junos.utils.sw.SW.install
 
     CLI Examples:
 
