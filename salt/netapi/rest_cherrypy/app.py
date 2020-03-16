@@ -1340,6 +1340,7 @@ class Flush(LowDataAdapter):
             Host: localhost:8000
 
         '''
+        import salt.config
         opts = salt.config.client_config(
             os.environ.get('SALT_MASTER_CONFIG', '/etc/salt/master'))
         apiopts = opts.get(__name__.rsplit('.', 2)[-2], {})
