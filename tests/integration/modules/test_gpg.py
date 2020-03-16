@@ -5,6 +5,7 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import errno
+import shutil
 import tempfile
 import textwrap
 import os
@@ -25,6 +26,15 @@ try:
     HAS_GPG = True
 except ImportError:
     HAS_GPG = False
+
+
+def _delete_errorhandler(func, path, exc):
+    '''
+    Helper function to ignore "No such file or directory"-errors
+    when cleaning up.
+    '''
+    if exc[1].errno != errno.ENOENT:
+        raise
 
 
 @skipIf(not salt.utils.platform.is_linux(), 'These tests can only be run on linux')
@@ -100,13 +110,7 @@ class GpgTestCase(ModuleCase):
 
     @classmethod
     def tearDownClass(cls):
-        try:
-            salt.utils.files.rm_rf(cls.gnupghome)
-        except OSError as exc:
-            # Ignore files already gone when attempting to delete them:
-            # OSError: [Errno 2] No such file or directory: '/tmp/saltgpg_UeafO/S.gpg-agent.extra'
-            if exc.errno != errno.ENOENT:
-                raise
+        shutil.rmtree(cls.gnupghome, onerror=_delete_errorhandler)
         del cls.gnupghome
         del cls.gpg20_secret_key_spec
         del cls.gpg21_secret_key_spec
@@ -142,7 +146,7 @@ class GpgTestCase(ModuleCase):
         random pool.
         '''
         step_1_gnupghome = tempfile.mkdtemp(prefix='saltgpg')
-        self.addCleanup(salt.utils.files.rm_rf, step_1_gnupghome)
+        self.addCleanup(shutil.rmtree, step_1_gnupghome, _delete_errorhandler)
         expected_result = {
             'message': 'GPG key pair successfully generated.', 'result': True,
         }

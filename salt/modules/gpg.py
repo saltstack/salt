@@ -1433,7 +1433,13 @@ def get_fingerprint_from_data(keydata, secret=False):
             stdin=keydata,
         )
     finally:
-        salt.utils.files.rm_rf(temp_gnupghome)
+        try:
+            salt.utils.files.rm_rf(temp_gnupghome)
+        except OSError as exc:
+            # Ignore files already gone when attempting to delete them:
+            # OSError: [Errno 2] No such file or directory: '/tmp/saltgpg_Ueaf0/S.gpg-agent.extra'
+            if exc.errno != errno.ENOENT:
+                raise
 
     fingerprint = re.match('^.*?(?:pub|sec):.*?fpr:{9}([0-9A-F]*):.*$', res, re.DOTALL)
     try:
