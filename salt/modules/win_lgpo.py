@@ -4986,6 +4986,12 @@ def _load_policy_definitions(path='c:\\Windows\\PolicyDefinitions',
     for root, dirs, files in salt.utils.path.os_walk(path):
         if root == path:
             for t_admx_file in files:
+                admx_file_name, admx_file_ext = os.path.splitext(t_admx_file)
+                # Only process ADMX files, any other file will cause a
+                # stacktrace later on
+                if not admx_file_ext == '.admx':
+                    log.debug('{0} is not an ADMX file'.format(t_admx_file))
+                    continue
                 admx_file = os.path.join(root, t_admx_file)
                 # Parse xml for the ADMX file
                 try:
@@ -5001,9 +5007,6 @@ def _load_policy_definitions(path='c:\\Windows\\PolicyDefinitions',
                     namespaces['None'] = namespaces[None]
                     namespaces.pop(None)
                     namespace_string = 'None:'
-                this_prefix = xml_tree.xpath(
-                        '/{0}policyDefinitions/{0}policyNamespaces/{0}target/@prefix'.format(namespace_string),
-                        namespaces=namespaces)[0]
                 this_namespace = xml_tree.xpath(
                         '/{0}policyDefinitions/{0}policyNamespaces/{0}target/@namespace'.format(namespace_string),
                         namespaces=namespaces)[0]
@@ -5038,7 +5041,7 @@ def _load_policy_definitions(path='c:\\Windows\\PolicyDefinitions',
                 adml_file = os.path.join(
                     root,
                     language,
-                    os.path.splitext(t_admx_file)[0] + '.adml')
+                    admx_file_name + '.adml')
                 if not __salt__['file.file_exists'](adml_file):
                     log.info('An ADML file in the specified ADML language '
                              '"%s" does not exist for the ADMX "%s", the '
@@ -5048,7 +5051,7 @@ def _load_policy_definitions(path='c:\\Windows\\PolicyDefinitions',
                     adml_file = os.path.join(
                         root,
                         language.split('-')[0],
-                        os.path.splitext(t_admx_file)[0] + '.adml')
+                        admx_file_name + '.adml')
                     if not __salt__['file.file_exists'](adml_file):
                         log.info('An ADML file in the specified ADML language '
                                  'code %s does not exist for the ADMX "%s", '
@@ -5058,7 +5061,7 @@ def _load_policy_definitions(path='c:\\Windows\\PolicyDefinitions',
                         adml_file = os.path.join(
                             root,
                             display_language_fallback,
-                            os.path.splitext(t_admx_file)[0] + '.adml')
+                            admx_file_name + '.adml')
                         if not __salt__['file.file_exists'](adml_file):
                             log.info('An ADML file in the specified ADML '
                                      'fallback language "%s" '
@@ -5070,7 +5073,7 @@ def _load_policy_definitions(path='c:\\Windows\\PolicyDefinitions',
                             adml_file = os.path.join(
                                 root,
                                 display_language_fallback.split('-')[0],
-                                os.path.splitext(t_admx_file)[0] + '.adml')
+                                admx_file_name + '.adml')
                             if not __salt__['file.file_exists'](adml_file):
                                 msg = ('An ADML file in the specified ADML language '
                                        '"{0}" and the fallback language "{1}" do not '
@@ -5526,7 +5529,7 @@ def _write_secedit_data(inf_data):
         # Success
         if retcode == 0:
             # Pop secedit data so it will always be current
-            __context__.pop('lgpo.secedit_data')
+            __context__.pop('lgpo.secedit_data', None)
             return True
         # Failure
         return False
@@ -5658,25 +5661,48 @@ def _getAdmlPresentationRefId(adml_data, ref_id):
     helper function to check for a presentation label for a policy element
     '''
     search_results = adml_data.xpath('//*[@*[local-name() = "refId"] = "{0}"]'.format(ref_id))
-    prepended_text = ''
+    alternate_label = ''
     if search_results:
         for result in search_results:
             the_localname = etree.QName(result.tag).localname
-            if the_localname == 'textBox' \
-                    or the_localname == 'comboBox':
+
+            # We want to prefer result.text as the label, however, if it is none
+            # we will fall back to this method for getting the label
+            # Brings some code back from:
+            # https://github.com/saltstack/salt/pull/55823/files#diff-b2e4dac5ccc17ab548f245371ec5d6faL5658
+            if result.text is None:
+                # Get the label from the text element above the referenced
+                # element. For example:
+                # --- taken from AppPrivacy.adml ---
+                # <text>Force allow these specific apps (use Package Family Names):</text>
+                # <multiTextBox refId="LetAppsSyncWithDevices_ForceAllowTheseApps_List"/>
+                # In this case, the label for the refId is the text element
+                # above it.
+                presentation_element = PRESENTATION_ANCESTOR_XPATH(result)
+                if presentation_element:
+                    presentation_element = presentation_element[0]
+                    if TEXT_ELEMENT_XPATH(presentation_element):
+                        for p_item in presentation_element.getchildren():
+                            if p_item == result:
+                                break
+                            if etree.QName(p_item.tag).localname == 'text':
+                                if getattr(p_item, 'text'):
+                                    alternate_label = getattr(p_item, 'text').rstrip()
+                        if alternate_label.endswith('.'):
+                            alternate_label = ''
+
+            if the_localname in ['textBox', 'comboBox']:
                 label_items = result.xpath('.//*[local-name() = "label"]')
                 for label_item in label_items:
                     if label_item.text:
-                        return (prepended_text + ' ' + label_item.text.rstrip().rstrip(':')).lstrip()
-            elif the_localname == 'decimalTextBox' \
-                    or the_localname == 'longDecimalTextBox' \
-                    or the_localname == 'dropdownList' \
-                    or the_localname == 'listBox' \
-                    or the_localname == 'checkBox' \
-                    or the_localname == 'text' \
-                    or the_localname == 'multiTextBox':
+                        return label_item.text.rstrip().rstrip(':')
+            elif the_localname in ['decimalTextBox', 'longDecimalTextBox',
+                                   'dropdownList', 'listBox', 'checkBox',
+                                   'text', 'multiTextBox']:
                 if result.text:
-                    return (prepended_text + ' ' + result.text.rstrip().rstrip(':')).lstrip()
+                    return result.text.rstrip().rstrip(':')
+                else:
+                    return alternate_label.rstrip(':')
     return None
 
 
@@ -6139,6 +6165,10 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
 
         if standard_element_expected_string and not check_deleted:
             if this_element_value is not None:
+                # Sometimes values come in as strings
+                if isinstance(this_element_value, str):
+                    log.debug('Converting {0} to bytes'.format(this_element_value))
+                    this_element_value = this_element_value.encode('utf-32-le')
                 expected_string = b''.join(['['.encode('utf-16-le'),
                                             reg_key,
                                             encoded_null,
@@ -6777,13 +6807,16 @@ def _regexSearchKeyValueCombo(policy_data, policy_regpath, policy_regkey):
     for a policy_regpath and policy_regkey combo
     '''
     if policy_data:
-        specialValueRegex = salt.utils.stringutils.to_bytes(r'(\*\*Del\.|\*\*DelVals\.){0,1}')
+        regex_str = [r'(\*', r'\*', 'D', 'e', 'l', r'\.', r'|\*', r'\*', 'D',
+                     'e', 'l', 'V', 'a', 'l', 's', r'\.', '){0,1}']
+        specialValueRegex = '\x00'.join(regex_str)
+        specialValueRegex = salt.utils.stringutils.to_bytes(specialValueRegex)
         _thisSearch = b''.join([salt.utils.stringutils.to_bytes(r'\['),
-                               re.escape(policy_regpath),
-                               b'\00;',
-                               specialValueRegex,
-                               re.escape(policy_regkey),
-                               b'\00;'])
+                                re.escape(policy_regpath),
+                                b'\x00;\x00',
+                                specialValueRegex,
+                                re.escape(policy_regkey.lstrip(b'\x00')),
+                                b'\x00;'])
         match = re.search(_thisSearch, policy_data, re.IGNORECASE)
         if match:
             # add 2 so we get the ']' and the \00

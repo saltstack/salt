@@ -5,6 +5,7 @@
 #    pip-compile -o requirements/static/py2.7/darwin.txt -v pkg/osx/req.txt pkg/osx/req_ext.txt requirements/base.txt requirements/zeromq.txt requirements/pytest.txt requirements/static/darwin.in
 #
 apache-libcloud==2.4.0
+appdirs==1.4.3            # via virtualenv
 argh==0.26.2              # via watchdog
 asn1crypto==1.3.0         # via certvalidator, cryptography, oscrypto
 atomicwrites==1.3.0       # via pytest
@@ -30,16 +31,18 @@ cherrypy==17.4.1
 click==7.0
 clustershell==1.8.1
 configparser==4.0.2       # via importlib-metadata
-contextlib2==0.5.5        # via cherrypy, importlib-metadata
+contextlib2==0.6.0.post1  # via cherrypy, importlib-metadata, importlib-resources, virtualenv
 cookies==2.2.1            # via responses
 croniter==0.3.29
 cryptography==2.6.1
+distlib==0.3.0            # via virtualenv
 dnspython==1.16.0
 docker-pycreds==0.4.0     # via docker
 docker==3.7.2
 docutils==0.14            # via botocore
 ecdsa==0.13.3             # via python-jose
 enum34==1.1.6
+filelock==3.0.12          # via virtualenv
 funcsigs==1.0.2           # via mock, pytest
 functools32==3.2.3.post2  # via jsonschema
 future==0.17.1            # via python-jose
@@ -50,7 +53,8 @@ gitdb==0.6.4
 gitpython==2.1.11
 google-auth==1.6.3        # via kubernetes
 idna==2.8
-importlib-metadata==0.23  # via pluggy, pytest
+importlib-metadata==0.23  # via importlib-resources, pluggy, pytest, virtualenv
+importlib-resources==1.3.1  # via virtualenv
 ipaddress==1.0.22
 jaraco.functools==2.0     # via tempora
 jinja2==2.10.1
@@ -77,7 +81,7 @@ netaddr==0.7.19           # via junos-eznc
 oscrypto==1.2.0           # via certvalidator
 packaging==19.2           # via pytest
 paramiko==2.4.2           # via junos-eznc, ncclient, scp
-pathlib2==2.3.3           # via importlib-metadata, pytest
+pathlib2==2.3.3           # via importlib-metadata, importlib-resources, pytest, virtualenv
 pathtools==0.1.2          # via watchdog
 pluggy==0.13.1            # via pytest
 portend==2.4              # via cherrypy
@@ -116,16 +120,17 @@ scp==0.13.2               # via junos-eznc
 selectors2==2.0.1         # via ncclient
 setproctitle==1.1.10
 singledispatch==3.4.0.3 ; python_version < "3.4"
-six==1.12.0               # via bcrypt, cheroot, cherrypy, cryptography, docker, docker-pycreds, google-auth, junos-eznc, kubernetes, mock, more-itertools, moto, ncclient, packaging, pathlib2, pynacl, pyopenssl, pytest, python-dateutil, python-jose, pyvmomi, responses, salttesting, singledispatch, tempora, vcert, websocket-client
+six==1.12.0               # via bcrypt, cheroot, cherrypy, cryptography, docker, docker-pycreds, google-auth, junos-eznc, kubernetes, mock, more-itertools, moto, ncclient, packaging, pathlib2, pynacl, pyopenssl, pytest, python-dateutil, python-jose, pyvmomi, responses, salttesting, singledispatch, tempora, vcert, virtualenv, websocket-client
 smmap2==2.0.5             # via gitdb2
 smmap==0.9.0
 strict-rfc3339==0.7
 supervisor==3.3.5 ; python_version < "3"
 tempora==1.14.1           # via portend
 timelib==0.2.4
+typing==3.7.4.1           # via importlib-resources
 urllib3==1.24.2           # via botocore, kubernetes, python-etcd, requests
 vcert==0.7.3
-virtualenv==16.4.3
+virtualenv==20.0.10
 vultr==1.0.1
 watchdog==0.9.0
 wcwidth==0.1.7            # via pytest
@@ -136,6 +141,6 @@ wrapt==1.11.1             # via aws-xray-sdk
 xmltodict==0.12.0         # via moto
 yamlordereddictloader==0.4.0
 zc.lockfile==1.4          # via cherrypy
-zipp==0.6.0               # via importlib-metadata
+zipp==0.6.0               # via importlib-metadata, importlib-resources
 # Passthrough dependencies from pkg/osx/req.txt
 pyobjc==5.1.2
