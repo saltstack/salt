@@ -1004,7 +1004,7 @@ def sign(
             if salt.utils.versions.version_cmp(gnupg.__version__, '0.3.7') >= 0 else None,
     })
     if (salt.utils.versions.version_cmp(gnupg.__version__, '0.4.1') >= 0
-            and salt.utils.versions.version_cmp(GPG_VERSION, '2.0') >= 0):
+            and salt.utils.versions.version_cmp(GPG_VERSION, '2.1') >= 0):
         # Avoid getting a popup asking for a password
         call_kwargs.update({'extra_args': ['--pinentry-mode', 'loopback']})
     if text:

@@ -18,6 +18,7 @@ from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
 import salt.utils.files
+# pylint: disable=incompatible-py3-code
 
 try:
     import gnupg
@@ -132,7 +133,7 @@ class GPGTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(ret, {})
-        if salt.utils.versions.version_cmp(GPG_VERSION, '2.0') >= 0:
+        if salt.utils.versions.version_cmp(GPG_VERSION, '2.1') >= 0:
             self.assertInSaltComment(
                 'GPG key with fingerprint "1B52281BF159856CA76A04F5857C86FCF8A3FB11" from keydata already in keychain.',
                 ret
