@@ -34,7 +34,7 @@ def _delete_errorhandler(func, path, exc):
     when cleaning up.
     '''
     if exc[1].errno != errno.ENOENT:
-        raise
+        raise exc[1]
 
 
 @skipIf(not salt.utils.platform.is_linux(), 'These tests can only be run on linux')
