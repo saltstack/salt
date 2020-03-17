@@ -344,7 +344,7 @@ def _run(cmd,
         # The last item in the list [-1] is the current method.
         # The third item[2] in each tuple is the name of that method.
         if stack[-2][2] == 'script':
-            cmd = 'Powershell -NonInteractive -NoProfile -ExecutionPolicy Bypass -File ' + cmd
+            cmd = 'Powershell -NonInteractive -NoProfile -ExecutionPolicy Bypass {0}'.format(cmd.replace('"', '\\"'))
         elif encoded_cmd:
             cmd = 'Powershell -NonInteractive -EncodedCommand {0}'.format(cmd)
         else:

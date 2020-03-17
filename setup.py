@@ -74,8 +74,9 @@ BOOTSTRAP_SCRIPT_DISTRIBUTED_VERSION = os.environ.get(
 )
 
 # Store a reference to the executing platform
+IS_OSX_PLATFORM = sys.platform.startswith('darwin')
 IS_WINDOWS_PLATFORM = sys.platform.startswith('win')
-if IS_WINDOWS_PLATFORM:
+if IS_WINDOWS_PLATFORM or IS_OSX_PLATFORM:
     IS_SMARTOS_PLATFORM = False
 else:
     # os.uname() not available on Windows.
@@ -100,8 +101,15 @@ SALT_SYSPATHS_HARDCODED = os.path.join(os.path.abspath(SETUP_DIRNAME), 'salt', '
 SALT_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'base.txt')
 SALT_CRYPTO_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'crypto.txt')
 SALT_ZEROMQ_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'zeromq.txt')
-SALT_WINDOWS_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'pkg', 'windows', 'req.txt')
 SALT_LONG_DESCRIPTION_FILE = os.path.join(os.path.abspath(SETUP_DIRNAME), 'README.rst')
+SALT_OSX_REQS = [
+    os.path.join(os.path.abspath(SETUP_DIRNAME), 'pkg', 'osx', 'req.txt'),
+    os.path.join(os.path.abspath(SETUP_DIRNAME), 'pkg', 'osx', 'req_ext.txt')
+]
+SALT_WINDOWS_REQS = [
+    os.path.join(os.path.abspath(SETUP_DIRNAME), 'pkg', 'windows', 'req.txt'),
+    os.path.join(os.path.abspath(SETUP_DIRNAME), 'pkg', 'windows', 'req_win.txt')
+]
 
 # Salt SSH Packaging Detection
 PACKAGED_FOR_SALT_SSH_FILE = os.path.join(os.path.abspath(SETUP_DIRNAME), '.salt-ssh-package')
@@ -700,8 +708,7 @@ class Install(install):
         install.finalize_options(self)
 
     def run(self):
-        from distutils.version import StrictVersion
-        if StrictVersion(setuptools.__version__) < StrictVersion('9.1'):
+        if LooseVersion(setuptools.__version__) < LooseVersion('9.1'):
             sys.stderr.write(
                 '\n\nInstalling Salt requires setuptools >= 9.1\n'
                 'Available setuptools version is {}\n\n'.format(setuptools.__version__)
@@ -1019,14 +1026,24 @@ class SaltDistribution(distutils.dist.Distribution):
 
     @property
     def _property_install_requires(self):
+
+        if IS_OSX_PLATFORM:
+            install_requires = []
+            for reqfile in SALT_OSX_REQS:
+                install_requires += _parse_requirements_file(reqfile)
+            return install_requires
+
+        if IS_WINDOWS_PLATFORM:
+            install_requires = []
+            for reqfile in SALT_WINDOWS_REQS:
+                install_requires += _parse_requirements_file(reqfile)
+            return install_requires
+
         install_requires = _parse_requirements_file(SALT_REQS)
 
         if self.salt_transport == 'zeromq':
             install_requires += _parse_requirements_file(SALT_CRYPTO_REQS)
             install_requires += _parse_requirements_file(SALT_ZEROMQ_REQS)
-
-        if IS_WINDOWS_PLATFORM:
-            install_requires = _parse_requirements_file(SALT_WINDOWS_REQS)
         return install_requires
 
     @property
