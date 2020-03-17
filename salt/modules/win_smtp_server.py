@@ -52,7 +52,7 @@ def __virtual__():
     '''
     if salt.utils.platform.is_windows() and _HAS_MODULE_DEPENDENCIES:
         return __virtualname__
-    return False
+    return (False, 'Module win_smtp_server: module only works on Windows systems with wmi.')
 
 
 def _get_wmi_setting(wmi_class_name, setting, server):
