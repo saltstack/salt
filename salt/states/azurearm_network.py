@@ -106,7 +106,9 @@ def __virtual__():
     '''
     Only make this state available if the azurearm_network module is available.
     '''
-    return __virtualname__ if 'azurearm_network.check_ip_address_availability' in __salt__ else False
+    if 'azurearm_network.check_ip_address_availability' in __salt__:
+        return __virtualname__
+    return (False, 'azurearm_network module could not be loaded')
 
 
 def virtual_network_present(name, address_prefixes, resource_group, dns_servers=None,

@@ -29,7 +29,7 @@ def __virtual__():
     '''
     if __salt__['cmd.has_exec']('rabbitmqctl'):
         return True
-    return False
+    return (False, 'Command not found: rabbitmqctl')
 
 
 def enabled(name, runas=None):

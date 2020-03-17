@@ -154,8 +154,7 @@ from salt.ext import six
 def __virtual__():
     if 'cron.list_tab' in __salt__:
         return True
-    else:
-        return (False, 'cron module could not be loaded')
+    return (False, 'cron module could not be loaded')
 
 
 def _check_cron(user,

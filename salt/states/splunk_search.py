@@ -20,7 +20,9 @@ def __virtual__():
     '''
     Only load if the splunk_search module is available in __salt__
     '''
-    return 'splunk_search' if 'splunk_search.get' in __salt__ else False
+    if 'splunk_search.get' in __salt__:
+        return 'splunk_search'
+    return (False, 'splunk module could not be loaded')
 
 
 def present(name, profile="splunk", **kwargs):

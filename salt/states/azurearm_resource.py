@@ -98,7 +98,9 @@ def __virtual__():
     '''
     Only make this state available if the azurearm_resource module is available.
     '''
-    return __virtualname__ if 'azurearm_resource.resource_group_check_existence' in __salt__ else False
+    if 'azurearm_resource.resource_group_check_existence' in __salt__:
+        return __virtualname__
+    return (False, 'azurearm_resource module could not be loaded')
 
 
 def resource_group_present(name, location, managed_by=None, tags=None, connection_auth=None, **kwargs):

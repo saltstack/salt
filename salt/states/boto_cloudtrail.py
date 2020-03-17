@@ -69,7 +69,9 @@ def __virtual__():
     '''
     Only load if boto is available.
     '''
-    return 'boto_cloudtrail' if 'boto_cloudtrail.exists' in __salt__ else False
+    if 'boto_cloudtrail.exists' in __salt__:
+        return 'boto_cloudtrail'
+    return (False, 'boto_cloudtrail module could not be loaded')
 
 
 def present(name, Name,

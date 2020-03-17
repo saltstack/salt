@@ -70,7 +70,9 @@ def __virtual__():
     '''
     Only load if boto is available.
     '''
-    return 'boto3_sns' if 'boto3_sns.topic_exists' in __salt__ else False
+    if 'boto3_sns.topic_exists' in __salt__:
+        return 'boto3_sns'
+    return (False, 'boto3_sns module could not be loaded')
 
 
 def topic_present(name, subscriptions=None, attributes=None,

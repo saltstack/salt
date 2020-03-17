@@ -146,7 +146,9 @@ def __virtual__():
     Only make these states available if a pkg provider has been detected or
     assigned for this minion
     '''
-    return 'pkg.install' in __salt__
+    if 'pkg.install' in __salt__:
+        return True
+    return (False, 'pkg module could not be loaded')
 
 
 def _get_comparison_spec(pkgver):

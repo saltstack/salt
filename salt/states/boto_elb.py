@@ -255,7 +255,9 @@ def __virtual__():
     '''
     Only load if boto is available.
     '''
-    return 'boto_elb' if 'boto_elb.exists' in __salt__ else False
+    if 'boto_elb.exists' in __salt__:
+        return 'boto_elb'
+    return (False, 'boto_elb module could not be loaded')
 
 
 def present(name, listeners, availability_zones=None, subnets=None,

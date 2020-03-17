@@ -32,7 +32,9 @@ def __virtual__():
     '''
     Only load if the ifttt module is available in __salt__
     '''
-    return 'ifttt' if 'ifttt.trigger_event' in __salt__ else False
+    if 'ifttt.trigger_event' in __salt__:
+        return 'ifttt'
+    return (False, 'ifttt module could not be loaded')
 
 
 def trigger_event(name,

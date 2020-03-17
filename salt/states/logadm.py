@@ -36,13 +36,12 @@ def __virtual__():
     '''
     if 'logadm.list_conf' in __salt__:
         return True
-    else:
-        return (
-            False,
-            '{0} state module can only if the logadm execution module is present'.format(
-                __virtualname__
-            )
+    return (
+        False,
+        '{0} state module can only if the logadm execution module is present'.format(
+            __virtualname__
         )
+    )
 
 
 def rotate(name, **kwargs):

@@ -20,7 +20,9 @@ def __virtual__():
     '''
     Only load if cyg module is available in __salt__.
     '''
-    return 'cyg.list' in __salt__
+    if 'cyg.list' in __salt__:
+        return True
+    return (False, 'cyg module could not be loaded')
 
 
 def installed(name,

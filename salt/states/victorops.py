@@ -25,7 +25,9 @@ def __virtual__():
     '''
     Only load if the victorops module is available in __salt__
     '''
-    return 'victorops' if 'victorops.create_event' in __salt__ else False
+    if 'victorops.create_event' in __salt__:
+        return 'victorops'
+    return (False, 'victorops module could not be loaded')
 
 
 def create_event(name, message_type, routing_key='everyone', **kwargs):

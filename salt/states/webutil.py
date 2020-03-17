@@ -29,8 +29,9 @@ def __virtual__():
     '''
     depends on webutil module
     '''
-
-    return __virtualname__ if salt.utils.path.which('htpasswd') else False
+    if salt.utils.path.which('htpasswd'):
+        return __virtualname__
+    return (False, 'Command not found: htpasswd')
 
 
 def user_exists(name, password=None, htpasswd_file=None, options='',

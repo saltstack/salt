@@ -20,7 +20,9 @@ def __virtual__():
     '''
     Only load if the eselect module is available in __salt__
     '''
-    return 'eselect' if 'eselect.exec_action' in __salt__ else False
+    if 'eselect.exec_action' in __salt__:
+        return 'eselect'
+    return (False, 'eselect module could not be loaded')
 
 
 def set_(name, target, module_parameter=None, action_parameter=None):

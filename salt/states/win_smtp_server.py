@@ -21,7 +21,7 @@ def __virtual__():
     '''
     if 'win_smtp_server.get_server_setting' in __salt__:
         return True
-    return False
+    return (False, 'win_smtp_server module could not be loaded')
 
 
 def _merge_dicts(*args):

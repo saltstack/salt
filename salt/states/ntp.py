@@ -35,7 +35,7 @@ def __virtual__():
     This only supports Windows
     '''
     if not salt.utils.platform.is_windows():
-        return False
+        return (False, 'Only Windows supported')
     return 'ntp'
 
 

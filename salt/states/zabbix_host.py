@@ -16,7 +16,9 @@ def __virtual__():
     '''
     Only make these states available if Zabbix module is available.
     '''
-    return 'zabbix.host_create' in __salt__
+    if 'zabbix.host_create' in __salt__:
+        return True
+    return (False, 'zabbix module could not be loaded')
 
 
 def present(host, groups, interfaces, **kwargs):

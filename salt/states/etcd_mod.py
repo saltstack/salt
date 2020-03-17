@@ -140,8 +140,9 @@ def __virtual__():
     '''
     Only return if python-etcd is installed
     '''
-
-    return __virtualname__ if HAS_ETCD else False
+    if HAS_ETCD:
+        return __virtualname__
+    return (False, 'Unable to import etcd_util')
 
 
 def set_(name, value, profile=None, **kwargs):

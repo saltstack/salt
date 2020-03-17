@@ -21,7 +21,9 @@ def __virtual__():
     '''
     Only make these states available if Zabbix module is available.
     '''
-    return 'zabbix.user_create' in __salt__
+    if 'zabbix.user_create' in __salt__:
+        return True
+    return (False, 'zabbix module could not be loaded')
 
 
 def admin_password_present(name, password=None, **kwargs):

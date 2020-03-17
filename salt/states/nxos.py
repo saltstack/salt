@@ -12,7 +12,9 @@ import re
 
 
 def __virtual__():
-    return 'nxos.cmd' in __salt__
+    if 'nxos.cmd' in __salt__:
+        return True
+    return (False, 'nxos module could not be loaded')
 
 
 def user_present(name, password=None, roles=None, encrypted=False, crypt_salt=None, algorithm='sha256'):

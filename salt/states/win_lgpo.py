@@ -128,7 +128,9 @@ def __virtual__():
     '''
     load this state if the win_lgpo module exists
     '''
-    return __virtualname__ if 'lgpo.set' in __salt__ else False
+    if 'lgpo.set' in __salt__:
+        return __virtualname__
+    return (False, 'lgpo module could not be loaded')
 
 
 def _compare_policies(new_policy, current_policy):

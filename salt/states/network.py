@@ -351,9 +351,11 @@ def __virtual__():
     Confine this module to non-Windows systems with the required execution
     module available.
     '''
-    if not salt.utils.platform.is_windows() and 'ip.get_interface' in __salt__:
+    if salt.utils.platform.is_windows():
+        return (False, 'Only supported on non-Windows OSs')
+    if 'ip.get_interface' in __salt__:
         return True
-    return False
+    return (False, 'ip module could not be loaded')
 
 
 def managed(name, type, enabled=True, **kwargs):

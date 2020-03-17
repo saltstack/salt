@@ -25,7 +25,9 @@ def __virtual__():
     '''
     Only load if the XMPP module is available in __salt__
     '''
-    return 'xmpp' if 'xmpp.send_msg' in __salt__ else False
+    if 'xmpp.send_msg' in __salt__:
+        return 'xmpp'
+    return (False, 'xmpp module could not be loaded')
 
 
 def send_msg(name, recipient, profile):

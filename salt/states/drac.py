@@ -48,8 +48,7 @@ def __virtual__():
     '''
     if salt.utils.path.which('racadm'):
         return True
-
-    return False
+    return (False, 'racadm command not found')
 
 
 def present(name, password, permission):

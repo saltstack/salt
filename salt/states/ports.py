@@ -36,7 +36,7 @@ log = logging.getLogger(__name__)
 def __virtual__():
     if __grains__.get('os', '') == 'FreeBSD' and 'ports.install' in __salt__:
         return 'ports'
-    return False
+    return (False, 'ports module could not be loaded')
 
 
 def _repack_options(options):

@@ -22,9 +22,9 @@ def __virtual__():
     '''
     Only work on apt-based platforms with pkg.get_selections
     '''
-    return (__virtualname__
-            if __salt__.get('pkg.get_selections', False)
-            else False)
+    if 'pkg.get_selections' in __salt__:
+        return True
+    return (False, 'apt module could not be loaded')
 
 
 def held(name):

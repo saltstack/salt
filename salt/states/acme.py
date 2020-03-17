@@ -39,7 +39,9 @@ def __virtual__():
     '''
     Only work when the ACME module agrees
     '''
-    return 'acme.cert' in __salt__
+    if 'acme.cert' in __salt__:
+        return True
+    return (False, 'acme module could not be loaded')
 
 
 def cert(name,

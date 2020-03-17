@@ -68,10 +68,9 @@ def __virtual__():
 
     :return:
     '''
-
     if 'vagrant.version' in __salt__:
         return __virtualname__
-    return False
+    return (False, 'vagrant module could not be loaded')
 
 
 def _vagrant_call(node, function, section, comment, status_when_done=None, **kwargs):

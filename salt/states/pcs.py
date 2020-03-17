@@ -185,7 +185,7 @@ def __virtual__():
     '''
     if salt.utils.path.which('pcs'):
         return 'pcs'
-    return False
+    return (False, 'Unable to locate command: pcs')
 
 
 def _file_read(path):

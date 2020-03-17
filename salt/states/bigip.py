@@ -20,7 +20,9 @@ def __virtual__():
     '''
     Only load if the bigip exec module is available in __salt__
     '''
-    return 'bigip' if 'bigip.list_transaction' in __salt__ else False
+    if 'bigip.list_transaction' in __salt__:
+        return 'bigip'
+    return (False, 'bigip module could not be loaded')
 
 
 def _load_result(response, ret):

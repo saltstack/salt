@@ -32,7 +32,7 @@ def __virtual__():
     if salt.utils.platform.is_darwin() \
             and _LooseVersion(__grains__['osrelease']) >= _LooseVersion('10.9'):
         return True
-    return False
+    return (False, 'Only supported on Mac OS 10.9+')
 
 
 def installed(name, enabled=True):

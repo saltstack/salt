@@ -26,7 +26,9 @@ def __virtual__():
     '''
     Only load if the keyboard module is available in __salt__
     '''
-    return 'keyboard.get_sys' in __salt__
+    if 'keyboard.get_sys' in __salt__:
+        return True
+    return (False, 'keyboard module could not be loaded')
 
 
 def system(name):

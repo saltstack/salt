@@ -73,7 +73,9 @@ def __virtual__():
     '''
     Only load if boto is available.
     '''
-    return 'boto_apigateway' if 'boto_apigateway.describe_apis' in __salt__ else False
+    if 'boto_apigateway.describe_apis' in __salt__:
+        return 'boto_apigateway'
+    return (False, 'boto_apigateway module could not be loaded')
 
 
 def present(name, api_name, swagger_file, stage_name, api_key_required,

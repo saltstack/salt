@@ -33,8 +33,10 @@ def __virtual__():
     '''
     Only work when cabal-install is installed.
     '''
-    return (salt.utils.path.which('cabal') is not None) and \
-        (salt.utils.path.which('ghc-pkg') is not None)
+    if (salt.utils.path.which('cabal') is not None) and \
+        (salt.utils.path.which('ghc-pkg') is not None):
+        return True
+    return (False, 'cabal or ghc-pkg commands not found')
 
 
 def _parse_pkg_string(pkg):

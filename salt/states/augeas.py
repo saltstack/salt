@@ -47,7 +47,9 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    return 'augeas' if 'augeas.execute' in __salt__ else False
+    if 'augeas.execute' in __salt__:
+        return 'augeas'
+    return (False, 'augeas module could not be loaded')
 
 
 def _workout_filename(filename):

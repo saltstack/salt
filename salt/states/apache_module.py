@@ -28,7 +28,9 @@ def __virtual__():
     '''
     Only load if a2enmod is available.
     '''
-    return 'apache_module' if 'apache.a2enmod' in __salt__ else False
+    if 'apache.a2enmod' in __salt__:
+        return 'apache_module'
+    return (False, 'apache module could not be loaded')
 
 
 def enabled(name):

@@ -24,7 +24,9 @@ def __virtual__():
     '''
     Only load if the SMTP module is available in __salt__
     '''
-    return 'smtp' if 'smtp.send_msg' in __salt__ else False
+    if 'smtp.send_msg' in __salt__:
+        return 'smtp'
+    return (False, 'smtp module could not be loaded')
 
 
 def send_msg(name,

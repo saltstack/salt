@@ -43,7 +43,9 @@ def __virtual__():
     '''
     Only load if the bower module is available in __salt__
     '''
-    return 'bower' if 'bower.list' in __salt__ else False
+    if 'bower.list' in __salt__:
+        return 'bower'
+    return (False, 'bower module could not be loaded')
 
 
 def installed(name,

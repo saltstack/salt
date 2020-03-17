@@ -12,7 +12,9 @@ def __virtual__():
     '''
     Only load if the lvs module is available in __salt__
     '''
-    return 'lvs_service' if 'lvs.get_rules' in __salt__ else False
+    if 'lvs.get_rules' in __salt__:
+        return 'lvs_service'
+    return (False, 'lvs module could not be loaded')
 
 
 def present(name,

@@ -34,7 +34,7 @@ def __virtual__():
     '''
     if salt.utils.platform.is_darwin() or salt.utils.platform.is_windows():
         return True
-    return False
+    return (False, 'Only Mac OS and Windows supported')
 
 
 def managed(name, port, services=None, user=None, password=None, bypass_domains=None, network_service='Ethernet'):

@@ -18,7 +18,7 @@ def __virtual__():
     '''
     if 'influxdb.db_exists' in __salt__:
         return 'influxdb_continuous_query'
-    return False
+    return (False, 'influxdb module could not be loaded')
 
 
 def present(name, database, query, resample_time=None, coverage_period=None, **client_args):

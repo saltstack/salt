@@ -27,7 +27,9 @@ def __virtual__():
     '''
     Only load if a2enconf is available.
     '''
-    return 'apache_conf' if 'apache.a2enconf' in __salt__ and salt.utils.path.which('a2enconf') else False
+    if 'apache.a2enconf' in __salt__ and salt.utils.path.which('a2enconf'):
+        return 'apache_conf'
+    return (False, 'apache module could not be loaded')
 
 
 def enabled(name):

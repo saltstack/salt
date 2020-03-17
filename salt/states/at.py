@@ -20,7 +20,9 @@ def __virtual__():
     '''
     Most everything has the ability to support at(1)
     '''
-    return 'at.at' in __salt__
+    if 'at.at' in __salt__:
+        return True
+    return (False, 'at module could not be loaded')
 
 
 def present(name, timespec, tag=None, user=None, job=None, unique_tag=False):

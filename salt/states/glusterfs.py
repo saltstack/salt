@@ -34,7 +34,9 @@ def __virtual__():
     '''
     Only load this module if the gluster command exists
     '''
-    return 'glusterfs' if 'glusterfs.list_volumes' in __salt__ else False
+    if 'glusterfs.list_volumes' in __salt__:
+        return 'glusterfs'
+    return (False, 'glusterfs module could not be loaded')
 
 
 def peered(name):

@@ -100,7 +100,9 @@ def __virtual__():
     '''
     Only load if boto is available.
     '''
-    return 'boto_iam_role' if 'boto_iam.role_exists' in __salt__ else False
+    if 'boto_iam.role_exists' in __salt__:
+        return 'boto_iam_role'
+    return (False, 'boto_iam module could not be loaded')
 
 
 def present(

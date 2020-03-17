@@ -51,7 +51,9 @@ def __virtual__():
     '''
     Only load if the lxd module is available in __salt__
     '''
-    return __virtualname__ if 'lxd.version' in __salt__ else False
+    if 'lxd.version' in __salt__:
+        return __virtualname__
+    return (False, 'lxd module could not be loaded')
 
 
 def present(name,

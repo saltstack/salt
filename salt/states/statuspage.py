@@ -56,7 +56,9 @@ def __virtual__():
     '''
     Return the execution module virtualname.
     '''
-    return __virtualname__
+    if 'statuspage.create' in __salt__:
+        return True
+    return (False, 'statuspage module could not be loaded')
 
 
 def _default_ret(name):

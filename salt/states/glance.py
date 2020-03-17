@@ -37,7 +37,9 @@ def __virtual__():
     '''
     Only load if dependencies are loaded
     '''
-    return HAS_KEYSTONE and HAS_GLANCE
+    if HAS_KEYSTONE and HAS_GLANCE:
+        return True
+    return (False, 'Unable to import keystoneclient or glanceclient')
 
 
 def _find_image(name):

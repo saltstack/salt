@@ -27,7 +27,9 @@ def __virtual__():
     '''
     Only load if the mysql module is available in __salt__
     '''
-    return 'mysql.db_exists' in __salt__
+    if 'mysql.db_exists' in __salt__:
+        return True
+    return (False, 'mysql module could not be loaded')
 
 
 def _get_mysql_error():

@@ -26,9 +26,9 @@ def __virtual__():
     '''
     Only load if memcache module is available
     '''
-    return __virtualname__ \
-        if '{0}.status'.format(__virtualname__) in __salt__ \
-        else False
+    if '{0}.status'.format(__virtualname__) in __salt__:
+        return __virtualname__
+    return (False, 'memcached module could not be loaded')
 
 
 def managed(name,

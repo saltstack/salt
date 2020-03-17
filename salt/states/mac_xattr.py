@@ -29,7 +29,7 @@ def __virtual__():
     '''
     if __grains__['os'] in ['MacOS', 'Darwin']:
         return __virtualname__
-    return False
+    return (False, 'Only supported on Mac OS')
 
 
 def exists(name, attributes):
