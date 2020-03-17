@@ -95,6 +95,9 @@ config_test:
 
 mine_functions:
   test.ping: []
+  test.arg:
+    - isn't
+    - allow_tgt: 'sub_minion'
 
 # sdb env module
 osenv:

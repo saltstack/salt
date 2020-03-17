@@ -487,7 +487,7 @@ def running(name,
         time.sleep(init_delay)
 
     # only force a change state if we have explicitly detected them
-    after_toggle_status = __salt__['service.status'](name, sig, **kwargs)
+    after_toggle_status = __salt__['service.status'](name, sig, **status_kwargs)
     if 'service.enabled' in __salt__:
         after_toggle_enable_status = __salt__['service.enabled'](name)
     else:
