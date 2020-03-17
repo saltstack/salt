@@ -42,6 +42,7 @@ class VersionTestCase(TestCase):
             ('v4518.1', (4518, 1, '', 0, 0, None), '4518.1'),
             ('v3000rc1', (3000, 'rc', 1, 0, None), '3000rc1'),
             ('v3000rc1-n/a-abcdefff', (3000, 'rc', 1, -1, 'abcdefff'), None),
+            ('3000-n/a-1e7bc8f', (3000, '', 0, -1, '1e7bc8f'), None)
 
         )
 
@@ -147,6 +148,27 @@ class VersionTestCase(TestCase):
         assert ver.minor == min_ver
         assert not ver.bugfix
         assert ver.string == '{0}.{1}'.format(maj_ver, min_ver)
+
+    def test_string_new_version_minor_as_string(self):
+        '''
+        Validate string property method
+        using new versioning scheme alongside
+        minor version
+        '''
+        maj_ver = '3000'
+        min_ver = '1'
+        ver = SaltStackVersion(major=maj_ver, minor=min_ver)
+        assert ver.minor == int(min_ver)
+        assert not ver.bugfix
+        assert ver.string == '{0}.{1}'.format(maj_ver, min_ver)
+
+        # This only seems to happen on a cloned repo without its tags
+        maj_ver = '3000'
+        min_ver = ''
+        ver = SaltStackVersion(major=maj_ver, minor=min_ver)
+        assert ver.minor is None, '{!r} is not {!r}'.format(ver.minor, min_ver)  # pylint: disable=repr-flag-used-in-string
+        assert not ver.bugfix
+        assert ver.string == maj_ver
 
     def test_string_old_version(self):
         '''
