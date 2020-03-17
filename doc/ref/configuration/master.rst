@@ -4266,7 +4266,7 @@ explanation <git-pillar-multiple-remotes>` from the git_pillar documentation.
 ``git_pillar_update_interval``
 ******************************
 
-.. versionadded:: neon
+.. versionadded:: 3000
 
 Default: ``60``
 

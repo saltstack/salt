@@ -405,8 +405,12 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
                 pprint.pformat(ret)
             )
         )
+        import salt.modules.virtualenv_mod
+        msg = 'New python executable'
+        if salt.modules.virtualenv_mod.virtualenv_ver(venv_dir) >= (20, 0, 2):
+            msg = 'created virtual environment'
         self.assertIn(
-            'New python executable',
+            msg,
             ret['stdout'],
             msg='Expected STDOUT did not match. Full return dictionary:\n{}'.format(
                 pprint.pformat(ret)

@@ -7,7 +7,7 @@ This state wraps the saltutil execution modules to make them easier to run
 from a states. Rather than needing to to use ``module.run`` this state allows for
 improved change detection.
 
-    .. versionadded: Neon
+    .. versionadded: 3000
 '''
 from __future__ import absolute_import, unicode_literals, print_function
 

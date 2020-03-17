@@ -76,6 +76,7 @@ except ImportError:
 # pylint: enable=import-error
 
 APT_LISTS_PATH = "/var/lib/apt/lists"
+PKG_ARCH_SEPARATOR = ':'
 
 # Source format for urllib fallback on PPA handling
 LP_SRC_FORMAT = 'deb http://ppa.launchpad.net/{0}/{1}/ubuntu {2} main'
@@ -186,6 +187,43 @@ def _warn_software_properties(repo):
                 'For more accurate support of PPA repositories, you should '
                 'install this package.')
     log.warning('Best guess at ppa format: %s', repo)
+
+
+def normalize_name(name):
+    '''
+    Strips the architecture from the specified package name, if necessary.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.normalize_name zsh:amd64
+    '''
+    try:
+        name, arch = name.rsplit(PKG_ARCH_SEPARATOR, 1)
+    except ValueError:
+        return name
+    return name
+
+
+def parse_arch(name):
+    '''
+    Parse name and architecture from the specified package name.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.parse_arch zsh:amd64
+    '''
+    try:
+        _name, _arch = name.rsplit(PKG_ARCH_SEPARATOR, 1)
+    except ValueError:
+        _name, _arch = name, None
+    return {
+        'name': _name,
+        'arch': _arch
+    }
 
 
 def latest_version(*names, **kwargs):
@@ -2315,6 +2353,8 @@ def mod_repo(repo, saltenv='base', **kwargs):
 
     if 'disabled' in kwargs:
         kwargs['disabled'] = salt.utils.data.is_true(kwargs['disabled'])
+    elif 'enabled' in kwargs:
+        kwargs['disabled'] = not salt.utils.data.is_true(kwargs['enabled'])
 
     kw_type = kwargs.get('type')
     kw_dist = kwargs.get('dist')

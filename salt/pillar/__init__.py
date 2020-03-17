@@ -10,7 +10,7 @@ import fnmatch
 import os
 import collections
 import logging
-import tornado.gen
+import salt.ext.tornado.gen
 import sys
 import traceback
 import inspect
@@ -158,7 +158,7 @@ class AsyncRemotePillar(RemotePillarMixin):
                                      merge_lists=True)
         self._closing = False
 
-    @tornado.gen.coroutine
+    @salt.ext.tornado.gen.coroutine
     def compile_pillar(self):
         '''
         Return a future which will contain the pillar data from the master
@@ -188,7 +188,7 @@ class AsyncRemotePillar(RemotePillarMixin):
             log.error(msg)
             # raise an exception! Pillar isn't empty, we can't sync it!
             raise SaltClientError(msg)
-        raise tornado.gen.Return(ret_pillar)
+        raise salt.ext.tornado.gen.Return(ret_pillar)
 
     def destroy(self):
         if self._closing:
@@ -1135,7 +1135,7 @@ class Pillar(object):
 # TODO: actually migrate from Pillar to AsyncPillar to allow for futures in
 # ext_pillar etc.
 class AsyncPillar(Pillar):
-    @tornado.gen.coroutine
+    @salt.ext.tornado.gen.coroutine
     def compile_pillar(self, ext=True):
         ret = super(AsyncPillar, self).compile_pillar(ext=ext)
-        raise tornado.gen.Return(ret)
+        raise salt.ext.tornado.gen.Return(ret)

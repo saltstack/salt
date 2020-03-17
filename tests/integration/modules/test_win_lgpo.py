@@ -215,7 +215,7 @@ class WinLgpoTest(ModuleCase):
                 'Users can only point and print to these servers': True,
                 'Enter fully qualified server names separated by semicolons': 'fakeserver1;fakeserver2',
                 'Users can only point and print to machines in their forest': True,
-                'Security Prompts: When installing drivers for a new connection': 'Show warning and elevation prompt',
+                'When installing drivers for a new connection': 'Show warning and elevation prompt',
                 'When updating drivers for an existing connection': 'Show warning only',
             },
             [
@@ -505,6 +505,22 @@ class WinLgpoTest(ModuleCase):
             r'Windows Components\Remote Desktop Services\Remote Desktop Session Host\Device and Resource Redirection\Do not allow Clipboard redirection',
             'Not Configured',
             [r'; Source file:  c:\\windows\\system32\\grouppolicy\\machine\\registry.pol[\s]*; PARSING COMPLETED.'])
+
+    @destructiveTest
+    def test_set_computer_policy_GuestAccountStatus(self):
+        '''
+        Test setting/unsetting/changing GuestAccountStatus
+        '''
+        # disable GuestAccountStatus
+        self._testSeceditPolicy(
+            'GuestAccountStatus',
+            'Disabled',
+            [r'^EnableGuestAccount = 0'])
+        # enable GuestAccountStatus
+        self._testSeceditPolicy(
+            'GuestAccountStatus',
+            'Enabled',
+            [r'^EnableGuestAccount = 1'])
 
     @destructiveTest
     def test_set_computer_policy_PasswordComplexity(self):

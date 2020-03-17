@@ -537,6 +537,30 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
             self.assert_called_once(refresh_mock)
             refresh_mock.reset_mock()
 
+    def test_mod_repo_enabled(self):
+        '''
+        Checks if a repo is enabled or disabled depending on the passed kwargs.
+        '''
+        with patch.dict(aptpkg.__salt__, {'config.option': MagicMock(), 'no_proxy': MagicMock(return_value=False)}):
+            with patch('salt.modules.aptpkg._check_apt', MagicMock(return_value=True)):
+                with patch('salt.modules.aptpkg.refresh_db', MagicMock(return_value={})):
+                    with patch('salt.utils.data.is_true', MagicMock(return_value=True)) as data_is_true:
+                        with patch('salt.modules.aptpkg.sourceslist', MagicMock(), create=True):
+                            repo = aptpkg.mod_repo('foo', enabled=False)
+                            data_is_true.assert_called_with(False)
+                            # with disabled=True; should call salt.utils.data.is_true True
+                            data_is_true.reset_mock()
+                            repo = aptpkg.mod_repo('foo', disabled=True)
+                            data_is_true.assert_called_with(True)
+                            # with enabled=True; should call salt.utils.data.is_true with False
+                            data_is_true.reset_mock()
+                            repo = aptpkg.mod_repo('foo', enabled=True)
+                            data_is_true.assert_called_with(True)
+                            # with disabled=True; should call salt.utils.data.is_true False
+                            data_is_true.reset_mock()
+                            repo = aptpkg.mod_repo('foo', disabled=False)
+                            data_is_true.assert_called_with(False)
+
     @patch('salt.utils.path.os_walk', MagicMock(return_value=[('test', 'test', 'test')]))
     @patch('os.path.getsize', MagicMock(return_value=123456))
     @patch('os.path.getctime', MagicMock(return_value=1234567890.123456))
