@@ -53,7 +53,6 @@ def __virtual__():
     return (False, 'Missing dependency: {0}'.format(BINS))
 
 
-
 def _service_path(name):
     '''
     build service path

@@ -73,7 +73,9 @@ def __virtual__():
     '''
     Only load if the keystone module is in __salt__
     '''
-    return 'keystone' if 'keystone.auth' in __salt__ else False
+    if 'keystone.auth' in __salt__:
+        return 'keystone'
+    return (False, 'keystone module could not be loaded')
 
 
 _OS_IDENTITY_API_VERSION = 2

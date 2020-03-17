@@ -183,7 +183,9 @@ def __virtual__():
     '''
     Only load if grafana is available.
     '''
-    return 'grafana' if 'elasticsearch.exists' in __salt__ else False
+    if 'elasticsearch.exists' in __salt__:
+        return 'grafana'
+    return (False, 'elasticsearch module could not be loaded')
 
 
 def _parse_profile(profile):

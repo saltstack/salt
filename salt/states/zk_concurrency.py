@@ -61,8 +61,7 @@ __virtualname__ = 'zk_concurrency'
 
 def __virtual__():
     if not all(func in __salt__ for func in REQUIRED_FUNCS):
-        return False
-
+        return (False, 'zk_concurrency module could not be loaded')
     return __virtualname__
 
 

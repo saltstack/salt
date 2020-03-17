@@ -54,7 +54,9 @@ from salt.ext.six import string_types
 
 def __virtual__():
     '''Only load if grafana4 module is available'''
-    return 'grafana4.get_org' in __salt__
+    if 'grafana4.get_org' in __salt__:
+        return True
+    return (False, 'grafana4 module could not be loaded')
 
 
 def present(name,

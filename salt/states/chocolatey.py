@@ -24,7 +24,9 @@ def __virtual__():
     '''
     Load only if chocolatey is loaded
     '''
-    return 'chocolatey' if 'chocolatey.install' in __salt__ else False
+    if 'chocolatey.install' in __salt__:
+        return 'chocolatey'
+    return (False, 'chocolatey module could not be loaded')
 
 
 def installed(name, version=None, source=None, force=False, pre_versions=False,

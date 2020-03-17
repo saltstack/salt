@@ -75,7 +75,9 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    return True
+    if 'libcloud_storage.list_containers' in __salt__:
+        return True
+    return (False, 'libcloud_storage module could not be loaded')
 
 
 def __init__(opts):

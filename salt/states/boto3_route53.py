@@ -81,7 +81,9 @@ def __virtual__():
     '''
     Only load if boto is available.
     '''
-    return 'boto3_route53' if 'boto3_route53.find_hosted_zone' in __salt__ else False
+    if 'boto3_route53.find_hosted_zone' in __salt__:
+        return 'boto3_route53'
+    return (False, 'boto3_route53 module could not be loaded')
 
 
 def hosted_zone_present(name, Name=None, PrivateZone=False,

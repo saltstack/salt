@@ -182,8 +182,9 @@ def __virtual__():
     '''
     Only load if boto_dynamodb is available.
     '''
-    ret = 'boto_dynamodb' if 'boto_dynamodb.exists' in __salt__ else False
-    return ret
+    if 'boto_dynamodb.exists' in __salt__:
+        return 'boto_dynamodb'
+    return (False, 'boto_dynamodb module could not be loaded')
 
 
 def present(name=None,

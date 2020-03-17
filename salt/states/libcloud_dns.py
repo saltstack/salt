@@ -55,7 +55,9 @@ import salt.utils.compat
 
 
 def __virtual__():
-    return True
+    if 'libcloud_dns.list_zones' in __salt__:
+        return True
+    return (False, 'libcloud_dns module could not be loaded')
 
 
 def __init__(opts):

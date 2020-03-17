@@ -123,7 +123,9 @@ def __virtual__():
     '''
     Only load if the locale module is available in __salt__
     '''
-    return 'nftables' if 'nftables.version' in __salt__ else False
+    if 'nftables.version' in __salt__:
+        return 'nftables'
+    return (False, 'nftables module could not be loaded')
 
 
 def chain_present(name, table='filter', table_type=None, hook=None, priority=None, family='ipv4'):

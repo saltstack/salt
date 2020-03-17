@@ -33,7 +33,9 @@ from salt.ext.six import string_types
 
 def __virtual__():
     '''Only load if grafana v2.0 is configured.'''
-    return __salt__['config.get']('grafana_version', 1) == 2
+    if __salt__['config.get']('grafana_version', 1) == 2:
+        return True
+    return (False, 'Not configured for grafana_version 2')
 
 
 def present(name,

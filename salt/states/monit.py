@@ -28,7 +28,9 @@ def __virtual__():
     '''
     Only make this state available if the monit module is available.
     '''
-    return 'monit' if 'monit.summary' in __salt__ else False
+    if 'monit.summary' in __salt__:
+        return 'monit'
+    return (False, 'monit module could not be loaded')
 
 
 def monitor(name):

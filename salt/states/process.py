@@ -15,7 +15,9 @@ from __future__ import absolute_import, unicode_literals, print_function
 
 
 def __virtual__():
-    return 'ps.pkill' in __salt__
+    if 'ps.pkill' in __salt__:
+        return True
+    return (False, 'ps module could not be loaded')
 
 
 def absent(name, user=None, signal=None):

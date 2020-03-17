@@ -45,7 +45,9 @@ def __virtual__():
     '''
     Provide ethtool state
     '''
-    return 'ethtool' if 'ethtool.show_driver' in __salt__ else False
+    if 'ethtool.show_driver' in __salt__:
+        return 'ethtool'
+    return (False, 'ethtool module could not be loaded')
 
 
 def coalesce(name, **kwargs):

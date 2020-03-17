@@ -29,7 +29,9 @@ def __virtual__():
     '''
     Only load if Chef execution module is available.
     '''
-    return True if 'chef.client' in __salt__ else False
+    if 'chef.client' in __salt__:
+        return True
+    return (False, 'chef module could not be loaded')
 
 
 def client(name, **kwargs):

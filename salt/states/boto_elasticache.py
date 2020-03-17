@@ -89,8 +89,7 @@ def __virtual__():
     '''
     if 'boto_elasticache.exists' in __salt__:
         return 'boto_elasticache'
-    else:
-        return False
+    return (False, 'boto_elasticache module could not be loaded')
 
 
 def cache_cluster_present(*args, **kwargs):

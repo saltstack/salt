@@ -29,7 +29,9 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():
-    return 'ddns' if 'ddns.update' in __salt__ else False
+    if 'ddns.update' in __salt__:
+        return 'ddns'
+    return (False, 'ddns module could not be loaded')
 
 
 def present(name, zone, ttl, data, rdtype='A', **kwargs):

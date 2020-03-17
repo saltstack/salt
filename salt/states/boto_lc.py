@@ -106,7 +106,9 @@ def __virtual__():
     '''
     Only load if boto is available.
     '''
-    return 'boto_lc' if 'boto_asg.exists' in __salt__ else False
+    if 'boto_asg.exists' in __salt__:
+        return 'boto_lc'
+    return (False, 'boto_asg module could not be loaded')
 
 
 def present(

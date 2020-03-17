@@ -9,7 +9,9 @@ def __virtual__():
     '''
     Load only if network_win is loaded
     '''
-    return 'rdp' if 'rdp.enable' in __salt__ else False
+    if 'rdp.enable' in __salt__:
+        return 'rdp'
+    return (False, 'rdp module could not be loaded')
 
 
 def enabled(name):

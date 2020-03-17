@@ -42,10 +42,9 @@ def __virtual__():
 
     :return:
     '''
-
     if 'virt.node_info' in __salt__:
         return __virtualname__
-    return False
+    return (False, 'virt module could not be loaded')
 
 
 def keys(name, basepath='/etc/pki', **kwargs):

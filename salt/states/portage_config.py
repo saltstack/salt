@@ -19,7 +19,9 @@ def __virtual__():
     '''
     Only load if the portage_config module is available in __salt__
     '''
-    return 'portage_config' if 'portage_config.get_missing_flags' in __salt__ else False
+    if 'portage_config.get_missing_flags' in __salt__:
+        return 'portage_config'
+    return (False, 'portage module could not be loaded')
 
 
 def mod_init(low):

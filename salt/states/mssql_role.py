@@ -18,7 +18,9 @@ def __virtual__():
     '''
     Only load if the mssql module is present
     '''
-    return 'mssql.version' in __salt__
+    if 'mssql.version' in __salt__:
+        return True
+    return (False, 'mssql module could not be loaded')
 
 
 def present(name, owner=None, grants=None, **kwargs):

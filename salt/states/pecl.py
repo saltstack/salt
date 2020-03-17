@@ -28,7 +28,9 @@ def __virtual__():
     '''
     Only load if the pecl module is available in __salt__
     '''
-    return 'pecl' if 'pecl.list' in __salt__ else False
+    if 'pecl.list' in __salt__:
+        return 'pecl'
+    return (False, 'pecl module could not be loaded')
 
 
 def installed(name,

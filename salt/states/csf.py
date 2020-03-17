@@ -25,7 +25,9 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    return 'csf'
+    if 'csf.exists' in __salt__:
+        return 'csf'
+    return (False, 'csf module could not be loaded')
 
 
 def rule_present(name,
