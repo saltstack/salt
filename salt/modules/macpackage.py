@@ -37,7 +37,7 @@ def __virtual__():
     '''
     if salt.utils.platform.is_darwin() and _quote is not None:
         return __virtualname__
-    return False
+    return (False, 'Only available on Mac OS systems with pipes')
 
 
 def install(pkg, target='LocalSystem', store=False, allow_untrusted=False):
