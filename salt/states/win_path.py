@@ -16,7 +16,9 @@ def __virtual__():
     '''
     Load this state if the win_path module exists
     '''
-    return 'win_path' if 'win_path.rehash' in __salt__ else False
+    if 'win_path.rehash' in __salt__:
+        return 'win_path'
+    return (False, 'win_path module could not be loaded')
 
 
 def _format_comments(ret, comments):

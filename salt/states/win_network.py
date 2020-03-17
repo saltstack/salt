@@ -88,7 +88,7 @@ def __virtual__():
     '''
     if salt.utils.platform.is_windows() and 'ip.get_interface' in __salt__:
         return __virtualname__
-    return False
+    return (False, 'ip module could not be loaded')
 
 
 def _validate(dns_proto, dns_servers, ip_proto, ip_addrs, gateway):

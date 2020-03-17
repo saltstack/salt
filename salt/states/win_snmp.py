@@ -18,7 +18,7 @@ def __virtual__():
     '''
     if 'win_snmp.get_agent_settings' in __salt__:
         return True
-    return False
+    return (False, 'win_snmp module could not be loaded')
 
 
 def agent_settings(name, contact, location, services=None):
