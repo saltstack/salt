@@ -18,18 +18,14 @@ import salt.config
 import salt.modules.config as config
 import salt.modules.virt as virt
 import salt.syspaths
-
 # Import salt libs
 import salt.utils.yaml
 from salt._compat import ElementTree as ET
 from salt.exceptions import CommandExecutionError
-
 # Import third party libs
 from salt.ext import six
-
 # pylint: disable=import-error
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
-
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
@@ -3960,4 +3956,60 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             [backend for backend in backends if backend["name"] == "netfs"][0][
                 "options"
             ],
+        )
+
+    def test_get_domain(self):
+        """
+        Test the virt._get_domain function
+        """
+        # Tests with no VM
+        self.mock_conn.listDomainsID.return_value = []
+        self.mock_conn.listDefinedDomains.return_value = []
+        self.assertEqual([], virt._get_domain(self.mock_conn))
+        self.assertRaisesRegex(
+            CommandExecutionError,
+            "No virtual machines found.",
+            virt._get_domain,
+            self.mock_conn,
+            "vm2",
+        )
+
+        # Test with active and inactive VMs
+        self.mock_conn.listDomainsID.return_value = [1]
+
+        def create_mock_vm(idx):
+            mock_vm = MagicMock()
+            mock_vm.name.return_value = "vm{0}".format(idx)
+            return mock_vm
+
+        mock_vms = [create_mock_vm(idx) for idx in range(3)]
+        self.mock_conn.lookupByID.return_value = mock_vms[0]
+        self.mock_conn.listDefinedDomains.return_value = ["vm1", "vm2"]
+
+        self.mock_conn.lookupByName.side_effect = mock_vms
+        self.assertEqual(mock_vms, virt._get_domain(self.mock_conn))
+
+        self.mock_conn.lookupByName.side_effect = None
+        self.mock_conn.lookupByName.return_value = mock_vms[0]
+        self.assertEqual(mock_vms[0], virt._get_domain(self.mock_conn, inactive=False))
+
+        self.mock_conn.lookupByName.return_value = None
+        self.mock_conn.lookupByName.side_effect = [mock_vms[1], mock_vms[2]]
+        self.assertEqual(
+            [mock_vms[1], mock_vms[2]], virt._get_domain(self.mock_conn, active=False)
+        )
+
+        self.mock_conn.reset_mock()
+        self.mock_conn.lookupByName.return_value = None
+        self.mock_conn.lookupByName.side_effect = [mock_vms[1], mock_vms[2]]
+        self.assertEqual(
+            [mock_vms[1], mock_vms[2]], virt._get_domain(self.mock_conn, "vm1", "vm2")
+        )
+        self.assertRaisesRegex(
+            CommandExecutionError,
+            "The VM 'vm2' is not present",
+            virt._get_domain,
+            self.mock_conn,
+            "vm2",
+            inactive=False,
         )
