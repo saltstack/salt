@@ -442,6 +442,29 @@ def stop(name, runas=None):
     return launchctl('bootout', domain_target, path, runas=runas)
 
 
+def _kickstart(name, runas=None):
+    '''
+    Kickstart a launchd service.  Raises an error if the service fails to start
+
+    .. note::
+        To start a service in macOS the service must be enabled first. Use
+        ``service.enable`` to enable the service.
+
+    :param str name: Service label, file name, or full path
+
+    :param str runas: User to run launchctl commands
+
+    :return: ``True`` if successful or if the service is already running
+    :rtype: bool
+    '''
+    # Get the domain target.
+    domain_target, path = _get_domain_target(name)
+
+    # Kickstart the service: will raise an error if it fails
+    # -k is "kill first if already running"
+    return launchctl('kickstart', '-k', domain_target, path, runas=runas)
+
+
 def restart(name, runas=None):
     '''
     Unloads and reloads a launchd service.  Raises an error if the service
@@ -461,9 +484,10 @@ def restart(name, runas=None):
         salt '*' service.restart org.cups.cupsd
     '''
     # Restart the service: will raise an error if it fails
-    if enabled(name):
-        stop(name, runas=runas)
-    start(name, runas=runas)
+    # We use kickstart instead of stop + start to help prevent
+    # leaving the system in an inconsistent state (i.e. if we try
+    # to restart ourselves)
+    _kickstart(name, runas=runas)
 
     return True
 
