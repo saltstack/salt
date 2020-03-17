@@ -24,7 +24,7 @@ def __virtual__():
     '''
     if salt.utils.path.which('ovs-vsctl'):
         return 'openvswitch'
-    return False
+    return (False, 'Missing dependency: ovs-vsctl')
 
 
 def _param_may_exist(may_exist):

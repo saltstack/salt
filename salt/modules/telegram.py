@@ -36,7 +36,7 @@ def __virtual__():
     :return: The virtual name of the module.
     '''
     if not HAS_REQUESTS:
-        return False
+        return (False, 'Missing dependency requests')
     return __virtualname__
 
 

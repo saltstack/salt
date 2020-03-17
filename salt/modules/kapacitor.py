@@ -38,7 +38,10 @@ log = logger.getLogger(__name__)
 
 
 def __virtual__():
-    return 'kapacitor' if salt.utils.path.which('kapacitor') else False
+    if salt.utils.path.which('kapacitor'):
+        return 'kapacitor'
+    else:
+        return (False, 'Missing dependency: kapacitor')
 
 
 @memoize
