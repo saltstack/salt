@@ -143,6 +143,9 @@ TEST_SUITES_UNORDERED = {
     'returners':
         {'display_name': 'Returners',
          'path': 'integration/returners'},
+    'setup':
+        {'display_name': 'Setup',
+         'path': 'integration/setup'},
     'ssh-int':
         {'display_name': 'SSH Integration',
          'path': 'integration/ssh'},
@@ -398,6 +401,13 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             default=False,
             action='store_true',
             help='Run spm integration tests'
+        )
+        self.test_selection_group.add_option(
+            '--setup',
+            dest='setup',
+            default=False,
+            action='store_true',
+            help='Run setup integration tests'
         )
         self.test_selection_group.add_option(
             '-l',
