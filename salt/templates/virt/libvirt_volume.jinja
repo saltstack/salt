@@ -1,17 +1,10 @@
 <volume>
-  <name>{{ name }}/{{ filename }}</name>
-  <key>{{ name }}/{{ volname }}</key>
+  <name>{{ name }}</name>
   <source>
   </source>
   <capacity unit='KiB'>{{ size }}</capacity>
   <allocation unit='KiB'>0</allocation>
   <target>
-    <path>{{ pool }}{{ name }}/{{ filename }}</path>
-    <format type='{{ disktype }}'/>
-    <permissions>
-      <mode>00</mode>
-      <owner>0</owner>
-      <group>0</group>
-    </permissions>
+    <format type='{{ format }}'/>
   </target>
 </volume>
