@@ -362,8 +362,9 @@ def cql_query(query, contact_points=None, port=None, cql_user=None, cql_pass=Non
     return ret
 
 
-def cql_query_with_prepare(query, statement_name, statement_arguments, callback_errors=None, contact_points=None,
-                           port=None, cql_user=None, cql_pass=None, **kwargs):
+def cql_query_with_prepare(query, statement_name, statement_arguments, asynchronous=False,
+                           callback_errors=None, contact_points=None, port=None, cql_user=None, cql_pass=None,
+                           **kwargs):
     '''
     Run a query on a Cassandra cluster and return a dictionary.
 
@@ -377,8 +378,11 @@ def cql_query_with_prepare(query, statement_name, statement_arguments, callback_
     :type  statement_name: str
     :param statement_arguments: Bind parameters for the SQL statement
     :type  statement_arguments: list[str]
-    :param async:           Run this query in asynchronous mode
-    :type  async:           bool
+    :param asynchronous:          Run this query in asynchronous mode
+    :type  asynchronous:          bool
+    :param async:                 Run this query in asynchronous mode (an alias to 'asynchronous')
+                                  NOTE: currently it overrides 'asynchronous' and it will be dropped in version Sodium!
+    :type  asynchronous:          bool
     :param callback_errors: Function to call after query runs if there is an error
     :type  callback_errors: Function callable
     :param contact_points: The Cassandra cluster addresses, can either be a string or a list of IPs.
@@ -407,8 +411,13 @@ def cql_query_with_prepare(query, statement_name, statement_arguments, callback_
         salt this-node cassandra_cql.cql_query_with_prepare "name_select" "SELECT * FROM USERS WHERE first_name=?" \
             statement_arguments=['John']
     '''
-    # Backward-compatibility with Python 3.7: "async" is a reserved word
-    asynchronous = kwargs.get('async', False)
+    # Backward-compatibility. This should be removed in Sodium version
+    if 'async' in kwargs:
+        asynchronous = bool(kwargs['async'])
+        msg = 'Use of "async" parameter detected. The "asynchronous" parameter should be used instead.'
+        log.warning(msg)
+        salt.utils.versions.warn_until('Sodium', msg)
+
     try:
         cluster, session = _connect(contact_points=contact_points, port=port,
                                     cql_user=cql_user, cql_pass=cql_pass)
