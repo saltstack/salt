@@ -467,10 +467,10 @@ can be used
 .. code-block:: python
 
     # Import logging handler
-    from tests.support.helpers import TestsLoggingHandler
+    from tests.support.helpers import TstSuiteLoggingHandler
 
     # .. inside test
-    with TestsLoggingHandler() as handler:
+    with TstSuiteLoggingHandler() as handler:
         for message in handler.messages:
             if message.startswith('ERROR: This is the error message we seek'):
                 break

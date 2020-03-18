@@ -17,8 +17,7 @@ import salt.states.ldap
 from salt.utils.oset import OrderedSet
 
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON
+from tests.support.unit import TestCase
 
 # emulates the LDAP database.  each key is the DN of an entry and it
 # maps to a dict which maps attribute names to sets of values.
@@ -80,10 +79,10 @@ def _dummy_search(connect_spec, base, scope):
 
 def _dummy_add(connect_spec, dn, attributes):
     assert dn not in db
-    assert len(attributes)
+    assert attributes
     db[dn] = {}
     for attr, vals in six.iteritems(attributes):
-        assert len(vals)
+        assert vals
         db[dn][attr] = OrderedSet(vals)
     return True
 
@@ -96,8 +95,8 @@ def _dummy_delete(connect_spec, dn):
 
 def _dummy_change(connect_spec, dn, before, after):
     assert before != after
-    assert len(before)
-    assert len(after)
+    assert before
+    assert after
     assert dn in db
     e = db[dn]
     assert e == before
@@ -108,20 +107,20 @@ def _dummy_change(connect_spec, dn, before, after):
     for attr in all_attrs:
         if attr not in before:
             assert attr in after
-            assert len(after[attr])
+            assert after[attr]
             directives.append(('add', attr, after[attr]))
         elif attr not in after:
             assert attr in before
-            assert len(before[attr])
+            assert before[attr]
             directives.append(('delete', attr, ()))
         else:
-            assert len(before[attr])
-            assert len(after[attr])
+            assert before[attr]
+            assert after[attr]
             to_del = before[attr] - after[attr]
-            if len(to_del):
+            if to_del:
                 directives.append(('delete', attr, to_del))
             to_add = after[attr] - before[attr]
-            if len(to_add):
+            if to_add:
                 directives.append(('add', attr, to_add))
     return _dummy_modify(connect_spec, dn, directives)
 
@@ -131,7 +130,7 @@ def _dummy_modify(connect_spec, dn, directives):
     e = db[dn]
     for op, attr, vals in directives:
         if op == 'add':
-            assert len(vals)
+            assert vals
             existing_vals = e.setdefault(attr, OrderedSet())
             for val in vals:
                 assert val not in existing_vals
@@ -139,14 +138,14 @@ def _dummy_modify(connect_spec, dn, directives):
         elif op == 'delete':
             assert attr in e
             existing_vals = e[attr]
-            assert len(existing_vals)
-            if not len(vals):
+            assert existing_vals
+            if not vals:
                 del e[attr]
                 continue
             for val in vals:
                 assert val in existing_vals
                 existing_vals.remove(val)
-            if not len(existing_vals):
+            if not existing_vals:
                 del e[attr]
         elif op == 'replace':
             e.pop(attr, None)
@@ -164,7 +163,6 @@ def _dump_db(d=None):
                  for dn in d))
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class LDAPTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
@@ -186,13 +184,13 @@ class LDAPTestCase(TestCase, LoaderModuleMockMixin):
         expected_db = copy.deepcopy(init_db)
         for dn, attrs in six.iteritems(replace):
             for attr, vals in six.iteritems(attrs):
-                if len(vals):
+                if vals:
                     new.setdefault(dn, {})[attr] = list(OrderedSet(vals))
                     expected_db.setdefault(dn, {})[attr] = OrderedSet(vals)
                 elif dn in expected_db:
                     new[dn].pop(attr, None)
                     expected_db[dn].pop(attr, None)
-            if not len(expected_db.get(dn, {})):
+            if not expected_db.get(dn, {}):
                 new.pop(dn, None)
                 expected_db.pop(dn, None)
         if delete_others:
@@ -206,7 +204,7 @@ class LDAPTestCase(TestCase, LoaderModuleMockMixin):
                     for attr in to_delete:
                         del attrs[attr]
                         del new[dn][attr]
-                    if not len(attrs):
+                    if not attrs:
                         dn_to_delete.add(dn)
             for dn in dn_to_delete:
                 del new[dn]

@@ -91,7 +91,7 @@ def xccdf(params):
         parser = _ArgumentParser()
         action = parser.parse_known_args(params)[0].action
         args, argv = _ArgumentParser(action=action).parse_known_args(args=params)
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         success = False
         error = six.text_type(err)
 

@@ -17,8 +17,6 @@ import warnings
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import salt libs
@@ -226,7 +224,6 @@ class TestThreadPool(TestCase):
 
 class TestProcess(TestCase):
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_daemonize_if(self):
         # pylint: disable=assignment-from-none
         with patch('sys.argv', ['salt-call']):
@@ -253,7 +250,6 @@ class TestProcessCallbacks(TestCase):
     def process_target(evt):
         evt.set()
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_callbacks(self):
         'Validate Process call after fork and finalize methods'
         teardown_to_mock = 'salt.log.setup.shutdown_multiprocessing_logging'
@@ -266,7 +262,6 @@ class TestProcessCallbacks(TestCase):
         mb.assert_called()
         ma.assert_called()
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_callbacks_called_when_run_overriden(self):
         'Validate Process sub classes call after fork and finalize methods when run is overridden'
 
@@ -303,7 +298,6 @@ class TestSignalHandlingProcess(TestCase):
     def children(cls, *args, **kwargs):
         raise psutil.NoSuchProcess(1)
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_process_does_not_exist(self):
         try:
             with patch('psutil.Process', self.Process):
@@ -312,7 +306,6 @@ class TestSignalHandlingProcess(TestCase):
         except psutil.NoSuchProcess:
             assert False, "psutil.NoSuchProcess raised"
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_process_children_do_not_exist(self):
         try:
             with patch('psutil.Process.children', self.children):
@@ -433,7 +426,6 @@ class TestSignalHandlingProcessCallbacks(TestCase):
     def process_target(evt):
         evt.set()
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_callbacks(self):
         'Validate SignalHandlingProcess call after fork and finalize methods'
 
@@ -453,7 +445,6 @@ class TestSignalHandlingProcessCallbacks(TestCase):
         ma.assert_called()
         mb.assert_called()
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_callbacks_called_when_run_overriden(self):
         'Validate SignalHandlingProcess sub classes call after fork and finalize methods when run is overridden'
 

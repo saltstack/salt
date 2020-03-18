@@ -2,16 +2,31 @@
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import logging
 import os
 import time
 
 # Import Salt Testing libs
-from tests.support.paths import TMP_CONF_DIR
+from tests.support.paths import TMP_CONF_DIR, TMP
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
+from tests.support.mock import patch
+from tests.support.case import SSHCase
+from tests.support.helpers import (
+    Webserver,
+    SaveRequestsPostHandler,
+    requires_sshd_server
+)
 
 # Import Salt libs
 import salt.config
 import salt.netapi
+
+from salt.exceptions import (
+    EauthAuthenticationError
+)
+
+log = logging.getLogger(__name__)
 
 
 class NetapiClientTest(TestCase):
@@ -25,14 +40,14 @@ class NetapiClientTest(TestCase):
         '''
         Set up a NetapiClient instance
         '''
-        opts = salt.config.client_config(os.path.join(TMP_CONF_DIR, 'master'))
+        opts = salt.config.client_config(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'master'))
         self.netapi = salt.netapi.NetapiClient(opts)
 
     def tearDown(self):
         del self.netapi
 
     def test_local(self):
-        low = {'client': 'local', 'tgt': '*', 'fun': 'test.ping'}
+        low = {'client': 'local', 'tgt': '*', 'fun': 'test.ping', 'timeout': 300}
         low.update(self.eauth_creds)
 
         ret = self.netapi.run(low)
@@ -44,7 +59,7 @@ class NetapiClientTest(TestCase):
         self.assertEqual(ret, {'minion': True, 'sub_minion': True})
 
     def test_local_batch(self):
-        low = {'client': 'local_batch', 'tgt': '*', 'fun': 'test.ping'}
+        low = {'client': 'local_batch', 'tgt': '*', 'fun': 'test.ping', 'timeout': 300}
         low.update(self.eauth_creds)
 
         ret = self.netapi.run(low)
@@ -73,6 +88,12 @@ class NetapiClientTest(TestCase):
         except ValueError:
             pass
         self.assertEqual(ret, {'minions': sorted(['minion', 'sub_minion'])})
+
+    def test_local_unauthenticated(self):
+        low = {'client': 'local', 'tgt': '*', 'fun': 'test.ping'}
+
+        with self.assertRaises(EauthAuthenticationError) as excinfo:
+            ret = self.netapi.run(low)
 
     def test_wheel(self):
         low = {'client': 'wheel', 'fun': 'key.list_all'}
@@ -107,6 +128,12 @@ class NetapiClientTest(TestCase):
         self.assertIn('jid', ret)
         self.assertIn('tag', ret)
 
+    def test_wheel_unauthenticated(self):
+        low = {'client': 'wheel', 'tgt': '*', 'fun': 'test.ping'}
+
+        with self.assertRaises(EauthAuthenticationError) as excinfo:
+            ret = self.netapi.run(low)
+
     @skipIf(True, 'This is not testing anything. Skipping for now.')
     def test_runner(self):
         # TODO: fix race condition in init of event-- right now the event class
@@ -125,3 +152,122 @@ class NetapiClientTest(TestCase):
         low.update(self.eauth_creds)
 
         ret = self.netapi.run(low)
+
+    def test_runner_unauthenticated(self):
+        low = {'client': 'runner', 'tgt': '*', 'fun': 'test.ping'}
+
+        with self.assertRaises(EauthAuthenticationError) as excinfo:
+            ret = self.netapi.run(low)
+
+
+@requires_sshd_server
+class NetapiSSHClientTest(SSHCase):
+    eauth_creds = {
+        'username': 'saltdev_auto',
+        'password': 'saltdev',
+        'eauth': 'auto',
+    }
+
+    def setUp(self):
+        '''
+        Set up a NetapiClient instance
+        '''
+        opts = salt.config.client_config(os.path.join(TMP_CONF_DIR, 'master'))
+        self.netapi = salt.netapi.NetapiClient(opts)
+
+        self.priv_file = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'key_test')
+        self.rosters = os.path.join(RUNTIME_VARS.TMP_CONF_DIR)
+
+        # Initialize salt-ssh
+        self.run_function('test.ping')
+
+    def tearDown(self):
+        del self.netapi
+
+    @classmethod
+    def setUpClass(cls):
+        cls.post_webserver = Webserver(handler=SaveRequestsPostHandler)
+        cls.post_webserver.start()
+        cls.post_web_root = cls.post_webserver.web_root
+        cls.post_web_handler = cls.post_webserver.handler
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.post_webserver.stop()
+        del cls.post_webserver
+
+    def test_ssh(self):
+        low = {'client': 'ssh',
+               'tgt': 'localhost',
+               'fun': 'test.ping',
+               'ignore_host_keys': True,
+               'roster_file': 'roster',
+               'rosters': [self.rosters],
+               'ssh_priv': self.priv_file}
+
+        low.update(self.eauth_creds)
+
+        ret = self.netapi.run(low)
+
+        self.assertIn('localhost', ret)
+        self.assertIn('return', ret['localhost'])
+        self.assertEqual(ret['localhost']['return'], True)
+        self.assertEqual(ret['localhost']['id'], 'localhost')
+        self.assertEqual(ret['localhost']['fun'], 'test.ping')
+
+    def test_ssh_unauthenticated(self):
+        low = {'client': 'ssh', 'tgt': 'localhost', 'fun': 'test.ping'}
+
+        with self.assertRaises(EauthAuthenticationError) as excinfo:
+            ret = self.netapi.run(low)
+
+    def test_ssh_unauthenticated_raw_shell_curl(self):
+
+        fun = '-o ProxyCommand curl {0}'.format(self.post_web_root)
+        low = {'client': 'ssh',
+               'tgt': 'localhost',
+               'fun': fun,
+               'raw_shell': True}
+
+        ret = None
+        with self.assertRaises(EauthAuthenticationError) as excinfo:
+            ret = self.netapi.run(low)
+
+        self.assertEqual(self.post_web_handler.received_requests, [])
+        self.assertEqual(ret, None)
+
+    def test_ssh_unauthenticated_raw_shell_touch(self):
+
+        badfile = os.path.join(TMP, 'badfile.txt')
+        fun = '-o ProxyCommand touch {0}'.format(badfile)
+        low = {'client': 'ssh',
+               'tgt': 'localhost',
+               'fun': fun,
+               'raw_shell': True}
+
+        ret = None
+        with self.assertRaises(EauthAuthenticationError) as excinfo:
+            ret = self.netapi.run(low)
+
+        self.assertEqual(ret, None)
+        self.assertFalse(os.path.exists('badfile.txt'))
+
+    def test_ssh_authenticated_raw_shell_disabled(self):
+
+        badfile = os.path.join(TMP, 'badfile.txt')
+        fun = '-o ProxyCommand touch {0}'.format(badfile)
+        low = {'client': 'ssh',
+               'tgt': 'localhost',
+               'fun': fun,
+               'raw_shell': True}
+
+        low.update(self.eauth_creds)
+
+        ret = None
+        with patch.dict(self.netapi.opts,
+                        {'netapi_allow_raw_shell': False}):
+            with self.assertRaises(EauthAuthenticationError) as excinfo:
+                ret = self.netapi.run(low)
+
+        self.assertEqual(ret, None)
+        self.assertFalse(os.path.exists('badfile.txt'))

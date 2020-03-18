@@ -10,9 +10,9 @@ import salt.exceptions
 import salt.tokens.localfs
 import salt.utils.files
 
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.helpers import with_tempdir
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
+from tests.support.mock import patch
 
 
 class CalledWith(object):
@@ -29,7 +29,6 @@ class CalledWith(object):
         return self.func(*args, **kwargs)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class WriteTokenTest(TestCase):
 
     @with_tempdir()

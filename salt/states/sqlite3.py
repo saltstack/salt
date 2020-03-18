@@ -180,7 +180,7 @@ def row_absent(name, db, table, where_sql, where_args=None):
             changes['result'] = True
             changes['comment'] = 'Row is absent'
 
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         changes['result'] = False
         changes['comment'] = six.text_type(e)
 
@@ -320,7 +320,7 @@ def row_present(name,
                     changes['result'] = False
                     changes['comment'] = "Unable to insert data"
 
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         changes['result'] = False
         changes['comment'] = six.text_type(e)
 
@@ -369,7 +369,7 @@ def table_absent(name, db):
             changes['comment'] = "Multiple tables with the same name='" + \
                                  name + "'"
 
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         changes['result'] = False
         changes['comment'] = six.text_type(e)
 
@@ -460,7 +460,7 @@ def table_present(name, db, schema, force=False):
             changes['result'] = False
             changes['comment'] = 'Multiple tables with the same name=' + name
 
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         changes['result'] = False
         changes['comment'] = str(e)
 

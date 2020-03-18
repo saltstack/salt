@@ -98,7 +98,7 @@ def valid_fileproto(uri):
     '''
     try:
         return bool(re.match('^(?:salt|https?|ftp)://', uri))
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return False
 
 

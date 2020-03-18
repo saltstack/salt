@@ -33,14 +33,14 @@ class TestHandleEvents(MultimasterModuleCase, MultiMasterTestShellCase, AdaptedC
         res = self.run_function(
                 'iptables.append',
                 ('filter', 'INPUT', disconnect_master_rule),
-                master_tgt=1,
+                master_tgt='mm-sub-master',
                 )
         # Workaround slow beacons.list_available response
         if not res:
             res = self.run_function(
                     'iptables.append',
                     ('filter', 'INPUT', disconnect_master_rule),
-                    master_tgt=1,
+                    master_tgt='mm-sub-master',
                     )
         self.assertTrue(res)
         try:
@@ -48,14 +48,14 @@ class TestHandleEvents(MultimasterModuleCase, MultiMasterTestShellCase, AdaptedC
             res = self.run_function(
                     'event.send',
                     ('myco/foo/bar',),
-                    master_tgt=1,
+                    master_tgt='mm-sub-master',
                     )
             self.assertTrue(res)
             # Send one more event. Minion was hanging on this. This is fixed by #53417
             res = self.run_function(
                     'event.send',
                     ('myco/foo/bar',),
-                    master_tgt=1,
+                    master_tgt='mm-sub-master',
                     timeout=60,
                     )
             self.assertTrue(res, 'Minion is not responding to the second master after the first '
@@ -72,6 +72,6 @@ class TestHandleEvents(MultimasterModuleCase, MultiMasterTestShellCase, AdaptedC
             res = self.run_function(
                     'event.send',
                     ('myco/foo/bar',),
-                    master_tgt=0,
+                    master_tgt='mm-master',
                     )
             self.assertTrue(res)

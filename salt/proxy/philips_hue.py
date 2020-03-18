@@ -147,7 +147,7 @@ def _set(lamp_id, state, method="state"):
     '''
     try:
         res = _query(lamp_id, state, action=method, method='PUT')
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         raise CommandExecutionError(err)
 
     res = len(res) > 1 and res[-1] or res[0]
@@ -439,7 +439,7 @@ def call_color(*args, **kwargs):
         if len(color) == 2:
             try:
                 color = {"xy": [float(color[0]), float(color[1])]}
-            except Exception as ex:
+            except Exception as ex:  # pylint: disable=broad-except
                 color = None
         else:
             color = None
@@ -482,12 +482,12 @@ def call_brightness(*args, **kwargs):
 
     try:
         brightness = max(min(int(kwargs['value']), 244), 1)
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         raise CommandExecutionError("Parameter 'value' does not contains an integer")
 
     try:
         transition = max(min(int(kwargs['transition']), 200), 0)
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         transition = 0
 
     devices = _get_lights()
@@ -523,7 +523,7 @@ def call_temperature(*args, **kwargs):
         raise CommandExecutionError("Parameter 'value' (150~500) is missing")
     try:
         value = max(min(int(kwargs['value']), 500), 150)
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         raise CommandExecutionError("Parameter 'value' does not contains an integer")
 
     devices = _get_lights()

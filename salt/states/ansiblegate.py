@@ -87,7 +87,7 @@ class AnsibleState(object):
             args, kwargs = self.get_args(mod_params)
             try:
                 ans_mod_out = __salt__['ansible.{0}'.format(mod_name)](**{'__pub_arg': [args, kwargs]})
-            except Exception as err:
+            except Exception as err:  # pylint: disable=broad-except
                 ans_mod_out = 'Module "{0}" failed. Error message: ({1}) {2}'.format(
                     mod_name, err.__class__.__name__, err)
                 ret['result'] = False

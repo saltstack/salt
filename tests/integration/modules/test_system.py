@@ -12,8 +12,8 @@ import textwrap
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest, skip_if_not_root, flaky
+from tests.support.unit import skipIf, SkipTest
+from tests.support.helpers import destructiveTest, skip_if_not_root, flaky, requires_system_grains
 
 # Import Salt libs
 import salt.utils.files
@@ -32,23 +32,33 @@ class SystemModuleTest(ModuleCase):
     '''
     Validate the date/time functions in the system module
     '''
-    fmt_str = "%Y-%m-%d %H:%M:%S"
 
-    def __init__(self, arg):
-        super(self.__class__, self).__init__(arg)
-        self._orig_time = None
-        self._machine_info = True
+    _hwclock_has_compare_ = None
+    _systemd_timesyncd_available_ = None
+
+    @classmethod
+    @requires_system_grains
+    def setUpClass(cls, grains):  # pylint: disable=arguments-differ
+        if grains['kernel'] != 'Linux':
+            raise SkipTest(
+                'Test not applicable to \'{kernel}\' kernel'.format(
+                    **grains
+                )
+            )
+        cls.fmt_str = "%Y-%m-%d %H:%M:%S"
+        cls._orig_time = None
+        cls._machine_info = True
+
+    @classmethod
+    def tearDownClass(cls):
+        for name in ('fmt_str', '_orig_time', '_machine_info'):
+            delattr(cls, name)
 
     def setUp(self):
         super(SystemModuleTest, self).setUp()
-        os_grain = self.run_function('grains.item', ['kernel'])
-        if os_grain['kernel'] not in 'Linux':
-            self.skipTest(
-                'Test not applicable to \'{kernel}\' kernel'.format(
-                    **os_grain
-                )
-            )
-        if self.run_function('service.available', ['systemd-timesyncd']):
+        if self._systemd_timesyncd_available_ is None:
+            SystemModuleTest._systemd_timesyncd_available_ = self.run_function('service.available', ['systemd-timesyncd'])
+        if self._systemd_timesyncd_available_:
             self.run_function('service.stop', ['systemd-timesyncd'])
 
     def tearDown(self):
@@ -58,7 +68,7 @@ class SystemModuleTest(ModuleCase):
         if self._machine_info is not True:
             self._restore_machine_info()
         self._machine_info = True
-        if self.run_function('service.available', ['systemd-timesyncd']):
+        if self._systemd_timesyncd_available_:
             self.run_function('service.start', ['systemd-timesyncd'])
 
     def _save_time(self):
@@ -87,8 +97,12 @@ class SystemModuleTest(ModuleCase):
         systems where it's not present so that we can skip the
         comparison portion of the test.
         '''
-        res = self.run_function('cmd.run_all', cmd='hwclock -h')
-        return res['retcode'] == 0 and res['stdout'].find('--compare') > 0
+        if self._hwclock_has_compare_ is None:
+            res = self.run_function('cmd.run_all', cmd='hwclock -h')
+            SystemModuleTest._hwclock_has_compare_ = (
+                res['retcode'] == 0 and res['stdout'].find('--compare') > 0
+            )
+        return self._hwclock_has_compare_
 
     def _test_hwclock_sync(self):
         '''
@@ -444,6 +458,7 @@ class WinSystemModuleTest(ModuleCase):
             In order for this test to pass, time sync must be disabled for the
             VM in the hypervisor
         '''
+        self.run_function('service.stop', ['w32time'])
         try:
             current_time = datetime.datetime.now().strftime('%H:%M:%S')
             test_time = '10:55'
@@ -453,6 +468,7 @@ class WinSystemModuleTest(ModuleCase):
             self.assertEqual(new_time, test_time)
         finally:
             self.run_function('system.set_system_time', [current_time])
+            self.run_function('service.start', ['w32time'])
 
     def test_get_system_date(self):
         '''
@@ -473,6 +489,7 @@ class WinSystemModuleTest(ModuleCase):
             In order for this test to pass, time sync must be disabled for the
             VM in the hypervisor
         '''
+        self.run_function('service.stop', ['w32time'])
         try:
             # If the test still fails, the hypervisor may be maintaining time
             # sync
@@ -482,3 +499,4 @@ class WinSystemModuleTest(ModuleCase):
             self.assertEqual(new_date, '2018/03/25')
         finally:
             self.run_function('system.set_system_date', [current_date])
+            self.run_function('service.start', ['w32time'])

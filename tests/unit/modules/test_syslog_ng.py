@@ -11,7 +11,7 @@ from textwrap import dedent
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.mock import MagicMock, patch
 
 # Import Salt libs
 import salt.utils.platform
@@ -56,7 +56,6 @@ _SYSLOG_NG_CTL_NOT_INSTALLED_RETURN_VALUE = {
 }
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
 
     # pylint: disable=blacklisted-function
