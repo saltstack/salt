@@ -10,16 +10,6 @@ from tests.support.unit import TestCase, skipIf
 import salt.utils.platform
 import salt.utils.win_network as win_network
 
-mock_base = MagicMock(return_value={
-    'alias': 'Ethernet',
-    'description': 'Dell GigabitEthernet',
-    'id': '{C5F468C0-DD5F-4C2B-939F-A411DCB5DE16}',
-    'receive_only': False,
-    'status': 'Up',
-    'type': 'Ethernet',
-    'physical_address': '02:D5:F1:DD:31:E0'
-})
-
 mock_ip_base = MagicMock(return_value={
     'dns_enabled': False,
     'dns_suffix': '',
@@ -75,11 +65,36 @@ mock_anycast = MagicMock(return_value={'ip_anycast': [],
 mock_wins = MagicMock(return_value={'ip_wins': []})
 
 
+class PhysicalAddress(object):
+    def __init__(self, address):
+        self.address = address
+
+    def ToString(self):
+        return str(self.address)
+
+
 class Interface(object):
-    Name = 'Ethernet'
+    '''
+    Mocked interface object
+    '''
+    def __init__(self,
+                 i_address='02D5F1DD31E0',
+                 i_description='Dell GigabitEthernet',
+                 i_id='{C5F468C0-DD5F-4C2B-939F-A411DCB5DE16}',
+                 i_name='Ethernet',
+                 i_receive_only=False,
+                 i_status=1,
+                 i_type=6):
+        self.PhysicalAddress = PhysicalAddress(i_address)
+        self.Description = i_description
+        self.Id = i_id
+        self.Name = i_name
+        self.NetworkInterfaceType = i_type
+        self.IsReceiveOnly = i_receive_only
+        self.OperationalStatus = i_status
 
-
-mock_int = MagicMock(return_value=[Interface()])
+    def GetPhysicalAddress(self):
+        return self.PhysicalAddress
 
 
 @skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
@@ -130,8 +145,8 @@ class WinNetworkTestCase(TestCase):
                'status': 'Up',
                'type': 'Ethernet'}}
 
+        mock_int = MagicMock(return_value=[Interface()])
         with patch.object(win_network, '_get_network_interfaces', mock_int), \
-                patch.object(win_network, '_get_base_properties', mock_base), \
                 patch.object(win_network, '_get_ip_base_properties', mock_ip_base), \
                 patch.object(win_network, '_get_ip_unicast_info', mock_unicast), \
                 patch.object(win_network, '_get_ip_gateway_info', mock_gateway), \
@@ -157,8 +172,8 @@ class WinNetworkTestCase(TestCase):
                 'inet6': [{'address': 'fe80::e8a4:1224:5548:2b81',
                            'gateway': 'fe80::208:a2ff:fe0b:de70'}],
                 'up': True}}
+        mock_int = MagicMock(return_value=[Interface()])
         with patch.object(win_network, '_get_network_interfaces', mock_int), \
-                patch.object(win_network, '_get_base_properties', mock_base), \
                 patch.object(win_network, '_get_ip_base_properties', mock_ip_base), \
                 patch.object(win_network, '_get_ip_unicast_info', mock_unicast), \
                 patch.object(win_network, '_get_ip_gateway_info', mock_gateway), \
@@ -170,4 +185,56 @@ class WinNetworkTestCase(TestCase):
             # ret = win_network._get_base_properties()
             results = win_network.get_interface_info()
 
+        self.assertDictEqual(expected, results)
+
+    def test__get_base_properties_tap_adapter(self):
+        '''
+        Adapter Type 53 is apparently an undocumented type corresponding to
+        OpenVPN TAP Adapters and possibly other TAP Adapters. This test makes
+        sure the win_network util will catch that.
+        https://github.com/saltstack/salt/issues/56196
+        https://github.com/saltstack/salt/issues/56275
+        '''
+        i_face = Interface(
+            i_address='03DE4D0713FA',
+            i_description='Windows TAP Adapter',
+            i_id='{C5F468C0-DD5F-4C2B-939F-A411DCB5DE16}',
+            i_name='Windows TAP Adapter',
+            i_receive_only=False,
+            i_status=1,
+            i_type=53)
+        expected = {
+            'alias': 'Windows TAP Adapter',
+            'description': 'Windows TAP Adapter',
+            'id': '{C5F468C0-DD5F-4C2B-939F-A411DCB5DE16}',
+            'receive_only': False,
+            'physical_address': '03:DE:4D:07:13:FA',
+            'status': 'Up',
+            'type': 'TAPAdapter'}
+        results = win_network._get_base_properties(i_face=i_face)
+        self.assertDictEqual(expected, results)
+
+    def test__get_base_properties_undefined_adapter(self):
+        '''
+        The Adapter Type 53 may be an arbitrary number assigned by OpenVPN.
+        This will test the ability to avoid stack tracing on an undefined
+        adapter type. If one is encountered, just use the description.
+        '''
+        i_face = Interface(
+            i_address='03DE4D0713FA',
+            i_description='Undefined Adapter',
+            i_id='{C5F468C0-DD5F-4C2B-939F-A411DCB5DE16}',
+            i_name='Undefined',
+            i_receive_only=False,
+            i_status=1,
+            i_type=50)
+        expected = {
+            'alias': 'Undefined',
+            'description': 'Undefined Adapter',
+            'id': '{C5F468C0-DD5F-4C2B-939F-A411DCB5DE16}',
+            'receive_only': False,
+            'physical_address': '03:DE:4D:07:13:FA',
+            'status': 'Up',
+            'type': 'Undefined Adapter'}
+        results = win_network._get_base_properties(i_face=i_face)
         self.assertDictEqual(expected, results)
