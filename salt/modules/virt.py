@@ -665,15 +665,28 @@ def _gen_xml(
     return template.render(**context)
 
 
-def _gen_vol_xml(name, format, size):
+def _gen_vol_xml(
+    name,
+    size,
+    format=None,
+    allocation=0,
+    type=None,
+    permissions=None,
+    backing_store=None,
+    nocow=False,
+):
     """
     Generate the XML string to define a libvirt storage volume
     """
     size = int(size) * 1024  # MB
     context = {
+        "type": type,
         "name": name,
+        "target": {"permissions": permissions, "nocow": nocow},
         "format": format,
         "size": six.text_type(size),
+        "allocation": six.text_type(int(allocation) * 1024),
+        "backingStore": backing_store,
     }
     fn_ = "libvirt_volume.jinja"
     try:
@@ -1561,7 +1574,7 @@ def init(
                 log.debug("Generating libvirt XML for %s", _disk)
                 volume_name = "{0}/{1}".format(name, _disk["name"])
                 filename = "{0}.{1}".format(volume_name, _disk["format"])
-                vol_xml = _gen_vol_xml(filename, _disk["format"], _disk["size"])
+                vol_xml = _gen_vol_xml(filename, _disk["size"], format=_disk["format"])
                 define_vol_xml_str(vol_xml, pool=_disk.get("pool"))
 
         elif virt_hypervisor in ["qemu", "kvm", "xen"]:
