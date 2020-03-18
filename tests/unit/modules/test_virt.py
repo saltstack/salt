@@ -3581,7 +3581,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_conn.storagePoolLookupByName = MagicMock(return_value=mocked_pool)
         self.mock_conn.storagePoolDefineXML = MagicMock()
 
-        self.assertTrue(
+        self.assertFalse(
             virt.pool_update(
                 "default",
                 "rbd",
@@ -3590,7 +3590,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 source_auth={"username": "libvirt", "password": "c2VjcmV0"},
             )
         )
-        self.mock_conn.storagePoolDefineXML.assert_called_once_with(expected_xml)
+        self.mock_conn.storagePoolDefineXML.assert_not_called()
         mock_secret.setValue.assert_called_once_with(b"secret")
 
     def test_pool_update_password_create(self):
