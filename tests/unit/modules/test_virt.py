@@ -538,13 +538,54 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test virt._get_vol_xml() for the ESX case
         """
-        xml_data = virt._gen_vol_xml("vmname/system.vmdk", "vmdk", 8192)
+        xml_data = virt._gen_vol_xml("vmname/system.vmdk", 8192, format="vmdk")
         root = ET.fromstring(xml_data)
         self.assertIsNone(root.get("type"))
         self.assertEqual(root.find("name").text, "vmname/system.vmdk")
         self.assertEqual(root.find("capacity").attrib["unit"], "KiB")
         self.assertEqual(root.find("capacity").text, six.text_type(8192 * 1024))
+        self.assertEqual(root.find("allocation").text, six.text_type(0))
         self.assertEqual(root.find("target/format").get("type"), "vmdk")
+        self.assertIsNone(root.find("target/permissions"))
+        self.assertIsNone(root.find("target/nocow"))
+        self.assertIsNone(root.find("backingStore"))
+
+    def test_gen_vol_xml_file(self):
+        """
+        Test virt._get_vol_xml() for a file volume
+        """
+        xml_data = virt._gen_vol_xml(
+            "myvm_system.qcow2",
+            8192,
+            format="qcow2",
+            allocation=4096,
+            type="file",
+            permissions={
+                "mode": "0775",
+                "owner": "123",
+                "group": "456",
+                "label": "sec_label",
+            },
+            backing_store={"path": "/backing/image", "format": "raw"},
+            nocow=True,
+        )
+        root = ET.fromstring(xml_data)
+        self.assertEqual(root.get("type"), "file")
+        self.assertEqual(root.find("name").text, "myvm_system.qcow2")
+        self.assertIsNone(root.find("key"))
+        self.assertIsNone(root.find("target/path"))
+        self.assertEqual(root.find("target/format").get("type"), "qcow2")
+        self.assertEqual(root.find("capacity").attrib["unit"], "KiB")
+        self.assertEqual(root.find("capacity").text, six.text_type(8192 * 1024))
+        self.assertEqual(root.find("capacity").attrib["unit"], "KiB")
+        self.assertEqual(root.find("allocation").text, six.text_type(4096 * 1024))
+        self.assertEqual(root.find("target/permissions/mode").text, "0775")
+        self.assertEqual(root.find("target/permissions/owner").text, "123")
+        self.assertEqual(root.find("target/permissions/group").text, "456")
+        self.assertEqual(root.find("target/permissions/label").text, "sec_label")
+        self.assertIsNotNone(root.find("target/nocow"))
+        self.assertEqual(root.find("backingStore/path").text, "/backing/image")
+        self.assertEqual(root.find("backingStore/format").get("type"), "raw")
 
     def test_gen_xml_for_kvm_default_profile(self):
         """
