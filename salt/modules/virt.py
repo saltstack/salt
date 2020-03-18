@@ -665,18 +665,15 @@ def _gen_xml(
     return template.render(**context)
 
 
-def _gen_vol_xml(vmname, diskname, disktype, size, pool):
+def _gen_vol_xml(name, format, size):
     """
     Generate the XML string to define a libvirt storage volume
     """
     size = int(size) * 1024  # MB
     context = {
-        "name": vmname,
-        "filename": "{0}.{1}".format(diskname, disktype),
-        "volname": diskname,
-        "disktype": disktype,
+        "name": name,
+        "format": format,
         "size": six.text_type(size),
-        "pool": pool,
     }
     fn_ = "libvirt_volume.jinja"
     try:
@@ -1011,12 +1008,7 @@ def _disk_profile(profile, hypervisor, disks, vm_name, **kwargs):
     """
     default = [{"system": {"size": 8192}}]
     if hypervisor == "vmware":
-        overlay = {
-            "format": "vmdk",
-            "model": "scsi",
-            "device": "disk",
-            "pool": "[0] ",
-        }
+        overlay = {"format": "vmdk", "model": "scsi", "device": "disk"}
     elif hypervisor in ["qemu", "kvm"]:
         overlay = {"format": "qcow2", "device": "disk", "model": "virtio"}
     elif hypervisor == "xen":
@@ -1091,13 +1083,20 @@ def _fill_disk_filename(vm_name, disk, hypervisor, **kwargs):
                         "or is unsupported".format(disk["name"], base_dir)
                     )
                 base_dir = pool["target_path"]
+        disk["source_file"] = os.path.join(base_dir, disk["filename"])
+
     elif hypervisor == "bhyve" and vm_name:
         disk["filename"] = "{0}.{1}".format(vm_name, disk["name"])
         disk["source_file"] = os.path.join(
             "/dev/zvol", base_dir or "", disk["filename"]
         )
 
-    disk["source_file"] = os.path.join(base_dir, disk["filename"])
+        disk["source_file"] = os.path.join(base_dir, disk["filename"])
+
+    elif hypervisor in ["esxi", "vmware"]:
+        if not base_dir:
+            base_dir = __salt__["config.get"]("virt:storagepool", "[0] ")
+        disk["source_file"] = "{0}{1}".format(base_dir, disk["filename"])
 
 
 def _complete_nics(interfaces, hypervisor):
@@ -1560,10 +1559,10 @@ def init(
             else:
                 # assume libvirt manages disks for us
                 log.debug("Generating libvirt XML for %s", _disk)
-                vol_xml = _gen_vol_xml(
-                    name, _disk["name"], _disk["format"], _disk["size"], _disk["pool"]
-                )
-                define_vol_xml_str(vol_xml)
+                volume_name = "{0}/{1}".format(name, _disk["name"])
+                filename = "{0}.{1}".format(volume_name, _disk["format"])
+                vol_xml = _gen_vol_xml(filename, _disk["format"], _disk["size"])
+                define_vol_xml_str(vol_xml, pool=_disk.get("pool"))
 
         elif virt_hypervisor in ["qemu", "kvm", "xen"]:
             create_overlay = _disk.get("overlay_image", False)
