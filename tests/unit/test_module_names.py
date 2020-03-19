@@ -159,6 +159,7 @@ class BadTestModuleNamesTestCase(TestCase):
             'integration.scheduler.test_maxrunning',
             'integration.scheduler.test_helpers',
             'integration.scheduler.test_run_job',
+            'integration.setup.test_bdist',
             'integration.shell.test_spm',
             'integration.shell.test_cp',
             'integration.shell.test_syndic',
