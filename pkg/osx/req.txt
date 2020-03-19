@@ -21,7 +21,7 @@ pyasn1==0.4.5
 pycparser==2.19
 pycryptodome==3.8.1
 pyobjc==5.3
-pyopenssl==19.0.0
+pyopenssl
 python-dateutil==2.8.0
 python-gnupg==0.4.4
 pyyaml==5.1.2
