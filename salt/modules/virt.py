@@ -6140,3 +6140,87 @@ def volume_delete(pool, volume, **kwargs):
         return not bool(vol.delete())
     finally:
         conn.close()
+
+
+def volume_define(
+    pool,
+    name,
+    size,
+    allocation=0,
+    format=None,
+    type=None,
+    permissions=None,
+    backing_store=None,
+    nocow=False,
+    **kwargs
+):
+    """
+    Create libvirt volume.
+
+    :param pool: name of the pool to create the volume in
+    :param name: name of the volume to define
+    :param size: capacity of the volume to define in MiB
+    :param allocation: allocated size of the volume in MiB. Defaults to 0.
+    :param format:
+        volume format. The allowed values are depending on the pool type.
+        Check the virt.pool_capabilities output for the possible values and the default.
+    :param type:
+        type of the volume. One of file, block, dir, network, netdiri, ploop or None.
+        By default, the type is guessed by libvirt from the pool type.
+    :param permissions:
+        Permissions to set on the target folder. This is mostly used for filesystem-based
+        pool types. See :ref:`pool-define-permissions` for more details on this structure.
+    :param backing_store:
+        dictionary describing a backing file for the volume. It must contain a ``path``
+        property pointing to the base volume and a ``format`` property defining the format
+        of the base volume.
+
+        The base volume format will not be guessed for security reasons and is thus mandatory.
+    :param nocow: disable COW for the volume.
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    .. rubric:: CLI Example:
+
+    Volume on ESX:
+
+    .. code-block:: bash
+
+        salt '*' virt.volume_define "[local-storage]" myvm/myvm.vmdk vmdk 8192
+
+    QCow2 volume with backing file:
+
+    .. code-block:: bash
+
+        salt '*' virt.volume_define default myvm.qcow2 qcow2 8192 \
+                            permissions="{'mode': '0775', 'owner': '123', 'group': '345'"}" \
+                            backing_store="{'path': '/path/to/base.img', 'format': 'raw'}" \
+                            nocow=True
+
+    .. versionadded:: Sodium
+    """
+    ret = False
+    try:
+        conn = __get_conn(**kwargs)
+        pool_obj = conn.storagePoolLookupByName(pool)
+        pool_type = ElementTree.fromstring(pool_obj.XMLDesc()).get("type")
+        new_allocation = allocation
+        if pool_type == "logical" and size != allocation:
+            new_allocation = size
+        xml = _gen_vol_xml(
+            name,
+            size,
+            format=format,
+            allocation=new_allocation,
+            type=type,
+            permissions=permissions,
+            backing_store=backing_store,
+            nocow=nocow,
+        )
+        ret = _define_vol_xml_str(conn, xml, pool=pool)
+    except libvirt.libvirtError as err:
+        raise CommandExecutionError(err.get_error_message())
+    finally:
+        conn.close()
+    return ret
