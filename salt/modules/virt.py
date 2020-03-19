@@ -521,16 +521,7 @@ def _get_migrate_command():
     """
     Returns the command shared by the different migration types
     """
-    tunnel = __salt__["config.option"]("virt.tunnel")
-    if tunnel:
-        salt.utils.versions.warn_until(
-            "Sodium",
-            "'virt.tunnel' has been deprecated in favor of "
-            "'virt:tunnel'. 'virt.tunnel' will stop "
-            "being used in {version}.",
-        )
-    else:
-        tunnel = __salt__["config.get"]("virt:tunnel")
+    tunnel = __salt__["config.get"]("virt:tunnel")
     if tunnel:
         return (
             "virsh migrate --p2p --tunnelled --live --persistent " "--undefinesource "
