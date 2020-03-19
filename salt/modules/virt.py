@@ -3269,15 +3269,11 @@ def undefine(vm_, **kwargs):
     return ret
 
 
-def purge(vm_, dirs=False, removables=None, **kwargs):
+def purge(vm_, dirs=False, removables=False, **kwargs):
     """
     Recursively destroy and delete a persistent virtual machine, pass True for
     dir's to also delete the directories containing the virtual machine disk
     images - USE WITH EXTREME CAUTION!
-
-    Pass removables=False to avoid deleting cdrom and floppy images. To avoid
-    disruption, the default but dangerous value is True. This will be changed
-    to the safer False default value in Sodium.
 
     :param vm_: domain name
     :param dirs: pass True to remove containing directories
@@ -3298,19 +3294,11 @@ def purge(vm_, dirs=False, removables=None, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' virt.purge <domain> removables=False
+        salt '*' virt.purge <domain>
     """
     conn = __get_conn(**kwargs)
     dom = _get_domain(conn, vm_)
     disks = _get_disks(dom)
-    if removables is None:
-        salt.utils.versions.warn_until(
-            "Sodium",
-            "removables argument default value is True, but will be changed "
-            "to False by default in {version}. Please set to True to maintain "
-            "the current behavior in the future.",
-        )
-        removables = True
     if (
         VIRT_STATE_NAME_MAP.get(dom.info()[0], "unknown") != "shutdown"
         and dom.destroy() != 0
