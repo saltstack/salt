@@ -2026,17 +2026,17 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
         res = virt.purge("test-vm")
         self.assertTrue(res)
+        mock_remove.assert_called_once()
         mock_remove.assert_any_call("/disks/test.qcow2")
-        mock_remove.assert_any_call("/disks/test-cdrom.iso")
 
     @patch("salt.modules.virt.stop", return_value=True)
     @patch("salt.modules.virt.undefine")
     @patch("os.remove")
-    def test_purge_noremovable(self, mock_remove, mock_undefine, mock_stop):
+    def test_purge_removable(self, mock_remove, mock_undefine, mock_stop):
         """
-        Test virt.purge(removables=False)
+        Test virt.purge(removables=True)
         """
-        xml = """<domain type='kvm' id='7'>
+        xml = """<domain type="kvm" id="7">
               <name>test-vm</name>
               <devices>
                 <disk type='file' device='disk'>
@@ -2083,10 +2083,10 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             qemu_infos
         ]  # pylint: disable=no-member
 
-        res = virt.purge("test-vm", removables=False)
+        res = virt.purge("test-vm", removables=True)
         self.assertTrue(res)
-        mock_remove.assert_called_once()
         mock_remove.assert_any_call("/disks/test.qcow2")
+        mock_remove.assert_any_call("/disks/test-cdrom.iso")
 
     def test_capabilities(self):
         """
