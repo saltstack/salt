@@ -877,9 +877,7 @@ def _qemu_image_create(disk, create_overlay=False, saltenv="base"):
     return img_dest
 
 
-def _disk_profile(
-    profile, hypervisor, disks=None, vm_name=None, image=None, pool=None, **kwargs
-):
+def _disk_profile(profile, hypervisor, disks=None, vm_name=None, image=None, **kwargs):
     """
     Gather the disk profile from the config or apply the default based
     on the active hypervisor
@@ -924,7 +922,7 @@ def _disk_profile(
             "format": "vmdk",
             "model": "scsi",
             "device": "disk",
-            "pool": "[{0}] ".format(pool if pool else "0"),
+            "pool": "[0] ",
         }
     elif hypervisor in ["qemu", "kvm"]:
         overlay = {"format": "qcow2", "device": "disk", "model": "virtio"}
@@ -1302,20 +1300,6 @@ def init(
             }
 
         .. deprecated:: 2019.2.0
-    :param pool:
-        Path of the folder where the image files are located for vmware/esx hypervisors.
-
-        Deprecated in favor of ``disks`` parameter. Add the following to the disks
-        definitions to set the vmware datastore of a disk image:
-
-        .. code-block:: python
-
-            {
-                'name': 'name_of_disk_to_change',
-                'pool': 'mydatastore'
-            }
-
-        .. deprecated:: Flurorine
     :param config: minion configuration to use when seeding.
                    See :mod:`seed module for more details <salt.modules.seed>`
     :param boot_dev: String of space-separated devices to boot from (Default: ``'hd'``)
@@ -1486,14 +1470,6 @@ def init(
     # 1 - get the disks defined in the profile
     # 2 - set the image on the first disk (will be removed later)
     # 3 - update the disks from the profile with the ones from the user. The matching key is the name.
-    pool = kwargs.get("pool", None)
-    if pool:
-        salt.utils.versions.warn_until(
-            "Sodium",
-            "'pool' parameter has been deprecated. Rather use the 'disks' parameter "
-            "to properly define the vmware datastore of disks. 'pool' will be removed in {version}.",
-        )
-
     if image:
         salt.utils.versions.warn_until(
             "Sodium",
@@ -1501,9 +1477,7 @@ def init(
             "to override or define the image. 'image' will be removed in {version}.",
         )
 
-    diskp = _disk_profile(
-        disk, virt_hypervisor, disks, name, image=image, pool=pool, **kwargs
-    )
+    diskp = _disk_profile(disk, virt_hypervisor, disks, name, image=image, **kwargs)
 
     # Create multiple disks, empty or from specified images.
     for _disk in diskp:
