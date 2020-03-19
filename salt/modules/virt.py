@@ -210,24 +210,6 @@ def __get_conn(**kwargs):
     password = kwargs.get("password", None)
     conn_str = kwargs.get("connection", None)
     if not conn_str:
-        conn_str = __salt__["config.get"]("virt.connect", None)
-        if conn_str is not None:
-            salt.utils.versions.warn_until(
-                "Sodium",
-                "'virt.connect' configuration property has been deprecated in favor "
-                "of 'virt:connection:uri'. 'virt.connect' will stop being used in "
-                "{version}.",
-            )
-        else:
-            conn_str = __salt__["config.get"]("libvirt:connection", None)
-            if conn_str is not None:
-                salt.utils.versions.warn_until(
-                    "Sodium",
-                    "'libvirt.connection' configuration property has been deprecated in favor "
-                    "of 'virt:connection:uri'. 'libvirt.connection' will stop being used in "
-                    "{version}.",
-                )
-
         conn_str = __salt__["config.get"]("virt:connection:uri", conn_str)
 
     hypervisor = __salt__["config.get"]("libvirt:hypervisor", None)
