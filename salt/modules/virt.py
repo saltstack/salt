@@ -877,7 +877,7 @@ def _qemu_image_create(disk, create_overlay=False, saltenv="base"):
     return img_dest
 
 
-def _disk_profile(profile, hypervisor, disks=None, vm_name=None, image=None, **kwargs):
+def _disk_profile(profile, hypervisor, disks=None, vm_name=None, **kwargs):
     """
     Gather the disk profile from the config or apply the default based
     on the active hypervisor
@@ -940,19 +940,6 @@ def _disk_profile(profile, hypervisor, disks=None, vm_name=None, image=None, **k
 
         # Transform the list to remove one level of dictionnary and add the name as a property
         disklist = [dict(d, name=name) for disk in disklist for name, d in disk.items()]
-
-        # Add the image to the first disk if there is one
-        if image:
-            # If image is specified in module arguments, then it will be used
-            # for the first disk instead of the image from the disk profile
-            log.debug(
-                '%s image from module arguments will be used for disk "%s"'
-                " instead of %s",
-                image,
-                disklist[0]["name"],
-                disklist[0].get("image", ""),
-            )
-            disklist[0]["image"] = image
 
     # Merge with the user-provided disks definitions
     if disks:
@@ -1194,7 +1181,6 @@ def init(
     name,
     cpu,
     mem,
-    image=None,
     nic="default",
     interfaces=None,
     hypervisor=None,
@@ -1221,17 +1207,6 @@ def init(
     :param name: name of the virtual machine to create
     :param cpu: Number of virtual CPUs to assign to the virtual machine
     :param mem: Amount of memory to allocate to the virtual machine in MiB.
-    :param image: Path to a disk image to use as the first disk (Default: ``None``).
-                  Deprecated in favor of the ``disks`` parameter. To set (or change) the image of a
-                  disk, add the following to the disks definitions:
-
-                  .. code-block:: python
-
-                      {
-                          'name': 'name_of_disk_to_change',
-                          'image': '/path/to/the/image'
-                      }
-
     :param nic: NIC profile to use (Default: ``'default'``).
                 The profile interfaces can be customized / extended with the interfaces parameter.
                 If set to ``None``, no profile will be used.
@@ -1468,16 +1443,8 @@ def init(
 
     # the disks are computed as follows:
     # 1 - get the disks defined in the profile
-    # 2 - set the image on the first disk (will be removed later)
     # 3 - update the disks from the profile with the ones from the user. The matching key is the name.
-    if image:
-        salt.utils.versions.warn_until(
-            "Sodium",
-            "'image' parameter has been deprecated. Rather use the 'disks' parameter "
-            "to override or define the image. 'image' will be removed in {version}.",
-        )
-
-    diskp = _disk_profile(disk, virt_hypervisor, disks, name, image=image, **kwargs)
+    diskp = _disk_profile(disk, virt_hypervisor, disks, name, **kwargs)
 
     # Create multiple disks, empty or from specified images.
     for _disk in diskp:
