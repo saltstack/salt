@@ -1092,20 +1092,9 @@ def _nic_profile(profile_name, hypervisor, dmac=None):
     """
     Compute NIC data based on profile
     """
-
-    default = [{"eth0": {}}]
-
-    # support old location
-    config_data = __salt__["config.option"]("virt.nic", {}).get(profile_name, None)
-
-    if config_data is not None:
-        salt.utils.versions.warn_until(
-            "Sodium",
-            "'virt.nic' has been deprecated in favor of 'virt:nic'. "
-            "'virt.nic' will stop being used in {version}.",
-        )
-    else:
-        config_data = __salt__["config.get"]("virt:nic", {}).get(profile_name, default)
+    config_data = __salt__["config.get"]("virt:nic", {}).get(
+        profile_name, [{"eth0": {}}]
+    )
 
     interfaces = []
 
