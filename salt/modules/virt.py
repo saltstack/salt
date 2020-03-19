@@ -1193,7 +1193,6 @@ def init(
     pub_key=None,
     priv_key=None,
     seed_cmd="seed.apply",
-    enable_vnc=False,
     graphics=None,
     os_type=None,
     arch=None,
@@ -1232,17 +1231,6 @@ def init(
     :param pub_key: public key to seed with (Default: ``None``)
     :param priv_key: public key to seed with (Default: ``None``)
     :param seed_cmd: Salt command to execute to seed the image. (Default: ``'seed.apply'``)
-    :param enable_vnc:
-        ``True`` to setup a vnc display for the VM (Default: ``False``)
-
-        Deprecated in favor of the ``graphics`` parameter. Could be replaced with
-        the following:
-
-        .. code-block:: python
-
-            graphics={'type': 'vnc'}
-
-        .. deprecated:: 2019.2.0
     :param graphics:
         Dictionary providing details on the graphics device to create. (Default: ``None``)
         See :ref:`init-graphics-def` for more details on the possible values.
@@ -1479,16 +1467,6 @@ def init(
             )
 
     log.debug("Generating VM XML")
-
-    if enable_vnc:
-        salt.utils.versions.warn_until(
-            "Sodium",
-            "'enable_vnc' parameter has been deprecated in favor of "
-            "'graphics'. Use graphics={'type': 'vnc'} for the same behavior. "
-            "'enable_vnc' will be removed in {version}. ",
-        )
-        graphics = {"type": "vnc"}
-
     if os_type is None:
         os_type = "hvm" if "hvm" in os_types else os_types[0]
     if arch is None:
