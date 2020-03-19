@@ -3352,26 +3352,6 @@ def _is_kvm_hyper():
     return "libvirtd" in __salt__["cmd.run"](__grains__["ps"])
 
 
-def is_kvm_hyper():
-    """
-    Returns a bool whether or not this node is a KVM hypervisor
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' virt.is_kvm_hyper
-
-    .. deprecated:: 2019.2.0
-    """
-    salt.utils.versions.warn_until(
-        "Sodium",
-        "'is_kvm_hyper' function has been deprecated. Use the 'get_hypervisor' == \"kvm\" instead. "
-        "'is_kvm_hyper' will be removed in {version}.",
-    )
-    return _is_kvm_hyper()
-
-
 def _is_xen_hyper():
     """
     Returns a bool whether or not this node is a XEN hypervisor
@@ -3390,26 +3370,6 @@ def _is_xen_hyper():
         # No /proc/modules? Are we on Windows? Or Solaris?
         return False
     return "libvirtd" in __salt__["cmd.run"](__grains__["ps"])
-
-
-def is_xen_hyper():
-    """
-    Returns a bool whether or not this node is a XEN hypervisor
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' virt.is_xen_hyper
-
-    .. deprecated:: 2019.2.0
-    """
-    salt.utils.versions.warn_until(
-        "Sodium",
-        "'is_xen_hyper' function has been deprecated. Use the 'get_hypervisor' == \"xen\" instead. "
-        "'is_xen_hyper' will be removed in {version}.",
-    )
-    return _is_xen_hyper()
 
 
 def get_hypervisor():
@@ -3452,7 +3412,7 @@ def is_hyper():
         salt '*' virt.is_hyper
     """
     if HAS_LIBVIRT:
-        return is_xen_hyper() or is_kvm_hyper()
+        return _is_xen_hyper() or _is_kvm_hyper()
     return False
 
 
