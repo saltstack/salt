@@ -29,7 +29,7 @@ click==7.0
 clustershell==1.8.1
 contextlib2==0.5.5        # via cherrypy
 croniter==0.3.29
-cryptography==2.6.1
+cryptography==2.6.1       # via moto, paramiko, pyopenssl, vcert
 distlib==0.3.0            # via virtualenv
 dnspython==1.16.0
 docker-pycreds==0.4.0     # via docker
