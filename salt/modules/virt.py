@@ -1014,7 +1014,7 @@ def _fill_disk_filename(vm_name, disk, hypervisor, **kwargs):
         disk["source_file"] = os.path.join(base_dir, disk["filename"])
 
 
-def _complete_nics(interfaces, hypervisor, dmac=None):
+def _complete_nics(interfaces, hypervisor):
     """
     Complete missing data for network interfaces.
     """
@@ -1065,18 +1065,10 @@ def _complete_nics(interfaces, hypervisor, dmac=None):
         """
         Compute mac address for NIC depending on hypervisor
         """
-        if dmac is not None:
-            log.debug("Default MAC address is %s", dmac)
-            if salt.utils.validate.net.mac(dmac):
-                attributes["mac"] = dmac
-            else:
-                msg = "Malformed MAC address: {0}".format(dmac)
-                raise CommandExecutionError(msg)
+        if hypervisor in ["qemu", "kvm"]:
+            attributes["mac"] = salt.utils.network.gen_mac(prefix="52:54:00")
         else:
-            if hypervisor in ["qemu", "kvm"]:
-                attributes["mac"] = salt.utils.network.gen_mac(prefix="52:54:00")
-            else:
-                attributes["mac"] = salt.utils.network.gen_mac()
+            attributes["mac"] = salt.utils.network.gen_mac()
 
     for interface in interfaces:
         _normalize_net_types(interface)
@@ -1088,7 +1080,7 @@ def _complete_nics(interfaces, hypervisor, dmac=None):
     return interfaces
 
 
-def _nic_profile(profile_name, hypervisor, dmac=None):
+def _nic_profile(profile_name, hypervisor):
     """
     Compute NIC data based on profile
     """
@@ -1141,15 +1133,14 @@ def _nic_profile(profile_name, hypervisor, dmac=None):
                 else:
                     interfaces.append(interface)
 
-    # dmac can only be used from init()
-    return _complete_nics(interfaces, hypervisor, dmac=dmac)
+    return _complete_nics(interfaces, hypervisor)
 
 
-def _get_merged_nics(hypervisor, profile, interfaces=None, dmac=None):
+def _get_merged_nics(hypervisor, profile, interfaces=None):
     """
     Get network devices from the profile and merge uer defined ones with them.
     """
-    nicp = _nic_profile(profile, hypervisor, dmac=dmac) if profile else []
+    nicp = _nic_profile(profile, hypervisor) if profile else []
     log.debug("NIC profile is %s", nicp)
     if interfaces:
         users_nics = _complete_nics(interfaces, hypervisor)
@@ -1325,21 +1316,6 @@ def init(
             }
 
         .. deprecated:: Flurorine
-    :param dmac:
-        Default MAC address to use for the network interfaces. By default MAC addresses are
-        automatically generated.
-
-        Deprecated in favor of ``interfaces`` parameter. Add the following to the interfaces
-        definitions to force the mac address of a NIC:
-
-        .. code-block:: python
-
-            {
-                'name': 'name_of_nic_to_change',
-                'mac': 'MY:MA:CC:ADD:RE:SS'
-            }
-
-        .. deprecated:: 2019.2.0
     :param config: minion configuration to use when seeding.
                    See :mod:`seed module for more details <salt.modules.seed>`
     :param boot_dev: String of space-separated devices to boot from (Default: ``'hd'``)
@@ -1504,18 +1480,7 @@ def init(
 
     log.debug("Using hypervisor %s", virt_hypervisor)
 
-    # the NICs are computed as follows:
-    # 1 - get the default NICs from the profile
-    # 2 - Complete the users NICS
-    # 3 - Update the default NICS list to the users one, matching key is the name
-    dmac = kwargs.get("dmac", None)
-    if dmac:
-        salt.utils.versions.warn_until(
-            "Sodium",
-            "'dmac' parameter has been deprecated. Rather use the 'interfaces' parameter "
-            "to properly define the desired MAC address. 'dmac' will be removed in {version}.",
-        )
-    nicp = _get_merged_nics(virt_hypervisor, nic, interfaces, dmac=dmac)
+    nicp = _get_merged_nics(virt_hypervisor, nic, interfaces)
 
     # the disks are computed as follows:
     # 1 - get the disks defined in the profile
