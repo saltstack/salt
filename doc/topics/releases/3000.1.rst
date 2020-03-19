@@ -9,17 +9,88 @@ Version 3000.1 is a bugfix release for :ref:`3000 <release-3000>`.
 Statistics
 ==========
 
-- Total Merges: **39**
+- Total Merges: **45**
 - Total Issue References: **14**
-- Total PR References: **40**
+- Total PR References: **46**
 
-- Contributors: **15** (`Ch3LL`_, `UtahDave`_, `cmcmarrow`_, `dwoz`_, `frogunder`_, `garethgreenaway`_, `lorengordon`_, `mchugh19`_, `oeuftete`_, `raddessi`_, `s0undt3ch`_, `sjorge`_, `terminalmage`_, `twangboy`_, `waynew`_)
-
+- Contributors: **16** (`Ch3LL`_, `UtahDave`_, `bryceml`_, `cmcmarrow`_, `dwoz`_, `frogunder`_, `garethgreenaway`_, `lorengordon`_, `mchugh19`_, `oeuftete`_, `raddessi`_, `s0undt3ch`_, `sjorge`_, `terminalmage`_, `twangboy`_, `waynew`_)
 
 Changelog for v3000..v3000.1
 ============================
 
-*Generated at: 2020-03-13 17:24:15 UTC*
+*Generated at: 2020-03-17 22:35:36 UTC*
+
+* **PR** `#56398`_: (`Ch3LL`_) Add additional PRs to 3000.1 changelog
+  @ *2020-03-17 18:08:15 UTC*
+
+  * 0de5c1e136 Merge pull request `#56398`_ from Ch3LL/change_3000.1
+
+  * 79c337b3db Add additional PRs to 3000.1 changelog
+
+* **PR** `#56376`_: (`twangboy`_) Fix win deps
+  @ *2020-03-17 17:02:46 UTC*
+
+  * 5ac09decb9 Merge pull request `#56376`_ from twangboy/fix_win_deps
+
+  * 6c83beeb9e Fix win deps
+
+* **PR** `#56378`_: (`Ch3LL`_)  Include _version.py if building wheel
+  @ *2020-03-17 17:01:33 UTC*
+
+  * e72a8d2cbc Merge pull request `#56378`_ from Ch3LL/wheel_version
+
+  * 22cccd2107 Use virtualenv test helper that already exists and fix setup.py
+
+  * 293b1fddf2 cleanup code
+
+  * ddfb065bfb add bdist_wheel test
+
+  * fceff0287c ensure name is included in new version
+
+  * 0cbf6d3246 Ensure SaltStackVersion attributes in _version.py correct
+
+  * 39cdf5382d Include _version.py if building wheel
+
+* **PR** `#56387`_: (`bryceml`_) update gpg key expiration date
+  @ *2020-03-17 16:59:30 UTC*
+
+  * 6a9326fb70 Merge pull request `#56387`_ from bryceml/update_gpg_key
+
+  * b74b26ccf3 update gpg key expiration date
+
+* **PR** `#55822`_: (`cmcmarrow`_) fix_Indefinitely_code
+  @ *2020-03-16 17:34:11 UTC*
+
+  * fcee692c4a Merge pull request `#55822`_ from cmcmarrow/win_task_repeat
+
+  * e257fb2804 Merge branch 'master' into win_task_repeat
+
+  * 07cada0f8f Merge branch 'master' into win_task_repeat
+
+  * 4b80301338 Merge branch 'master' into win_task_repeat
+
+  * 9df94569c4 Merge branch 'master' into win_task_repeat
+
+  * 22a2d0b9ec Merge branch 'master' into win_task_repeat
+
+  * dee9c134e7 Merge branch 'master' into win_task_repeat
+
+  * beaf05d514 Update test_win_task.py
+
+  * 6e923f75fc Merge branch 'master' into win_task_repeat
+
+  * 5839da81ee add test
+
+  * 2aa6338ed0 fix Indefinitely code
+
+* **PR** `#56373`_: (`frogunder`_) update 3000.1 releasenotes
+  @ *2020-03-13 18:58:43 UTC*
+
+  * c11ef89200 Merge pull request `#56373`_ from frogunder/releasenotes_3000.1
+
+  * a5ca8b5277 Fix doc test errors
+
+  * 47e483187e update 3000.1 releasenotes
 
 * **PR** `#56365`_: (`Ch3LL`_) Update 3000.1 changelog
   @ *2020-03-13 17:21:02 UTC*
@@ -478,6 +549,7 @@ Changelog for v3000..v3000.1
 .. _`#52195`: https://github.com/saltstack/salt/pull/52195
 .. _`#53152`: https://github.com/saltstack/salt/issues/53152
 .. _`#55185`: https://github.com/saltstack/salt/issues/55185
+.. _`#55822`: https://github.com/saltstack/salt/pull/55822
 .. _`#55888`: https://github.com/saltstack/salt/pull/55888
 .. _`#55894`: https://github.com/saltstack/salt/pull/55894
 .. _`#55906`: https://github.com/saltstack/salt/pull/55906
@@ -528,9 +600,15 @@ Changelog for v3000..v3000.1
 .. _`#56358`: https://github.com/saltstack/salt/pull/56358
 .. _`#56360`: https://github.com/saltstack/salt/pull/56360
 .. _`#56365`: https://github.com/saltstack/salt/pull/56365
+.. _`#56373`: https://github.com/saltstack/salt/pull/56373
+.. _`#56376`: https://github.com/saltstack/salt/pull/56376
+.. _`#56378`: https://github.com/saltstack/salt/pull/56378
+.. _`#56387`: https://github.com/saltstack/salt/pull/56387
+.. _`#56398`: https://github.com/saltstack/salt/pull/56398
 .. _`Ch3LL`: https://github.com/Ch3LL
 .. _`Oloremo`: https://github.com/Oloremo
 .. _`UtahDave`: https://github.com/UtahDave
+.. _`bryceml`: https://github.com/bryceml
 .. _`cmcmarrow`: https://github.com/cmcmarrow
 .. _`dwoz`: https://github.com/dwoz
 .. _`finalduty`: https://github.com/finalduty
