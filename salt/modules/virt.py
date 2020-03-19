@@ -3016,17 +3016,7 @@ def define_vol_xml_str(xml, **kwargs):  # pylint: disable=redefined-outer-name
         virt:
             storagepool: mine
     """
-    poolname = __salt__["config.get"]("libvirt:storagepool", None)
-    if poolname is not None:
-        salt.utils.versions.warn_until(
-            "Sodium",
-            "'libvirt:storagepool' has been deprecated in favor of "
-            "'virt:storagepool'. 'libvirt:storagepool' will stop "
-            "being used in {version}.",
-        )
-    else:
-        poolname = __salt__["config.get"]("virt:storagepool", "default")
-
+    poolname = __salt__["config.get"]("virt:storagepool", "default")
     conn = __get_conn(**kwargs)
     pool = conn.storagePoolLookupByName(six.text_type(poolname))
     ret = pool.createXML(xml, 0) is not None
