@@ -4400,3 +4400,102 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             "vm2",
             inactive=False,
         )
+
+    def test_volume_define(self):
+        """
+        Test virt.volume_define function
+        """
+        # Normal test case
+        pool_mock = MagicMock()
+        pool_mock.XMLDesc.return_value = "<pool type='dir'></pool>"
+        self.mock_conn.storagePoolLookupByName.return_value = pool_mock
+
+        self.assertTrue(
+            virt.volume_define(
+                "testpool",
+                "myvm_system.qcow2",
+                8192,
+                allocation=4096,
+                format="qcow2",
+                type="file",
+            )
+        )
+
+        expected_xml = (
+            "<volume type='file'>\n"
+            "  <name>myvm_system.qcow2</name>\n"
+            "  <source>\n"
+            "  </source>\n"
+            "  <capacity unit='KiB'>8388608</capacity>\n"
+            "  <allocation unit='KiB'>4194304</allocation>\n"
+            "  <target>\n"
+            "    <format type='qcow2'/>\n"
+            "  </target>\n"
+            "</volume>"
+        )
+
+        pool_mock.createXML.assert_called_once_with(expected_xml, 0)
+
+        # backing store test case
+        pool_mock.reset_mock()
+        self.assertTrue(
+            virt.volume_define(
+                "testpool",
+                "myvm_system.qcow2",
+                8192,
+                allocation=4096,
+                format="qcow2",
+                type="file",
+                backing_store={"path": "/path/to/base.raw", "format": "raw"},
+            )
+        )
+
+        expected_xml = (
+            "<volume type='file'>\n"
+            "  <name>myvm_system.qcow2</name>\n"
+            "  <source>\n"
+            "  </source>\n"
+            "  <capacity unit='KiB'>8388608</capacity>\n"
+            "  <allocation unit='KiB'>4194304</allocation>\n"
+            "  <target>\n"
+            "    <format type='qcow2'/>\n"
+            "  </target>\n"
+            "  <backingStore>\n"
+            "    <path>/path/to/base.raw</path>\n"
+            "    <format type='raw'/>\n"
+            "  </backingStore>\n"
+            "</volume>"
+        )
+
+        pool_mock.createXML.assert_called_once_with(expected_xml, 0)
+
+        # logical pool test case
+        pool_mock.reset_mock()
+        pool_mock.XMLDesc.return_value = "<pool type='logical'></pool>"
+        self.mock_conn.storagePoolLookupByName.return_value = pool_mock
+
+        self.assertTrue(
+            virt.volume_define(
+                "testVG",
+                "myvm_system",
+                8192,
+                backing_store={"path": "/dev/testVG/base"},
+            )
+        )
+
+        expected_xml = (
+            "<volume>\n"
+            "  <name>myvm_system</name>\n"
+            "  <source>\n"
+            "  </source>\n"
+            "  <capacity unit='KiB'>8388608</capacity>\n"
+            "  <allocation unit='KiB'>8388608</allocation>\n"
+            "  <target>\n"
+            "  </target>\n"
+            "  <backingStore>\n"
+            "    <path>/dev/testVG/base</path>\n"
+            "  </backingStore>\n"
+            "</volume>"
+        )
+
+        pool_mock.createXML.assert_called_once_with(expected_xml, 0)
