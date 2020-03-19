@@ -3161,11 +3161,18 @@ def define_xml_path(path, **kwargs):
         return False
 
 
-def define_vol_xml_str(xml, **kwargs):  # pylint: disable=redefined-outer-name
+def define_vol_xml_str(
+    xml, pool=None, **kwargs
+):  # pylint: disable=redefined-outer-name
     """
     Define a volume based on the XML passed to the function
 
     :param xml: libvirt XML definition of the storage volume
+    :param pool:
+        storage pool name to define the volume in.
+        If defined, this parameter will override the configuration setting.
+
+        .. versionadded:: Sodium
     :param connection: libvirt connection URI, overriding defaults
 
         .. versionadded:: 2019.2.0
@@ -3183,26 +3190,34 @@ def define_vol_xml_str(xml, **kwargs):  # pylint: disable=redefined-outer-name
         salt '*' virt.define_vol_xml_str <XML in string format>
 
     The storage pool where the disk image will be defined is ``default``
-    unless changed with a configuration like this:
+    unless changed with the pool parameter or a configuration like this:
 
     .. code-block:: yaml
 
         virt:
             storagepool: mine
     """
-    poolname = __salt__["config.get"]("virt:storagepool", "default")
     conn = __get_conn(**kwargs)
+    default_pool = "default" if conn.getType() != "ESX" else "0"
+    poolname = (
+        pool if pool else __salt__["config.get"]("virt:storagepool", default_pool)
+    )
     pool = conn.storagePoolLookupByName(six.text_type(poolname))
     ret = pool.createXML(xml, 0) is not None
     conn.close()
     return ret
 
 
-def define_vol_xml_path(path, **kwargs):
+def define_vol_xml_path(path, pool=None, **kwargs):
     """
     Define a volume based on the XML-file path passed to the function
 
     :param path: path to a file containing the libvirt XML definition of the volume
+    :param pool:
+        storage pool name to define the volume in.
+        If defined, this parameter will override the configuration setting.
+
+        .. versionadded:: Sodium
     :param connection: libvirt connection URI, overriding defaults
 
         .. versionadded:: 2019.2.0
@@ -3223,7 +3238,7 @@ def define_vol_xml_path(path, **kwargs):
     try:
         with salt.utils.files.fopen(path, "r") as fp_:
             return define_vol_xml_str(
-                salt.utils.stringutils.to_unicode(fp_.read()), **kwargs
+                salt.utils.stringutils.to_unicode(fp_.read()), pool=pool, **kwargs
             )
     except (OSError, IOError):
         return False
