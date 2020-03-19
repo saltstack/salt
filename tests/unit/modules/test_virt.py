@@ -111,11 +111,12 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         Test virt._disk_profile() when merging with user-defined disks
         """
         root_dir = os.path.join(salt.syspaths.ROOT_DIR, "srv", "salt-images")
-        userdisks = [{"name": "data", "size": 16384, "format": "raw"}]
+        userdisks = [
+            {"name": "system", "image": "/path/to/image"},
+            {"name": "data", "size": 16384, "format": "raw"},
+        ]
 
-        disks = virt._disk_profile(
-            "default", "kvm", userdisks, "myvm", image="/path/to/image"
-        )
+        disks = virt._disk_profile("default", "kvm", userdisks, "myvm")
         self.assertEqual(
             [
                 {
