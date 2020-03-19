@@ -1194,7 +1194,6 @@ def init(
     priv_key=None,
     seed_cmd="seed.apply",
     enable_vnc=False,
-    enable_qcow=False,
     graphics=None,
     os_type=None,
     arch=None,
@@ -1259,22 +1258,6 @@ def init(
         but ``x86_64`` is prefed over ``i686``.
 
         .. versionadded:: 2019.2.0
-    :param enable_qcow:
-        ``True`` to create a QCOW2 overlay image, rather than copying the image
-        (Default: ``False``).
-
-        Deprecated in favor of ``disks`` parameter. Add the following to the disks
-        definitions to create an overlay image of a template disk image with an
-        image set:
-
-        .. code-block:: python
-
-            {
-                'name': 'name_of_disk_to_change',
-                'overlay_image': True
-            }
-
-        .. deprecated:: 2019.2.0
     :param config: minion configuration to use when seeding.
                    See :mod:`seed module for more details <salt.modules.seed>`
     :param boot_dev: String of space-separated devices to boot from (Default: ``'hd'``)
@@ -1466,18 +1449,7 @@ def init(
                 define_vol_xml_str(vol_xml)
 
         elif virt_hypervisor in ["qemu", "kvm", "xen"]:
-
-            create_overlay = enable_qcow
-            if create_overlay:
-                salt.utils.versions.warn_until(
-                    "Sodium",
-                    "'enable_qcow' parameter has been deprecated. Rather use the 'disks' "
-                    "parameter to override or define the image. 'enable_qcow' will be removed "
-                    "in {version}.",
-                )
-            else:
-                create_overlay = _disk.get("overlay_image", False)
-
+            create_overlay = _disk.get("overlay_image", False)
             if _disk["source_file"]:
                 if os.path.exists(_disk["source_file"]):
                     img_dest = _disk["source_file"]
