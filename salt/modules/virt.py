@@ -782,17 +782,7 @@ def _get_images_dir():
     Extract the images dir from the configuration. First attempts to
     find legacy virt.images, then tries virt:images.
     """
-    img_dir = __salt__["config.option"]("virt.images")
-    if img_dir:
-        salt.utils.versions.warn_until(
-            "Sodium",
-            "'virt.images' has been deprecated in favor of "
-            "'virt:images'. 'virt.images' will stop "
-            "being used in {version}.",
-        )
-    else:
-        img_dir = __salt__["config.get"]("virt:images")
-
+    img_dir = __salt__["config.get"]("virt:images")
     log.debug("Image directory from config option `virt:images`" " is %s", img_dir)
     return img_dir
 
