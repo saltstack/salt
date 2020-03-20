@@ -643,7 +643,7 @@ class TestWebhookSaltAPIHandler(_SaltnadoIntegrationTestCase):
             self._future_resolved.wait(resolve_future_timeout)
             try:
                 event = future.result()
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 self.fail('Failed to resolve future under {} secs: {}'.format(resolve_future_timeout, exc))
             self.assertEqual(event['tag'], 'salt/netapi/hook')
             self.assertIn('headers', event['data'])

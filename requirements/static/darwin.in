@@ -6,6 +6,7 @@ croniter>=0.3.0,!=0.3.22
 dnspython
 docker
 futures>=2.0; python_version < '3.0'
+jmespath
 jsonschema
 junos-eznc
 jxmlease
@@ -14,7 +15,9 @@ kubernetes<4.0
 mock>=3.0.5; python_version < '3.6'
 more-itertools==5.0.0
 moto
-pylxd>=2.2.5
+# XXX: Temporarily do not install pylxd.
+# pylxd(or likely ws4py) will cause the test suite to hang at the finish line under runtests.py
+# pylxd>=2.2.5
 pyopenssl
 python-etcd>0.4.2
 pyvmomi
@@ -22,6 +25,13 @@ rfc3987
 salttesting==2017.6.1
 strict_rfc3339
 supervisor==3.3.5; python_version < '3'
-virtualenv
+virtualenv==20.0.10
 watchdog
 yamlordereddictloader
+vcert~=0.7.0
+
+# Available template libraries that can be used
+Genshi
+Cheetah3==3.1.0
+Mako
+wempy; python_version <'3'

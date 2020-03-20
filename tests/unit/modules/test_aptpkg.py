@@ -14,7 +14,7 @@ import textwrap
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import Mock, MagicMock, patch, NO_MOCK, NO_MOCK_REASON
+from tests.support.mock import Mock, MagicMock, patch
 
 # Import Salt Libs
 from salt.ext import six
@@ -90,7 +90,26 @@ LOWPKG_INFO = {
         'name': 'wget',
         'section': 'web',
         'source': 'wget',
-        'version': '1.15-1ubuntu1.14.04.2'
+        'version': '1.15-1ubuntu1.14.04.2',
+        'status': 'ii',
+    },
+    'apache2': {
+        'architecture': 'amd64',
+        'description': """Apache HTTP Server
+ The Apache HTTP Server Project's goal is to build a secure, efficient and
+ extensible HTTP server as standards-compliant open source software. The
+ result has long been the number one web server on the Internet.
+ .
+ Installing this package results in a full installation, including the
+ configuration files, init scripts and support scripts.""",
+        'homepage': 'http://httpd.apache.org/',
+        'install_date': '2016-08-30T22:20:15Z',
+        'maintainer': 'Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>',
+        'name': 'apache2',
+        'section': 'httpd',
+        'source': 'apache2',
+        'version': '2.4.18-2ubuntu3.9',
+        'status': 'rc',
     }
 }
 
@@ -139,7 +158,6 @@ UNINSTALL = {
 }
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.aptpkg
@@ -244,14 +262,16 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
             'url': 'homepage'
         }
 
-        installed = copy.deepcopy(LOWPKG_INFO)
+        installed = copy.deepcopy({'wget': LOWPKG_INFO['wget']})
         for name in names:
             if installed['wget'].get(names[name], False):
                 installed['wget'][name] = installed['wget'].pop(names[name])
 
         mock = MagicMock(return_value=LOWPKG_INFO)
         with patch.dict(aptpkg.__salt__, {'lowpkg.info': mock}):
+            del installed['wget']['status']
             self.assertEqual(aptpkg.info_installed('wget'), installed)
+            self.assertEqual(len(aptpkg.info_installed()), 1)
 
     def test_owner(self):
         '''
@@ -347,6 +367,39 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
                 }
                 with patch.multiple(aptpkg, **patch_kwargs):
                     self.assertEqual(aptpkg.upgrade(), dict())
+
+    def test_upgrade_downloadonly(self):
+        '''
+        Tests the download-only options for upgrade.
+        '''
+        with patch('salt.utils.pkg.clear_rtag', MagicMock()):
+            with patch('salt.modules.aptpkg.list_pkgs',
+                       MagicMock(return_value=UNINSTALL)):
+                mock_cmd = MagicMock(return_value={
+                    'retcode': 0,
+                    'stdout': UPGRADE
+                })
+                patch_kwargs = {
+                    '__salt__': {
+                        'config.get': MagicMock(return_value=True),
+                        'cmd.run_all': mock_cmd
+                    },
+                }
+                with patch.multiple(aptpkg, **patch_kwargs):
+                    aptpkg.upgrade()
+                    args_matching = [True for args in patch_kwargs['__salt__']['cmd.run_all'].call_args[0] if "--download-only" in args]
+                    # Here we shouldn't see the parameter and args_matching should be empty.
+                    self.assertFalse(any(args_matching))
+
+                    aptpkg.upgrade(downloadonly=True)
+                    args_matching = [True for args in patch_kwargs['__salt__']['cmd.run_all'].call_args[0] if "--download-only" in args]
+                    # --download-only should be in the args list and we should have at least on True in the list.
+                    self.assertTrue(any(args_matching))
+
+                    aptpkg.upgrade(download_only=True)
+                    args_matching = [True for args in patch_kwargs['__salt__']['cmd.run_all'].call_args[0] if "--download-only" in args]
+                    # --download-only should be in the args list and we should have at least on True in the list.
+                    self.assertTrue(any(args_matching))
 
     def test_show(self):
         '''
@@ -469,6 +522,56 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(aptpkg.show('foo*', refresh=True), {})
             self.assert_called_once(refresh_mock)
             refresh_mock.reset_mock()
+
+    def test_mod_repo_enabled(self):
+        '''
+        Checks if a repo is enabled or disabled depending on the passed kwargs.
+        '''
+        with patch.dict(aptpkg.__salt__, {'config.option': MagicMock(), 'no_proxy': MagicMock(return_value=False)}):
+            with patch('salt.modules.aptpkg._check_apt', MagicMock(return_value=True)):
+                with patch('salt.modules.aptpkg.refresh_db', MagicMock(return_value={})):
+                    with patch('salt.utils.data.is_true', MagicMock(return_value=True)) as data_is_true:
+                        with patch('salt.modules.aptpkg.sourceslist', MagicMock(), create=True):
+                            repo = aptpkg.mod_repo('foo', enabled=False)
+                            data_is_true.assert_called_with(False)
+                            # with disabled=True; should call salt.utils.data.is_true True
+                            data_is_true.reset_mock()
+                            repo = aptpkg.mod_repo('foo', disabled=True)
+                            data_is_true.assert_called_with(True)
+                            # with enabled=True; should call salt.utils.data.is_true with False
+                            data_is_true.reset_mock()
+                            repo = aptpkg.mod_repo('foo', enabled=True)
+                            data_is_true.assert_called_with(True)
+                            # with disabled=True; should call salt.utils.data.is_true False
+                            data_is_true.reset_mock()
+                            repo = aptpkg.mod_repo('foo', disabled=False)
+                            data_is_true.assert_called_with(False)
+
+    @patch('salt.utils.path.os_walk', MagicMock(return_value=[('test', 'test', 'test')]))
+    @patch('os.path.getsize', MagicMock(return_value=123456))
+    @patch('os.path.getctime', MagicMock(return_value=1234567890.123456))
+    @patch('fnmatch.filter', MagicMock(return_value=['/var/cache/apt/archive/test_package.rpm']))
+    def test_list_downloaded(self):
+        '''
+        Test downloaded packages listing.
+        :return:
+        '''
+        DOWNLOADED_RET = {
+            'test-package': {
+                '1.0': {
+                    'path': '/var/cache/apt/archive/test_package.rpm',
+                    'size': 123456,
+                    'creation_date_time_t': 1234567890,
+                    'creation_date_time': '2009-02-13T23:31:30',
+                }
+            }
+        }
+
+        with patch.dict(aptpkg.__salt__, {'lowpkg.bin_pkg_info': MagicMock(return_value={'name': 'test-package',
+                                                                                         'version': '1.0'})}):
+            list_downloaded = aptpkg.list_downloaded()
+            self.assertEqual(len(list_downloaded), 1)
+            self.assertDictEqual(list_downloaded, DOWNLOADED_RET)
 
 
 @skipIf(pytest is None, 'PyTest is missing')

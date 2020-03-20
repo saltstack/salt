@@ -8,16 +8,11 @@ from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
-from tests.support.mock import (
-    patch,
-    NO_MOCK,
-    NO_MOCK_REASON
-)
+from tests.support.unit import TestCase
+from tests.support.mock import patch
 import salt.modules.{{module_name}} as {{module_name}}
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class {{module_name|capitalize}}TestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):

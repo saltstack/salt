@@ -5,8 +5,14 @@ codecov:
 
   branch: master
 
-  notify:
-    require_ci_to_pass: yes      # Less spammy. Only notify on passing builds.
+#  notify:
+#    require_ci_to_pass: yes      # Less spammy. Only notify on passing builds.
+#    after_n_builds: 46           # Only notify after N builds
+#                                 # This value is the output of:
+#                                 #    sh -c 'echo "$(ls .ci/ | grep kitchen | wc -l)"'
+
+# Disable Notifications
+  notify: off
 
 ignore:
   - ^*.py$                       # python files at the repo root, ie, setup.py
@@ -66,14 +72,17 @@ flags:
     paths:
       - tests/
 
-comment:
-  layout: "reach, diff, flags, files"
-  after_n_builds: 46             # Only comment on PRs after N builds
-                                 # This value is the output of:
-                                 #    sh -c 'echo "$(ls .ci/ | grep kitchen | wc -l)"'
-
-  behavior: new                  # Comment posting behaviour
-                                 #   default: update, if exists. Otherwise post new.
-                                 #   once: update, if exists. Otherwise post new. Skip if deleted.
-                                 #   new: delete old and post new.
-                                 #   spammy: post new (do not delete old comments).
+#comment:
+#  layout: "reach, diff, flags, files"
+#  after_n_builds: 46             # Only comment on PRs after N builds
+#                                 # This value is the output of:
+#                                 #    sh -c 'echo "$(ls .ci/ | grep kitchen | wc -l)"'
+#
+#  behavior: new                  # Comment posting behaviour
+#                                 #   default: update, if exists. Otherwise post new.
+#                                 #   once: update, if exists. Otherwise post new. Skip if deleted.
+#                                 #   new: delete old and post new.
+#                                 #   spammy: post new (do not delete old comments).
+#
+# Disable Comments
+comment: off

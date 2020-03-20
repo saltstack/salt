@@ -6,14 +6,13 @@ from __future__ import absolute_import, unicode_literals
 
 # Import Salt libs
 import salt.utils.locales as locales
-from tests.support.unit import TestCase, skipIf
-from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
+from tests.support.unit import TestCase
+from tests.support.mock import patch
 
 # Import 3rd-part libs
 from salt.ext.six.moves import reload_module
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class TestLocales(TestCase):
     def test_get_encodings(self):
         # reload locales modules before and after to defeat memoization of

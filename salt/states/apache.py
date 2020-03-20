@@ -133,7 +133,7 @@ def configfile(name, config):
         }
         ret['result'] = True
         ret['comment'] = 'Successfully created configuration.'
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         ret['result'] = False
         ret['comment'] = 'Failed to create apache configuration.'
 

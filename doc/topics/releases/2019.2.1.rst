@@ -1,3 +1,5 @@
+.. _release-2019-2-1:
+
 ===========================
 Salt 2019.2.1 Release Notes
 ===========================
@@ -49,7 +51,7 @@ the YAML renderer that now require the new Jinja filter `tojson`.
 
 In 2019.2.1, we introduce a new configuration option for both the Salt master and Salt minion
 configurations to be able to support the older YAML renderer.  Using the option
-`use_yamlloader_old` will allow the YAML renderer to function as before.
+``use_yamlloader_old`` will allow the YAML renderer to function as before.
 
 Statistics
 ==========

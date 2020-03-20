@@ -9,8 +9,8 @@ import logging
 import multiprocessing
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase, skipIf
-from tests.support.mock import patch, MagicMock, NO_MOCK, NO_MOCK_REASON
+from tests.support.unit import TestCase
+from tests.support.mock import patch, MagicMock
 from tests.support.mixins import SaltClientTestCaseMixin
 
 # Import Salt libs
@@ -104,7 +104,7 @@ def _master_exec_test(child_pipe):
                     _create_master().start()
                     ret = ret and _logger.messages \
                           and not _logger.has_message('Do not use ')
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         log.exception('Exception raised in master daemon unit test')
         ret = False
     child_pipe.send(ret)
@@ -141,7 +141,7 @@ def _minion_exec_test(child_pipe):
                     _create_minion().start()
                     ret = ret and _logger.messages \
                           and not _logger.has_message('Do not use ')
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         log.exception('Exception raised in minion daemon unit test')
         ret = False
     child_pipe.send(ret)
@@ -179,7 +179,7 @@ def _proxy_exec_test(child_pipe):
                     _create_proxy_minion().start()
                     ret = ret and _logger.messages \
                           and not _logger.has_message('Do not use ')
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         log.exception('Exception raised in proxy daemon unit test')
         ret = False
     child_pipe.send(ret)
@@ -216,14 +216,13 @@ def _syndic_exec_test(child_pipe):
                     _create_syndic().start()
                     ret = ret and _logger.messages \
                           and not _logger.has_message('Do not use ')
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         log.exception('Exception raised in syndic daemon unit test')
         ret = False
     child_pipe.send(ret)
     child_pipe.close()
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class DaemonsStarterTestCase(TestCase, SaltClientTestCaseMixin):
     '''
     Unit test for the daemons starter classes.

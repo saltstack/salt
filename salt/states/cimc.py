@@ -89,7 +89,7 @@ def hostname(name, hostname=None):
         else:
             ret['comment'] = "Hostname already configured. No changes required."
 
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         ret['result'] = False
         ret['comment'] = "Error occurred setting hostname."
         log.error(err)
@@ -154,7 +154,7 @@ def logging_levels(name, remote=None, local=None):
         else:
             ret['comment'] = "Logging level already configured. No changes required."
 
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         ret['result'] = False
         ret['comment'] = "Error occurred setting logging level settings."
         log.error(err)
@@ -230,7 +230,7 @@ def ntp(name, servers):
                 ret['result'] = False
                 ret['comment'] = "Error setting NTP configuration."
                 return ret
-        except Exception as err:
+        except Exception as err:  # pylint: disable=broad-except
             ret['result'] = False
             ret['comment'] = "Error setting NTP configuration."
             log.error(err)
@@ -337,7 +337,7 @@ def power_configuration(name, policy=None, delayType=None, delayValue=None):
         else:
             ret['comment'] = "Power settings already configured. No changes required."
 
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         ret['result'] = False
         ret['comment'] = "Error occurred setting power settings."
         log.error(err)
@@ -392,7 +392,7 @@ def syslog(name, primary=None, secondary=None):
                     ret['result'] = False
                     ret['comment'] = "Error setting primary SYSLOG server."
                     return ret
-            except Exception as err:
+            except Exception as err:  # pylint: disable=broad-except
                 ret['result'] = False
                 ret['comment'] = "Error setting primary SYSLOG server."
                 log.error(err)
@@ -416,7 +416,7 @@ def syslog(name, primary=None, secondary=None):
                     ret['result'] = False
                     ret['comment'] = "Error setting secondary SYSLOG server."
                     return ret
-            except Exception as err:
+            except Exception as err:  # pylint: disable=broad-except
                 ret['result'] = False
                 ret['comment'] = "Error setting secondary SYSLOG server."
                 log.error(err)
@@ -492,7 +492,7 @@ def user(name, id='', user='', priv='', password='', status='active'):
             ret['comment'] = "Error setting user configuration."
             return ret
 
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         ret['result'] = False
         ret['comment'] = "Error setting user configuration."
         log.error(err)

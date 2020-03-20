@@ -36,6 +36,7 @@ import salt.utils.zeromq
 import salt.syspaths
 import salt.exceptions
 import salt.defaults.exitcodes
+import salt.utils.immutabletypes as immutabletypes
 
 try:
     import psutil
@@ -100,11 +101,7 @@ _DFLT_IPC_WBUFFER = _gather_buffer_space() * .5
 # TODO: Reserved for future use
 _DFLT_IPC_RBUFFER = _gather_buffer_space() * .5
 
-FLO_DIR = os.path.join(
-        os.path.dirname(os.path.dirname(__file__)),
-        'daemons', 'flo')
-
-VALID_OPTS = {
+VALID_OPTS = immutabletypes.freeze({
     # The address of the salt master. May be specified as IP address or hostname
     'master': (six.string_types, list),
 
@@ -662,6 +659,7 @@ VALID_OPTS = {
     'roots_update_interval': int,
     'azurefs_update_interval': int,
     'gitfs_update_interval': int,
+    'git_pillar_update_interval': int,
     'hgfs_update_interval': int,
     'minionfs_update_interval': int,
     's3fs_update_interval': int,
@@ -692,8 +690,6 @@ VALID_OPTS = {
     'gitfs_privkey': six.string_types,
     'gitfs_pubkey': six.string_types,
     'gitfs_passphrase': six.string_types,
-    'gitfs_env_whitelist': list,
-    'gitfs_env_blacklist': list,
     'gitfs_saltenv_whitelist': list,
     'gitfs_saltenv_blacklist': list,
     'gitfs_ssl_verify': bool,
@@ -707,8 +703,6 @@ VALID_OPTS = {
     'hgfs_root': six.string_types,
     'hgfs_base': six.string_types,
     'hgfs_branch_method': six.string_types,
-    'hgfs_env_whitelist': list,
-    'hgfs_env_blacklist': list,
     'hgfs_saltenv_whitelist': list,
     'hgfs_saltenv_blacklist': list,
     'svnfs_remotes': list,
@@ -717,8 +711,6 @@ VALID_OPTS = {
     'svnfs_trunk': six.string_types,
     'svnfs_branches': six.string_types,
     'svnfs_tags': six.string_types,
-    'svnfs_env_whitelist': list,
-    'svnfs_env_blacklist': list,
     'svnfs_saltenv_whitelist': list,
     'svnfs_saltenv_blacklist': list,
     'minionfs_env': six.string_types,
@@ -957,6 +949,9 @@ VALID_OPTS = {
     # Always generate minion id in lowercase.
     'minion_id_lowercase': bool,
 
+    # Remove either a single domain (foo.org), or all (True) from a generated minion id.
+    'minion_id_remove_domain': (six.string_types, bool),
+
     # If set, the master will sign all publications before they are sent out
     'sign_pub_messages': bool,
 
@@ -1169,9 +1164,6 @@ VALID_OPTS = {
     # Subconfig entries can be specified by using the ':' notation (e.g. key:subkey)
     'pass_to_ext_pillars': (six.string_types, list),
 
-    # Used by salt.modules.dockermod.compare_container_networks to specify which keys are compared
-    'docker.compare_container_networks': dict,
-
     # SSDP discovery publisher description.
     # Contains publisher configuration and minion mapping.
     # Setting it to False disables discovery
@@ -1194,10 +1186,14 @@ VALID_OPTS = {
 
     # Thorium top file location
     'thorium_top': six.string_types,
-}
+
+    # Allow raw_shell option when using the ssh
+    # client via the Salt API
+    'netapi_allow_raw_shell': bool,
+})
 
 # default configurations
-DEFAULT_MINION_OPTS = {
+DEFAULT_MINION_OPTS = immutabletypes.freeze({
     'interface': '0.0.0.0',
     'master': 'salt',
     'master_type': 'str',
@@ -1257,6 +1253,7 @@ DEFAULT_MINION_OPTS = {
     'state_top_saltenv': None,
     'startup_states': '',
     'sls_list': [],
+    'start_event_grains': [],
     'top_file': '',
     'thoriumenv': None,
     'thorium_top': 'top.sls',
@@ -1296,6 +1293,7 @@ DEFAULT_MINION_OPTS = {
     'roots_update_interval': DEFAULT_INTERVAL,
     'azurefs_update_interval': DEFAULT_INTERVAL,
     'gitfs_update_interval': DEFAULT_INTERVAL,
+    'git_pillar_update_interval': DEFAULT_INTERVAL,
     'hgfs_update_interval': DEFAULT_INTERVAL,
     'minionfs_update_interval': DEFAULT_INTERVAL,
     's3fs_update_interval': DEFAULT_INTERVAL,
@@ -1325,8 +1323,6 @@ DEFAULT_MINION_OPTS = {
     'gitfs_privkey': '',
     'gitfs_pubkey': '',
     'gitfs_passphrase': '',
-    'gitfs_env_whitelist': [],
-    'gitfs_env_blacklist': [],
     'gitfs_saltenv_whitelist': [],
     'gitfs_saltenv_blacklist': [],
     'gitfs_global_lock': True,
@@ -1443,6 +1439,7 @@ DEFAULT_MINION_OPTS = {
     'grains_refresh_every': 0,
     'minion_id_caching': True,
     'minion_id_lowercase': False,
+    'minion_id_remove_domain': False,
     'keysize': 2048,
     'transport': 'zeromq',
     'auth_timeout': 5,
@@ -1481,17 +1478,12 @@ DEFAULT_MINION_OPTS = {
     'extmod_whitelist': {},
     'extmod_blacklist': {},
     'minion_sign_messages': False,
-    'docker.compare_container_networks': {
-        'static': ['Aliases', 'Links', 'IPAMConfig'],
-        'automatic': ['IPAddress', 'Gateway',
-                      'GlobalIPv6Address', 'IPv6Gateway'],
-    },
     'discovery': False,
     'schedule': {},
     'ssh_merge_pillar': True
-}
+})
 
-DEFAULT_MASTER_OPTS = {
+DEFAULT_MASTER_OPTS = immutabletypes.freeze({
     'interface': '0.0.0.0',
     'publish_port': 4505,
     'zmq_backlog': 1000,
@@ -1544,6 +1536,7 @@ DEFAULT_MASTER_OPTS = {
     'roots_update_interval': DEFAULT_INTERVAL,
     'azurefs_update_interval': DEFAULT_INTERVAL,
     'gitfs_update_interval': DEFAULT_INTERVAL,
+    'git_pillar_update_interval': DEFAULT_INTERVAL,
     'hgfs_update_interval': DEFAULT_INTERVAL,
     'minionfs_update_interval': DEFAULT_INTERVAL,
     's3fs_update_interval': DEFAULT_INTERVAL,
@@ -1574,8 +1567,6 @@ DEFAULT_MASTER_OPTS = {
     'gitfs_privkey': '',
     'gitfs_pubkey': '',
     'gitfs_passphrase': '',
-    'gitfs_env_whitelist': [],
-    'gitfs_env_blacklist': [],
     'gitfs_saltenv_whitelist': [],
     'gitfs_saltenv_blacklist': [],
     'gitfs_global_lock': True,
@@ -1589,8 +1580,6 @@ DEFAULT_MASTER_OPTS = {
     'hgfs_root': '',
     'hgfs_base': 'default',
     'hgfs_branch_method': 'branches',
-    'hgfs_env_whitelist': [],
-    'hgfs_env_blacklist': [],
     'hgfs_saltenv_whitelist': [],
     'hgfs_saltenv_blacklist': [],
     'show_timeout': True,
@@ -1602,8 +1591,6 @@ DEFAULT_MASTER_OPTS = {
     'svnfs_trunk': 'trunk',
     'svnfs_branches': 'branches',
     'svnfs_tags': 'tags',
-    'svnfs_env_whitelist': [],
-    'svnfs_env_blacklist': [],
     'svnfs_saltenv_whitelist': [],
     'svnfs_saltenv_blacklist': [],
     'max_event_size': 1048576,
@@ -1816,12 +1803,13 @@ DEFAULT_MASTER_OPTS = {
     'auth_events': True,
     'minion_data_cache_events': True,
     'enable_ssh_minions': False,
-}
+    'netapi_allow_raw_shell': False,
+})
 
 
 # ----- Salt Proxy Minion Configuration Defaults ----------------------------------->
 # These are merged with DEFAULT_MINION_OPTS since many of them also apply here.
-DEFAULT_PROXY_MINION_OPTS = {
+DEFAULT_PROXY_MINION_OPTS = immutabletypes.freeze({
     'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'proxy'),
     'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'proxy'),
     'add_proxymodule_to_opts': False,
@@ -1847,9 +1835,10 @@ DEFAULT_PROXY_MINION_OPTS = {
     'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'proxy'),
     'cachedir': os.path.join(salt.syspaths.CACHE_DIR, 'proxy'),
     'sock_dir': os.path.join(salt.syspaths.SOCK_DIR, 'proxy'),
-}
+})
+
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
-DEFAULT_CLOUD_OPTS = {
+DEFAULT_CLOUD_OPTS = immutabletypes.freeze({
     'verify_env': True,
     'default_include': 'cloud.conf.d/*.conf',
     # Global defaults
@@ -1877,17 +1866,17 @@ DEFAULT_CLOUD_OPTS = {
     'log_rotate_backup_count': 0,
     'bootstrap_delay': None,
     'cache': 'localfs',
-}
+})
 
-DEFAULT_API_OPTS = {
+DEFAULT_API_OPTS = immutabletypes.freeze({
     # ----- Salt master settings overridden by Salt-API --------------------->
     'api_pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-api.pid'),
     'api_logfile': os.path.join(salt.syspaths.LOGS_DIR, 'api'),
     'rest_timeout': 300,
     # <---- Salt master settings overridden by Salt-API ----------------------
-}
+})
 
-DEFAULT_SPM_OPTS = {
+DEFAULT_SPM_OPTS = immutabletypes.freeze({
     # ----- Salt master settings overridden by SPM --------------------->
     'spm_conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'spm'),
     'formula_path': salt.syspaths.SPM_FORMULA_PATH,
@@ -1908,15 +1897,15 @@ DEFAULT_SPM_OPTS = {
     'spm_node_type': '',
     'spm_share_dir': os.path.join(salt.syspaths.SHARE_DIR, 'spm'),
     # <---- Salt master settings overridden by SPM ----------------------
-}
+})
 
-VM_CONFIG_DEFAULTS = {
+VM_CONFIG_DEFAULTS = immutabletypes.freeze({
     'default_include': 'cloud.profiles.d/*.conf',
-}
+})
 
-PROVIDER_CONFIG_DEFAULTS = {
+PROVIDER_CONFIG_DEFAULTS = immutabletypes.freeze({
     'default_include': 'cloud.providers.d/*.conf',
-}
+})
 # <---- Salt Cloud Configuration Defaults ------------------------------------
 
 
@@ -1971,7 +1960,7 @@ def _expand_glob_path(file_roots):
                 unglobbed_path.extend(glob.glob(path))
             else:
                 unglobbed_path.append(path)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             unglobbed_path.append(path)
     return unglobbed_path
 
@@ -2460,10 +2449,10 @@ def syndic_config(master_config_path,
                   master_defaults=None):
 
     if minion_defaults is None:
-        minion_defaults = DEFAULT_MINION_OPTS
+        minion_defaults = DEFAULT_MINION_OPTS.copy()
 
     if master_defaults is None:
-        master_defaults = DEFAULT_MASTER_OPTS
+        master_defaults = DEFAULT_MASTER_OPTS.copy()
 
     opts = {}
     master_opts = master_config(
@@ -2782,7 +2771,7 @@ def apply_cloud_config(overrides, defaults=None):
     Return a cloud config
     '''
     if defaults is None:
-        defaults = DEFAULT_CLOUD_OPTS
+        defaults = DEFAULT_CLOUD_OPTS.copy()
 
     config = defaults.copy()
     if overrides:
@@ -3567,6 +3556,26 @@ def call_id_function(opts):
         sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
 
+def remove_domain_from_fqdn(opts, newid):
+    '''
+    Depending on the values of `minion_id_remove_domain`,
+    remove all domains or a single domain from a FQDN, effectivly generating a hostname.
+    '''
+    opt_domain = opts.get('minion_id_remove_domain')
+    if opt_domain is True:
+        if '.' in newid:
+            # Remove any domain
+            newid, xdomain = newid.split('.', 1)
+            log.debug('Removed any domain (%s) from minion id.', xdomain)
+    else:
+        # Must be string type
+        if newid.upper().endswith('.' + opt_domain.upper()):
+            # Remove single domain
+            newid = newid[:-len('.' + opt_domain)]
+            log.debug('Removed single domain %s from minion id.', opt_domain)
+    return newid
+
+
 def get_id(opts, cache_minion_id=False):
     '''
     Guess the id of the minion.
@@ -3618,6 +3627,11 @@ def get_id(opts, cache_minion_id=False):
     if opts.get('minion_id_lowercase'):
         newid = newid.lower()
         log.debug('Changed minion id %s to lowercase.', newid)
+
+    # Optionally remove one or many domains in a generated minion id
+    if opts.get('minion_id_remove_domain'):
+        newid = remove_domain_from_fqdn(opts, newid)
+
     if '__role' in opts and opts.get('__role') == 'minion':
         if opts.get('id_function'):
             log.debug(
@@ -3682,7 +3696,7 @@ def apply_minion_config(overrides=None,
     Returns minion configurations dict.
     '''
     if defaults is None:
-        defaults = DEFAULT_MINION_OPTS
+        defaults = DEFAULT_MINION_OPTS.copy()
     if overrides is None:
         overrides = {}
 
@@ -3837,7 +3851,7 @@ def master_config(path, env_var='SALT_MASTER_CONFIG', defaults=None, exit_on_con
     :py:func:`salt.client.client_config`.
     '''
     if defaults is None:
-        defaults = DEFAULT_MASTER_OPTS
+        defaults = DEFAULT_MASTER_OPTS.copy()
 
     if not os.environ.get(env_var, None):
         # No valid setting was given using the configuration variable.
@@ -3879,7 +3893,7 @@ def apply_master_config(overrides=None, defaults=None):
     Returns master configurations dict.
     '''
     if defaults is None:
-        defaults = DEFAULT_MASTER_OPTS
+        defaults = DEFAULT_MASTER_OPTS.copy()
     if overrides is None:
         overrides = {}
 
@@ -4002,7 +4016,7 @@ def apply_master_config(overrides=None, defaults=None):
                 # serialization)
                 re.compile(regex)
                 opts['file_ignore_regex'].append(regex)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 log.warning(
                     'Unable to parse file_ignore_regex. Skipping: %s',
                     regex
@@ -4054,7 +4068,7 @@ def client_config(path, env_var='SALT_CLIENT_CONFIG', defaults=None):
     :py:class:`~salt.client.LocalClient`.
     '''
     if defaults is None:
-        defaults = DEFAULT_MASTER_OPTS
+        defaults = DEFAULT_MASTER_OPTS.copy()
 
     xdg_dir = salt.utils.xdg.xdg_config_dir()
     if os.path.isdir(xdg_dir):
@@ -4122,10 +4136,10 @@ def api_config(path):
     need to be stubbed out for salt-api
     '''
     # Let's grab a copy of salt-api's required defaults
-    opts = DEFAULT_API_OPTS
+    opts = DEFAULT_API_OPTS.copy()
 
     # Let's override them with salt's master opts
-    opts.update(client_config(path, defaults=DEFAULT_MASTER_OPTS))
+    opts.update(client_config(path, defaults=DEFAULT_MASTER_OPTS.copy()))
 
     # Let's set the pidfile and log_file values in opts to api settings
     opts.update({

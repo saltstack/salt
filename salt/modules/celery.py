@@ -12,9 +12,11 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
+import sys
 
 # Import salt libs
 from salt.exceptions import SaltInvocationError
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -22,7 +24,7 @@ log = logging.getLogger(__name__)
 # Import third party libs
 try:
     from celery import Celery
-    from celery.exceptions import TimeoutError
+    from celery.exceptions import TimeoutError  # pylint: disable=no-name-in-module
     HAS_CELERY = True
 except ImportError:
     HAS_CELERY = False
@@ -106,5 +108,5 @@ def run_task(task_name, args=None, kwargs=None, broker=None, backend=None, wait_
                 except TimeoutError as ex:
                     log.error('Waiting for the result of a celery task execution timed out.')
                     if raise_timeout:
-                        raise ex
+                        six.reraise(*sys.exc_info())
                     return False

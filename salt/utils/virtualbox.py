@@ -202,7 +202,7 @@ def vb_get_network_adapters(machine_name=None, machine=None):
             )
             network_adapter['properties'] = inetwork_adapter.getProperties('')
             network_adapters.append(network_adapter)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             pass
 
     return network_adapters
@@ -316,7 +316,7 @@ def vb_get_network_addresses(machine_name=None, machine=None, wait_for_pattern=N
                     address = machine.getGuestPropertyValue('/VirtualBox/GuestInfo/Net/{0}/V4/IP'.format(i))
                     if address:
                         ip_addresses.append(address)
-                except Exception as e:
+                except Exception as e:  # pylint: disable=broad-except
                     log.debug(e.message)
         except ValueError as e:
             log.debug(e.message)
@@ -428,7 +428,7 @@ def _start_machine(machine, session):
     '''
     try:
         return machine.launchVMProcess(session, '', '')
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         log.debug(e.message, exc_info=True)
         return None
 
@@ -661,7 +661,7 @@ def vb_machine_exists(name):
         vbox = vb_get_box()
         vbox.findMachine(name)
         return True
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         if isinstance(e.message, six.string_types):
             message = e.message
         elif hasattr(e, 'msg') and isinstance(getattr(e, 'msg'), six.string_types):

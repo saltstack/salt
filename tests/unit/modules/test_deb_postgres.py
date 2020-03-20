@@ -5,8 +5,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch
+from tests.support.unit import TestCase
+from tests.support.mock import Mock, patch
 
 # Import salt libs
 from salt.ext import six
@@ -20,7 +20,6 @@ LSCLUSTER = '''\
 '''
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class PostgresClusterTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
@@ -65,7 +64,6 @@ class PostgresClusterTestCase(TestCase, LoaderModuleMockMixin):
     #                            datadir='/opt/postgresql'))
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class PostgresLsClusterTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
@@ -121,7 +119,6 @@ class PostgresLsClusterTestCase(TestCase, LoaderModuleMockMixin):
         self.assertFalse(deb_postgres.cluster_exists('3.4', 'main'))
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class PostgresDeleteClusterTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):

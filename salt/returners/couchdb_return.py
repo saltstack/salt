@@ -240,11 +240,8 @@ def get_fun(fun):
                                      options['db'] +
                                      ('/_design/salt/_view/by-minion-fun-times'
                                       'tamp?descending=true&endkey=["{0}","{1}'
-                                      '",0]&startkey=["{2}","{3}",9999999999]&'
-                                      'limit=1').format(minion,
-                                                        fun,
-                                                        minion,
-                                                        fun))
+                                      '",0]&startkey=["{0}","{1}",9999999999]&'
+                                      'limit=1').format(minion, fun))
         # Skip the minion if we got an error..
         if 'error' in _response:
             log.warning(
@@ -376,4 +373,3 @@ def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argume
     '''
     Included for API consistency
     '''
-    pass

@@ -15,7 +15,7 @@ import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
 
 # Import Salt Tesing libs
-from tests.support.paths import CODE_DIR
+from tests.support.runtests import RUNTIME_VARS
 
 log = logging.getLogger(__name__)
 
@@ -26,7 +26,7 @@ def install(rootdir):
     return __salt__['cmd.run_all'](
         [
             sys.executable,
-            os.path.join(CODE_DIR, 'setup.py'),
+            os.path.join(RUNTIME_VARS.CODE_DIR, 'setup.py'),
             'install', '--root={0}'.format(rootdir)
         ],
         redirect_stderr=True

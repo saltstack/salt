@@ -465,7 +465,7 @@ def snapshot_id_to_name(name, snap_id, strict=False, runas=None):
     info = prlctl('snapshot-list', [name, '--id', snap_id], runas=runas)
 
     # Parallels desktop returned no information for snap_id
-    if not len(info):
+    if not info:
         raise SaltInvocationError(
             'No snapshots for VM "{0}" have ID "{1}"'.format(name, snap_id)
         )

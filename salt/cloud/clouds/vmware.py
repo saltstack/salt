@@ -1429,7 +1429,7 @@ def _upg_tools_helper(vm, reboot=False):
                                             'tools upgrade',
                                             sleep_seconds=5,
                                             log_level='info')
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.error(
                 'Error while upgrading VMware tools on VM %s: %s',
                 vm.name, exc,
@@ -1482,7 +1482,7 @@ def test_vcenter_connection(kwargs=None, call=None):
     try:
         # Get the service instance object
         _get_si()
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         return 'failed to connect: {0}'.format(exc)
 
     return 'connection successful'
@@ -2136,7 +2136,7 @@ def start(name, call=None):
                 log.info('Starting VM %s', name)
                 task = vm["object"].PowerOn()
                 salt.utils.vmware.wait_for_task(task, name, 'power on')
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.error(
                     'Error while powering on VM %s: %s',
                     name, exc,
@@ -2193,7 +2193,7 @@ def stop(name, soft=False, call=None):
                 else:
                     task = vm["object"].PowerOff()
                     salt.utils.vmware.wait_for_task(task, name, 'power off')
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.error(
                     'Error while powering off VM %s: %s',
                     name, exc,
@@ -2242,7 +2242,7 @@ def suspend(name, call=None):
                 log.info('Suspending VM %s', name)
                 task = vm["object"].Suspend()
                 salt.utils.vmware.wait_for_task(task, name, 'suspend')
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.error(
                     'Error while suspending VM %s: %s',
                     name, exc,
@@ -2299,7 +2299,7 @@ def reset(name, soft=False, call=None):
                 else:
                     task = vm["object"].ResetVM_Task()
                     salt.utils.vmware.wait_for_task(task, name, 'reset')
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.error(
                     'Error while resetting VM %s: %s',
                     name, exc,
@@ -2344,7 +2344,7 @@ def terminate(name, call=None):
             try:
                 log.info('Terminating VM %s', name)
                 vm["object"].Terminate()
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.error(
                     'Error while terminating VM %s: %s',
                     name, exc,
@@ -2398,7 +2398,7 @@ def destroy(name, call=None):
                     log.info('Powering Off VM %s', name)
                     task = vm["object"].PowerOff()
                     salt.utils.vmware.wait_for_task(task, name, 'power off')
-                except Exception as exc:
+                except Exception as exc:  # pylint: disable=broad-except
                     log.error(
                         'Error while powering off VM %s: %s',
                         name, exc,
@@ -2410,7 +2410,7 @@ def destroy(name, call=None):
                 log.info('Destroying VM %s', name)
                 task = vm["object"].Destroy_Task()
                 salt.utils.vmware.wait_for_task(task, name, 'destroy')
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.error(
                     'Error while destroying VM %s: %s',
                     name, exc,
@@ -2899,7 +2899,7 @@ def create(vm_):
             else:
                 task = folder_ref.CreateVM_Task(config_spec, resourcepool_ref)
             salt.utils.vmware.wait_for_task(task, vm_name, "create", 15, 'info')
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         err_msg = 'Error creating {0}: {1}'.format(vm_['name'], exc)
         log.error(
             err_msg,
@@ -2915,7 +2915,7 @@ def create(vm_):
         if not clone_type and power:
             task = new_vm_ref.PowerOn()
             salt.utils.vmware.wait_for_task(task, vm_name, 'power', 5, 'info')
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.info('Powering on the VM threw this exception. Ignoring.')
         log.info(exc)
 
@@ -3062,7 +3062,7 @@ def create_datacenter(kwargs=None, call=None):
     if isinstance(folder, vim.Folder):
         try:
             folder.CreateDatacenter(name=datacenter_name)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.error(
                 'Error creating datacenter %s: %s',
                 datacenter_name, exc,
@@ -3128,7 +3128,7 @@ def create_cluster(kwargs=None, call=None):
     if isinstance(folder, vim.Folder):
         try:
             folder.CreateClusterEx(name=cluster_name, spec=cluster_spec)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.error(
                 'Error creating cluster %s: %s',
                 cluster_name, exc,
@@ -3182,7 +3182,7 @@ def rescan_hba(kwargs=None, call=None):
             log.info('Rescanning all HBAs on host %s', host_name)
             host_ref.configManager.storageSystem.RescanAllHba()
             ret = 'rescanned all HBAs'
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error(
             'Error while rescaning HBA on host %s: %s',
             host_name, exc,
@@ -3550,7 +3550,7 @@ def enter_maintenance_mode(kwargs=None, call=None):
     try:
         task = host_ref.EnterMaintenanceMode(timeout=0, evacuatePoweredOffVms=True)
         salt.utils.vmware.wait_for_task(task, host_name, 'enter maintenance mode')
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error(
             'Error while moving host system %s in maintenance mode: %s',
             host_name, exc,
@@ -3593,7 +3593,7 @@ def exit_maintenance_mode(kwargs=None, call=None):
     try:
         task = host_ref.ExitMaintenanceMode(timeout=0)
         salt.utils.vmware.wait_for_task(task, host_name, 'exit maintenance mode')
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error(
             'Error while moving host system %s out of maintenance mode: %s',
             host_name, exc,
@@ -3747,7 +3747,7 @@ def create_snapshot(name, kwargs=None, call=None):
     try:
         task = vm_ref.CreateSnapshot(snapshot_name, desc, memdump, quiesce)
         salt.utils.vmware.wait_for_task(task, name, 'create snapshot', 5, 'info')
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error(
             'Error while creating snapshot of %s: %s',
             name, exc,
@@ -3819,7 +3819,7 @@ def revert_to_snapshot(name, kwargs=None, call=None):
 
         salt.utils.vmware.wait_for_task(task, name, 'revert to snapshot', 5, 'info')
 
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error(
             'Error while reverting VM %s to snapshot: %s',
             name, exc,
@@ -3872,7 +3872,7 @@ def remove_snapshot(name, kwargs=None, call=None):
         task = snap_obj.RemoveSnapshot_Task(remove_children)
         salt.utils.vmware.wait_for_task(task, name, 'remove snapshot', 5, 'info')
 
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error(
             'Error while removing snapshot of %s: %s',
             name, exc,
@@ -3919,7 +3919,7 @@ def remove_all_snapshots(name, kwargs=None, call=None):
     try:
         task = vm_ref.RemoveAllSnapshots()
         salt.utils.vmware.wait_for_task(task, name, 'remove snapshots', 5, 'info')
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error(
             'Error while removing snapshots on VM %s: %s',
             name, exc,
@@ -3958,7 +3958,7 @@ def convert_to_template(name, kwargs=None, call=None):
 
     try:
         vm_ref.MarkAsTemplate()
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error(
             'Error while converting VM to template %s: %s',
             name, exc,
@@ -4103,7 +4103,7 @@ def add_host(kwargs=None, call=None):
             ssl_thumbprint = out.split('=')[-1].strip()
             log.debug('SSL thumbprint received from the host system: %s', ssl_thumbprint)
             spec.sslThumbprint = ssl_thumbprint
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.error(
                 'Error while trying to get SSL thumbprint of host %s: %s',
                 host_name, exc,
@@ -4120,7 +4120,7 @@ def add_host(kwargs=None, call=None):
             task = datacenter_ref.hostFolder.AddStandaloneHost(spec=spec, addConnected=True)
             ret = 'added host system to datacenter {0}'.format(datacenter_name)
         salt.utils.vmware.wait_for_task(task, host_name, 'add host system', 5, 'info')
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         if isinstance(exc, vim.fault.SSLVerifyFault):
             log.error('Authenticity of the host\'s SSL certificate is not verified')
             log.info('Try again after setting the esxi_host_ssl_thumbprint '
@@ -4176,7 +4176,7 @@ def remove_host(kwargs=None, call=None):
             # This is a standalone host system
             task = host_ref.parent.Destroy_Task()
         salt.utils.vmware.wait_for_task(task, host_name, 'remove host', log_level='info')
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error(
             'Error while removing host %s: %s',
             host_name, exc,
@@ -4226,7 +4226,7 @@ def connect_host(kwargs=None, call=None):
     try:
         task = host_ref.ReconnectHost_Task()
         salt.utils.vmware.wait_for_task(task, host_name, 'connect host', 5, 'info')
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error(
             'Error while connecting host %s: %s',
             host_name, exc,
@@ -4276,7 +4276,7 @@ def disconnect_host(kwargs=None, call=None):
     try:
         task = host_ref.DisconnectHost_Task()
         salt.utils.vmware.wait_for_task(task, host_name, 'disconnect host', log_level='info')
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error(
             'Error while disconnecting host %s: %s',
             host_name, exc,
@@ -4347,7 +4347,7 @@ def reboot_host(kwargs=None, call=None):
     try:
         host_ref.RebootHost_Task(force)
         _wait_for_host(host_ref, "reboot", 10, 'info')
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error(
             'Error while rebooting host %s: %s',
             host_name, exc,
@@ -4409,7 +4409,7 @@ def create_datastore_cluster(kwargs=None, call=None):
 
     try:
         datacenter_ref.datastoreFolder.CreateStoragePod(name=datastore_cluster_name)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error(
             'Error creating datastore cluster %s: %s',
             datastore_cluster_name, exc,
