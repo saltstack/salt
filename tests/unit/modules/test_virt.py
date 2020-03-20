@@ -2348,6 +2348,16 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         net = virt.network_info('foo')
         self.assertEqual({}, net)
 
+    def test_network_get_xml(self):
+        '''
+        Test virt.network_get_xml
+        '''
+        network_mock = MagicMock()
+        network_mock.XMLDesc.return_value = '<net>Raw XML</net>'
+        self.mock_conn.networkLookupByName.return_value = network_mock
+
+        self.assertEqual('<net>Raw XML</net>', virt.network_get_xml('default'))
+
     def test_pool(self):
         '''
         Test virt._gen_pool_xml()
@@ -2749,6 +2759,16 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 'target_path': '/srv/vms'
             }
         }, pool)
+
+    def test_pool_get_xml(self):
+        '''
+        Test virt.pool_get_xml
+        '''
+        pool_mock = MagicMock()
+        pool_mock.XMLDesc.return_value = '<pool>Raw XML</pool>'
+        self.mock_conn.storagePoolLookupByName.return_value = pool_mock
+
+        self.assertEqual('<pool>Raw XML</pool>', virt.pool_get_xml('default'))
 
     def test_pool_list_volumes(self):
         '''
