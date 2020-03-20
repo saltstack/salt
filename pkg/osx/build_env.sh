@@ -284,7 +284,19 @@ echo "##########################################################################
 echo "Installing Salt Dependencies with pip (normal)"
 echo "################################################################################"
 $PIP install -r $SRCDIR/pkg/osx/req.txt \
-             --no-cache-dir
+             --target=$PYDIR/site-packages \
+             --ignore-installed \
+             --no-cache-dir \
+             --upgrade
+
+#echo "################################################################################"
+#echo "Installing Salt Dependencies with pip (build_ext)"
+#echo "################################################################################"
+#$PIP install -r $SRCDIR/pkg/osx/req_ext.txt \
+#             --global-option=build_ext \
+#             --global-option="-I$INSTALL_DIR/include" \
+#             --ignore-installed \
+#             --no-cache-dir
 
 echo "--------------------------------------------------------------------------------"
 echo "Create Symlink to certifi for openssl"
