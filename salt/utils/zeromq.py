@@ -5,8 +5,10 @@ ZMQ-specific functions
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import salt.ext.tornado
+
 import logging
-import tornado.ioloop
+import salt.ext.tornado.ioloop
 from salt.exceptions import SaltSystemExit
 from salt._compat import ipaddress
 
@@ -27,7 +29,7 @@ try:
         ZMQ_VERSION_INFO = tuple([int(v_el) for v_el in zmq.__version__.split('.')])
         LIBZMQ_VERSION_INFO = tuple([int(v_el) for v_el in zmq.zmq_version().split('.')])
         if ZMQ_VERSION_INFO[0] > 16:  # 17.0.x+ deprecates zmq's ioloops
-            ZMQDefaultLoop = tornado.ioloop.IOLoop
+            ZMQDefaultLoop = salt.ext.tornado.ioloop.IOLoop
 except Exception:  # pylint: disable=broad-except
     log.exception('Error while getting LibZMQ/PyZMQ library version')
 
@@ -37,12 +39,12 @@ if ZMQDefaultLoop is None:
         # Support for ZeroMQ 13.x
         if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
             zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
-        if tornado.version_info < (5,):
+        if salt.ext.tornado.version_info < (5,):
             ZMQDefaultLoop = zmq.eventloop.ioloop.ZMQIOLoop
     except ImportError:
         ZMQDefaultLoop = None
     if ZMQDefaultLoop is None:
-        ZMQDefaultLoop = tornado.ioloop.IOLoop
+        ZMQDefaultLoop = salt.ext.tornado.ioloop.IOLoop
 
 
 def install_zmq():
@@ -56,7 +58,7 @@ def install_zmq():
     # instead of checking the first element of ZMQ_VERSION_INFO will prevent an
     # IndexError when this function is invoked during the docs build.
     if zmq and ZMQ_VERSION_INFO < (17,):
-        if tornado.version_info < (5,):
+        if salt.ext.tornado.version_info < (5,):
             zmq.eventloop.ioloop.install()
 
 

@@ -19,7 +19,7 @@ import stat
 import subprocess
 import sys
 import time
-import tornado.ioloop
+import salt.ext.tornado.ioloop
 import weakref
 from datetime import datetime
 
@@ -1294,10 +1294,10 @@ class GitPython(GitProvider):
             file_path = add_mountpoint(relpath(file_blob.path))
             files.add(file_path)
             if stat.S_ISLNK(file_blob.mode):
-                stream = six.StringIO()
+                stream = six.BytesIO()
                 file_blob.stream_data(stream)
                 stream.seek(0)
-                link_tgt = stream.read()
+                link_tgt = salt.utils.stringutils.to_str(stream.read())
                 stream.close()
                 symlinks[file_path] = link_tgt
         return files, symlinks
@@ -1324,10 +1324,10 @@ class GitPython(GitProvider):
                     # this path's object ID will be the target of the
                     # symlink. Follow the symlink and set path to the
                     # location indicated in the blob data.
-                    stream = six.StringIO()
+                    stream = six.BytesIO()
                     file_blob.stream_data(stream)
                     stream.seek(0)
-                    link_tgt = stream.read()
+                    link_tgt = salt.utils.stringutils.to_str(stream.read())
                     stream.close()
                     path = salt.utils.path.join(
                         os.path.dirname(path), link_tgt, use_posixpath=True)
@@ -2676,7 +2676,7 @@ class GitFS(GitBase):
         exited.
         '''
         # No need to get the ioloop reference if we're not initializing remotes
-        io_loop = tornado.ioloop.IOLoop.current() if init_remotes else None
+        io_loop = salt.ext.tornado.ioloop.IOLoop.current() if init_remotes else None
         if not init_remotes or io_loop not in cls.instance_map:
             # We only evaluate the second condition in this if statement if
             # we're initializing remotes, so we won't get here unless io_loop

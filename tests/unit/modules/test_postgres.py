@@ -1466,6 +1466,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                     locale=None,
                     password='test',
                     runas='postgres',
+                    checksums=False,
                     user='postgres',
                 )
                 self.assertTrue(ret)

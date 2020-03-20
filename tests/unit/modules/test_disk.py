@@ -14,6 +14,7 @@ from tests.support.mock import MagicMock, patch
 # Import Salt libs
 import salt.modules.disk as disk
 import salt.utils.path
+import salt.utils.platform
 
 STUB_DISK_USAGE = {
                    '/': {'filesystem': None, '1K-blocks': 10000, 'used': 10000, 'available': 10000, 'capacity': 10000},
@@ -188,3 +189,29 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                 patch('salt.utils.path.which', MagicMock(return_value=True)):
             disk.resize2fs(device)
             mock.assert_called_once_with('resize2fs {0}'.format(device), python_shell=False)
+
+    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows')
+    @skipIf(not salt.utils.path.which('mkfs'), 'mkfs not found')
+    def test_format_(self):
+        '''
+        unit tests for disk.format_
+        '''
+        device = '/dev/sdX1'
+        mock = MagicMock(return_value=0)
+        with patch.dict(disk.__salt__, {'cmd.retcode': mock}):
+            disk.format_(device=device)
+            mock.assert_any_call(['mkfs', '-t', 'ext4', device],
+                                 ignore_retcode=True)
+
+    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows')
+    @skipIf(not salt.utils.path.which('mkfs'), 'mkfs not found')
+    def test_format__fat(self):
+        '''
+        unit tests for disk.format_ with FAT parameter
+        '''
+        device = '/dev/sdX1'
+        mock = MagicMock(return_value=0)
+        with patch.dict(disk.__salt__, {'cmd.retcode': mock}):
+            disk.format_(device=device, fs_type='fat', fat=12)
+            mock.assert_any_call(['mkfs', '-t', 'fat', '-F', 12, device],
+                                 ignore_retcode=True)

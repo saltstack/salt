@@ -6,7 +6,7 @@ Module for sending messages to Pushbullet (https://www.pushbullet.com)
 
 Requires an ``api_key`` in ``/etc/salt/minion``:
 
-.. code-block: yaml
+.. code-block:: yaml
 
     pushbullet:
       api_key: 'ABC123abc123ABC123abc123ABC123ab'
