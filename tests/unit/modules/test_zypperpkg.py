@@ -346,14 +346,32 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
 
         run_out = {"stderr": "", "stdout": "\n".join(ref_out), "retcode": 0}
 
-        with patch.dict(
-            zypper.__salt__, {"cmd.run_all": MagicMock(return_value=run_out)}
-        ):
+        zypper_mock = MagicMock(return_value=run_out)
+        call_kwargs = {
+            "output_loglevel": "trace",
+            "python_shell": False,
+            "env": {}
+        }
+        with patch.dict(zypper.__salt__, {"cmd.run_all": zypper_mock}):
             with patch.object(salt.utils.pkg, "clear_rtag", Mock()):
                 result = zypper.refresh_db()
                 self.assertEqual(result.get("openSUSE-Leap-42.1-LATEST"), False)
                 self.assertEqual(result.get("openSUSE-Leap-42.1-Update"), False)
                 self.assertEqual(result.get("openSUSE-Leap-42.1-Update-Non-Oss"), True)
+                zypper_mock.assert_called_with(
+                    ["zypper", "--non-interactive", "refresh", "--force"],
+                    **call_kwargs
+                )
+                zypper.refresh_db(force=False)
+                zypper_mock.assert_called_with(
+                    ["zypper", "--non-interactive", "refresh"],
+                    **call_kwargs
+                )
+                zypper.refresh_db(force=True)
+                zypper_mock.assert_called_with(
+                    ["zypper", "--non-interactive", "refresh", "--force"],
+                    **call_kwargs
+                )
 
     def test_info_installed(self):
         """
