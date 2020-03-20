@@ -28,6 +28,22 @@ class EggSetupTest(ModuleCase):
     '''
     Tests for building and installing egg packages
     '''
+
+    def setUp(self):
+        # ensure we have a clean build dir
+        self._clean_build()
+
+    def _clean_build(self):
+        '''
+        helper method to clean the build dir
+        '''
+        dirs = [os.path.join(RUNTIME_VARS.CODE_DIR, 'build'),
+                os.path.join(RUNTIME_VARS.CODE_DIR, 'salt.egg-info'),
+                os.path.join(RUNTIME_VARS.CODE_DIR, 'dist')]
+        for _dir in dirs:
+            if os.path.exists(_dir):
+                shutil.rmtree(_dir)
+
     def test_egg_install(self):
         '''
         test installing an egg package
@@ -37,6 +53,7 @@ class EggSetupTest(ModuleCase):
             ret = self.run_function('cmd.run', ['{0} setup.py install --prefix={1}'.format(venv.venv_python,
                                                                                            venv.venv_dir)],
                                                cwd=RUNTIME_VARS.CODE_DIR)
+            self._clean_build()
             lib_dir = os.path.join(venv.venv_dir, 'lib')
             for _dir in os.listdir(lib_dir):
                 site_pkg = os.path.join(lib_dir, _dir, 'site-packages')
@@ -50,9 +67,3 @@ class EggSetupTest(ModuleCase):
             pip_ver = self.run_function('pip.list', bin_env=venv.venv_dir).get('salt')
             egg_ver = [x for x in egg.split('/')[-1:][0].split('-') if re.search(r'^\d.\d*', x)][0]
             assert pip_ver == egg_ver.replace('_', '-')
-            assert self.run_function('cmd.run', ['salt --version']).split()[1] == pip_ver
-
-    def tearDown(self):
-        build_dir = os.path.join(RUNTIME_VARS.CODE_DIR, 'build')
-        if os.path.exists(build_dir):
-            shutil.rmtree(build_dir)
