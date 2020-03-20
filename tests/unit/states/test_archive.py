@@ -9,10 +9,8 @@ import os
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     MagicMock,
     patch
 )
@@ -43,10 +41,9 @@ def _isfile_side_effect(path):
         '/tmp/test_extracted_tar': False,
         'c:\\tmp\\test_extracted_tar': False,
         '/private/tmp/test_extracted_tar': False,
-    }[path]
+    }[path.lower() if salt.utils.platform.is_windows() else path]
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
@@ -82,11 +79,11 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
             'z -v -weird-long-opt arg',
         ]
         ret_tar_opts = [
-            ['tar', 'x', '--no-anchored', 'foo', '-f'],
+            ['tar', 'xv', '--no-anchored', 'foo', '-f'],
             ['tar', 'xv', '-p', '--opt', '-f'],
-            ['tar', 'x', '-v', '-p', '-f'],
-            ['tar', 'x', '--long-opt', '-z', '-f'],
-            ['tar', 'xz', '-v', '-weird-long-opt', 'arg', '-f'],
+            ['tar', 'xv', '-p', '-f'],
+            ['tar', 'xv', '--long-opt', '-z', '-f'],
+            ['tar', 'xvz', '-weird-long-opt', 'arg', '-f'],
         ]
 
         mock_true = MagicMock(return_value=True)
@@ -163,7 +160,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                                     options='xvzf',
                                     enforce_toplevel=False,
                                     keep=True)
-            self.assertEqual(ret['changes']['extracted_files'], 'stdout')
+            self.assertEqual(ret['changes']['extracted_files'], ['stdout'])
 
     def test_tar_bsdtar(self):
         '''
@@ -202,7 +199,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                                     options='xvzf',
                                     enforce_toplevel=False,
                                     keep=True)
-            self.assertEqual(ret['changes']['extracted_files'], 'stderr')
+            self.assertEqual(ret['changes']['extracted_files'], ['stderr'])
 
     def test_extracted_when_if_missing_path_exists(self):
         '''
@@ -225,3 +222,141 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                 ret['comment'],
                 'Path {0} exists'.format(if_missing)
             )
+
+    def test_clean_parent_conflict(self):
+        '''
+        Tests the call of extraction with gnutar with both clean_parent plus clean set to True
+        '''
+        gnutar = MagicMock(return_value='tar (GNU tar)')
+        source = '/tmp/foo.tar.gz'
+        ret_comment = "Only one of 'clean' and 'clean_parent' can be set to True"
+        mock_false = MagicMock(return_value=False)
+        mock_true = MagicMock(return_value=True)
+        state_single_mock = MagicMock(return_value={'local': {'result': True}})
+        run_all = MagicMock(return_value={'retcode': 0, 'stdout': 'stdout', 'stderr': 'stderr'})
+        mock_source_list = MagicMock(return_value=(source, None))
+        list_mock = MagicMock(return_value={
+            'dirs': [],
+            'files': ['stdout'],
+            'links': [],
+            'top_level_dirs': [],
+            'top_level_files': ['stdout'],
+            'top_level_links': [],
+        })
+        isfile_mock = MagicMock(side_effect=_isfile_side_effect)
+
+        with patch.dict(archive.__salt__, {'cmd.run': gnutar,
+                                           'file.directory_exists': mock_false,
+                                           'file.file_exists': mock_false,
+                                           'state.single': state_single_mock,
+                                           'file.makedirs': mock_true,
+                                           'cmd.run_all': run_all,
+                                           'archive.list': list_mock,
+                                           'file.source_list': mock_source_list}),\
+                patch.dict(archive.__states__, {'file.directory': mock_true}),\
+                patch.object(os.path, 'isfile', isfile_mock),\
+                patch('salt.utils.path.which', MagicMock(return_value=True)):
+            ret = archive.extracted(os.path.join(os.sep + 'tmp', 'out'),
+                                    source,
+                                    options='xvzf',
+                                    enforce_toplevel=False,
+                                    clean=True,
+                                    clean_parent=True,
+                                    keep=True)
+            self.assertEqual(ret['result'], False)
+            self.assertEqual(ret['changes'], {})
+            self.assertEqual(ret['comment'], ret_comment)
+
+    def test_skip_files_list_verify_conflict(self):
+        '''
+        Tests the call of extraction  with both skip_files_list_verify and skip_verify set to True
+        '''
+        gnutar = MagicMock(return_value='tar (GNU tar)')
+        source = '/tmp/foo.tar.gz'
+        ret_comment = 'Only one of "skip_files_list_verify" and "skip_verify" can be set to True'
+        mock_false = MagicMock(return_value=False)
+        mock_true = MagicMock(return_value=True)
+        state_single_mock = MagicMock(return_value={'local': {'result': True}})
+        run_all = MagicMock(return_value={'retcode': 0, 'stdout': 'stdout', 'stderr': 'stderr'})
+        mock_source_list = MagicMock(return_value=(source, None))
+        list_mock = MagicMock(return_value={
+            'dirs': [],
+            'files': ['stdout'],
+            'links': [],
+            'top_level_dirs': [],
+            'top_level_files': ['stdout'],
+            'top_level_links': [],
+        })
+        isfile_mock = MagicMock(side_effect=_isfile_side_effect)
+
+        with patch.dict(archive.__salt__, {'cmd.run': gnutar,
+                                           'file.directory_exists': mock_false,
+                                           'file.file_exists': mock_false,
+                                           'state.single': state_single_mock,
+                                           'file.makedirs': mock_true,
+                                           'cmd.run_all': run_all,
+                                           'archive.list': list_mock,
+                                           'file.source_list': mock_source_list}),\
+                patch.dict(archive.__states__, {'file.directory': mock_true}),\
+                patch.object(os.path, 'isfile', isfile_mock),\
+                patch('salt.utils.path.which', MagicMock(return_value=True)):
+            ret = archive.extracted(os.path.join(os.sep + 'tmp', 'out'),
+                                    source,
+                                    options='xvzf',
+                                    enforce_toplevel=False,
+                                    clean=True,
+                                    skip_files_list_verify=True,
+                                    skip_verify=True,
+                                    keep=True)
+            self.assertEqual(ret['result'], False)
+            self.assertEqual(ret['changes'], {})
+            self.assertEqual(ret['comment'], ret_comment)
+
+    def test_skip_files_list_verify_success(self):
+        '''
+        Test that if the local and expected source hash are the same we won't do anything.
+        '''
+
+        if salt.utils.platform.is_windows():
+            source = 'c:\\tmp\\foo.tar.gz'
+            tmp_dir = 'c:\\tmp\\test_extracted_tar'
+        elif salt.utils.platform.is_darwin():
+            source = '/private/tmp/foo.tar.gz'
+            tmp_dir = '/private/tmp/test_extracted_tar'
+        else:
+            source = '/tmp/foo.tar.gz'
+            tmp_dir = '/tmp/test_extracted_tar'
+
+        expected_comment = ('Archive {} existing source sum is the same as the '
+                            'expected one and skip_files_list_verify argument '
+                            'was set to True. Extraction is not needed'.format(source))
+        expected_ret = {'name': tmp_dir,
+                        'result': True,
+                        'changes': {},
+                        'comment': expected_comment
+                       }
+        mock_true = MagicMock(return_value=True)
+        mock_false = MagicMock(return_value=False)
+        mock_cached = MagicMock(return_value='{}/{}'.format(tmp_dir, source))
+        source_sum = {'hsum': 'testhash', 'hash_type': 'sha256'}
+        mock_hash = MagicMock(return_value=source_sum)
+        mock_source_list = MagicMock(return_value=(source, None))
+        isfile_mock = MagicMock(side_effect=_isfile_side_effect)
+
+        with patch('salt.states.archive._read_cached_checksum', mock_hash):
+            with patch.dict(archive.__opts__, {'test': False,
+                                               'cachedir': tmp_dir,
+                                               'hash_type': 'sha256'}),\
+                    patch.dict(archive.__salt__, {'file.directory_exists': mock_false,
+                                                  'file.get_source_sum': mock_hash,
+                                                  'file.check_hash': mock_true,
+                                                  'cp.is_cached': mock_cached,
+                                                  'file.source_list': mock_source_list}),\
+                    patch.object(os.path, 'isfile', isfile_mock):
+
+                ret = archive.extracted(tmp_dir,
+                                        source,
+                                        source_hash='testhash',
+                                        skip_files_list_verify=True,
+                                        enforce_toplevel=False)
+                self.assertDictEqual(ret, expected_ret)

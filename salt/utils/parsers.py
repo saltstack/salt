@@ -137,7 +137,7 @@ class OptionParserMeta(MixInMeta):
 
 
 class CustomOption(optparse.Option, object):
-    def take_action(self, action, dest, *args, **kwargs):
+    def take_action(self, action, dest, *args, **kwargs):  # pylint: disable=arguments-differ
         # see https://github.com/python/cpython/blob/master/Lib/optparse.py#L786
         self.explicit = True
         return optparse.Option.take_action(self, action, dest, *args, **kwargs)
@@ -2542,7 +2542,7 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
     process_config_dir._mixin_prio_ = ConfigDirMixIn._mixin_prio_
 
     def setup_config(self):
-        keys_config = config.master_config(self.get_config_file_path())
+        keys_config = config.client_config(self.get_config_file_path())
         if self.options.gen_keys:
             # Since we're generating the keys, some defaults can be assumed
             # or tweaked

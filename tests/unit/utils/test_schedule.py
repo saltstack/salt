@@ -12,7 +12,7 @@ import os
 
 # Import Salt Testing Libs
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
+from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt Libs
@@ -29,8 +29,8 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+
 # pylint: disable=too-many-public-methods,invalid-name
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class ScheduleTestCase(TestCase):
     '''
     Unit tests for salt.utils.schedule module
@@ -214,9 +214,12 @@ class ScheduleTestCase(TestCase):
         '''
         Tests enabling the scheduler
         '''
-        self.schedule.opts.update({'schedule': {'enabled': 'foo'}, 'pillar': {}})
-        Schedule.enable_schedule(self.schedule)
-        self.assertTrue(self.schedule.opts['schedule']['enabled'])
+        with patch('salt.utils.schedule.Schedule.persist', MagicMock(return_value=None)) as persist_mock:
+            self.schedule.opts.update({'schedule': {'enabled': 'foo'}, 'pillar': {}})
+            Schedule.enable_schedule(self.schedule)
+            self.assertTrue(self.schedule.opts['schedule']['enabled'])
+
+        persist_mock.assert_called()
 
     # disable_schedule tests
 
@@ -224,9 +227,12 @@ class ScheduleTestCase(TestCase):
         '''
         Tests disabling the scheduler
         '''
-        self.schedule.opts.update({'schedule': {'enabled': 'foo'}, 'pillar': {}})
-        Schedule.disable_schedule(self.schedule)
-        self.assertFalse(self.schedule.opts['schedule']['enabled'])
+        with patch('salt.utils.schedule.Schedule.persist', MagicMock(return_value=None)) as persist_mock:
+            self.schedule.opts.update({'schedule': {'enabled': 'foo'}, 'pillar': {}})
+            Schedule.disable_schedule(self.schedule)
+            self.assertFalse(self.schedule.opts['schedule']['enabled'])
+
+        persist_mock.assert_called()
 
     # reload tests
 

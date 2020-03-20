@@ -15,14 +15,13 @@ import salt.utils.files
 from salt.ext import six
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase, skipIf
-from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON, mock_open
+from tests.support.unit import TestCase
+from tests.support.mock import patch, mock_open
 
 # Import 3rd-party libs
 from salt.ext import six
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class YamlLoaderTestCase(TestCase):
     '''
     TestCase for salt.utils.yamlloader module

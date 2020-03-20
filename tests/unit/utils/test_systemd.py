@@ -6,8 +6,8 @@ import errno
 import os
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase, skipIf
-from tests.support.mock import Mock, patch, NO_MOCK, NO_MOCK_REASON
+from tests.support.unit import TestCase
+from tests.support.mock import Mock, patch
 
 # Import Salt libs
 import salt.utils.systemd as _systemd
@@ -24,7 +24,6 @@ def _not_booted_effect(path):
     return os.stat(path)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class SystemdTestCase(TestCase):
     '''
     Tests the functions in salt.utils.systemd

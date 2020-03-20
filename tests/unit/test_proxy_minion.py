@@ -8,12 +8,11 @@ from __future__ import absolute_import
 import copy
 
 import logging
-import tornado
-import tornado.testing
+import salt.ext.tornado
+import salt.ext.tornado.testing
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase, skipIf
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON
+from tests.support.unit import TestCase
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 
 # Import salt libs
@@ -25,7 +24,6 @@ log = logging.getLogger(__name__)
 __opts__ = {}
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class ProxyMinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     def test_post_master_init_metaproxy_called(self):
         '''
@@ -33,7 +31,7 @@ class ProxyMinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         mock_jid_queue = [123]
-        proxy_minion = salt.minion.ProxyMinion(mock_opts, jid_queue=copy.copy(mock_jid_queue), io_loop=tornado.ioloop.IOLoop())
+        proxy_minion = salt.minion.ProxyMinion(mock_opts, jid_queue=copy.copy(mock_jid_queue), io_loop=salt.ext.tornado.ioloop.IOLoop())
         try:
             ret = proxy_minion._post_master_init('dummy_master')
             self.assert_called_once(salt.minion._metaproxy_call)
@@ -48,7 +46,7 @@ class ProxyMinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         mock_data = {'fun': 'foo.bar',
                      'jid': 123}
         mock_jid_queue = [123]
-        proxy_minion = salt.minion.ProxyMinion(mock_opts, jid_queue=copy.copy(mock_jid_queue), io_loop=tornado.ioloop.IOLoop())
+        proxy_minion = salt.minion.ProxyMinion(mock_opts, jid_queue=copy.copy(mock_jid_queue), io_loop=salt.ext.tornado.ioloop.IOLoop())
         try:
             ret = proxy_minion._handle_decoded_payload(mock_data).result()
             self.assertEqual(proxy_minion.jid_queue, mock_jid_queue)
@@ -65,7 +63,7 @@ class ProxyMinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         mock_data = {'fun': 'foo.bar',
                      'jid': 123}
         mock_jid_queue = [123]
-        proxy_minion = salt.minion.ProxyMinion(mock_opts, jid_queue=copy.copy(mock_jid_queue), io_loop=tornado.ioloop.IOLoop())
+        proxy_minion = salt.minion.ProxyMinion(mock_opts, jid_queue=copy.copy(mock_jid_queue), io_loop=salt.ext.tornado.ioloop.IOLoop())
         try:
             ret = proxy_minion._handle_decoded_payload(mock_data).result()
             self.assertEqual(proxy_minion.jid_queue, mock_jid_queue)

@@ -659,6 +659,7 @@ VALID_OPTS = immutabletypes.freeze({
     'roots_update_interval': int,
     'azurefs_update_interval': int,
     'gitfs_update_interval': int,
+    'git_pillar_update_interval': int,
     'hgfs_update_interval': int,
     'minionfs_update_interval': int,
     's3fs_update_interval': int,
@@ -689,8 +690,6 @@ VALID_OPTS = immutabletypes.freeze({
     'gitfs_privkey': six.string_types,
     'gitfs_pubkey': six.string_types,
     'gitfs_passphrase': six.string_types,
-    'gitfs_env_whitelist': list,
-    'gitfs_env_blacklist': list,
     'gitfs_saltenv_whitelist': list,
     'gitfs_saltenv_blacklist': list,
     'gitfs_ssl_verify': bool,
@@ -704,8 +703,6 @@ VALID_OPTS = immutabletypes.freeze({
     'hgfs_root': six.string_types,
     'hgfs_base': six.string_types,
     'hgfs_branch_method': six.string_types,
-    'hgfs_env_whitelist': list,
-    'hgfs_env_blacklist': list,
     'hgfs_saltenv_whitelist': list,
     'hgfs_saltenv_blacklist': list,
     'svnfs_remotes': list,
@@ -714,8 +711,6 @@ VALID_OPTS = immutabletypes.freeze({
     'svnfs_trunk': six.string_types,
     'svnfs_branches': six.string_types,
     'svnfs_tags': six.string_types,
-    'svnfs_env_whitelist': list,
-    'svnfs_env_blacklist': list,
     'svnfs_saltenv_whitelist': list,
     'svnfs_saltenv_blacklist': list,
     'minionfs_env': six.string_types,
@@ -954,6 +949,9 @@ VALID_OPTS = immutabletypes.freeze({
     # Always generate minion id in lowercase.
     'minion_id_lowercase': bool,
 
+    # Remove either a single domain (foo.org), or all (True) from a generated minion id.
+    'minion_id_remove_domain': (six.string_types, bool),
+
     # If set, the master will sign all publications before they are sent out
     'sign_pub_messages': bool,
 
@@ -1166,9 +1164,6 @@ VALID_OPTS = immutabletypes.freeze({
     # Subconfig entries can be specified by using the ':' notation (e.g. key:subkey)
     'pass_to_ext_pillars': (six.string_types, list),
 
-    # Used by salt.modules.dockermod.compare_container_networks to specify which keys are compared
-    'docker.compare_container_networks': dict,
-
     # SSDP discovery publisher description.
     # Contains publisher configuration and minion mapping.
     # Setting it to False disables discovery
@@ -1191,6 +1186,10 @@ VALID_OPTS = immutabletypes.freeze({
 
     # Thorium top file location
     'thorium_top': six.string_types,
+
+    # Allow raw_shell option when using the ssh
+    # client via the Salt API
+    'netapi_allow_raw_shell': bool,
 })
 
 # default configurations
@@ -1254,6 +1253,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze({
     'state_top_saltenv': None,
     'startup_states': '',
     'sls_list': [],
+    'start_event_grains': [],
     'top_file': '',
     'thoriumenv': None,
     'thorium_top': 'top.sls',
@@ -1293,6 +1293,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze({
     'roots_update_interval': DEFAULT_INTERVAL,
     'azurefs_update_interval': DEFAULT_INTERVAL,
     'gitfs_update_interval': DEFAULT_INTERVAL,
+    'git_pillar_update_interval': DEFAULT_INTERVAL,
     'hgfs_update_interval': DEFAULT_INTERVAL,
     'minionfs_update_interval': DEFAULT_INTERVAL,
     's3fs_update_interval': DEFAULT_INTERVAL,
@@ -1322,8 +1323,6 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze({
     'gitfs_privkey': '',
     'gitfs_pubkey': '',
     'gitfs_passphrase': '',
-    'gitfs_env_whitelist': [],
-    'gitfs_env_blacklist': [],
     'gitfs_saltenv_whitelist': [],
     'gitfs_saltenv_blacklist': [],
     'gitfs_global_lock': True,
@@ -1440,6 +1439,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze({
     'grains_refresh_every': 0,
     'minion_id_caching': True,
     'minion_id_lowercase': False,
+    'minion_id_remove_domain': False,
     'keysize': 2048,
     'transport': 'zeromq',
     'auth_timeout': 5,
@@ -1478,11 +1478,6 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze({
     'extmod_whitelist': {},
     'extmod_blacklist': {},
     'minion_sign_messages': False,
-    'docker.compare_container_networks': {
-        'static': ['Aliases', 'Links', 'IPAMConfig'],
-        'automatic': ['IPAddress', 'Gateway',
-                      'GlobalIPv6Address', 'IPv6Gateway'],
-    },
     'discovery': False,
     'schedule': {},
     'ssh_merge_pillar': True
@@ -1541,6 +1536,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze({
     'roots_update_interval': DEFAULT_INTERVAL,
     'azurefs_update_interval': DEFAULT_INTERVAL,
     'gitfs_update_interval': DEFAULT_INTERVAL,
+    'git_pillar_update_interval': DEFAULT_INTERVAL,
     'hgfs_update_interval': DEFAULT_INTERVAL,
     'minionfs_update_interval': DEFAULT_INTERVAL,
     's3fs_update_interval': DEFAULT_INTERVAL,
@@ -1571,8 +1567,6 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze({
     'gitfs_privkey': '',
     'gitfs_pubkey': '',
     'gitfs_passphrase': '',
-    'gitfs_env_whitelist': [],
-    'gitfs_env_blacklist': [],
     'gitfs_saltenv_whitelist': [],
     'gitfs_saltenv_blacklist': [],
     'gitfs_global_lock': True,
@@ -1586,8 +1580,6 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze({
     'hgfs_root': '',
     'hgfs_base': 'default',
     'hgfs_branch_method': 'branches',
-    'hgfs_env_whitelist': [],
-    'hgfs_env_blacklist': [],
     'hgfs_saltenv_whitelist': [],
     'hgfs_saltenv_blacklist': [],
     'show_timeout': True,
@@ -1599,8 +1591,6 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze({
     'svnfs_trunk': 'trunk',
     'svnfs_branches': 'branches',
     'svnfs_tags': 'tags',
-    'svnfs_env_whitelist': [],
-    'svnfs_env_blacklist': [],
     'svnfs_saltenv_whitelist': [],
     'svnfs_saltenv_blacklist': [],
     'max_event_size': 1048576,
@@ -1813,6 +1803,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze({
     'auth_events': True,
     'minion_data_cache_events': True,
     'enable_ssh_minions': False,
+    'netapi_allow_raw_shell': False,
 })
 
 
@@ -1969,7 +1960,7 @@ def _expand_glob_path(file_roots):
                 unglobbed_path.extend(glob.glob(path))
             else:
                 unglobbed_path.append(path)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             unglobbed_path.append(path)
     return unglobbed_path
 
@@ -3565,6 +3556,26 @@ def call_id_function(opts):
         sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
 
+def remove_domain_from_fqdn(opts, newid):
+    '''
+    Depending on the values of `minion_id_remove_domain`,
+    remove all domains or a single domain from a FQDN, effectivly generating a hostname.
+    '''
+    opt_domain = opts.get('minion_id_remove_domain')
+    if opt_domain is True:
+        if '.' in newid:
+            # Remove any domain
+            newid, xdomain = newid.split('.', 1)
+            log.debug('Removed any domain (%s) from minion id.', xdomain)
+    else:
+        # Must be string type
+        if newid.upper().endswith('.' + opt_domain.upper()):
+            # Remove single domain
+            newid = newid[:-len('.' + opt_domain)]
+            log.debug('Removed single domain %s from minion id.', opt_domain)
+    return newid
+
+
 def get_id(opts, cache_minion_id=False):
     '''
     Guess the id of the minion.
@@ -3616,6 +3627,11 @@ def get_id(opts, cache_minion_id=False):
     if opts.get('minion_id_lowercase'):
         newid = newid.lower()
         log.debug('Changed minion id %s to lowercase.', newid)
+
+    # Optionally remove one or many domains in a generated minion id
+    if opts.get('minion_id_remove_domain'):
+        newid = remove_domain_from_fqdn(opts, newid)
+
     if '__role' in opts and opts.get('__role') == 'minion':
         if opts.get('id_function'):
             log.debug(
@@ -4000,7 +4016,7 @@ def apply_master_config(overrides=None, defaults=None):
                 # serialization)
                 re.compile(regex)
                 opts['file_ignore_regex'].append(regex)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 log.warning(
                     'Unable to parse file_ignore_regex. Skipping: %s',
                     regex

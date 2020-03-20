@@ -301,7 +301,7 @@ def create(name, allocated_storage, db_instance_class, engine,
             status = describe_db_instances(name=name, jmespath=jmespath,
                                            region=region, key=key, keyid=keyid,
                                            profile=profile)
-            if len(status):
+            if status:
                 stat = status[0]
             else:
                 # Whoops, something is horribly wrong...
@@ -507,7 +507,7 @@ def update_parameter_group(name, parameters, apply_method="pending-reboot",
             item.update({'ParameterValue': str(value)})  # future lint: disable=blacklisted-function
         param_list.append(item)
 
-    if not len(param_list):
+    if not param_list:
         return {'results': False}
 
     try:

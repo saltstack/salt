@@ -10,20 +10,19 @@ docker
 futures>=2.0; python_version < '3.0'
 GitPython
 hgtools
+jmespath
 jsonschema
 junos-eznc
 jxmlease
 kazoo
 keyring==5.7.1
 kubernetes<4.0
-mock>=3.0.5; python_version < '3.6'
+libnacl==1.6.0
+mock>=3.0.5
 more-itertools==5.0.0
 moto
 paramiko>=2.1.6
 psutil
-# Let's install pycryptodome instead of pycrypto because of pycrypto's outstanding security issues
-# PyCrypto, if pulled, will be removed from the generated static requirements
-pycryptodome
 pygit2
 pyinotify
 pyopenssl
@@ -38,6 +37,12 @@ setuptools-scm
 strict_rfc3339
 supervisor==3.3.5; python_version < '3'
 timelib
-tornado<5.0
 virtualenv
 watchdog
+vcert~=0.7.0
+
+# Available template libraries that can be used
+Genshi
+Cheetah3==3.1.0
+Mako
+wempy; python_version <'3'

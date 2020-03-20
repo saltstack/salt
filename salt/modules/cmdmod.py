@@ -344,7 +344,7 @@ def _run(cmd,
         # The last item in the list [-1] is the current method.
         # The third item[2] in each tuple is the name of that method.
         if stack[-2][2] == 'script':
-            cmd = 'Powershell -NonInteractive -NoProfile -ExecutionPolicy Bypass -File ' + cmd
+            cmd = 'Powershell -NonInteractive -NoProfile -ExecutionPolicy Bypass {0}'.format(cmd.replace('"', '\\"'))
         elif encoded_cmd:
             cmd = 'Powershell -NonInteractive -EncodedCommand {0}'.format(cmd)
         else:
@@ -418,7 +418,13 @@ def _run(cmd,
 
         # Ensure environment is correct for a newly logged-in user by running
         # the command under bash as a login shell
-        cmd = '/bin/bash -l -c {cmd}'.format(cmd=_cmd_quote(cmd))
+        try:
+            user_shell = __salt__['user.info'](runas)['shell']
+            if re.search('bash$', user_shell):
+                cmd = '{shell} -l -c {cmd}'.format(shell=user_shell,
+                                                   cmd=_cmd_quote(cmd))
+        except KeyError:
+            pass
 
         # Ensure the login is simulated correctly (note: su runs sh, not bash,
         # which causes the environment to be initialised incorrectly, which is
@@ -2377,6 +2383,22 @@ def script(source,
         on a Windows minion you must also use the ``password`` argument, and
         the target user account must be in the Administrators group.
 
+        .. note::
+
+            For Window's users, specifically Server users, it may be necessary
+            to specify your runas user using the User Logon Name instead of the
+            legacy logon name. Traditionally, logons would be in the following
+            format.
+
+                ``Domain/user``
+
+            In the event this causes issues when executing scripts, use the UPN
+            format which looks like the following.
+
+                ``user@domain.local``
+
+            More information <https://github.com/saltstack/salt/issues/55080>
+
     :param str password: Windows only. Required when specifying ``runas``. This
         parameter will be ignored on non-Windows platforms.
 
@@ -2895,6 +2917,7 @@ def run_chroot(root,
                group=None,
                shell=DEFAULT_SHELL,
                python_shell=True,
+               binds=None,
                env=None,
                clean_env=False,
                template=None,
@@ -2920,19 +2943,17 @@ def run_chroot(root,
 
     :param str root: Path to the root of the jail to use.
 
-    stdin
-        A string of standard input can be specified for the command to be run using
-        the ``stdin`` parameter. This can be useful in cases where sensitive
-        information must be read from standard input.:
+    :param str stdin: A string of standard input can be specified for
+        the command to be run using the ``stdin`` parameter. This can
+        be useful in cases where sensitive information must be read
+        from standard input.:
 
-    runas
-        User to run script as.
+    :param str runas: User to run script as.
 
-    group
-        Group to run script as.
+    :param str group: Group to run script as.
 
-    shell
-        Shell to execute under. Defaults to the system default shell.
+    :param str shell: Shell to execute under. Defaults to the system
+        default shell.
 
     :param str cmd: The command to run. ex: ``ls -lart /home``
 
@@ -2956,6 +2977,11 @@ def run_chroot(root,
         arguments. Set to True to use shell features, such as pipes or
         redirection.
 
+    :param list binds: List of directories that will be exported inside
+        the chroot with the bind option.
+
+        .. versionadded:: 3000
+
     :param dict env: Environment variables to be set prior to execution.
 
         .. note::
@@ -2974,11 +3000,11 @@ def run_chroot(root,
         engine will be used to render the downloaded file. Currently jinja,
         mako, and wempy are supported.
 
-    :param bool rstrip:
-        Strip all whitespace off the end of output before it is returned.
+    :param bool rstrip: Strip all whitespace off the end of output
+        before it is returned.
 
-    :param str umask:
-         The umask (in octal) to use when running the command.
+    :param str umask: The umask (in octal) to use when running the
+         command.
 
     :param str output_encoding: Control the encoding used to decode the
         command's output.
@@ -3052,6 +3078,15 @@ def run_chroot(root,
         'sysfs',
         fstype='sysfs')
 
+    binds = binds if binds else []
+    for bind_exported in binds:
+        bind_exported_to = os.path.relpath(bind_exported, os.path.sep)
+        bind_exported_to = os.path.join(root, bind_exported_to)
+        __salt__['mount.mount'](
+            bind_exported_to,
+            bind_exported,
+            opts='default,bind')
+
     # Execute chroot routine
     sh_ = '/bin/sh'
     if os.path.isfile(os.path.join(root, 'bin/bash')):
@@ -3101,6 +3136,11 @@ def run_chroot(root,
     if _chroot_pids(root):
         log.error('Processes running in chroot could not be killed, '
                   'filesystem will remain mounted')
+
+    for bind_exported in binds:
+        bind_exported_to = os.path.relpath(bind_exported, os.path.sep)
+        bind_exported_to = os.path.join(root, bind_exported_to)
+        __salt__['mount.umount'](bind_exported_to)
 
     __salt__['mount.umount'](os.path.join(root, 'sys'))
     __salt__['mount.umount'](os.path.join(root, 'proc'))
@@ -3598,7 +3638,7 @@ def powershell(cmd,
 
     try:
         return salt.utils.json.loads(response)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         log.error("Error converting PowerShell JSON return", exc_info=True)
         return {}
 
@@ -3923,7 +3963,7 @@ def powershell_all(cmd,
     # If we fail to parse stdoutput we will raise an exception
     try:
         result = salt.utils.json.loads(stdoutput)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         err_msg = "cmd.powershell_all " + \
                   "cannot parse the Powershell output."
         response["cmd"] = cmd

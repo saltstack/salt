@@ -228,10 +228,10 @@ class VirtualboxProviderHeavyTests(VirtualboxCloudTestCase):
         """
         try:
             socket.inet_aton(ip_str)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             try:
                 socket.inet_pton(socket.AF_INET6, ip_str)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 self.fail("{0} is not a valid IP address".format(ip_str))
 
     def setUp(self):
@@ -285,14 +285,14 @@ class VirtualboxProviderHeavyTests(VirtualboxCloudTestCase):
     def tearDown(self):
         try:
             vb_stop_vm(BOOTABLE_BASE_BOX_NAME)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             pass
 
         if vb_machine_exists(INSTANCE_NAME):
             try:
                 vb_stop_vm(INSTANCE_NAME)
                 vb_destroy_machine(INSTANCE_NAME)
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-except
                 log.warning("Possibly dirty state after exception", exc_info=True)
 
     def test_deploy(self):
@@ -349,8 +349,6 @@ class BaseVirtualboxTests(TestCase):
 
 
 class CreationDestructionVirtualboxTests(VirtualboxTestCase):
-    def setUp(self):
-        super(CreationDestructionVirtualboxTests, self).setUp()
 
     def test_vm_creation_and_destruction(self):
         vm_name = BASE_BOX_NAME
