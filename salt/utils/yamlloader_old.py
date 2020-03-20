@@ -14,7 +14,7 @@ from yaml.constructor import ConstructorError
 try:
     yaml.Loader = yaml.CLoader
     yaml.Dumper = yaml.CDumper
-except Exception:
+except Exception:  # pylint: disable=broad-except
     pass
 
 import salt.utils.stringutils

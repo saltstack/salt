@@ -73,6 +73,9 @@ of the 2015.5 branch:
    example, cwd: 'C:\\salt\\bin\\scripts'. Sometimes python thinks the single
    back slash is an escape character.
 
+   There is a known incompatibility between Python2 pip>=10.* and Salt <=2018.3.0.
+   The issue is decribed here: https://github.com/saltstack/salt/issues/46163
+
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 
@@ -85,6 +88,7 @@ import shutil
 import sys
 import tempfile
 
+
 # Import Salt libs
 import salt.utils.data
 import salt.utils.files
@@ -96,6 +100,7 @@ import salt.utils.url
 import salt.utils.versions
 from salt.ext import six
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
+import salt.utils.platform
 
 # This needs to be named logger so we don't shadow it in pip.install
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
@@ -117,6 +122,19 @@ def __virtual__():
     user is required to provide the location of pip each time it is used.
     '''
     return 'pip'
+
+
+def _pip_bin_env(cwd, bin_env):
+    """
+    Binary builds need to have the 'cwd' set when using pip on Windows. This will
+    set cwd if pip is being used in 'bin_env', 'cwd' is None and salt is on windows.
+    """
+
+    if salt.utils.platform.is_windows():
+        if bin_env is not None and cwd is None and 'pip' in os.path.basename(bin_env):
+            cwd = os.path.dirname(bin_env)
+
+    return cwd
 
 
 def _clear_context(bin_env=None):
@@ -481,6 +499,11 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         behind an authenticated proxy. If you provide
         ``user@proxy.server:port`` then you will be prompted for a password.
 
+        .. note::
+            If the the Minion has a globaly configured proxy - it will be used
+            even if no proxy was set here. To explicitly disable proxy for pip
+            you should pass ``False`` as a value.
+
     timeout
         Set the socket timeout (default 15 seconds)
 
@@ -644,6 +667,8 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
                 editable=git+https://github.com/worldcompany/djangoembed.git#egg=djangoembed upgrade=True no_deps=True
 
     '''
+
+    cwd = _pip_bin_env(cwd, bin_env)
     cmd = _get_pip_bin(bin_env)
     cmd.append('install')
 
@@ -658,7 +683,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     if error:
         return error
 
-    cur_version = version(bin_env)
+    cur_version = version(bin_env, cwd)
 
     if use_wheel:
         min_version = '1.4'
@@ -711,8 +736,16 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
         cmd.extend(['--log', log])
 
+    config = __opts__
     if proxy:
         cmd.extend(['--proxy', proxy])
+    # If proxy arg is set to False we won't use the global proxy even if it's set.
+    elif proxy is not False and config.get('proxy_host') and config.get('proxy_port'):
+        if config.get('proxy_username') and config.get('proxy_password'):
+            http_proxy_url = 'http://{proxy_username}:{proxy_password}@{proxy_host}:{proxy_port}'.format(**config)
+        else:
+            http_proxy_url = 'http://{proxy_host}:{proxy_port}'.format(**config)
+        cmd.extend(['--proxy', http_proxy_url])
 
     if timeout:
         try:
@@ -995,6 +1028,11 @@ def uninstall(pkgs=None,
         behind an authenticated proxy.  If you provide
         ``user@proxy.server:port`` then you will be prompted for a password.
 
+        .. note::
+            If the the Minion has a globaly configured proxy - it will be used
+            even if no proxy was set here. To explicitly disable proxy for pip
+            you should pass ``False`` as a value.
+
     timeout
         Set the socket timeout (default 15 seconds)
 
@@ -1016,6 +1054,8 @@ def uninstall(pkgs=None,
         salt '*' pip.uninstall <package name> bin_env=/path/to/virtualenv
         salt '*' pip.uninstall <package name> bin_env=/path/to/pip_bin
     '''
+
+    cwd = _pip_bin_env(cwd, bin_env)
     cmd = _get_pip_bin(bin_env)
     cmd.extend(['uninstall', '-y'])
 
@@ -1036,8 +1076,16 @@ def uninstall(pkgs=None,
 
         cmd.extend(['--log', log])
 
+    config = __opts__
     if proxy:
         cmd.extend(['--proxy', proxy])
+    # If proxy arg is set to False we won't use the global proxy even if it's set.
+    elif proxy is not False and config.get('proxy_host') and config.get('proxy_port'):
+        if config.get('proxy_username') and config.get('proxy_password'):
+            http_proxy_url = 'http://{proxy_username}:{proxy_password}@{proxy_host}:{proxy_port}'.format(**config)
+        else:
+            http_proxy_url = 'http://{proxy_host}:{proxy_port}'.format(**config)
+        cmd.extend(['--proxy', http_proxy_url])
 
     if timeout:
         try:
@@ -1119,12 +1167,14 @@ def freeze(bin_env=None,
 
         salt '*' pip.freeze bin_env=/home/code/path/to/virtualenv
     '''
+
+    cwd = _pip_bin_env(cwd, bin_env)
     cmd = _get_pip_bin(bin_env)
     cmd.append('freeze')
 
     # Include pip, setuptools, distribute, wheel
     min_version = '8.0.3'
-    cur_version = version(bin_env)
+    cur_version = version(bin_env, cwd)
     if salt.utils.versions.compare(ver1=cur_version, oper='<', ver2=min_version):
         logger.warning(
             'The version of pip installed is %s, which is older than %s. '
@@ -1173,10 +1223,12 @@ def list_(prefix=None,
 
         salt '*' pip.list salt
     '''
+
+    cwd = _pip_bin_env(cwd, bin_env)
     packages = {}
 
     if prefix is None or 'pip'.startswith(prefix):
-        packages['pip'] = version(bin_env)
+        packages['pip'] = version(bin_env, cwd)
 
     for line in freeze(bin_env=bin_env,
                        user=user,
@@ -1220,7 +1272,7 @@ def list_(prefix=None,
     return packages
 
 
-def version(bin_env=None):
+def version(bin_env=None, cwd=None):
     '''
     .. versionadded:: 0.17.0
 
@@ -1235,6 +1287,8 @@ def version(bin_env=None):
 
         salt '*' pip.version
     '''
+
+    cwd = _pip_bin_env(cwd, bin_env)
     contextkey = 'pip.version'
     if bin_env is not None:
         contextkey = '{0}.{1}'.format(contextkey, bin_env)
@@ -1245,7 +1299,7 @@ def version(bin_env=None):
     cmd = _get_pip_bin(bin_env)[:]
     cmd.append('--version')
 
-    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
+    ret = __salt__['cmd.run_all'](cmd, cwd=cwd, python_shell=False)
     if ret['retcode']:
         raise CommandNotFoundError('Could not find a `pip` binary')
 
@@ -1270,10 +1324,12 @@ def list_upgrades(bin_env=None,
 
         salt '*' pip.list_upgrades
     '''
+
+    cwd = _pip_bin_env(cwd, bin_env)
     cmd = _get_pip_bin(bin_env)
     cmd.extend(['list', '--outdated'])
 
-    pip_version = version(bin_env)
+    pip_version = version(bin_env, cwd)
     # Pip started supporting the ability to output json starting with 9.0.0
     min_version = '9.0'
     if salt.utils.versions.compare(ver1=pip_version,
@@ -1359,6 +1415,8 @@ def is_installed(pkgname=None,
 
         salt '*' pip.is_installed salt
     '''
+
+    cwd = _pip_bin_env(cwd, bin_env)
     for line in freeze(bin_env=bin_env, user=user, cwd=cwd):
         if line.startswith('-f') or line.startswith('#'):
             # ignore -f line as it contains --find-links directory
@@ -1402,6 +1460,8 @@ def upgrade_available(pkg,
 
         salt '*' pip.upgrade_available <package name>
     '''
+
+    cwd = _pip_bin_env(cwd, bin_env)
     return pkg in list_upgrades(bin_env=bin_env, user=user, cwd=cwd)
 
 
@@ -1430,6 +1490,8 @@ def upgrade(bin_env=None,
 
         salt '*' pip.upgrade
     '''
+
+    cwd = _pip_bin_env(cwd, bin_env)
     ret = {'changes': {},
            'result': True,
            'comment': '',
@@ -1515,6 +1577,7 @@ def list_all_versions(pkg,
 
        salt '*' pip.list_all_versions <package name>
     '''
+    cwd = _pip_bin_env(cwd, bin_env)
     cmd = _get_pip_bin(bin_env)
     cmd.extend(['install', '{0}==versions'.format(pkg)])
 

@@ -12,11 +12,9 @@ import tempfile
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
-    NO_MOCK,
-    NO_MOCK_REASON,
     patch
 )
 
@@ -27,7 +25,6 @@ import salt.cache.localfs as localfs
 from salt.exceptions import SaltCacheError
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class LocalFSTest(TestCase, LoaderModuleMockMixin):
     '''
     Validate the functions in the localfs cache

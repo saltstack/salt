@@ -18,7 +18,7 @@ from tests.support.runtests import RUNTIME_VARS
 # Import Salt libs
 import salt.utils.schedule
 
-from salt.modules.test import ping as ping
+from salt.modules.test import ping
 
 try:
     import croniter  # pylint: disable=W0611
@@ -101,7 +101,7 @@ class SchedulerErrorTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status('job1')
         self.assertEqual(ret['_error'],
-                         'Invalid date string. Ignoring job job1.')
+                         'Invalid date string 13/29/2017 1:00pm. Ignoring job job1.')
 
     def test_eval_whens_grain_not_dict(self):
         '''

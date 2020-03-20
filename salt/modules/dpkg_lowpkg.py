@@ -287,6 +287,7 @@ def _get_pkg_info(*packages, **kwargs):
           "SHA256:${SHA256}\\n" \
           "origin:${Origin}\\n" \
           "homepage:${Homepage}\\n" \
+          "status:${db:Status-Abbrev}\\n" \
           "======\\n" \
           "description:${Description}\\n" \
           "------\\n'"

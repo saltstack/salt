@@ -313,7 +313,7 @@ def _getUserSid(user):
     if user and re.match(sid_pattern, user, re.I):
         try:
             sid = win32security.GetBinarySid(user)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             ret['result'] = False
             ret['comment'] = 'Unable to obtain the binary security identifier for {0}.  The exception was {1}.'.format(
                 user, e)
@@ -322,7 +322,7 @@ def _getUserSid(user):
                 win32security.LookupAccountSid('', sid)
                 ret['result'] = True
                 ret['sid'] = sid
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-except
                 ret['result'] = False
                 ret['comment'] = 'Unable to lookup the account for the security identifier {0}.  The exception was {1}.'.format(
                     user, e)
@@ -331,7 +331,7 @@ def _getUserSid(user):
             sid = win32security.LookupAccountName('', user)[0] if user else None
             ret['result'] = True
             ret['sid'] = sid
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             ret['result'] = False
             ret['comment'] = 'Unable to obtain the security identifier for {0}.  The exception was {1}.'.format(
                 user, e)
@@ -355,7 +355,7 @@ def _get_dacl(path, objectType):
         dacl = win32security.GetNamedSecurityInfo(
             path, objectType, win32security.DACL_SECURITY_INFORMATION
             ).GetSecurityDescriptorDacl()
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         dacl = None
     return dacl
 
@@ -453,7 +453,7 @@ def add_ace(path, objectType, user, permission, acetype, propagation):
                     user, dc.getAceTypeText(acetype), dc.getPermissionText(objectTypeBit, permission),
                     dc.getPropagationText(objectTypeBit, propagation)))
                 ret['result'] = True
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-except
                 ret['comment'] = 'An error occurred attempting to add the ace.  The error was {0}'.format(e)
                 ret['result'] = False
                 return ret
@@ -531,7 +531,7 @@ def rm_ace(path, objectType, user, permission=None, acetype=None, propagation=No
                         None, None, dacl, None)
                     ret['changes']['Removed ACEs'] = acesRemoved
                     ret['result'] = True
-                except Exception as e:
+                except Exception as e:  # pylint: disable=broad-except
                     ret['result'] = False
                     ret['comment'] = 'Error removing ACE.  The error was {0}.'.format(e)
                     return ret
@@ -552,7 +552,7 @@ def _ace_to_text(ace, objectType):
             userSid = '{1}\\{0}'.format(userSid[0], userSid[1])
         else:
             userSid = '{0}'.format(userSid[0])
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         userSid = win32security.ConvertSidToStringSid(ace[2])
     tPerm = ace[1]
     tAceType = ace[0][0]
@@ -643,7 +643,7 @@ def _set_dacl_inheritance(path, objectType, inheritance=True, copy=True, clear=F
                     None, None, tdacl, None)
                 ret['changes']['Inheritance'] = 'Disabled'
             ret['result'] = True
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             ret['result'] = False
             ret['comment'] = 'Error attempting to set the inheritance.  The error was {0}.'.format(e)
 
@@ -729,7 +729,7 @@ def check_inheritance(path, objectType, user=None):
     try:
         sd = win32security.GetNamedSecurityInfo(path, objectType, win32security.DACL_SECURITY_INFORMATION)
         dacls = sd.GetSecurityDescriptorDacl()
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         ret['result'] = False
         ret['comment'] = 'Error obtaining the Security Descriptor or DACL of the path: {0}.'.format(e)
         return ret

@@ -7,8 +7,6 @@ import datetime
 
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     MagicMock,
     patch)
 
@@ -71,7 +69,6 @@ class Mocks(object):
         return factory
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(pytest is None, 'PyTest is missing')
 class SSDPBaseTestCase(TestCase, Mocks):
     '''
@@ -149,7 +146,6 @@ class SSDPBaseTestCase(TestCase, Mocks):
             assert base.get_self_ip() == expected_ip
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(pytest is None, 'PyTest is missing')
 class SSDPFactoryTestCase(TestCase, Mocks):
     '''
@@ -340,7 +336,6 @@ class SSDPFactoryTestCase(TestCase, Mocks):
             assert 'Received "%s" from %s:%s' in factory.log.debug.call_args[0][0]
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(pytest is None, 'PyTest is missing')
 class SSDPServerTestCase(TestCase, Mocks):
     '''
@@ -401,7 +396,6 @@ class SSDPServerTestCase(TestCase, Mocks):
                 assert not cfg_port == ssdp.SSDPBase.DEFAULTS[ssdp.SSDPBase.PORT] and cfg_port == 12345
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(pytest is None, 'PyTest is missing')
 class SSDPClientTestCase(TestCase, Mocks):
     '''

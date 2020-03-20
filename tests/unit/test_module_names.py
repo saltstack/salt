@@ -43,14 +43,12 @@ EXCLUDED_FILES = [
     os.path.join('tests', 'runtests.py'),
     os.path.join('tests', 'jenkins.py'),
     os.path.join('tests', 'salt-tcpdump.py'),
-    os.path.join('tests', 'conftest.py'),
     os.path.join('tests', 'packdump.py'),
     os.path.join('tests', 'consist.py'),
     os.path.join('tests', 'modparser.py'),
     os.path.join('tests', 'virtualname.py'),
     os.path.join('tests', 'committer_parser.py'),
     os.path.join('tests', 'zypp_plugin.py'),
-    os.path.join('tests', 'tox-helper.py'),
     os.path.join('tests', 'unit', 'transport', 'mixins.py'),
     os.path.join('tests', 'integration', 'utils', 'testprogram.py'),
 ]
@@ -79,7 +77,7 @@ class BadTestModuleNamesTestCase(TestCase):
                     or reldir.endswith('__pycache__'):
                 continue
             for fname in files:
-                if fname == '__init__.py' or not fname.endswith('.py'):
+                if fname in ('__init__.py', 'conftest.py') or not fname.endswith('.py'):
                     continue
                 relpath = os.path.join(reldir, fname)
                 if relpath in EXCLUDED_FILES:
@@ -133,10 +131,12 @@ class BadTestModuleNamesTestCase(TestCase):
             'integration.loader.test_ext_grains',
             'integration.loader.test_ext_modules',
             'integration.logging.test_jid_logging',
+            'integration.logging.handlers.test_logstash_mod',
             'integration.master.test_event_return',
             'integration.minion.test_blackout',
-            'integration.minion.test_pillar',
             'integration.minion.test_executor',
+            'integration.minion.test_minion_cache',
+            'integration.minion.test_pillar',
             'integration.minion.test_timeout',
             'integration.modules.test_decorators',
             'integration.modules.test_pkg',
@@ -159,6 +159,7 @@ class BadTestModuleNamesTestCase(TestCase):
             'integration.scheduler.test_maxrunning',
             'integration.scheduler.test_helpers',
             'integration.scheduler.test_run_job',
+            'integration.setup.test_bdist',
             'integration.shell.test_spm',
             'integration.shell.test_cp',
             'integration.shell.test_syndic',
@@ -188,6 +189,7 @@ class BadTestModuleNamesTestCase(TestCase):
             'integration.ssh.test_mine',
             'integration.ssh.test_pillar',
             'integration.ssh.test_raw',
+            'integration.ssh.test_saltcheck',
             'integration.ssh.test_state',
             'integration.states.test_compiler',
             'integration.states.test_handle_error',

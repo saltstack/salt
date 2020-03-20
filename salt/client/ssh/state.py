@@ -110,7 +110,7 @@ class SSHHighState(salt.state.BaseHighState):
                 continue
             try:
                 ret.update(self.tops[fun](opts=self.opts, grains=grains))
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 # If anything happens in the top generation, log it and move on
                 log.error(
                     'Top function %s failed with error %s for minion %s',

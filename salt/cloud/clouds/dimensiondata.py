@@ -143,7 +143,7 @@ def _query_node_data(vm_, data):
         running = (node['state'] == NodeState.RUNNING)
         log.debug('Loaded node data for %s:\nname: %s\nstate: %s',
                   vm_['name'], pprint.pformat(node['name']), node['state'])
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         log.error(
             'Failed to get nodes list: %s', err,
             # Show the traceback if the debug logging level is enabled
@@ -268,7 +268,7 @@ def create(vm_):
 
     try:
         data = conn.create_node(**kwargs)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error(
             'Error creating %s on DIMENSIONDATA\n\n'
             'The following exception was thrown by libcloud when trying to '
@@ -389,7 +389,7 @@ def create_lb(kwargs=None, call=None):
                 node = get_node(conn, member)  # pylint: disable=not-callable
                 log.debug('Node: %s', node)
                 ip = node.private_ips[0]
-            except Exception as err:
+            except Exception as err:  # pylint: disable=broad-except
                 log.error(
                     'Failed to get node ip: %s', err,
                     # Show the traceback if the debug logging level is enabled
@@ -464,7 +464,7 @@ def preferred_ip(vm_, ips):
         try:
             socket.inet_pton(family, ip)
             return ip
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             continue
     return False
 

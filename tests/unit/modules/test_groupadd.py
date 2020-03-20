@@ -13,14 +13,13 @@ except ImportError:
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
+from tests.support.mock import MagicMock, patch
 
 # Import Salt Libs
 import salt.modules.groupadd as groupadd
 import salt.utils.platform
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(salt.utils.platform.is_windows(), "Module not available on Windows")
 class GroupAddTestCase(TestCase, LoaderModuleMockMixin):
     '''

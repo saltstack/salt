@@ -198,7 +198,7 @@ def ping():
     r = salt.utils.http.query(DETAILS['url']+'ping', decode_type='json', decode=True)
     try:
         return r['dict'].get('ret', False)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return False
 
 

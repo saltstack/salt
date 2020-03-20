@@ -67,7 +67,7 @@ def ping():
         )
         if 'text' in response and response['text'].strip() == 'pong':
             return True
-    except Exception as ex:
+    except Exception as ex:  # pylint: disable=broad-except
         log.error(
             'error calling marathon.info with base_url %s: %s',
             CONFIG[CONFIG_BASE_URL],

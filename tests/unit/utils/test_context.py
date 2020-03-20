@@ -5,9 +5,9 @@
 '''
 # Import python libs
 from __future__ import absolute_import
-import tornado.stack_context
-import tornado.gen
-from tornado.testing import AsyncTestCase, gen_test
+import salt.ext.tornado.stack_context
+import salt.ext.tornado.gen
+from salt.ext.tornado.testing import AsyncTestCase, gen_test
 import threading
 import time
 
@@ -66,11 +66,11 @@ class ContextDictTests(AsyncTestCase):
     def test_coroutines(self):
         '''Verify that ContextDict overrides properly within coroutines
         '''
-        @tornado.gen.coroutine
+        @salt.ext.tornado.gen.coroutine
         def secondary_coroutine(over):
-            raise tornado.gen.Return(over.get('foo'))
+            raise salt.ext.tornado.gen.Return(over.get('foo'))
 
-        @tornado.gen.coroutine
+        @salt.ext.tornado.gen.coroutine
         def tgt(x, s, over):
             inner_ret = []
             # first grab the global
@@ -81,13 +81,13 @@ class ContextDictTests(AsyncTestCase):
             over['foo'] = x
             inner_ret.append(over.get('foo'))
             # sleep for some time to let other coroutines do this section of code
-            yield tornado.gen.sleep(s)
+            yield salt.ext.tornado.gen.sleep(s)
             # get the value of the global again.
             inner_ret.append(over.get('foo'))
             # Call another coroutine to verify that we keep our context
             r = yield secondary_coroutine(over)
             inner_ret.append(r)
-            raise tornado.gen.Return(inner_ret)
+            raise salt.ext.tornado.gen.Return(inner_ret)
 
         futures = []
 
@@ -95,13 +95,13 @@ class ContextDictTests(AsyncTestCase):
             s = self.num_concurrent_tasks - x
             over = self.cd.clone()
 
-            f = tornado.stack_context.run_with_stack_context(
-                tornado.stack_context.StackContext(lambda: over),  # pylint: disable=W0640
+            f = salt.ext.tornado.stack_context.run_with_stack_context(
+                salt.ext.tornado.stack_context.StackContext(lambda: over),  # pylint: disable=W0640
                 lambda: tgt(x, s/5.0, over),  # pylint: disable=W0640
             )
             futures.append(f)
 
-        wait_iterator = tornado.gen.WaitIterator(*futures)
+        wait_iterator = salt.ext.tornado.gen.WaitIterator(*futures)
         while not wait_iterator.done():
             r = yield wait_iterator.next()  # pylint: disable=incompatible-py3-code
             self.assertEqual(r[0], r[1])  # verify that the global value remails

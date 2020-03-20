@@ -12,8 +12,6 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     patch,
     MagicMock,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 import salt.modules.libcloud_loadbalancer as libcloud_loadbalancer
 
@@ -87,8 +85,7 @@ def get_mock_driver():
     return MockLBDriver()
 
 
-@skipIf(not HAS_LIBCLOUD, NO_MOCK_REASON)
-@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not HAS_LIBCLOUD, 'No libcloud package')
 @patch('salt.modules.libcloud_loadbalancer._get_driver',
        MagicMock(return_value=MockLBDriver()))
 class LibcloudLoadBalancerModuleTestCase(TestCase, LoaderModuleMockMixin):

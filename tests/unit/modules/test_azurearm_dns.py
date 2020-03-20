@@ -13,11 +13,7 @@ import salt.modules.azurearm_dns as azurearm_dns
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import (
-    MagicMock,
-    NO_MOCK,
-    NO_MOCK_REASON
-)
+from tests.support.mock import MagicMock
 
 # Azure libs
 # pylint: disable=import-error
@@ -111,7 +107,6 @@ class AzureClientMock(object):
         return MagicMock(return_value=self.__return_value)()
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(HAS_LIBS is False, 'The azure.mgmt.dns module must be installed.')
 class AzureRmDnsTestCase(TestCase, LoaderModuleMockMixin):
     '''

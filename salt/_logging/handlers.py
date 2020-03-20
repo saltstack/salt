@@ -246,7 +246,7 @@ elif sys.version_info < (3, 7):
     #  https://bugs.python.org/issue35726
     class QueueHandler(ExcInfoOnLogLevelFormatMixin, logging.handlers.QueueHandler):  # pylint: disable=no-member,inconsistent-mro
 
-        def __init__(self, queue):
+        def __init__(self, queue):  # pylint: disable=useless-super-delegation
             super(QueueHandler, self).__init__(queue)
             #warn_until_date(
             #    '20220101',
@@ -299,7 +299,7 @@ elif sys.version_info < (3, 7):
 else:
     class QueueHandler(ExcInfoOnLogLevelFormatMixin, logging.handlers.QueueHandler):  # pylint: disable=no-member,inconsistent-mro
 
-        def __init__(self, queue):
+        def __init__(self, queue):  # pylint: disable=useless-super-delegation
             super(QueueHandler, self).__init__(queue)
             #warn_until_date(
             #    '20220101',

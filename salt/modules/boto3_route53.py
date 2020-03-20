@@ -121,7 +121,7 @@ def _wait_for_sync(change, conn, tries=10, sleep=20):
             if e.response.get('Error', {}).get('Code') == 'Throttling':
                 log.debug('Throttled by AWS API.')
             else:
-                raise e
+                six.reraise(*sys.exc_info())
         if status == 'INSYNC':
             return True
         time.sleep(sleep)
@@ -747,7 +747,7 @@ def aws_encode(x):
                       _hexReplace, x.encode('unicode_escape'))
     except UnicodeEncodeError:
         ret = x.encode('idna')
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         log.error("Couldn't encode %s using either 'unicode_escape' or 'idna' codecs", x)
         raise CommandExecutionError(e)
     log.debug('AWS-encoded result for %s: %s', x, ret)
@@ -898,7 +898,7 @@ def get_resource_records(HostedZoneId=None, Name=None, StartRecordName=None,
                 log.debug('Throttled by AWS API.')
                 time.sleep(3)
                 continue
-            raise e
+            six.reraise(*sys.exc_info())
 
 
 def change_resource_record_sets(HostedZoneId=None, Name=None,

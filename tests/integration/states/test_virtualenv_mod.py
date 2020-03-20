@@ -81,9 +81,10 @@ class VirtualenvTest(ModuleCase, SaltReturnAssertsMixin):
             '    - requirements: salt://issue-2594-requirements.txt',
         ]
 
+        reqs = ['pep8==1.3.3', 'zope.interface==4.7.1']
         # Let's populate the requirements file, just pep-8 for now
         with salt.utils.files.fopen(requirements_file_path, 'a') as fhw:
-            fhw.write('pep8==1.3.3\n')
+            fhw.write(reqs[0] + '\n')
 
         # Let's run our state!!!
         try:
@@ -94,7 +95,7 @@ class VirtualenvTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltTrueReturn(ret)
             self.assertInSaltComment('Created new virtualenv', ret)
             self.assertSaltStateChangesEqual(
-                ret, ['pep8==1.3.3'], keys=('packages', 'new')
+                ret, [reqs[0]], keys=('packages', 'new')
             )
         except AssertionError:
             # Always clean up the tests temp files
@@ -106,12 +107,12 @@ class VirtualenvTest(ModuleCase, SaltReturnAssertsMixin):
 
         # Let's make sure, it really got installed
         ret = self.run_function('pip.freeze', bin_env=venv_path)
-        self.assertIn('pep8==1.3.3', ret)
-        self.assertNotIn('zope.interface==4.0.1', ret)
+        self.assertIn(reqs[0], ret)
+        self.assertNotIn(reqs[1], ret)
 
         # Now let's update the requirements file, which is now cached.
         with salt.utils.files.fopen(requirements_file_path, 'w') as fhw:
-            fhw.write('zope.interface==4.0.1\n')
+            fhw.write(reqs[1] + '\n')
 
         # Let's run our state!!!
         try:
@@ -122,7 +123,7 @@ class VirtualenvTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltTrueReturn(ret)
             self.assertInSaltComment('virtualenv exists', ret)
             self.assertSaltStateChangesEqual(
-                ret, ['zope.interface==4.0.1'], keys=('packages', 'new')
+                ret, [reqs[1]], keys=('packages', 'new')
             )
         except AssertionError:
             # Always clean up the tests temp files
@@ -134,8 +135,8 @@ class VirtualenvTest(ModuleCase, SaltReturnAssertsMixin):
 
         # Let's make sure, it really got installed
         ret = self.run_function('pip.freeze', bin_env=venv_path)
-        self.assertIn('pep8==1.3.3', ret)
-        self.assertIn('zope.interface==4.0.1', ret)
+        self.assertIn(reqs[0], ret)
+        self.assertIn(reqs[1], ret)
 
         # If we reached this point no assertion failed, so, cleanup!
         if os.path.exists(venv_path):

@@ -93,11 +93,14 @@ class SaltUtilSyncModuleTest(ModuleCase):
                            'beacons': [],
                            'utils': [],
                            'returners': [],
-                           'modules': ['modules.mantest',
-                                       'modules.override_test',
-                                       'modules.runtests_decorators',
-                                       'modules.runtests_helpers',
-                                       'modules.salttest'],
+                           'modules': [
+                                'modules.depends_versioned',
+                                'modules.depends_versionless',
+                                'modules.mantest',
+                                'modules.override_test',
+                                'modules.runtests_decorators',
+                                'modules.runtests_helpers',
+                                'modules.salttest'],
                            'renderers': [],
                            'log_handlers': [],
                            'matchers': [],
@@ -159,7 +162,7 @@ class SaltUtilSyncModuleTest(ModuleCase):
                            'output': [],
                            'thorium': [],
                            'serializers': []}
-        ret = self.run_function('saltutil.sync_all', extmod_blacklist={'modules': ['runtests_decorators']})
+        ret = self.run_function('saltutil.sync_all', extmod_blacklist={'modules': ['runtests_decorators', 'depends_versioned', 'depends_versionless']})
         self.assertEqual(ret, expected_return)
 
     def test_sync_all_blacklist_and_whitelist(self):

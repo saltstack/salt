@@ -49,7 +49,7 @@ class RegTestCase(TestCase, LoaderModuleMockMixin):
         Test to set a registry entry.
         '''
         expected = {
-            'comment': 'Added {0} to {0}'.format(self.name),
+            'comment': 'Added {0} to {1}'.format(self.vname, self.name),
             'pchanges': {},
             'changes': {
                 'reg': {
@@ -58,13 +58,63 @@ class RegTestCase(TestCase, LoaderModuleMockMixin):
                         'Perms': {
                             'Deny': None,
                             'Grant': None},
-                        'Value': '0.15.3',
+                        'Value': self.vdata,
                         'Key': self.name,
                         'Owner': None,
-                        'Entry': 'version'}}},
+                        'Entry': self.vname}}},
             'name': self.name,
             'result': True}
         ret = reg.present(self.name, vname=self.vname, vdata=self.vdata)
+        self.assertDictEqual(ret, expected)
+
+    @destructiveTest
+    def test_present_string_dword(self):
+        '''
+        Test to set a registry entry.
+        '''
+        vname = 'dword_data'
+        vdata = '00000001'
+        vtype = 'REG_DWORD'
+        expected_vdata = 1
+        expected = {
+            'comment': 'Added {0} to {1}'.format(vname, self.name),
+            'pchanges': {},
+            'changes': {
+                'reg': {
+                    'Added': {
+                        'Inheritance': True,
+                        'Perms': {
+                            'Deny': None,
+                            'Grant': None},
+                        'Value': expected_vdata,
+                        'Key': self.name,
+                        'Owner': None,
+                        'Entry': vname}}},
+            'name': self.name,
+            'result': True}
+        ret = reg.present(
+            self.name, vname=vname, vdata=vdata, vtype=vtype)
+        self.assertDictEqual(ret, expected)
+
+    @destructiveTest
+    def test_present_string_dword_existing(self):
+        '''
+        Test to set a registry entry.
+        '''
+        vname = 'dword_data'
+        vdata = '0000001'
+        vtype = 'REG_DWORD'
+        # Set it first
+        reg.present(
+            self.name, vname=vname, vdata=vdata, vtype=vtype)
+        expected = {
+            'comment': '{0} in {1} is already present'.format(vname, self.name),
+            'pchanges': {},
+            'changes': {},
+            'name': self.name,
+            'result': True}
+        ret = reg.present(
+            self.name, vname=vname, vdata=vdata, vtype=vtype)
         self.assertDictEqual(ret, expected)
 
     def test_present_test_true(self):

@@ -6,8 +6,6 @@ import os
 
 # Import Salt Testing Libs
 from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     patch
 )
 from tests.support import mixins
@@ -55,7 +53,6 @@ EXPECTED = {
 
 
 @skipIf(not salt.utils.path.which('ansible-inventory'), 'Skipping because ansible-inventory is not available')
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class AnsibleRosterTestCase(TestCase, mixins.LoaderModuleMockMixin):
 
     @classmethod

@@ -32,6 +32,8 @@ log = logging.getLogger(__name__)
 
 class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
 
+    _call_binary_ = 'salt-cp'
+
     def test_cp_testfile(self):
         '''
         test salt-cp

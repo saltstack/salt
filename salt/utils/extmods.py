@@ -149,6 +149,6 @@ def sync(opts,
                     for emptydir in emptydirs:
                         touched = True
                         shutil.rmtree(emptydir, ignore_errors=True)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.error('Failed to sync %s module: %s', form, exc)
     return ret, touched

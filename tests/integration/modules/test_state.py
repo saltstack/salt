@@ -83,7 +83,6 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
                     fhw.write(line + ending)
 
         destpath = os.path.join(RUNTIME_VARS.BASE_FILES, 'testappend', 'firstif')
-        _reline(destpath)
         destpath = os.path.join(RUNTIME_VARS.BASE_FILES, 'testappend', 'secondif')
         _reline(destpath)
         cls.TIMEOUT = 600 if salt.utils.platform.is_windows() else 10
@@ -405,7 +404,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             with salt.utils.files.fopen(testfile, 'r') as fp_:
                 contents = salt.utils.stringutils.to_unicode(fp_.read())
             self.assertMultiLineEqual(expected, contents)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             if os.path.exists(testfile):
                 shutil.copy(testfile, testfile + '.bak')
             raise
@@ -816,9 +815,9 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 'result': True,
                 'changes': True,
             },
-            'cmd_|-C_|-/bin/false_|-run': {
+            'cmd_|-C_|-$(which false)_|-run': {
                 '__run_num__': 1,
-                'comment': 'Command "/bin/false" run',
+                'comment': 'Command "$(which false)" run',
                 'result': False,
                 'changes': True,
             },
@@ -1365,6 +1364,144 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertReturnNonEmptySaltType(ret)
         for item, descr in six.iteritems(ret):
             self.assertEqual(descr['comment'], 'onlyif condition is false')
+
+    def test_onlyif_req(self):
+        ret = self.run_function(
+            'state.single',
+            fun='test.succeed_with_changes',
+            name='onlyif test',
+            onlyif=[
+                {}
+            ],
+        )['test_|-onlyif test_|-onlyif test_|-succeed_with_changes']
+        self.assertTrue(ret['result'])
+        self.assertEqual(ret['comment'], 'Success!')
+        ret = self.run_function(
+            'state.single',
+            fun='test.fail_with_changes',
+            name='onlyif test',
+            onlyif=[
+                {'fun': 'test.false'},
+            ],
+        )['test_|-onlyif test_|-onlyif test_|-fail_with_changes']
+        self.assertTrue(ret['result'])
+        self.assertFalse(ret['changes'])
+        self.assertEqual(ret['comment'], 'onlyif condition is false')
+        ret = self.run_function(
+            'state.single',
+            fun='test.fail_with_changes',
+            name='onlyif test',
+            onlyif=[
+                {'fun': 'test.true'},
+            ],
+        )['test_|-onlyif test_|-onlyif test_|-fail_with_changes']
+        self.assertFalse(ret['result'])
+        self.assertTrue(ret['changes'])
+        self.assertEqual(ret['comment'], 'Failure!')
+        ret = self.run_function(
+            'state.single',
+            fun='test.succeed_without_changes',
+            name='onlyif test',
+            onlyif=[
+                {'fun': 'test.true'},
+            ],
+        )['test_|-onlyif test_|-onlyif test_|-succeed_without_changes']
+        self.assertTrue(ret['result'])
+        self.assertFalse(ret['changes'])
+        self.assertEqual(ret['comment'], 'Success!')
+
+    def test_onlyif_req_retcode(self):
+        ret = self.run_function(
+            'state.single',
+            fun='test.succeed_with_changes',
+            name='onlyif test',
+            onlyif=[
+                {'fun': 'test.retcode'},
+            ],
+        )['test_|-onlyif test_|-onlyif test_|-succeed_with_changes']
+        self.assertTrue(ret['result'])
+        self.assertFalse(ret['changes'])
+        self.assertEqual(ret['comment'], 'onlyif condition is false')
+        ret = self.run_function(
+            'state.single',
+            fun='test.succeed_with_changes',
+            name='onlyif test',
+            onlyif=[
+                {'fun': 'test.retcode', 'code': 0},
+            ],
+        )['test_|-onlyif test_|-onlyif test_|-succeed_with_changes']
+        self.assertTrue(ret['result'])
+        self.assertTrue(ret['changes'])
+        self.assertEqual(ret['comment'], 'Success!')
+
+    def test_unless_req(self):
+        ret = self.run_function(
+            'state.single',
+            fun='test.succeed_with_changes',
+            name='unless test',
+            unless=[
+                {}
+            ],
+        )['test_|-unless test_|-unless test_|-succeed_with_changes']
+        self.assertTrue(ret['result'])
+        self.assertEqual(ret['comment'], 'Success!')
+        ret = self.run_function(
+            'state.single',
+            fun='test.fail_with_changes',
+            name='unless test',
+            unless=[
+                {'fun': 'test.true'},
+            ],
+        )['test_|-unless test_|-unless test_|-fail_with_changes']
+        self.assertTrue(ret['result'])
+        self.assertFalse(ret['changes'])
+        self.assertEqual(ret['comment'], 'unless condition is true')
+        ret = self.run_function(
+            'state.single',
+            fun='test.fail_with_changes',
+            name='unless test',
+            unless=[
+                {'fun': 'test.false'},
+            ],
+        )['test_|-unless test_|-unless test_|-fail_with_changes']
+        self.assertFalse(ret['result'])
+        self.assertTrue(ret['changes'])
+        self.assertEqual(ret['comment'], 'Failure!')
+        ret = self.run_function(
+            'state.single',
+            fun='test.succeed_without_changes',
+            name='unless test',
+            unless=[
+                {'fun': 'test.false'},
+            ],
+        )['test_|-unless test_|-unless test_|-succeed_without_changes']
+        self.assertTrue(ret['result'])
+        self.assertFalse(ret['changes'])
+        self.assertEqual(ret['comment'], 'Success!')
+
+    def test_unless_req_retcode(self):
+        ret = self.run_function(
+            'state.single',
+            fun='test.succeed_with_changes',
+            name='unless test',
+            unless=[
+                {'fun': 'test.retcode'},
+            ],
+        )['test_|-unless test_|-unless test_|-succeed_with_changes']
+        self.assertTrue(ret['result'])
+        self.assertTrue(ret['changes'])
+        self.assertEqual(ret['comment'], 'Success!')
+        ret = self.run_function(
+            'state.single',
+            fun='test.succeed_with_changes',
+            name='unless test',
+            unless=[
+                {'fun': 'test.retcode', 'code': 0},
+            ],
+        )['test_|-unless test_|-unless test_|-succeed_with_changes']
+        self.assertTrue(ret['result'])
+        self.assertFalse(ret['changes'])
+        self.assertEqual(ret['comment'], 'unless condition is true')
 
     def test_get_file_from_env_in_top_match(self):
         tgt = os.path.join(RUNTIME_VARS.TMP, 'prod-cheese-file')
@@ -2075,7 +2212,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         test the output from running and echo command with non-ascii
         characters.
         '''
-        ret = self.run_function('state.sls', ['issue-46672-a'])
+        ret = self.run_function('state.sls', ['issue-46672-a'], timeout=60)
         key = list(ret.keys())[0]
         log.debug('== ret %s ==', type(ret))
         _expected = 'This is Æ test!'
@@ -2131,3 +2268,26 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(state_run[state_id]['comment'],
                          'Success!')
         self.assertTrue(state_run[state_id]['result'])
+
+    def test_issue_56131(self):
+        module_path = os.path.join(RUNTIME_VARS.CODE_DIR, 'pip.py')
+        if six.PY3:
+            modulec_path = os.path.join(RUNTIME_VARS.CODE_DIR, '__pycache__', 'pip.pyc')
+        else:
+            modulec_path = os.path.join(RUNTIME_VARS.CODE_DIR, 'pip.pyc')
+        unzip_path = os.path.join(RUNTIME_VARS.TMP, 'issue-56131.txt')
+
+        def clean_paths(paths):
+            for path in paths:
+                try:
+                    os.remove(path)
+                except OSError:
+                    log.warn("Path not found: %s", path)
+
+        with salt.utils.files.fopen(module_path, 'w') as fp:
+            fp.write('raise ImportError("No module named pip")')
+        self.addCleanup(clean_paths, [unzip_path, module_path, modulec_path])
+        assert not os.path.exists(unzip_path)
+        state_run = self.run_function('state.sls', mods='issue-56131', pillar={'unzip_to': RUNTIME_VARS.TMP}, timeout=30)
+        assert state_run is not False
+        assert os.path.exists(unzip_path)

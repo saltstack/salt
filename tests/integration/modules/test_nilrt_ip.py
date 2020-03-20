@@ -23,9 +23,9 @@ class Nilrt_ipModuleTest(ModuleCase):
     Validate the nilrt_ip module
     '''
 
-    def __init__(self, arg):
-        super(self.__class__, self).__init__(arg)
-        self.initialState = {}
+    @classmethod
+    def setUpClass(cls):
+        cls.initialState = {}
 
     def setUp(self):
         '''

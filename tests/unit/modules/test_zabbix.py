@@ -10,12 +10,10 @@ import salt.modules.zabbix as zabbix
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 from salt.exceptions import SaltException
@@ -96,7 +94,6 @@ DIFF_PARAMS_RESULT_WITH_ROLLBACK = {'new': DIFF_PARAMS_RESULT,
                                             'empty_list': [{'dict_key': 'dic_val'}]}}
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.zabbix

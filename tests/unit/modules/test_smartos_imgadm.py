@@ -12,8 +12,7 @@ from salt.modules.smartos_imgadm import _parse_image_meta
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON
+from tests.support.unit import TestCase
 
 image_orphan = {
     "manifest": {
@@ -203,7 +202,6 @@ image_docker = {
 }
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class ImgadmTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.smartos_imgadm module

@@ -15,7 +15,7 @@ from tests.support.helpers import destructiveTest
 import salt.utils.path
 
 # Import 3rd-party libs
-from tornado.httpclient import HTTPClient
+from salt.ext.tornado.httpclient import HTTPClient
 
 
 def check_status():

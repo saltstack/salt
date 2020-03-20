@@ -8,12 +8,10 @@ import copy
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt libs
@@ -25,7 +23,6 @@ import salt.utils.dictupdate as dictupdate
 from salt.utils.odict import OrderedDict
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):

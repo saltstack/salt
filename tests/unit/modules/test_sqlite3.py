@@ -8,11 +8,7 @@ from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
-from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON
-)
+from tests.support.unit import TestCase
 
 # Import Salt Libs
 import salt.modules.sqlite3 as sqlite3
@@ -59,7 +55,6 @@ class MockSqlite3(object):
         return True
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class Sqlite3TestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.sqlite3

@@ -43,7 +43,7 @@ from salt.ext import six
 IMPORT_ERR = None
 try:
     import libinfoblox
-except Exception as exc:
+except Exception as exc:  # pylint: disable=broad-except
     IMPORT_ERR = six.text_type(exc)
 __virtualname__ = 'infoblox'
 

@@ -9,12 +9,10 @@ from __future__ import unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 import salt.states.zabbix_valuemap as zabbix_valuemap
@@ -34,7 +32,6 @@ DIFF_PARAMS = {'valuemapid': '21', 'mappings': [{'newvalue': 'OK', 'value': '0h'
                                                 {'newvalue': 'Failure', 'value': '1'}]}
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class ZabbixActionTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.zabbix

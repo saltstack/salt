@@ -17,8 +17,6 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -26,7 +24,6 @@ import salt.modules.useradd as useradd
 from salt.exceptions import CommandExecutionError
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class UserAddTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.useradd
