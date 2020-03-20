@@ -42,6 +42,8 @@ class VersionTestCase(TestCase):
             ('v4518.1', (4518, 1, '', 0, 0, None), '4518.1'),
             ('v3000rc1', (3000, 'rc', 1, 0, None), '3000rc1'),
             ('v3000rc1-n/a-abcdefff', (3000, 'rc', 1, -1, 'abcdefff'), None),
+            ('3000-n/a-1e7bc8f', (3000, '', 0, -1, '1e7bc8f'), None),
+            ('3000.1-n/a-1e7bc8f', (3000, 1, '', 0, -1, '1e7bc8f'), None),
 
         )
 
@@ -148,6 +150,27 @@ class VersionTestCase(TestCase):
         assert not ver.bugfix
         assert ver.string == '{0}.{1}'.format(maj_ver, min_ver)
 
+    def test_string_new_version_minor_as_string(self):
+        '''
+        Validate string property method
+        using new versioning scheme alongside
+        minor version
+        '''
+        maj_ver = '3000'
+        min_ver = '1'
+        ver = SaltStackVersion(major=maj_ver, minor=min_ver)
+        assert ver.minor == int(min_ver)
+        assert not ver.bugfix
+        assert ver.string == '{0}.{1}'.format(maj_ver, min_ver)
+
+        # This only seems to happen on a cloned repo without its tags
+        maj_ver = '3000'
+        min_ver = ''
+        ver = SaltStackVersion(major=maj_ver, minor=min_ver)
+        assert ver.minor is None, '{!r} is not {!r}'.format(ver.minor, min_ver)  # pylint: disable=repr-flag-used-in-string
+        assert not ver.bugfix
+        assert ver.string == maj_ver
+
     def test_string_old_version(self):
         '''
         Validate string property method
@@ -198,6 +221,25 @@ class VersionTestCase(TestCase):
             saltstack_version = SaltStackVersion.parse(vstr)
             assert saltstack_version.full_info, full_info
             assert len(saltstack_version.full_info) == len(full_info)
+
+    def test_full_info_all_versions(self):
+        '''
+        Test full_info_all_versions property method
+        '''
+        expect = (
+            ('v2014.1.4.1rc3-n/a-abcdefff', (2014, 1, 4, 1, 'rc', 3, -1, 'abcdefff')),
+            ('v3.4.1.1', (3, 4, 1, 1, '', 0, 0, None)),
+            ('v3000', (3000, None, None, 0, '', 0, 0, None)),
+            ('v3000.0', (3000, 0, None, 0, '', 0, 0, None)),
+            ('v4518.1', (4518, 1, None, 0, '', 0, 0, None)),
+            ('v3000rc1', (3000, None, None, 0, 'rc', 2, 0, None)),
+            ('v3000rc1-n/a-abcdefff', (3000, None, None, 0, 'rc', 1, -1, 'abcdefff')),
+        )
+
+        for vstr, full_info in expect:
+            saltstack_version = SaltStackVersion.parse(vstr)
+            assert saltstack_version.full_info_all_versions, full_info
+            assert len(saltstack_version.full_info_all_versions) == len(full_info)
 
     def test_discover_version(self):
         '''
@@ -253,3 +295,27 @@ class VersionTestCase(TestCase):
                 assert ver.info == (maj_ver, min_ver, 0, 0)
             else:
                 assert ver.info == (maj_ver, min_ver, bug_fix, 0)
+
+    def test_bugfix_string(self):
+        '''
+        test when bugfix is an empty string
+        '''
+        ret = SaltStackVersion(3000, 1, '', 0, 0, None)
+        assert ret.info == (3000, 1)
+        assert ret.minor == 1
+        assert ret.bugfix is None
+
+    def test_version_repr(self):
+        '''
+        Test SaltStackVersion repr for both date
+        and new versioning scheme
+        '''
+        expect = (
+            ((3000, 1, None, None, '', 0, 0, None), "<SaltStackVersion name='Neon' major=3000 minor=1>"),
+            ((3000, 0, None, None, '', 0, 0, None), "<SaltStackVersion name='Neon' major=3000>"),
+            ((2019, 2, 3, None, '', 0, 0, None), "<SaltStackVersion name='Fluorine' major=2019 minor=2 bugfix=3>"),
+            ((2019, 2, 3, None, 'rc', 1, 0, None), "<SaltStackVersion name='Fluorine' major=2019 minor=2 bugfix=3 rc=1>")
+            )
+
+        for ver, repr_ret in expect:
+            assert repr(SaltStackVersion(*ver)) == repr_ret

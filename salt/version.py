@@ -113,8 +113,8 @@ class SaltStackVersion(object):
         'Sodium'        : (MAX_SIZE - 98, 0),
         'Magnesium'     : (MAX_SIZE - 97, 0),
         'Aluminium'     : (MAX_SIZE - 96, 0),
-        'Silicon'      : (MAX_SIZE - 95, 0),
-        'Phosphorus'   : (MAX_SIZE - 94, 0),
+        'Silicon'       : (MAX_SIZE - 95, 0),
+        'Phosphorus'    : (MAX_SIZE - 94, 0),
         # pylint: disable=E8265
         #'Sulfur'       : (MAX_SIZE - 93, 0),
         #'Chlorine'     : (MAX_SIZE - 92, 0),
@@ -232,12 +232,19 @@ class SaltStackVersion(object):
             major = int(major)
 
         if isinstance(minor, string_types):
-            minor = int(minor)
+            if not minor:
+                # Empty string
+                minor = None
+            else:
+                minor = int(minor)
 
         if bugfix is None and not self.new_version(major=major):
             bugfix = 0
         elif isinstance(bugfix, string_types):
-            bugfix = int(bugfix)
+            if not bugfix:
+                bugfix = None
+            else:
+                bugfix = int(bugfix)
 
         if mbugfix is None:
             mbugfix = 0
@@ -265,6 +272,8 @@ class SaltStackVersion(object):
         self.pre_type = pre_type
         self.pre_num = pre_num
         self.name = self.VNAMES.get((major, minor), None)
+        if self.new_version(major):
+            self.name = self.VNAMES.get((major,), None)
         self.noc = noc
         self.sha = sha
 
@@ -356,6 +365,23 @@ class SaltStackVersion(object):
                      self.pre_num,
                      self.noc,
                      self.sha])
+        return tuple(info)
+
+    @property
+    def full_info_all_versions(self):
+        '''
+        Return the full info regardless
+        of which versioning scheme we
+        are using.
+        '''
+        info = [self.major,
+                self.minor,
+                self.bugfix,
+                self.mbugfix,
+                self.pre_type,
+                self.pre_num,
+                self.noc,
+                self.sha]
         return tuple(info)
 
     @property
@@ -473,8 +499,16 @@ class SaltStackVersion(object):
         parts.extend([
             'major={0}'.format(self.major),
             'minor={0}'.format(self.minor),
-            'bugfix={0}'.format(self.bugfix)
-        ])
+            ])
+
+        if self.new_version(self.major):
+            if not self.minor:
+                parts.remove(''.join([x for x in parts if re.search('^minor*', x)]))
+        else:
+            parts.extend([
+                'bugfix={0}'.format(self.bugfix)
+            ])
+
         if self.mbugfix:
             parts.append('minor-bugfix={0}'.format(self.mbugfix))
         if self.pre_type:
