@@ -289,6 +289,15 @@ $PIP install -r $SRCDIR/pkg/osx/req.txt \
              --no-cache-dir \
              --upgrade
 
+echo "################################################################################"
+echo "Installing PyOBJ C Dependencies with pip (normal)"
+echo "################################################################################"
+$PIP install -r $SRCDIR/pkg/osx/req_pyobjc.txt \
+             --target=$PYDIR/site-packages \
+             --ignore-installed \
+             --no-cache-dir \
+             --upgrade
+
 #echo "################################################################################"
 #echo "Installing Salt Dependencies with pip (build_ext)"
 #echo "################################################################################"
