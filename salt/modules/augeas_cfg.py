@@ -35,7 +35,7 @@ from salt.ext import six
 # Make sure augeas python interface is installed
 HAS_AUGEAS = False
 try:
-    from augeas import Augeas as _Augeas
+    from augeas import Augeas as _Augeas  # pylint: disable=no-name-in-module
     HAS_AUGEAS = True
 except ImportError:
     pass

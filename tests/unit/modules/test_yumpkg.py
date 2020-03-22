@@ -16,6 +16,7 @@ from tests.support.mock import (
 # Import Salt libs
 from salt.exceptions import CommandExecutionError
 import salt.modules.rpm_lowpkg as rpm
+from salt.ext import six
 import salt.modules.yumpkg as yumpkg
 import salt.modules.pkg_resource as pkg_resource
 
@@ -73,7 +74,8 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                     'os_family': 'RedHat',
                     'osmajorrelease': 7,
                 },
-            }
+            },
+            pkg_resource: {}
         }
 
     def test_list_pkgs(self):
@@ -104,7 +106,8 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
              patch.dict(yumpkg.__salt__, {'cmd.run': MagicMock(return_value=os.linesep.join(rpm_out))}), \
              patch.dict(yumpkg.__salt__, {'pkg_resource.add_pkg': _add_data}), \
              patch.dict(yumpkg.__salt__, {'pkg_resource.format_pkg_list': pkg_resource.format_pkg_list}), \
-             patch.dict(yumpkg.__salt__, {'pkg_resource.stringify': MagicMock()}):
+             patch.dict(yumpkg.__salt__, {'pkg_resource.stringify': MagicMock()}), \
+             patch.dict(pkg_resource.__salt__, {'pkg.parse_arch': yumpkg.parse_arch}):
             pkgs = yumpkg.list_pkgs(versions_as_list=True)
             for pkg_name, pkg_version in {
                 'python-urlgrabber': '3.10-8.el7',
@@ -151,7 +154,8 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
              patch.dict(yumpkg.__salt__, {'cmd.run': MagicMock(return_value=os.linesep.join(rpm_out))}), \
              patch.dict(yumpkg.__salt__, {'pkg_resource.add_pkg': _add_data}), \
              patch.dict(yumpkg.__salt__, {'pkg_resource.format_pkg_list': pkg_resource.format_pkg_list}), \
-             patch.dict(yumpkg.__salt__, {'pkg_resource.stringify': MagicMock()}):
+             patch.dict(yumpkg.__salt__, {'pkg_resource.stringify': MagicMock()}), \
+             patch.dict(pkg_resource.__salt__, {'pkg.parse_arch': yumpkg.parse_arch}):
             pkgs = yumpkg.list_pkgs(attr=['epoch', 'release', 'arch', 'install_date_time_t'])
             for pkg_name, pkg_attr in {
                 'python-urlgrabber': {
@@ -159,54 +163,63 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                     'release': '8.el7',
                     'arch': 'noarch',
                     'install_date_time_t': 1487838471,
+                    'epoch': None
                 },
                 'alsa-lib': {
                     'version': '1.1.1',
                     'release': '1.el7',
                     'arch': 'x86_64',
                     'install_date_time_t': 1487838475,
+                    'epoch': None
                 },
                 'gnupg2': {
                     'version': '2.0.22',
                     'release': '4.el7',
                     'arch': 'x86_64',
                     'install_date_time_t': 1487838477,
+                    'epoch': None
                 },
                 'rpm-python': {
                     'version': '4.11.3',
                     'release': '21.el7',
                     'arch': 'x86_64',
                     'install_date_time_t': 1487838477,
+                    'epoch': None
                 },
                 'pygpgme': {
                     'version': '0.3',
                     'release': '9.el7',
                     'arch': 'x86_64',
                     'install_date_time_t': 1487838478,
+                    'epoch': None
                 },
                 'yum': {
                     'version': '3.4.3',
                     'release': '150.el7.centos',
                     'arch': 'noarch',
                     'install_date_time_t': 1487838479,
+                    'epoch': None
                 },
                 'lzo': {
                     'version': '2.06',
                     'release': '8.el7',
                     'arch': 'x86_64',
                     'install_date_time_t': 1487838479,
+                    'epoch': None
                 },
                 'qrencode-libs': {
                     'version': '3.4.1',
                     'release': '3.el7',
                     'arch': 'x86_64',
                     'install_date_time_t': 1487838480,
+                    'epoch': None
                 },
                 'ustr': {
                     'version': '1.0.4',
                     'release': '16.el7',
                     'arch': 'x86_64',
                     'install_date_time_t': 1487838480,
+                    'epoch': None
                 },
                 'shadow-utils': {
                     'epoch': '2',
@@ -220,21 +233,87 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                     'release': '33.el7',
                     'arch': 'x86_64',
                     'install_date_time_t': 1487838484,
+                    'epoch': None
                 },
                 'openssh': {
                     'version': '6.6.1p1',
                     'release': '33.el7_3',
                     'arch': 'x86_64',
                     'install_date_time_t': 1487838485,
+                    'epoch': None
                 },
                 'virt-what': {
                     'version': '1.13',
                     'release': '8.el7',
                     'install_date_time_t': 1487838486,
                     'arch': 'x86_64',
+                    'epoch': None
                 }}.items():
+
                 self.assertTrue(pkgs.get(pkg_name))
                 self.assertEqual(pkgs[pkg_name], [pkg_attr])
+
+    def test_list_pkgs_with_attr_multiple_versions(self):
+        '''
+        Test packages listing with the attr parameter reporting multiple version installed
+
+        :return:
+        '''
+        def _add_data(data, key, value):
+            data.setdefault(key, []).append(value)
+
+        rpm_out = [
+            'glibc_|-(none)_|-2.12_|-1.212.el6_|-i686_|-(none)_|-1542394210'
+            'glibc_|-(none)_|-2.12_|-1.212.el6_|-x86_64_|-(none)_|-1542394204',
+            'virt-what_|-(none)_|-1.13_|-8.el7_|-x86_64_|-(none)_|-1487838486',
+            'virt-what_|-(none)_|-1.10_|-2.el7_|-x86_64_|-(none)_|-1387838486',
+        ]
+        with patch.dict(yumpkg.__grains__, {'osarch': 'x86_64'}), \
+             patch.dict(yumpkg.__salt__, {'cmd.run': MagicMock(return_value=os.linesep.join(rpm_out))}), \
+             patch.dict(yumpkg.__salt__, {'pkg_resource.add_pkg': _add_data}), \
+             patch.dict(yumpkg.__salt__, {'pkg_resource.format_pkg_list': pkg_resource.format_pkg_list}), \
+             patch.dict(yumpkg.__salt__, {'pkg_resource.stringify': MagicMock()}), \
+             patch.dict(pkg_resource.__salt__, {'pkg.parse_arch': yumpkg.parse_arch}):
+            pkgs = yumpkg.list_pkgs(attr=['epoch', 'release', 'arch', 'install_date_time_t'])
+            expected_pkg_list = {
+                'glibc': [
+                    {
+                        'version': '2.12',
+                        'release': '1.212.el6',
+                        'install_date_time_t': 1542394210,
+                        'arch': 'i686',
+                        'epoch': None
+                    },
+                    {
+                        'version': '2.12',
+                        'release': '1.212.el6',
+                        'install_date_time_t': 1542394204,
+                        'arch': 'x86_64',
+                        'epoch': None
+                    }
+                ],
+                'virt-what': [
+                    {
+                        'version': '1.10',
+                        'release': '2.el7',
+                        'install_date_time_t': 1387838486,
+                        'arch': 'x86_64',
+                        'epoch': None
+                    },
+                    {
+                        'version': '1.13',
+                        'release': '8.el7',
+                        'install_date_time_t': 1487838486,
+                        'arch': 'x86_64',
+                        'epoch': None
+                    }
+                ]
+            }
+            for pkgname, pkginfo in pkgs.items():
+                if six.PY3:
+                    self.assertCountEqual(pkginfo, expected_pkg_list[pkgname])
+                else:
+                    self.assertItemsEqual(pkginfo, expected_pkg_list[pkgname])
 
     def test_list_patches(self):
         '''
@@ -242,9 +321,6 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
 
         :return:
         '''
-        def _add_data(data, key, value):
-            data.setdefault(key, []).append(value)
-
         yum_out = [
             'i my-fake-patch-not-installed-1234 recommended    spacewalk-usix-2.7.5.2-2.2.noarch',
             '  my-fake-patch-not-installed-1234 recommended    spacewalksd-5.0.26.2-21.2.x86_64',

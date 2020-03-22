@@ -31,7 +31,6 @@ strict_rfc3339
 supervisor==3.3.5; python_version < '3'
 virtualenv
 timelib
-tornado<5.0
 wmi==1.4.9
 
 # Available template libraries that can be used

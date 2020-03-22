@@ -42,6 +42,7 @@ get the process started by running the following:
 
 While those commands are running, finish reading the rest of this guide.
 
+
 Pre-commit
 ----------
 
@@ -55,7 +56,7 @@ will be notified about style and lint issues before you ever open a PR.
 Salt Coding Style
 -----------------
 
-After the Neon release, SaltStack is `joining the ranks <SEP 15_>`_ of projects
+After the 3000 release, SaltStack is `joining the ranks <SEP 15_>`_ of projects
 in adopting the `Black code formatter <Black_>`_ in order to ease the adoption
 of a unified code formatting style.
 
@@ -265,6 +266,21 @@ Fork a Repo Guide_>`_ and is well worth reading.
 Salt's Branch Topology
 ----------------------
 
+Salt will only have one active branch - ``master``.
+This will include bug fixes, features and CVE “Common Vulnerabilities and Exposures”.
+
+The release will be cut from the master when the time comes for a new release,
+which should be every 3 to 4 months.
+
+To be able to merge code:
+
+    #. The code must have a well-written test.
+       Note that you are only expected to write tests for what you did, not the whole modules or function.
+
+    #. All tests must pass.
+
+The SaltStack employee that reviews your pull request might request changes or deny the pull request for various reasons.
+
 Salt uses a typical branch strategy - ``master`` is the next expected release.
 Code should only make it to ``master`` once it's production ready. This means
 that typical changes (fixes, features) should have accompanying tests.\
@@ -276,7 +292,23 @@ SaltStack encourages using `the magic keywords to close a GitHub issue <Closing
 issues via commit message_>`_. These should appear in the commit message text
 directly.
 
+
+Release Naming Convention
+-------------------------
+
+A new convention will start when Salt releases Salt 3000.
+Every new release name will increment by one ‘Salt last_release_number + 1’.
+
+This naming convention is very different from past releases, which was 'YYYY.MM.PATCH'.
+
+Handling CVE
+--------------
+
+If a CVE is discovered, Salt will create a new release that **only** contains the tests and patch for the CVE.
+This method should improve the upgrade process by reducing the chances of breaking something.
+
 .. _backporting-pull-requests:
+
 
 Backporting Pull Requests
 -------------------------
