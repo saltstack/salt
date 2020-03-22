@@ -288,6 +288,8 @@ def defined(
     boot=None,
     update=True,
     boot_dev=None,
+    serials=None,
+    consoles=None,
 ):
     """
     Starts an existing guest, or defines and starts a new VM with specified arguments.
@@ -356,6 +358,17 @@ def defined(
 
         .. versionadded:: Magnesium
 
+    :param serials:
+        Dictionary providing details on the serials connection to create. (Default: ``None``)
+        See :ref:`init-serials-def` for more details on the possible values.
+
+        .. versionadded:: Sodium
+    :param consoles:
+        Dictionary providing details on the consoles device to create. (Default: ``None``)
+        See :ref:`init-consoles-def` for more details on the possible values.
+
+        .. versionadded:: Sodium
+
     .. rubric:: Example States
 
     Make sure a virtual machine called ``domain_name`` is defined:
@@ -418,6 +431,8 @@ def defined(
                     username=username,
                     password=password,
                     boot=boot,
+                    serials=serials,
+                    consoles=consoles,
                     test=__opts__["test"],
                     boot_dev=boot_dev,
                 )
@@ -453,6 +468,8 @@ def defined(
                     username=username,
                     password=password,
                     boot=boot,
+                    serials=serials,
+                    consoles=consoles,
                     start=False,
                     boot_dev=boot_dev,
                 )
@@ -488,6 +505,8 @@ def running(
     arch=None,
     boot=None,
     boot_dev=None,
+    serials=None,
+    consoles=None,
 ):
     """
     Starts an existing guest, or defines and starts a new VM with specified arguments.
@@ -581,6 +600,16 @@ def running(
         pass a None object, for instance: 'kernel': ``None``.
 
         .. versionadded:: 3000
+    :param serials:
+        Dictionary providing details on the serials connection to create. (Default: ``None``)
+        See :ref:`init-serials-def` for more details on the possible values.
+
+        .. versionadded:: Sodium
+    :param consoles:
+        Dictionary providing details on the consoles device to create. (Default: ``None``)
+        See :ref:`init-consoles-def` for more details on the possible values.
+
+        .. versionadded:: Sodium
 
     :param boot_dev:
         Space separated list of devices to boot from sorted by decreasing priority.
@@ -661,6 +690,8 @@ def running(
         connection=connection,
         username=username,
         password=password,
+        serials=serials,
+        consoles=consoles,
     )
 
     result = True if not __opts__["test"] else None

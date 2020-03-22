@@ -333,6 +333,14 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     "type": "spice",
                     "listen": {"type": "address", "address": "192.168.0.1"},
                 }
+                serials = [
+                    {"type": "tcp", "port": 22223, "protocol": "telnet"},
+                    {"type": "pty"},
+                ]
+                consoles = [
+                    {"type": "tcp", "port": 22223, "protocol": "telnet"},
+                    {"type": "pty"},
+                ]
                 self.assertDictEqual(
                     virt.defined(
                         "myvm",
@@ -354,6 +362,8 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                         connection="someconnection",
                         username="libvirtuser",
                         password="supersecret",
+                        serials=serials,
+                        consoles=consoles,
                     ),
                     ret,
                 )
@@ -379,6 +389,8 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     connection="someconnection",
                     username="libvirtuser",
                     password="supersecret",
+                    serials=serials,
+                    consoles=consoles,
                 )
 
             # Working update case when running
@@ -489,6 +501,8 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     password=None,
                     boot=None,
                     test=False,
+                    serials=None,
+                    consoles=None,
                 )
 
             # Failed definition update case
@@ -601,6 +615,8 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     boot=None,
                     test=True,
                     boot_dev=None,
+                    serials=None,
+                    consoles=None,
                 )
 
             # No changes case
@@ -636,6 +652,8 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     boot=None,
                     test=True,
                     boot_dev=None,
+                    serials=None,
+                    consoles=None,
                 )
 
     def test_running(self):
@@ -716,6 +734,8 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     connection=None,
                     username=None,
                     password=None,
+                    serials=None,
+                    consoles=None,
                 )
                 start_mock.assert_called_with(
                     "myvm", connection=None, username=None, password=None
@@ -803,6 +823,8 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     connection="someconnection",
                     username="libvirtuser",
                     password="supersecret",
+                    serials=None,
+                    consoles=None,
                 )
                 start_mock.assert_called_with(
                     "myvm",
@@ -945,6 +967,8 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     boot=None,
                     test=False,
                     boot_dev=None,
+                    serials=None,
+                    consoles=None,
                 )
 
             # Failed definition update case
@@ -1064,6 +1088,8 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     boot=None,
                     test=True,
                     boot_dev=None,
+                    serials=None,
+                    consoles=None,
                 )
                 start_mock.assert_not_called()
 
@@ -1101,6 +1127,8 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     boot=None,
                     test=True,
                     boot_dev=None,
+                    serials=None,
+                    consoles=None,
                 )
 
     def test_stopped(self):
