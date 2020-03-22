@@ -90,7 +90,7 @@ def post_message(name, **kwargs):
             An optional flag indicating whether the value is short
             enough to be displayed side-by-side with other values.
 
-        identifier
+        webhook
             The identifier of WebHook.
 
         channel
