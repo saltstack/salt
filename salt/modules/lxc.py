@@ -1048,7 +1048,7 @@ class _LXCConfig(object):
         # this might look like the function name is shadowing the
         # module, but it's not since the method belongs to the class
         ntf = tempfile.NamedTemporaryFile()
-        ntf.write(self.as_string())
+        ntf.write(salt.utils.data.encode(self.as_string()))
         ntf.flush()
         return ntf
 
