@@ -303,31 +303,34 @@
                             {% endif %}/>
                 </graphics>
                 {% endif %}
-                {% if serial_type == 'pty' %}
+
+                {% for serial in serials %}
+                {% if serial.type == 'pty' %}
                 <serial type='pty'>
                         <target port='0'/>
                 </serial>
-                {% if console %}
+                {% elif serial.type == 'tcp' %}
+                <serial type='tcp'>
+                        <source mode='bind' host='' service='{{ serial.port }}'/>
+                        <protocol type='{{ serial.protocol }}'/>
+                        <target port='0'/>
+                </serial>
+                {% endif %}
+                {% endfor %}
+
+                {% for console in consoles %}
+                {% if console.type == 'pty' %}
                 <console type='pty'>
                         <target type='serial' port='0'/>
                 </console>
-                {% endif %}
-                {% endif %}
-
-                {% if serial_type == 'tcp' %}
-                <serial type='tcp'>
-                        <source mode='bind' host='' service='{{ telnet_port }}'/>
-                        <protocol type='telnet'/>
-                        <target port='0'/>
-                </serial>
-                {% if console %}
+                {% elif console.type == 'tcp' %}
                 <console type='tcp'>
-                        <source mode='bind' host='' service='{{ telnet_port }}'/>
-                        <protocol type='telnet'/>
+                        <source mode='bind' host='' service='{{ console.port }}'/>
+                        <protocol type='{{ console.protocol }}'/>
                         <target type='serial' port='0'/>
                 </console>
                 {% endif %}
-                {% endif %}
+                {% endfor %}
 {%- if hypervisor in ["qemu", "kvm"] %}
         <channel type='unix'>
             <target type='virtio' name='org.qemu.guest_agent.0'/>
