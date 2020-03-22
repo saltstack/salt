@@ -1717,10 +1717,13 @@ class Keys(LowDataAdapter):
         pub_key = ret.get('pub', '')
         pub_key_file = tarfile.TarInfo('minion.pub')
         pub_key_file.size = len(pub_key)
+        pub_key_file.mtime = time.time()
 
         priv_key = ret.get('priv', '')
         priv_key_file = tarfile.TarInfo('minion.pem')
         priv_key_file.size = len(priv_key)
+        priv_key_file.mtime = time.time()
+        priv_key_file.mode = 0o0600
 
         fileobj = BytesIO()
         tarball = tarfile.open(fileobj=fileobj, mode='w')
