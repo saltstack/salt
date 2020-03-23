@@ -443,7 +443,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(
             virt.__salt__, {"config.get": mock}  # pylint: disable=no-member
         ):
-            ret = virt._disk_profile("nonexistent", "vmware")
+            ret = virt._disk_profile("nonexistent", "vmware", None, "test-vm")
             self.assertTrue(len(ret) == 1)
             found = [disk for disk in ret if disk["name"] == "system"]
             self.assertTrue(bool(found))
@@ -456,11 +456,11 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test virt._disk_profile() default KVM profile
         """
-        mock = MagicMock(return_value={})
+        mock = MagicMock(side_effect=[{}, "/images/dir"])
         with patch.dict(
             virt.__salt__, {"config.get": mock}  # pylint: disable=no-member
         ):
-            ret = virt._disk_profile("nonexistent", "kvm")
+            ret = virt._disk_profile("nonexistent", "kvm", None, "test-vm")
             self.assertTrue(len(ret) == 1)
             found = [disk for disk in ret if disk["name"] == "system"]
             self.assertTrue(bool(found))
@@ -473,11 +473,11 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test virt._disk_profile() default XEN profile
         """
-        mock = MagicMock(return_value={})
+        mock = MagicMock(side_effect=[{}, "/images/dir"])
         with patch.dict(
             virt.__salt__, {"config.get": mock}  # pylint: disable=no-member
         ):
-            ret = virt._disk_profile("nonexistent", "xen")
+            ret = virt._disk_profile("nonexistent", "xen", None, "test-vm")
             self.assertTrue(len(ret) == 1)
             found = [disk for disk in ret if disk["name"] == "system"]
             self.assertTrue(bool(found))
