@@ -43,7 +43,7 @@ Versions are `MAJOR.PATCH`.
 - [#56378](https://github.com/saltstack/salt/pull/56378) - Include _version.py if building wheel
 - [#56376](https://github.com/saltstack/salt/pull/56376) - Fix win deps
 - [#56418](https://github.com/saltstack/salt/pull/56418) - Ensure version.py included before we install
-- [#56417](https://github.com/saltstack/salt/pull/56417) - Update mac build scripts
+- [#56435](https://github.com/saltstack/salt/pull/56435) - Update mac build scripts
 
 ### Added
 
