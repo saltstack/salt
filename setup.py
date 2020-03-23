@@ -745,6 +745,12 @@ class Install(install):
             self.distribution.salt_download_windows_dlls = True
             self.run_command('download-windows-dlls')
             self.distribution.salt_download_windows_dlls = None
+        # need to ensure _version.py is created in build dir before install
+        if not os.path.exists(os.path.join(self.build_lib)):
+            if not self.skip_build:
+                self.run_command('build')
+        else:
+            self.run_command('write_salt_version')
         # Run install.run
         install.run(self)
 
