@@ -294,7 +294,6 @@ echo "##########################################################################
 $PIP install -r $SRCDIR/pkg/osx/req_ext.txt \
              --global-option=build_ext \
              --global-option="-I$INSTALL_DIR/include" \
-             --ignore-installed \
              --no-cache-dir
 
 echo "--------------------------------------------------------------------------------"
