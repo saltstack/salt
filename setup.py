@@ -109,7 +109,7 @@ SALT_ZEROMQ_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 
 SALT_LONG_DESCRIPTION_FILE = os.path.join(os.path.abspath(SETUP_DIRNAME), 'README.rst')
 SALT_OSX_REQS = [
     os.path.join(os.path.abspath(SETUP_DIRNAME), 'pkg', 'osx', 'req.txt'),
-    os.path.join(os.path.abspath(SETUP_DIRNAME), 'pkg', 'osx', 'req_ext.txt')
+    os.path.join(os.path.abspath(SETUP_DIRNAME), 'pkg', 'osx', 'req_pyobjc.txt')
 ]
 SALT_WINDOWS_REQS = [
     os.path.join(os.path.abspath(SETUP_DIRNAME), 'pkg', 'windows', 'req.txt'),
