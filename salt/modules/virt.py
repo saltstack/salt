@@ -970,7 +970,7 @@ def _qemu_image_create(disk, create_overlay=False, saltenv="base"):
     return img_dest
 
 
-def _disk_profile(profile, hypervisor, disks=None, vm_name=None, **kwargs):
+def _disk_profile(profile, hypervisor, disks, vm_name, **kwargs):
     """
     Gather the disk profile from the config or apply the default based
     on the active hypervisor
@@ -1065,6 +1065,10 @@ def _fill_disk_filename(vm_name, disk, hypervisor, **kwargs):
     """
     Compute the disk file name and update it in the disk value.
     """
+    # Compute the filename
+    disk["filename"] = "{0}_{1}.{2}".format(vm_name, disk["name"], disk["format"])
+
+    # Compute the source file path
     base_dir = disk.get("pool", None)
     if hypervisor in ["qemu", "kvm", "xen"]:
         # Compute the base directory from the pool property. We may have either a path
@@ -1087,16 +1091,13 @@ def _fill_disk_filename(vm_name, disk, hypervisor, **kwargs):
                         "or is unsupported".format(disk["name"], base_dir)
                     )
                 base_dir = pool["target_path"]
-
-    if hypervisor == "bhyve" and vm_name:
+    elif hypervisor == "bhyve" and vm_name:
         disk["filename"] = "{0}.{1}".format(vm_name, disk["name"])
         disk["source_file"] = os.path.join(
             "/dev/zvol", base_dir or "", disk["filename"]
         )
-    elif vm_name:
-        # Compute the filename and source file properties if possible
-        disk["filename"] = "{0}_{1}.{2}".format(vm_name, disk["name"], disk["format"])
-        disk["source_file"] = os.path.join(base_dir, disk["filename"])
+
+    disk["source_file"] = os.path.join(base_dir, disk["filename"])
 
 
 def _complete_nics(interfaces, hypervisor):
