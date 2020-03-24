@@ -332,18 +332,18 @@ def clonevm(
         )
 
     params = ""
-    nodes_names = list_nodes_min()
-    nodes_uuids = list_items("vms", True, "UUID").keys()
     if name:
+        nodes_names = list_nodes_min()
         if name not in nodes_names:
             raise CommandExecutionError(
                 "The specified VM ({0}) is not registered.".format(name)
             )
         params += " " + name
     elif uuid:
+        nodes_uuids = list_items('vms', True, 'UUID').keys()
         if uuid not in nodes_uuids:
             raise CommandExecutionError(
-                "The specified VM ({0}) is not registered.".format(name)
+                "The specified VM ({0}) is not registered.".format(uuid)
             )
         params += " " + uuid
 
