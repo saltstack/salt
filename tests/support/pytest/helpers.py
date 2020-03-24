@@ -54,7 +54,7 @@ def temp_directory(name=None):
 
 @pytest.helpers.register
 @contextmanager
-def temp_file(name, contents=None, directory=None, strip_first_newline=True):
+def temp_file(name=None, contents=None, directory=None, strip_first_newline=True):
     """
     This helper creates a temporary file. It should be used as a context manager
     which returns the temporary file path, and, once out of context, deletes it.
@@ -89,8 +89,16 @@ def temp_file(name, contents=None, directory=None, strip_first_newline=True):
         if directory is None:
             directory = RUNTIME_VARS.TMP
 
-        file_path = os.path.join(directory, name)
+        if name is not None:
+            file_path = os.path.join(directory, name)
+        else:
+            handle, file_path = tempfile.mkstemp(dir=directory)
+            os.close(handle)
+
         file_directory = os.path.dirname(file_path)
+        if not os.path.isdir(file_directory):
+            os.makedirs(file_directory)
+
         if contents is not None:
             if contents:
                 if contents.startswith("\n") and strip_first_newline:
@@ -99,9 +107,6 @@ def temp_file(name, contents=None, directory=None, strip_first_newline=True):
             else:
                 file_contents = contents
 
-        if not os.path.isdir(file_directory):
-            os.makedirs(file_directory)
-        if contents is not None:
             with salt.utils.files.fopen(file_path, "w") as wfh:
                 wfh.write(file_contents)
 
