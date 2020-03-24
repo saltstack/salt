@@ -19,7 +19,7 @@ def confirm_top(match, data, nodegroups=None):
     data matches this minion
     """
     matcher = 'compound'
-    if not isinstance(data, list):
+    if not data:
         log.error('Received bad data when setting the match from the top '
                   'file')
         return False
