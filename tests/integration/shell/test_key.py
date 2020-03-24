@@ -2,69 +2,48 @@
 
 from __future__ import absolute_import, print_function, unicode_literals
 
+import ast
 import os
-import shutil
-import tempfile
+import re
 import textwrap
 
 import pytest
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.yaml
-from salt.ext import six
-from tests.support.case import ShellCase
-from tests.support.mixins import ShellCaseCommonTestsMixin
-from tests.support.runtests import RUNTIME_VARS
 
-USERA = "saltdev"
+USERA = "saltdev-key"
 USERA_PWD = "saltdev"
 HASHED_USERA_PWD = "$6$SALTsalt$ZZFD90fKFWq8AGmmX0L3uBtS9fXL62SrTk5zcnQ6EkD6zoiM3kB88G1Zvs0xm/gZ7WXJRs5nsTBybUvGSqZkT."
 
 
+@pytest.fixture(scope="module")
+def saltdev_account(sminion):
+    try:
+        assert sminion.functions.user.add(USERA, createhome=False)
+        assert sminion.functions.shadow.set_password(
+            USERA, USERA_PWD if salt.utils.platform.is_darwin() else HASHED_USERA_PWD
+        )
+        assert USERA in sminion.functions.user.list_users()
+        # Run tests
+        yield
+    finally:
+        sminion.functions.user.delete(USERA, remove=True)
+
+
 @pytest.mark.windows_whitelisted
 @pytest.mark.usefixtures("salt_sub_minion")
-class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
+class TestSaltKey(object):
     """
     Test salt-key script
     """
 
-    _call_binary_ = "salt-key"
-
-    def _add_user(self):
-        """
-        helper method to add user
-        """
-        try:
-            add_user = self.run_call("user.add {0} createhome=False".format(USERA))
-            add_pwd = self.run_call(
-                "shadow.set_password {0} '{1}'".format(
-                    USERA,
-                    USERA_PWD if salt.utils.platform.is_darwin() else HASHED_USERA_PWD,
-                )
-            )
-            self.assertTrue(add_user)
-            self.assertTrue(add_pwd)
-            user_list = self.run_call("user.list_users")
-            self.assertIn(USERA, six.text_type(user_list))
-        except AssertionError:
-            self.run_call("user.delete {0} remove=True".format(USERA))
-            self.skipTest("Could not add user or password, skipping test")
-
-    def _remove_user(self):
-        """
-        helper method to remove user
-        """
-        user_list = self.run_call("user.list_users")
-        for user in user_list:
-            if USERA in user:
-                self.run_call("user.delete {0} remove=True".format(USERA))
-
-    def test_remove_key(self):
+    def test_remove_key(self, salt_master, salt_key_cli):
         """
         test salt-key -d usage
         """
         min_name = "minibar"
-        pki_dir = self.master_opts["pki_dir"]
+        pki_dir = salt_master.config["pki_dir"]
         key = os.path.join(pki_dir, "minions", min_name)
 
         with salt.utils.files.fopen(key, "w") as fp:
@@ -84,202 +63,194 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
                 )
             )
 
-        check_key = self.run_key("-p {0}".format(min_name))
-        self.assertIn("Accepted Keys:", check_key)
-        self.assertIn("minibar:  -----BEGIN PUBLIC KEY-----", check_key)
+        try:
+            # Check Key
+            ret = salt_key_cli.run("-p", min_name)
+            assert ret.exitcode == 0
+            assert "minions" in ret.json
+            assert min_name in ret.json["minions"]
+            assert "-----BEGIN PUBLIC KEY-----" in ret.json["minions"][min_name]
+            # Remove Key
+            ret = salt_key_cli.run("-d", min_name, "-y")
+            assert ret.exitcode == 0
+            # We can't load JSON because we print to stdout!
+            # >>>>> STDOUT >>>>>
+            # The following keys are going to be deleted:
+            # {
+            #     "minions": [
+            #         "minibar"
+            #     ]
+            # }
+            # Key for minion minibar deleted.
+            # <<<<< STDOUT <<<<<
+            assert "minions" in ret.stdout
+            assert min_name in ret.stdout
+            # Check Key
+            ret = salt_key_cli.run("-p", min_name)
+            assert ret.exitcode == 0
+            assert ret.json == {}
+        finally:
+            if os.path.exists(key):
+                os.unlink(key)
 
-        remove_key = self.run_key("-d {0} -y".format(min_name))
-
-        check_key = self.run_key("-p {0}".format(min_name))
-        self.assertEqual([], check_key)
-
-    def test_list_accepted_args(self):
+    @pytest.mark.parametrize("key_type", ("acc", "pre", "den", "un", "rej"))
+    def test_list_accepted_args(self, salt_key_cli, key_type):
         """
         test salt-key -l for accepted arguments
         """
-        for key in ("acc", "pre", "den", "un", "rej"):
-            # These should not trigger any error
-            data = self.run_key("-l {0}".format(key), catch_stderr=True)
-            self.assertNotIn("error:", "\n".join(data[1]))
-            data = self.run_key("-l foo-{0}".format(key), catch_stderr=True)
-            self.assertIn("error:", "\n".join(data[1]))
+        # Should not trigger any error
+        ret = salt_key_cli.run("-l", key_type)
+        assert ret.exitcode == 0
+        assert "error:" not in ret.stdout
+        # Should throw an error now
+        ret = salt_key_cli.run("-l", "foo-{}".format(key_type))
+        assert ret.exitcode != 0
+        assert "error:" in ret.stderr
 
-    def test_list_all(self):
+    def test_list_all(self, salt_key_cli):
         """
         test salt-key -L
         """
-        data = self.run_key("-L")
-        expect = None
-        if self.master_opts["transport"] in ("zeromq", "tcp"):
-            expect = [
-                "Accepted Keys:",
-                "minion",
-                "sub_minion",
-                "Denied Keys:",
-                "Unaccepted Keys:",
-                "Rejected Keys:",
-            ]
-        self.assertEqual(data, expect)
+        ret = salt_key_cli.run("-L")
+        assert ret.exitcode == 0
+        expected = {
+            "minions_rejected": [],
+            "minions_denied": [],
+            "minions_pre": [],
+            "minions": ["minion", "sub_minion"],
+        }
+        assert ret.json == expected
 
-    def test_list_json_out(self):
+    def test_list_all_yaml_out(self, salt_key_cli):
         """
-        test salt-key -L --json-out
+        test salt-key -L --out=yaml
         """
-        data = self.run_key("-L --out json")
-        ret = {}
-        try:
-            import salt.utils.json
+        ret = salt_key_cli.run("-L", "--out=yaml")
+        assert ret.exitcode == 0
+        output = salt.utils.yaml.safe_load(ret.stdout)
+        expected = {
+            "minions_rejected": [],
+            "minions_denied": [],
+            "minions_pre": [],
+            "minions": ["minion", "sub_minion"],
+        }
+        assert output == expected
 
-            ret = salt.utils.json.loads("\n".join(data))
-        except ValueError:
-            pass
-
-        expect = None
-        if self.master_opts["transport"] in ("zeromq", "tcp"):
-            expect = {
-                "minions_rejected": [],
-                "minions_denied": [],
-                "minions_pre": [],
-                "minions": ["minion", "sub_minion"],
-            }
-        self.assertEqual(ret, expect)
-
-    def test_list_yaml_out(self):
+    def test_list_all_raw_out(self, salt_key_cli):
         """
-        test salt-key -L --yaml-out
+        test salt-key -L --out=raw
         """
-        data = self.run_key("-L --out yaml")
-        ret = {}
-        try:
-            import salt.utils.yaml
+        ret = salt_key_cli.run("-L", "--out=raw")
+        assert ret.exitcode == 0
+        output = ast.literal_eval(ret.stdout)
+        expected = {
+            "minions_rejected": [],
+            "minions_denied": [],
+            "minions_pre": [],
+            "minions": ["minion", "sub_minion"],
+        }
+        assert output == expected
 
-            ret = salt.utils.yaml.safe_load("\n".join(data))
-        except Exception:  # pylint: disable=broad-except
-            pass
-
-        expect = []
-        if self.master_opts["transport"] in ("zeromq", "tcp"):
-            expect = {
-                "minions_rejected": [],
-                "minions_denied": [],
-                "minions_pre": [],
-                "minions": ["minion", "sub_minion"],
-            }
-        self.assertEqual(ret, expect)
-
-    def test_list_raw_out(self):
+    def test_list_acc(self, salt_key_cli):
         """
-        test salt-key -L --raw-out
+        test salt-key -l acc
         """
-        data = self.run_key("-L --out raw")
-        self.assertEqual(len(data), 1)
-
-        ret = {}
-        try:
-            import ast
-
-            ret = ast.literal_eval(data[0])
-        except ValueError:
-            pass
-
-        expect = None
-        if self.master_opts["transport"] in ("zeromq", "tcp"):
-            expect = {
-                "minions_rejected": [],
-                "minions_denied": [],
-                "minions_pre": [],
-                "minions": ["minion", "sub_minion"],
-            }
-        self.assertEqual(ret, expect)
-
-    def test_list_acc(self):
-        """
-        test salt-key -l
-        """
-        data = self.run_key("-l acc")
-        expect = ["Accepted Keys:", "minion", "sub_minion"]
-        self.assertEqual(data, expect)
+        ret = salt_key_cli.run("-l", "acc")
+        assert ret.exitcode == 0
+        expected = {"minions": ["minion", "sub_minion"]}
+        assert ret.json == expected
 
     @pytest.mark.skip_if_not_root
     @pytest.mark.destructive_test
-    def test_list_acc_eauth(self):
+    @pytest.mark.skip_on_windows(reason="PAM is not supported on Windows")
+    def test_list_acc_eauth(self, salt_key_cli, saltdev_account):
         """
         test salt-key -l with eauth
         """
-        self._add_user()
-        data = self.run_key(
-            "-l acc --eauth pam --username {0} --password {1}".format(USERA, USERA_PWD)
+        ret = salt_key_cli.run(
+            "-l", "acc", "--eauth", "pam", "--username", USERA, "--password", USERA_PWD
         )
-        expect = ["Accepted Keys:", "minion", "sub_minion"]
-        self.assertEqual(data, expect)
-        self._remove_user()
+        assert ret.exitcode == 0
+        expected = {"minions": ["minion", "sub_minion"]}
+        assert ret.json == expected
 
     @pytest.mark.skip_if_not_root
     @pytest.mark.destructive_test
-    def test_list_acc_eauth_bad_creds(self):
+    @pytest.mark.skip_on_windows(reason="PAM is not supported on Windows")
+    def test_list_acc_eauth_bad_creds(self, salt_key_cli, saltdev_account):
         """
         test salt-key -l with eauth and bad creds
         """
-        self._add_user()
-        data = self.run_key(
-            "-l acc --eauth pam --username {0} --password wrongpassword".format(USERA)
+        ret = salt_key_cli.run(
+            "-l",
+            "acc",
+            "--eauth",
+            "pam",
+            "--username",
+            USERA,
+            "--password",
+            "wrongpassword",
         )
-        expect = [
-            'Authentication failure of type "eauth" occurred for user {0}.'.format(
+        assert (
+            ret.stdout
+            == 'Authentication failure of type "eauth" occurred for user {}.'.format(
                 USERA
             )
-        ]
-        self.assertEqual(data, expect)
-        self._remove_user()
+        )
 
-    def test_list_acc_wrong_eauth(self):
+    def test_list_acc_wrong_eauth(self, salt_key_cli):
         """
         test salt-key -l with wrong eauth
         """
-        data = self.run_key(
-            "-l acc --eauth wrongeauth --username {0} --password {1}".format(
-                USERA, USERA_PWD
-            )
+        ret = salt_key_cli.run(
+            "-l",
+            "acc",
+            "--eauth",
+            "wrongeauth",
+            "--username",
+            USERA,
+            "--password",
+            USERA_PWD,
         )
-        expect = r"^The specified external authentication system \"wrongeauth\" is not available\tAvailable eauth types: auto, .*"
-        self.assertRegex("\t".join(data), expect)
+        assert ret.exitcode == 0, ret
+        assert re.search(
+            r"^The specified external authentication system \"wrongeauth\" is not available\nAvailable eauth types: auto, .*",
+            ret.stdout.replace("\r\n", "\n"),
+        )
 
-    def test_list_un(self):
+    def test_list_un(self, salt_key_cli):
         """
-        test salt-key -l
+        test salt-key -l un
         """
-        data = self.run_key("-l un")
-        expect = ["Unaccepted Keys:"]
-        self.assertEqual(data, expect)
+        ret = salt_key_cli.run("-l", "un")
+        assert ret.exitcode == 0
+        expected = {"minions_pre": []}
+        assert ret.json == expected
 
-    def test_keys_generation(self):
-        tempdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
-        arg_str = "--gen-keys minibar --gen-keys-dir {0}".format(tempdir)
-        self.run_key(arg_str)
-        try:
-            key_names = None
-            if self.master_opts["transport"] in ("zeromq", "tcp"):
+    def test_keys_generation(self, salt_key_cli):
+        with pytest.helpers.temp_directory() as tempdir:
+            ret = salt_key_cli.run("--gen-keys", "minibar", "--gen-keys-dir", tempdir)
+            assert ret.exitcode == 0
+            try:
                 key_names = ("minibar.pub", "minibar.pem")
-            for fname in key_names:
-                self.assertTrue(os.path.isfile(os.path.join(tempdir, fname)))
-        finally:
-            for dirname, dirs, files in os.walk(tempdir):
-                for filename in files:
-                    os.chmod(os.path.join(dirname, filename), 0o700)
-            shutil.rmtree(tempdir)
+                for fname in key_names:
+                    assert os.path.isfile(os.path.join(tempdir, fname))
+            finally:
+                for filename in os.listdir(tempdir):
+                    os.chmod(os.path.join(tempdir, filename), 0o700)
 
-    def test_keys_generation_keysize_minmax(self):
-        tempdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
-        arg_str = "--gen-keys minion --gen-keys-dir {0}".format(tempdir)
-        try:
-            data, error = self.run_key(arg_str + " --keysize=1024", catch_stderr=True)
-            self.assertIn(
-                "error: The minimum value for keysize is 2048", "\n".join(error)
+    def test_keys_generation_keysize_min(self, salt_key_cli):
+        with pytest.helpers.temp_directory() as tempdir:
+            ret = salt_key_cli.run(
+                "--gen-keys", "minibar", "--gen-keys-dir", tempdir, "--keysize", "1024"
             )
+            assert ret.exitcode != 0
+            assert "error: The minimum value for keysize is 2048" in ret.stderr
 
-            data, error = self.run_key(arg_str + " --keysize=32769", catch_stderr=True)
-            self.assertIn(
-                "error: The maximum value for keysize is 32768", "\n".join(error)
+    def test_keys_generation_keysize_max(self, salt_key_cli):
+        with pytest.helpers.temp_directory() as tempdir:
+            ret = salt_key_cli.run(
+                "--gen-keys", "minibar", "--gen-keys-dir", tempdir, "--keysize", "32769"
             )
-        finally:
-            shutil.rmtree(tempdir)
+            assert ret.exitcode != 0
+            assert "error: The maximum value for keysize is 32768" in ret.stderr
