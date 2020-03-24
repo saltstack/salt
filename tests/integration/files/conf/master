@@ -41,7 +41,11 @@ yaml_utf8: True
 
 external_auth:
   pam:
-    saltdev:
+    saltdev-netapi:
+      - '@wheel'
+      - '@runner'
+      - test.*
+    saltdev-key:
       - '@wheel'
       - '@runner'
       - test.*
