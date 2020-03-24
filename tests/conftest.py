@@ -651,6 +651,9 @@ def temp_directory(name=None):
     else:
         directory_path = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
 
+    if not os.path.isdir(directory_path):
+        os.makedirs(directory_path)
+
     yield directory_path
 
     shutil.rmtree(directory_path, ignore_errors=True)
