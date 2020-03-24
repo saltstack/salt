@@ -301,6 +301,7 @@ def _install_requirements(session, transport, *extra_requirements):
     elif sys.platform.startswith('darwin'):
         requirements_files = [
             os.path.join('pkg', 'osx', 'req.txt'),
+            os.path.join('pkg', 'osx', 'req_ext.txt'),
             os.path.join('pkg', 'osx', 'req_pyobjc.txt'),
             os.path.join('requirements', 'static', 'darwin.in')
         ]
