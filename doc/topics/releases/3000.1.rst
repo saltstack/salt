@@ -9,16 +9,104 @@ Version 3000.1 is a bugfix release for :ref:`3000 <release-3000>`.
 Statistics
 ==========
 
-- Total Merges: **45**
-- Total Issue References: **14**
-- Total PR References: **46**
+- Total Merges: **51**
+- Total Issue References: **15**
+- Total PR References: **52**
 
 - Contributors: **16** (`Ch3LL`_, `UtahDave`_, `bryceml`_, `cmcmarrow`_, `dwoz`_, `frogunder`_, `garethgreenaway`_, `lorengordon`_, `mchugh19`_, `oeuftete`_, `raddessi`_, `s0undt3ch`_, `sjorge`_, `terminalmage`_, `twangboy`_, `waynew`_)
 
 Changelog for v3000..v3000.1
 ============================
 
-*Generated at: 2020-03-17 22:35:36 UTC*
+*Generated at: 2020-03-24 19:52:52 UTC*
+
+* **PR** `#56435`_: (`twangboy`_) Update mac build scripts
+  @ *2020-03-24 19:47:40 UTC*
+
+  * 4d2bc7004d Merge pull request `#56435`_ from twangboy/update_mac_build_scripts
+
+  * 5d244b0aa6 Merge branch 'master' into update_mac_build_scripts
+
+  * 8fdf52a243 Update gitpython to 2.1.15
+
+  * afcedc5232 Remove --ignore-installed
+
+  * e6cc2a6192 Separate pyobjc requirements
+
+  * 262ad2e98a Compile static requirements
+
+  * 224f72d0f2 Update noxfile and .precommit
+
+  * 68a36f2e37 Add req_ext.txt
+
+  * 5851a5c2cd Roll back changes, fix dependencies
+
+* **ISSUE** `#56433`_: (`Ch3LL`_) integration.states.test_pip_state.PipStateTest.test_pip_installed_specific_env failing on MAC (refs: `#56436`_)
+
+* **PR** `#56436`_: (`Ch3LL`_) Fix `#56433`_ - test_pip_installed_specific_env
+  @ *2020-03-24 19:47:20 UTC*
+
+  * 8a8ae8ebe4 Merge pull request `#56436`_ from Ch3LL/pip_custom_pypi
+
+  * 55655ff96c Merge branch 'master' into pip_custom_pypi
+
+* **PR** `#56423`_: (`Ch3LL`_) Update changelog with package fixes
+  @ *2020-03-24 16:42:17 UTC*
+
+  * 3a993d73a9 Merge pull request `#56423`_ from Ch3LL/changelog_again
+
+  * 963c16e1a7 update pr number for mac build changes in changelog
+
+  * 83e22b77c7 Update changelog with package fixes
+
+* **PR** `#56417`_: (`twangboy`_) Update mac build scripts
+  @ *2020-03-23 18:45:34 UTC*
+
+  * d2a5bd8add Merge pull request `#56417`_ from twangboy/update_mac_build_scripts
+
+  * 3bda8ddb82 Update noxfile and pre-commit
+
+  * de58c52d66 Merge branch 'update_mac_build_scripts' of https://github.com/twangboy/salt into update_mac_build_scripts
+
+    * e7f08d5349 Update static requirements
+
+    * a53977de5b Merge branch 'update_mac_build_scripts' of github.com:twangboy/salt into update_mac_build_scripts
+
+    * 04e5cde9dd `pkg/osx/req_ext.txt` no longer exists
+
+    * be4a272d07 Update static requirements
+
+  * 02dfe4119c Add pyobjc in its own requirements file
+
+  * 6b2ac2be64 Remove pyobjc, enforce pip install location
+
+  * 30ca5d04ec Remove cryptography, it gets installed by pyopenssl
+
+  * fda8abf4a8 Update static requirements
+
+  * 732ecc83c1 Update pre-commit config
+
+  * 1fa9864e3d Don't set a version for pyopenssl
+
+  * 461b198978 Update dependencies, remove req_ext.txt
+
+* **PR** `#56418`_: (`Ch3LL`_) Ensure version.py included before we install
+  @ *2020-03-23 18:27:46 UTC*
+
+  * 74575a6993 Merge pull request `#56418`_ from Ch3LL/egg_version
+
+  * 85d7c784ef Fix integration setup egg test
+
+  * a8a22a4040 Ensure version.py included before we install
+
+  * 86fe450c82 Fix `#56433`_ - test_pip_installed_specific_env
+
+* **PR** `#56403`_: (`frogunder`_) update 3000.1 releasenotes
+  @ *2020-03-17 23:50:21 UTC*
+
+  * 249367b462 Merge pull request `#56403`_ from frogunder/update_releasenotes_3000.1
+
+  * 9d972c96e8 update 3000.1 releasenotes
 
 * **PR** `#56398`_: (`Ch3LL`_) Add additional PRs to 3000.1 changelog
   @ *2020-03-17 18:08:15 UTC*
@@ -605,6 +693,13 @@ Changelog for v3000..v3000.1
 .. _`#56378`: https://github.com/saltstack/salt/pull/56378
 .. _`#56387`: https://github.com/saltstack/salt/pull/56387
 .. _`#56398`: https://github.com/saltstack/salt/pull/56398
+.. _`#56403`: https://github.com/saltstack/salt/pull/56403
+.. _`#56417`: https://github.com/saltstack/salt/pull/56417
+.. _`#56418`: https://github.com/saltstack/salt/pull/56418
+.. _`#56423`: https://github.com/saltstack/salt/pull/56423
+.. _`#56433`: https://github.com/saltstack/salt/issues/56433
+.. _`#56435`: https://github.com/saltstack/salt/pull/56435
+.. _`#56436`: https://github.com/saltstack/salt/pull/56436
 .. _`Ch3LL`: https://github.com/Ch3LL
 .. _`Oloremo`: https://github.com/Oloremo
 .. _`UtahDave`: https://github.com/UtahDave
