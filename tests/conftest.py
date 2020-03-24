@@ -658,11 +658,15 @@ def temp_directory(name=None):
 
 @pytest.helpers.register
 @contextmanager
-def temp_file(name, contents=None, directory=None, strip_first_newline=True):
+def temp_file(name=None, contents=None, directory=None, strip_first_newline=True):
     if directory is None:
         directory = RUNTIME_VARS.TMP
 
-    file_path = os.path.join(directory, name)
+    if name is not None:
+        file_path = os.path.join(directory, name)
+    else:
+        handle, file_path = tempfile.mkstemp(dir=directory)
+        os.close(handle)
     file_directory = os.path.dirname(file_path)
     if contents is not None:
         if contents:
