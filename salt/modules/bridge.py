@@ -29,7 +29,7 @@ def __virtual__():
         'NetBSD': 'brconfig',
         'OpenBSD': 'ifconfig'
     }
-    cur_os = __grains__['kernel']
+    cur_os = __grains__.get('kernel')
     for _os in supported_os_tool:
         if cur_os == _os and salt.utils.path.which(supported_os_tool[cur_os]):
             return True

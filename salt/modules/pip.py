@@ -442,9 +442,10 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             no_cache_dir=False,
             cache_dir=None,
             no_binary=None,
+            user_install=False,
             extra_args=None,
             **kwargs):
-    '''
+    r'''
     Install packages with pip
 
     Install packages individually or from a pip requirements file. Install
@@ -613,6 +614,10 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
     no_cache_dir
         Disable the cache.
+
+    user_install
+        Enable install to occur inside the user base's (site.USER_BASE) binary directory,
+        typically ~/.local/, or %APPDATA%\Python on Windows
 
     extra_args
         pip keyword and positional arguments not yet implemented in salt
@@ -800,6 +805,9 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
     if source:
         cmd.extend(['--source', source])
+
+    if user_install:
+        cmd.append('--user')
 
     if upgrade:
         cmd.append('--upgrade')
@@ -1091,8 +1099,9 @@ def freeze(bin_env=None,
            cwd=None,
            use_vt=False,
            env_vars=None,
+           user_install=False,
            **kwargs):
-    '''
+    r'''
     Return a list of installed packages either globally or in the specified
     virtualenv
 
@@ -1107,6 +1116,10 @@ def freeze(bin_env=None,
 
     cwd
         Directory from which to run pip
+
+    user_install
+        Enable output to show inside the user base's (site.USER_BASE) binary directory,
+        typically ~/.local/, or %APPDATA%\Python on Windows
 
     .. note::
         If the version of pip available is older than 8.0.3, the list will not
@@ -1134,6 +1147,9 @@ def freeze(bin_env=None,
     else:
         cmd.append('--all')
 
+    if user_install:
+        cmd.append('--user')
+
     cmd_kwargs = dict(runas=user, cwd=cwd, use_vt=use_vt, python_shell=False)
     if kwargs:
         cmd_kwargs.update(**kwargs)
@@ -1154,8 +1170,9 @@ def list_(prefix=None,
           user=None,
           cwd=None,
           env_vars=None,
+          user_install=False,
           **kwargs):
-    '''
+    r'''
     Filter list of installed apps from ``freeze`` and check to see if
     ``prefix`` exists in the list of packages installed.
 
@@ -1166,6 +1183,11 @@ def list_(prefix=None,
         this function even if they are installed. Unlike :py:func:`pip.freeze
         <salt.modules.pip.freeze>`, this function always reports the version of
         pip which is installed.
+
+
+    user_install
+        Enable output to show inside the user base's (site.USER_BASE) binary directory,
+        typically ~/.local/, or %APPDATA%\Python on Windows
 
     CLI Example:
 
@@ -1182,6 +1204,7 @@ def list_(prefix=None,
                        user=user,
                        cwd=cwd,
                        env_vars=env_vars,
+                       user_install=user_install,
                        **kwargs):
         if line.startswith('-f') or line.startswith('#'):
             # ignore -f line as it contains --find-links directory

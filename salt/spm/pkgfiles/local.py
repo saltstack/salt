@@ -136,7 +136,7 @@ def install_file(package, formula_tar, member, formula_def, conn=None):
     if member.name.startswith('{0}/_'.format(package)):
         if node_type in ('master', 'minion'):
             # Module files are distributed via extmods directory
-            member.name = new_name.name.replace('{0}/_'.format(package), '')
+            member.name = new_name.replace('{0}/_'.format(package), '')
             out_path = os.path.join(
                 salt.syspaths.CACHE_DIR,
                 node_type,
@@ -144,7 +144,7 @@ def install_file(package, formula_tar, member, formula_def, conn=None):
             )
         else:
             # Module files are distributed via _modules, _states, etc
-            member.name = new_name.name.replace('{0}/'.format(package), '')
+            member.name = new_name.replace('{0}/'.format(package), '')
     elif member.name == '{0}/pillar.example'.format(package):
         # Pillars are automatically put in the pillar_path
         member.name = '{0}.sls.orig'.format(package)

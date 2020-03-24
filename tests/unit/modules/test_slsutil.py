@@ -32,6 +32,7 @@ class SlsUtilTestCase(TestCase):
         self.check_banner(width=20)
         self.check_banner(commentchar='//', borderchar='-')
         self.check_banner(title='title here', text='text here')
+        self.check_banner(commentchar=' *')
 
     def check_banner(self, width=72, commentchar='#', borderchar='#', blockstart=None, blockend=None,
                      title=None, text=None, newline=True):
@@ -42,7 +43,7 @@ class SlsUtilTestCase(TestCase):
         for line in result:
             self.assertEqual(len(line), width)
             self.assertTrue(line.startswith(commentchar))
-            self.assertTrue(line.endswith(commentchar))
+            self.assertTrue(line.endswith(commentchar.strip()))
 
     def test_boolstr(self):
         '''

@@ -356,6 +356,8 @@ State Changes
 - Added new `onfail_all` requisite form to allow for AND logic when adding
   onfail states.
 
+- The :py:func:`pkgrepo <salt.states.pkgrepo>` state now supports VMware Photon.
+
 Module Changes
 ==============
 
@@ -372,6 +374,8 @@ Module Changes
 - Added new :py:func:`boto_ssm <salt.modules.boto_ssm>` module to set and query
   secrets in AWS SSM parameters.
 
+- Added new :py:func:`flatpak <salt.modules.flatpak>` module to work with flatpak packages.
+  
 - The :py:func:`file.set_selinux_context <salt.modules.file.set_selinux_context>`
   module now supports perstant changes with ``persist=True`` by calling the
   :py:func:`selinux.fcontext_add_policy <salt.modules.selinux.fcontext_add_policy>` module.
@@ -403,6 +407,29 @@ Util Changes
     - :py:func:`versions_list <salt.utils.win_dotnet.versions_list>`
     - :py:func:`versions_details <salt.utils.win_dotnet.versions_details>`
     - :py:func:`version_at_least <salt.utils.win_dotnet.version_at_least>`
+
+Serializer Changes
+==================
+
+- The configparser serializer and deserializer functions can now be made to preserve
+  case of item names by passing 'preserve_case=True' in the options parameter of the function.
+
+  .. note::
+      This is a parameter consumed only by the salt.serializer.configparser serialize and
+      deserialize functions and not the low-level configparser python object.
+
+  For example, in a file.serialze state:
+
+  .. code-block:: yaml
+
+    some.ini:
+      - file.serialize:
+         - formatter: configparser
+         - merge_if_exists: True
+         - deserializer_opts:
+           - preserve_case: True
+         - serializer_opts:
+           - preserve_case: True
 
 Enhancements to Engines
 =======================
