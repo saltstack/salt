@@ -41,7 +41,7 @@ filelock==3.0.12          # via virtualenv
 future==0.17.1            # via python-jose
 genshi==0.7.3
 gitdb2==2.0.5             # via gitpython
-gitpython==2.1.11
+gitpython==2.1.15
 google-auth==1.6.3        # via kubernetes
 idna==2.8
 importlib-metadata==0.23  # via pluggy, pytest, virtualenv

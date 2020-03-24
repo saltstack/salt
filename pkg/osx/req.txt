@@ -8,7 +8,7 @@ click==7.0
 cryptography==2.6.1
 enum34==1.1.6
 futures==3.2.0 ; python_version < "3.0"
-gitpython==2.1.11
+gitpython==2.1.15
 idna==2.8
 ipaddress==1.0.22
 jinja2==2.10.1
