@@ -1228,15 +1228,14 @@ def show_next_fire_time(name, **kwargs):
                     tag='/salt/minion/minion_schedule_next_fire_time_complete',
                     wait=30,
                 )
+                if 'next_fire_time' in event_ret:
+                    ret['next_fire_time'] = event_ret['next_fire_time']
+                else:
+                    ret['comment'] = 'next fire time not available.'
+                return ret
     except KeyError:
         # Effectively a no-op, since we can't really return without an event system
         ret = {}
         ret['comment'] = 'Event module not available. Schedule show next fire time failed.'
         ret['result'] = True
         return ret
-
-    if 'next_fire_time' in event_ret:
-        ret['next_fire_time'] = event_ret['next_fire_time']
-    else:
-        ret['comment'] = 'next fire time not available.'
-    return ret
