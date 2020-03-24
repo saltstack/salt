@@ -1,0 +1,7 @@
+pyobjc==5.3
+pyobjc-framework-AdSupport==5.3
+pyobjc-framework-BusinessChat==5.3
+pyobjc-framework-NaturalLanguage==5.3
+pyobjc-framework-Network==5.3
+pyobjc-framework-UserNotifications==5.3
+pyobjc-framework-VideoSubscriberAccount==5.3
