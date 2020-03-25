@@ -271,7 +271,7 @@ $MAKE install
 ############################################################################
 # upgrade pip
 ############################################################################
-$PIP install --upgrade pip
+$PIP install --upgrade pip wheel
 
 ############################################################################
 # Download and install salt python dependencies
@@ -283,29 +283,18 @@ cd $BUILDDIR
 echo "################################################################################"
 echo "Installing Salt Dependencies with pip (normal)"
 echo "################################################################################"
-$PIP install -r $SRCDIR/pkg/osx/req.txt \
+$PIP install -r $SRCDIR/pkg/osx/req.txt -r $SRCDIR/pkg/osx/req_pyobjc.txt \
              --target=$PYDIR/site-packages \
              --ignore-installed \
-             --no-cache-dir \
-             --upgrade
+             --no-cache-dir
 
 echo "################################################################################"
-echo "Installing PyOBJ C Dependencies with pip (normal)"
+echo "Installing Salt Dependencies with pip (build_ext)"
 echo "################################################################################"
-$PIP install -r $SRCDIR/pkg/osx/req_pyobjc.txt \
-             --target=$PYDIR/site-packages \
-             --ignore-installed \
-             --no-cache-dir \
-             --upgrade
-
-#echo "################################################################################"
-#echo "Installing Salt Dependencies with pip (build_ext)"
-#echo "################################################################################"
-#$PIP install -r $SRCDIR/pkg/osx/req_ext.txt \
-#             --global-option=build_ext \
-#             --global-option="-I$INSTALL_DIR/include" \
-#             --ignore-installed \
-#             --no-cache-dir
+$PIP install -r $SRCDIR/pkg/osx/req_ext.txt \
+             --global-option=build_ext \
+             --global-option="-I$INSTALL_DIR/include" \
+             --no-cache-dir
 
 echo "--------------------------------------------------------------------------------"
 echo "Create Symlink to certifi for openssl"
