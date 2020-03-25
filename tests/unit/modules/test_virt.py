@@ -54,6 +54,13 @@ class LibvirtMock(MagicMock):  # pylint: disable=too-many-ancestors
         libvirtError mock
         """
 
+        def __init__(self, msg):
+            super().__init__(msg)
+            self.msg = msg
+
+        def get_error_message(self):
+            return self.msg
+
 
 class VirtTestCase(TestCase, LoaderModuleMockMixin):
     """
@@ -4499,3 +4506,59 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         )
 
         pool_mock.createXML.assert_called_once_with(expected_xml, 0)
+
+    def test_volume_upload(self):
+        """
+        Test virt.volume_upload function
+        """
+        pool_mock = MagicMock()
+        vol_mock = MagicMock()
+        pool_mock.storageVolLookupByName.return_value = vol_mock
+        self.mock_conn.storagePoolLookupByName.return_value = pool_mock
+        stream_mock = MagicMock()
+        self.mock_conn.newStream.return_value = stream_mock
+
+        open_mock = MagicMock()
+        close_mock = MagicMock()
+        with patch.dict(
+            os.__dict__, {"open": open_mock, "close": close_mock}
+        ):  # pylint: disable=no-member
+            # Normal case
+            self.assertTrue(virt.volume_upload("pool0", "vol1.qcow2", "/path/to/file"))
+            stream_mock.sendAll.assert_called_once()
+            stream_mock.finish.assert_called_once()
+            self.mock_conn.close.assert_called_once()
+            vol_mock.upload.assert_called_once_with(stream_mock, 0, 0, 0)
+
+            # Sparse upload case
+            stream_mock.sendAll.reset_mock()
+            vol_mock.upload.reset_mock()
+            self.assertTrue(
+                virt.volume_upload(
+                    "pool0",
+                    "vol1.qcow2",
+                    "/path/to/file",
+                    offset=123,
+                    length=456,
+                    sparse=True,
+                )
+            )
+            stream_mock.sendAll.assert_not_called()
+            stream_mock.sparseSendAll.assert_called_once()
+            vol_mock.upload.assert_called_once_with(
+                stream_mock,
+                123,
+                456,
+                self.mock_libvirt.VIR_STORAGE_VOL_UPLOAD_SPARSE_STREAM,
+            )
+
+            # Upload unsupported case
+            vol_mock.upload.side_effect = self.mock_libvirt.libvirtError("Unsupported")
+            self.assertRaisesRegex(
+                CommandExecutionError,
+                "Unsupported",
+                virt.volume_upload,
+                "pool0",
+                "vol1.qcow2",
+                "/path/to/file",
+            )
