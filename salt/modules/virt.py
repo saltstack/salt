@@ -3174,6 +3174,19 @@ def define_xml_path(path, **kwargs):
         return False
 
 
+def _define_vol_xml_str(conn, xml, pool=None):  # pylint: disable=redefined-outer-name
+    """
+    Same function than define_vml_xml_str but using an already opened libvirt connection
+    """
+    default_pool = "default" if conn.getType() != "ESX" else "0"
+    poolname = (
+        pool if pool else __salt__["config.get"]("virt:storagepool", default_pool)
+    )
+    pool = conn.storagePoolLookupByName(six.text_type(poolname))
+    ret = pool.createXML(xml, 0) is not None
+    return ret
+
+
 def define_vol_xml_str(
     xml, pool=None, **kwargs
 ):  # pylint: disable=redefined-outer-name
@@ -3211,13 +3224,13 @@ def define_vol_xml_str(
             storagepool: mine
     """
     conn = __get_conn(**kwargs)
-    default_pool = "default" if conn.getType() != "ESX" else "0"
-    poolname = (
-        pool if pool else __salt__["config.get"]("virt:storagepool", default_pool)
-    )
-    pool = conn.storagePoolLookupByName(six.text_type(poolname))
-    ret = pool.createXML(xml, 0) is not None
-    conn.close()
+    ret = False
+    try:
+        ret = _define_vol_xml_str(conn, xml, pool=pool)
+    except libvirtError as err:
+        raise CommandExecutionError(err.get_error_message())
+    finally:
+        conn.close()
     return ret
 
 
