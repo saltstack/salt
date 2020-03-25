@@ -6224,3 +6224,131 @@ def volume_define(
     finally:
         conn.close()
     return ret
+
+
+def _volume_upload(conn, pool, volume, file, offset=0, length=0, sparse=False):
+    """
+    Function performing the heavy duty for volume_upload but using an already
+    opened libvirt connection.
+    """
+
+    def handler(stream, nbytes, opaque):
+        return os.read(opaque, nbytes)
+
+    def holeHandler(stream, opaque):
+        """
+        Taken from the sparsestream.py libvirt-python example.
+        """
+        fd = opaque
+        cur = os.lseek(fd, 0, os.SEEK_CUR)
+
+        try:
+            data = os.lseek(fd, cur, os.SEEK_DATA)
+        except OSError as e:
+            if e.errno != 6:
+                raise e
+            else:
+                data = -1
+        if data < 0:
+            inData = False
+            eof = os.lseek(fd, 0, os.SEEK_END)
+            if eof < cur:
+                raise RuntimeError("Current position in file after EOF: {}".format(cur))
+            sectionLen = eof - cur
+        else:
+            if data > cur:
+                inData = False
+                sectionLen = data - cur
+            else:
+                inData = True
+
+                hole = os.lseek(fd, data, os.SEEK_HOLE)
+                if hole < 0:
+                    raise RuntimeError("No trailing hole")
+
+                if hole == data:
+                    raise RuntimeError("Impossible happened")
+                else:
+                    sectionLen = hole - data
+        os.lseek(fd, cur, os.SEEK_SET)
+        return [inData, sectionLen]
+
+    def skipHandler(stream, length, opaque):
+        return os.lseek(opaque, length, os.SEEK_CUR)
+
+    stream = None
+    fd = None
+    ret = False
+    try:
+        pool_obj = conn.storagePoolLookupByName(pool)
+        vol_obj = pool_obj.storageVolLookupByName(volume)
+
+        stream = conn.newStream()
+        fd = os.open(file, os.O_RDONLY)
+        vol_obj.upload(
+            stream,
+            offset,
+            length,
+            libvirt.VIR_STORAGE_VOL_UPLOAD_SPARSE_STREAM if sparse else 0,
+        )
+        if sparse:
+            stream.sparseSendAll(handler, holeHandler, skipHandler, fd)
+        else:
+            stream.sendAll(handler, fd)
+        ret = True
+    except libvirt.libvirtError as err:
+        raise CommandExecutionError(err.get_error_message())
+    finally:
+        if fd:
+            try:
+                os.close(fd)
+            except OSError as err:
+                if stream:
+                    stream.abort()
+                if ret:
+                    raise CommandExecutionError(
+                        "Failed to close file: {0}".format(err.strerror)
+                    )
+        if stream:
+            try:
+                stream.finish()
+            except libvirt.libvirtError as err:
+                if ret:
+                    raise CommandExecutionError(
+                        "Failed to finish stream: {0}".format(err.get_error_message())
+                    )
+    return ret
+
+
+def volume_upload(pool, volume, file, offset=0, length=0, sparse=False, **kwargs):
+    """
+    Create libvirt volume.
+
+    :param pool: name of the pool to create the volume in
+    :param name: name of the volume to define
+    :param file: the file to upload to the volume
+    :param offset: where to start writing the data in the volume
+    :param length: amount of bytes to transfer to the volume
+    :param sparse: set to True to preserve data sparsiness.
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    .. rubric:: CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.volume_upload default myvm.qcow2 /path/to/disk.qcow2
+
+    .. versionadded:: Sodium
+    """
+    conn = __get_conn(**kwargs)
+
+    ret = False
+    try:
+        ret = _volume_upload(
+            conn, pool, volume, file, offset=offset, length=length, sparse=sparse
+        )
+    finally:
+        conn.close()
+    return ret
