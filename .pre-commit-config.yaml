@@ -19,12 +19,13 @@ repos:
       - id: pip-tools-compile
         alias: compile-darwin-py2.7-zmq-requirements
         name: Darwin Py2.7 ZeroMQ Requirements
-        files: ^(pkg/osx/(req|req_pyobjc)\.txt|requirements/((base|zeromq|pytest)\.txt|static/darwin\.in))$
+        files: ^(pkg/osx/(req|req_ext|req_pyobjc)\.txt|requirements/((base|zeromq|pytest)\.txt|static/darwin\.in))$
         args:
           - -v
           - --py-version=2.7
           - --platform=darwin
           - --include=pkg/osx/req.txt
+          - --include=pkg/osx/req_ext.txt
           - --include=pkg/osx/req_pyobjc.txt
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
@@ -132,12 +133,13 @@ repos:
       - id: pip-tools-compile
         alias: compile-darwin-py3.5-zmq-requirements
         name: Darwin Py3.5 ZeroMQ Requirements
-        files: ^(pkg/osx/(req|req_pyobjc)\.txt|requirements/((base|zeromq|pytest)\.txt|static/darwin\.in))$
+        files: ^(pkg/osx/(req|req_ext|req_pyobjc)\.txt|requirements/((base|zeromq|pytest)\.txt|static/darwin\.in))$
         args:
           - -v
           - --py-version=3.5
           - --platform=darwin
           - --include=pkg/osx/req.txt
+          - --include=pkg/osx/req_ext.txt
           - --include=pkg/osx/req_pyobjc.txt
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
@@ -231,12 +233,13 @@ repos:
       - id: pip-tools-compile
         alias: compile-darwin-py3.6-zmq-requirements
         name: Darwin Py3.6 ZeroMQ Requirements
-        files: ^(pkg/osx/(req|req_pyobjc)\.txt|requirements/((base|zeromq|pytest)\.txt|static/darwin\.in))$
+        files: ^(pkg/osx/(req|req_ext|req_pyobjc)\.txt|requirements/((base|zeromq|pytest)\.txt|static/darwin\.in))$
         args:
           - -v
           - --py-version=3.6
           - --platform=darwin
           - --include=pkg/osx/req.txt
+          - --include=pkg/osx/req_ext.txt
           - --include=pkg/osx/req_pyobjc.txt
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
@@ -330,12 +333,13 @@ repos:
       - id: pip-tools-compile
         alias: compile-darwin-py3.7-zmq-requirements
         name: Darwin Py3.7 ZeroMQ Requirements
-        files: ^(pkg/osx/(req|req_pyobjc)\.txt|requirements/((base|zeromq|pytest)\.txt|static/darwin\.in))$
+        files: ^(pkg/osx/(req|req_ext|req_pyobjc)\.txt|requirements/((base|zeromq|pytest)\.txt|static/darwin\.in))$
         args:
           - -v
           - --py-version=3.7
           - --platform=darwin
           - --include=pkg/osx/req.txt
+          - --include=pkg/osx/req_ext.txt
           - --include=pkg/osx/req_pyobjc.txt
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
