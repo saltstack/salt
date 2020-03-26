@@ -1071,7 +1071,7 @@ def refresh_matchers():
 
 def refresh_pillar(wait=False, timeout=30):
     '''
-    Signal the minion to refresh the pillar data.
+    Signal the minion to refresh the in-memory pillar data. See :ref:`pillar-in-memory`.
 
     :param wait:            Wait for pillar refresh to complete, defaults to False.
     :type wait:             bool, optional
