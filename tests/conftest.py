@@ -878,12 +878,84 @@ def salt_master_config(request, salt_factories, salt_syndic_master_config):
 
 @pytest.fixture(scope="session")
 def salt_minion_config(request, salt_factories, salt_master_config):
-    return salt_factories.configure_minion(request, "minion", master_id="master")
+    with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, "minion")) as rfh:
+        config_defaults = yaml.deserialize(rfh.read())
+    config_defaults["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
+    config_defaults["aliases.file"] = os.path.join(RUNTIME_VARS.TMP, "aliases")
+    config_defaults["transport"] = request.config.getoption("--transport")
+
+    config_overrides = {
+        "file_roots": {
+            "base": [
+                RUNTIME_VARS.TMP_STATE_TREE,
+                os.path.join(RUNTIME_VARS.FILES, "file", "base"),
+            ],
+            # Alternate root to test __env__ choices
+            "prod": [
+                RUNTIME_VARS.TMP_PRODENV_STATE_TREE,
+                os.path.join(RUNTIME_VARS.FILES, "file", "prod"),
+            ],
+        },
+        "pillar_roots": {
+            "base": [
+                RUNTIME_VARS.TMP_PILLAR_TREE,
+                os.path.join(RUNTIME_VARS.FILES, "pillar", "base"),
+            ],
+            "prod": [RUNTIME_VARS.TMP_PRODENV_PILLAR_TREE],
+        },
+    }
+    virtualenv_binary = _get_virtualenv_binary_path()
+    if virtualenv_binary:
+        config_overrides["venv_bin"] = virtualenv_binary
+    return salt_factories.configure_minion(
+        request,
+        "minion",
+        master_id="master",
+        config_defaults=config_defaults,
+        config_overrides=config_overrides,
+    )
 
 
 @pytest.fixture(scope="session")
 def salt_sub_minion_config(request, salt_factories, salt_master_config):
-    return salt_factories.configure_minion(request, "sub_minion", master_id="master")
+    with salt.utils.files.fopen(
+        os.path.join(RUNTIME_VARS.CONF_DIR, "sub_minion")
+    ) as rfh:
+        config_defaults = yaml.deserialize(rfh.read())
+    config_defaults["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
+    config_defaults["aliases.file"] = os.path.join(RUNTIME_VARS.TMP, "aliases")
+    config_defaults["transport"] = request.config.getoption("--transport")
+
+    config_overrides = {
+        "file_roots": {
+            "base": [
+                RUNTIME_VARS.TMP_STATE_TREE,
+                os.path.join(RUNTIME_VARS.FILES, "file", "base"),
+            ],
+            # Alternate root to test __env__ choices
+            "prod": [
+                RUNTIME_VARS.TMP_PRODENV_STATE_TREE,
+                os.path.join(RUNTIME_VARS.FILES, "file", "prod"),
+            ],
+        },
+        "pillar_roots": {
+            "base": [
+                RUNTIME_VARS.TMP_PILLAR_TREE,
+                os.path.join(RUNTIME_VARS.FILES, "pillar", "base"),
+            ],
+            "prod": [RUNTIME_VARS.TMP_PRODENV_PILLAR_TREE],
+        },
+    }
+    virtualenv_binary = _get_virtualenv_binary_path()
+    if virtualenv_binary:
+        config_overrides["venv_bin"] = virtualenv_binary
+    return salt_factories.configure_minion(
+        request,
+        "sub_minion",
+        master_id="master",
+        config_defaults=config_defaults,
+        config_overrides=config_overrides,
+    )
 
 
 def pytest_saltfactories_master_configuration_defaults(
@@ -1034,97 +1106,6 @@ def pytest_saltfactories_master_configuration_overrides(
         }
     )
     return opts
-
-
-def pytest_saltfactories_minion_configuration_defaults(
-    request, factories_manager, root_dir, minion_id, master_port
-):
-    """
-    Hook which should return a dictionary tailored for the provided minion_id
-
-    Stops at the first non None result
-    """
-    setup_hosts_aliases_transport = True
-    if minion_id == "minion":
-        with salt.utils.files.fopen(
-            os.path.join(RUNTIME_VARS.CONF_DIR, "minion")
-        ) as rfh:
-            opts = yaml.deserialize(rfh.read())
-    elif minion_id == "sub_minion":
-        with salt.utils.files.fopen(
-            os.path.join(RUNTIME_VARS.CONF_DIR, "sub_minion")
-        ) as rfh:
-            opts = yaml.deserialize(rfh.read())
-    elif minion_id == "mm-minion":
-        with salt.utils.files.fopen(
-            os.path.join(RUNTIME_VARS.CONF_DIR, "mm_minion")
-        ) as rfh:
-            opts = yaml.deserialize(rfh.read())
-    elif minion_id == "mm-sub-minion":
-        with salt.utils.files.fopen(
-            os.path.join(RUNTIME_VARS.CONF_DIR, "mm_sub_minion")
-        ) as rfh:
-            opts = yaml.deserialize(rfh.read())
-        setup_hosts_aliases_transport = False
-
-    if setup_hosts_aliases_transport:
-        opts["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
-        opts["aliases.file"] = os.path.join(RUNTIME_VARS.TMP, "aliases")
-        opts["transport"] = request.config.getoption("--transport")
-
-        return opts
-
-
-def pytest_saltfactories_minion_configuration_overrides(
-    request, factories_manager, root_dir, minion_id, config_defaults
-):
-    """
-    Hook which should return a dictionary tailored for the provided minion_id.
-    This dictionary will override the default_options dictionary.
-
-    Stops at the first non None result
-    """
-    if minion_id in ("minion", "sub_minion"):
-        opts = {
-            "file_roots": {
-                "base": [
-                    RUNTIME_VARS.TMP_STATE_TREE,
-                    os.path.join(RUNTIME_VARS.FILES, "file", "base"),
-                ],
-                # Alternate root to test __env__ choices
-                "prod": [
-                    RUNTIME_VARS.TMP_PRODENV_STATE_TREE,
-                    os.path.join(RUNTIME_VARS.FILES, "file", "prod"),
-                ],
-            },
-            "pillar_roots": {
-                "base": [
-                    RUNTIME_VARS.TMP_PILLAR_TREE,
-                    os.path.join(RUNTIME_VARS.FILES, "pillar", "base"),
-                ],
-                "prod": [RUNTIME_VARS.TMP_PRODENV_PILLAR_TREE],
-            },
-        }
-        virtualenv_binary = _get_virtualenv_binary_path()
-        if virtualenv_binary:
-            opts["venv_bin"] = virtualenv_binary
-        return opts
-    if minion_id in ("mm-minion", "mm-sub-minion"):
-        mm_master_port = factories_manager.cache["configs"]["masters"]["mm-master"][
-            "ret_port"
-        ]
-        mm_sub_master_port = factories_manager.cache["configs"]["masters"][
-            "mm-sub-master"
-        ]["ret_port"]
-        opts = {
-            "master_port": "",
-            "master": [
-                "localhost:{}".format(mm_master_port),
-                "localhost:{}".format(mm_sub_master_port),
-            ],
-            "test.foo": "baz",
-        }
-        return opts
 
 
 @pytest.hookspec(firstresult=True)
