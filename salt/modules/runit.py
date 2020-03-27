@@ -235,7 +235,7 @@ def status(name, sig=None):
     try:
         out = __salt__['cmd.run_stdout'](cmd)
         return out.startswith('run: ')
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         # sv (as a command) returned an error
         return False
 

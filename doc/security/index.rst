@@ -13,7 +13,6 @@ Security disclosure policy
 .. code-block:: text
 
     -----BEGIN PGP PUBLIC KEY BLOCK-----
-    Version: GnuPG/MacGPG2 v2.0.22 (Darwin)
 
     mQINBFO15mMBEADa3CfQwk5ED9wAQ8fFDku277CegG3U1hVGdcxqKNvucblwoKCb
     hRK6u9ihgaO9V9duV2glwgjytiBI/z6lyWqdaD37YXG/gTL+9Md+qdSDeaOa/9eg
@@ -39,30 +38,43 @@ Security disclosure policy
     El1BLAg+m+1UpE1L7zJT1il6PqVyEFAWBxW46wXCCkGssFsvz2yRp0PDX8A6u4yq
     rTkt09uYht1is61joLDJ/kq3+6k8gJWkDOW+2NMrmf+/qcdYCMYXmrtOpg/wF27W
     GMNAkbdyzgeX/MbUBCGCMdzhevRuivOI5bu4vT5s3KdshG+yhzV45bapKRd5VN+1
-    mZRquQINBFO15mMBEAC5UuLii9ZLz6qHfIJp35IOW9U8SOf7QFhzXR7NZ3DmJsd3
-    f6Nb/habQFIHjm3K9wbpj+FvaW2oWRlFVvYdzjUq6c82GUUjW1dnqgUvFwdmM835
-    1n0YQ2TonmyaF882RvsRZrbJ65uvy7SQxlouXaAYOdqwLsPxBEOyOnMPSktW5V2U
-    IWyxsNP3sADchWIGq9p5D3Y/loyIMsS1dj+TjoQZOKSj7CuRT98+8yhGAY8YBEXu
-    9r3I9o6mDkuPpAljuMc8r09Im6az2egtK/szKt4Hy1bpSSBZU4W/XR7XwQNywmb3
-    wxjmYT6Od3Mwj0jtzc3gQiH8hcEy3+BO+NNmyzFVyIwOLziwjmEcw62S57wYKUVn
-    HD2nglMsQa8Ve0e6ABBMEY7zGEGStva59rfgeh0jUMJiccGiUDTMs0tdkC6knYKb
-    u/fdRqNYFoNuDcSeLEw4DdCuP01l2W4yY+fiK6hAcL25amjzc+yYo9eaaqTn6RAT
-    bzdhHQZdpAMxY+vNT0+NhP1Zo5gYBMR65Zp/VhFsf67ijb03FUtdw9N8dHwiR2m8
-    vVA8kO/gCD6wS2p9RdXqrJ9JhnHYWjiVuXR+f755ZAndyQfRtowMdQIoiXuJEXYw
-    6XN+/BX81gJaynJYc0uw0MnxWQX+A5m8HqEsbIFUXBYXPgbwXTm7c4IHGgXXdwAR
-    AQABiQIlBBgBAgAPBQJTteZjAhsMBQkHhh+AAAoJENVw8tNOoHk91rcQAIhxLv4g
-    duF/J1Cyf6Wixz4rqslBQ7DgNztdIUMjCThg3eB6pvIzY5d3DNROmwU5JvGP1rEw
-    hNiJhgBDFaB0J/y28uSci+orhKDTHb/cn30IxfuAuqrv9dujvmlgM7JUswOtLZhs
-    5FYGa6v1RORRWhUx2PQsF6ORg22QAaagc7OlaO3BXBoiE/FWsnEQCUsc7GnnPqi7
-    um45OJl/pJntsBUKvivEU20fj7j1UpjmeWz56NcjXoKtEvGh99gM5W2nSMLE3aPw
-    vcKhS4yRyLjOe19NfYbtID8m8oshUDji0XjQ1z5NdGcf2V1YNGHU5xyK6zwyGxgV
-    xZqaWnbhDTu1UnYBna8BiUobkuqclb4T9k2WjbrUSmTwKixokCOirFDZvqISkgmN
-    r6/g3w2TRi11/LtbUciF0FN2pd7rj5mWrOBPEFYJmrB6SQeswWNhr5RIsXrQd/Ho
-    zvNm0HnUNEe6w5YBfA6sXQy8B0Zs6pcgLogkFB15TuHIIIpxIsVRv5z8SlEnB7HQ
-    Io9hZT58yjhekJuzVQB9loU0C/W0lzci/pXTt6fd9puYQe1DG37pSifRG6kfHxrR
-    if6nRyrfdTlawqbqdkoqFDmEybAM9/hv3BqriGahGGH/hgplNQbYoXfNwYMYaHuB
-    aSkJvrOQW8bpuAzgVyd7TyNFv+t1kLlfaRYJ
-    =wBTJ
+    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
+    7JqB1tMjNHLkRpveO/DTYB+iffpba1nCguk=
+    =OgRY
     -----END PGP PUBLIC KEY BLOCK-----
 
 The SaltStack Security Team is available at security@saltstack.com for

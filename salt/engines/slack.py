@@ -646,7 +646,7 @@ class SlackClient(object):
                 out=outputter,
                 opts=__opts__,
             )
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             import pprint
             log.exception(
                 'Exception encountered when trying to serialize %s',
@@ -845,5 +845,5 @@ def start(token,
         client = SlackClient(token=token)
         message_generator = client.generate_triggered_messages(token, trigger, groups, groups_pillar_name)
         client.run_commands_from_slack_async(message_generator, fire_all, tag, control)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         raise Exception('{}'.format(traceback.format_exc()))

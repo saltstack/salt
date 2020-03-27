@@ -18,14 +18,13 @@ import salt.utils.versions
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON
-from tests.support.paths import TESTS_DIR
+from tests.support.runtests import RUNTIME_VARS
 
 # import Python Third Party Libs
 # pylint: disable=import-error
 try:
     import boto
-    boto.ENDPOINTS_PATH = os.path.join(TESTS_DIR, 'unit/files/endpoints.json')
+    boto.ENDPOINTS_PATH = os.path.join(RUNTIME_VARS.TESTS_DIR, 'unit/files/endpoints.json')
     from moto import mock_route53_deprecated
     HAS_MOTO = True
 except ImportError:
@@ -66,7 +65,6 @@ def _has_required_moto():
     return True
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(HAS_MOTO is False, 'The moto module must be installed.')
 @skipIf(_has_required_moto() is False, 'The moto module must be >= to {0} for '
                                        'PY2 or {1} for PY3.'.format(required_moto, required_moto_py3))

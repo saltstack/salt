@@ -68,7 +68,7 @@ def execute(opts, data, func, args, kwargs):
     .. code-block:: bash
 
         # With specified splaytime (5 minutes) and timeout with 10 second buffer
-        salt -t 310 --module-executors='[slpay, direct_call]' --executor-opts='{splaytime: 300}' '*' pkg.version cowsay
+        salt -t 310 --module-executors='[splay, direct_call]' --executor-opts='{splaytime: 300}' '*' pkg.version cowsay
     '''
     if 'executor_opts' in data and 'splaytime' in data['executor_opts']:
         splaytime = data['executor_opts']['splaytime']

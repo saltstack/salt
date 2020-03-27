@@ -9,10 +9,10 @@ import threading
 import socket
 import logging
 
-import tornado.gen
-import tornado.ioloop
-import tornado.concurrent
-from tornado.testing import AsyncTestCase, gen_test
+import salt.ext.tornado.gen
+import salt.ext.tornado.ioloop
+import salt.ext.tornado.concurrent
+from salt.ext.tornado.testing import AsyncTestCase, gen_test
 
 import salt.config
 from salt.ext import six
@@ -22,7 +22,7 @@ import salt.transport.server
 import salt.transport.client
 import salt.exceptions
 from salt.ext.six.moves import range
-from salt.transport.tcp import SaltMessageClientPool, SaltMessageClient
+from salt.transport.tcp import SaltMessageClientPool, SaltMessageClient, TCPPubServerChannel
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
@@ -72,7 +72,7 @@ class BaseTCPReqCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
         cls.server_channel = salt.transport.server.ReqServerChannel.factory(cls.master_config)
         cls.server_channel.pre_fork(cls.process_manager)
-        cls.io_loop = tornado.ioloop.IOLoop()
+        cls.io_loop = salt.ext.tornado.ioloop.IOLoop()
         cls.stop = threading.Event()
         cls.server_channel.post_fork(cls._handle_payload, io_loop=cls.io_loop)
         cls.server_thread = threading.Thread(
@@ -90,12 +90,12 @@ class BaseTCPReqCase(TestCase, AdaptedConfigurationTestCaseMixin):
         del cls.server_channel
 
     @classmethod
-    @tornado.gen.coroutine
+    @salt.ext.tornado.gen.coroutine
     def _handle_payload(cls, payload):
         '''
         TODO: something besides echo
         '''
-        raise tornado.gen.Return((payload, {'fun': 'send_clear'}))
+        raise salt.ext.tornado.gen.Return((payload, {'fun': 'send_clear'}))
 
 
 @skipIf(salt.utils.platform.is_darwin(), 'hanging test suite on MacOS')
@@ -107,15 +107,16 @@ class ClearReqTestCases(BaseTCPReqCase, ReqChannelMixin):
         self.channel = salt.transport.client.ReqChannel.factory(self.minion_config, crypt='clear')
 
     def tearDown(self):
+        self.channel.close()
         del self.channel
 
     @classmethod
-    @tornado.gen.coroutine
+    @salt.ext.tornado.gen.coroutine
     def _handle_payload(cls, payload):
         '''
         TODO: something besides echo
         '''
-        raise tornado.gen.Return((payload, {'fun': 'send_clear'}))
+        raise salt.ext.tornado.gen.Return((payload, {'fun': 'send_clear'}))
 
 
 @skipIf(salt.utils.platform.is_darwin(), 'hanging test suite on MacOS')
@@ -124,15 +125,16 @@ class AESReqTestCases(BaseTCPReqCase, ReqChannelMixin):
         self.channel = salt.transport.client.ReqChannel.factory(self.minion_config)
 
     def tearDown(self):
+        self.channel.close()
         del self.channel
 
     @classmethod
-    @tornado.gen.coroutine
+    @salt.ext.tornado.gen.coroutine
     def _handle_payload(cls, payload):
         '''
         TODO: something besides echo
         '''
-        raise tornado.gen.Return((payload, {'fun': 'send'}))
+        raise salt.ext.tornado.gen.Return((payload, {'fun': 'send'}))
 
     # TODO: make failed returns have a specific framing so we can raise the same exception
     # on encrypted channels
@@ -188,7 +190,7 @@ class BaseTCPPubCase(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
         # we also require req server for auth
         cls.req_server_channel = salt.transport.server.ReqServerChannel.factory(cls.master_config)
         cls.req_server_channel.pre_fork(cls.process_manager)
-        cls.io_loop = tornado.ioloop.IOLoop()
+        cls.io_loop = salt.ext.tornado.ioloop.IOLoop()
         cls.stop = threading.Event()
         cls.req_server_channel.post_fork(cls._handle_payload, io_loop=cls.io_loop)
         cls.server_thread = threading.Thread(
@@ -223,10 +225,30 @@ class BaseTCPPubCase(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
         for k, v in six.iteritems(self.io_loop._handlers):
             if self._start_handlers.get(k) != v:
                 failures.append((k, v))
-        if len(failures) > 0:
+        if failures:
             raise Exception('FDs still attached to the IOLoop: {0}'.format(failures))
         del self.channel
         del self._start_handlers
+
+
+class AsyncTCPPubChannelTest(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
+    def test_connect_publish_port(self):
+        '''
+        test when publish_port is not 4506
+        '''
+        opts = self.get_temp_config('master')
+        opts['master_uri'] = ''
+        opts['master_ip'] = '127.0.0.1'
+        opts['publish_port'] = 1234
+        channel = salt.transport.tcp.AsyncTCPPubChannel(opts)
+        patch_auth = MagicMock(return_value=True)
+        patch_client = MagicMock(spec=SaltMessageClientPool)
+        with patch('salt.crypt.AsyncAuth.gen_token', patch_auth), \
+                patch('salt.crypt.AsyncAuth.authenticated', patch_auth), \
+                patch('salt.transport.tcp.SaltMessageClientPool',
+                      patch_client):
+            channel.connect()
+        assert patch_client.call_args[0][0]['publish_port'] == opts['publish_port']
 
 
 @skipIf(True, 'Skip until we can devote time to fix this test')
@@ -286,7 +308,7 @@ class SaltMessageClientPoolTest(AsyncTestCase):
             yield self.message_client_pool.connect()
 
         for message_client_mock in self.message_client_pool.message_clients:
-            future = tornado.concurrent.Future()
+            future = salt.ext.tornado.concurrent.Future()
             future.set_result('foo')
             message_client_mock.connect.return_value = future
 
@@ -298,12 +320,12 @@ class SaltMessageClientPoolTest(AsyncTestCase):
             yield self.message_client_pool.connect()
 
         for idx, message_client_mock in enumerate(self.message_client_pool.message_clients):
-            future = tornado.concurrent.Future()
+            future = salt.ext.tornado.concurrent.Future()
             if idx % 2 == 0:
                 future.set_result('foo')
             message_client_mock.connect.return_value = future
 
-        with self.assertRaises(tornado.ioloop.TimeoutError):
+        with self.assertRaises(salt.ext.tornado.ioloop.TimeoutError):
             test_connect(self)
 
 
@@ -325,7 +347,7 @@ class SaltMessageClientCleanupTest(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         test message client cleanup on close
         '''
-        orig_loop = tornado.ioloop.IOLoop()
+        orig_loop = salt.ext.tornado.ioloop.IOLoop()
         orig_loop.make_current()
         opts = self.get_temp_config('master')
         client = SaltMessageClient(opts, self.listen_on, self.port)
@@ -359,3 +381,73 @@ class SaltMessageClientCleanupTest(TestCase, AdaptedConfigurationTestCaseMixin):
             orig_loop.stop = orig_loop.real_stop
             del orig_loop.real_stop
             del orig_loop.stop_called
+
+
+class TCPPubServerChannelTest(TestCase, AdaptedConfigurationTestCaseMixin):
+    @patch('salt.master.SMaster.secrets')
+    @patch('salt.crypt.Crypticle')
+    @patch('salt.utils.asynchronous.SyncWrapper')
+    def test_publish_filtering(self, sync_wrapper, crypticle, secrets):
+        opts = self.get_temp_config('master')
+        opts["sign_pub_messages"] = False
+        channel = TCPPubServerChannel(opts)
+
+        wrap = MagicMock()
+        crypt = MagicMock()
+        crypt.dumps.return_value = {"test": "value"}
+
+        secrets.return_value = {"aes": {"secret": None}}
+        crypticle.return_value = crypt
+        sync_wrapper.return_value = wrap
+
+        # try simple publish with glob tgt_type
+        channel.publish({"test": "value", "tgt_type": "glob", "tgt": "*"})
+        payload = wrap.send.call_args[0][0]
+
+        # verify we send it without any specific topic
+        assert "topic_lst" not in payload
+
+        # try simple publish with list tgt_type
+        channel.publish({"test": "value", "tgt_type": "list", "tgt": ["minion01"]})
+        payload = wrap.send.call_args[0][0]
+
+        # verify we send it with correct topic
+        assert "topic_lst" in payload
+        self.assertEqual(payload["topic_lst"], ["minion01"])
+
+        # try with syndic settings
+        opts['order_masters'] = True
+        channel.publish({"test": "value", "tgt_type": "list", "tgt": ["minion01"]})
+        payload = wrap.send.call_args[0][0]
+
+        # verify we send it without topic for syndics
+        assert "topic_lst" not in payload
+
+    @patch('salt.utils.minions.CkMinions.check_minions')
+    @patch('salt.master.SMaster.secrets')
+    @patch('salt.crypt.Crypticle')
+    @patch('salt.utils.asynchronous.SyncWrapper')
+    def test_publish_filtering_str_list(self, sync_wrapper, crypticle, secrets, check_minions):
+        opts = self.get_temp_config('master')
+        opts["sign_pub_messages"] = False
+        channel = TCPPubServerChannel(opts)
+
+        wrap = MagicMock()
+        crypt = MagicMock()
+        crypt.dumps.return_value = {"test": "value"}
+
+        secrets.return_value = {"aes": {"secret": None}}
+        crypticle.return_value = crypt
+        sync_wrapper.return_value = wrap
+        check_minions.return_value = {"minions": ["minion02"]}
+
+        # try simple publish with list tgt_type
+        channel.publish({"test": "value", "tgt_type": "list", "tgt": "minion02"})
+        payload = wrap.send.call_args[0][0]
+
+        # verify we send it with correct topic
+        assert "topic_lst" in payload
+        self.assertEqual(payload["topic_lst"], ["minion02"])
+
+        # verify it was correctly calling check_minions
+        check_minions.assert_called_with("minion02", tgt_type="list")

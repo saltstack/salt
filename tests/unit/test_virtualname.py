@@ -18,8 +18,8 @@ except ImportError:
 import salt.ext.six as six
 
 # Import Salt Testing libs
-from tests.support.paths import CODE_DIR
 from tests.support.unit import TestCase
+from tests.support.runtests import RUNTIME_VARS
 
 log = logging.getLogger(__name__)
 
@@ -86,14 +86,14 @@ class VirtualNameTestCase(TestCase):
         Test that the virtualname is in __name__ of the module
         '''
         errors = []
-        for entry in os.listdir(os.path.join(CODE_DIR, 'salt/')):
+        for entry in os.listdir(os.path.join(RUNTIME_VARS.CODE_DIR, 'salt/')):
             name, path = os.path.splitext(os.path.basename(entry))[0], entry
             if name.startswith('.') or name.startswith('_') or not os.path.isdir(path):
                 continue
             if name in ('cli', 'defaults', 'spm', 'daemons', 'ext', 'templates'):
                 continue
             if name == 'cloud':
-                entry = os.path.join(CODE_DIR, 'salt', 'cloud', 'clouds')
+                entry = os.path.join(RUNTIME_VARS.CODE_DIR, 'salt', 'cloud', 'clouds')
             errors.extend(self._check_modules(entry))
         for error in errors:
             log.critical(error)

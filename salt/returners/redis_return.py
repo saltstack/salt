@@ -223,7 +223,6 @@ def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argume
     '''
     Included for API consistency
     '''
-    pass
 
 
 def get_load(jid):
@@ -259,7 +258,7 @@ def get_fun(fun):
         ind_str = '{0}:{1}'.format(minion, fun)
         try:
             jid = serv.get(ind_str)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             continue
         if not jid:
             continue

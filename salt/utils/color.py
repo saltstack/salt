@@ -36,7 +36,7 @@ def get_color_theme(theme):
                 log.warning('The theme file %s is not a dict', theme)
                 return {}
             return ret
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         log.warning('Failed to read the color theme %s', theme)
         return {}
 

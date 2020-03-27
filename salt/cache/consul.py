@@ -15,7 +15,7 @@ The related documentation can be found in the `Consul documentation`_.
 To enable this cache plugin, the master will need the python client for
 Consul installed. This can be easily installed with pip:
 
-.. code-block: bash
+.. code-block:: bash
 
     pip install python-consul
 
@@ -100,7 +100,7 @@ def store(bank, key, data):
     try:
         c_data = __context__['serial'].dumps(data)
         api.kv.put(c_key, c_data)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         raise SaltCacheError(
             'There was an error writing the key, {0}: {1}'.format(
                 c_key, exc
@@ -118,7 +118,7 @@ def fetch(bank, key):
         if value is None:
             return {}
         return __context__['serial'].loads(value['Value'])
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         raise SaltCacheError(
             'There was an error reading the key, {0}: {1}'.format(
                 c_key, exc
@@ -136,7 +136,7 @@ def flush(bank, key=None):
         c_key = '{0}/{1}'.format(bank, key)
     try:
         return api.kv.delete(c_key, recurse=key is None)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         raise SaltCacheError(
             'There was an error removing the key, {0}: {1}'.format(
                 c_key, exc
@@ -150,7 +150,7 @@ def list_(bank):
     '''
     try:
         _, keys = api.kv.get(bank + '/', keys=True, separator='/')
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         raise SaltCacheError(
             'There was an error getting the key "{0}": {1}'.format(
                 bank, exc
@@ -178,7 +178,7 @@ def contains(bank, key):
         try:
             c_key = '{0}/{1}'.format(bank, key)
             _, value = api.kv.get(c_key)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             raise SaltCacheError(
                 'There was an error getting the key, {0}: {1}'.format(
                     c_key, exc

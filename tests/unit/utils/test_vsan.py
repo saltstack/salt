@@ -12,7 +12,7 @@ import logging
 # Import Salt testing libraries
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, \
+from tests.support.mock import patch, MagicMock, \
         PropertyMock
 
 # Import Salt libraries
@@ -21,7 +21,7 @@ from salt.exceptions import VMwareApiError, VMwareRuntimeError, \
 from salt.utils import vsan
 
 try:
-    from pyVmomi import vim, vmodl
+    from pyVmomi import vim, vmodl  # pylint: disable=no-name-in-module
     HAS_PYVMOMI = True
 except ImportError:
     HAS_PYVMOMI = False
@@ -32,7 +32,6 @@ HAS_PYVSAN = vsan.HAS_PYVSAN
 log = logging.getLogger(__name__)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 @skipIf(not HAS_PYVSAN, 'The \'vsan\' ext library is missing')
 class VsanSupportedTestCase(TestCase):
@@ -80,7 +79,6 @@ class VsanSupportedTestCase(TestCase):
         self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 @skipIf(not HAS_PYVSAN, 'The \'vsan\' ext library is missing')
 class GetVsanClusterConfigSystemTestCase(TestCase, LoaderModuleMockMixin):
@@ -138,7 +136,6 @@ class GetVsanClusterConfigSystemTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret, self.mock_ret)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 @skipIf(not HAS_PYVSAN, 'The \'pyvsan\' bindings are missing')
 class GetVsanDiskManagementSystemTestCase(TestCase, LoaderModuleMockMixin):
@@ -196,7 +193,6 @@ class GetVsanDiskManagementSystemTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret, self.mock_ret)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 @skipIf(not HAS_PYVSAN, 'The \'vsan\' ext library is missing')
 class GetHostVsanSystemTestCase(TestCase):
@@ -279,7 +275,6 @@ class GetHostVsanSystemTestCase(TestCase):
         self.assertEqual(res, self.mock_vsan_system)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 @skipIf(not HAS_PYVSAN, 'The \'vsan\' ext library is missing')
 class CreateDiskgroupTestCase(TestCase):
@@ -408,7 +403,6 @@ class CreateDiskgroupTestCase(TestCase):
         self.assertTrue(res)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 @skipIf(not HAS_PYVSAN, 'The \'vsan\' ext library is missing')
 class AddCapacityToDiskGroupTestCase(TestCase):
@@ -547,7 +541,6 @@ class AddCapacityToDiskGroupTestCase(TestCase):
         self.assertTrue(res)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 @skipIf(not HAS_PYVSAN, 'The \'vsan\' ext library is missing')
 class RemoveCapacityFromDiskGroup(TestCase):
@@ -664,7 +657,6 @@ class RemoveCapacityFromDiskGroup(TestCase):
         self.assertTrue(res)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 @skipIf(not HAS_PYVSAN, 'The \'vsan\' ext library is missing')
 class RemoveDiskgroup(TestCase):
@@ -783,7 +775,6 @@ class RemoveDiskgroup(TestCase):
         self.assertTrue(res)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 @skipIf(not HAS_PYVSAN, 'The \'vsan\' ext library is missing')
 class GetClusterVsanInfoTestCase(TestCase, LoaderModuleMockMixin):
@@ -864,7 +855,6 @@ class GetClusterVsanInfoTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 @skipIf(not HAS_PYVSAN, 'The \'vsan\' ext library is missing')
 class ReconfigureClusterVsanTestCase(TestCase):
@@ -970,7 +960,6 @@ class ReconfigureClusterVsanTestCase(TestCase):
                                                     self.mock_si)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 @skipIf(not HAS_PYVSAN, 'The \'vsan\' ext library is missing')
 class _WaitForTasks(TestCase, LoaderModuleMockMixin):

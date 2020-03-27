@@ -14,7 +14,7 @@ import logging
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import TestsLoggingHandler
+from tests.support.helpers import TstSuiteLoggingHandler
 
 # Import 3rd-party tests
 import salt.ext.six as six
@@ -27,6 +27,6 @@ log = logging.getLogger(__name__)
 class TestEventReturn(ModuleCase):
 
     def test_noop_return(self):
-        with TestsLoggingHandler(format='%(message)s', level=logging.DEBUG) as handler:
+        with TstSuiteLoggingHandler(format='%(message)s', level=logging.DEBUG) as handler:
             self.run_function('test.ping')
             assert any('NOOP_RETURN' in s for s in handler.messages) is True, 'NOOP_RETURN not found in log messages'

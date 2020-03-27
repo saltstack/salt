@@ -11,11 +11,9 @@ from salt.ext import six
 import salt.utils.args
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     DEFAULT,
-    NO_MOCK,
-    NO_MOCK_REASON,
     patch
 )
 
@@ -65,7 +63,6 @@ class ArgsTestCase(TestCase):
         ret = salt.utils.args.arg_lookup(dummy_func)
         self.assertEqual(expected_dict, ret)
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_format_call(self):
         with patch('salt.utils.args.arg_lookup') as arg_lookup:
             def dummy_func(first=None, second=None, third=None):
@@ -120,7 +117,6 @@ class ArgsTestCase(TestCase):
                 r'foo2 takes at least 2 arguments \(1 given\)'):
             salt.utils.args.format_call(foo2, dict(one=1))
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_argspec_report(self):
         def _test_spec(arg1, arg2, kwarg1=None):
             pass

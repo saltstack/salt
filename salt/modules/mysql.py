@@ -35,6 +35,8 @@ Module to provide MySQL compatibility to salt.
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import copy
+import hashlib
 import time
 import logging
 import re
@@ -261,6 +263,12 @@ def __virtual__():
     return bool(MySQLdb), 'No python mysql client installed.' if MySQLdb is None else ''
 
 
+def __mysql_hash_password(password):
+    _password = hashlib.sha1(password.encode()).digest()
+    _password = '*{0}'.format(hashlib.sha1(_password).hexdigest().upper())
+    return _password
+
+
 def __check_table(name, table, **connection_args):
     dbc = _connect(**connection_args)
     if dbc is None:
@@ -307,6 +315,9 @@ def __optimize_table(name, table, **connection_args):
 
 
 def __password_column(**connection_args):
+    if 'mysql.password_column'in __context__:
+        return __context__['mysql.password_column']
+
     dbc = _connect(**connection_args)
     if dbc is None:
         return 'Password'
@@ -321,9 +332,34 @@ def __password_column(**connection_args):
     }
     _execute(cur, qry, args)
     if int(cur.rowcount) > 0:
-        return 'Password'
+        __context__['mysql.password_column'] = 'Password'
     else:
-        return 'authentication_string'
+        __context__['mysql.password_column'] = 'authentication_string'
+
+    return __context__['mysql.password_column']
+
+
+def __get_auth_plugin(user, host, **connection_args):
+    dbc = _connect(**connection_args)
+    if dbc is None:
+        return []
+    cur = dbc.cursor(MySQLdb.cursors.DictCursor)
+    try:
+        qry = 'SELECT plugin FROM mysql.user WHERE User=%(user)s and Host=%(host)s'
+        args = {'user': user, 'host': host}
+        _execute(cur, qry, args)
+    except MySQLdb.OperationalError as exc:
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
+        __context__['mysql.error'] = err
+        log.error(err)
+        return 'mysql_native_password'
+    results = cur.fetchall()
+    log.debug(results)
+
+    if results:
+        return results[0].get('plugin', 'mysql_native_password')
+    else:
+        return 'mysql_native_password'
 
 
 def _connect(**kwargs):
@@ -384,6 +420,10 @@ def _connect(**kwargs):
     _connarg('connection_charset', 'charset')
     # Ensure MySQldb knows the format we use for queries with arguments
     MySQLdb.paramstyle = 'pyformat'
+
+    for key in copy.deepcopy(connargs):
+        if not connargs[key]:
+            del connargs[key]
 
     if connargs.get('passwd', True) is None:  # If present but set to None. (Extreme edge case.)
         log.warning('MySQL password of None found. Attempting passwordless login.')
@@ -855,6 +895,9 @@ def version(**connection_args):
 
         salt '*' mysql.version
     '''
+    if 'mysql.version' in __context__:
+        return __context__['mysql.version']
+
     dbc = _connect(**connection_args)
     if dbc is None:
         return ''
@@ -869,7 +912,8 @@ def version(**connection_args):
         return ''
 
     try:
-        return salt.utils.data.decode(cur.fetchone()[0])
+        __context__['mysql.version'] = salt.utils.data.decode(cur.fetchone()[0])
+        return __context__['mysql.version']
     except IndexError:
         return ''
 
@@ -1237,6 +1281,82 @@ def user_list(**connection_args):
     return results
 
 
+def _mysql_user_exists(user,
+                       host='localhost',
+                       password=None,
+                       password_hash=None,
+                       passwordless=False,
+                       unix_socket=False,
+                       password_column=None,
+                       auth_plugin='mysql_native_password',
+                       **connection_args):
+
+    server_version = salt.utils.data.decode(version(**connection_args))
+    compare_version = '8.0.11'
+    qry = ('SELECT User,Host FROM mysql.user WHERE User = %(user)s AND '
+           'Host = %(host)s')
+    args = {}
+    args['user'] = user
+    args['host'] = host
+
+    if salt.utils.data.is_true(passwordless):
+        if salt.utils.data.is_true(unix_socket):
+            qry += ' AND plugin=%(unix_socket)s'
+            args['unix_socket'] = 'auth_socket'
+        else:
+            qry += ' AND ' + password_column + ' = \'\''
+    elif password:
+        if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
+            if auth_plugin == 'mysql_native_password':
+                _password = __mysql_hash_password(six.text_type(password))
+                qry += ' AND ' + password_column + ' = %(password)s'
+                args['password'] = six.text_type(_password)
+            else:
+                err = 'Unable to verify password.'
+                log.error(err)
+                __context__['mysql.error'] = err
+        else:
+            qry += ' AND ' + password_column + ' = PASSWORD(%(password)s)'
+            args['password'] = six.text_type(password)
+    elif password_hash:
+        qry += ' AND ' + password_column + ' = %(password)s'
+        args['password'] = password_hash
+
+    return qry, args
+
+
+def _mariadb_user_exists(user,
+                         host='localhost',
+                         password=None,
+                         password_hash=None,
+                         passwordless=False,
+                         unix_socket=False,
+                         password_column=None,
+                         auth_plugin='mysql_native_password',
+                         **connection_args):
+
+    qry = ('SELECT User,Host FROM mysql.user WHERE User = %(user)s AND '
+           'Host = %(host)s')
+    args = {}
+    args['user'] = user
+    args['host'] = host
+
+    if salt.utils.data.is_true(passwordless):
+        if salt.utils.data.is_true(unix_socket):
+            qry += ' AND plugin=%(unix_socket)s'
+            args['unix_socket'] = 'unix_socket'
+        else:
+            qry += ' AND ' + password_column + ' = \'\''
+    elif password:
+        qry += ' AND ' + password_column + ' = PASSWORD(%(password)s)'
+        args['password'] = six.text_type(password)
+    elif password_hash:
+        qry += ' AND ' + password_column + ' = %(password)s'
+        args['password'] = password_hash
+
+    return qry, args
+
+
 def user_exists(user,
                 host='localhost',
                 password=None,
@@ -1269,7 +1389,6 @@ def user_exists(user,
         err = 'MySQL Error: Unable to fetch current server version. Last error was: "{}"'.format(last_err)
         log.error(err)
         return False
-    compare_version = '10.2.0' if 'MariaDB' in server_version else '8.0.11'
     dbc = _connect(**connection_args)
     # Did we fail to connect with the user we are checking
     # Its password might have previously change with the same command/state
@@ -1287,33 +1406,30 @@ def user_exists(user,
     if not password_column:
         password_column = __password_column(**connection_args)
 
+    auth_plugin = __get_auth_plugin(user, host, **connection_args)
+
     cur = dbc.cursor()
-    qry = ('SELECT User,Host FROM mysql.user WHERE User = %(user)s AND '
-           'Host = %(host)s')
-    args = {}
-    args['user'] = user
-    args['host'] = host
+    if 'MariaDB' in server_version:
+        qry, args = _mariadb_user_exists(user,
+                                         host,
+                                         password,
+                                         password_hash,
+                                         passwordless,
+                                         unix_socket,
+                                         password_column=password_column,
+                                         auth_plugin=auth_plugin,
+                                         **connection_args)
+    else:
+        qry, args = _mysql_user_exists(user,
+                                       host,
+                                       password,
+                                       password_hash,
+                                       passwordless,
+                                       unix_socket,
+                                       password_column=password_column,
+                                       auth_plugin=auth_plugin,
+                                       **connection_args)
 
-    if salt.utils.data.is_true(passwordless):
-        if salt.utils.data.is_true(unix_socket):
-            qry += ' AND plugin=%(unix_socket)s'
-            args['unix_socket'] = 'unix_socket'
-        else:
-            qry += ' AND ' + password_column + ' = \'\''
-    elif password:
-        if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
-            run_verify = True
-        else:
-            _password = password
-            qry += ' AND ' + password_column + ' = PASSWORD(%(password)s)'
-            args['password'] = six.text_type(_password)
-    elif password_hash:
-        qry += ' AND ' + password_column + ' = %(password)s'
-        args['password'] = password_hash
-
-    if run_verify:
-        if not verify_login(user, password, **connection_args):
-            return False
     try:
         _execute(cur, qry, args)
     except MySQLdb.OperationalError as exc:
@@ -1358,6 +1474,100 @@ def user_info(user, host='localhost', **connection_args):
     return result
 
 
+def _mysql_user_create(user,
+                       host='localhost',
+                       password=None,
+                       password_hash=None,
+                       allow_passwordless=False,
+                       unix_socket=False,
+                       password_column=None,
+                       auth_plugin='mysql_native_password',
+                       **connection_args):
+
+    server_version = salt.utils.data.decode(version(**connection_args))
+    compare_version = '8.0.11'
+
+    qry = 'CREATE USER %(user)s@%(host)s'
+    args = {}
+    args['user'] = user
+    args['host'] = host
+    if password is not None:
+        if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
+            args['auth_plugin'] = auth_plugin
+            qry += ' IDENTIFIED WITH %(auth_plugin)s BY %(password)s'
+        else:
+            qry += ' IDENTIFIED BY %(password)s'
+        args['password'] = six.text_type(password)
+    elif password_hash is not None:
+        if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
+            qry += ' IDENTIFIED BY %(password)s'
+        else:
+            qry += ' IDENTIFIED BY PASSWORD %(password)s'
+        args['password'] = password_hash
+    elif salt.utils.data.is_true(allow_passwordless):
+        if not plugin_status('auth_socket', **connection_args):
+            err = 'The auth_socket plugin is not enabled.'
+            log.error(err)
+            __context__['mysql.error'] = err
+            qry = False
+        else:
+            if salt.utils.data.is_true(unix_socket):
+                if host == 'localhost':
+                    qry += ' IDENTIFIED WITH auth_socket'
+                else:
+                    log.error(
+                        'Auth via unix_socket can be set only for host=localhost'
+                    )
+    else:
+        log.error('password or password_hash must be specified, unless '
+                  'allow_passwordless=True')
+        qry = False
+
+    return qry, args
+
+
+def _mariadb_user_create(user,
+                         host='localhost',
+                         password=None,
+                         password_hash=None,
+                         allow_passwordless=False,
+                         unix_socket=False,
+                         password_column=None,
+                         auth_plugin='mysql_native_password',
+                         **connection_args):
+
+    qry = 'CREATE USER %(user)s@%(host)s'
+    args = {}
+    args['user'] = user
+    args['host'] = host
+    if password is not None:
+        qry += ' IDENTIFIED BY %(password)s'
+        args['password'] = six.text_type(password)
+    elif password_hash is not None:
+        qry += ' IDENTIFIED BY PASSWORD %(password)s'
+        args['password'] = password_hash
+    elif salt.utils.data.is_true(allow_passwordless):
+        if not plugin_status('unix_socket', **connection_args):
+            err = 'The unix_socket plugin is not enabled.'
+            log.error(err)
+            __context__['mysql.error'] = err
+            qry = False
+        else:
+            if salt.utils.data.is_true(unix_socket):
+                if host == 'localhost':
+                    qry += ' IDENTIFIED VIA unix_socket'
+                else:
+                    log.error(
+                        'Auth via unix_socket can be set only for host=localhost'
+                    )
+    else:
+        log.error('password or password_hash must be specified, unless '
+                  'allow_passwordless=True')
+        qry = False
+
+    return qry, args
+
+
 def user_create(user,
                 host='localhost',
                 password=None,
@@ -1365,6 +1575,7 @@ def user_create(user,
                 allow_passwordless=False,
                 unix_socket=False,
                 password_column=None,
+                auth_plugin='mysql_native_password',
                 **connection_args):
     '''
     Creates a MySQL user
@@ -1396,6 +1607,12 @@ def user_create(user,
     unix_socket
         If ``True`` and allow_passwordless is ``True`` then will be used unix_socket auth plugin.
 
+    password_column
+        The password column to use in the user table.
+
+    auth_plugin
+        The authentication plugin to use, default is to use the mysql_native_password plugin.
+
     .. versionadded:: 0.16.2
         The ``allow_passwordless`` option was added.
 
@@ -1413,7 +1630,7 @@ def user_create(user,
         err = 'MySQL Error: Unable to fetch current server version. Last error was: "{}"'.format(last_err)
         log.error(err)
         return False
-    compare_version = '10.2.0' if 'MariaDB' in server_version else '8.0.11'
+
     if user_exists(user, host, **connection_args):
         log.info('User \'%s\'@\'%s\' already exists', user, host)
         return False
@@ -1426,31 +1643,29 @@ def user_create(user,
         password_column = __password_column(**connection_args)
 
     cur = dbc.cursor()
-    qry = 'CREATE USER %(user)s@%(host)s'
-    args = {}
-    args['user'] = user
-    args['host'] = host
-    if password is not None:
-        qry += ' IDENTIFIED BY %(password)s'
-        args['password'] = six.text_type(password)
-    elif password_hash is not None:
-        if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
-            qry += ' IDENTIFIED BY %(password)s'
-        else:
-            qry += ' IDENTIFIED BY PASSWORD %(password)s'
-        args['password'] = password_hash
-    elif salt.utils.data.is_true(allow_passwordless):
-        if salt.utils.data.is_true(unix_socket):
-            if host == 'localhost':
-                qry += ' IDENTIFIED VIA unix_socket'
-            else:
-                log.error(
-                    'Auth via unix_socket can be set only for host=localhost'
-                )
+    if 'MariaDB' in server_version:
+        qry, args = _mariadb_user_create(user,
+                                         host,
+                                         password,
+                                         password_hash,
+                                         allow_passwordless,
+                                         unix_socket,
+                                         password_column=password_column,
+                                         auth_plugin=auth_plugin,
+                                         **connection_args)
     else:
-        log.error('password or password_hash must be specified, unless '
-                  'allow_passwordless=True')
-        return False
+        qry, args = _mysql_user_create(user,
+                                       host,
+                                       password,
+                                       password_hash,
+                                       allow_passwordless,
+                                       unix_socket,
+                                       password_column=password_column,
+                                       auth_plugin=auth_plugin,
+                                       **connection_args)
+
+    if isinstance(qry, bool):
+        return qry
 
     try:
         _execute(cur, qry, args)
@@ -1460,7 +1675,12 @@ def user_create(user,
         log.error(err)
         return False
 
-    if user_exists(user, host, password, password_hash, password_column=password_column, **connection_args):
+    if user_exists(user,
+                   host,
+                   password,
+                   password_hash,
+                   password_column=password_column,
+                   **connection_args):
         msg = 'User \'{0}\'@\'{1}\' has been created'.format(user, host)
         if not any((password, password_hash)):
             msg += ' with passwordless login'
@@ -1469,6 +1689,121 @@ def user_create(user,
 
     log.info('User \'%s\'@\'%s\' was not created', user, host)
     return False
+
+
+def _mysql_user_chpass(user,
+                       host='localhost',
+                       password=None,
+                       password_hash=None,
+                       allow_passwordless=False,
+                       unix_socket=None,
+                       password_column=None,
+                       auth_plugin='mysql_native_password',
+                       **connection_args):
+    server_version = salt.utils.data.decode(version(**connection_args))
+    compare_version = '8.0.11'
+
+    args = {}
+
+    if password is not None:
+        if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
+            password_sql = '%(password)s'
+        else:
+            password_sql = 'PASSWORD(%(password)s)'
+        args['password'] = password
+    elif password_hash is not None:
+        password_sql = '%(password)s'
+        args['password'] = password_hash
+    elif not salt.utils.data.is_true(allow_passwordless):
+        log.error('password or password_hash must be specified, unless '
+                  'allow_passwordless=True')
+        return False
+    else:
+        password_sql = '\'\''
+
+    args['user'] = user
+    args['host'] = host
+
+    if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
+        qry = "ALTER USER %(user)s@%(host)s IDENTIFIED BY %(password)s;"
+    else:
+        qry = ('UPDATE mysql.user SET ' + password_column + '=' + password_sql +
+               ' WHERE User=%(user)s AND Host = %(host)s;')
+    if salt.utils.data.is_true(allow_passwordless) and \
+            salt.utils.data.is_true(unix_socket):
+        if host == 'localhost':
+            if not plugin_status('auth_socket', **connection_args):
+                err = 'The auth_socket plugin is not enabled.'
+                log.error(err)
+                __context__['mysql.error'] = err
+                qry = False
+            else:
+                args['unix_socket'] = 'auth_socket'
+                if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
+                    qry = "ALTER USER %(user)s@%(host)s IDENTIFIED WITH %(unix_socket)s AS %(user)s;"
+                else:
+                    qry = ('UPDATE mysql.user SET ' + password_column + '='
+                           + password_sql + ', plugin=%(unix_socket)s' +
+                           ' WHERE User=%(user)s AND Host = %(host)s;')
+        else:
+            log.error('Auth via unix_socket can be set only for host=localhost')
+
+    return qry, args
+
+
+def _mariadb_user_chpass(user,
+                         host='localhost',
+                         password=None,
+                         password_hash=None,
+                         allow_passwordless=False,
+                         unix_socket=None,
+                         password_column=None,
+                         auth_plugin='mysql_native_password',
+                         **connection_args):
+
+    server_version = salt.utils.data.decode(version(**connection_args))
+    compare_version = '10.4.0'
+
+    args = {}
+
+    if password is not None:
+        password_sql = 'PASSWORD(%(password)s)'
+        args['password'] = password
+    elif password_hash is not None:
+        password_sql = '%(password)s'
+        args['password'] = password_hash
+    elif not salt.utils.data.is_true(allow_passwordless):
+        log.error('password or password_hash must be specified, unless '
+                  'allow_passwordless=True')
+        return False
+    else:
+        password_sql = '\'\''
+
+    args['user'] = user
+    args['host'] = host
+
+    if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
+        qry = "ALTER USER %(user)s@%(host)s IDENTIFIED BY %(password)s;"
+    else:
+        qry = ('UPDATE mysql.user SET ' + password_column + '=' + password_sql +
+               ' WHERE User=%(user)s AND Host = %(host)s;')
+    if salt.utils.data.is_true(allow_passwordless) and \
+            salt.utils.data.is_true(unix_socket):
+        if host == 'localhost':
+            if not plugin_status('unix_socket', **connection_args):
+                err = 'The unix_socket plugin is not enabled.'
+                log.error(err)
+                __context__['mysql.error'] = err
+                qry = False
+            else:
+                args['unix_socket'] = 'unix_socket'
+                qry = ('UPDATE mysql.user SET ' + password_column + '='
+                       + password_sql + ', plugin=%(unix_socket)s' +
+                       ' WHERE User=%(user)s AND Host = %(host)s;')
+        else:
+            log.error('Auth via unix_socket can be set only for host=localhost')
+
+    return qry, args
 
 
 def user_chpass(user,
@@ -1523,51 +1858,44 @@ def user_chpass(user,
         err = 'MySQL Error: Unable to fetch current server version. Last error was: "{}"'.format(last_err)
         log.error(err)
         return False
-    compare_version = '10.2.0' if 'MariaDB' in server_version else '8.0.11'
-    args = {}
-    if password is not None:
-        if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
-            password_sql = '%(password)s'
-        else:
-            password_sql = 'PASSWORD(%(password)s)'
-        args['password'] = password
-    elif password_hash is not None:
-        password_sql = '%(password)s'
-        args['password'] = password_hash
-    elif not salt.utils.data.is_true(allow_passwordless):
-        log.error('password or password_hash must be specified, unless '
-                  'allow_passwordless=True')
+
+    if not user_exists(user, host, **connection_args):
+        log.info('User \'%s\'@\'%s\' does not exists', user, host)
         return False
-    else:
-        password_sql = '\'\''
 
     dbc = _connect(**connection_args)
+
     if dbc is None:
         return False
 
     if not password_column:
         password_column = __password_column(**connection_args)
 
+    auth_plugin = __get_auth_plugin(user, host, **connection_args)
+
     cur = dbc.cursor()
-    args['user'] = user
-    args['host'] = host
-    if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
-        qry = "ALTER USER %(user)s@%(host)s IDENTIFIED BY %(password)s;"
+
+    if 'MariaDB' in server_version:
+        qry, args = _mariadb_user_chpass(user,
+                                         host,
+                                         password,
+                                         password_hash,
+                                         allow_passwordless,
+                                         unix_socket,
+                                         password_column=password_column,
+                                         auth_plugin=auth_plugin,
+                                         **connection_args)
     else:
-        qry = ('UPDATE mysql.user SET ' + password_column + '=' + password_sql +
-               ' WHERE User=%(user)s AND Host = %(host)s;')
-    if salt.utils.data.is_true(allow_passwordless) and \
-            salt.utils.data.is_true(unix_socket):
-        if host == 'localhost':
-            args['unix_socket'] = 'auth_socket'
-            if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
-                qry = "ALTER USER %(user)s@%(host)s IDENTIFIED WITH %(unix_socket)s AS %(user)s;"
-            else:
-                qry = ('UPDATE mysql.user SET ' + password_column + '='
-                       + password_sql + ', plugin=%(unix_socket)s' +
-                       ' WHERE User=%(user)s AND Host = %(host)s;')
-        else:
-            log.error('Auth via unix_socket can be set only for host=localhost')
+        qry, args = _mysql_user_chpass(user,
+                                       host,
+                                       password,
+                                       password_hash,
+                                       allow_passwordless,
+                                       unix_socket,
+                                       password_column=password_column,
+                                       auth_plugin=auth_plugin,
+                                       **connection_args)
+
     try:
         result = _execute(cur, qry, args)
     except MySQLdb.OperationalError as exc:
@@ -1576,8 +1904,17 @@ def user_chpass(user,
         log.error(err)
         return False
 
+    compare_version = '10.4.0' if 'MariaDB' in server_version else '8.0.11'
+    res = False
     if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
         _execute(cur, 'FLUSH PRIVILEGES;')
+        res = True
+    else:
+        if result:
+            _execute(cur, 'FLUSH PRIVILEGES;')
+            res = True
+
+    if res:
         log.info(
             'Password for user \'%s\'@\'%s\' has been %s',
                 user, host,
@@ -1585,21 +1922,12 @@ def user_chpass(user,
         )
         return True
     else:
-        if result:
-            _execute(cur, 'FLUSH PRIVILEGES;')
-            log.info(
-                'Password for user \'%s\'@\'%s\' has been %s',
-                    user, host,
-                    'changed' if any((password, password_hash)) else 'cleared'
-            )
-            return True
-
-    log.info(
-        'Password for user \'%s\'@\'%s\' was not %s',
-            user, host,
-            'changed' if any((password, password_hash)) else 'cleared'
-    )
-    return False
+        log.info(
+            'Password for user \'%s\'@\'%s\' was not %s',
+                user, host,
+                'changed' if any((password, password_hash)) else 'cleared'
+        )
+        return False
 
 
 def user_remove(user,
@@ -1614,6 +1942,12 @@ def user_remove(user,
 
         salt '*' mysql.user_remove frank localhost
     '''
+    if not user_exists(user, host, **connection_args):
+        err = 'User \'%s\'@\'%s\' does not exists', user, host
+        __context__['mysql.error'] = err
+        log.info(err)
+        return False
+
     dbc = _connect(**connection_args)
     if dbc is None:
         return False
@@ -1810,7 +2144,7 @@ def __grant_generate(grant,
     args = {}
     args['user'] = user
     args['host'] = host
-    if isinstance(ssl_option, list) and len(ssl_option):
+    if isinstance(ssl_option, list) and ssl_option:
         qry += __ssl_option_sanitize(ssl_option)
     if salt.utils.data.is_true(grant_option):
         qry += ' WITH GRANT OPTION'
@@ -1895,7 +2229,7 @@ def grant_exists(grant,
         target = __grant_generate(
             grant, database, user, host, grant_option, escape
         )
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         log.error('Error during grant generation.')
         return False
 
@@ -1939,7 +2273,8 @@ def grant_exists(grant,
             else:
                 log.debug('grants mismatch \'%s\'<>\'%s\'', grant_tokens, target_tokens)
 
-        except Exception as exc:  # Fallback to strict parsing
+        except Exception as exc:  # pylint: disable=broad-except
+            # Fallback to strict parsing
             log.exception(exc)
             if grants is not False and target in grants:
                 log.debug('Grant exists.')
@@ -1978,7 +2313,7 @@ def grant_add(grant,
     grant = grant.strip()
     try:
         qry = __grant_generate(grant, database, user, host, grant_option, escape, ssl_option)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         log.error('Error during grant generation')
         return False
     try:
@@ -2356,3 +2691,153 @@ def verify_login(user, password=None, **connection_args):
             del __context__['mysql.error']
         return False
     return True
+
+
+def plugins_list(**connection_args):
+    '''
+    Return a list of plugins and their status
+    from the ``SHOW PLUGINS`` query.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mysql.plugins_list
+    '''
+    dbc = _connect(**connection_args)
+    if dbc is None:
+        return []
+    cur = dbc.cursor()
+    qry = 'SHOW PLUGINS'
+    try:
+        _execute(cur, qry)
+    except MySQLdb.OperationalError as exc:
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
+        __context__['mysql.error'] = err
+        log.error(err)
+        return []
+
+    ret = []
+    results = cur.fetchall()
+    for dbs in results:
+        ret.append({'name': dbs[0], 'status': dbs[1]})
+
+    log.debug(ret)
+    return ret
+
+
+def plugin_add(name, soname=None, **connection_args):
+    '''
+    Add a plugina.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mysql.plugin_add auth_socket
+    '''
+    if not name:
+        log.error('Plugin name is required.')
+        return False
+
+    if plugin_status(name, **connection_args):
+        log.error('Plugin %s is already installed.', name)
+        return True
+
+    dbc = _connect(**connection_args)
+    if dbc is None:
+        return False
+    cur = dbc.cursor()
+    qry = 'INSTALL PLUGIN {0}'.format(name)
+
+    if soname:
+        qry += ' SONAME "{0}"'.format(soname)
+    else:
+        qry += ' SONAME "{0}.so"'.format(name)
+
+    try:
+        _execute(cur, qry)
+    except MySQLdb.OperationalError as exc:
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
+        __context__['mysql.error'] = err
+        log.error(err)
+        return False
+
+    return True
+
+
+def plugin_remove(name, **connection_args):
+    '''
+    Remove a plugin.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mysql.plugin_remove auth_socket
+    '''
+    if not name:
+        log.error('Plugin name is required.')
+        return False
+
+    if not plugin_status(name, **connection_args):
+        log.error('Plugin %s is not installed.', name)
+        return True
+
+    dbc = _connect(**connection_args)
+    if dbc is None:
+        return False
+    cur = dbc.cursor()
+    qry = 'UNINSTALL PLUGIN {0}'.format(name)
+    args = {}
+    args['name'] = name
+
+    try:
+        _execute(cur, qry)
+    except MySQLdb.OperationalError as exc:
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
+        __context__['mysql.error'] = err
+        log.error(err)
+        return False
+
+    return True
+
+
+def plugin_status(name, **connection_args):
+    '''
+    Return the status of a plugin.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mysql.plugin_status auth_socket
+    '''
+    if not name:
+        log.error('Plugin name is required.')
+        return False
+
+    dbc = _connect(**connection_args)
+    if dbc is None:
+        return ''
+    cur = dbc.cursor()
+    qry = 'SELECT PLUGIN_STATUS FROM INFORMATION_SCHEMA.PLUGINS WHERE PLUGIN_NAME = %(name)s'
+    args = {}
+    args['name'] = name
+
+    try:
+        _execute(cur, qry, args)
+    except MySQLdb.OperationalError as exc:
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
+        __context__['mysql.error'] = err
+        log.error(err)
+        return ''
+
+    try:
+        status = cur.fetchone()
+        if status is None:
+            return ''
+        else:
+            return status[0]
+    except IndexError:
+        return ''
