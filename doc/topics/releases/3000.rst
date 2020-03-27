@@ -4,6 +4,14 @@
 Salt 3000 Release Notes - Codename Neon
 =======================================
 
+Security Advisory
+=================
+
+For historical reasons, Salt requires PyCrypto as a "lowest common
+denominator". However, `PyCrypto is unmaintained`_ and best practice is to
+manually upgrade to use a more maintained library such as `PyCryptodome`_. See
+`Issue #52674`_ and `Issue #54115`_ for more info
+
 New Versioning
 ==============
 The neon release has removed the date versioning. Going forward we will
@@ -32,6 +40,28 @@ to provide a consistent version of Tornado across all operating systems while
 we continue to work on upgrading Tornado to a recent version. New code that
 uses Tornado should import the module from ``salt.ext.tornado`` instead of
 importing the system version of Tornado.
+
+Msgpack 1.0.0rc1 Incompatibility
+================================
+Salt is currently incompatible with mgspack 1.0.0rc1. We recommend using
+versions < 1.0.0 . This impacts the Salt Master's ability to run commands
+against minions. Please see `Issue 56007 <https://github.com/saltstack/salt/issues/56007>`_
+for more details and updates.
+
+
+Pip Installing Salt On Windows
+==============================
+
+This release will not install correctly on windows when using pip to install salt.
+This issue is addressed in `PR 56099 <https://github.com/saltstack/salt/pull/56099>`_.
+The workaround for this issue is:
+
+.. code-block:: text
+
+   pip install "pywin32==224" "WMI==1.4.9"
+
+
+Those using the Salt Windows Installer are not affected by this issue.
 
 
 Saltcheck Updates
@@ -337,6 +367,48 @@ editing values from an xpath query, or editing XML IDs.
         - xpath: .//actor[@id='1']
         - value: William Shatner
 
+
+LGPO Execution Module
+=====================
+Multiple fixes were made to the :py:func:`win_lgpo <salt.modules.win_lgpo>` to
+expand support for additional policies and improve performance. Issues with
+encoding and unsupported characters (smart-quotes, em-dash, etc) found in the
+ADML files as well as whitespace in some policies have been addressed.
+
+Speed enhancements include:
+
+- Caching the compiled xml from ADMX/ADML files in ``__context__``
+- Lowercasing all keys before compiling XML to remove an expensive XPath lookup
+
+Additional functionality:
+
+- Adds the :py:func:`lgpo.get_policy <salt.modules.win_lgpo.get_policy>`
+  function that allows you to get the current settings for a single policy.
+- Changes some policy names that were overly long
+
+
+LGPO State Module
+=================
+Multiple changes were made to the :py:func:`win_lgpo <salt.states.win_lgpo>`
+state to improve performance.
+
+It now uses the :py:func:`lgpo.get_policy <salt.modules.win_lgpo.get_policy>`
+function instead of the :py:func:`lgpo.get <salt.modules.win_lgpo.get>` to avoid
+reloading all settings on the machine at the beginning and end of each state
+run.
+
+Supports the new shorter policy names but also attempts to resolve the older,
+longer policy names.
+
+
+Win_network Salt Util
+=====================
+Now uses .NET libraries to obtain Interface information on Windows systems that
+support it. Unsupported systems fall back to the more expensive WMI calls. This
+is important as this data is gathered for grains and occurs each time a process
+is forked.
+
+
 Jinja enhancements
 ==================
 
@@ -519,6 +591,19 @@ Enhancements to chroot
   :py:func:`sls<salt.modules.chroot.sls>`, and
   :py:func:`highstate<salt.modules.chroot.highstate>` that allow executing
   states in sls files or running apply/highstate inside of a chroot.
+
+Minion-side ACL
+---------------
+
+Salt has had master-side ACL for the salt mine for some time, where the master
+configuration contained `mine_get` that specified which minions could request
+which functions. However, now you can specify which minions can access a function
+in the salt mine function definition itself (or when calling :py:func:`mine.send <salt.modules.mine.send>`).
+This targeting works the same as the generic minion targeting as specified
+:ref:`here <targeting>`. The parameters used are ``allow_tgt`` and ``allow_tgt_type``.
+See also :ref:`the documentation of the Salt Mine <mine_minion-side-acl>`. Please
+note that if you want to use this new feature both your minion and masters will need
+to be on atleast version 3000.
 
 Deprecations
 ============
@@ -795,3 +880,9 @@ salt.auth.Authorize Class Removal
 - The salt.auth.Authorize Class inside of the `salt/auth/__init__.py` file has been removed and
   the `any_auth` method inside of the file `salt/utils/minions.py`. These method and classes were
   not being used inside of the salt code base.
+
+
+.. _PyCrypto is unmaintained: https://github.com/dlitz/pycrypto/issues/301#issue-551975699
+.. _PyCryptodome: https://pypi.org/project/pycryptodome/
+.. _Issue #52674: https://github.com/saltstack/salt/issues/52674
+.. _Issue #54115: https://github.com/saltstack/salt/issues/54115

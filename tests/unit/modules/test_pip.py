@@ -14,11 +14,28 @@ from tests.support.mock import MagicMock, patch
 import salt.utils.platform
 import salt.modules.pip as pip
 from salt.exceptions import CommandExecutionError
+import salt.utils.platform
 
 
 class PipTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {pip: {'__salt__': {'cmd.which_bin': lambda _: 'pip'}}}
+
+    def test__pip_bin_env(self):
+        ret = pip._pip_bin_env(None, 'C:/Users/ch44d/Documents/salt/tests/pip.exe')
+        if salt.utils.platform.is_windows():
+            self.assertEqual(ret, 'C:/Users/ch44d/Documents/salt/tests')
+        else:
+            self.assertEqual(ret, None)
+
+    def test__pip_bin_env_no_change(self):
+        cwd = 'C:/Users/ch44d/Desktop'
+        ret = pip._pip_bin_env(cwd, 'C:/Users/ch44d/Documents/salt/tests/pip.exe')
+        self.assertEqual(ret, cwd)
+
+    def test__pip_bin_env_no_bin_env(self):
+        ret = pip._pip_bin_env(None, None)
+        self.assertEqual(None, None)
 
     def test_fix4361(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
