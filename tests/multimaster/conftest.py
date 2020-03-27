@@ -12,6 +12,8 @@ import os
 import shutil
 
 import pytest
+import salt.utils.files
+from salt.serializers import yaml
 from salt.utils.immutabletypes import freeze
 from tests.support.runtests import RUNTIME_VARS
 
@@ -25,8 +27,30 @@ def salt_mm_master_config(request, salt_factories):
 
 @pytest.fixture(scope="package")
 def salt_mm_minion_config(request, salt_factories, salt_mm_master, salt_mm_sub_master):
+    with salt.utils.files.fopen(
+        os.path.join(RUNTIME_VARS.CONF_DIR, "mm_minion")
+    ) as rfh:
+        config_defaults = yaml.deserialize(rfh.read())
+    config_defaults["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
+    config_defaults["aliases.file"] = os.path.join(RUNTIME_VARS.TMP, "aliases")
+    config_defaults["transport"] = request.config.getoption("--transport")
+
+    mm_master_port = salt_mm_master.config["ret_port"]
+    mm_sub_master_port = salt_mm_sub_master.config["ret_port"]
+    config_overrides = {
+        "master_port": "",
+        "master": [
+            "localhost:{}".format(mm_master_port),
+            "localhost:{}".format(mm_sub_master_port),
+        ],
+        "test.foo": "baz",
+    }
     return salt_factories.configure_minion(
-        request, "mm-minion", master_id=salt_mm_master.config["id"]
+        request,
+        "mm-minion",
+        master_id=salt_mm_master.config["id"],
+        config_defaults=config_defaults,
+        config_overrides=config_overrides,
     )
 
 
@@ -39,8 +63,30 @@ def salt_mm_sub_master_config(request, salt_factories, salt_mm_master):
 def salt_mm_sub_minion_config(
     request, salt_factories, salt_mm_master, salt_mm_sub_master
 ):
+    with salt.utils.files.fopen(
+        os.path.join(RUNTIME_VARS.CONF_DIR, "mm_sub_minion")
+    ) as rfh:
+        config_defaults = yaml.deserialize(rfh.read())
+    config_defaults["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
+    config_defaults["aliases.file"] = os.path.join(RUNTIME_VARS.TMP, "aliases")
+    config_defaults["transport"] = request.config.getoption("--transport")
+
+    mm_master_port = salt_mm_master.config["ret_port"]
+    mm_sub_master_port = salt_mm_sub_master.config["ret_port"]
+    config_overrides = {
+        "master_port": "",
+        "master": [
+            "localhost:{}".format(mm_master_port),
+            "localhost:{}".format(mm_sub_master_port),
+        ],
+        "test.foo": "baz",
+    }
     return salt_factories.configure_minion(
-        request, "mm-sub-minion", master_id=salt_mm_sub_master.config["id"]
+        request,
+        "mm-sub-minion",
+        master_id=salt_mm_sub_master.config["id"],
+        config_defaults=config_defaults,
+        config_overrides=config_overrides,
     )
 
 
