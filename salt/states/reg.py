@@ -396,10 +396,13 @@ def present(name,
                                               vname=vname,
                                               use_32bit_registry=use_32bit_registry)
 
+    # Cast the vdata according to the vtype
+    vdata_decoded = __utils__['reg.cast_vdata'](vdata=vdata, vtype=vtype)
+
     # Check if the key already exists
     # If so, check perms
     # We check `vdata` and `success` because `vdata` can be None
-    if vdata == reg_current['vdata'] and reg_current['success']:
+    if vdata_decoded == reg_current['vdata'] and reg_current['success']:
         ret['comment'] = '{0} in {1} is already present' \
                          ''.format(salt.utils.stringutils.to_unicode(vname, 'utf-8') if vname else '(Default)',
                                    salt.utils.stringutils.to_unicode(name, 'utf-8'))
@@ -412,9 +415,6 @@ def present(name,
             deny_perms=win_deny_perms,
             inheritance=win_inheritance,
             reset=win_perms_reset)
-
-    # Cast the vdata according to the vtype
-    vdata_decoded = __utils__['reg.cast_vdata'](vdata=vdata, vtype=vtype)
 
     add_change = {'Key': r'{0}\{1}'.format(hive, key),
                   'Entry': '{0}'.format(salt.utils.stringutils.to_unicode(vname, 'utf-8') if vname else '(Default)'),
@@ -440,10 +440,10 @@ def present(name,
 
     if not ret['result']:
         ret['changes'] = {}
-        ret['comment'] = r'Failed to add {0} to {1}\{2}'.format(name, hive, key)
+        ret['comment'] = r'Failed to add {0} to {1}\{2}'.format(vname, hive, key)
     else:
         ret['changes'] = {'reg': {'Added': add_change}}
-        ret['comment'] = r'Added {0} to {1}\{2}'.format(name, hive, key)
+        ret['comment'] = r'Added {0} to {1}\{2}'.format(vname, hive, key)
 
     if ret['result']:
         ret = __utils__['dacl.check_perms'](
