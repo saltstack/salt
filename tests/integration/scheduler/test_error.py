@@ -11,16 +11,14 @@ import dateutil.parser as dateutil_parser
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
-
-# Import Salt Testing Libs
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import skipIf
-import tests.integration as integration
+from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt libs
 import salt.utils.schedule
 
-from salt.modules.test import ping as ping
+from salt.modules.test import ping
 
 try:
     import croniter  # pylint: disable=W0611
@@ -29,7 +27,7 @@ except ImportError:
     HAS_CRONITER = False
 
 log = logging.getLogger(__name__)
-ROOT_DIR = os.path.join(integration.TMP, 'schedule-unit-tests')
+ROOT_DIR = os.path.join(RUNTIME_VARS.TMP, 'schedule-unit-tests')
 SOCK_DIR = os.path.join(ROOT_DIR, 'test-socks')
 
 DEFAULT_CONFIG = salt.config.minion_config(None)
@@ -103,7 +101,7 @@ class SchedulerErrorTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status('job1')
         self.assertEqual(ret['_error'],
-                         'Invalid date string. Ignoring job job1.')
+                         'Invalid date string 13/29/2017 1:00pm. Ignoring job job1.')
 
     def test_eval_whens_grain_not_dict(self):
         '''

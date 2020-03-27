@@ -22,8 +22,8 @@ from salt.utils.versions import LooseVersion
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, __version__ as mock_version
+from tests.support.unit import TestCase
+from tests.support.mock import patch, __version__ as mock_version
 
 VM_NAME = 'kings_landing'
 DUMMY_TOKEN = {
@@ -48,7 +48,6 @@ except ImportError:
     pass
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class GCETestCase(TestCase, LoaderModuleMockMixin):
     '''
     Unit TestCase for salt.cloud.clouds.gce module.

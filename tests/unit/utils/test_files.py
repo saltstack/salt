@@ -17,8 +17,6 @@ from tests.support.helpers import with_tempdir
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 
@@ -27,7 +25,6 @@ class FilesTestCase(TestCase):
     Test case for files util.
     '''
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_safe_rm(self):
         with patch('os.remove') as os_remove_mock:
             salt.utils.files.safe_rm('dummy_tgt')

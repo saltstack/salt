@@ -322,7 +322,7 @@ def bulk_stop(workers, lbn, profile='default'):
     for worker in workers:
         try:
             ret[worker] = worker_stop(worker, lbn, profile)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             ret[worker] = False
 
     return ret
@@ -351,7 +351,7 @@ def bulk_activate(workers, lbn, profile='default'):
     for worker in workers:
         try:
             ret[worker] = worker_activate(worker, lbn, profile)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             ret[worker] = False
 
     return ret
@@ -380,7 +380,7 @@ def bulk_disable(workers, lbn, profile='default'):
     for worker in workers:
         try:
             ret[worker] = worker_disable(worker, lbn, profile)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             ret[worker] = False
 
     return ret
@@ -409,7 +409,7 @@ def bulk_recover(workers, lbn, profile='default'):
     for worker in workers:
         try:
             ret[worker] = worker_recover(worker, lbn, profile)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             ret[worker] = False
 
     return ret

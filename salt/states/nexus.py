@@ -95,7 +95,7 @@ def downloaded(name, artifact, target_dir='/tmp', target_file=None):
 
     try:
         fetch_result = __fetch_from_nexus(artifact, target_dir, target_file)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         ret['result'] = False
         ret['comment'] = six.text_type(exc)
         return ret

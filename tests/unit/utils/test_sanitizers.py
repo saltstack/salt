@@ -8,11 +8,9 @@ from salt.ext.six import text_type as text
 from salt.utils.sanitizers import clean, mask_args_value
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase, skipIf
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON
+from tests.support.unit import TestCase
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class SanitizersTestCase(TestCase):
     '''
     TestCase for sanitizers

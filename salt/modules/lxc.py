@@ -80,7 +80,7 @@ def __virtual__():
     #     try:
     #         passed = subprocess.check_output(
     #             'lxc-version').split(':')[1].strip() >= '1.0'
-    #     except Exception:
+    #     except Exception:  # pylint: disable=broad-except
     #         pass
     #     if not passed:
     #         log.warning('Support for lxc < 1.0 may be incomplete.')
@@ -2776,7 +2776,7 @@ def info(name, path=None):
                     config.append(tuple(comps))
 
         ifaces = []
-        current = None
+        current = {}
 
         for key, val in config:
             if key == 'lxc.network.type':
@@ -3674,8 +3674,6 @@ def _run(name,
                                              python_shell=python_shell,
                                              output_loglevel=output_loglevel,
                                              ignore_retcode=ignore_retcode)
-    except Exception:
-        raise
     finally:
         # Make sure we honor preserve_state, even if there was an exception
         new_state = state(name, path=path)
@@ -4371,7 +4369,7 @@ def edit_conf(conf_file,
 
     try:
         conf = read_conf(conf_file, out_format=out_format)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         conf = []
 
     if not lxc_config:

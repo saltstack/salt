@@ -8,10 +8,8 @@ import os
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
+from tests.support.unit import TestCase
 from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     MagicMock,
     patch)
 
@@ -19,7 +17,6 @@ from tests.support.mock import (
 import salt.states.mysql_query as mysql_query
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class MysqlQueryTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.mysql_query

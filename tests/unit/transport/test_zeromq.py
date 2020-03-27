@@ -23,8 +23,8 @@ import zmq.eventloop.ioloop
 # support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
 if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
     zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
-from tornado.testing import AsyncTestCase
-import tornado.gen
+from salt.ext.tornado.testing import AsyncTestCase
+import salt.ext.tornado.gen
 
 # Import Salt libs
 import salt.config
@@ -37,9 +37,10 @@ import salt.transport.client
 import salt.exceptions
 from salt.ext.six.moves import range
 from salt.transport.zeromq import AsyncReqMessageClientPool
+import salt.ext.tornado.ioloop
 
 # Import test support libs
-from tests.support.paths import TMP_CONF_DIR
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 from tests.support.helpers import flaky, get_unused_localhost_port
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
@@ -92,7 +93,7 @@ class BaseZMQReqCase(TestCase, AdaptedConfigurationTestCaseMixin):
         cls.server_channel = salt.transport.server.ReqServerChannel.factory(cls.master_config)
         cls.server_channel.pre_fork(cls.process_manager)
 
-        cls.io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
+        cls.io_loop = salt.ext.tornado.ioloop.IOLoop()
         cls.evt = threading.Event()
         cls.server_channel.post_fork(cls._handle_payload, io_loop=cls.io_loop)
         cls.server_thread = threading.Thread(target=run_loop_in_thread, args=(cls.io_loop, cls.evt))
@@ -133,15 +134,16 @@ class ClearReqTestCases(BaseZMQReqCase, ReqChannelMixin):
         self.channel = salt.transport.client.ReqChannel.factory(self.minion_config, crypt='clear')
 
     def tearDown(self):
+        self.channel.close()
         del self.channel
 
     @classmethod
-    @tornado.gen.coroutine
+    @salt.ext.tornado.gen.coroutine
     def _handle_payload(cls, payload):
         '''
         TODO: something besides echo
         '''
-        raise tornado.gen.Return((payload, {'fun': 'send_clear'}))
+        raise salt.ext.tornado.gen.Return((payload, {'fun': 'send_clear'}))
 
     def test_master_uri_override(self):
         '''
@@ -162,15 +164,16 @@ class AESReqTestCases(BaseZMQReqCase, ReqChannelMixin):
         self.channel = salt.transport.client.ReqChannel.factory(self.minion_config)
 
     def tearDown(self):
+        self.channel.close()
         del self.channel
 
     @classmethod
-    @tornado.gen.coroutine
+    @salt.ext.tornado.gen.coroutine
     def _handle_payload(cls, payload):
         '''
         TODO: something besides echo
         '''
-        raise tornado.gen.Return((payload, {'fun': 'send'}))
+        raise salt.ext.tornado.gen.Return((payload, {'fun': 'send'}))
 
     # TODO: make failed returns have a specific framing so we can raise the same exception
     # on encrypted channels
@@ -217,7 +220,7 @@ class BaseZMQPubCase(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
                'tcp_master_workers': tcp_master_workers}
         )
 
-        cls.minion_config = salt.config.minion_config(os.path.join(TMP_CONF_DIR, 'minion'))
+        cls.minion_config = salt.config.minion_config(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'minion'))
         cls.minion_config = cls.get_temp_config(
             'minion',
             **{'transport': 'zeromq',
@@ -235,7 +238,7 @@ class BaseZMQPubCase(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
         cls.req_server_channel = salt.transport.server.ReqServerChannel.factory(cls.master_config)
         cls.req_server_channel.pre_fork(cls.process_manager)
 
-        cls._server_io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
+        cls._server_io_loop = salt.ext.tornado.ioloop.IOLoop()
         cls.evt = threading.Event()
         cls.req_server_channel.post_fork(cls._handle_payload, io_loop=cls._server_io_loop)
         cls.server_thread = threading.Thread(target=run_loop_in_thread, args=(cls._server_io_loop, cls.evt))
@@ -286,7 +289,7 @@ class AsyncPubChannelTest(BaseZMQPubCase, PubChannelMixin):
     Tests around the publish system
     '''
     def get_new_ioloop(self):
-        return zmq.eventloop.ioloop.ZMQIOLoop()
+        return salt.ext.tornado.ioloop.IOLoop()
 
 
 class AsyncReqMessageClientPoolTest(TestCase):
@@ -417,7 +420,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         # Start the event loop, even though we dont directly use this with
         # ZeroMQPubServerChannel, having it running seems to increase the
         # likely hood of dropped messages.
-        self.io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
+        self.io_loop = salt.ext.tornado.ioloop.IOLoop()
         self.io_loop.make_current()
         self.io_loop_thread = threading.Thread(target=self.io_loop.start)
         self.io_loop_thread.start()
@@ -461,7 +464,6 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
                     break
                 last_msg = time.time()
                 results.append(payload['jid'])
-        return results
 
     @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows OS')
     def test_publish_to_pubserv_ipc(self):
@@ -493,6 +495,27 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         gather.join()
         server_channel.pub_close()
         assert len(results) == send_num, (len(results), set(expect).difference(results))
+
+    def test_zeromq_publish_port(self):
+        '''
+        test when connecting that we
+        use the publish_port set in opts
+        when its not 4506
+        '''
+        opts = dict(self.master_config, ipc_mode='ipc',
+                    pub_hwm=0, recon_randomize=False,
+                    publish_port=455505,
+                    recon_default=1, recon_max=2, master_ip='127.0.0.1',
+                    acceptance_wait_time=5, acceptance_wait_time_max=5)
+        opts['master_uri'] = 'tcp://{interface}:{publish_port}'.format(**opts)
+
+        channel = salt.transport.zeromq.AsyncZeroMQPubChannel(opts)
+        patch_socket = MagicMock(return_value=True)
+        patch_auth = MagicMock(return_value=True)
+        with patch.object(channel, '_socket', patch_socket), \
+            patch.object(channel, 'auth', patch_auth):
+            channel.connect()
+        assert str(opts['publish_port']) in patch_socket.mock_calls[0][1][0]
 
     def test_zeromq_zeromq_filtering_decode_message_no_match(self):
         '''
@@ -613,6 +636,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         for i in range(num):
             load = {'tgt_type': 'glob', 'tgt': '*', 'jid': '{}-{}'.format(sid, i)}
             server_channel.publish(load)
+        server_channel.close()
 
     @staticmethod
     def _send_large(opts, sid, num=10, size=250000 * 3):
@@ -620,6 +644,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         for i in range(num):
             load = {'tgt_type': 'glob', 'tgt': '*', 'jid': '{}-{}'.format(sid, i), 'xdata': '0' * size}
             server_channel.publish(load)
+        server_channel.close()
 
     def test_issue_36469_tcp(self):
         '''
@@ -628,38 +653,6 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         https://github.com/saltstack/salt/issues/36469
         '''
         opts = dict(self.master_config, ipc_mode='tcp', pub_hwm=0)
-        server_channel = salt.transport.zeromq.ZeroMQPubServerChannel(opts)
-        server_channel.pre_fork(self.process_manager, kwargs={
-            'log_queue': salt.log.setup.get_multiprocessing_logging_queue()
-        })
-        send_num = 10 * 4
-        expect = []
-        results = []
-        pub_uri = 'tcp://{interface}:{publish_port}'.format(**opts)
-        # Allow time for server channel to start, especially on windows
-        time.sleep(2)
-        gather = threading.Thread(target=self._gather_results, args=(self.minion_config, pub_uri, results,))
-        gather.start()
-        with ThreadPoolExecutor(max_workers=4) as executor:
-            executor.submit(self._send_small, opts, 1)
-            executor.submit(self._send_small, opts, 2)
-            executor.submit(self._send_small, opts, 3)
-            executor.submit(self._send_large, opts, 4)
-        expect = ['{}-{}'.format(a, b) for a in range(10) for b in (1, 2, 3, 4)]
-        time.sleep(0.1)
-        server_channel.publish({'tgt_type': 'glob', 'tgt': '*', 'stop': True})
-        gather.join()
-        server_channel.pub_close()
-        assert len(results) == send_num, (len(results), set(expect).difference(results))
-
-    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows OS')
-    def test_issue_36469_udp(self):
-        '''
-        Test sending both large and small messags to publisher using UDP
-
-        https://github.com/saltstack/salt/issues/36469
-        '''
-        opts = dict(self.master_config, ipc_mode='udp', pub_hwm=0)
         server_channel = salt.transport.zeromq.ZeroMQPubServerChannel(opts)
         server_channel.pre_fork(self.process_manager, kwargs={
             'log_queue': salt.log.setup.get_multiprocessing_logging_queue()

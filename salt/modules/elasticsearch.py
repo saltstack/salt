@@ -52,6 +52,7 @@ Module to provide Elasticsearch compatibility to Salt
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
+import sys
 
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -62,7 +63,7 @@ log = logging.getLogger(__name__)
 # Import third party libs
 try:
     import elasticsearch
-    from elasticsearch import RequestsHttpConnection
+    from elasticsearch import RequestsHttpConnection  # pylint: disable=no-name-in-module
     logging.getLogger('elasticsearch').setLevel(logging.CRITICAL)
     HAS_ELASTICSEARCH = True
 except ImportError:
@@ -171,7 +172,7 @@ def ping(allow_failure=False, hosts=None, profile=None):
         _get_instance(hosts, profile)
     except CommandExecutionError as e:
         if allow_failure:
-            raise e
+            six.reraise(*sys.exc_info())
         return False
     return True
 
@@ -266,7 +267,7 @@ def cluster_stats(nodes=None, hosts=None, profile=None):
 
 def cluster_get_settings(flat_settings=False, include_defaults=False, hosts=None, profile=None):
     '''
-    .. versionadded:: Neon
+    .. versionadded:: 3000
 
     Return Elasticsearch cluster settings.
 
@@ -290,7 +291,7 @@ def cluster_get_settings(flat_settings=False, include_defaults=False, hosts=None
 
 def cluster_put_settings(body=None, flat_settings=False, hosts=None, profile=None):
     '''
-    .. versionadded:: Neon
+    .. versionadded:: 3000
 
     Set Elasticsearch cluster settings.
 
@@ -688,6 +689,117 @@ def index_close(index, allow_no_indices=True, expand_wildcards='open', ignore_un
         return result.get('acknowledged', False)
     except elasticsearch.TransportError as e:
         raise CommandExecutionError("Cannot close index {0}, server returned code {1} with message {2}".format(index, e.status_code, e.error))
+
+
+def index_get_settings(hosts=None, profile=None, **kwargs):
+    '''
+    .. versionadded:: 3000
+
+    Check for the existence of an index and if it exists, return its settings
+    http://www.elastic.co/guide/en/elasticsearch/reference/current/indices-get-settings.html
+
+    index
+        (Optional, string) A comma-separated list of index names; use _all or empty string for all indices. Defaults to '_all'.
+    name
+        (Optional, string) The name of the settings that should be included
+    allow_no_indices
+        (Optional, boolean) Whether to ignore if a wildcard indices expression resolves into no concrete indices.
+        (This includes _all string or when no indices have been specified)
+    expand_wildcards
+        (Optional, string) Whether to expand wildcard expression to concrete indices that are open, closed or both.
+        Valid choices are: ‘open’, ‘closed’, ‘none’, ‘all’
+    flat_settings
+        (Optional, boolean) Return settings in flat format
+    ignore_unavailable
+        (Optional, boolean) Whether specified concrete indices should be ignored when unavailable (missing or closed)
+    include_defaults
+        (Optional, boolean) Whether to return all default setting for each of the indices.
+    local
+        (Optional, boolean) Return local information, do not retrieve the state from master node
+
+    The defaults settings for the above parameters depend on the API version being used.
+
+    CLI example::
+
+        salt myminion elasticsearch.index_get_settings index=testindex
+    '''
+
+    es = _get_instance(hosts, profile)
+
+    # Filtering Salt internal keys
+    filtered_kwargs = kwargs.copy()
+    for k in kwargs:
+        if k.startswith('__'):
+            filtered_kwargs.pop(k)
+
+    try:
+        return es.indices.get_settings(**filtered_kwargs)
+    except elasticsearch.exceptions.NotFoundError:
+        return None
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot retrieve index settings {0}, server returned code {1} with message {2}".format(kwargs, e.status_code, e.error))
+
+
+def index_put_settings(body=None, hosts=None, profile=None, source=None, **kwargs):
+    '''
+    .. versionadded:: 3000
+
+    Update existing index settings
+    https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-update-settings.html
+
+    body
+        The index settings to be updated.
+    source
+        URL to file specifying index definition. Cannot be used in combination with ``body``.
+    index
+        (Optional, string) A comma-separated list of index names; use _all or empty string to perform the operation on all indices
+    allow_no_indices
+        (Optional, boolean) Whether to ignore if a wildcard indices expression resolves into no concrete indices.
+        (This includes _all string or when no indices have been specified)
+    expand_wildcards
+        (Optional, string) Whether to expand wildcard expression to concrete indices that are open, closed or both.
+        Valid choices are: ‘open’, ‘closed’, ‘none’, ‘all’
+    flat_settings
+        (Optional, boolean) Return settings in flat format (default: false)
+    ignore_unavailable
+        (Optional, boolean) Whether specified concrete indices should be ignored when unavailable (missing or closed)
+    master_timeout
+        (Optional, time units) Explicit operation timeout for connection to master node
+    preserve_existing
+        (Optional, boolean) Whether to update existing settings. If set to true existing settings on an index remain unchanged, the default is false
+
+    The defaults settings for the above parameters depend on the API version being used.
+
+    ..note::
+        Elasticsearch time units can be found here:
+        https://www.elastic.co/guide/en/elasticsearch/reference/current/common-options.html#time-units
+
+    CLI example::
+
+        salt myminion elasticsearch.index_put_settings index=testindex body='{"settings" : {"index" : {"number_of_replicas" : 2}}}'
+    '''
+    es = _get_instance(hosts, profile)
+    if source and body:
+        message = 'Either body or source should be specified but not both.'
+        raise SaltInvocationError(message)
+    if source:
+        body = __salt__['cp.get_file_str'](
+                  source,
+                  saltenv=__opts__.get('saltenv', 'base'))
+
+    # Filtering Salt internal keys
+    filtered_kwargs = kwargs.copy()
+    for k in kwargs:
+        if k.startswith('__'):
+            filtered_kwargs.pop(k)
+
+    try:
+        result = es.indices.put_settings(body=body, **filtered_kwargs)
+        return result.get('acknowledged', False)
+    except elasticsearch.exceptions.NotFoundError:
+        return None
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot update index settings {0}, server returned code {1} with message {2}".format(kwargs, e.status_code, e.error))
 
 
 def mapping_create(index, doc_type, body=None, hosts=None, profile=None, source=None):
@@ -1271,7 +1383,7 @@ def snapshot_delete(repository, snapshot, hosts=None, profile=None):
 
 def flush_synced(hosts=None, profile=None, **kwargs):
     '''
-    .. versionadded:: Neon
+    .. versionadded:: 3000
 
     Perform a normal flush, then add a generated unique marker (sync_id) to all shards.
     http://www.elastic.co/guide/en/elasticsearch/reference/current/indices-synced-flush.html

@@ -445,7 +445,7 @@ def check(set=None, entry=None, family='ipv4'):
 
     current_members = _parse_members(settype, _find_set_members(set))
 
-    if not len(current_members):
+    if not current_members:
         return False
 
     if isinstance(entry, list):

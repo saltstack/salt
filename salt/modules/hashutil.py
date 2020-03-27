@@ -115,13 +115,13 @@ def base64_b64decode(instr):
 
 def base64_encodestring(instr):
     '''
-    Encode a string as base64 using the "legacy" Python interface.
+    Encode a byte-like object as base64 using the "modern" Python interface.
 
-    Among other possible differences, the "legacy" encoder includes
+    Among other possible differences, the "modern" encoder includes
     a newline ('\\n') character after every 76 characters and always
-    at the end of the encoded string.
+    at the end of the encoded byte-like object.
 
-    .. versionadded:: 2014.7.0
+    .. versionadded:: 3000
 
     CLI Example:
 
@@ -167,9 +167,9 @@ def base64_encodefile(fname):
 
 def base64_decodestring(instr):
     '''
-    Decode a base64-encoded string using the "legacy" Python interface
+    Decode a base64-encoded byte-like object using the "modern" Python interface
 
-    .. versionadded:: 2014.7.0
+    .. versionadded:: 3000
 
     CLI Example:
 
@@ -261,6 +261,21 @@ def hmac_signature(string, shared_secret, challenge_hmac):
         salt '*' hashutil.hmac_signature 'get salted' 'shared secret' 'eBWf9bstXg+NiP5AOwppB5HMvZiYMPzEM9W5YMm/AmQ='
     '''
     return salt.utils.hashutils.hmac_signature(string, shared_secret, challenge_hmac)
+
+
+def hmac_compute(string, shared_secret):
+    '''
+    .. versionadded:: 3000
+
+    Compute a HMAC SHA256 digest using a string and secret.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' hashutil.hmac_compute 'get salted' 'shared secret'
+    '''
+    return salt.utils.hashutils.hmac_compute(string, shared_secret)
 
 
 def github_signature(string, shared_secret, challenge_hmac):

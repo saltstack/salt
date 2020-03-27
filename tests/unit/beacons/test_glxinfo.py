@@ -7,14 +7,13 @@ from __future__ import absolute_import
 import salt.beacons.glxinfo as glxinfo
 
 # Salt testing libs
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, Mock
+from tests.support.unit import TestCase
+from tests.support.mock import patch, Mock
 
 # Import test suite libs
 from tests.support.mixins import LoaderModuleMockMixin
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class GLXInfoBeaconTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test case for salt.beacons.glxinfo

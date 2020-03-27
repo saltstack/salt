@@ -12,8 +12,6 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -29,7 +27,6 @@ except ImportError:
     WINAPI = False
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Test cases for salt.modules.win_service
