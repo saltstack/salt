@@ -51,7 +51,7 @@ def __virtual__():
     try:
         os_grain = __grains__['os'].lower()
         os_family = __grains__['os_family'].lower()
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return (False, 'The rpm execution module failed to load: failed to detect os or os_family grains.')
 
     enabled = ('amazon', 'xcp', 'xenserver', 'VirtuozzoLinux')
@@ -732,7 +732,7 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
                 )
             return cmp_result
 
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.warning(
             'Failed to compare version \'%s\' to \'%s\' using RPM: %s',
             ver1, ver2, exc

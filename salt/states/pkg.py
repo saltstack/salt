@@ -31,7 +31,6 @@ A more involved example involves pulling from a custom repository.
 
     base:
       pkgrepo.managed:
-        - humanname: Logstash PPA
         - name: ppa:wolfnet/logstash
         - dist: precise
         - file: /etc/apt/sources.list.d/logstash.list
@@ -49,7 +48,6 @@ state module
 
     dotdeb.repo:
       pkgrepo.managed:
-        - humanname: Dotdeb
         - name: deb http://packages.dotdeb.org wheezy-php55 all
         - dist: wheezy-php55
         - file: /etc/apt/sources.list.d/dotbeb.list
@@ -135,10 +133,7 @@ if salt.utils.platform.is_windows():
     # The following imports are used by the namespaced win_pkg funcs
     # and need to be included in their globals.
     # pylint: disable=import-error,unused-import
-    try:
-        import msgpack
-    except ImportError:
-        import msgpack_pure as msgpack
+    import salt.utils.msgpack as msgpack
     from salt.utils.versions import LooseVersion
     # pylint: enable=import-error,unused-import
 # pylint: enable=invalid-name
@@ -267,7 +262,7 @@ def _find_download_targets(name=None,
     '''
     cur_pkgs = __salt__['pkg.list_downloaded']()
     if pkgs:
-        to_download = _repack_pkgs(pkgs, normalize=normalize)
+        to_download = _repack_pkgs(pkgs, normalize=normalize)  # pylint: disable=not-callable
 
         if not to_download:
             # Badly-formatted SLS
@@ -430,7 +425,7 @@ def _find_remove_targets(name=None,
         kwargs['with_origin'] = True
     cur_pkgs = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
     if pkgs:
-        to_remove = _repack_pkgs(pkgs, normalize=normalize)
+        to_remove = _repack_pkgs(pkgs, normalize=normalize)  # pylint: disable=not-callable
 
         if not to_remove:
             # Badly-formatted SLS
@@ -571,7 +566,7 @@ def _find_install_targets(name=None,
 
     if any((pkgs, sources)):
         if pkgs:
-            desired = _repack_pkgs(pkgs, normalize=normalize)
+            desired = _repack_pkgs(pkgs, normalize=normalize)  # pylint: disable=not-callable
         elif sources:
             desired = __salt__['pkg_resource.pack_sources'](
                 sources,
@@ -590,7 +585,7 @@ def _find_install_targets(name=None,
         to_unpurge = _find_unpurge_targets(desired)
     else:
         if salt.utils.platform.is_windows():
-            pkginfo = _get_package_info(name, saltenv=kwargs['saltenv'])
+            pkginfo = _get_package_info(name, saltenv=kwargs['saltenv'])  # pylint: disable=not-callable
             if not pkginfo:
                 return {'name': name,
                         'changes': {},
@@ -598,7 +593,7 @@ def _find_install_targets(name=None,
                         'comment': 'Package {0} not found in the '
                                    'repository.'.format(name)}
             if version is None:
-                version = _get_latest_pkg_version(pkginfo)
+                version = _get_latest_pkg_version(pkginfo)  # pylint: disable=not-callable
 
         if normalize:
             _normalize_name = \
@@ -843,7 +838,7 @@ def _verify_install(desired, new_pkgs, ignore_epoch=False, new_caps=None):
     Determine whether or not the installed packages match what was requested in
     the SLS file.
     '''
-    ok = []
+    _ok = []
     failed = []
     if not new_caps:
         new_caps = dict()
@@ -870,19 +865,19 @@ def _verify_install(desired, new_pkgs, ignore_epoch=False, new_caps=None):
             failed.append(pkgname)
             continue
         elif pkgver == 'latest':
-            ok.append(pkgname)
+            _ok.append(pkgname)
             continue
         elif not __salt__['pkg_resource.version_clean'](pkgver):
-            ok.append(pkgname)
+            _ok.append(pkgname)
             continue
         elif pkgver.endswith("*") and cver[0].startswith(pkgver[:-1]):
-            ok.append(pkgname)
+            _ok.append(pkgname)
             continue
         if _fulfills_version_string(cver, pkgver, ignore_epoch=ignore_epoch):
-            ok.append(pkgname)
+            _ok.append(pkgname)
         else:
             failed.append(pkgname)
-    return ok, failed
+    return _ok, failed
 
 
 def _get_desired_pkg(name, desired):
@@ -1853,11 +1848,11 @@ def installed(
             new_caps = __salt__['pkg.list_provides'](**kwargs)
         else:
             new_caps = {}
-        ok, failed = _verify_install(desired, new_pkgs,
+        _ok, failed = _verify_install(desired, new_pkgs,
                                      ignore_epoch=ignore_epoch,
                                      new_caps=new_caps)
-        modified = [x for x in ok if x in targets]
-        not_modified = [x for x in ok
+        modified = [x for x in _ok if x in targets]
+        not_modified = [x for x in _ok
                         if x not in targets
                         and x not in to_reinstall]
         failed = [x for x in failed if x in targets]
@@ -2040,7 +2035,7 @@ def downloaded(name,
     (if specified).
 
     Currently supported for the following pkg providers:
-    :mod:`yumpkg <salt.modules.yumpkg>` and :mod:`zypper <salt.modules.zypper>`
+    :mod:`yumpkg <salt.modules.yumpkg>`, :mod:`zypper <salt.modules.zypper>` and :mod:`zypper <salt.modules.aptpkg>`
 
     :param str name:
         The name of the package to be downloaded. This parameter is ignored if
@@ -2168,7 +2163,7 @@ def downloaded(name,
         return ret
 
     new_pkgs = __salt__['pkg.list_downloaded']()
-    ok, failed = _verify_install(targets, new_pkgs, ignore_epoch=ignore_epoch)
+    _ok, failed = _verify_install(targets, new_pkgs, ignore_epoch=ignore_epoch)
 
     if failed:
         summary = ', '.join([_get_desired_pkg(x, targets)
@@ -2179,7 +2174,7 @@ def downloaded(name,
 
     if not ret['changes'] and not ret['comment']:
         ret['result'] = True
-        ret['comment'] = 'Packages are already downloaded: ' \
+        ret['comment'] = 'Packages downloaded: ' \
                          '{0}'.format(', '.join(targets))
 
     return ret
@@ -2450,7 +2445,7 @@ def latest(
                 'result': False,
                 'comment': 'The "sources" parameter is not supported.'}
     elif pkgs:
-        desired_pkgs = list(_repack_pkgs(pkgs).keys())
+        desired_pkgs = list(_repack_pkgs(pkgs).keys())  # pylint: disable=not-callable
         if not desired_pkgs:
             # Badly-formatted SLS
             return {'name': name,
@@ -2731,15 +2726,15 @@ def _uninstall(
     changes = __salt__['pkg.{0}'.format(action)](name, pkgs=pkgs, version=version, **kwargs)
     new = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
     failed = []
-    for x in pkg_params:
+    for param in pkg_params:
         if __grains__['os_family'] in ['Suse', 'RedHat']:
             # Check if the package version set to be removed is actually removed:
-            if x in new and not pkg_params[x]:
-                failed.append(x)
-            elif x in new and pkg_params[x] in new[x]:
-                failed.append(x + "-" + pkg_params[x])
-        elif x in new:
-            failed.append(x)
+            if param in new and not pkg_params[param]:
+                failed.append(param)
+            elif param in new and pkg_params[param] in new[param]:
+                failed.append(param + "-" + pkg_params[param])
+        elif param in new:
+            failed.append(param)
 
     if action == 'purge':
         new_removed = __salt__['pkg.list_pkgs'](versions_as_list=True,
@@ -3048,7 +3043,7 @@ def uptodate(name, refresh=False, pkgs=None, **kwargs):
             if isinstance(pkgs, list):
                 packages = [pkg for pkg in packages if pkg in pkgs]
                 expected = {pkgname: pkgver for pkgname, pkgver in six.iteritems(expected) if pkgname in pkgs}
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             ret['comment'] = six.text_type(exc)
             return ret
     else:

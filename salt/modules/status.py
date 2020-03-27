@@ -1662,7 +1662,7 @@ def ping_master(master):
     opts.update(salt.minion.prep_ip_port(opts))
     try:
         opts.update(salt.minion.resolve_dns(opts, fallback=False))
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return False
 
     timeout = opts.get('auth_timeout', 60)
@@ -1673,7 +1673,7 @@ def ping_master(master):
         try:
             payload = channel.send(load, tries=0, timeout=timeout)
             result = True
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             pass
 
         if result:

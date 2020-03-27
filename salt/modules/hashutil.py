@@ -121,7 +121,7 @@ def base64_encodestring(instr):
     a newline ('\\n') character after every 76 characters and always
     at the end of the encoded byte-like object.
 
-    .. versionadded:: Neon
+    .. versionadded:: 3000
 
     CLI Example:
 
@@ -169,7 +169,7 @@ def base64_decodestring(instr):
     '''
     Decode a base64-encoded byte-like object using the "modern" Python interface
 
-    .. versionadded:: Neon
+    .. versionadded:: 3000
 
     CLI Example:
 
@@ -265,7 +265,7 @@ def hmac_signature(string, shared_secret, challenge_hmac):
 
 def hmac_compute(string, shared_secret):
     '''
-    .. versionadded:: Sodium
+    .. versionadded:: 3000
 
     Compute a HMAC SHA256 digest using a string and secret.
 

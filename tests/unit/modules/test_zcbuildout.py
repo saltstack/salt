@@ -27,6 +27,7 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.modules.zcbuildout as buildout
+import salt.modules.virtualenv_mod
 import salt.modules.cmdmod as cmd
 from salt.ext import six
 
@@ -466,6 +467,9 @@ class BuildoutOnlineTestCase(Base):
 
     @requires_network()
     def test_run_buildout(self):
+        if salt.modules.virtualenv_mod.virtualenv_ver(self.ppy_st) >= (20, 0, 0):
+            self.skipTest("Skiping until upstream resolved https://github.com/pypa/virtualenv/issues/1715")
+
         b_dir = os.path.join(self.tdir, 'b')
         ret = buildout.bootstrap(b_dir, buildout_ver=2, python=self.py_st)
         self.assertTrue(ret['status'])
@@ -477,6 +481,9 @@ class BuildoutOnlineTestCase(Base):
 
     @requires_network()
     def test_buildout(self):
+        if salt.modules.virtualenv_mod.virtualenv_ver(self.ppy_st) >= (20, 0, 0):
+            self.skipTest("Skiping until upstream resolved https://github.com/pypa/virtualenv/issues/1715")
+
         b_dir = os.path.join(self.tdir, 'b')
         ret = buildout.buildout(b_dir, buildout_ver=2, python=self.py_st)
         self.assertTrue(ret['status'])

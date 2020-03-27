@@ -33,6 +33,7 @@ import salt.utils.functools
 import salt.utils.hashutils
 import salt.utils.jid
 import salt.utils.json
+import salt.utils.msgpack
 import salt.utils.platform
 import salt.utils.state
 import salt.utils.stringutils
@@ -45,7 +46,6 @@ from salt.utils.odict import OrderedDict
 
 # Import 3rd-party libs
 from salt.ext import six
-import msgpack
 
 __proxyenabled__ = ['*']
 
@@ -145,7 +145,7 @@ def _snapper_pre(opts, jid):
                     snapshot_type='pre',
                     description='Salt State run for jid {0}'.format(jid),
                     __pub_jid=jid)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         log.error('Failed to create snapper pre snapshot for jid: %s', jid)
     return snapper_pre
 
@@ -163,7 +163,7 @@ def _snapper_post(opts, jid, pre_num):
                     pre_number=pre_num,
                     description='Salt State run for jid {0}'.format(jid),
                     __pub_jid=jid)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         log.error('Failed to create snapper pre snapshot for jid: %s', jid)
 
 
@@ -185,7 +185,7 @@ def _get_pause(jid, state_id=None):
             data[state_id] = {}
     if os.path.exists(pause_path):
         with salt.utils.files.fopen(pause_path, 'rb') as fp_:
-            data = msgpack.loads(fp_.read())
+            data = salt.utils.msgpack.loads(fp_.read())
     return data, pause_path
 
 
@@ -256,7 +256,7 @@ def soft_kill(jid, state_id=None):
     data, pause_path = _get_pause(jid, state_id)
     data[state_id]['kill'] = True
     with salt.utils.files.fopen(pause_path, 'wb') as fp_:
-        fp_.write(msgpack.dumps(data))
+        fp_.write(salt.utils.msgpack.dumps(data))
 
 
 def pause(jid, state_id=None, duration=None):
@@ -291,7 +291,7 @@ def pause(jid, state_id=None, duration=None):
     if duration:
         data[state_id]['duration'] = int(duration)
     with salt.utils.files.fopen(pause_path, 'wb') as fp_:
-        fp_.write(msgpack.dumps(data))
+        fp_.write(salt.utils.msgpack.dumps(data))
 
 
 def resume(jid, state_id=None):
@@ -325,7 +325,7 @@ def resume(jid, state_id=None):
     if state_id == '__all__':
         data = {}
     with salt.utils.files.fopen(pause_path, 'wb') as fp_:
-        fp_.write(msgpack.dumps(data))
+        fp_.write(salt.utils.msgpack.dumps(data))
 
 
 def orchestrate(mods,

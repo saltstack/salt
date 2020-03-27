@@ -14,6 +14,7 @@ MANIFEST
 *.DS_Store
 .pytest_cache
 Pipfile.lock
+.mypy_cache/*
 
 # virtualenv
 # - ignores directories of a virtualenv when you create it right on
@@ -103,9 +104,14 @@ tests/integration/cloud/providers/pki/minions
 # Ignore nox virtualenvs
 /.nox/
 
+# Ignore pyenv files
+.python-version
+
 # Kitchen tests files
 .kitchen.local.yml
+kitchen.local.yml
 .kitchen/
 .bundle/
 Gemfile.lock
 /artifacts/
+requirements/static/py*/*.log

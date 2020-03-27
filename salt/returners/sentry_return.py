@@ -80,7 +80,7 @@ def returner(ret):
 
     try:
         _connect_sentry(_get_message(ret), ret)
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         log.error('Can\'t run connect_sentry: %s', err, exc_info=True)
 
 
@@ -176,7 +176,7 @@ def _connect_sentry(message, result):
             tags=tags
         )
         log.info('Message id %s written to sentry', msgid)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error('Can\'t send message to sentry: %s', exc, exc_info=True)
 
 

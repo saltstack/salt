@@ -25,6 +25,6 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
     try:
         command = command.replace('%s', minion_id)
         return deserialize(__salt__['cmd.run']('{0}'.format(command)))
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         log.critical('YAML data from %s failed to parse', command)
         return {}

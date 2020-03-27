@@ -5,7 +5,7 @@ Manage Dell DRAC from the Master
 The login credentials need to be configured in the Salt master
 configuration file.
 
-.. code-block: yaml
+.. code-block:: yaml
 
     drac:
       username: admin
@@ -59,7 +59,7 @@ def __connect(hostname, timeout=20, username=None, password=None):
 
     try:
         client.connect(hostname, username=username, password=password, timeout=timeout)
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         log.error('Unable to connect to %s: %s', hostname, e)
         return False
 

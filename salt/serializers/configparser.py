@@ -53,7 +53,7 @@ def deserialize(stream_or_string, **options):
                 section[k] = v
             data[section_name] = section
         return data
-    except Exception as error:
+    except Exception as error:  # pylint: disable=broad-except
         raise DeserializationError(error)
 
 
@@ -81,7 +81,7 @@ def serialize(obj, **options):
             s = six.moves.StringIO()
             cp.write(s)
             return s.getvalue()
-    except Exception as error:
+    except Exception as error:  # pylint: disable=broad-except
         raise SerializationError(error)
 
 

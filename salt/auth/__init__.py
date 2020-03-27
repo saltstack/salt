@@ -110,7 +110,7 @@ class LoadAuth(object):
                 return self.auth[fstr](*fcall['args'], **fcall['kwargs'])
             else:
                 return self.auth[fstr](*fcall['args'])
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             log.debug('Authentication module threw %s', e)
             return False
 
@@ -154,7 +154,7 @@ class LoadAuth(object):
             expected_extra_kws=AUTH_INTERNAL_KEYWORDS)
         try:
             return self.auth[fstr](*fcall['args'], **fcall['kwargs'])
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             log.debug('Authentication module threw %s', e)
             return None
 
@@ -170,7 +170,7 @@ class LoadAuth(object):
             return auth_list
         try:
             return self.auth[fstr](auth_list, self.opts)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             log.debug('Authentication module threw %s', e)
             return auth_list
 
@@ -192,7 +192,7 @@ class LoadAuth(object):
             return self.auth[fstr](*fcall['args'], **fcall['kwargs'])
         except IndexError:
             return False
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             return None
 
     def _allow_custom_expire(self, load):

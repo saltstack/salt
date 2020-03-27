@@ -808,7 +808,7 @@ class _Swagger(object):
                                     method='')
                 self._lambda_funcname_format.format(**known_kwargs)
             return True
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             raise ValueError('Invalid lambda_funcname_format {0}.  Please review '
                              'documentation for known substitutable keys'.format(self._lambda_funcname_format))
 

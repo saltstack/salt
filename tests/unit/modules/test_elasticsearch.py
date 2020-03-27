@@ -21,7 +21,7 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError
 NO_ELASTIC = False
 try:
     from elasticsearch import TransportError, NotFoundError
-except Exception:
+except Exception:  # pylint: disable=broad-except
     NO_ELASTIC = True
 
 
@@ -995,6 +995,91 @@ class ElasticsearchTestCase(TestCase):
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
             self.assertRaises(CommandExecutionError, elasticsearch.index_exists, "foo", "bar")
+
+    def test_index_get_settings(self):
+        '''
+        Test if settings can be obtained from the index
+        '''
+
+        fake_es = MagicMock()
+        fake_es.indices = MagicMock()
+        fake_es.indices.get_settings = MagicMock(return_value={"foo": "key"})
+        fake_instance = MagicMock(return_value=fake_es)
+
+        with patch.object(elasticsearch, '_get_instance', fake_instance):
+            self.assertDictEqual(elasticsearch.index_get_settings("foo", "bar"), {"foo": "key"})
+
+    def test_index_get_settings_not_exists(self):
+        '''
+        Test index_get_settings if index doesn't exist
+        '''
+
+        fake_es = MagicMock()
+        fake_es.indices = MagicMock()
+        fake_es.indices.get_settings = MagicMock()
+        fake_es.indices.get_settings.side_effect = NotFoundError("custom error", 123)
+        fake_instance = MagicMock(return_value=fake_es)
+
+        with patch.object(elasticsearch, '_get_instance', fake_instance):
+            self.assertIs(elasticsearch.index_get_settings(index='foo'), None)
+
+    def test_get_settings_failure(self):
+        '''
+        Test if index settings get fails with CommandExecutionError
+        '''
+
+        fake_es = MagicMock()
+        fake_es.indices = MagicMock()
+        fake_es.indices.get_settings = MagicMock()
+        fake_es.indices.get_settings.side_effect = TransportError("custom error", 123)
+        fake_instance = MagicMock(return_value=fake_es)
+
+        with patch.object(elasticsearch, '_get_instance', fake_instance):
+            self.assertRaises(CommandExecutionError, elasticsearch.index_get_settings, index='foo')
+
+    def test_index_put_settings(self):
+        '''
+        Test if we can put settings for the index
+        '''
+
+        body = {"settings": {"index": {"number_of_replicas": 2}}}
+        fake_es = MagicMock()
+        fake_es.indices = MagicMock()
+        fake_es.indices.put_settings = MagicMock(return_value={"acknowledged": True})
+        fake_instance = MagicMock(return_value=fake_es)
+
+        with patch.object(elasticsearch, '_get_instance', fake_instance):
+            self.assertTrue(elasticsearch.index_put_settings(index='foo', body=body))
+
+    def test_index_put_settings_not_exists(self):
+        '''
+        Test if settings put executed agains non-existinf index
+        '''
+
+        body = {"settings": {"index": {"number_of_replicas": 2}}}
+        fake_es = MagicMock()
+        fake_es.indices = MagicMock()
+        fake_es.indices.put_settings = MagicMock()
+        fake_es.indices.put_settings.side_effect = NotFoundError("custom error", 123)
+        fake_instance = MagicMock(return_value=fake_es)
+
+        with patch.object(elasticsearch, '_get_instance', fake_instance):
+            self.assertIs(elasticsearch.index_put_settings(index='foo', body=body), None)
+
+    def test_index_put_settings_failure(self):
+        '''
+        Test if settings put failed with CommandExecutionError
+        '''
+
+        body = {"settings": {"index": {"number_of_replicas": 2}}}
+        fake_es = MagicMock()
+        fake_es.indices = MagicMock()
+        fake_es.indices.put_settings = MagicMock()
+        fake_es.indices.put_settings.side_effect = TransportError("custom error", 123)
+        fake_instance = MagicMock(return_value=fake_es)
+
+        with patch.object(elasticsearch, '_get_instance', fake_instance):
+            self.assertRaises(CommandExecutionError, elasticsearch.index_put_settings, index='foo', body=body)
 
     # 'index_get' function tests: 3
 

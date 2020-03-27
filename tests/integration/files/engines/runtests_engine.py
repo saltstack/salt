@@ -25,10 +25,10 @@ import salt.utils.event
 import salt.utils.asynchronous
 
 # Import 3rd-party libs
-from tornado import gen
-from tornado import ioloop
-from tornado import netutil
-from tornado import iostream
+from salt.ext.tornado import gen
+from salt.ext.tornado import ioloop
+from salt.ext.tornado import netutil
+from salt.ext.tornado import iostream
 
 log = logging.getLogger(__name__)
 
@@ -61,7 +61,7 @@ class PyTestEngine(object):
     @gen.coroutine
     def _start(self):
         port = int(self.opts['runtests_conn_check_port'])
-        log.warning('Starting Pytest Engine(role=%s, id=%s) on port %s', self.opts['__role'], self.opts['id'], port)
+        log.info('Starting Pytest Engine(role=%s, id=%s) on port %s', self.opts['__role'], self.opts['id'], port)
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -98,21 +98,22 @@ class PyTestEngine(object):
     @gen.coroutine
     def fire_master_started_event(self):
         log.info('Firing salt-%s started event...', self.opts['__role'])
-        event_bus = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'], listen=False)
         start_event_tag = 'salt/{}/{}/start'.format(self.opts['__role'], self.opts['id'])
         log.info('Firing salt-%s started event. Tag: %s', self.opts['__role'], start_event_tag)
         load = {'id': self.opts['id'], 'tag': start_event_tag, 'data': {}}
         # One minute should be more than enough to fire these events every second in order
         # for pytest-salt to pickup that the master is running
-        timeout = 30
-        while True:
-            if self.stop_sending_events_file and not os.path.exists(self.stop_sending_events_file):
-                break
-            timeout -= 1
-            try:
-                event_bus.fire_event(load, start_event_tag, timeout=500)
-                if timeout <= 0:
+        with salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'], listen=False) as event_bus:
+            timeout = 30
+            while True:
+                if self.stop_sending_events_file and not os.path.exists(self.stop_sending_events_file):
+                    log.info('The stop sending events file "marker" is done. Stop sending events...')
                     break
-                yield gen.sleep(1)
-            except iostream.StreamClosedError:
-                break
+                timeout -= 1
+                try:
+                    event_bus.fire_event(load, start_event_tag, timeout=500)
+                    if timeout <= 0:
+                        break
+                    yield gen.sleep(1)
+                except iostream.StreamClosedError:
+                    break

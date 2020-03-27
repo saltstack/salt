@@ -7,7 +7,6 @@ Return config information
 from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import fnmatch
-import re
 import os
 import logging
 
@@ -129,10 +128,10 @@ def valid_fileproto(uri):
 
         salt '*' config.valid_fileproto salt://path/to/file
     '''
-    try:
-        return bool(re.match('^(?:salt|https?|ftp)://', uri))
-    except Exception:
-        return False
+    return (
+        six.moves.urllib.parse.urlparse(uri).scheme in
+        salt.utils.files.VALID_PROTOS
+    )
 
 
 def option(
@@ -177,7 +176,7 @@ def option(
         Shorthand to omit all of the above and return matches only from the
         "sane defaults".
 
-        .. versionadded:: Neon
+        .. versionadded:: 3000
 
     wildcard : False
         If used, this will perform pattern matching on keys. Note that this
@@ -190,7 +189,7 @@ def option(
 
             {'foo.bar': True, 'foo.baz': False}
 
-        .. versionadded:: Neon
+        .. versionadded:: 3000
 
     CLI Example:
 

@@ -49,7 +49,7 @@ def check_mod_enabled(mod):
     cmd = 'a2enmod -l'
     try:
         active_mods = __salt__['cmd.run'](cmd, python_shell=False).split(' ')
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         return e
 
     return mod_name in active_mods
@@ -70,7 +70,7 @@ def a2enmod(mod):
 
     try:
         status = __salt__['cmd.retcode'](command, python_shell=False)
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         return e
 
     ret['Name'] = 'Apache2 Enable Mod'
@@ -101,7 +101,7 @@ def a2dismod(mod):
 
     try:
         status = __salt__['cmd.retcode'](command, python_shell=False)
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         return e
 
     ret['Name'] = 'Apache2 Disable Mod'

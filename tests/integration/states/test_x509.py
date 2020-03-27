@@ -65,7 +65,7 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
             salt.utils.files.rm_rf(certs_path)
         self.run_function('saltutil.refresh_pillar')
 
-    def run_function(self, *args, **kwargs):
+    def run_function(self, *args, **kwargs):  # pylint: disable=arguments-differ
         ret = super(x509Test, self).run_function(*args, **kwargs)
         log.debug('ret = %s', ret)
         return ret

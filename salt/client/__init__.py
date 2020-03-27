@@ -69,7 +69,7 @@ except ImportError:
 # pylint: enable=import-error
 
 # Import tornado
-import tornado.gen  # pylint: disable=F0401
+import salt.ext.tornado.gen  # pylint: disable=F0401
 
 log = logging.getLogger(__name__)
 
@@ -342,7 +342,7 @@ class LocalClient(object):
             six.reraise(*sys.exc_info())
         except AuthorizationError as err:
             six.reraise(*sys.exc_info())
-        except Exception as general_exception:
+        except Exception as general_exception:  # pylint: disable=broad-except
             # Convert to generic client error and pass along message
             raise SaltClientError(general_exception)
 
@@ -352,7 +352,7 @@ class LocalClient(object):
         _res = salt.utils.minions.CkMinions(self.opts).check_minions(tgt, tgt_type=expr_form)
         return _res['minions']
 
-    @tornado.gen.coroutine
+    @salt.ext.tornado.gen.coroutine
     def run_job_async(
             self,
             tgt,
@@ -403,11 +403,11 @@ class LocalClient(object):
             raise AuthenticationError(err)
         except AuthorizationError as err:
             raise AuthorizationError(err)
-        except Exception as general_exception:
+        except Exception as general_exception:  # pylint: disable=broad-except
             # Convert to generic client error and pass along message
             raise SaltClientError(general_exception)
 
-        raise tornado.gen.Return(self._check_pub_data(pub_data, listen=listen))
+        raise salt.ext.tornado.gen.Return(self._check_pub_data(pub_data, listen=listen))
 
     def cmd_async(
             self,
@@ -1043,7 +1043,7 @@ class LocalClient(object):
                 yield {}
                 # stop the iteration, since the jid is invalid
                 raise StopIteration()
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.warning('Returner unavailable: %s', exc, exc_info_on_loglevel=logging.DEBUG)
         # Wait for the hosts to check in
         last_time = False
@@ -1259,7 +1259,7 @@ class LocalClient(object):
             if self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) == {}:
                 log.warning('jid does not exist')
                 return ret
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             raise SaltClientError('Master job cache returner [{0}] failed to verify jid. '
                                   'Exception details: {1}'.format(self.opts['master_job_cache'], exc))
 
@@ -1304,7 +1304,7 @@ class LocalClient(object):
 
         try:
             data = self.returners['{0}.get_jid'.format(self.opts['master_job_cache'])](jid)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             raise SaltClientError('Returner {0} could not fetch jid data. '
                                   'Exception details: {1}'.format(
                                       self.opts['master_job_cache'],
@@ -1353,7 +1353,7 @@ class LocalClient(object):
 
         try:
             data = self.returners['{0}.get_jid'.format(self.opts['master_job_cache'])](jid)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             raise SaltClientError('Could not examine master job cache. '
                                   'Error occurred in {0} returner. '
                                   'Exception details: {1}'.format(self.opts['master_job_cache'],
@@ -1407,7 +1407,7 @@ class LocalClient(object):
             if self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) == {}:
                 log.warning('jid does not exist')
                 return ret
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             raise SaltClientError('Load could not be retrieved from '
                                   'returner {0}. Exception details: {1}'.format(
                                       self.opts['master_job_cache'],
@@ -1558,8 +1558,12 @@ class LocalClient(object):
             if 'minions' in raw.get('data', {}):
                 continue
             try:
-                found.add(raw['id'])
-                ret = {raw['id']: {'ret': raw['return']}}
+                # There might be two jobs for the same minion, so we have to check for the jid
+                if jid == raw['jid']:
+                    found.add(raw['id'])
+                    ret = {raw['id']: {'ret': raw['return']}}
+                else:
+                    continue
             except KeyError:
                 # Ignore other erroneous messages
                 continue
@@ -1741,7 +1745,7 @@ class LocalClient(object):
         return {'jid': payload['load']['jid'],
                 'minions': payload['load']['minions']}
 
-    @tornado.gen.coroutine
+    @salt.ext.tornado.gen.coroutine
     def pub_async(self,
                   tgt,
                   fun,
@@ -1823,7 +1827,7 @@ class LocalClient(object):
                 # and try again if the key has changed
                 key = self.__read_master_key()
                 if key == self.key:
-                    raise tornado.gen.Return(payload)
+                    raise salt.ext.tornado.gen.Return(payload)
                 self.key = key
                 payload_kwargs['key'] = self.key
                 payload = yield channel.send(payload_kwargs)
@@ -1841,9 +1845,9 @@ class LocalClient(object):
                 raise PublishError(error)
 
             if not payload:
-                raise tornado.gen.Return(payload)
+                raise salt.ext.tornado.gen.Return(payload)
 
-        raise tornado.gen.Return({'jid': payload['load']['jid'],
+        raise salt.ext.tornado.gen.Return({'jid': payload['load']['jid'],
                                   'minions': payload['load']['minions']})
 
     # pylint: disable=W1701
@@ -1903,7 +1907,7 @@ class FunctionWrapper(dict):
             Run a remote call
             '''
             args = list(args)
-            for _key, _val in kwargs:
+            for _key, _val in kwargs.items():
                 args.append('{0}={1}'.format(_key, _val))
             return self.local.cmd(self.minion, key, args)
         return func

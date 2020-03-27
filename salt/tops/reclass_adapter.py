@@ -68,7 +68,7 @@ __virtualname__ = 'reclass'
 
 def __virtual__(retry=False):
     try:
-        import reclass
+        import reclass  # pylint: disable=unused-import
         return __virtualname__
     except ImportError:
         if retry:
@@ -86,10 +86,10 @@ def top(**kwargs):
 
     # If reclass is installed, __virtual__ put it onto the search path, so we
     # don't need to protect against ImportError:
-    # pylint: disable=3rd-party-module-not-gated
+    # pylint: disable=3rd-party-module-not-gated,no-name-in-module
     from reclass.adapters.salt import top as reclass_top
     from reclass.errors import ReclassException
-    # pylint: enable=3rd-party-module-not-gated
+    # pylint: enable=3rd-party-module-not-gated,no-name-in-module
 
     try:
         # Salt's top interface is inconsistent with ext_pillar (see #5786) and

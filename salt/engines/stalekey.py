@@ -4,13 +4,16 @@ An engine that uses presence detection to keep track of which minions
 have been recently connected and remove their keys if they have not been
 connected for a certain period of time.
 
-Requires that the minion_data_cache option be enabled.
+Requires that the :conf_master:`minion_data_cache` option be enabled.
 
 .. versionadded: 2017.7.0
 
 :configuration:
 
-    Example configuration
+    Example configuration:
+
+    .. code-block:: yaml
+
         engines:
           - stalekey:
               interval: 3600
@@ -28,11 +31,11 @@ import salt.config
 import salt.key
 import salt.utils.files
 import salt.utils.minions
+import salt.utils.msgpack
 import salt.wheel
 
 # Import 3rd-party libs
 from salt.ext import six
-import msgpack
 
 log = logging.getLogger(__name__)
 
@@ -60,7 +63,7 @@ def start(interval=3600, expire=604800):
         if os.path.exists(presence_file):
             try:
                 with salt.utils.files.fopen(presence_file, 'r') as f:
-                    minions = msgpack.load(f)
+                    minions = salt.utils.msgpack.load(f)
             except IOError as e:
                 log.error('Could not open presence file %s: %s', presence_file, e)
                 time.sleep(interval)
@@ -95,7 +98,7 @@ def start(interval=3600, expire=604800):
 
         try:
             with salt.utils.files.fopen(presence_file, 'w') as f:
-                msgpack.dump(minions, f)
+                salt.utils.msgpack.dump(minions, f)
         except IOError as e:
             log.error('Could not write to presence file %s: %s', presence_file, e)
         time.sleep(interval)

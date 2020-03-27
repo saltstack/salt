@@ -140,7 +140,7 @@ class GitModuleTest(ModuleCase):
         # Go back to original cwd
         os.chdir(self.orig_cwd)
 
-    def run_function(self, *args, **kwargs):
+    def run_function(self, *args, **kwargs):  # pylint: disable=arguments-differ
         '''
         Ensure that results are decoded
 
@@ -587,8 +587,6 @@ class GitModuleTest(ModuleCase):
                     **{'all': True, 'global': True}
                 )
             )
-        except Exception:
-            raise
         finally:
             _clear_config()
 

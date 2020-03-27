@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
+    :codeauthor: Gareth J. Greenaway <gareth@saltstack.com>
 '''
 # Import Python libs
 from __future__ import absolute_import, unicode_literals, print_function
@@ -42,8 +43,7 @@ class SlackTestCase(TestCase, LoaderModuleMockMixin):
                'comment': ''}
 
         with patch.dict(slack.__opts__, {'test': True}):
-            comt = ('The following message is to be sent to Slack: {0}'
-                    .format(message))
+            comt = 'The following message is to be sent to Slack: {0}'.format(message)
             ret.update({'comment': comt})
             self.assertDictEqual(slack.post_message(name,
                                                     channel=channel,
@@ -52,7 +52,7 @@ class SlackTestCase(TestCase, LoaderModuleMockMixin):
                                                     api_key=api_key), ret)
 
         with patch.dict(slack.__opts__, {'test': False}):
-            comt = ('Please specify api_key or webhook.')
+            comt = 'Please specify api_key or webhook.'
             ret.update({'comment': comt, 'result': False})
             self.assertDictEqual(slack.post_message(name,
                                                     channel=None,
@@ -60,7 +60,7 @@ class SlackTestCase(TestCase, LoaderModuleMockMixin):
                                                     message=message,
                                                     api_key=None), ret)
 
-            comt = ('Slack channel is missing.')
+            comt = 'Slack channel is missing.'
             ret.update({'comment': comt, 'result': False})
             self.assertDictEqual(slack.post_message(name,
                                                     channel=None,
@@ -68,7 +68,7 @@ class SlackTestCase(TestCase, LoaderModuleMockMixin):
                                                     message=message,
                                                     api_key=api_key), ret)
 
-            comt = ('Slack from name is missing.')
+            comt = 'Slack from name is missing.'
             ret.update({'comment': comt, 'result': False})
             self.assertDictEqual(slack.post_message(name,
                                                     channel=channel,
@@ -76,7 +76,7 @@ class SlackTestCase(TestCase, LoaderModuleMockMixin):
                                                     message=message,
                                                     api_key=api_key), ret)
 
-            comt = ('Slack message is missing.')
+            comt = 'Slack message is missing.'
             ret.update({'comment': comt, 'result': False})
             self.assertDictEqual(slack.post_message(name,
                                                     channel=channel,
@@ -86,7 +86,7 @@ class SlackTestCase(TestCase, LoaderModuleMockMixin):
 
             mock = MagicMock(return_value=True)
             with patch.dict(slack.__salt__, {'slack.post_message': mock}):
-                comt = ('Sent message: slack-message')
+                comt = 'Sent message: slack-message'
                 ret.update({'comment': comt, 'result': True})
                 self.assertDictEqual(slack.post_message(name,
                                                         channel=channel,
@@ -112,8 +112,7 @@ class SlackTestCase(TestCase, LoaderModuleMockMixin):
                'comment': ''}
 
         with patch.dict(slack.__opts__, {'test': True}):
-            comt = ('The following message is to be sent to Slack: {0}'
-                    .format(message))
+            comt = 'The following message is to be sent to Slack: {0}'.format(message)
             ret.update({'comment': comt})
             self.assertDictEqual(slack.post_message(name,
                                                     channel=channel,
@@ -122,7 +121,7 @@ class SlackTestCase(TestCase, LoaderModuleMockMixin):
                                                     webhook=webhook), ret)
 
         with patch.dict(slack.__opts__, {'test': False}):
-            comt = ('Please specify api_key or webhook.')
+            comt = 'Please specify api_key or webhook.'
             ret.update({'comment': comt, 'result': False})
             self.assertDictEqual(slack.post_message(name,
                                                     channel=channel,
@@ -130,7 +129,7 @@ class SlackTestCase(TestCase, LoaderModuleMockMixin):
                                                     message=None,
                                                     webhook=None), ret)
 
-            comt = ('Please specify only either api_key or webhook.')
+            comt = 'Please specify only either api_key or webhook.'
             ret.update({'comment': comt, 'result': False})
             self.assertDictEqual(slack.post_message(name,
                                                     channel=channel,
@@ -139,7 +138,7 @@ class SlackTestCase(TestCase, LoaderModuleMockMixin):
                                                     api_key=api_key,
                                                     webhook=webhook), ret)
 
-            comt = ('Slack message is missing.')
+            comt = 'Slack message is missing.'
             ret.update({'comment': comt, 'result': False})
             self.assertDictEqual(slack.post_message(name,
                                                     channel=channel,
@@ -149,7 +148,7 @@ class SlackTestCase(TestCase, LoaderModuleMockMixin):
 
             mock = MagicMock(return_value=True)
             with patch.dict(slack.__salt__, {'slack.call_hook': mock}):
-                comt = ('Sent message: slack-message')
+                comt = 'Sent message: slack-message'
                 ret.update({'comment': comt, 'result': True})
                 self.assertDictEqual(slack.post_message(name,
                                                         channel=channel,

@@ -479,7 +479,7 @@ class Schedule(object):
             log.info('Running Job: %s', name)
             self._run_job(func, data)
 
-    def enable_schedule(self):
+    def enable_schedule(self, persist=True):
         '''
         Enable the scheduler.
         '''
@@ -491,7 +491,10 @@ class Schedule(object):
                             'schedule': self._get_schedule()},
                            tag='/salt/minion/minion_schedule_enabled_complete')
 
-    def disable_schedule(self):
+        if persist:
+            self.persist()
+
+    def disable_schedule(self, persist=True):
         '''
         Disable the scheduler.
         '''
@@ -502,6 +505,9 @@ class Schedule(object):
             evt.fire_event({'complete': True,
                             'schedule': self._get_schedule()},
                            tag='/salt/minion/minion_schedule_disabled_complete')
+
+        if persist:
+            self.persist()
 
     def reload(self, schedule):
         '''
@@ -791,7 +797,7 @@ class Schedule(object):
                                 func, returner
                             )
 
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             log.exception('Unhandled exception running %s', ret['fun'])
             # Although catch-all exception handlers are bad, the exception here
             # is to let the exception bubble up to the top of the thread context,
@@ -830,7 +836,7 @@ class Schedule(object):
                                                                   self.opts['sock_dir'])
                     try:
                         event.fire_event(load, '__schedule_return')
-                    except Exception as exc:
+                    except Exception as exc:  # pylint: disable=broad-except
                         log.exception('Unhandled exception firing __schedule_return event')
                     finally:
                         event.destroy()
@@ -952,127 +958,76 @@ class Schedule(object):
                 log.error(data['_error'])
                 return
 
-            if isinstance(data['when'], list):
-                _when = []
-                for i in data['when']:
-                    if ('pillar' in self.opts and 'whens' in self.opts['pillar'] and
-                            i in self.opts['pillar']['whens']):
-                        if not isinstance(self.opts['pillar']['whens'],
-                                          dict):
-                            data['_error'] = ('Pillar item "whens" '
-                                              'must be a dict. '
-                                              'Ignoring job {0}.'.format(data['name']))
-                            log.error(data['_error'])
-                            return
-                        when_ = self.opts['pillar']['whens'][i]
-                    elif ('whens' in self.opts['grains'] and
-                          i in self.opts['grains']['whens']):
-                        if not isinstance(self.opts['grains']['whens'],
-                                          dict):
-                            data['_error'] = ('Grain "whens" must be a dict.'
-                                              'Ignoring job {0}.'.format(data['name']))
-                            log.error(data['_error'])
-                            return
-                        when_ = self.opts['grains']['whens'][i]
-                    else:
-                        when_ = i
-
-                    if not isinstance(when_, datetime.datetime):
-                        try:
-                            when_ = dateutil_parser.parse(when_)
-                        except ValueError:
-                            data['_error'] = ('Invalid date string {0}. '
-                                              'Ignoring job {1}.'.format(i, data['name']))
-                            log.error(data['_error'])
-                            return
-
-                    _when.append(when_)
-
-                if data['_splay']:
-                    _when.append(data['_splay'])
-
-                # Sort the list of "whens" from earlier to later schedules
-                _when.sort()
-
-                # Copy the list so we can loop through it
-                for i in copy.deepcopy(_when):
-                    if len(_when) > 1:
-                        if i < now - loop_interval:
-                            # Remove all missed schedules except the latest one.
-                            # We need it to detect if it was triggered previously.
-                            _when.remove(i)
-
-                if _when:
-                    # Grab the first element, which is the next run time or
-                    # last scheduled time in the past.
-                    when = _when[0]
-
-                    if when < now - loop_interval and \
-                            not data.get('_run', False) and \
-                            not data.get('run', False) and \
-                            not data['_splay']:
-                        data['_next_fire_time'] = None
-                        data['_continue'] = True
-                        return
-
-                    if '_run' not in data:
-                        # Prevent run of jobs from the past
-                        data['_run'] = bool(when >= now - loop_interval)
-
-                    if not data['_next_fire_time']:
-                        data['_next_fire_time'] = when
-
-                    data['_next_scheduled_fire_time'] = when
-
-                    if data['_next_fire_time'] < when and \
-                            not run and \
-                            not data['_run']:
-                        data['_next_fire_time'] = when
-                        data['_run'] = True
-
-                elif not data.get('_run', False):
-                    data['_next_fire_time'] = None
-                    data['_continue'] = True
-
+            if not isinstance(data['when'], list):
+                _when_data = [data['when']]
             else:
+                _when_data = data['when']
+
+            _when = []
+            for i in _when_data:
                 if ('pillar' in self.opts and 'whens' in self.opts['pillar'] and
-                        data['when'] in self.opts['pillar']['whens']):
-                    if not isinstance(self.opts['pillar']['whens'], dict):
-                        data['_error'] = ('Pillar item "whens" must be dict.'
+                        i in self.opts['pillar']['whens']):
+                    if not isinstance(self.opts['pillar']['whens'],
+                                      dict):
+                        data['_error'] = ('Pillar item "whens" '
+                                          'must be a dict. '
                                           'Ignoring job {0}.'.format(data['name']))
                         log.error(data['_error'])
                         return
-                    when = self.opts['pillar']['whens'][data['when']]
+                    when_ = self.opts['pillar']['whens'][i]
                 elif ('whens' in self.opts['grains'] and
-                      data['when'] in self.opts['grains']['whens']):
-                    if not isinstance(self.opts['grains']['whens'], dict):
+                      i in self.opts['grains']['whens']):
+                    if not isinstance(self.opts['grains']['whens'],
+                                      dict):
                         data['_error'] = ('Grain "whens" must be a dict. '
                                           'Ignoring job {0}.'.format(data['name']))
                         log.error(data['_error'])
                         return
-                    when = self.opts['grains']['whens'][data['when']]
+                    when_ = self.opts['grains']['whens'][i]
                 else:
-                    when = data['when']
+                    when_ = i
 
-                if not isinstance(when, datetime.datetime):
+                if not isinstance(when_, datetime.datetime):
                     try:
-                        when = dateutil_parser.parse(when)
+                        when_ = dateutil_parser.parse(when_)
                     except ValueError:
-                        data['_error'] = ('Invalid date string. '
-                                          'Ignoring job {0}.'.format(data['name']))
+                        data['_error'] = ('Invalid date string {0}. '
+                                          'Ignoring job {1}.'.format(i, data['name']))
                         log.error(data['_error'])
                         return
 
+                _when.append(when_)
+
+            if data['_splay']:
+                _when.append(data['_splay'])
+
+            # Sort the list of "whens" from earlier to later schedules
+            _when.sort()
+
+            # Copy the list so we can loop through it
+            for i in copy.deepcopy(_when):
+                if len(_when) > 1:
+                    if i < now - loop_interval:
+                        # Remove all missed schedules except the latest one.
+                        # We need it to detect if it was triggered previously.
+                        _when.remove(i)
+
+            if _when:
+                # Grab the first element, which is the next run time or
+                # last scheduled time in the past.
+                when = _when[0]
+
                 if when < now - loop_interval and \
                         not data.get('_run', False) and \
-                        not data.get('run', False) and \
+                        not run and \
                         not data['_splay']:
                     data['_next_fire_time'] = None
                     data['_continue'] = True
                     return
 
                 if '_run' not in data:
-                    data['_run'] = True
+                    # Prevent run of jobs from the past
+                    data['_run'] = bool(when >= now - loop_interval)
 
                 if not data['_next_fire_time']:
                     data['_next_fire_time'] = when
@@ -1080,9 +1035,14 @@ class Schedule(object):
                 data['_next_scheduled_fire_time'] = when
 
                 if data['_next_fire_time'] < when and \
+                        not run and \
                         not data['_run']:
                     data['_next_fire_time'] = when
                     data['_run'] = True
+
+            elif not data.get('_run', False):
+                data['_next_fire_time'] = None
+                data['_continue'] = True
 
         def _handle_cron(data, loop_interval):
             '''
@@ -1726,7 +1686,8 @@ def clean_proc_dir(opts):
             job = None
             try:
                 job = salt.payload.Serial(opts).load(fp_)
-            except Exception:  # It's corrupted
+            except Exception:  # pylint: disable=broad-except
+                # It's corrupted
                 # Windows cannot delete an open file
                 if salt.utils.platform.is_windows():
                     fp_.close()
