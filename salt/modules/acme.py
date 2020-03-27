@@ -376,7 +376,7 @@ def needs_renewal(name, window=None):
             log.info('Your certificate is still good')
     '''
     if window:
-        if str(window).lower in ('force', 'true'):
+        if str(window).lower() in ('force', 'true'):
             return True
         if not (isinstance(window, int) or (hasattr(window, 'isdigit') and window.isdigit())):
             raise SaltInvocationError(
