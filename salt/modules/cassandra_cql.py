@@ -414,9 +414,6 @@ def cql_query_with_prepare(query, statement_name, statement_arguments, asynchron
     # Backward-compatibility. This should be removed in Sodium version
     if 'async' in kwargs:
         asynchronous = bool(kwargs['async'])
-        msg = 'Use of "async" parameter detected. The "asynchronous" parameter should be used instead.'
-        log.warning(msg)
-        salt.utils.versions.warn_until('Sodium', msg)
 
     try:
         cluster, session = _connect(contact_points=contact_points, port=port,

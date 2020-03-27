@@ -80,7 +80,7 @@ class CassandraCQLReturnerTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(cassandra_cql._get_ssl_opts(),  # pylint: disable=protected-access
                              None)
 
-    def test_valid_async_args(self):
+    def test_valid_asynchronous_args(self):
         mock_execute = MagicMock(return_value={})
         mock_execute_async = MagicMock(return_value={})
         mock_context = {
@@ -94,4 +94,24 @@ class CassandraCQLReturnerTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.dict(cassandra_cql.__context__, mock_context):
             cassandra_cql.cql_query_with_prepare('SELECT now() from system.local;', 'select_now', [], asynchronous=True)
+            self.assert_called_once(mock_execute_async)
+
+    def test_valid_async_args(self):
+        mock_execute = MagicMock(return_value={})
+        mock_execute_async = MagicMock(return_value={})
+        mock_context = {
+            'cassandra_cql_returner_cluster': MagicMock(return_value={}),
+            'cassandra_cql_returner_session': MagicMock(execute=mock_execute,
+                                                        execute_async=mock_execute_async,
+                                                        prepare=lambda _: MagicMock(bind=lambda _: None),
+                                                        # mock prepared_statement
+                                                        row_factory=None),
+            'cassandra_cql_prepared': {}
+        }
+
+        kwargs = {
+            'async': True  # to avoid syntax error in python 3.7
+        }
+        with patch.dict(cassandra_cql.__context__, mock_context):
+            cassandra_cql.cql_query_with_prepare('SELECT now() from system.local;', 'select_now', [], **kwargs)
             self.assert_called_once(mock_execute_async)
