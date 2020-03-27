@@ -504,7 +504,7 @@ def install(
         ``user@proxy.server:port`` then you will be prompted for a password.
 
         .. note::
-            If the the Minion has a globaly configured proxy - it will be used
+            If the Minion has a globaly configured proxy - it will be used
             even if no proxy was set here. To explicitly disable proxy for pip
             you should pass ``False`` as a value.
 
@@ -1050,7 +1050,7 @@ def uninstall(
         ``user@proxy.server:port`` then you will be prompted for a password.
 
         .. note::
-            If the the Minion has a globaly configured proxy - it will be used
+            If the Minion has a globaly configured proxy - it will be used
             even if no proxy was set here. To explicitly disable proxy for pip
             you should pass ``False`` as a value.
 

@@ -88,11 +88,11 @@ def get_entity(ent_type, **kwargs):
 
 
 def _clean_kwargs(keep_name=False, **kwargs):
-    """
-    Sanatize the the arguments for use with shade
-    """
-    if "name" in kwargs and not keep_name:
-        kwargs["name_or_id"] = kwargs.pop("name")
+    '''
+    Sanatize the arguments for use with shade
+    '''
+    if 'name' in kwargs and not keep_name:
+        kwargs['name_or_id'] = kwargs.pop('name')
 
     return __utils__["args.clean_kwargs"](**kwargs)
 

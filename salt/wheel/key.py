@@ -352,7 +352,7 @@ def gen(id_=None, keysize=2048):
     r"""
     Generate a key pair. No keys are stored on the master. A key pair is
     returned as a dict containing pub and priv keys. Returns a dictionary
-    containing the the ``pub`` and ``priv`` keys with their generated values.
+    containing the ``pub`` and ``priv`` keys with their generated values.
 
     id\_
         Set a name to generate a key pair for use with salt. If not specified,

@@ -14,7 +14,7 @@ There are 3 functions in this salt util.
 - get_interface_info_wmi
 - get_interface_info
 The ``get_interface_info`` function will call one of the other two functions
-depending on the the version of Windows this is run on. Once support for Windows
+depending on the version of Windows this is run on. Once support for Windows
 7 is dropped we can remove the WMI stuff and just use .NET.
 :depends: - pythonnet
           - wmi

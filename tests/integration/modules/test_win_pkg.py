@@ -21,7 +21,7 @@ from tests.support.unit import skipIf
 class WinPKGTest(ModuleCase):
     """
     Tests for salt.modules.win_pkg. There are already
-    some pkg execution module tests in the the test
+    some pkg execution module tests in the test
     integration.modules.test_pkg but this will be for
     specific windows software respository tests while
     using the win_pkg module.

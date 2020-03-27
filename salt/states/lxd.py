@@ -65,7 +65,7 @@ def init(
 ):
     """
     Initalizes the LXD Daemon, as LXD doesn't tell if its initialized
-    we touch the the done_file and check if it exist.
+    we touch the done_file and check if it exist.
 
     This can only be called once per host unless you remove the done_file.
 

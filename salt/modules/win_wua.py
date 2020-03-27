@@ -739,7 +739,7 @@ def set_wu_settings(
     # Apparently the Windows Update framework in Windows Vista - Windows 8.1 has
     # been changed quite a bit in Windows 10 / Server 2016. It is now called the
     # Unified Update Platform (UUP). I haven't found an API or a Powershell
-    # commandlet for working with the the UUP. Perhaps there will be something
+    # commandlet for working with the UUP. Perhaps there will be something
     # forthcoming. The `win_lgpo` module might be an option for changing the
     # Windows Update settings using local group policy.
     ret = {"Success": True}

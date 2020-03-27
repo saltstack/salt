@@ -1962,7 +1962,7 @@ def create(
     def select(key, default=None):
         kw_overrides_match = kw_overrides.pop(key, None)
         profile_match = profile.pop(key, default)
-        # Return the profile match if the the kwarg match was None, as the
+        # Return the profile match if the kwarg match was None, as the
         # lxc.present state will pass these kwargs set to None by default.
         if kw_overrides_match is None:
             return profile_match
