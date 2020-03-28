@@ -102,7 +102,7 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
 
     def test_cert_signing(self):
         ret = self.run_function(
-            "state.apply", ["test_cert"], pillar={"tmp_dir": RUNTIME_VARS.TMP}
+            "state.apply", ["x509.cert_signing"], pillar={"tmp_dir": RUNTIME_VARS.TMP}
         )
         key = "x509_|-test_crt_|-{}/pki/test.crt_|-certificate_managed".format(
             RUNTIME_VARS.TMP
