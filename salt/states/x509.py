@@ -573,6 +573,11 @@ def certificate_managed(name, days_remaining=90, append_certs=None, **kwargs):
             "public_key or signing_private_key must be specified."
         )
 
+    if "managed_private_key" in kwargs:
+        raise salt.exceptions.SaltInvocationError(
+            "managed_private_key is no longer supported by x509.certificate_managed, use a separate x509.private_key_managed call instead."
+        )
+
     ret = {"name": name, "result": False, "changes": {}, "comment": ""}
 
     is_valid, invalid_reason, current_cert_info = _certificate_is_valid(

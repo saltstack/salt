@@ -280,3 +280,22 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
                 third_cert.read(),
                 "Certificate contents should not have changed.",
             )
+
+    @with_tempfile(suffix=".crt", create=False)
+    @with_tempfile(suffix=".key", create=False)
+    def test_managed_private_key_not_supported_by_certificate_managed(
+        self, keyfile, crtfile
+    ):
+        ret = self.run_state(
+            "x509.certificate_managed",
+            name=crtfile,
+            ca_server="any-minion-not-important",
+            signing_policy="not-important",
+            public_key=keyfile,
+            managed_private_key={"name": keyfile},
+        )
+        key = "x509_|-{0}_|-{0}_|-certificate_managed".format(crtfile)
+        expected = "managed_private_key is no longer supported by x509.certificate_managed, use a separate x509.private_key_managed call instead."
+        self.assertIn(expected, ret[key]["comment"], ret)
+        self.assertEqual(False, ret[key]["result"])
+        self.assertEqual({}, ret[key]["changes"])
