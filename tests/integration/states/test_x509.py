@@ -151,7 +151,7 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
 
     @with_tempfile(suffix=".crt", create=False)
     @with_tempfile(suffix=".key", create=False)
-    def test_old_self_signed_cert_is_renewed(self, keyfile, crtfile):
+    def test_old_self_signed_cert_is_recreated(self, keyfile, crtfile):
         """
         Self-signed certificate, no CA.
         First create a cert that expires in 30 days, then recreate
@@ -207,4 +207,76 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
                 cert_contents,
                 second_cert.read(),
                 "Certificate contents should have changed.",
+            )
+
+    @with_tempfile(suffix=".crt", create=False)
+    @with_tempfile(suffix=".key", create=False)
+    def test_mismatched_self_signed_cert_is_recreated(self, keyfile, crtfile):
+        """
+        Self-signed certificate, no CA.
+        First create a cert, then run the state again with a different
+        subjectAltName. The cert should be recreated.
+        Finally, run once more with the same subjectAltName as the
+        second run. Nothing should change.
+        """
+        first_run = self.run_function(
+            "state.apply",
+            ["x509.self_signed_different_properties"],
+            pillar={
+                "keyfile": keyfile,
+                "crtfile": crtfile,
+                "subjectAltName": "DNS:alt.service.local",
+            },
+        )
+        key = "x509_|-self_signed_cert_|-{0}_|-certificate_managed".format(crtfile)
+        self.assertEqual(
+            "Certificate is valid and up to date",
+            first_run[key]["changes"]["Status"]["New"],
+        )
+        sans = first_run[key]["changes"]["Certificate"]["New"]["X509v3 Extensions"][
+            "subjectAltName"
+        ]
+        self.assertEqual("DNS:alt.service.local", sans)
+        self.assertTrue(os.path.exists(crtfile), "Certificate was not created.")
+
+        with salt.utils.files.fopen(crtfile, "r") as first_cert:
+            first_cert_contents = first_cert.read()
+
+        second_run_pillar = {
+            "keyfile": keyfile,
+            "crtfile": crtfile,
+            "subjectAltName": "DNS:alt1.service.local, DNS:alt2.service.local",
+        }
+        second_run = self.run_function(
+            "state.apply",
+            ["x509.self_signed_different_properties"],
+            pillar=second_run_pillar,
+        )
+        self.assertEqual(
+            "Certificate properties are different: X509v3 Extensions",
+            second_run[key]["changes"]["Status"]["Old"],
+        )
+        sans = second_run[key]["changes"]["Certificate"]["New"]["X509v3 Extensions"][
+            "subjectAltName"
+        ]
+        self.assertEqual("DNS:alt1.service.local, DNS:alt2.service.local", sans)
+        with salt.utils.files.fopen(crtfile, "r") as second_cert:
+            second_cert_contents = second_cert.read()
+            self.assertNotEqual(
+                first_cert_contents,
+                second_cert_contents,
+                "Certificate contents should have changed.",
+            )
+
+        third_run = self.run_function(
+            "state.apply",
+            ["x509.self_signed_different_properties"],
+            pillar=second_run_pillar,
+        )
+        self.assertEqual({}, third_run[key]["changes"])
+        with salt.utils.files.fopen(crtfile, "r") as third_cert:
+            self.assertEqual(
+                second_cert_contents,
+                third_cert.read(),
+                "Certificate contents should not have changed.",
             )
