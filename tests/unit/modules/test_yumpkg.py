@@ -844,6 +844,238 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
             with pytest.raises(CommandExecutionError):
                 yumpkg._get_yum_config()
 
+    def test_group_info(self):
+        '''
+        Test yumpkg.group_info parsing
+        '''
+        expected = {
+            'conditional': [],
+            'default': ['qgnomeplatform', 'xdg-desktop-portal-gtk'],
+            'description': 'GNOME is a highly intuitive and user friendly desktop environment.',
+            'group': 'GNOME',
+            'id': 'gnome-desktop',
+            'mandatory': ['NetworkManager-libreswan-gnome',
+                          'PackageKit-command-not-found',
+                          'PackageKit-gtk3-module',
+                          'abrt-desktop',
+                          'at-spi2-atk',
+                          'at-spi2-core',
+                          'avahi',
+                          'baobab',
+                          'caribou',
+                          'caribou-gtk2-module',
+                          'caribou-gtk3-module',
+                          'cheese',
+                          'chrome-gnome-shell',
+                          'compat-cheese314',
+                          'control-center',
+                          'dconf',
+                          'empathy',
+                          'eog',
+                          'evince',
+                          'evince-nautilus',
+                          'file-roller',
+                          'file-roller-nautilus',
+                          'firewall-config',
+                          'firstboot',
+                          'fprintd-pam',
+                          'gdm',
+                          'gedit',
+                          'glib-networking',
+                          'gnome-bluetooth',
+                          'gnome-boxes',
+                          'gnome-calculator',
+                          'gnome-classic-session',
+                          'gnome-clocks',
+                          'gnome-color-manager',
+                          'gnome-contacts',
+                          'gnome-dictionary',
+                          'gnome-disk-utility',
+                          'gnome-font-viewer',
+                          'gnome-getting-started-docs',
+                          'gnome-icon-theme',
+                          'gnome-icon-theme-extras',
+                          'gnome-icon-theme-symbolic',
+                          'gnome-initial-setup',
+                          'gnome-packagekit',
+                          'gnome-packagekit-updater',
+                          'gnome-screenshot',
+                          'gnome-session',
+                          'gnome-session-xsession',
+                          'gnome-settings-daemon',
+                          'gnome-shell',
+                          'gnome-software',
+                          'gnome-system-log',
+                          'gnome-system-monitor',
+                          'gnome-terminal',
+                          'gnome-terminal-nautilus',
+                          'gnome-themes-standard',
+                          'gnome-tweak-tool',
+                          'gnome-user-docs',
+                          'gnome-weather',
+                          'gucharmap',
+                          'gvfs-afc',
+                          'gvfs-afp',
+                          'gvfs-archive',
+                          'gvfs-fuse',
+                          'gvfs-goa',
+                          'gvfs-gphoto2',
+                          'gvfs-mtp',
+                          'gvfs-smb',
+                          'initial-setup-gui',
+                          'libcanberra-gtk2',
+                          'libcanberra-gtk3',
+                          'libproxy-mozjs',
+                          'librsvg2',
+                          'libsane-hpaio',
+                          'metacity',
+                          'mousetweaks',
+                          'nautilus',
+                          'nautilus-sendto',
+                          'nm-connection-editor',
+                          'orca',
+                          'redhat-access-gui',
+                          'sane-backends-drivers-scanners',
+                          'seahorse',
+                          'setroubleshoot',
+                          'sushi',
+                          'totem',
+                          'totem-nautilus',
+                          'vinagre',
+                          'vino',
+                          'xdg-user-dirs-gtk',
+                          'yelp'],
+            'optional': ['',
+                         'alacarte',
+                         'dconf-editor',
+                         'dvgrab',
+                         'fonts-tweak-tool',
+                         'gconf-editor',
+                         'gedit-plugins',
+                         'gnote',
+                         'libappindicator-gtk3',
+                         'seahorse-nautilus',
+                         'seahorse-sharing',
+                         'vim-X11',
+                         'xguest'],
+            'type': 'package group'
+        }
+        cmd_out = '''Group: GNOME
+         Group-Id: gnome-desktop
+         Description: GNOME is a highly intuitive and user friendly desktop environment.
+         Mandatory Packages:
+           =NetworkManager-libreswan-gnome
+           =PackageKit-command-not-found
+           =PackageKit-gtk3-module
+            abrt-desktop
+           =at-spi2-atk
+           =at-spi2-core
+           =avahi
+           =baobab
+           -caribou
+           -caribou-gtk2-module
+           -caribou-gtk3-module
+           =cheese
+           =chrome-gnome-shell
+           =compat-cheese314
+           =control-center
+           =dconf
+           =empathy
+           =eog
+           =evince
+           =evince-nautilus
+           =file-roller
+           =file-roller-nautilus
+           =firewall-config
+           =firstboot
+            fprintd-pam
+           =gdm
+           =gedit
+           =glib-networking
+           =gnome-bluetooth
+           =gnome-boxes
+           =gnome-calculator
+           =gnome-classic-session
+           =gnome-clocks
+           =gnome-color-manager
+           =gnome-contacts
+           =gnome-dictionary
+           =gnome-disk-utility
+           =gnome-font-viewer
+           =gnome-getting-started-docs
+           =gnome-icon-theme
+           =gnome-icon-theme-extras
+           =gnome-icon-theme-symbolic
+           =gnome-initial-setup
+           =gnome-packagekit
+           =gnome-packagekit-updater
+           =gnome-screenshot
+           =gnome-session
+           =gnome-session-xsession
+           =gnome-settings-daemon
+           =gnome-shell
+           =gnome-software
+           =gnome-system-log
+           =gnome-system-monitor
+           =gnome-terminal
+           =gnome-terminal-nautilus
+           =gnome-themes-standard
+           =gnome-tweak-tool
+           =gnome-user-docs
+           =gnome-weather
+           =gucharmap
+           =gvfs-afc
+           =gvfs-afp
+           =gvfs-archive
+           =gvfs-fuse
+           =gvfs-goa
+           =gvfs-gphoto2
+           =gvfs-mtp
+           =gvfs-smb
+            initial-setup-gui
+           =libcanberra-gtk2
+           =libcanberra-gtk3
+           =libproxy-mozjs
+           =librsvg2
+           =libsane-hpaio
+           =metacity
+           =mousetweaks
+           =nautilus
+           =nautilus-sendto
+           =nm-connection-editor
+           =orca
+           -redhat-access-gui
+           =sane-backends-drivers-scanners
+           =seahorse
+           =setroubleshoot
+           =sushi
+           =totem
+           =totem-nautilus
+           =vinagre
+           =vino
+           =xdg-user-dirs-gtk
+           =yelp
+         Default Packages:
+           =qgnomeplatform
+           =xdg-desktop-portal-gtk
+         Optional Packages:
+           alacarte
+           dconf-editor
+           dvgrab
+           fonts-tweak-tool
+           gconf-editor
+           gedit-plugins
+           gnote
+           libappindicator-gtk3
+           seahorse-nautilus
+           seahorse-sharing
+           vim-X11
+           xguest
+        '''
+        with patch.dict(yumpkg.__salt__, {'cmd.run_stdout': MagicMock(return_value=cmd_out)}):
+            info = yumpkg.group_info('@gnome-desktop')
+            self.assertDictEqual(info, expected)
+
 
 @skipIf(pytest is None, 'PyTest is missing')
 class YumUtilsTestCase(TestCase, LoaderModuleMockMixin):
