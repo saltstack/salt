@@ -2467,8 +2467,6 @@ def group_info(name, expand=False, ignore_groups=None):
         python_shell=False
     )
 
-    log.trace('Output from "%s": %s', cmd, out)
-
     g_info = {}
     for line in salt.utils.itertools.split(out, '\n'):
         try:
