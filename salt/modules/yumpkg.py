@@ -2418,10 +2418,10 @@ def group_list():
     return ret
 
 
-def group_info(name, expand=False):
+def group_info(name, expand=False, ignore_groups=None):
     '''
     .. versionadded:: 2014.1.0
-    .. versionchanged:: 2016.3.0,2015.8.4,2015.5.10
+    .. versionchanged:: Sodium,2015.8.4,2015.5.10
         The return data has changed. A new key ``type`` has been added to
         distinguish environment groups from package groups. Also, keys for the
         group name and group ID have been added. The ``mandatory packages``,
@@ -2442,6 +2442,13 @@ def group_info(name, expand=False):
 
         .. versionadded:: 2016.3.0
 
+    ignore_groups : None
+        This parameter can be used to pass a list of groups to ignore when
+        expanding subgroups. It is used during recursion in order to prevent
+        expanding the same group multiple times.
+
+        .. versionadded:: Sodium
+
     CLI Example:
 
     .. code-block:: bash
@@ -2459,6 +2466,8 @@ def group_info(name, expand=False):
         output_loglevel='trace',
         python_shell=False
     )
+
+    log.trace('Output from "%s": %s', cmd, out)
 
     g_info = {}
     for line in salt.utils.itertools.split(out, '\n'):
@@ -2480,6 +2489,7 @@ def group_info(name, expand=False):
 
     ret['description'] = g_info.get('description', '')
 
+    completed_groups = ignore_groups or []
     pkgtypes_capturegroup = '(' + '|'.join(pkgtypes) + ')'
     for pkgtype in pkgtypes:
         target_found = False
@@ -2500,7 +2510,11 @@ def group_info(name, expand=False):
                     continue
             if target_found:
                 if expand and ret['type'] == 'environment group':
-                    expanded = group_info(line, expand=True)
+                    if not line or line in completed_groups:
+                        continue
+                    log.trace('Adding group "%s" to completed list: %s', line, completed_groups)
+                    completed_groups.append(line)
+                    expanded = group_info(line, expand=True, ignore_groups=completed_groups)
                     # Don't shadow the pkgtype variable from the outer loop
                     for p_type in pkgtypes:
                         ret[p_type].update(set(expanded[p_type]))
