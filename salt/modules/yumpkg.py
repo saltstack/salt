@@ -2514,7 +2514,9 @@ def group_info(name, expand=False, ignore_groups=None):
                         continue
                     log.trace('Adding group "%s" to completed list: %s', line, completed_groups)
                     completed_groups.append(line)
-                    expanded = group_info(line, expand=True, ignore_groups=completed_groups)
+                    # Using the @ prefix on the group here in order to prevent multiple matches
+                    # being returned, such as with gnome-desktop
+                    expanded = group_info('@' + line, expand=True, ignore_groups=completed_groups)
                     # Don't shadow the pkgtype variable from the outer loop
                     for p_type in pkgtypes:
                         ret[p_type].update(set(expanded[p_type]))
