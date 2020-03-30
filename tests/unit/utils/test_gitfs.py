@@ -179,7 +179,7 @@ class TestPygit2(TestCase):
         override_params = tuple(per_remote_defaults.keys())
         cache_root = cache + '/gitfs'
         role = 'gitfs'
-        shutil.rmtree(cache_root, ignore_errors=False)
+        shutil.rmtree(cache_root, ignore_errors=True)
         provider = salt.utils.gitfs.Pygit2(
             opts, remote, per_remote_defaults,
             per_remote_only, override_params, cache_root, role)
