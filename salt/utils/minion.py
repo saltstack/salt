@@ -102,7 +102,8 @@ def _read_proc_file(path, opts):
         thread_name = '{}-Job-{}'.format(data.get('jid'), data.get('jid'))
         if data.get('jid') == current_thread or thread_name == current_thread:
             return None
-        found = data.get('jid') in [x.name for x in threading.enumerate()]
+        found = data.get('jid') in [x.name for x in threading.enumerate()] or \
+            thread_name in [x.name for x in threading.enumerate()]
         if not found:
             found = thread_name in [x.name for x in threading.enumerate()]
         if not found:
