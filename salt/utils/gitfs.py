@@ -1549,10 +1549,10 @@ class Pygit2(GitProvider):
 
             elif tag_ref in refs:
                 tag_obj = self.repo.revparse_single(tag_ref)
-                if not isinstance(tag_obj, pygit2.Commit):
+                if True not in [isinstance(tag_obj, pygit_type) for pygit_type in [pygit2.Commit, pygit2.Tag]]:
                     log.error(
-                        '%s does not correspond to pygit2.Commit object',
-                        tag_ref
+                        '%s does not correspond to pygit2 Commit or Tag object. It is of type %s',
+                        tag_ref, type(tag_obj)
                     )
                 else:
                     try:
