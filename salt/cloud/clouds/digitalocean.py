@@ -1287,7 +1287,7 @@ def reboot(name, call=None):
     """
     if call != "action":
         raise SaltCloudSystemExit(
-            "The restart action must be called with -a or --action."
+            "The reboot action must be called with -a or --action."
         )
 
     data = show_instance(name, call="action")
