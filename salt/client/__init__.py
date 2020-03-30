@@ -454,7 +454,7 @@ class LocalClient(object):
             tgt_type='glob',
             ret='',
             kwarg=None,
-            sub=3,
+            subset=3,
             cli=False,
             progress=False,
             full_return=False,
@@ -465,13 +465,13 @@ class LocalClient(object):
         The function signature is the same as :py:meth:`cmd` with the
         following exceptions.
 
-        :param sub: The number of systems to execute on
+        :param subset: The number of systems to execute on
         :param cli: When this is set to True, a generator is returned,
                     otherwise a dictionary of the minion returns is returned
 
         .. code-block:: python
 
-            >>> SLC.cmd_subset('*', 'test.ping', sub=1)
+            >>> SLC.cmd_subset('*', 'test.ping', subset=1)
             {'jerry': True}
         '''
         minion_ret = self.cmd(tgt,
@@ -484,7 +484,7 @@ class LocalClient(object):
         for minion in minions:
             if fun in minion_ret[minion]:
                 f_tgt.append(minion)
-            if len(f_tgt) >= sub:
+            if len(f_tgt) >= subset:
                 break
         func = self.cmd
         if cli:

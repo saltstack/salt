@@ -91,7 +91,7 @@ class LocalClientTestCase(TestCase,
         with patch('salt.client.LocalClient.cmd', return_value={'minion1': ['first.func', 'second.func'],
                                                                 'minion2': ['first.func', 'second.func']}):
             with patch('salt.client.LocalClient.cmd_cli') as cmd_cli_mock:
-                self.client.cmd_subset('*', 'first.func', sub=1, cli=True)
+                self.client.cmd_subset('*', 'first.func', subset=1, cli=True)
                 try:
                     cmd_cli_mock.assert_called_with(['minion2'], 'first.func', (), progress=False,
                                                     kwarg=None, tgt_type='list', full_return=False,
@@ -100,7 +100,7 @@ class LocalClientTestCase(TestCase,
                     cmd_cli_mock.assert_called_with(['minion1'], 'first.func', (), progress=False,
                                                     kwarg=None, tgt_type='list', full_return=False,
                                                     ret='')
-                self.client.cmd_subset('*', 'first.func', sub=10, cli=True)
+                self.client.cmd_subset('*', 'first.func', subset=10, cli=True)
                 try:
                     cmd_cli_mock.assert_called_with(['minion2', 'minion1'], 'first.func', (), progress=False,
                                                     kwarg=None, tgt_type='list', full_return=False,
@@ -110,7 +110,7 @@ class LocalClientTestCase(TestCase,
                                                     kwarg=None, tgt_type='list', full_return=False,
                                                     ret='')
 
-                ret = self.client.cmd_subset('*', 'first.func', sub=1, cli=True, full_return=True)
+                ret = self.client.cmd_subset('*', 'first.func', subset=1, cli=True, full_return=True)
                 try:
                     cmd_cli_mock.assert_called_with(['minion2'], 'first.func', (), progress=False,
                                                     kwarg=None, tgt_type='list', full_return=True,
