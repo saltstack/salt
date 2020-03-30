@@ -1480,29 +1480,25 @@ def _get_ssh_or_api_client(cfgfile, ssh=False):
     return client
 
 
-def _exec(client, tgt, fun, arg, timeout, tgt_type, ret, kwarg, **kwargs):
+def _exec(client, tgt, fun, arg, timeout, tgt_type, ret, kwarg, batch=False, subset=False, **kwargs):
     fcn_ret = {}
     seen = 0
-    if 'batch' in kwargs:
+
+    cmd_kwargs = {
+        'tgt': tgt, 'fun': fun, 'arg': arg, 'timeout': timeout,
+        'tgt_type': tgt_type, 'ret': ret, 'kwarg': kwarg
+    }
+
+    if batch:
         _cmd = client.cmd_batch
-        cmd_kwargs = {
-            'tgt': tgt, 'fun': fun, 'arg': arg, 'tgt_type': tgt_type,
-            'ret': ret, 'kwarg': kwarg, 'batch': kwargs['batch'],
-        }
-        del kwargs['batch']
-    elif 'subset' in kwargs:
+        cmd_kwargs.update({'batch': batch})
+    elif subset:
         _cmd = client.cmd_subset
-        cmd_kwargs = {
-            'tgt': tgt, 'fun': fun, 'arg': arg, 'tgt_type': tgt_type,
-            'ret': ret, 'cli': True, 'kwarg': kwarg, 'sub': kwargs['subset'],
-        }
-        del kwargs['subset']
+        cmd_kwargs.update({'subset': subset,
+                           'cli': True})
     else:
         _cmd = client.cmd_iter
-        cmd_kwargs = {
-            'tgt': tgt, 'fun': fun, 'arg': arg, 'timeout': timeout,
-            'tgt_type': tgt_type, 'ret': ret, 'kwarg': kwarg,
-        }
+
     cmd_kwargs.update(kwargs)
     for ret_comp in _cmd(**cmd_kwargs):
         fcn_ret.update(ret_comp)
@@ -1512,6 +1508,15 @@ def _exec(client, tgt, fun, arg, timeout, tgt_type, ret, kwarg, **kwargs):
             # do not wait for timeout when explicit list matching
             # and all results are there
             break
+
+    if batch:
+        old_ret, fcn_ret = fcn_ret, {}
+        for key, value in old_ret.items():
+            fcn_ret[key] = {
+                'out': value.get('out', 'highstate') if isinstance(value, dict) else 'highstate',
+                'ret': value,
+            }
+
     return fcn_ret
 
 
@@ -1553,14 +1558,6 @@ def cmd(tgt,
         client = _get_ssh_or_api_client(master_cfgfile, ssh)
         fcn_ret = _exec(
             client, tgt, fun, arg, timeout, tgt_type, ret, kwarg, **kwargs)
-
-    if 'batch' in kwargs:
-        old_ret, fcn_ret = fcn_ret, {}
-        for key, value in old_ret.items():
-            fcn_ret[key] = {
-                'out': value.get('out', 'highstate') if isinstance(value, dict) else 'highstate',
-                'ret': value,
-            }
 
     return fcn_ret
 
