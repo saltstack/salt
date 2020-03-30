@@ -13,12 +13,13 @@ from time import time
 
 import pygit2
 
-import salt.fileserver.gitfs
 # Import salt libs
+import salt.fileserver.gitfs
+import salt.utils.files
 import salt.utils.gitfs
 from salt.exceptions import FileserverConfigError
-from tests.support.mock import MagicMock, patch
 # Import Salt Testing libs
+from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
 
 # GLOBALS
@@ -115,7 +116,7 @@ class TestPygit2(TestCase):
             'Create master branch', tree, [])
         repository.create_reference('refs/tags/simple_tag', commit)
 
-        with open(os.path.join(repository.workdir, filename), 'w') as file:
+        with salt.utils.files.fopen(os.path.join(repository.workdir, filename), 'w') as file:
             file.write(filecontent)
 
         blob = repository.create_blob_fromworkdir(filename)
