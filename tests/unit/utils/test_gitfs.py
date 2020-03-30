@@ -19,6 +19,7 @@ import salt.utils.files
 import salt.utils.gitfs
 from salt.exceptions import FileserverConfigError
 # Import Salt Testing libs
+import tests.support.paths
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
 
@@ -177,7 +178,7 @@ class TestPygit2(TestCase):
         }
         per_remote_only = ('all_saltenvs', 'name', 'saltenv')
         override_params = tuple(per_remote_defaults.keys())
-        cache_root = cache + '/gitfs'
+        cache_root = os.path.join(cache, 'gitfs')
         role = 'gitfs'
         shutil.rmtree(cache_root, ignore_errors=True)
         provider = salt.utils.gitfs.Pygit2(
@@ -186,8 +187,10 @@ class TestPygit2(TestCase):
         return provider
 
     def test_checkout(self):
-        self._prepare_remote_repository('/tmp/pygit2-repo')
-        provider = self._prepare_cache_repository('/tmp/pygit2-repo', '/tmp/pygit2-repo-cache')
+        remote = os.path.join(tests.support.paths.TMP, 'pygit2-repo')
+        cache = os.path.join(tests.support.paths.TMP, 'pygit2-repo-cache')
+        self._prepare_remote_repository(remote)
+        provider = self._prepare_cache_repository(remote, cache)
         provider.remotecallbacks = None
         provider.credentials = None
         provider.init_remote()
