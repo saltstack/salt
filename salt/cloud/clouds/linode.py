@@ -392,7 +392,7 @@ def create(vm_):
             result = clone(kwargs={'linode_id': linode_id,
                                    'datacenter_id': datacenter_id,
                                    'plan_id': plan_id})
-        except Exception as err:
+        except Exception as err:  # pylint: disable=broad-except
             log.error(
                 'Error cloning \'%s\' on Linode.\n\n'
                 'The following exception was thrown by Linode when trying to '
@@ -409,7 +409,7 @@ def create(vm_):
                 'PLANID': plan_id,
                 'DATACENTERID': datacenter_id
             })
-        except Exception as err:
+        except Exception as err:  # pylint: disable=broad-except
             log.error(
                 'Error creating %s on Linode\n\n'
                 'The following exception was thrown by Linode when trying to '

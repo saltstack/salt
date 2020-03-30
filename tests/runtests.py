@@ -12,7 +12,6 @@ import sys
 import time
 import warnings
 import collections
-
 TESTS_DIR = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
 if os.name == 'nt':
     TESTS_DIR = TESTS_DIR.replace('\\', '\\\\')
@@ -43,6 +42,8 @@ except ImportError:
     pass
 
 # Import salt libs
+from salt.ext import six
+
 try:
     from tests.support.paths import TMP, SYS_TMP_DIR, INTEGRATION_TEST_DIR
     from tests.support.paths import CODE_DIR as SALT_ROOT
@@ -56,9 +57,9 @@ except ImportError as exc:
     print('Current sys.path:')
     import pprint
     pprint.pprint(sys.path)
-    raise exc
+    six.reraise(*sys.exc_info())
 
-from tests.integration import TestDaemon, TestDaemonStartFailed  # pylint: disable=W0403
+from tests.integration import TestDaemon, TestDaemonStartFailed
 from tests.multimaster import MultimasterTestDaemon
 import salt.utils.platform
 
@@ -142,6 +143,9 @@ TEST_SUITES_UNORDERED = {
     'returners':
         {'display_name': 'Returners',
          'path': 'integration/returners'},
+    'setup':
+        {'display_name': 'Setup',
+         'path': 'integration/setup'},
     'ssh-int':
         {'display_name': 'SSH Integration',
          'path': 'integration/ssh'},
@@ -261,9 +265,9 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         self.add_option(
             '--transport',
             default='zeromq',
-            choices=('zeromq', 'raet', 'tcp'),
+            choices=('zeromq', 'tcp'),
             help=('Select which transport to run the integration tests with, '
-                  'zeromq, raet, or tcp. Default: %default')
+                  'zeromq or tcp. Default: %default')
         )
         self.add_option(
             '--interactive',
@@ -397,6 +401,13 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             default=False,
             action='store_true',
             help='Run spm integration tests'
+        )
+        self.test_selection_group.add_option(
+            '--setup',
+            dest='setup',
+            default=False,
+            action='store_true',
+            help='Run setup integration tests'
         )
         self.test_selection_group.add_option(
             '-l',
@@ -796,7 +807,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                     win32file._setmaxstdio(hard)
                 else:
                     resource.setrlimit(resource.RLIMIT_NOFILE, (soft, hard))
-            except Exception as err:
+            except Exception as err:  # pylint: disable=broad-except
                 print(
                     'ERROR: Failed to raise the max open files settings -> '
                     '{0}'.format(err)
@@ -907,11 +918,11 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
 
         try:
             print_header(
-                ' * Setting up Salt daemons to execute tests',
+                ' * Setting up multimaster Salt daemons to execute tests',
                 top=False, width=getattr(self.options, 'output_columns', PNUM)
             )
         except TypeError:
-            print_header(' * Setting up Salt daemons to execute tests', top=False)
+            print_header(' * Setting up multimaster Salt daemons to execute tests', top=False)
 
         status = []
 

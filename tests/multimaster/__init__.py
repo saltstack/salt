@@ -14,6 +14,7 @@ import stat
 import sys
 import threading
 import time
+from collections import OrderedDict
 
 # Import salt tests support dirs
 from tests.support.paths import (
@@ -38,6 +39,8 @@ from tests.integration import (
         )
 import salt.config
 import salt.log.setup as salt_log_setup
+import salt.utils.path
+import salt.utils.platform
 from salt.utils.immutabletypes import freeze
 from salt.utils.verify import verify_env
 
@@ -68,7 +71,7 @@ class MultimasterTestDaemon(TestDaemon):
         self._enter_mockbin()
 
         self.master_targets = [self.mm_master_opts, self.mm_sub_master_opts]
-        self.minion_targets = set(['minion', 'sub_minion'])
+        self.minion_targets = set(['mm-minion', 'mm-sub-minion'])
 
         if self.parser.options.transport == 'zeromq':
             self.start_zeromq_daemons()
@@ -191,7 +194,7 @@ class MultimasterTestDaemon(TestDaemon):
                 daemon_class=SaltMaster,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
-                start_timeout=60)
+                start_timeout=120)
             sys.stdout.write(
                 '\r{0}\r'.format(
                     ' ' * getattr(self.parser.options, 'output_columns', PNUM)
@@ -235,7 +238,7 @@ class MultimasterTestDaemon(TestDaemon):
                 daemon_class=SaltMaster,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
-                start_timeout=60)
+                start_timeout=120)
             sys.stdout.write(
                 '\r{0}\r'.format(
                     ' ' * getattr(self.parser.options, 'output_columns', PNUM)
@@ -272,7 +275,7 @@ class MultimasterTestDaemon(TestDaemon):
                 daemon_class=SaltMinion,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
-                start_timeout=60)
+                start_timeout=120)
             sys.stdout.write(
                 '\r{0}\r'.format(
                     ' ' * getattr(self.parser.options, 'output_columns', PNUM)
@@ -309,7 +312,7 @@ class MultimasterTestDaemon(TestDaemon):
                 daemon_class=SaltMinion,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
-                start_timeout=60)
+                start_timeout=120)
             sys.stdout.write(
                 '\r{0}\r'.format(
                     ' ' * getattr(self.parser.options, 'output_columns', PNUM)
@@ -368,15 +371,18 @@ class MultimasterTestDaemon(TestDaemon):
         previously was, it would not receive the master events.
         '''
         if 'runtime_clients' not in RUNTIME_VARS.RUNTIME_CONFIGS:
-            clients = []
-            for master_opts in self.master_targets:
-                clients.append(salt.client.get_local_client(mopts=master_opts))
-            RUNTIME_VARS.RUNTIME_CONFIGS['runtime_clients'] = clients
-        return RUNTIME_VARS.RUNTIME_CONFIGS['runtime_clients']
+            RUNTIME_VARS.RUNTIME_CONFIGS['runtime_clients'] = OrderedDict()
+
+        runtime_clients = RUNTIME_VARS.RUNTIME_CONFIGS['runtime_clients']
+        for mopts in self.master_targets:
+            if mopts['id'] in runtime_clients:
+                continue
+            runtime_clients[mopts['id']] = salt.client.get_local_client(mopts=mopts)
+        return runtime_clients
 
     @property
     def client(self):
-        return self.clients[0]
+        return self.clients['mm-master']
 
     @classmethod
     def transplant_configs(cls, transport='zeromq'):
@@ -391,11 +397,11 @@ class MultimasterTestDaemon(TestDaemon):
         master_opts.update(salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR,
                                                                     'mm_master')))
         master_opts['known_hosts_file'] = tests_known_hosts_file
-        master_opts['cachedir'] = os.path.join(TMP, 'rootdir_multimaster', 'cache')
+        master_opts['cachedir'] = 'cache'
         master_opts['user'] = RUNTIME_VARS.RUNNING_TESTS_USER
         master_opts['config_dir'] = RUNTIME_VARS.TMP_MM_CONF_DIR
         master_opts['root_dir'] = os.path.join(TMP, 'rootdir-multimaster')
-        master_opts['pki_dir'] = os.path.join(TMP, 'rootdir-multimaster', 'pki', 'master')
+        master_opts['pki_dir'] = 'pki'
         file_tree = {
             'root_dir': os.path.join(FILES, 'pillar', 'base', 'file_tree'),
             'follow_dir_links': False,
@@ -408,11 +414,11 @@ class MultimasterTestDaemon(TestDaemon):
         sub_master_opts.update(salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR,
                                                                         'mm_sub_master')))
         sub_master_opts['known_hosts_file'] = tests_known_hosts_file
-        sub_master_opts['cachedir'] = os.path.join(TMP, 'rootdir-sub-multimaster', 'cache')
+        sub_master_opts['cachedir'] = 'cache'
         sub_master_opts['user'] = RUNTIME_VARS.RUNNING_TESTS_USER
         sub_master_opts['config_dir'] = RUNTIME_VARS.TMP_MM_SUB_CONF_DIR
         sub_master_opts['root_dir'] = os.path.join(TMP, 'rootdir-sub-multimaster')
-        sub_master_opts['pki_dir'] = os.path.join(TMP, 'rootdir-sub-multimaster', 'pki', 'master')
+        sub_master_opts['pki_dir'] = 'pki'
         sub_master_opts['ext_pillar'].append({'file_tree': copy.deepcopy(file_tree)})
 
         # Under windows we can't seem to properly create a virtualenv off of another
@@ -421,7 +427,7 @@ class MultimasterTestDaemon(TestDaemon):
         try:
             real_prefix = sys.real_prefix
             # The above attribute exists, this is a virtualenv
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 virtualenv_binary = os.path.join(real_prefix, 'Scripts', 'virtualenv.exe')
             else:
                 # We need to remove the virtualenv from PATH or we'll get the virtualenv binary
@@ -433,7 +439,7 @@ class MultimasterTestDaemon(TestDaemon):
                         if item.startswith(sys.base_prefix):
                             path_items.remove(item)
                     os.environ['PATH'] = os.pathsep.join(path_items)
-                virtualenv_binary = salt.utils.which('virtualenv')
+                virtualenv_binary = salt.utils.path.which('virtualenv')
                 if path is not None:
                     # Restore previous environ PATH
                     os.environ['PATH'] = path
@@ -450,11 +456,11 @@ class MultimasterTestDaemon(TestDaemon):
         minion_opts = salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'minion'))
         minion_opts.update(salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR,
                                                                     'mm_minion')))
-        minion_opts['cachedir'] = os.path.join(TMP, 'rootdir-multimaster', 'cache')
+        minion_opts['cachedir'] = 'cache'
         minion_opts['user'] = RUNTIME_VARS.RUNNING_TESTS_USER
         minion_opts['config_dir'] = RUNTIME_VARS.TMP_MM_CONF_DIR
         minion_opts['root_dir'] = os.path.join(TMP, 'rootdir-multimaster')
-        minion_opts['pki_dir'] = os.path.join(TMP, 'rootdir-multimaster', 'pki', 'minion')
+        minion_opts['pki_dir'] = 'pki'
         minion_opts['hosts.file'] = os.path.join(TMP, 'rootdir', 'hosts')
         minion_opts['aliases.file'] = os.path.join(TMP, 'rootdir', 'aliases')
         if virtualenv_binary:
@@ -464,11 +470,11 @@ class MultimasterTestDaemon(TestDaemon):
         sub_minion_opts = salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'sub_minion'))
         sub_minion_opts.update(salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR,
                                                                         'mm_sub_minion')))
-        sub_minion_opts['cachedir'] = os.path.join(TMP, 'rootdir-sub-multimaster', 'cache')
+        sub_minion_opts['cachedir'] = 'cache'
         sub_minion_opts['user'] = RUNTIME_VARS.RUNNING_TESTS_USER
         sub_minion_opts['config_dir'] = RUNTIME_VARS.TMP_MM_SUB_CONF_DIR
         sub_minion_opts['root_dir'] = os.path.join(TMP, 'rootdir-sub-multimaster')
-        sub_minion_opts['pki_dir'] = os.path.join(TMP, 'rootdir-sub-multimaster', 'pki', 'minion')
+        sub_minion_opts['pki_dir'] = 'pki'
         sub_minion_opts['hosts.file'] = os.path.join(TMP, 'rootdir', 'hosts')
         sub_minion_opts['aliases.file'] = os.path.join(TMP, 'rootdir', 'aliases')
         if virtualenv_binary:

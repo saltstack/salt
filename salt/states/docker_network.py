@@ -585,7 +585,7 @@ def present(name,
             ignore_collisions=ignore_collisions,
             validate_ip_addrs=validate_ip_addrs,
             **__utils__['args.clean_kwargs'](**kwargs))
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         ret['comment'] = exc.__str__()
         return ret
 
@@ -613,7 +613,7 @@ def present(name,
             ipam_config = __utils__['docker.create_ipam_config'](
                 *ipam_pools,
                 **ipam_kwargs)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             ret['comment'] = exc.__str__()
             return ret
 
@@ -796,7 +796,7 @@ def present(name,
                 name,
                 skip_translate=True,  # No need to translate (already did)
                 **kwargs)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             ret['comment'] = 'Failed to create network \'{0}\': {1}'.format(
                 name, exc.__str__())
             return ret

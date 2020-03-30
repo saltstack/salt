@@ -18,6 +18,9 @@ import os
 import re
 import logging
 import time
+import fnmatch
+import datetime
+
 
 # Import third party libs
 # pylint: disable=no-name-in-module,import-error,redefined-builtin
@@ -73,6 +76,7 @@ except ImportError:
 # pylint: enable=import-error
 
 APT_LISTS_PATH = "/var/lib/apt/lists"
+PKG_ARCH_SEPARATOR = ':'
 
 # Source format for urllib fallback on PPA handling
 LP_SRC_FORMAT = 'deb http://ppa.launchpad.net/{0}/{1}/ubuntu {2} main'
@@ -183,6 +187,43 @@ def _warn_software_properties(repo):
                 'For more accurate support of PPA repositories, you should '
                 'install this package.')
     log.warning('Best guess at ppa format: %s', repo)
+
+
+def normalize_name(name):
+    '''
+    Strips the architecture from the specified package name, if necessary.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.normalize_name zsh:amd64
+    '''
+    try:
+        name, arch = name.rsplit(PKG_ARCH_SEPARATOR, 1)
+    except ValueError:
+        return name
+    return name
+
+
+def parse_arch(name):
+    '''
+    Parse name and architecture from the specified package name.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.parse_arch zsh:amd64
+    '''
+    try:
+        _name, _arch = name.rsplit(PKG_ARCH_SEPARATOR, 1)
+    except ValueError:
+        _name, _arch = name, None
+    return {
+        'name': _name,
+        'arch': _arch
+    }
 
 
 def latest_version(*names, **kwargs):
@@ -384,6 +425,7 @@ def install(name=None,
             pkgs=None,
             sources=None,
             reinstall=False,
+            downloadonly=False,
             ignore_epoch=False,
             **kwargs):
     '''
@@ -730,6 +772,9 @@ def install(name=None,
         cmd.extend(downgrade)
         cmds.append(cmd)
 
+    if downloadonly:
+        cmd.append("--download-only")
+
     if to_reinstall:
         all_pkgs.extend(to_reinstall)
         cmd = copy.deepcopy(cmd_prefix)
@@ -1016,8 +1061,9 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
         Skip refreshing the package database if refresh has already occurred within
         <value> seconds
 
-    download_only
-        Only download the packages, don't unpack or install them
+    download_only (or downloadonly)
+        Only download the packages, don't unpack or install them. Use
+        downloadonly to be in line with yum and zypper module.
 
         .. versionadded:: 2018.3.0
 
@@ -1048,7 +1094,7 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
         cmd.append('--force-yes')
     if kwargs.get('skip_verify', False):
         cmd.append('--allow-unauthenticated')
-    if kwargs.get('download_only', False):
+    if kwargs.get('download_only', False) or kwargs.get('downloadonly', False):
         cmd.append('--download-only')
 
     cmd.append('dist-upgrade' if dist_upgrade else 'upgrade')
@@ -1156,7 +1202,7 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
             salt '*' pkg.unhold <package name>
 
     pkgs
-        A list of packages to hold. Must be passed as a python list.
+        A list of packages to unhold. Must be passed as a python list.
 
         CLI Example:
 
@@ -1282,7 +1328,7 @@ def list_pkgs(versions_as_list=False,
             osarch = __grains__.get('osarch', '')
             if arch != 'all' and osarch == 'amd64' and osarch != arch:
                 name += ':{0}'.format(arch)
-        if len(cols):
+        if cols:
             if ('install' in linetype or 'hold' in linetype) and \
                     'installed' in status:
                 __salt__['pkg_resource.add_pkg'](ret['installed'],
@@ -1444,7 +1490,7 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False):
             except TypeError:
                 ret = apt_pkg.version_compare(six.text_type(pkg1), six.text_type(pkg2))
             return 1 if ret > 0 else -1 if ret < 0 else 0
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             # Try to use shell version in case of errors w/python bindings
             pass
     try:
@@ -1456,7 +1502,7 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False):
                                               ignore_retcode=True)
             if retcode == 0:
                 return ret
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error(exc)
     return None
 
@@ -2053,6 +2099,13 @@ def mod_repo(repo, saltenv='base', **kwargs):
 
         .. versionadded:: 2015.8.9
 
+    refresh : True
+        Enable or disable (True or False) refreshing of the apt package
+        database. The previous ``refresh_db`` argument was deprecated in
+        favor of ``refresh```. The ``refresh_db`` argument will still
+        continue to work to ensure backwards compatibility, but please
+        change to using the preferred ``refresh``.
+
     .. note::
         Due to the way keys are stored for APT, there is a known issue where
         the key won't be updated unless another change is made at the same
@@ -2066,12 +2119,6 @@ def mod_repo(repo, saltenv='base', **kwargs):
         salt '*' pkg.mod_repo 'myrepo definition' comps=main,universe
     '''
     if 'refresh_db' in kwargs:
-        salt.utils.versions.warn_until(
-            'Neon',
-            'The \'refresh_db\' argument to \'pkg.mod_repo\' has been '
-            'renamed to \'refresh\'. Support for using \'refresh_db\' will be '
-            'removed in the Neon release of Salt.'
-        )
         refresh = kwargs['refresh_db']
     else:
         refresh = kwargs.get('refresh', True)
@@ -2285,6 +2332,8 @@ def mod_repo(repo, saltenv='base', **kwargs):
 
     if 'disabled' in kwargs:
         kwargs['disabled'] = salt.utils.data.is_true(kwargs['disabled'])
+    elif 'enabled' in kwargs:
+        kwargs['disabled'] = not salt.utils.data.is_true(kwargs['enabled'])
 
     kw_type = kwargs.get('type')
     kw_dist = kwargs.get('dist')
@@ -2791,6 +2840,8 @@ def info_installed(*names, **kwargs):
     ret = dict()
     for pkg_name, pkg_nfo in __salt__['lowpkg.info'](*names, failhard=failhard).items():
         t_nfo = dict()
+        if pkg_nfo.get('status', 'ii')[1] != 'i':
+            continue    # return only packages that are really installed
         # Translate dpkg-specific keys to a common structure
         for key, value in pkg_nfo.items():
             if key == 'package':
@@ -2803,6 +2854,8 @@ def info_installed(*names, **kwargs):
                 t_nfo['packager'] = value
             elif key == 'homepage':
                 t_nfo['url'] = value
+            elif key == 'status':
+                continue    # only installed pkgs are returned, no need for status
             else:
                 t_nfo[key] = value
 
@@ -2840,3 +2893,37 @@ def _get_http_proxy_url():
             )
 
     return http_proxy_url
+
+
+def list_downloaded(root=None, **kwargs):
+    '''
+    .. versionadded:: 3000?
+
+    List prefetched packages downloaded by apt in the local disk.
+
+    root
+        operate on a different root directory.
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_downloaded
+    '''
+    CACHE_DIR = '/var/cache/apt'
+    if root:
+        CACHE_DIR = os.path.join(root, os.path.relpath(CACHE_DIR, os.path.sep))
+
+    ret = {}
+    for root, dirnames, filenames in salt.utils.path.os_walk(CACHE_DIR):
+        for filename in fnmatch.filter(filenames, '*.deb'):
+            package_path = os.path.join(root, filename)
+            pkg_info = __salt__['lowpkg.bin_pkg_info'](package_path)
+            pkg_timestamp = int(os.path.getctime(package_path))
+            ret.setdefault(pkg_info['name'], {})[pkg_info['version']] = {
+                'path': package_path,
+                'size': os.path.getsize(package_path),
+                'creation_date_time_t': pkg_timestamp,
+                'creation_date_time': datetime.datetime.utcfromtimestamp(pkg_timestamp).isoformat(),
+            }
+    return ret

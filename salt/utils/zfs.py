@@ -123,7 +123,7 @@ def _property_parse_cmd(cmd, alias=None):
     # NOTE: parse output
     prop_hdr = []
     for prop_data in _exec(cmd=cmd)['stderr'].split('\n'):
-        # NOTE: make the line data more managable
+        # NOTE: make the line data more manageable
         prop_data = prop_data.lower().split()
 
         # NOTE: skip empty lines
@@ -217,7 +217,7 @@ def _command(source, command, flags=None, opts=None,
         cmd.append(flag)
 
     # NOTE: append options
-    #       we pass through 'sorted' to garentee the same order
+    #       we pass through 'sorted' to guarantee the same order
     if opts is None:
         opts = {}
     for opt in sorted(opts):
@@ -228,7 +228,7 @@ def _command(source, command, flags=None, opts=None,
             cmd.append(to_str(val))
 
     # NOTE: append filesystem properties (really just options with a key/value)
-    #       we pass through 'sorted' to garentee the same order
+    #       we pass through 'sorted' to guarantee the same order
     if filesystem_properties is None:
         filesystem_properties = {}
     for fsopt in sorted(filesystem_properties):
@@ -239,7 +239,7 @@ def _command(source, command, flags=None, opts=None,
         ))
 
     # NOTE: append pool properties (really just options with a key/value)
-    #       we pass through 'sorted' to garentee the same order
+    #       we pass through 'sorted' to guarantee the same order
     if pool_properties is None:
         pool_properties = {}
     for fsopt in sorted(pool_properties):
@@ -330,8 +330,8 @@ def property_data_zpool():
 
     .. warning::
 
-        This data is probed from the output of 'zpool get' with some suplimental
-        data that is hardcoded. There is no better way to get this informatio aside
+        This data is probed from the output of 'zpool get' with some supplemental
+        data that is hardcoded. There is no better way to get this information aside
         from reading the code.
 
     '''
@@ -387,8 +387,8 @@ def property_data_zfs():
 
     .. warning::
 
-        This data is probed from the output of 'zfs get' with some suplimental
-        data that is hardcoded. There is no better way to get this informatio aside
+        This data is probed from the output of 'zfs get' with some supplemental
+        data that is hardcoded. There is no better way to get this information aside
         from reading the code.
 
     '''
@@ -476,7 +476,7 @@ def to_bool_alt(value):
 
 def from_size(value):
     '''
-    Convert zfs size (human readble) to python int (bytes)
+    Convert zfs size (human readable) to python int (bytes)
     '''
     match_size = re_zfs_size.match(str(value))
     if match_size:
@@ -676,7 +676,7 @@ def parse_command_result(res, label=None):
 
     .. note::
 
-        Output on failure is rather predicatable.
+        Output on failure is rather predictable.
         - retcode > 0
         - each 'error' is a line on stderr
         - optional 'Usage:' block under those with hits

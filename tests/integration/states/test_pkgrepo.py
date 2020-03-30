@@ -13,11 +13,14 @@ from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
 from tests.support.helpers import (
     destructiveTest,
+    requires_salt_modules,
+    requires_salt_states,
     requires_system_grains,
 )
 
 # Import Salt libs
 import salt.utils.platform
+import salt.utils.files
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -29,14 +32,13 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     pkgrepo state tests
     '''
+    @requires_salt_modules('pkgrepo.managed')
     @requires_system_grains
     def test_pkgrepo_01_managed(self, grains):
         '''
         Test adding a repo
         '''
-        os_grain = self.run_function('grains.item', ['os'])['os']
-        os_release_info = tuple(self.run_function('grains.item', ['osrelease_info'])['osrelease_info'])
-        if os_grain == 'Ubuntu' and os_release_info >= (15, 10):
+        if grains['os'] == 'Ubuntu' and grains['osrelease_info'] >= (15, 10):
             self.skipTest(
                 'The PPA used for this test does not exist for Ubuntu Wily'
                 ' (15.10) and later.'
@@ -44,7 +46,7 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
 
         if grains['os_family'] == 'Debian':
             try:
-                from aptsources import sourceslist
+                from aptsources import sourceslist  # pylint: disable=unused-import
             except ImportError:
                 self.skipTest(
                     'aptsources.sourceslist python module not found'
@@ -57,13 +59,13 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
         for state_id, state_result in six.iteritems(ret):
             self.assertSaltTrueReturn(dict([(state_id, state_result)]))
 
-    def test_pkgrepo_02_absent(self):
+    @requires_salt_modules('pkgrepo.absent')
+    @requires_system_grains
+    def test_pkgrepo_02_absent(self, grains):
         '''
         Test removing the repo from the above test
         '''
-        os_grain = self.run_function('grains.item', ['os'])['os']
-        os_release_info = tuple(self.run_function('grains.item', ['osrelease_info'])['osrelease_info'])
-        if os_grain == 'Ubuntu' and os_release_info >= (15, 10):
+        if grains['os'] == 'Ubuntu' and grains['osrelease_info'] >= (15, 10):
             self.skipTest(
                 'The PPA used for this test does not exist for Ubuntu Wily'
                 ' (15.10) and later.'
@@ -77,24 +79,22 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
         for state_id, state_result in six.iteritems(ret):
             self.assertSaltTrueReturn(dict([(state_id, state_result)]))
 
+    @requires_salt_states('pkgrepo.absent', 'pkgrepo.managed')
     @requires_system_grains
     def test_pkgrepo_03_with_comments(self, grains):
         '''
         Test adding a repo with comments
         '''
-        os_family = grains['os_family'].lower()
-
-        if os_family in ('redhat',):
+        kwargs = {}
+        if grains['os_family'] == 'RedHat':
             kwargs = {
                 'name': 'examplerepo',
                 'baseurl': 'http://example.com/repo',
                 'enabled': False,
                 'comments': ['This is a comment']
             }
-        elif os_family in ('debian',):
-            self.skipTest('Debian/Ubuntu test case needed')
         else:
-            self.skipTest("No test case for os_family '{0}'".format(os_family))
+            self.skipTest('{}/{} test case needed'.format(grains['os_family'], grains['os']))
 
         try:
             # Run the state to add the repo
@@ -130,6 +130,7 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
             # Clean up
             self.run_state('pkgrepo.absent', name=kwargs['name'])
 
+    @requires_salt_states('pkgrepo.managed')
     @requires_system_grains
     def test_pkgrepo_04_apt_with_architectures(self, grains):
         '''

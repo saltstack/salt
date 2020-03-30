@@ -14,10 +14,11 @@ import textwrap
 import subprocess
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
-from tests.support.paths import TMP, TMP_CONF_DIR
 from tests.support.unit import skipIf
-from tests.support.helpers import requires_system_grains
+from tests.support.helpers import requires_system_grains, dedent
+from tests.support.runtests import RUNTIME_VARS
 
 # Import salt libs
 import salt.utils.files
@@ -28,33 +29,6 @@ import salt.pillar as pillar
 
 log = logging.getLogger(__name__)
 
-
-GPG_HOMEDIR = os.path.join(TMP_CONF_DIR, 'gpgkeys')
-PILLAR_BASE = os.path.join(TMP, 'test-decrypt-pillar', 'pillar')
-TOP_SLS = os.path.join(PILLAR_BASE, 'top.sls')
-GPG_SLS = os.path.join(PILLAR_BASE, 'gpg.sls')
-DEFAULT_OPTS = {
-    'cachedir': os.path.join(TMP, 'rootdir', 'cache'),
-    'config_dir': TMP_CONF_DIR,
-    'optimization_order': [0, 1, 2],
-    'extension_modules': os.path.join(TMP,
-                                      'test-decrypt-pillar',
-                                      'extmods'),
-    'pillar_roots': {'base': [PILLAR_BASE]},
-    'ext_pillar_first': False,
-    'ext_pillar': [],
-    'decrypt_pillar_default': 'gpg',
-    'decrypt_pillar_delimiter': ':',
-    'decrypt_pillar_renderers': ['gpg'],
-}
-ADDITIONAL_OPTS = (
-    'conf_file',
-    'file_roots',
-    'state_top',
-    'renderer',
-    'renderer_whitelist',
-    'renderer_blacklist',
-)
 
 TEST_KEY = '''\
 -----BEGIN PGP PRIVATE KEY BLOCK-----
@@ -222,14 +196,53 @@ GPG_PILLAR_DECRYPTED = {
 }
 
 
-class BasePillarTest(ModuleCase):
+class _CommonBase(ModuleCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.pillar_base = os.path.join(RUNTIME_VARS.TMP, 'test-decrypt-pillar', 'pillar')
+        cls.top_sls = os.path.join(cls.pillar_base, 'top.sls')
+        cls.gpg_sls = os.path.join(cls.pillar_base, 'gpg.sls')
+        cls.default_opts = {
+            'cachedir': os.path.join(RUNTIME_VARS.TMP, 'rootdir', 'cache'),
+            'optimization_order': [0, 1, 2],
+            'extension_modules': os.path.join(RUNTIME_VARS.TMP,
+                                              'test-decrypt-pillar',
+                                              'extmods'),
+            'pillar_roots': {'base': [cls.pillar_base]},
+            'ext_pillar_first': False,
+            'ext_pillar': [],
+            'decrypt_pillar_default': 'gpg',
+            'decrypt_pillar_delimiter': ':',
+            'decrypt_pillar_renderers': ['gpg'],
+        }
+        cls.additional_opts = (
+            'conf_file',
+            'file_roots',
+            'state_top',
+            'renderer',
+            'renderer_whitelist',
+            'renderer_blacklist',
+        )
+        cls.gpg_homedir = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'gpgkeys')
+
+    def _build_opts(self, opts):
+        ret = copy.deepcopy(self.default_opts)
+        for item in self.additional_opts:
+            ret[item] = self.master_opts[item]
+        ret.update(opts)
+        return ret
+
+
+class BasePillarTest(_CommonBase):
     '''
     Tests for pillar decryption
     '''
     @classmethod
     def setUpClass(cls):
-        os.makedirs(PILLAR_BASE)
-        with salt.utils.files.fopen(TOP_SLS, 'w') as fp_:
+        super(BasePillarTest, cls).setUpClass()
+        os.makedirs(cls.pillar_base)
+        with salt.utils.files.fopen(cls.top_sls, 'w') as fp_:
             fp_.write(textwrap.dedent('''\
             base:
               'N@mins not L@minion':
@@ -238,22 +251,15 @@ class BasePillarTest(ModuleCase):
                 - ng2
             '''))
 
-        with salt.utils.files.fopen(os.path.join(PILLAR_BASE, 'ng1.sls'), 'w') as fp_:
+        with salt.utils.files.fopen(os.path.join(cls.pillar_base, 'ng1.sls'), 'w') as fp_:
             fp_.write('pillar_from_nodegroup: True')
 
-        with salt.utils.files.fopen(os.path.join(PILLAR_BASE, 'ng2.sls'), 'w') as fp_:
+        with salt.utils.files.fopen(os.path.join(cls.pillar_base, 'ng2.sls'), 'w') as fp_:
             fp_.write('pillar_from_nodegroup_with_ghost: True')
 
     @classmethod
     def tearDownClass(cls):
-        shutil.rmtree(PILLAR_BASE)
-
-    def _build_opts(self, opts):
-        ret = copy.deepcopy(DEFAULT_OPTS)
-        for item in ADDITIONAL_OPTS:
-            ret[item] = self.master_opts[item]
-        ret.update(opts)
-        return ret
+        shutil.rmtree(cls.pillar_base)
 
     def test_pillar_top_compound_match(self, grains=None):
         '''
@@ -284,7 +290,7 @@ class BasePillarTest(ModuleCase):
 
 
 @skipIf(not salt.utils.path.which('gpg'), 'GPG is not installed')
-class DecryptGPGPillarTest(ModuleCase):
+class DecryptGPGPillarTest(_CommonBase):
     '''
     Tests for pillar decryption
     '''
@@ -292,14 +298,15 @@ class DecryptGPGPillarTest(ModuleCase):
 
     @classmethod
     def setUpClass(cls):
+        super(DecryptGPGPillarTest, cls).setUpClass()
         try:
-            os.makedirs(GPG_HOMEDIR, mode=0o700)
-        except Exception:
+            os.makedirs(cls.gpg_homedir, mode=0o700)
+        except Exception:  # pylint: disable=broad-except
             cls.created_gpg_homedir = False
             raise
         else:
             cls.created_gpg_homedir = True
-            cmd_prefix = ['gpg', '--homedir', GPG_HOMEDIR]
+            cmd_prefix = ['gpg', '--homedir', cls.gpg_homedir]
 
             cmd = cmd_prefix + ['--list-keys']
             log.debug('Instantiating gpg keyring using: %s', cmd)
@@ -318,19 +325,19 @@ class DecryptGPGPillarTest(ModuleCase):
                                       shell=False).communicate(input=salt.utils.stringutils.to_bytes(TEST_KEY))[0]
             log.debug('Result:\n%s', output)
 
-            os.makedirs(PILLAR_BASE)
-            with salt.utils.files.fopen(TOP_SLS, 'w') as fp_:
+            os.makedirs(cls.pillar_base)
+            with salt.utils.files.fopen(cls.top_sls, 'w') as fp_:
                 fp_.write(textwrap.dedent('''\
                 base:
                   '*':
                     - gpg
                 '''))
-            with salt.utils.files.fopen(GPG_SLS, 'w') as fp_:
+            with salt.utils.files.fopen(cls.gpg_sls, 'w') as fp_:
                 fp_.write(GPG_PILLAR_YAML)
 
     @classmethod
     def tearDownClass(cls):
-        cmd = ['gpg-connect-agent', '--homedir', GPG_HOMEDIR]
+        cmd = ['gpg-connect-agent', '--homedir', cls.gpg_homedir]
         try:
             log.debug('Killing gpg-agent using: %s', cmd)
             output = subprocess.Popen(cmd,
@@ -344,19 +351,12 @@ class DecryptGPGPillarTest(ModuleCase):
 
         if cls.created_gpg_homedir:
             try:
-                shutil.rmtree(GPG_HOMEDIR)
+                shutil.rmtree(cls.gpg_homedir)
             except OSError as exc:
                 # GPG socket can disappear before rmtree gets to this point
                 if exc.errno != errno.ENOENT:
                     raise
-        shutil.rmtree(PILLAR_BASE)
-
-    def _build_opts(self, opts):
-        ret = copy.deepcopy(DEFAULT_OPTS)
-        for item in ADDITIONAL_OPTS:
-            ret[item] = self.master_opts[item]
-        ret.update(opts)
-        return ret
+        shutil.rmtree(cls.pillar_base)
 
     @requires_system_grains
     def test_decrypt_pillar_default_renderer(self, grains=None):
@@ -490,3 +490,169 @@ class DecryptGPGPillarTest(ModuleCase):
                          expected['secrets']['vault']['baz'])
         self.assertEqual(ret['secrets']['vault']['qux'],
                          expected['secrets']['vault']['qux'])
+
+
+class RefreshPillarTest(ModuleCase):
+    '''
+    These tests validate the behavior defined in the documentation:
+
+    https://docs.saltstack.com/en/latest/topics/pillar/#in-memory-pillar-data-vs-on-demand-pillar-data
+
+    These tests also serve as a regression test for:
+
+    https://github.com/saltstack/salt/issues/54941
+    '''
+
+    def cleanup_pillars(self, top_path, pillar_path):
+        os.remove(top_path)
+        os.remove(pillar_path)
+        self.run_function('saltutil.refresh_pillar', arg=(True,))
+
+    def create_pillar(self, key):
+        '''
+        Utility method to create a pillar for the minion and a value of true,
+        this method also removes and cleans up the pillar at the end of the
+        test.
+        '''
+        top_path = os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, 'top.sls')
+        pillar_path = os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, 'test_pillar.sls')
+        with salt.utils.files.fopen(top_path, 'w') as fd:
+            fd.write(dedent('''
+            base:
+              'minion':
+                - test_pillar
+            '''))
+        with salt.utils.files.fopen(pillar_path, 'w') as fd:
+            fd.write(dedent('''
+            {}: true
+            '''.format(key)))
+        self.addCleanup(self.cleanup_pillars, top_path, pillar_path)
+
+    def test_pillar_refresh_pillar_raw(self):
+        '''
+        Validate the minion's pillar.raw call behavior for new pillars
+        '''
+        key = 'issue-54941-raw'
+
+        # We do not expect to see the pillar beacuse it does not exist yet
+        val = self.run_function('pillar.raw', arg=(key,))
+        assert val == {}
+
+        self.create_pillar(key)
+
+        # The pillar exists now but raw reads it from in-memory pillars
+        val = self.run_function('pillar.raw', arg=(key,))
+        assert val == {}
+
+        # Calling refresh_pillar to update in-memory pillars
+        ret = self.run_function('saltutil.refresh_pillar', arg=(True,))
+
+        # The pillar can now be read from in-memory pillars
+        val = self.run_function('pillar.raw', arg=(key,))
+        assert val is True, repr(val)
+
+    def test_pillar_refresh_pillar_get(self):
+        '''
+        Validate the minion's pillar.get call behavior for new pillars
+        '''
+        key = 'issue-54941-get'
+
+        # We do not expect to see the pillar beacuse it does not exist yet
+        val = self.run_function('pillar.get', arg=(key,))
+        assert val == ''
+        top_path = os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, 'top.sls')
+        pillar_path = os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, 'test_pillar.sls')
+
+        self.create_pillar(key)
+
+        # The pillar exists now but get reads it from in-memory pillars, no
+        # refresh happens
+        val = self.run_function('pillar.get', arg=(key,))
+        assert val == ''
+
+        # Calling refresh_pillar to update in-memory pillars
+        ret = self.run_function('saltutil.refresh_pillar', arg=(True,))
+        assert ret is True
+
+        # The pillar can now be read from in-memory pillars
+        val = self.run_function('pillar.get', arg=(key,))
+        assert val is True, repr(val)
+
+    def test_pillar_refresh_pillar_item(self):
+        '''
+        Validate the minion's pillar.item call behavior for new pillars
+        '''
+        key = 'issue-54941-item'
+
+        # We do not expect to see the pillar beacuse it does not exist yet
+        val = self.run_function('pillar.item', arg=(key,))
+        assert key in val
+        assert val[key] == ''
+
+        self.create_pillar(key)
+
+        # The pillar exists now but get reads it from in-memory pillars, no
+        # refresh happens
+        val = self.run_function('pillar.item', arg=(key,))
+        assert key in val
+        assert val[key] == ''
+
+        # Calling refresh_pillar to update in-memory pillars
+        ret = self.run_function('saltutil.refresh_pillar', arg=(True,))
+        assert ret is True
+
+        # The pillar can now be read from in-memory pillars
+        val = self.run_function('pillar.item', arg=(key,))
+        assert key in val
+        assert val[key] is True
+
+    def test_pillar_refresh_pillar_items(self):
+        '''
+        Validate the minion's pillar.item call behavior for new pillars
+        '''
+        key = 'issue-54941-items'
+
+        # We do not expect to see the pillar beacuse it does not exist yet
+        val = self.run_function('pillar.items')
+        assert key not in val
+
+        self.create_pillar(key)
+
+        # A pillar.items call sees the pillar right away because a
+        # refresh_pillar event is fired.
+        val = self.run_function('pillar.items')
+        assert key in val
+        assert val[key] is True
+
+    def test_pillar_refresh_pillar_ping(self):
+        '''
+        Validate the minion's test.ping does not update pillars
+
+        See: https://github.com/saltstack/salt/issues/54941
+        '''
+        key = 'issue-54941-ping'
+
+        # We do not expect to see the pillar beacuse it does not exist yet
+        val = self.run_function('pillar.item', arg=(key,))
+        assert key in val
+        assert val[key] == ''
+
+        self.create_pillar(key)
+
+        val = self.run_function('test.ping')
+        assert val is True
+
+        # The pillar exists now but get reads it from in-memory pillars, no
+        # refresh happens
+        val = self.run_function('pillar.item', arg=(key,))
+        assert key in val
+        assert val[key] == ''
+
+        # Calling refresh_pillar to update in-memory pillars
+        ret = self.run_function('saltutil.refresh_pillar', arg=(True,))
+        assert ret is True
+
+        # The pillar can now be read from in-memory pillars
+        val = self.run_function('pillar.item', arg=(key,))
+        assert key in val
+        assert val[key] is True

@@ -6,7 +6,10 @@ Module for notifications via Twilio
 
 :depends:   - twilio python module
 :configuration: Configure this module by specifying the name of a configuration
-    profile in the minion config, minion pillar, or master config.
+    profile in the minion config, minion pillar, or master config (with :conf_master:`pillar_opts` set to True).
+
+    .. warning: Setting pillar_opts to True in the master config may be considered
+      unsafe as it copies the master config to pillar
 
     For example:
 
@@ -73,7 +76,7 @@ def send_sms(profile, body, to, from_):
 
     CLI Example:
 
-        twilio.send_sms twilio-account 'Test sms' '+18019999999' '+18011111111'
+        twilio.send_sms my-twilio-account 'Test sms' '+18019999999' '+18011111111'
     '''
     ret = {}
     ret['message'] = {}

@@ -156,7 +156,7 @@ def get(key,
                     'skipped.', default, ret, type(ret).__name__
                 )
         elif isinstance(default, list):
-            ret = salt.utils.data.traverse_dict_and_list(  # pylint: disable=redefined-variable-type
+            ret = salt.utils.data.traverse_dict_and_list(
                 pillar_dict,
                 key,
                 [],
@@ -262,7 +262,7 @@ def items(*args, **kwargs):
                 translate_newlines=True,
                 opts=__opts__,
                 valid_rend=__opts__['decrypt_pillar_renderers'])
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             raise CommandExecutionError(
                 'Failed to decrypt pillar override: {0}'.format(exc)
             )
@@ -614,7 +614,7 @@ def filter_by(lookup_dict,
         on that particular OS.
 
         The dictionary key can be a globbing pattern. The function will return
-        the corresponding ``lookup_dict`` value where the pilalr value matches
+        the corresponding ``lookup_dict`` value where the pillar value matches
         the  pattern. For example:
 
         .. code-block:: bash

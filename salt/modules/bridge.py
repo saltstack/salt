@@ -398,7 +398,7 @@ def find_interfaces(*args):
             try:  # a bridge may not contain interfaces
                 if iface in brs[br]['interfaces']:
                     iflist[iface] = br
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 pass
 
     return iflist

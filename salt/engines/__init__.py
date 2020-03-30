@@ -12,7 +12,7 @@ import logging
 import salt
 import salt.loader
 import salt.utils.platform
-from salt.utils.process import SignalHandlingMultiprocessingProcess
+from salt.utils.process import SignalHandlingProcess
 
 log = logging.getLogger(__name__)
 
@@ -46,10 +46,22 @@ def start_engines(opts, proc_mgr, proxy=None):
             engine, engine_opts = next(iter(engine.items()))
         else:
             engine_opts = None
-        fun = '{0}.start'.format(engine)
+        engine_name = None
+        if engine_opts is not None and 'engine_module' in engine_opts:
+            fun = '{0}.start'.format(engine_opts['engine_module'])
+            engine_name = engine
+            del engine_opts['engine_module']
+        else:
+            fun = '{0}.start'.format(engine)
         if fun in engines:
             start_func = engines[fun]
-            name = '{0}.Engine({1})'.format(__name__, start_func.__module__)
+            if engine_name:
+                name = '{0}.Engine({1}-{2})'.format(__name__,
+                                                    start_func.__module__,
+                                                    engine_name)
+            else:
+                name = '{0}.Engine({1})'.format(__name__,
+                                                start_func.__module__)
             log.info('Starting Engine %s', name)
             proc_mgr.add_process(
                     Engine,
@@ -65,7 +77,7 @@ def start_engines(opts, proc_mgr, proxy=None):
                     )
 
 
-class Engine(SignalHandlingMultiprocessingProcess):
+class Engine(SignalHandlingProcess):
     '''
     Execute the given engine in a new process
     '''
@@ -85,7 +97,6 @@ class Engine(SignalHandlingMultiprocessingProcess):
     # We do this so that __init__ will be invoked on Windows in the child
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
-        self._is_child = True
         self.__init__(
             state['opts'],
             state['fun'],
@@ -130,7 +141,7 @@ class Engine(SignalHandlingMultiprocessingProcess):
         kwargs = self.config or {}
         try:
             self.engine[self.fun](**kwargs)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.critical(
                 'Engine \'%s\' could not be started!',
                 self.fun.split('.')[0], exc_info=True

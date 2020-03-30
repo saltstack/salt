@@ -8,9 +8,9 @@ import tempfile
 import textwrap
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.helpers import with_tempfile
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.paths import TMP
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, Mock, patch, mock_open, DEFAULT
 
@@ -1308,9 +1308,9 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         :return:
         '''
         for mode, err_msg in [(None, 'How to process the file'), ('nonsense', 'Unknown mode')]:
-            with pytest.raises(CommandExecutionError) as cmd_err:
+            with pytest.raises(CommandExecutionError) as exc_info:
                 filemod.line('foo', mode=mode)
-            self.assertIn(err_msg, six.text_type(cmd_err.value))
+            self.assertIn(err_msg, six.text_type(exc_info.value))
 
     @patch('os.path.realpath', MagicMock(wraps=lambda x: x))
     @patch('os.path.isfile', MagicMock(return_value=True))
@@ -1320,10 +1320,10 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         :return:
         '''
         for mode in ['insert', 'ensure', 'replace']:
-            with pytest.raises(CommandExecutionError) as cmd_err:
+            with pytest.raises(CommandExecutionError) as exc_info:
                 filemod.line('foo', mode=mode)
             self.assertIn('Content can only be empty if mode is "delete"',
-                          six.text_type(cmd_err.value))
+                          six.text_type(exc_info.value))
 
     @patch('os.path.realpath', MagicMock(wraps=lambda x: x))
     @patch('os.path.isfile', MagicMock(return_value=True))
@@ -1335,10 +1335,10 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         '''
         files_fopen = mock_open(read_data='test data')
         with patch('salt.utils.files.fopen', files_fopen):
-            with pytest.raises(CommandExecutionError) as cmd_err:
+            with pytest.raises(CommandExecutionError) as exc_info:
                 filemod.line('foo', content='test content', mode='insert')
             self.assertIn('"location" or "before/after"',
-                          six.text_type(cmd_err.value))
+                          six.text_type(exc_info.value))
 
     def test_util_starts_till(self):
         '''
@@ -1944,11 +1944,11 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             with patch('salt.utils.files.fopen', files_fopen):
                 atomic_opener = mock_open()
                 with patch('salt.utils.atomicfile.atomic_open', atomic_opener):
-                    with pytest.raises(CommandExecutionError) as cmd_err:
+                    with pytest.raises(CommandExecutionError) as exc_info:
                         filemod.line('foo', content=cfg_content, after=_after, before=_before, mode='ensure')
             self.assertIn(
                 'Found more than one line between boundaries "before" and "after"',
-                six.text_type(cmd_err.value))
+                six.text_type(exc_info.value))
 
     @with_tempfile()
     def test_line_delete(self, name):
@@ -2061,7 +2061,7 @@ class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
             self.tfile.close()
         self.addCleanup(os.remove, self.tfile.name)
         self.addCleanup(delattr, self, 'tfile')
-        self.myfile = os.path.join(TMP, 'myfile')
+        self.myfile = os.path.join(RUNTIME_VARS.TMP, 'myfile')
         with salt.utils.files.fopen(self.myfile, 'w+') as fp:
             fp.write(salt.utils.stringutils.to_str('Hello\n'))
         self.addCleanup(os.remove, self.myfile)
@@ -2073,6 +2073,30 @@ class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
         self.addCleanup(os.remove, self.directory + '/a_link')
         result = filemod.symlink(self.tfile.name, self.directory + '/a_link')
         self.assertTrue(result)
+
+    @skipIf(salt.utils.platform.is_windows(), 'os.link is not available on Windows')
+    def test_hardlink_sanity(self):
+        target = os.path.join(self.directory, 'a_hardlink')
+        self.addCleanup(os.remove, target)
+        result = filemod.link(self.tfile.name, target)
+        self.assertTrue(result)
+
+    @skipIf(salt.utils.platform.is_windows(), 'os.link is not available on Windows')
+    def test_hardlink_numlinks(self):
+        target = os.path.join(self.directory, 'a_hardlink')
+        self.addCleanup(os.remove, target)
+        result = filemod.link(self.tfile.name, target)
+        name_i = os.stat(self.tfile.name).st_nlink
+        self.assertTrue(name_i > 1)
+
+    @skipIf(salt.utils.platform.is_windows(), 'os.link is not available on Windows')
+    def test_hardlink_working(self):
+        target = os.path.join(self.directory, 'a_hardlink')
+        self.addCleanup(os.remove, target)
+        result = filemod.link(self.tfile.name, target)
+        name_i = os.stat(self.tfile.name).st_ino
+        target_i = os.stat(target).st_ino
+        self.assertTrue(name_i == target_i)
 
     def test_source_list_for_list_returns_file_from_dict_via_http(self):
         with patch('salt.modules.file.os.remove') as remove:

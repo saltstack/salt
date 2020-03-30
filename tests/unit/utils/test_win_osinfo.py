@@ -11,10 +11,6 @@ from salt.ext import six
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON
-)
 
 # Import Salt Libs
 import salt.utils.win_osinfo as win_osinfo
@@ -22,7 +18,6 @@ import salt.utils.platform
 
 
 @skipIf(not salt.utils.platform.is_windows(), 'Requires Windows')
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class WinOsInfo(TestCase):
     '''
     Test cases for salt/utils/win_osinfo.py

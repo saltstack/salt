@@ -55,7 +55,6 @@ import time
 import salt.utils.compat
 import salt.utils.versions
 import salt.utils.odict as odict
-import salt.utils.versions
 from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -246,6 +245,23 @@ def zone_exists(zone, region=None, key=None, keyid=None, profile=None,
     CLI Example::
 
         salt myminion boto_route53.zone_exists example.org
+
+   retry_on_errors
+        Continue to query if the zone exists after an error is
+        raised. The previously used argument `retry_on_rate_limit`
+        was deprecated for this argument. Users can still use
+        `retry_on_rate_limit` to ensure backwards compatibility,
+        but please migrate to using the favored `retry_on_errors`
+        argument instead.
+
+    error_retries
+        Amount of times to attempt to query if the zone exists.
+        The previously used argument `rate_limit_retries` was
+        deprecated for this arguments. Users can still use
+        `rate_limit_retries` to ensure backwards compatibility,
+        but please migrate to using the favored `error_retries`
+        argument instead.
+
     '''
     if region is None:
         region = 'universal'
@@ -253,13 +269,6 @@ def zone_exists(zone, region=None, key=None, keyid=None, profile=None,
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     if retry_on_rate_limit or rate_limit_retries is not None:
-        salt.utils.versions.warn_until(
-            'Neon',
-            'The \'retry_on_rate_limit\' and \'rate_limit_retries\' arguments '
-            'have been deprecated in favor of \'retry_on_errors\' and '
-            '\'error_retries\' respectively. Their functionality will be '
-            'removed, as such, their usage is no longer required.'
-        )
         if retry_on_rate_limit is not None:
             retry_on_errors = retry_on_rate_limit
         if rate_limit_retries is not None:
@@ -279,7 +288,7 @@ def zone_exists(zone, region=None, key=None, keyid=None, profile=None,
                 time.sleep(3)
                 error_retries -= 1
                 continue
-            raise e
+            six.reraise(*sys.exc_info())
 
 
 def create_zone(zone, private=False, vpc_id=None, vpc_region=None, region=None,
@@ -480,6 +489,22 @@ def get_record(name, zone, record_type, fetch_all=False, region=None, key=None,
     CLI example::
 
         salt myminion boto_route53.get_record test.example.org example.org A
+
+   retry_on_errors
+        Continue to query if the zone exists after an error is
+        raised. The previously used argument `retry_on_rate_limit`
+        was deprecated for this argument. Users can still use
+        `retry_on_rate_limit` to ensure backwards compatibility,
+        but please migrate to using the favored `retry_on_errors`
+        argument instead.
+
+    error_retries
+        Amount of times to attempt to query if the zone exists.
+        The previously used argument `rate_limit_retries` was
+        deprecated for this arguments. Users can still use
+        `rate_limit_retries` to ensure backwards compatibility,
+        but please migrate to using the favored `error_retries`
+        argument instead.
     '''
     if region is None:
         region = 'universal'
@@ -487,13 +512,6 @@ def get_record(name, zone, record_type, fetch_all=False, region=None, key=None,
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     if retry_on_rate_limit or rate_limit_retries is not None:
-        salt.utils.versions.warn_until(
-            'Neon',
-            'The \'retry_on_rate_limit\' and \'rate_limit_retries\' arguments '
-            'have been deprecated in favor of \'retry_on_errors\' and '
-            '\'error_retries\' respectively. Their functionality will be '
-            'removed, as such, their usage is no longer required.'
-        )
         if retry_on_rate_limit is not None:
             retry_on_errors = retry_on_rate_limit
         if rate_limit_retries is not None:
@@ -528,7 +546,7 @@ def get_record(name, zone, record_type, fetch_all=False, region=None, key=None,
                 time.sleep(3)
                 error_retries -= 1
                 continue
-            raise e
+            six.reraise(*sys.exc_info())
 
     if _record:
         ret['name'] = _decode_name(_record.name)
@@ -561,6 +579,22 @@ def add_record(name, value, zone, record_type, identifier=None, ttl=None,
     CLI example::
 
         salt myminion boto_route53.add_record test.example.org 1.1.1.1 example.org A
+
+   retry_on_errors
+        Continue to query if the zone exists after an error is
+        raised. The previously used argument `retry_on_rate_limit`
+        was deprecated for this argument. Users can still use
+        `retry_on_rate_limit` to ensure backwards compatibility,
+        but please migrate to using the favored `retry_on_errors`
+        argument instead.
+
+    error_retries
+        Amount of times to attempt to query if the zone exists.
+        The previously used argument `rate_limit_retries` was
+        deprecated for this arguments. Users can still use
+        `rate_limit_retries` to ensure backwards compatibility,
+        but please migrate to using the favored `error_retries`
+        argument instead.
     '''
     if region is None:
         region = 'universal'
@@ -568,13 +602,6 @@ def add_record(name, value, zone, record_type, identifier=None, ttl=None,
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     if retry_on_rate_limit or rate_limit_retries is not None:
-        salt.utils.versions.warn_until(
-            'Neon',
-            'The \'retry_on_rate_limit\' and \'rate_limit_retries\' arguments '
-            'have been deprecated in favor of \'retry_on_errors\' and '
-            '\'error_retries\' respectively. Their functionality will be '
-            'removed, as such, their usage is no longer required.'
-        )
         if retry_on_rate_limit is not None:
             retry_on_errors = retry_on_rate_limit
         if rate_limit_retries is not None:
@@ -603,7 +630,7 @@ def add_record(name, value, zone, record_type, identifier=None, ttl=None,
                 time.sleep(3)
                 error_retries -= 1
                 continue
-            raise e
+            six.reraise(*sys.exc_info())
 
     _value = _munge_value(value, _type)
     while error_retries > 0:
@@ -624,7 +651,7 @@ def add_record(name, value, zone, record_type, identifier=None, ttl=None,
                 time.sleep(3)
                 error_retries -= 1
                 continue
-            raise e
+            six.reraise(*sys.exc_info())
 
 
 def update_record(name, value, zone, record_type, identifier=None, ttl=None,
@@ -638,6 +665,22 @@ def update_record(name, value, zone, record_type, identifier=None, ttl=None,
     CLI example::
 
         salt myminion boto_route53.modify_record test.example.org 1.1.1.1 example.org A
+
+   retry_on_errors
+        Continue to query if the zone exists after an error is
+        raised. The previously used argument `retry_on_rate_limit`
+        was deprecated for this argument. Users can still use
+        `retry_on_rate_limit` to ensure backwards compatibility,
+        but please migrate to using the favored `retry_on_errors`
+        argument instead.
+
+    error_retries
+        Amount of times to attempt to query if the zone exists.
+        The previously used argument `rate_limit_retries` was
+        deprecated for this arguments. Users can still use
+        `rate_limit_retries` to ensure backwards compatibility,
+        but please migrate to using the favored `error_retries`
+        argument instead.
     '''
     if region is None:
         region = 'universal'
@@ -655,13 +698,6 @@ def update_record(name, value, zone, record_type, identifier=None, ttl=None,
     _type = record_type.upper()
 
     if retry_on_rate_limit or rate_limit_retries is not None:
-        salt.utils.versions.warn_until(
-            'Neon',
-            'The \'retry_on_rate_limit\' and \'rate_limit_retries\' arguments '
-            'have been deprecated in favor of \'retry_on_errors\' and '
-            '\'error_retries\' respectively. Their functionality will be '
-            'removed, as such, their usage is no longer required.'
-        )
         if retry_on_rate_limit is not None:
             retry_on_errors = retry_on_rate_limit
         if rate_limit_retries is not None:
@@ -686,7 +722,7 @@ def update_record(name, value, zone, record_type, identifier=None, ttl=None,
                 time.sleep(3)
                 error_retries -= 1
                 continue
-            raise e
+            six.reraise(*sys.exc_info())
 
 
 def delete_record(name, zone, record_type, identifier=None, all_records=False,
@@ -700,6 +736,22 @@ def delete_record(name, zone, record_type, identifier=None, all_records=False,
     CLI example::
 
         salt myminion boto_route53.delete_record test.example.org example.org A
+
+   retry_on_errors
+        Continue to query if the zone exists after an error is
+        raised. The previously used argument `retry_on_rate_limit`
+        was deprecated for this argument. Users can still use
+        `retry_on_rate_limit` to ensure backwards compatibility,
+        but please migrate to using the favored `retry_on_errors`
+        argument instead.
+
+    error_retries
+        Amount of times to attempt to query if the zone exists.
+        The previously used argument `rate_limit_retries` was
+        deprecated for this arguments. Users can still use
+        `rate_limit_retries` to ensure backwards compatibility,
+        but please migrate to using the favored `error_retries`
+        argument instead.
     '''
     if region is None:
         region = 'universal'
@@ -717,13 +769,6 @@ def delete_record(name, zone, record_type, identifier=None, all_records=False,
     _type = record_type.upper()
 
     if retry_on_rate_limit or rate_limit_retries is not None:
-        salt.utils.versions.warn_until(
-            'Neon',
-            'The \'retry_on_rate_limit\' and \'rate_limit_retries\' arguments '
-            'have been deprecated in favor of \'retry_on_errors\' and '
-            '\'error_retries\' respectively. Their functionality will be '
-            'removed, as such, their usage is no longer required.'
-        )
         if retry_on_rate_limit is not None:
             retry_on_errors = retry_on_rate_limit
         if rate_limit_retries is not None:
@@ -747,7 +792,7 @@ def delete_record(name, zone, record_type, identifier=None, all_records=False,
                 time.sleep(3)
                 error_retries -= 1
                 continue
-            raise e
+            six.reraise(*sys.exc_info())
 
 
 def _try_func(conn, func, **args):

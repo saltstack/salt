@@ -254,6 +254,9 @@ class Batch(object):
                     data['ret']['retcode'] = data['retcode']
                     if self.opts.get('failhard') and data['ret']['retcode'] > 0:
                         failhard = True
+                else:
+                    if self.opts.get('failhard') and data['retcode'] > 0:
+                        failhard = True
 
                 if self.opts.get('raw'):
                     ret[minion] = data

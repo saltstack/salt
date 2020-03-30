@@ -10,7 +10,7 @@ import os
 
 # Import Salt libs
 from salt.ext import six
-from salt.textformat import TextFormat
+from salt.utils.textformat import TextFormat
 
 log = logging.getLogger(__name__)
 
@@ -36,7 +36,7 @@ def get_color_theme(theme):
                 log.warning('The theme file %s is not a dict', theme)
                 return {}
             return ret
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         log.warning('Failed to read the color theme %s', theme)
         return {}
 

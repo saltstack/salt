@@ -1,0 +1,361 @@
+.. _release-2019-2-2:
+
+===========================
+Salt 2019.2.2 Release Notes
+===========================
+
+Version 2019.2.2 is a bugfix release for :ref:`2019.2.0 <release-2019-2-0>`.
+
+Statistics
+==========
+
+- Total Merges: **26**
+- Total Issue References: **12**
+- Total PR References: **26**
+
+- Contributors: **13** (`Akm0d`_, `Ch3LL`_, `Oloremo`_, `OrlandoArcapix`_, `bryceml`_, `dhiltonp`_, `dwoz`_, `frogunder`_, `garethgreenaway`_, `javierbertoli`_, `pizzapanther`_, `s0undt3ch`_, `twangboy`_)
+
+Changelog for v2019.2.1..v2019.2.2
+==================================
+
+*Generated at: 2019-10-11 20:54:15 UTC*
+
+* **PR** `#54919`_: (`twangboy`_) Add missing docs for win_wusa state and module (2019.2.1)
+  @ *2019-10-11 18:28:11 UTC*
+
+  * 7d253bc Merge pull request `#54919`_ from twangboy/update_docs
+
+  * 57ff199 Add docs for win_wusa
+
+* **ISSUE** `#54941`_: (`UtahDave`_) Pillar data is refreshed for EVERY salt command in 2019.2.1 and 2019.2.2 (refs: `#54942`_)
+
+* **PR** `#54942`_: (`dwoz`_) Fix for 54941 pillar_refresh regression
+  @ *2019-10-11 18:27:31 UTC*
+
+  * 2f817bc Merge pull request `#54942`_ from dwoz/fix-54941
+
+  * cb5d326 Add a test for 54941 using test.ping
+
+  * 348d1c4 Add regression tests for issue 54941
+
+  * 766f3ca Initial commit of a potential fix for 54941
+
+* **PR** `#54897`_: (`bryceml`_) update version numbers to be correct
+  @ *2019-10-05 01:59:14 UTC*
+
+  * f783108 Merge pull request `#54897`_ from bryceml/2019.2.1_fix_docs
+
+  * e9a2a70 update version numbers to be correct
+
+* **PR** `#54894`_: (`bryceml`_) 2019.2.1 fix docs
+  @ *2019-10-04 22:31:26 UTC*
+
+  * 3233663 Merge pull request `#54894`_ from bryceml/2019.2.1_fix_docs
+
+  * 2456aaa Porting PR `#52948`_ to 2019.2.1
+
+  * 94a1e3b Porting PR `#52752`_ to 2019.2.1
+
+  * c7b7474 modifying saltconf ads
+
+  * d48057b add new saltconf ads
+
+* **PR** `#54858`_: (`frogunder`_) remove in progress from releasenotes 2019.2.2
+  @ *2019-10-02 20:42:59 UTC*
+
+  * 4b06eca Merge pull request `#54858`_ from frogunder/releasenotes_remove2019.2.2
+
+  * a697abd remove in progress from releasenotes 2019.2.2
+
+* **PR** `#54854`_: (`frogunder`_) releasenotes 2019.2.2
+  @ *2019-10-02 18:58:21 UTC*
+
+  * aaf2d1c Merge pull request `#54854`_ from frogunder/release_notes_2019.2.2
+
+  * a41dc59 Update 2019.2.2.rst
+
+  * 9bea043 releasenotes 2019.2.2
+
+* **PR** `#54852`_: (`frogunder`_) Update man pages for 2019.2.2
+  @ *2019-10-02 18:27:07 UTC*
+
+  * 10d433f Merge pull request `#54852`_ from frogunder/man_pages_2019.2.2
+
+  * 92bc4b2 Update man pages for 2019.2.2
+
+* **PR** `#54845`_: (`s0undt3ch`_) Remove debug print
+  @ *2019-10-02 17:38:21 UTC*
+
+  * 8ca6b20 Merge pull request `#54845`_ from s0undt3ch/hotfix/event-return-fix-2019.2.1
+
+  * 3937890 Remove debug print
+
+* **ISSUE** `#54755`_: (`Reiner030`_) 2019.2.1/2019.2.0 pip failures even when not using pip (refs: `#54826`_)
+
+* **PR** `#54826`_: (`dwoz`_) Fix issue 54755 and add regression tests
+  @ *2019-10-01 20:07:46 UTC*
+
+  * 9e3914a Merge pull request `#54826`_ from dwoz/issue_54755
+
+  * 0bad9cb Handle locals and globals separatly
+
+  * bcbe9a2 Only purge pip when needed
+
+  * d2f98ca Fix issue 54755 and add regression tests
+
+* **PR** `#54830`_: (`frogunder`_) Add known issues to 2019.2.1 release notes
+  @ *2019-10-01 16:23:30 UTC*
+
+  * ba569d0 Merge pull request `#54830`_ from frogunder/update_relasenotes_2019.2.1
+
+  * 8cdb27b Update 2019.2.1.rst
+
+  * 14f955c Add known issues to 2019.2.1 release notes
+
+* **ISSUE** `#54521`_: (`Oloremo`_) [Regression] Failhard, batch and retcodes (refs: `#54806`_)
+
+* **PR** `#54806`_: (`Oloremo`_) [Regression] Batch with failhard fix 
+  @ *2019-10-01 14:51:47 UTC*
+
+  * 433b6fa Merge pull request `#54806`_ from Oloremo/failhard-batch-fix-2019.2.1
+
+  * 6684793 Merge branch '2019.2.1' into failhard-batch-fix-2019.2.1
+
+  * 3e0e928 Added tests for cli and runner
+
+  * 2416516 Made batch work properly with failhard in cli and runner
+
+* **ISSUE** `#54820`_: (`OrangeDog`_) schedule.present not idempotent when scheduler disabled (refs: `#54828`_)
+
+* **PR** `#54828`_: (`garethgreenaway`_) [2019.2.1] Fix global disabling code in scheduler
+  @ *2019-10-01 09:27:49 UTC*
+
+  * ed94aa5 Merge pull request `#54828`_ from garethgreenaway/54820_fix_schedule_disabled_job_enabled_bug
+
+  * be15a28 Rework code that handles individual jobs being disabled and scheduler being globally being disabled.  Previously disabling the schedule would result in individual jobs being disabled when they were run through eval.  This change does not change schedule items.
+
+* **PR** `#54778`_: (`Akm0d`_) fix broken salt-cloud openstack query
+  @ *2019-10-01 09:23:27 UTC*
+
+  * 435b40c Merge pull request `#54778`_ from Akm0d/master_openstack_query_fix
+
+  * ba4ba2a fixed pylint errors in openstack test
+
+  * d9a8517 Added openstack tests for openstack --query fix
+
+  * 59214ad Fallback to image id if we don't have an image name
+
+  * 3a42a4d fixed pylint error
+
+  * 0074d18 created unit tests for openstack
+
+  * 4255e3e Merge branch '2019.2.1' of https://github.com/saltstack/salt into HEAD
+
+  * 1c2821b Return a configured provider, not a bool
+
+  * c585550 fix broken salt-cloud openstack query
+
+* **ISSUE** `#54762`_: (`margau`_) 2019.2.1: Breaks Minion-Master Communication (refs: `#54823`_, `#54784`_, `#54807`_)
+
+* **PR** `#54823`_: (`dhiltonp`_) ip_bracket can now accept ipv6 addresses with brackets
+  @ *2019-10-01 01:13:34 UTC*
+
+  * 93b1c4d Merge pull request `#54823`_ from dhiltonp/maybe-bracket
+
+  * faa1d98 ip_bracket can now accept ipv6 addresses with brackets
+
+* **ISSUE** `#54762`_: (`margau`_) 2019.2.1: Breaks Minion-Master Communication (refs: `#54823`_, `#54784`_, `#54807`_)
+
+* **PR** `#54807`_: (`dwoz`_) Fix pip state pip >=10.0 and <=18.0
+  @ *2019-09-30 09:20:14 UTC*
+
+  * **PR** `#54772`_: (`OrlandoArcapix`_) Fix import of pip modules (refs: `#54807`_)
+
+  * b61b30d Merge pull request `#54807`_ from dwoz/patch-2
+
+  * 664806b Add unit test for pip state fix
+
+  * e637658 Revert change to pip version query
+
+  * 42810a2 Fix import of pip modules
+
+* **ISSUE** `#54741`_: (`kjkeane`_) Schedulers Fail to Run (refs: `#54799`_)
+
+* **PR** `#54799`_: (`garethgreenaway`_) Fix to scheduler when job without a time element is run with schedule.run_job
+  @ *2019-09-30 00:19:43 UTC*
+
+  * 4ee1ff6 Merge pull request `#54799`_ from garethgreenaway/54741_run_job_fails_without_time_element
+
+  * 44caa81 Merge branch '54741_run_job_fails_without_time_element' of github.com:garethgreenaway/salt into 54741_run_job_fails_without_time_element
+
+    * 3ae4f75 Merge branch '2019.2.1' into 54741_run_job_fails_without_time_element
+
+  * 8afd2d8 Removing extra, unnecessary code.
+
+  * 549cfb8 Fixing test_run_job test to ensure the right data is being asserted.  Updating unit/test_module_names.py to include integration.scheduler.test_run_job.
+
+  * 7d716d6 Fixing lint.
+
+  * ec68591 If a scheduled job does not contains a time element parameter then running that job with schedule.run_job fails with a traceback because data['run'] does not exist.
+
+* **PR** `#54785`_: (`Ch3LL`_) Fix state.show_states when sls file missing in top file
+  @ *2019-09-30 00:00:34 UTC*
+
+  * b90c3f2 Merge pull request `#54785`_ from Ch3LL/fix_show_states
+
+  * 96540be Clean up files after state.show_states test
+
+  * ad265ae Fix state.show_states when sls file missing
+
+* **ISSUE** `#54768`_: (`paul-palmer`_) 2019.2.1 Some Jinja imports not found (refs: `#54780`_)
+
+* **ISSUE** `#54765`_: (`awerner`_) 2019.2.1: Jinja from import broken (refs: `#54780`_)
+
+* **PR** `#54780`_: (`dwoz`_) Fix masterless jinja imports
+  @ *2019-09-29 22:12:48 UTC*
+
+  * b9459e6 Merge pull request `#54780`_ from dwoz/fix-masterless-jinja-imports
+
+  * 5d873cc Merge branch '2019.2.1' into fix-masterless-jinja-imports
+
+  * e901a83 Add regression tests for jinja import bug
+
+  * 3925bb7 Fix broken jinja imports in masterless salt-call
+
+* **ISSUE** `#54776`_: (`javierbertoli`_) Setting `ping_interval` in salt-minion's config (version 2019.2.1) prevents it from starting (refs: `#54777`_)
+
+* **PR** `#54777`_: (`javierbertoli`_) Fix minion's remove_periodic_callback()
+  @ *2019-09-29 21:33:53 UTC*
+
+  * 4c240e5 Merge pull request `#54777`_ from netmanagers/2019.2.1
+
+  * 459c790 Merge branch '2019.2.1' into 2019.2.1
+
+* **PR** `#54805`_: (`bryceml`_) improve lint job
+  @ *2019-09-29 21:24:05 UTC*
+
+  * 83f8f5c Merge pull request `#54805`_ from bryceml/2019.2.1_update_lint_salt
+
+  * ffa4ed6 improve lint job
+
+  * fa1a767 Merge branch '2019.2.1' into 2019.2.1
+
+* **ISSUE** `#54751`_: (`jnmatlock`_) NXOS_API Proxy Minions Error KeyError: 'proxy.post_master_init' after upgrading to 2019.2.1 (refs: `#54783`_)
+
+* **PR** `#54783`_: (`garethgreenaway`_) Ensure metaproxy directory is included in sdist
+  @ *2019-09-29 02:17:23 UTC*
+
+  * 6b43fbe Merge pull request `#54783`_ from garethgreenaway/54751_fixing_missing_metaproxy_directory
+
+  * 67d9938 Merge branch '2019.2.1' into 54751_fixing_missing_metaproxy_directory
+
+  * a35e609 Adding __init__.py to metaproxy directory so that metaproxy is included when running setup.py.
+
+* **ISSUE** `#54762`_: (`margau`_) 2019.2.1: Breaks Minion-Master Communication (refs: `#54823`_, `#54784`_, `#54807`_)
+
+* **PR** `#54784`_: (`dhiltonp`_) fix dns_check to return uri-compatible ipv6 addresses, add tests
+  @ *2019-09-28 08:36:51 UTC*
+
+  * 7912b67 Merge pull request `#54784`_ from dhiltonp/ipv46
+
+  * 042a101 Merge branch '2019.2.1' into ipv46
+
+* **PR** `#54779`_: (`frogunder`_) Add 2019.2.2 release notes
+  @ *2019-09-27 17:45:46 UTC*
+
+  * 2f94b44 Merge pull request `#54779`_ from frogunder/releasenotes_2019.2.2
+
+  * 67f564b Add 2019.2.2 release notes
+
+  * ac6b54f Merge branch '2019.2.1' into ipv46
+
+  * 93ebd09 update mock (py2) from 2.0.0 to 3.0.5
+
+  * 37bcc4c fix dns_check to return uri-compatible ipv6 addresses, add tests
+
+    * dd86c46 Merge pull request `#1`_ from waynew/pull/54777-callback-typo
+
+      * a57f7d0 Add tests
+
+    * c19d0b0 Fix minion's remove_periodic_callback()
+
+* **PR** `#54731`_: (`pizzapanther`_) Fix returners not loading properly
+  @ *2019-09-26 17:24:27 UTC*
+
+  * 46bec3c Merge pull request `#54731`_ from pizzapanther/not-so-__new__-and-shiny
+
+  * bdf24f4 Make sure we tests salt-master's `event_return` setting
+
+  * 5499518 remove unnecessary import
+
+  * 3f8a382 fix module import
+
+  * 0746aa7 remove __new__ method since it was removed from parent class
+
+* **PR** `#54706`_: (`bryceml`_) 2019.2.1 ruby
+  @ *2019-09-23 16:00:27 UTC*
+
+  * e2b86bf Merge pull request `#54706`_ from bryceml/2019.2.1_ruby
+
+  * 168a6c1 switch to ruby 2.6.3
+
+.. _`#1`: https://github.com/saltstack/salt/issues/1
+.. _`#52752`: https://github.com/saltstack/salt/pull/52752
+.. _`#52948`: https://github.com/saltstack/salt/pull/52948
+.. _`#54521`: https://github.com/saltstack/salt/issues/54521
+.. _`#54706`: https://github.com/saltstack/salt/pull/54706
+.. _`#54731`: https://github.com/saltstack/salt/pull/54731
+.. _`#54741`: https://github.com/saltstack/salt/issues/54741
+.. _`#54751`: https://github.com/saltstack/salt/issues/54751
+.. _`#54755`: https://github.com/saltstack/salt/issues/54755
+.. _`#54762`: https://github.com/saltstack/salt/issues/54762
+.. _`#54765`: https://github.com/saltstack/salt/issues/54765
+.. _`#54768`: https://github.com/saltstack/salt/issues/54768
+.. _`#54772`: https://github.com/saltstack/salt/pull/54772
+.. _`#54776`: https://github.com/saltstack/salt/issues/54776
+.. _`#54777`: https://github.com/saltstack/salt/pull/54777
+.. _`#54778`: https://github.com/saltstack/salt/pull/54778
+.. _`#54779`: https://github.com/saltstack/salt/pull/54779
+.. _`#54780`: https://github.com/saltstack/salt/pull/54780
+.. _`#54783`: https://github.com/saltstack/salt/pull/54783
+.. _`#54784`: https://github.com/saltstack/salt/pull/54784
+.. _`#54785`: https://github.com/saltstack/salt/pull/54785
+.. _`#54799`: https://github.com/saltstack/salt/pull/54799
+.. _`#54805`: https://github.com/saltstack/salt/pull/54805
+.. _`#54806`: https://github.com/saltstack/salt/pull/54806
+.. _`#54807`: https://github.com/saltstack/salt/pull/54807
+.. _`#54820`: https://github.com/saltstack/salt/issues/54820
+.. _`#54823`: https://github.com/saltstack/salt/pull/54823
+.. _`#54826`: https://github.com/saltstack/salt/pull/54826
+.. _`#54828`: https://github.com/saltstack/salt/pull/54828
+.. _`#54830`: https://github.com/saltstack/salt/pull/54830
+.. _`#54845`: https://github.com/saltstack/salt/pull/54845
+.. _`#54852`: https://github.com/saltstack/salt/pull/54852
+.. _`#54854`: https://github.com/saltstack/salt/pull/54854
+.. _`#54858`: https://github.com/saltstack/salt/pull/54858
+.. _`#54894`: https://github.com/saltstack/salt/pull/54894
+.. _`#54897`: https://github.com/saltstack/salt/pull/54897
+.. _`#54919`: https://github.com/saltstack/salt/pull/54919
+.. _`#54941`: https://github.com/saltstack/salt/issues/54941
+.. _`#54942`: https://github.com/saltstack/salt/pull/54942
+.. _`Akm0d`: https://github.com/Akm0d
+.. _`Ch3LL`: https://github.com/Ch3LL
+.. _`Oloremo`: https://github.com/Oloremo
+.. _`OrangeDog`: https://github.com/OrangeDog
+.. _`OrlandoArcapix`: https://github.com/OrlandoArcapix
+.. _`Reiner030`: https://github.com/Reiner030
+.. _`UtahDave`: https://github.com/UtahDave
+.. _`awerner`: https://github.com/awerner
+.. _`bryceml`: https://github.com/bryceml
+.. _`dhiltonp`: https://github.com/dhiltonp
+.. _`dwoz`: https://github.com/dwoz
+.. _`frogunder`: https://github.com/frogunder
+.. _`garethgreenaway`: https://github.com/garethgreenaway
+.. _`javierbertoli`: https://github.com/javierbertoli
+.. _`jnmatlock`: https://github.com/jnmatlock
+.. _`kjkeane`: https://github.com/kjkeane
+.. _`margau`: https://github.com/margau
+.. _`paul-palmer`: https://github.com/paul-palmer
+.. _`pizzapanther`: https://github.com/pizzapanther
+.. _`s0undt3ch`: https://github.com/s0undt3ch
+.. _`twangboy`: https://github.com/twangboy

@@ -13,8 +13,6 @@ from tests.support.mock import (
     MagicMock,
     patch,
     mock_open,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -49,27 +47,25 @@ mock_soa_zone = salt.utils.stringutils.to_str(
                 'NS      land-5.com.\n\n'
                 '1                       PTR     localhost.')
 
-if NO_MOCK is False:
-    mock_writes_list = salt.utils.data.decode([
-            '##\n',
-            '# Host Database\n',
-            '#\n',
-            '# localhost is used to configure the loopback interface\n',
-            '# when the system is booting.  Do not change this entry.\n',
-            '##\n',
-            '127.0.0.1 localhost',
-            '\n',
-            '255.255.255.255 broadcasthost',
-            '\n',
-            '::1 localhost',
-            '\n',
-            'fe80::1%lo0 localhost',
-            '\n'
+mock_writes_list = salt.utils.data.decode([
+        '##\n',
+        '# Host Database\n',
+        '#\n',
+        '# localhost is used to configure the loopback interface\n',
+        '# when the system is booting.  Do not change this entry.\n',
+        '##\n',
+        '127.0.0.1 localhost',
+        '\n',
+        '255.255.255.255 broadcasthost',
+        '\n',
+        '::1 localhost',
+        '\n',
+        'fe80::1%lo0 localhost',
+        '\n'
     ], to_str=True
 )
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class DNSUtilTestCase(TestCase):
     def test_parse_hosts(self):
         with patch('salt.utils.files.fopen', mock_open(read_data=mock_hosts_file)):

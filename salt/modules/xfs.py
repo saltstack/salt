@@ -448,7 +448,7 @@ def mkfs(device, label=None, ssize=None, noforce=None,
             if getopts(opts):
                 cmd.append(switch)
                 cmd.append(opts)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             raise CommandExecutionError("Wrong parameters \"{0}\" for option \"{1}\"".format(opts, switch))
 
     if not noforce:

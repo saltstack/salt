@@ -46,7 +46,8 @@ optional. The following ssl options are simply for illustration purposes:
 
 Should you wish the returner data to be cleaned out every so often, set
 `keep_jobs` to the number of hours for the jobs to live in the tables.
-Setting it to `0` or leaving it unset will cause the data to stay in the tables.
+Setting it to `0` will cause the data to stay in the tables. The default
+setting for `keep_jobs` is set to `24`.
 
 Should you wish to archive jobs in a different table for later processing,
 set `archive_jobs` to True.  Salt will create 3 archive tables
@@ -78,7 +79,6 @@ Use the following mysql database schema:
       `load` mediumtext NOT NULL,
       UNIQUE KEY `jid` (`jid`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-    CREATE INDEX jid ON jids(jid) USING BTREE;
 
     --
     -- Table structure for table `salt_returns`
@@ -278,7 +278,7 @@ def _get_serv(ret=None, commit=False):
         error = err.args
         sys.stderr.write(six.text_type(error))
         cursor.execute("ROLLBACK")
-        raise err
+        six.reraise(*sys.exc_info())
     else:
         if commit:
             cursor.execute("COMMIT")
@@ -348,7 +348,6 @@ def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argume
     '''
     Included for API consistency
     '''
-    pass
 
 
 def get_load(jid):
@@ -545,7 +544,7 @@ def _archive_jobs(timestamp):
             log.error('mysql returner archiver was unable to copy contents of table \'jids\'')
             log.error(six.text_type(e))
             raise salt.exceptions.SaltRunnerError(six.text_type(e))
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             log.error(e)
             raise
 

@@ -11,8 +11,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 import salt.utils.decorators as decorators
 from salt.version import SaltStackVersion
 from salt.exceptions import CommandExecutionError, SaltConfigurationError
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
+from tests.support.unit import TestCase
+from tests.support.mock import patch
 
 
 class DummyLogger(object):
@@ -29,7 +29,6 @@ class DummyLogger(object):
         self._messages.append(msg)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class DecoratorsTest(TestCase):
     '''
     Testing decorators.

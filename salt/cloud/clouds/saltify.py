@@ -300,7 +300,7 @@ def get_configured_provider():
 
 def _verify(vm_):
     '''
-    Verify credentials for an exsiting system
+    Verify credentials for an existing system
     '''
     log.info('Verifying credentials for %s', vm_['name'])
 

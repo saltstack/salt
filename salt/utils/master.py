@@ -29,7 +29,7 @@ import salt.payload
 from salt.exceptions import SaltException
 import salt.config
 from salt.utils.cache import CacheCli as cache_cli
-from salt.utils.process import MultiprocessingProcess
+from salt.utils.process import Process
 
 # Import third party libs
 from salt.ext import six
@@ -352,6 +352,8 @@ class MasterPillarUtil(object):
         minion_pillars = {}
         minion_grains = {}
         minion_ids = self._tgt_to_list()
+        if self.tgt and not minion_ids:
+            return {}
         if any(arg for arg in [self.use_cached_grains, self.use_cached_pillar, self.grains_fallback, self.pillar_fallback]):
             log.debug('Getting cached minion data')
             cached_minion_grains, cached_minion_pillars = self._get_cached_minion_data(*minion_ids)
@@ -424,7 +426,7 @@ class MasterPillarUtil(object):
             clear_what.append('mine')
         if clear_mine_func is not None:
             clear_what.append('mine_func: \'{0}\''.format(clear_mine_func))
-        if not len(clear_what):
+        if not clear_what:
             log.debug('No cached data types specified for clearing.')
             return False
 
@@ -510,7 +512,7 @@ class CacheTimer(Thread):
                 count = 0
 
 
-class CacheWorker(MultiprocessingProcess):
+class CacheWorker(Process):
     '''
     Worker for ConnectedCache which runs in its
     own process to prevent blocking of ConnectedCache
@@ -528,7 +530,6 @@ class CacheWorker(MultiprocessingProcess):
     # We do this so that __init__ will be invoked on Windows in the child
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
-        self._is_child = True
         self.__init__(
             state['opts'],
             log_queue=state['log_queue'],
@@ -553,7 +554,7 @@ class CacheWorker(MultiprocessingProcess):
         log.debug('ConCache CacheWorker update finished')
 
 
-class ConnectedCache(MultiprocessingProcess):
+class ConnectedCache(Process):
     '''
     Provides access to all minions ids that the master has
     successfully authenticated. The cache is cleaned up regularly by
@@ -591,7 +592,6 @@ class ConnectedCache(MultiprocessingProcess):
     # We do this so that __init__ will be invoked on Windows in the child
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
-        self._is_child = True
         self.__init__(
             state['opts'],
             log_queue=state['log_queue'],

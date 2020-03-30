@@ -95,7 +95,7 @@ TASK_TRIGGER_LOGON = 9
 TASK_TRIGGER_SESSION_STATE_CHANGE = 11
 
 duration = {'Immediately': 'PT0M',
-            'Indefinitely': 'PT0M',
+            'Indefinitely': '',
             'Do not wait': 'PT0M',
             '15 seconds': 'PT15S',
             '30 seconds': 'PT30S',
@@ -155,9 +155,9 @@ results = {0x0: 'The operation completed successfully',
            0x41306: 'Task was terminated by the user',
            0x8004130F: 'Credentials became corrupted',
            0x8004131F: 'An instance of this task is already running',
+           0x800710E0: 'The operator or administrator has refused the request',
            0x800704DD: 'The service is not available (Run only when logged '
                        'in?)',
-           0x800710E0: 'The operator or administrator has refused the request',
            0xC000013A: 'The application terminated as a result of CTRL+C',
            0xC06D007E: 'Unknown software exception'}
 
@@ -571,10 +571,7 @@ def create_task(name,
                           logon_type=task_definition.Principal.LogonType)
 
     # Verify task was created
-    if name in list_tasks(location):
-        return True
-    else:
-        return False
+    return name in list_tasks(location)
 
 
 def create_task_from_xml(name,
@@ -679,10 +676,7 @@ def create_task_from_xml(name,
         log.debug('Failed to create task: %s', failure_code)
 
     # Verify creation
-    if name in list_tasks(location):
-        return True
-    else:
-        return False
+    return name in list_tasks(location)
 
 
 def create_folder(name, location='\\'):
@@ -724,10 +718,7 @@ def create_folder(name, location='\\'):
     task_folder.CreateFolder(name)
 
     # Verify creation
-    if name in list_folders(location):
-        return True
-    else:
-        return False
+    return name in list_folders(location)
 
 
 def edit_task(name=None,
@@ -1132,10 +1123,7 @@ def delete_task(name, location='\\'):
     task_folder.DeleteTask(name, 0)
 
     # Verify deletion
-    if name not in list_tasks(location):
-        return True
-    else:
-        return False
+    return name not in list_tasks(location)
 
 
 def delete_folder(name, location='\\'):
@@ -2003,7 +1991,7 @@ def add_trigger(name=None,
 
     *MonthlyDay*
 
-        The task will run monthly an the specified day.
+        The task will run monthly on the specified day.
 
             months_of_year (list):
                 Sets the months of the year during which the task runs. Should

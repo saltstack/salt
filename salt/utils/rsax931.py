@@ -115,9 +115,11 @@ class RSAX931Signer(object):
         if not libcrypto.PEM_read_bio_RSAPrivateKey(self._bio, pointer(self._rsa), None, None):
             raise ValueError('invalid RSA private key')
 
+    # pylint: disable=W1701
     def __del__(self):
         libcrypto.BIO_free(self._bio)
         libcrypto.RSA_free(self._rsa)
+    # pylint: enable=W1701
 
     def sign(self, msg):
         '''
@@ -153,9 +155,11 @@ class RSAX931Verifier(object):
         if not libcrypto.PEM_read_bio_RSA_PUBKEY(self._bio, pointer(self._rsa), None, None):
             raise ValueError('invalid RSA public key')
 
+    # pylint: disable=W1701
     def __del__(self):
         libcrypto.BIO_free(self._bio)
         libcrypto.RSA_free(self._rsa)
+    # pylint: enable=W1701
 
     def verify(self, signed):
         '''

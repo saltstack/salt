@@ -15,7 +15,7 @@ try:
     # Import Salt Testing Libs
     from tests.support.mixins import LoaderModuleMockMixin
     from tests.support.unit import TestCase, skipIf
-    from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
+    from tests.support.mock import MagicMock, patch
 
     # Import Salt Libs
     from tests.support.kernelpkg import KernelPkgTestCase
@@ -26,7 +26,6 @@ except ImportError:
     HAS_MODULES = False
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_MODULES, 'Salt modules could not be loaded')
 class AptKernelPkgTestCase(KernelPkgTestCase, TestCase, LoaderModuleMockMixin):
     '''

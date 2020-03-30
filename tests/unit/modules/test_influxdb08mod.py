@@ -7,12 +7,10 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -57,7 +55,6 @@ class MockInfluxDBClient(object):
         return query, time_precision, chunked
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class InfluxTestCase(TestCase):
     '''
     TestCase for the salt.modules.at module

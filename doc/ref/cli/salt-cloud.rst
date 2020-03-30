@@ -146,19 +146,19 @@ Cloud Providers Listings
 .. option:: --list-locations=LIST_LOCATIONS
 
     Display a list of locations available in configured cloud providers. Pass
-    the cloud provider that available locations are desired on, aka "linode",
+    the cloud provider that available locations are desired on, such as "linode",
     or pass "all" to list locations for all configured cloud providers
 
 .. option:: --list-images=LIST_IMAGES
 
     Display a list of images available in configured cloud providers. Pass the
-    cloud provider that available images are desired on, aka "linode", or pass
+    cloud provider that available images are desired on, such as "linode", or pass
     "all" to list images for all configured cloud providers
 
 .. option:: --list-sizes=LIST_SIZES
 
     Display a list of sizes available in configured cloud providers. Pass the
-    cloud provider that available sizes are desired on, aka "AWS", or pass
+    cloud provider that available sizes are desired on, such as "AWS", or pass
     "all" to list sizes for all configured cloud providers
 
 Cloud Credentials

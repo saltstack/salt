@@ -304,7 +304,7 @@ class MapMeta(six.with_metaclass(Prepareable, type)):
         return c
 
     def __init__(cls, name, bases, nmspc):
-        cls.__set_attributes__()
+        cls.__set_attributes__()  # pylint: disable=no-value-for-parameter
         super(MapMeta, cls).__init__(name, bases, nmspc)
 
     def __set_attributes__(cls):
