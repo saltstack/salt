@@ -1365,6 +1365,10 @@ class VirtualEnv(object):
     def install(self, *args):
         subprocess.check_call([self.venv_python, "-m", "pip", "install"] + list(args))
 
+    def run(self, *args, **kwargs):
+        kwargs.setdefault("cwd", self.venv_dir)
+        return subprocess.check_call(args, **kwargs)
+
     def _get_real_python(self):
         """
         The reason why the virtualenv creation is proxied by this function is mostly
