@@ -180,7 +180,7 @@ class SSHClient(object):
             tgt_type='glob',
             ret='',
             kwarg=None,
-            sub=3,
+            subset=3,
             **kwargs):
         '''
         Execute a command on a random subset of the targeted systems
@@ -188,13 +188,13 @@ class SSHClient(object):
         The function signature is the same as :py:meth:`cmd` with the
         following exceptions.
 
-        :param sub: The number of systems to execute on
+        :param subset: The number of systems to execute on
 
         .. code-block:: python
 
             >>> import salt.client.ssh.client
             >>> sshclient= salt.client.ssh.client.SSHClient()
-            >>> sshclient.cmd_subset('*', 'test.ping', sub=1)
+            >>> sshclient.cmd_subset('*', 'test.ping', subset=1)
             {'jerry': True}
 
         .. versionadded:: 2017.7.0
@@ -209,6 +209,6 @@ class SSHClient(object):
         for minion in minions:
             if fun in minion_ret[minion]['return']:
                 f_tgt.append(minion)
-            if len(f_tgt) >= sub:
+            if len(f_tgt) >= subset:
                 break
         return self.cmd_iter(f_tgt, fun, arg, timeout, tgt_type='list', ret=ret, kwarg=kwarg, **kwargs)
