@@ -101,5 +101,5 @@ def start(docker_url='unix://var/run/docker.sock',
                 fire('{0}/{1}'.format(tag, data['Action']), data)
             else:
                 fire('{0}/{1}'.format(tag, data['status']), data)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         traceback.print_exc()

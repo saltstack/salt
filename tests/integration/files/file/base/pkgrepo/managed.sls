@@ -93,7 +93,6 @@ epel-salttest:
 {% if codename != 'vivid' %}
 gpodder-ppa:
   pkgrepo.managed:
-    - humanname: gPodder PPA
     - name: deb http://ppa.launchpad.net/thp/gpodder/ubuntu {{ codename }} main
     - dist: {{ codename }}
     - file: /etc/apt/sources.list.d/gpodder.list

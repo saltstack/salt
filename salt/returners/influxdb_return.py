@@ -111,7 +111,7 @@ def _get_version(host, port, user, password):
         result = requests.get("http://{0}:{1}/ping".format(host, port), auth=(user, password))
         if influxDBVersionHeader in result.headers:
             version = result.headers[influxDBVersionHeader]
-    except Exception as ex:
+    except Exception as ex:  # pylint: disable=broad-except
         log.critical(
             'Failed to query InfluxDB version from HTTP API within InfluxDB '
             'returner: %s', ex
@@ -188,7 +188,7 @@ def returner(ret):
 
     try:
         serv.write_points(req)
-    except Exception as ex:
+    except Exception as ex:  # pylint: disable=broad-except
         log.critical('Failed to store return with InfluxDB returner: %s', ex)
 
 
@@ -225,7 +225,7 @@ def save_load(jid, load, minions=None):
 
     try:
         serv.write_points(req)
-    except Exception as ex:
+    except Exception as ex:  # pylint: disable=broad-except
         log.critical('Failed to store load with InfluxDB returner: %s', ex)
 
 
@@ -233,7 +233,6 @@ def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argume
     '''
     Included for API consistency
     '''
-    pass
 
 
 def get_load(jid):

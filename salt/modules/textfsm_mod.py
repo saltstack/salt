@@ -23,6 +23,8 @@ from __future__ import absolute_import
 import os
 import logging
 
+from salt.utils.files import fopen
+
 # Import third party modules
 try:
     import textfsm
@@ -35,11 +37,6 @@ try:
     HAS_CLITABLE = True
 except ImportError:
     HAS_CLITABLE = False
-
-try:
-    from salt.utils.files import fopen
-except ImportError:
-    from salt.utils import fopen
 
 log = logging.getLogger(__name__)
 

@@ -1031,7 +1031,6 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             assert core.dns() == ret
 
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
-    @patch.object(salt.utils, 'is_windows', MagicMock(return_value=False))
     @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4', '5.6.7.8']))
     @patch('salt.utils.network.ip_addrs6',
            MagicMock(return_value=['fe80::a8b2:93ff:fe00:0', 'fe80::a8b2:93ff:dead:beef']))
@@ -1053,7 +1052,6 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(set(fqdns['fqdns']), set(ret['fqdns']))
 
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
-    @patch.object(salt.utils, 'is_windows', MagicMock(return_value=False))
     @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4']))
     @patch('salt.utils.network.ip_addrs6', MagicMock(return_value=[]))
     def test_fqdns_socket_error(self):
@@ -1432,3 +1430,74 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertIn('virtual', osdata_grains)
             self.assertNotEqual(osdata_grains['virtual'], 'physical')
+
+    @skipIf(salt.utils.platform.is_windows(), 'System is Windows')
+    def test_bsd_osfullname(self):
+        '''
+        Test to ensure osfullname exists on *BSD systems
+        '''
+        _path_exists_map = {}
+        _path_isfile_map = {}
+        _cmd_run_map = {
+            'freebsd-version -u': '10.3-RELEASE',
+            '/sbin/sysctl -n hw.physmem': '2121781248',
+            '/sbin/sysctl -n vm.swap_total': '419430400'
+        }
+
+        path_exists_mock = MagicMock(side_effect=lambda x: _path_exists_map[x])
+        path_isfile_mock = MagicMock(
+            side_effect=lambda x: _path_isfile_map.get(x, False)
+        )
+        cmd_run_mock = MagicMock(
+            side_effect=lambda x: _cmd_run_map[x]
+        )
+        empty_mock = MagicMock(return_value={})
+
+        mock_freebsd_uname = ('FreeBSD',
+                              'freebsd10.3-hostname-8148',
+                              '10.3-RELEASE',
+                              'FreeBSD 10.3-RELEASE #0 r297264: Fri Mar 25 02:10:02 UTC 2016     root@releng1.nyi.freebsd.org:/usr/obj/usr/src/sys/GENERIC',
+                              'amd64',
+                              'amd64')
+
+        with patch('platform.uname',
+                   MagicMock(return_value=mock_freebsd_uname)):
+            with patch.object(salt.utils.platform, 'is_linux',
+                              MagicMock(return_value=False)):
+                with patch.object(salt.utils.platform, 'is_freebsd',
+                                  MagicMock(return_value=True)):
+                    # Skip the first if statement
+                    with patch.object(salt.utils.platform, 'is_proxy',
+                                      MagicMock(return_value=False)):
+                        # Skip the init grain compilation (not pertinent)
+                        with patch.object(os.path, 'exists', path_exists_mock):
+                            with patch('salt.utils.path.which') as mock:
+                                mock.return_value = '/sbin/sysctl'
+                                # Make a bunch of functions return empty dicts,
+                                # we don't care about these grains for the
+                                # purposes of this test.
+                                with patch.object(core, '_bsd_cpudata', empty_mock), \
+                                     patch.object(core, '_hw_data', empty_mock), \
+                                     patch.object(core, '_virtual', empty_mock), \
+                                     patch.object(core, '_ps', empty_mock), \
+                                     patch.dict(core.__salt__, {'cmd.run': cmd_run_mock}):
+                                    os_grains = core.os_data()
+
+        self.assertIn('osfullname', os_grains)
+        self.assertEqual(os_grains.get('osfullname'), 'FreeBSD')
+
+    def test_saltversioninfo(self):
+        '''
+        test saltversioninfo core grain.
+        '''
+        ret = core.saltversioninfo()
+        info = ret['saltversioninfo']
+        assert isinstance(ret, dict)
+        assert isinstance(info, list)
+        try:
+            assert len(info) == 1
+        except AssertionError:
+            # We have a minor version we need to test
+            assert len(info) == 2
+        assert all([x is not None for x in info])
+        assert all([isinstance(x, int) for x in info])

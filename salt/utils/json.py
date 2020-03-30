@@ -20,6 +20,10 @@ from salt.ext import six
 log = logging.getLogger(__name__)
 
 
+# One to one mappings
+JSONEncoder = json.JSONEncoder
+
+
 def __split(raw):
     '''
     Performs a splitlines on the string. This function exists to make mocking
@@ -137,7 +141,6 @@ def dumps(obj, **kwargs):
     You can pass an alternate json module (loaded via import_json() above)
     using the _json_module argument)
     '''
-    import sys
     json_module = kwargs.pop('_json_module', json)
     if 'ensure_ascii' not in kwargs:
         kwargs['ensure_ascii'] = False

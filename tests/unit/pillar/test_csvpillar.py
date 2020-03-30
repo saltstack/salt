@@ -8,6 +8,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 from tests.support.unit import TestCase
 from tests.support.mock import patch, mock_open
 
+
 # Import Salt Libs
 import salt.pillar.csvpillar as csvpillar
 

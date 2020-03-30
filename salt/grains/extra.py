@@ -71,7 +71,7 @@ def config():
         with salt.utils.files.fopen(gfn, 'rb') as fp_:
             try:
                 return salt.utils.data.decode(salt.utils.yaml.safe_load(fp_))
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 log.warning("Bad syntax in grains file! Skipping.")
                 return {}
     return {}

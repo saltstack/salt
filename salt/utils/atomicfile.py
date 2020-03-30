@@ -77,7 +77,7 @@ if os.name == 'nt':  # pragma: no cover
                 return rval
             finally:
                 _CloseHandle(tra)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         pass
 
     def atomic_rename(src, dst):
@@ -95,7 +95,7 @@ if os.name == 'nt':  # pragma: no cover
             os.rename(src, dst)
             try:
                 os.unlink(old)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 pass
 else:
     atomic_rename = os.rename  # pylint: disable=C0103

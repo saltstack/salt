@@ -132,7 +132,7 @@ def update_app(id, config):
         )
         log.debug('update response: %s', response)
         return response['dict']
-    except Exception as ex:
+    except Exception as ex:  # pylint: disable=broad-except
         log.error('unable to update marathon app: %s', get_error_message(ex))
         return {
             'exception': {
@@ -224,7 +224,7 @@ def restart_app(id, restart=False, force=True):
         ret['restarted'] = True
         ret.update(response['dict'])
         return ret
-    except Exception as ex:
+    except Exception as ex:  # pylint: disable=broad-except
         log.error('unable to restart marathon app: %s', ex.message)
         return {
             'exception': {

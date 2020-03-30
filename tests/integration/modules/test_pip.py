@@ -57,7 +57,7 @@ class PipModuleTest(ModuleCase):
         virtualenv because it will fail otherwise
         '''
         try:
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 python = os.path.join(sys.real_prefix, os.path.basename(sys.executable))
             else:
                 python_binary_names = [

@@ -24,6 +24,7 @@ try:
     from ssl import match_hostname  # pylint: disable=E0611
     HAS_MATCHHOSTNAME = True
 except ImportError:
+    # pylint: disable=no-name-in-module
     try:
         from backports.ssl_match_hostname import CertificateError
         from backports.ssl_match_hostname import match_hostname
@@ -35,6 +36,7 @@ except ImportError:
             HAS_MATCHHOSTNAME = True
         except ImportError:
             HAS_MATCHHOSTNAME = False
+    # pylint: enable=no-name-in-module
 
 # Import salt libs
 import salt.config
@@ -44,6 +46,7 @@ import salt.utils.args
 import salt.utils.data
 import salt.utils.files
 import salt.utils.json
+import salt.utils.msgpack
 import salt.utils.network
 import salt.utils.platform
 import salt.utils.stringutils
@@ -67,12 +70,12 @@ from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
 # pylint: enable=import-error,no-name-in-module
 
 # Don't need a try/except block, since Salt depends on tornado
-import tornado.httputil
-import tornado.simple_httpclient
-from tornado.httpclient import HTTPClient
+import salt.ext.tornado.httputil
+import salt.ext.tornado.simple_httpclient
+from salt.ext.tornado.httpclient import HTTPClient
 
 try:
-    import tornado.curl_httpclient
+    import salt.ext.tornado.curl_httpclient
     HAS_CURL_HTTPCLIENT = True
 except ImportError:
     HAS_CURL_HTTPCLIENT = False
@@ -82,12 +85,6 @@ try:
     HAS_REQUESTS = True
 except ImportError:
     HAS_REQUESTS = False
-
-try:
-    import msgpack
-    HAS_MSGPACK = True
-except ImportError:
-    HAS_MSGPACK = False
 
 try:
     import certifi
@@ -215,7 +212,7 @@ def query(url,
 
     # Some libraries don't support separation of url and GET parameters
     # Don't need a try/except block, since Salt depends on tornado
-    url_full = tornado.httputil.url_concat(url, params) if params else url
+    url_full = salt.ext.tornado.httputil.url_concat(url, params) if params else url
 
     if ca_bundle is None:
         ca_bundle = get_ca_bundle(opts)
@@ -270,19 +267,19 @@ def query(url,
     if session_cookie_jar is None:
         session_cookie_jar = os.path.join(opts.get('cachedir', salt.syspaths.CACHE_DIR), 'cookies.session.p')
 
-    if persist_session is True and HAS_MSGPACK:
+    if persist_session is True and salt.utils.msgpack.HAS_MSGPACK:
         # TODO: This is hackish; it will overwrite the session cookie jar with
         # all cookies from this one connection, rather than behaving like a
         # proper cookie jar. Unfortunately, since session cookies do not
         # contain expirations, they can't be stored in a proper cookie jar.
         if os.path.isfile(session_cookie_jar):
             with salt.utils.files.fopen(session_cookie_jar, 'rb') as fh_:
-                session_cookies = msgpack.load(fh_)
+                session_cookies = salt.utils.msgpack.load(fh_)
             if isinstance(session_cookies, dict):
                 header_dict.update(session_cookies)
         else:
             with salt.utils.files.fopen(session_cookie_jar, 'wb') as fh_:
-                msgpack.dump('', fh_)
+                salt.utils.msgpack.dump('', fh_)
 
     for header in header_list:
         comps = header.split(':')
@@ -541,12 +538,12 @@ def query(url,
                 log.error(ret['error'])
                 return ret
 
-            tornado.httpclient.AsyncHTTPClient.configure('tornado.curl_httpclient.CurlAsyncHTTPClient')
+            salt.ext.tornado.httpclient.AsyncHTTPClient.configure('tornado.curl_httpclient.CurlAsyncHTTPClient')
             client_argspec = salt.utils.args.get_function_argspec(
-                    tornado.curl_httpclient.CurlAsyncHTTPClient.initialize)
+                    salt.ext.tornado.curl_httpclient.CurlAsyncHTTPClient.initialize)
         else:
             client_argspec = salt.utils.args.get_function_argspec(
-                    tornado.simple_httpclient.SimpleAsyncHTTPClient.initialize)
+                    salt.ext.tornado.simple_httpclient.SimpleAsyncHTTPClient.initialize)
 
         supports_max_body_size = 'max_body_size' in client_argspec.args
 
@@ -580,7 +577,7 @@ def query(url,
                 if supports_max_body_size \
                 else HTTPClient()
             result = download_client.fetch(url_full, **req_kwargs)
-        except tornado.httpclient.HTTPError as exc:
+        except salt.ext.tornado.httpclient.HTTPError as exc:
             ret['status'] = exc.code
             ret['error'] = six.text_type(exc)
             return ret
@@ -650,15 +647,15 @@ def query(url,
     if cookies is not None:
         sess_cookies.save()
 
-    if persist_session is True and HAS_MSGPACK:
+    if persist_session is True and salt.utils.msgpack.HAS_MSGPACK:
         # TODO: See persist_session above
         if 'set-cookie' in result_headers:
             with salt.utils.files.fopen(session_cookie_jar, 'wb') as fh_:
                 session_cookies = result_headers.get('set-cookie', None)
                 if session_cookies is not None:
-                    msgpack.dump({'Cookie': session_cookies}, fh_)
+                    salt.utils.msgpack.dump({'Cookie': session_cookies}, fh_)
                 else:
-                    msgpack.dump('', fh_)
+                    salt.utils.msgpack.dump('', fh_)
 
     if status is True:
         ret['status'] = result_status_code

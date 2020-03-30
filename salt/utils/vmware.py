@@ -79,6 +79,7 @@ import atexit
 import errno
 import logging
 import time
+import requests
 import sys
 import ssl
 
@@ -92,6 +93,7 @@ import salt.utils.stringutils
 # Import Third Party Libs
 from salt.ext import six
 from salt.ext.six.moves.http_client import BadStatusLine  # pylint: disable=E0611
+# pylint: disable=no-name-in-module
 try:
     from pyVim.connect import GetSi, SmartConnect, Disconnect, GetStub, \
             SoapStubAdapter
@@ -100,6 +102,14 @@ try:
 except ImportError:
     HAS_PYVMOMI = False
 
+try:
+    from com.vmware.vapi.std.errors_client import Unauthenticated
+    from vmware.vapi.vsphere.client import create_vsphere_client
+    HAS_VSPHERE_SDK = True
+
+except ImportError:
+    HAS_VSPHERE_SDK = False
+# pylint: enable=no-name-in-module
 try:
     import gssapi
     import base64
@@ -179,6 +189,42 @@ def esxcli(host, user, pwd, cmd, protocol=None, port=None, esxi_host=None, creds
     return ret
 
 
+def get_vsphere_client(server, username, password, session=None):
+    '''
+    Internal helper method to create an instance of the vSphere API client.
+    Please provide username and password to authenticate.
+
+    :param basestring server:
+        vCenter host name or IP address
+    :param basestring username:
+        Name of the user
+    :param basestring password:
+        Password of the user
+    :param Session session:
+        Request HTTP session instance. If not specified, one
+        is automatically created and used
+
+    :returns:
+        Vsphere Client instance
+    :rtype:
+        :class:`vmware.vapi.vmc.client.VsphereClient`
+    '''
+    if not session:
+        # Create an https session to be used for a vSphere client
+        session = requests.session()
+        # If client uses own SSL cert, session should not verify
+        session.verify = False
+    client = None
+    try:
+        client = create_vsphere_client(server=server,
+                                       username=username,
+                                       password=password,
+                                       session=session)
+    except Unauthenticated as err:
+        log.trace(err)
+    return client
+
+
 def _get_service_instance(host, username, password, protocol,
                           port, mechanism, principal, domain):
     '''
@@ -200,7 +246,7 @@ def _get_service_instance(host, username, password, protocol,
         if principal is not None and domain is not None:
             try:
                 token = get_gssapi_token(principal, host, domain)
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 raise salt.exceptions.VMwareConnectionError(six.text_type(exc))
         else:
             err_msg = 'Login mechanism \'{0}\' was specified but the' \
@@ -264,7 +310,7 @@ def _get_service_instance(host, username, password, protocol,
                         b64token=token,
                         mechanism=mechanism
                     )
-                except Exception as exc:
+                except Exception as exc:  # pylint: disable=broad-except
                     log.exception(exc)
                     err_msg = exc.msg if hasattr(exc, 'msg') else six.text_type(exc)
                     raise salt.exceptions.VMwareConnectionError(

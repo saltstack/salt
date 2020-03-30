@@ -12,10 +12,15 @@ from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
 # Import Salt Libs
+import salt.modules.config as config
 import salt.modules.pkg_resource as pkg_resource
 import salt.modules.win_pkg as win_pkg
 import salt.utils.data
 import salt.utils.platform
+import salt.utils.win_reg as win_reg
+
+# Import 3rd Party Libs
+from salt.ext import six
 
 
 @skipIf(not salt.utils.platform.is_windows(), "Must be on Windows!")
@@ -54,6 +59,13 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
                     'pkg_resource.parse_targets': pkg_resource.parse_targets,
                     'pkg_resource.sort_pkglist': pkg_resource.sort_pkglist,
                     'pkg_resource.stringify': pkg_resource.stringify,
+                    'config.valid_fileproto': config.valid_fileproto,
+                },
+                '__utils__': {
+                    'reg.key_exists': win_reg.key_exists,
+                    'reg.list_keys': win_reg.list_keys,
+                    'reg.read_value': win_reg.read_value,
+                    'reg.value_exists': win_reg.value_exists,
                 },
             },
             pkg_resource: {
@@ -62,6 +74,16 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
                 }
             },
         }
+
+    def test_pkg__get_reg_software(self):
+        result = win_pkg._get_reg_software()
+        self.assertTrue(isinstance(result, dict))
+        found_python = False
+        search = 'Python 2' if six.PY2 else 'Python 3'
+        for key in result:
+            if search in key:
+                found_python = True
+        self.assertTrue(found_python)
 
     def test_pkg_install_not_found(self):
         '''

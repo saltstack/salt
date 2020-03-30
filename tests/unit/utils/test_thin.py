@@ -13,8 +13,8 @@ from tests.support.mock import (
     patch)
 
 import salt.exceptions
+import salt.utils.json
 from salt.utils import thin
-from salt.utils import json
 import salt.utils.stringutils
 import salt.utils.platform
 from salt.utils.stringutils import to_bytes as bts
@@ -211,7 +211,7 @@ class SSHThinTestCase(TestCase):
 
         :return:
         '''
-        assert json.loads(thin.gte()).get('foo') == 'bar'
+        assert salt.utils.json.loads(thin.gte()).get('foo') == 'bar'
 
     def test_add_dep_path(self):
         '''
@@ -243,12 +243,12 @@ class SSHThinTestCase(TestCase):
         out = thin._get_salt_call('foo', 'bar', py26=[2, 6], py27=[2, 7], py34=[3, 4])
         for line in salt.utils.stringutils.to_str(out).split(os.linesep):
             if line.startswith('namespaces = {'):
-                data = json.loads(line.replace('namespaces = ', '').strip())
+                data = salt.utils.json.loads(line.replace('namespaces = ', '').strip())
                 assert data.get('py26') == [2, 6]
                 assert data.get('py27') == [2, 7]
                 assert data.get('py34') == [3, 4]
             if line.startswith('syspaths = '):
-                data = json.loads(line.replace('syspaths = ', ''))
+                data = salt.utils.json.loads(line.replace('syspaths = ', ''))
                 assert data == ['foo', 'bar']
 
     def test_get_ext_namespaces_empty(self):
