@@ -183,7 +183,7 @@ def get_pending_domain_join():
 
 
 def get_pending_file_rename():
-    '''
+    r'''
     Determine whether there are pending file rename operations that require a
     reboot.
 
