@@ -9,16 +9,32 @@ Version 3000.1 is a bugfix release for :ref:`3000 <release-3000>`.
 Statistics
 ==========
 
-- Total Merges: **51**
+- Total Merges: **53**
 - Total Issue References: **15**
-- Total PR References: **52**
+- Total PR References: **54**
 
 - Contributors: **16** (`Ch3LL`_, `UtahDave`_, `bryceml`_, `cmcmarrow`_, `dwoz`_, `frogunder`_, `garethgreenaway`_, `lorengordon`_, `mchugh19`_, `oeuftete`_, `raddessi`_, `s0undt3ch`_, `sjorge`_, `terminalmage`_, `twangboy`_, `waynew`_)
 
 Changelog for v3000..v3000.1
 ============================
 
-*Generated at: 2020-03-24 19:52:52 UTC*
+*Generated at: 2020-03-27 16:48:41 UTC*
+
+* **PR** `#56455`_: (`s0undt3ch`_) Fix gitpython windows requirement
+  @ *2020-03-27 16:31:57 UTC*
+
+  * c5a700e01e Merge pull request `#56455`_ from s0undt3ch/hotfix/gitpython
+
+  * d9791c393f Revert and fix windows requirements
+
+  * 4b573c1c94 Revert "Fix win deps"
+
+* **PR** `#56446`_: (`frogunder`_) 3000.1 releasenotes updates
+  @ *2020-03-24 20:28:23 UTC*
+
+  * 7ba36325d9 Merge pull request `#56446`_ from frogunder/releasenotes_3000.1_updates
+
+  * 6b47f474af 3000.1 releasenotes updates
 
 * **PR** `#56435`_: (`twangboy`_) Update mac build scripts
   @ *2020-03-24 19:47:40 UTC*
@@ -122,7 +138,7 @@ Changelog for v3000..v3000.1
 
   * 6c83beeb9e Fix win deps
 
-* **PR** `#56378`_: (`Ch3LL`_)  Include _version.py if building wheel
+* **PR** `#56378`_: (`Ch3LL`_)  Include _version.py if building wheel 
   @ *2020-03-17 17:01:33 UTC*
 
   * e72a8d2cbc Merge pull request `#56378`_ from Ch3LL/wheel_version
@@ -564,7 +580,7 @@ Changelog for v3000..v3000.1
 
 * **ISSUE** `#56121`_: (`githubcdr`_) salt-minion broken after upgrade to 3000 (refs: `#56143`_)
 
-* **ISSUE** `#51854`_: (`Oloremo`_) Fluorine: minion_pillar_cache: True leads to exception (refs: `#52195`_, `#56143`_)
+* **ISSUE** `#51854`_: (`Oloremo`_) Fluorine: minion_pillar_cache: True leads to exception (refs: `#56143`_, `#52195`_)
 
 * **PR** `#56143`_: (`waynew`_) Use encoding when caching pillar data
   @ *2020-03-10 01:33:37 UTC*
@@ -700,6 +716,8 @@ Changelog for v3000..v3000.1
 .. _`#56433`: https://github.com/saltstack/salt/issues/56433
 .. _`#56435`: https://github.com/saltstack/salt/pull/56435
 .. _`#56436`: https://github.com/saltstack/salt/pull/56436
+.. _`#56446`: https://github.com/saltstack/salt/pull/56446
+.. _`#56455`: https://github.com/saltstack/salt/pull/56455
 .. _`Ch3LL`: https://github.com/Ch3LL
 .. _`Oloremo`: https://github.com/Oloremo
 .. _`UtahDave`: https://github.com/UtahDave
