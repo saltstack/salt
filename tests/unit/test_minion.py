@@ -419,7 +419,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 patch('salt.utils.process.SignalHandlingMultiprocessingProcess.start', MagicMock(return_value=True)), \
                 patch('salt.utils.process.SignalHandlingMultiprocessingProcess.join', MagicMock(return_value=True)):
             mock_opts = self.get_config('minion', from_scratch=True)
-            io_loop = tornado.ioloop.IOLoop()
+            io_loop = salt.ext.tornado.ioloop.IOLoop()
             io_loop.make_current()
 
             with patch('salt.utils.schedule.clean_proc_dir', MagicMock(return_value=None)):
@@ -454,7 +454,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 patch('salt.utils.process.SignalHandlingMultiprocessingProcess.start', MagicMock(return_value=True)), \
                 patch('salt.utils.process.SignalHandlingMultiprocessingProcess.join', MagicMock(return_value=True)):
             mock_opts = self.get_config('minion', from_scratch=True)
-            io_loop = tornado.ioloop.IOLoop()
+            io_loop = salt.ext.tornado.ioloop.IOLoop()
             io_loop.make_current()
 
             mock_functions = {'test.ping': None}
