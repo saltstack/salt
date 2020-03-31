@@ -9,7 +9,7 @@ import string
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import MagicMock, NO_MOCK, NO_MOCK_REASON, patch
+from tests.support.mock import MagicMock, patch
 
 # Import Salt libs
 from salt.ext import six
@@ -140,7 +140,6 @@ class BotoElasticsearchDomainStateTestCaseBase(TestCase, LoaderModuleMockMixin):
 @skipIf(_has_required_boto() is False, 'The boto3 module must be greater than'
                                        ' or equal to version {0}'
         .format(required_boto3_version))
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class BotoElasticsearchDomainTestCase(BotoElasticsearchDomainStateTestCaseBase, BotoElasticsearchDomainTestCaseMixin):
     '''
     TestCase for salt.modules.boto_elasticsearch_domain state.module

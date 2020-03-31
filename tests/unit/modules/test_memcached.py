@@ -7,12 +7,10 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -21,7 +19,6 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext.six import integer_types
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class MemcachedTestCase(TestCase):
     '''
     Test cases for salt.modules.memcached

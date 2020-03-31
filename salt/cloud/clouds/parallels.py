@@ -297,7 +297,7 @@ def create(vm_):
 
     try:
         data = create_node(vm_)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error(
             'Error creating %s on PARALLELS\n\n'
             'The following exception was thrown when trying to '

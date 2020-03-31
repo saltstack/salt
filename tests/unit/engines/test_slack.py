@@ -9,8 +9,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     MagicMock,
     patch)
 
@@ -20,10 +18,9 @@ import salt.config
 
 
 @skipIf(slack.HAS_SLACKCLIENT is False, 'The SlackClient is not installed')
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class EngineSlackTestCase(TestCase, LoaderModuleMockMixin):
     '''
-    Test cases for salt.engine.sqs_events
+    Test cases for salt.engine.slack
     '''
 
     def setup_loader_modules(self):

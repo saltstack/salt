@@ -16,7 +16,6 @@ import datetime
 
 # Import Salt Testing libs
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 
 # Import Salt libs
 from salt.utils import immutabletypes
@@ -33,7 +32,6 @@ import logging
 log = logging.getLogger(__name__)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class PayloadTestCase(TestCase):
 
     def assertNoOrderedDict(self, data):
@@ -152,6 +150,17 @@ class PayloadTestCase(TestCase):
         sdata = payload.dumps(idata)
         odata = payload.loads(sdata)
         self.assertEqual(edata, odata)
+
+    def test_recursive_dump_load(self):
+        '''
+        Test recursive payloads are (mostly) serialized
+        '''
+        payload = salt.payload.Serial('msgpack')
+        data = {'name': 'roscivs'}
+        data['data'] = data  # Data all the things!
+        sdata = payload.dumps(data)
+        odata = payload.loads(sdata)
+        self.assertTrue('recursion' in odata['data'].lower())
 
 
 class SREQTestCase(TestCase):

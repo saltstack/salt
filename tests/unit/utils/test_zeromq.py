@@ -12,8 +12,6 @@ from salt._compat import ipaddress
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import salt libs
@@ -33,7 +31,6 @@ class UtilsTestCase(TestCase):
         ip_addr_obj = ipaddress.ip_address(test_ipv4)
         self.assertEqual(test_ipv4, salt.utils.zeromq.ip_bracket(ip_addr_obj))
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     @skipIf(not hasattr(zmq, 'IPC_PATH_MAX_LEN'), "ZMQ does not have max length support.")
     def test_check_ipc_length(self):
         '''

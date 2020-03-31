@@ -5,7 +5,17 @@ Display return data in YAML format
 
 This outputter defaults to printing in YAML block mode for better readability.
 
-Example output::
+CLI Example:
+
+.. code-block:: bash
+
+    salt '*' foo.bar --out=yaml
+
+Example output:
+
+CLI Example:
+
+.. code-block:: python
 
     saltmine:
       foo:
@@ -53,7 +63,7 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
                       indent=0)
     try:
         return salt.utils.yaml.safe_dump(data, **params)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         import pprint
         log.exception(
             'Exception %s encountered when trying to serialize %s',

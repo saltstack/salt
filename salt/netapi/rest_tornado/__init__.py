@@ -18,8 +18,8 @@ log = logging.getLogger(__virtualname__)
 min_tornado_version = '4.0'
 has_tornado = False
 try:
-    import tornado
-    if _StrictVersion(tornado.version) >= _StrictVersion(min_tornado_version):
+    import salt.ext.tornado
+    if _StrictVersion(salt.ext.tornado.version) >= _StrictVersion(min_tornado_version):
         has_tornado = True
     else:
         log.error('rest_tornado requires at least tornado %s', min_tornado_version)
@@ -76,7 +76,7 @@ def get_application(opts):
             (formatted_events_pattern, saltnado_websockets.FormattedEventsHandler),
         ]
 
-    application = tornado.web.Application(paths, debug=mod_opts.get('debug', False))
+    application = salt.ext.tornado.web.Application(paths, debug=mod_opts.get('debug', False))
 
     application.opts = opts
     application.mod_opts = mod_opts
@@ -115,19 +115,19 @@ def start():
             ssl_opts.update({'keyfile': mod_opts['ssl_key']})
         kwargs['ssl_options'] = ssl_opts
 
-    import tornado.httpserver
-    http_server = tornado.httpserver.HTTPServer(get_application(__opts__), **kwargs)
+    import salt.ext.tornado.httpserver
+    http_server = salt.ext.tornado.httpserver.HTTPServer(get_application(__opts__), **kwargs)
     try:
         http_server.bind(mod_opts['port'],
                          address=mod_opts.get('address'),
                          backlog=mod_opts.get('backlog', 128),
                          )
         http_server.start(mod_opts['num_processes'])
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         log.error('Rest_tornado unable to bind to port %s', mod_opts['port'], exc_info=True)
         raise SystemExit(1)
 
     try:
-        tornado.ioloop.IOLoop.current().start()
+        salt.ext.tornado.ioloop.IOLoop.current().start()
     except KeyboardInterrupt:
         raise SystemExit(0)

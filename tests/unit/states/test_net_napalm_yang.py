@@ -10,10 +10,8 @@ import salt.states.net_napalm_yang as netyang
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
+from tests.support.unit import TestCase
 from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     MagicMock,
     patch
 )
@@ -23,7 +21,6 @@ TEST_DATA = {
 }
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class NetyangTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {netyang: {}}

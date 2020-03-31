@@ -35,7 +35,7 @@ from salt.log.mixins import NewStyleClassMixIn
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import queue, range  # pylint: disable=import-error,redefined-builtin
-from tornado import gen
+from salt.ext.tornado import gen
 
 log = logging.getLogger(__name__)
 
@@ -163,7 +163,7 @@ def notify_systemd():
     Notify systemd that this process has started
     '''
     try:
-        import systemd.daemon
+        import systemd.daemon  # pylint: disable=no-name-in-module
     except ImportError:
         if salt.utils.path.which('systemd-notify') \
                 and systemd_notify_call('--booted'):
@@ -367,7 +367,7 @@ class ThreadPool(object):
                     func, args, kwargs
                 )
                 func(*args, **kwargs)
-            except Exception as err:
+            except Exception as err:  # pylint: disable=broad-except
                 log.debug(err, exc_info=True)
 
 
@@ -541,7 +541,7 @@ class ProcessManager(object):
             # OSError is raised if a signal handler is called (SIGTERM) during os.wait
             except OSError:
                 break
-            except IOError as exc:
+            except IOError as exc:  # pylint: disable=duplicate-except
                 # IOError with errno of EINTR (4) may be raised
                 # when using time.sleep() on Windows.
                 if exc.errno != errno.EINTR:

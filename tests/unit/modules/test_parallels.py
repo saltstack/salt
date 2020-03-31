@@ -10,14 +10,13 @@ from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
-from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
+from tests.support.unit import TestCase
+from tests.support.mock import MagicMock, patch
 
 # Import third party libs
 from salt.ext import six
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test parallels desktop execution module functions

@@ -9,7 +9,12 @@ import os
 import random
 import time
 
-import dateutil.parser as dateutil_parser
+try:
+    import dateutil.parser as dateutil_parser
+    HAS_DATEUTIL_PARSER = True
+except ImportError:
+    HAS_DATEUTIL_PARSER = False
+
 import datetime
 
 # Import Salt Testing libs
@@ -23,7 +28,7 @@ from tests.support.runtests import RUNTIME_VARS
 import salt.utils.schedule
 import salt.utils.platform
 
-from salt.modules.test import ping as ping
+from salt.modules.test import ping
 
 try:
     import croniter  # pylint: disable=W0611
@@ -43,6 +48,7 @@ DEFAULT_CONFIG['pki_dir'] = os.path.join(ROOT_DIR, 'pki')
 DEFAULT_CONFIG['cachedir'] = os.path.join(ROOT_DIR, 'cache')
 
 
+@skipIf(HAS_DATEUTIL_PARSER is False, 'The \'dateutil.parser\' library is not available')
 class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the pkg module
@@ -920,6 +926,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         }
         run_time1 = dateutil_parser.parse('11/29/2017 4:00pm')
         run_time2 = run_time1 + datetime.timedelta(seconds=splay)
+        run_time3 = run_time2 + datetime.timedelta(seconds=1)
 
         # Add the job to the scheduler
         self.schedule.opts.update(job)
@@ -939,6 +946,13 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
             self.schedule.eval(now=run_time2)
             ret = self.schedule.job_status(job_name)
             self.assertEqual(ret['_last_run'], run_time2)
+
+            # Evaluate at expected runtime3, should not run
+            # _next_fire_time should be None
+            self.schedule.eval(now=run_time3)
+            ret = self.schedule.job_status(job_name)
+            self.assertEqual(ret['_last_run'], run_time2)
+            self.assertEqual(ret['_next_fire_time'], None)
 
     def test_eval_when_splay_in_past(self):
         '''

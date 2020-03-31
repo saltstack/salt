@@ -7,16 +7,15 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
+from tests.support.helpers import destructiveTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import (
-    MagicMock,
-    patch,
-    NO_MOCK,
-    NO_MOCK_REASON
-)
+from tests.support.mock import MagicMock, patch
 
 # Import Salt Libs
+import salt.utils.platform
+import salt.config
+import salt.loader
 import salt.states.service as service
 
 
@@ -27,7 +26,6 @@ def func(name):
     return name
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class ServiceTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the service state
@@ -253,4 +251,72 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
                     self.assertDictEqual(service.mod_watch("salt", "running"),
                                          ret[3])
 
-        self.assertDictEqual(service.mod_watch("salt", "stack"), ret[1])
+            self.assertDictEqual(service.mod_watch("salt", "stack"), ret[1])
+
+
+@destructiveTest
+@skipIf(salt.utils.platform.is_darwin(), "service.running is currently failing on OSX")
+class ServiceTestCaseFunctional(TestCase, LoaderModuleMockMixin):
+    '''
+        Validate the service state
+    '''
+    def setup_loader_modules(self):
+        self.opts = salt.config.DEFAULT_MINION_OPTS.copy()
+        self.opts['grains'] = salt.loader.grains(self.opts)
+        self.utils = salt.loader.utils(self.opts)
+        self.modules = salt.loader.minion_mods(self.opts, utils=self.utils)
+
+        self.service_name = 'cron'
+        cmd_name = 'crontab'
+        os_family = self.opts['grains']['os_family']
+        os_release = self.opts['grains']['osrelease']
+        if os_family == 'RedHat':
+            self.service_name = 'crond'
+        elif os_family == 'Arch':
+            self.service_name = 'sshd'
+            cmd_name = 'systemctl'
+        elif os_family == 'MacOS':
+            self.service_name = 'org.ntp.ntpd'
+            if int(os_release.split('.')[1]) >= 13:
+                self.service_name = 'com.openssh.sshd'
+        elif os_family == 'Windows':
+            self.service_name = 'Spooler'
+
+        if os_family != 'Windows' and salt.utils.path.which(cmd_name) is None:
+            self.skipTest('{0} is not installed'.format(cmd_name))
+
+        return {
+            service: {
+                '__grains__': self.opts['grains'],
+                '__opts__': self.opts,
+                '__salt__': self.modules,
+                '__utils__': self.utils,
+            },
+        }
+
+    def setUp(self):
+        self.pre_srv_enabled = True if self.service_name in self.modules['service.get_enabled']() else False
+        self.post_srv_disable = False
+        if not self.pre_srv_enabled:
+            self.modules['service.enable'](self.service_name)
+            self.post_srv_disable = True
+
+    def tearDown(self):
+        if self.post_srv_disable:
+            self.modules['service.disable'](self.service_name)
+
+    def test_running_with_reload(self):
+        with patch.dict(service.__opts__, {'test': False}):
+            service.dead(self.service_name, enable=False)
+            result = service.running(name=self.service_name, enable=True, reload=False)
+
+        expected = {
+            'changes': {
+                self.service_name: True
+            },
+            'comment': 'Service {0} has been enabled, and is '
+                       'running'.format(self.service_name),
+            'name': self.service_name,
+            'result': True
+        }
+        self.assertDictEqual(result, expected)

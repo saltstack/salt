@@ -13,16 +13,15 @@ import sys
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
-from tests.support.helpers import TestsLoggingHandler, ForceImportErrorOn
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.unit import TestCase
+from tests.support.helpers import TstSuiteLoggingHandler, ForceImportErrorOn
+from tests.support.mock import MagicMock, patch
 
 # Import salt libs
 import salt.modules.virtualenv_mod as virtualenv_mod
 from salt.exceptions import CommandExecutionError
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
@@ -54,7 +53,7 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
                 python_shell=False
             )
 
-        with TestsLoggingHandler() as handler:
+        with TstSuiteLoggingHandler() as handler:
             # Let's fake a higher virtualenv version
             virtualenv_mock = MagicMock()
             virtualenv_mock.__version__ = '1.10rc1'
@@ -92,7 +91,7 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
                 python_shell=False
             )
 
-        with TestsLoggingHandler() as handler:
+        with TstSuiteLoggingHandler() as handler:
             mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
             # Let's fake a higher virtualenv version
             virtualenv_mock = MagicMock()
@@ -351,3 +350,31 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
                 runas=None,
                 python_shell=False
             )
+
+    def test_virtualenv_ver(self):
+        '''
+        test virtualenv_ver when there is no ImportError
+        '''
+        ret = virtualenv_mod.virtualenv_ver(venv_bin='pyvenv')
+        assert ret == (1, 9, 1)
+
+    def test_virtualenv_ver_importerror(self):
+        '''
+        test virtualenv_ver when there is an ImportError
+        '''
+        with ForceImportErrorOn('virtualenv'):
+            mock_ver = MagicMock(return_value={'retcode': 0, 'stdout': '1.9.1'})
+            with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock_ver}):
+                ret = virtualenv_mod.virtualenv_ver(venv_bin='pyenv')
+        assert ret == (1, 9, 1)
+
+    def test_virtualenv_ver_importerror_cmd_error(self):
+        '''
+        test virtualenv_ver when there is an ImportError
+        and virtualenv --version does not return anything
+        '''
+        with ForceImportErrorOn('virtualenv'):
+            mock_ver = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+            with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock_ver}):
+                with self.assertRaises(CommandExecutionError):
+                    virtualenv_mod.virtualenv_ver(venv_bin='pyenv')
