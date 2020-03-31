@@ -17,11 +17,13 @@ import pygit2
 import salt.fileserver.gitfs
 import salt.utils.files
 import salt.utils.gitfs
+import salt.utils.platform
 from salt.exceptions import FileserverConfigError
 # Import Salt Testing libs
 import tests.support.paths
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
+
 
 # GLOBALS
 OPTS = {'cachedir': '/tmp/gitfs-test-cache'}
@@ -99,6 +101,16 @@ class TestGitFSProvider(TestCase):
                                 **kwargs)
 
 
+try:
+    HAS_PYGIT2 = salt.utils.gitfs.PYGIT2_VERSION >= salt.utils.gitfs.PYGIT2_MINVER \
+        and salt.utils.gitfs.LIBGIT2_VERSION >= salt.utils.gitfs.LIBGIT2_MINVER
+except AttributeError:
+    HAS_PYGIT2 = False
+
+
+@skipIf(not HAS_PYGIT2, 'This host lacks proper pygit2 support')
+@skipIf(salt.utils.platform.is_windows(),
+        'Skip Pygit2 on windows, due to pygit2 access error on windows')
 class TestPygit2(TestCase):
     def _prepare_remote_repository(self, path):
         shutil.rmtree(path, ignore_errors=True)
@@ -123,7 +135,7 @@ class TestPygit2(TestCase):
         blob = repository.create_blob_fromworkdir(filename)
         builder = repository.TreeBuilder()
         builder.insert(
-            filename, blob, os.stat(os.path.join(path, filename)).st_mode)
+            filename, blob, pygit2.GIT_FILEMODE_BLOB)
         tree = builder.write()
 
         repository.index.read()
