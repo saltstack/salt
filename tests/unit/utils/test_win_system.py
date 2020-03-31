@@ -12,6 +12,7 @@ from tests.support.unit import TestCase, skipIf
 import salt.utils.platform
 import salt.utils.win_system as win_system
 
+
 @skipIf(not salt.utils.platform.is_windows(), 'Only test on Windows systems')
 class WinSystemTestCase(TestCase):
     '''
