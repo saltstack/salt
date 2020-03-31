@@ -61,6 +61,20 @@ The information which can be stored in a roster ``target`` is the following:
                      # components. Defaults to /tmp/salt-<hash>.
         cmd_umask:   # umask to enforce for the salt-call command. Should be in
                      # octal (so for 0o077 in YAML you would do 0077, or 63)
+        ssh_pre_flight: # Path to a script that will run before all other salt-ssh
+                        # commands. Will only run the first time when the thin dir
+                        # does not exist. Added in Sodium Release.
+
+.. _ssh_pre_flight:
+
+ssh_pre_flight
+--------------
+
+A Salt-SSH roster option `ssh_pre_flight` was added in the Sodium release. This enables
+you to run a script before Salt-SSH tries to run any commands. You can set this option
+in the roster for a specific minion or use the `roster_defaults` to set it for all minions.
+This script will only run if the thin dir is not currently on the minion. This means it will
+only run on the first run of salt-ssh or if you have recently wiped out your thin dir.
 
 .. _roster_defaults:
 

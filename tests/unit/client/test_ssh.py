@@ -18,12 +18,12 @@ import salt.utils.path
 import salt.utils.thin
 import salt.utils.yaml
 from salt.client import ssh
-from tests.support.case import ShellCase
-from tests.support.mock import MagicMock, patch
 
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
+from tests.support.case import ShellCase
+from tests.support.mock import MagicMock, patch, call
 
 ROSTER = """
 localhost:
@@ -113,48 +113,248 @@ class SSHRosterDefaults(TestCase):
 class SSHSingleTests(TestCase):
     def setUp(self):
         self.tmp_cachedir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+        self.argv = ['ssh.set_auth_key', 'root', 'hobn+amNAXSBTiOXEqlBjGB...rsa root@master']
+        self.opts = {
+            'argv': self.argv,
+            '__role': 'master',
+            'cachedir': self.tmp_cachedir,
+            'extension_modules': os.path.join(self.tmp_cachedir, 'extmods'),
+        }
+        self.target = {
+            'passwd': 'abc123',
+            'ssh_options': None,
+            'sudo': False,
+            'identities_only': False,
+            'host': 'login1',
+            'user': 'root',
+            'timeout': 65,
+            'remote_port_forwards': None,
+            'sudo_user': '',
+            'port': '22',
+            'priv': '/etc/salt/pki/master/ssh/salt-ssh.rsa'
+        }
 
     def test_single_opts(self):
-        """ Sanity check for ssh.Single options
-        """
-        argv = ["ssh.set_auth_key", "root", "hobn+amNAXSBTiOXEqlBjGB...rsa root@master"]
-        opts = {
-            "argv": argv,
-            "__role": "master",
-            "cachedir": self.tmp_cachedir,
-            "extension_modules": os.path.join(self.tmp_cachedir, "extmods"),
-        }
-        target = {
-            "passwd": "abc123",
-            "ssh_options": None,
-            "sudo": False,
-            "identities_only": False,
-            "host": "login1",
-            "user": "root",
-            "timeout": 65,
-            "remote_port_forwards": None,
-            "sudo_user": "",
-            "port": "22",
-            "priv": "/etc/salt/pki/master/ssh/salt-ssh.rsa",
-        }
+        ''' Sanity check for ssh.Single options
+        '''
 
         single = ssh.Single(
-            opts,
-            opts["argv"],
-            "localhost",
-            mods={},
-            fsclient=None,
-            thin=salt.utils.thin.thin_path(opts["cachedir"]),
-            mine=False,
-            **target
-        )
+                self.opts,
+                self.opts['argv'],
+                'localhost',
+                mods={},
+                fsclient=None,
+                thin=salt.utils.thin.thin_path(self.opts['cachedir']),
+                mine=False,
+                **self.target)
 
-        self.assertEqual(single.shell._ssh_opts(), "")
-        self.assertEqual(
-            single.shell._cmd_str("date +%s"),
-            "ssh login1 "
-            "-o KbdInteractiveAuthentication=no -o "
-            "PasswordAuthentication=yes -o ConnectTimeout=65 -o Port=22 "
-            "-o IdentityFile=/etc/salt/pki/master/ssh/salt-ssh.rsa "
-            "-o User=root  date +%s",
-        )
+        self.assertEqual(single.shell._ssh_opts(), '')
+        self.assertEqual(single.shell._cmd_str('date +%s'), 'ssh login1 '
+                         '-o KbdInteractiveAuthentication=no -o '
+                         'PasswordAuthentication=yes -o ConnectTimeout=65 -o Port=22 '
+                         '-o IdentityFile=/etc/salt/pki/master/ssh/salt-ssh.rsa '
+                         '-o User=root  date +%s')
+
+    def test_run_with_pre_flight(self):
+        '''
+        test Single.run() when ssh_pre_flight is set
+        and script successfully runs
+        '''
+        target = self.target.copy()
+        target['ssh_pre_flight'] = os.path.join(RUNTIME_VARS.TMP, 'script.sh')
+        single = ssh.Single(
+                self.opts,
+                self.opts['argv'],
+                'localhost',
+                mods={},
+                fsclient=None,
+                thin=salt.utils.thin.thin_path(self.opts['cachedir']),
+                mine=False,
+                **target)
+
+        cmd_ret = ('Success', '', 0)
+        mock_flight = MagicMock(return_value=cmd_ret)
+        mock_cmd = MagicMock(return_value=cmd_ret)
+        patch_flight = patch('salt.client.ssh.Single.run_ssh_pre_flight', mock_flight)
+        patch_cmd = patch('salt.client.ssh.Single.cmd_block', mock_cmd)
+        patch_os = patch('os.path.exists', side_effect=[False, True])
+
+        with patch_os, patch_flight, patch_cmd:
+            ret = single.run()
+            mock_cmd.assert_called()
+            mock_flight.assert_called()
+            assert ret == cmd_ret
+
+    def test_run_with_pre_flight_stderr(self):
+        '''
+        test Single.run() when ssh_pre_flight is set
+        and script errors when run
+        '''
+        target = self.target.copy()
+        target['ssh_pre_flight'] = os.path.join(RUNTIME_VARS.TMP, 'script.sh')
+        single = ssh.Single(
+                self.opts,
+                self.opts['argv'],
+                'localhost',
+                mods={},
+                fsclient=None,
+                thin=salt.utils.thin.thin_path(self.opts['cachedir']),
+                mine=False,
+                **target)
+
+        cmd_ret = ('', 'Error running script', 1)
+        mock_flight = MagicMock(return_value=cmd_ret)
+        mock_cmd = MagicMock(return_value=cmd_ret)
+        patch_flight = patch('salt.client.ssh.Single.run_ssh_pre_flight', mock_flight)
+        patch_cmd = patch('salt.client.ssh.Single.cmd_block', mock_cmd)
+        patch_os = patch('os.path.exists', side_effect=[False, True])
+
+        with patch_os, patch_flight, patch_cmd:
+            ret = single.run()
+            mock_cmd.assert_not_called()
+            mock_flight.assert_called()
+            assert ret == cmd_ret
+
+    def test_run_with_pre_flight_script_doesnot_exist(self):
+        '''
+        test Single.run() when ssh_pre_flight is set
+        and the script does not exist
+        '''
+        target = self.target.copy()
+        target['ssh_pre_flight'] = os.path.join(RUNTIME_VARS.TMP, 'script.sh')
+        single = ssh.Single(
+                self.opts,
+                self.opts['argv'],
+                'localhost',
+                mods={},
+                fsclient=None,
+                thin=salt.utils.thin.thin_path(self.opts['cachedir']),
+                mine=False,
+                **target)
+
+        cmd_ret = ('Success', '', 0)
+        mock_flight = MagicMock(return_value=cmd_ret)
+        mock_cmd = MagicMock(return_value=cmd_ret)
+        patch_flight = patch('salt.client.ssh.Single.run_ssh_pre_flight', mock_flight)
+        patch_cmd = patch('salt.client.ssh.Single.cmd_block', mock_cmd)
+        patch_os = patch('os.path.exists', side_effect=[False, False])
+
+        with patch_os, patch_flight, patch_cmd:
+            ret = single.run()
+            mock_cmd.assert_called()
+            mock_flight.assert_not_called()
+            assert ret == cmd_ret
+
+    def test_run_with_pre_flight_thin_dir_exists(self):
+        '''
+        test Single.run() when ssh_pre_flight is set
+        and thin_dir already exists
+        '''
+        target = self.target.copy()
+        target['ssh_pre_flight'] = os.path.join(RUNTIME_VARS.TMP, 'script.sh')
+        single = ssh.Single(
+                self.opts,
+                self.opts['argv'],
+                'localhost',
+                mods={},
+                fsclient=None,
+                thin=salt.utils.thin.thin_path(self.opts['cachedir']),
+                mine=False,
+                **target)
+
+        cmd_ret = ('', 'Error running script', 1)
+        mock_flight = MagicMock(return_value=cmd_ret)
+        mock_cmd = MagicMock(return_value=cmd_ret)
+        patch_flight = patch('salt.client.ssh.Single.run_ssh_pre_flight', mock_flight)
+        patch_cmd = patch('salt.client.ssh.Single.cmd_block', mock_cmd)
+        patch_os = patch('os.path.exists', return_value=True)
+
+        with patch_os, patch_flight, patch_cmd:
+            ret = single.run()
+            mock_cmd.assert_called()
+            mock_flight.assert_not_called()
+            assert ret == cmd_ret
+
+    def test_execute_script(self):
+        '''
+        test Single.execute_script()
+        '''
+        single = ssh.Single(
+                self.opts,
+                self.opts['argv'],
+                'localhost',
+                mods={},
+                fsclient=None,
+                thin=salt.utils.thin.thin_path(self.opts['cachedir']),
+                mine=False,
+                winrm=False,
+                **self.target)
+
+        exp_ret = ('Success', '', 0)
+        mock_cmd = MagicMock(return_value=exp_ret)
+        patch_cmd = patch('salt.client.ssh.shell.Shell.exec_cmd', mock_cmd)
+        script = os.path.join(RUNTIME_VARS.TMP, 'script.sh')
+
+        with patch_cmd:
+            ret = single.execute_script(script=script)
+            assert ret == exp_ret
+            assert mock_cmd.call_count == 2
+            assert [call("/bin/sh '{0}'".format(script)),
+                    call("rm '{0}'".format(script))] == mock_cmd.call_args_list
+
+    def test_shim_cmd(self):
+        '''
+        test Single.shim_cmd()
+        '''
+        single = ssh.Single(
+                self.opts,
+                self.opts['argv'],
+                'localhost',
+                mods={},
+                fsclient=None,
+                thin=salt.utils.thin.thin_path(self.opts['cachedir']),
+                mine=False,
+                winrm=False,
+                tty=True,
+                **self.target)
+
+        exp_ret = ('Success', '', 0)
+        mock_cmd = MagicMock(return_value=exp_ret)
+        patch_cmd = patch('salt.client.ssh.shell.Shell.exec_cmd', mock_cmd)
+        patch_rand = patch('os.urandom', return_value=b'5\xd9l\xca\xc2\xff')
+
+        with patch_cmd, patch_rand:
+            ret = single.shim_cmd(cmd_str='echo test')
+            assert ret == exp_ret
+            assert [call('mkdir -p '),
+                    call("/bin/sh '$HOME/.35d96ccac2ff.py'"),
+                    call("rm '$HOME/.35d96ccac2ff.py'")] == mock_cmd.call_args_list
+
+    def test_run_ssh_pre_flight(self):
+        '''
+        test Single.run_ssh_pre_flight
+        '''
+        target = self.target.copy()
+        target['ssh_pre_flight'] = os.path.join(RUNTIME_VARS.TMP, 'script.sh')
+        single = ssh.Single(
+                self.opts,
+                self.opts['argv'],
+                'localhost',
+                mods={},
+                fsclient=None,
+                thin=salt.utils.thin.thin_path(self.opts['cachedir']),
+                mine=False,
+                winrm=False,
+                tty=True,
+                **target)
+
+        exp_ret = ('Success', '', 0)
+        mock_cmd = MagicMock(return_value=exp_ret)
+        patch_cmd = patch('salt.client.ssh.shell.Shell.exec_cmd', mock_cmd)
+        exp_tmp = os.path.join(tempfile.gettempdir(), os.path.basename(target['ssh_pre_flight']))
+
+        with patch_cmd:
+            ret = single.run_ssh_pre_flight()
+            assert ret == exp_ret
+            assert [call("/bin/sh '{0}'".format(exp_tmp)),
+                    call("rm '{0}'".format(exp_tmp))] == mock_cmd.call_args_list
