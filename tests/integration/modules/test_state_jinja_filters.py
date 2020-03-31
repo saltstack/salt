@@ -12,4 +12,3 @@ class StateModuleJinjaFiltersTest(ModuleCase, JinjaFiltersTest):
     '''
     testing Jinja filters are available via state system
     '''
-    pass

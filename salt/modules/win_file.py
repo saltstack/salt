@@ -79,7 +79,7 @@ except ImportError:
 
 # This is to fix the pylint error: E0602: Undefined variable "WindowsError"
 try:
-    from exceptions import WindowsError
+    from exceptions import WindowsError  # pylint: disable=no-name-in-module
 except ImportError:
     class WindowsError(OSError):
         pass
@@ -1197,7 +1197,7 @@ def is_link(path):
 
     try:
         return salt.utils.path.islink(path)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         raise CommandExecutionError(exc)
 
 
@@ -1232,7 +1232,7 @@ def readlink(path):
         if exc.errno == errno.EINVAL:
             raise CommandExecutionError('{0} is not a symbolic link'.format(path))
         raise CommandExecutionError(exc.__str__())
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         raise CommandExecutionError(exc)
 
 

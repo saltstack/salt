@@ -362,7 +362,6 @@ class StateError(Exception):
     '''
     Custom exception class.
     '''
-    pass
 
 
 class Compiler(object):
@@ -773,7 +772,7 @@ class State(object):
                         renderers=getattr(self, 'rend', None),
                         opts=self.opts,
                         valid_rend=self.opts['decrypt_pillar_renderers'])
-                except Exception as exc:
+                except Exception as exc:  # pylint: disable=broad-except
                     log.error('Failed to decrypt pillar override: %s', exc)
 
             if isinstance(self._pillar_override, six.string_types):
@@ -785,7 +784,7 @@ class State(object):
                     self._pillar_override = yamlloader.load(
                         self._pillar_override,
                         Loader=yamlloader.SaltYamlSafeLoader)
-                except Exception as exc:
+                except Exception as exc:  # pylint: disable=broad-except
                     log.error('Failed to load CLI pillar override')
                     log.exception(exc)
 
@@ -870,6 +869,17 @@ class State(object):
 
         return ret
 
+    def _run_check_function(self, entry):
+        """Format slot args and run unless/onlyif function."""
+        fun = entry.pop('fun')
+        args = entry.pop('args') if 'args' in entry else []
+        cdata = {
+            'args': args,
+            'kwargs': entry
+        }
+        self.format_slots(cdata)
+        return self.functions[fun](*cdata['args'], **cdata['kwargs'])
+
     def _run_check_onlyif(self, low_data, cmd_opts):
         '''
         Check that unless doesn't return 0, and that onlyif returns a 0.
@@ -901,10 +911,7 @@ class State(object):
                     log.warning(ret['comment'])
                     return ret
 
-                if 'args' in entry:
-                    result = self.functions[entry.pop('fun')](*entry.pop('args'), **entry)
-                else:
-                    result = self.functions[entry.pop('fun')](**entry)
+                result = self._run_check_function(entry)
                 if self.state_con.get('retcode', 0):
                     _check_cmd(self.state_con['retcode'])
                 elif not result:
@@ -949,10 +956,7 @@ class State(object):
                     log.warning(ret['comment'])
                     return ret
 
-                if 'args' in entry:
-                    result = self.functions[entry.pop('fun')](*entry.pop('args'), **entry)
-                else:
-                    result = self.functions[entry.pop('fun')](**entry)
+                result = self._run_check_function(entry)
                 if self.state_con.get('retcode', 0):
                     _check_cmd(self.state_con['retcode'])
                 elif result:
@@ -1794,7 +1798,7 @@ class State(object):
         try:
             ret = self.states[cdata['full']](*cdata['args'],
                                              **cdata['kwargs'])
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.debug('An exception occurred in this state: %s', exc,
                       exc_info_on_loglevel=logging.DEBUG)
             trb = traceback.format_exc()
@@ -1978,7 +1982,7 @@ class State(object):
                 self.states.inject_globals = {}
             if 'check_cmd' in low and '{0[state]}.mod_run_check_cmd'.format(low) not in self.states:
                 ret.update(self._run_check_cmd(low))
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.debug('An exception occurred in this state: %s', exc,
                       exc_info_on_loglevel=logging.DEBUG)
             trb = traceback.format_exc()
@@ -2328,7 +2332,7 @@ class State(object):
                         else:
                             return 'run'
                         time.sleep(1)
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.error('Failed to read in pause data for file located at: %s', pause_path)
                 return 'run'
         return 'run'
@@ -3602,7 +3606,7 @@ class BaseHighState(object):
                 )
                 log.critical(msg)
                 errors.append(msg)
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 msg = 'Rendering SLS {0} failed, render error: {1}'.format(
                     sls, exc
                 )
@@ -4034,7 +4038,7 @@ class BaseHighState(object):
             ret[tag_name]['comment'] = 'Unable to render top file: '
             ret[tag_name]['comment'] += six.text_type(err.error)
             return ret
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             trb = traceback.format_exc()
             err.append(trb)
             return err

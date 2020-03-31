@@ -16,7 +16,7 @@ from tests.support.runtests import RUNTIME_VARS
 import salt.utils.schedule
 import salt.utils.platform
 
-from salt.modules.test import ping as ping
+from salt.modules.test import ping
 
 log = logging.getLogger(__name__)
 ROOT_DIR = os.path.join(RUNTIME_VARS.TMP, 'schedule-unit-tests')

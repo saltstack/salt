@@ -16,9 +16,9 @@ Function Start_Process_and_test_exitcode {
 
     Process {
         $p = Start-Process "$fun" -ArgumentList "$args" -Wait -NoNewWindow -PassThru
-        If ( $($p.ExitCode) -ne 0) {
-            Write-Error "$descr returned exitcode $($p.ExitCode). "
-            exit $($p.ExitCode)
+        If ($p.ExitCode -ne 0) {
+            Write-Error "$descr returned exitcode $p.ExitCode."
+            exit $p.ExitCode
         }
     }
 

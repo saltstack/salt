@@ -134,7 +134,7 @@ def _get_system():
 
     try:
         system.get()
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         raise CommandExecutionError('Pure Storage FlashArray authentication failed.')
     return system
 

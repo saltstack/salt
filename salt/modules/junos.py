@@ -81,14 +81,11 @@ def timeoutDecorator(function):
                 result = function(*args, **kwargs)
                 conn.timeout = restore_timeout
                 return result
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 conn.timeout = restore_timeout
                 raise
         else:
-            try:
-                return function(*args, **kwargs)
-            except Exception:
-                raise
+            return function(*args, **kwargs)
 
     return wrapper
 
@@ -110,7 +107,7 @@ def facts_refresh():
     ret['out'] = True
     try:
         conn.facts_refresh()
-    except Exception as exception:
+    except Exception as exception:  # pylint: disable=broad-except
         ret['message'] = 'Execution failed due to "{0}"'.format(exception)
         ret['out'] = False
         return ret
@@ -119,7 +116,7 @@ def facts_refresh():
 
     try:
         __salt__['saltutil.sync_grains']()
-    except Exception as exception:
+    except Exception as exception:  # pylint: disable=broad-except
         log.error('Grains could not be updated due to "%s"', exception)
     return ret
 
@@ -139,7 +136,7 @@ def facts():
     try:
         ret['facts'] = __proxy__['junos.get_serialized_facts']()
         ret['out'] = True
-    except Exception as exception:
+    except Exception as exception:  # pylint: disable=broad-except
         ret['message'] = 'Could not display facts due to "{0}"'.format(
             exception)
         ret['out'] = False
@@ -222,7 +219,7 @@ def rpc(cmd=None, dest=None, **kwargs):
                 cmd.replace('-',
                             '_'))(filter_reply,
                                   options=op)
-        except Exception as exception:
+        except Exception as exception:  # pylint: disable=broad-except
             ret['message'] = 'RPC execution failed due to "{0}"'.format(
                 exception)
             ret['out'] = False
@@ -237,7 +234,7 @@ def rpc(cmd=None, dest=None, **kwargs):
                 cmd.replace('-',
                             '_'))({'format': format_},
                                   **op)
-        except Exception as exception:
+        except Exception as exception:  # pylint: disable=broad-except
             ret['message'] = 'RPC execution failed due to "{0}"'.format(
                 exception)
             ret['out'] = False
@@ -310,7 +307,7 @@ def set_hostname(hostname=None, **kwargs):
     set_string = 'set system host-name {0}'.format(hostname)
     try:
         conn.cu.load(set_string, format='set')
-    except Exception as exception:
+    except Exception as exception:  # pylint: disable=broad-except
         ret['message'] = 'Could not load configuration due to error "{0}"'.format(
             exception)
         ret['out'] = False
@@ -318,7 +315,7 @@ def set_hostname(hostname=None, **kwargs):
 
     try:
         commit_ok = conn.cu.commit_check()
-    except Exception as exception:
+    except Exception as exception:  # pylint: disable=broad-except
         ret['message'] = 'Could not commit check due to error "{0}"'.format(
             exception)
         ret['out'] = False
@@ -329,7 +326,7 @@ def set_hostname(hostname=None, **kwargs):
             conn.cu.commit(**op)
             ret['message'] = 'Successfully changed hostname.'
             ret['out'] = True
-        except Exception as exception:
+        except Exception as exception:  # pylint: disable=broad-except
             ret['out'] = False
             ret['message'] = 'Successfully loaded host-name but commit failed with "{0}"'.format(
                 exception)
@@ -398,7 +395,7 @@ def commit(**kwargs):
 
     try:
         commit_ok = conn.cu.commit_check()
-    except Exception as exception:
+    except Exception as exception:  # pylint: disable=broad-except
         ret['message'] = 'Could not perform commit check due to "{0}"'.format(
             exception)
         ret['out'] = False
@@ -416,7 +413,7 @@ def commit(**kwargs):
             else:
                 ret['message'] = 'Commit failed.'
                 ret['out'] = False
-        except Exception as exception:
+        except Exception as exception:  # pylint: disable=broad-except
             ret['out'] = False
             ret['message'] = \
                 'Commit check succeeded but actual commit failed with "{0}"' \
@@ -474,7 +471,7 @@ def rollback(**kwargs):
 
     try:
         ret['out'] = conn.cu.rollback(id_)
-    except Exception as exception:
+    except Exception as exception:  # pylint: disable=broad-except
         ret['message'] = 'Rollback failed due to "{0}"'.format(exception)
         ret['out'] = False
         return ret
@@ -497,7 +494,7 @@ def rollback(**kwargs):
 
     try:
         commit_ok = conn.cu.commit_check()
-    except Exception as exception:
+    except Exception as exception:  # pylint: disable=broad-except
         ret['message'] = 'Could not commit check due to "{0}"'.format(
             exception)
         ret['out'] = False
@@ -507,7 +504,7 @@ def rollback(**kwargs):
         try:
             conn.cu.commit(**op)
             ret['out'] = True
-        except Exception as exception:
+        except Exception as exception:  # pylint: disable=broad-except
             ret['out'] = False
             ret['message'] = \
                 'Rollback successful but commit failed with error "{0}"'\
@@ -542,7 +539,7 @@ def diff(**kwargs):
     ret['out'] = True
     try:
         ret['message'] = conn.cu.diff(rb_id=id_)
-    except Exception as exception:
+    except Exception as exception:  # pylint: disable=broad-except
         ret['message'] = 'Could not get diff with error "{0}"'.format(
             exception)
         ret['out'] = False
@@ -607,7 +604,7 @@ def ping(dest_ip=None, **kwargs):
     ret['out'] = True
     try:
         ret['message'] = jxmlease.parse(etree.tostring(conn.rpc.ping(**op)))
-    except Exception as exception:
+    except Exception as exception:  # pylint: disable=broad-except
         ret['message'] = 'Execution failed due to "{0}"'.format(exception)
         ret['out'] = False
     return ret
@@ -663,7 +660,7 @@ def cli(command=None, **kwargs):
 
     try:
         result = conn.cli(command, format_, warning=False)
-    except Exception as exception:
+    except Exception as exception:  # pylint: disable=broad-except
         ret['message'] = 'Execution failed due to "{0}"'.format(exception)
         ret['out'] = False
         return ret
@@ -750,7 +747,7 @@ def shutdown(**kwargs):
             shut()
         ret['message'] = 'Successfully powered off/rebooted.'
         ret['out'] = True
-    except Exception as exception:
+    except Exception as exception:  # pylint: disable=broad-except
         ret['message'] = \
             'Could not poweroff/reboot beacause "{0}"'.format(exception)
         ret['out'] = False
@@ -901,7 +898,7 @@ def install_config(path=None, **kwargs):
         try:
             cu.load(**op)
 
-        except Exception as exception:
+        except Exception as exception:  # pylint: disable=broad-except
             ret['message'] = 'Could not load configuration due to : "{0}"'.format(
                 exception)
             ret['format'] = op['format']
@@ -925,7 +922,7 @@ def install_config(path=None, **kwargs):
 
         try:
             check = cu.commit_check()
-        except Exception as exception:
+        except Exception as exception:  # pylint: disable=broad-except
             ret['message'] = \
                 'Commit check threw the following exception: "{0}"'\
                 .format(exception)
@@ -937,7 +934,7 @@ def install_config(path=None, **kwargs):
             try:
                 cu.commit(**commit_params)
                 ret['message'] = 'Successfully loaded and committed!'
-            except Exception as exception:
+            except Exception as exception:  # pylint: disable=broad-except
                 ret['message'] = \
                     'Commit check successful but commit failed with "{0}"'\
                     .format(exception)
@@ -956,7 +953,7 @@ def install_config(path=None, **kwargs):
             if write_diff and config_diff is not None:
                 with salt.utils.files.fopen(write_diff, 'w') as fp:
                     fp.write(salt.utils.stringutils.to_str(config_diff))
-        except Exception as exception:
+        except Exception as exception:  # pylint: disable=broad-except
             ret['message'] = 'Could not write into diffs_file due to: "{0}"'.format(
                 exception)
             ret['out'] = False
@@ -980,7 +977,7 @@ def zeroize():
     try:
         conn.cli('request system zeroize')
         ret['message'] = 'Completed zeroize and rebooted'
-    except Exception as exception:
+    except Exception as exception:  # pylint: disable=broad-except
         ret['message'] = 'Could not zeroize due to : "{0}"'.format(exception)
         ret['out'] = False
 
@@ -1079,7 +1076,7 @@ def install_os(path=None, **kwargs):
     try:
         conn.sw.install(path, progress=True, **op)
         ret['message'] = 'Installed the os.'
-    except Exception as exception:
+    except Exception as exception:  # pylint: disable=broad-except
         ret['message'] = 'Installation failed due to: "{0}"'.format(exception)
         ret['out'] = False
         return ret
@@ -1090,7 +1087,7 @@ def install_os(path=None, **kwargs):
     if 'reboot' in op and op['reboot'] is True:
         try:
             conn.sw.reboot()
-        except Exception as exception:
+        except Exception as exception:  # pylint: disable=broad-except
             ret['message'] = \
                 'Installation successful but reboot failed due to : "{0}"' \
                 .format(exception)
@@ -1141,7 +1138,7 @@ def file_copy(src=None, dest=None):
             scp.put(src, dest)
         ret['message'] = 'Successfully copied file from {0} to {1}'.format(
             src, dest)
-    except Exception as exception:
+    except Exception as exception:  # pylint: disable=broad-except
         ret['message'] = 'Could not copy file : "{0}"'.format(exception)
         ret['out'] = False
     return ret
@@ -1316,7 +1313,7 @@ def load(path=None, **kwargs):
     try:
         conn.cu.load(**op)
         ret['message'] = "Successfully loaded the configuration."
-    except Exception as exception:
+    except Exception as exception:  # pylint: disable=broad-except
         ret['message'] = 'Could not load configuration due to : "{0}"'.format(
             exception)
         ret['format'] = op['format']
@@ -1344,7 +1341,7 @@ def commit_check():
     try:
         conn.cu.commit_check()
         ret['message'] = 'Commit check succeeded.'
-    except Exception as exception:
+    except Exception as exception:  # pylint: disable=broad-except
         ret['message'] = 'Commit check failed with {0}'.format(exception)
         ret['out'] = False
 

@@ -51,9 +51,7 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
                 sort_keys = True
 
             elif isinstance(indent, six.integer_types):
-                if indent >= 0:
-                    indent = indent
-                else:
+                if indent < 0:
                     indent = None
 
             dump_opts['indent'] = indent

@@ -31,7 +31,7 @@ Advanced Usage:
 Instead of a table name, it is possible to provide custom SQL statements to
 create the table(s) and get and set values.
 
-.. code-block: yaml
+.. code-block:: yaml
 
     myadvanced
       driver: sqlite3
@@ -124,7 +124,7 @@ def set_(key, value, profile=None):
         return False
     conn, cur, table = _connect(profile)
     if six.PY2:
-        value = buffer(salt.utils.msgpack.packb(value))
+        value = buffer(salt.utils.msgpack.packb(value))  # pylint: disable=undefined-variable
     else:
         value = memoryview(salt.utils.msgpack.packb(value))
     q = profile.get('set_query', ('INSERT OR REPLACE INTO {0} VALUES '

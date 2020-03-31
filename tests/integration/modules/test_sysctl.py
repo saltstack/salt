@@ -30,7 +30,7 @@ class SysctlModuleTest(ModuleCase):
     def test_show_freebsd(self):
         ret = self.run_function('sysctl.show')
         self.assertIn('vm.vmtotal', ret, 'Multiline variable absent')
-        self.assertGreater(ret.get('vm.vmtotal').splitlines(),
+        self.assertGreater(len(ret.get('vm.vmtotal').splitlines()),
                            1,
                            'Multiline value was parsed wrong')
 

@@ -1,14 +1,12 @@
 -r req_win.txt
-backports-abc==0.5
+backports-abc==0.5; python_version < '3.0'
 backports.ssl-match-hostname==3.7.0.1
 certifi
 cffi==1.12.2
 CherryPy==17.4.1
 cryptography==2.6.1
-enum34==1.1.6
-futures==3.2.0 ; python_version < "3.0"
-gitdb==0.6.4
-GitPython==2.1.10
+enum34==1.1.6; python_version < '3.4'
+futures==3.2.0; python_version < "3.0"
 idna==2.8
 ioloop==0.1a0
 ipaddress==1.0.22
@@ -23,6 +21,7 @@ pyasn1==0.4.5
 pycparser==2.19
 pycryptodomex==3.8.1
 pycurl==7.43.0.2
+pymssql==2.1.4
 PyMySQL==0.9.3
 pyopenssl==19.0.0
 python-dateutil==2.8.0
@@ -32,9 +31,12 @@ pyyaml==5.1.2
 pyzmq==18.0.1
 requests==2.21.0
 setproctitle
-singledispatch==3.4.0.3
-smmap==0.9.0
+singledispatch==3.4.0.3; python_version < '3.4'
 timelib==0.2.4
-tornado==4.5.3
 watchdog==0.9.0
 wheel==0.33.4
+
+# GitPython
+GitPython==2.1.10
+gitdb2==2.0.5             # via gitpython
+smmap2==2.0.5             # via gitdb2

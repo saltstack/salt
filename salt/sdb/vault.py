@@ -73,7 +73,7 @@ def set_(key, value, profile=None):
         if response.status_code != 204:
             response.raise_for_status()
         return True
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         log.error('Failed to write secret! %s: %s', type(e).__name__, e)
         raise salt.exceptions.CommandExecutionError(e)
 
@@ -95,6 +95,6 @@ def get(key, profile=None):
         data = response.json()['data']
 
         return data[key]
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         log.error('Failed to read secret! %s: %s', type(e).__name__, e)
         raise salt.exceptions.CommandExecutionError(e)

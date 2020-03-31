@@ -379,7 +379,7 @@ class TestMsgpack(TestCase):
         '''
         try:
             test(*args, **kwargs)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             return e
 
     def test_binary_function_compatibility(self):

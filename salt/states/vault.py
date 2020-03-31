@@ -52,7 +52,7 @@ def policy_present(name, rules):
             return _create_new_policy(name, rules)
         else:
             response.raise_for_status()
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         return {
             'name': name,
             'changes': {},

@@ -43,9 +43,11 @@ import logging
 
 # Import third party libs
 try:
+    # pylint: disable=no-name-in-module
     import confidant.client
     import confidant.formatter
     HAS_LIBS = True
+    # pylint: enable=no-name-in-module
 except ImportError:
     HAS_LIBS = False
 

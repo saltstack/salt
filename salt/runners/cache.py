@@ -80,7 +80,8 @@ def pillar(tgt=None, tgt_type='glob', **kwargs):
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
         releases must use ``expr_form``.
 
-    Return cached pillars of the targeted minions
+    Return cached pillars of the targeted minions if tgt is set.
+    If tgt is not set will return cached pillars for all minions.
 
     CLI Example:
 

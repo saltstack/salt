@@ -327,7 +327,7 @@ def beacon(config):
         log.debug(fun_cfg)
         try:
             fun_cmp_result = _compare(fun_cfg, fun_ret_out)
-        except Exception as err:
+        except Exception as err:  # pylint: disable=broad-except
             log.error(err, exc_info=True)
             # catch any exception and continue
             # to not jeopardise the execution of the next function in the list
