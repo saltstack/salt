@@ -181,7 +181,8 @@ class IPCMessagePubSubCase(tornado.testing.AsyncTestCase):
     '''
     def setUp(self):
         super(IPCMessagePubSubCase, self).setUp()
-        self.opts = {'ipc_write_buffer': 0}
+        self.opts = {'ipc_write_buffer': 0,
+                     'ipc_so_backlog': 128}
         self.socket_path = os.path.join(TMP, 'ipc_test.ipc')
         self.pub_channel = self._get_pub_channel()
         self.sub_channel = self._get_sub_channel()
