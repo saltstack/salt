@@ -2238,19 +2238,19 @@ class Minion(MinionBase):
         persist = data.get('persist', None)
 
         funcs = {'delete': ('delete_job', (name, persist)),
-                 'add': 'add_job', (schedule, persist)),
-                 'modify': 'modify_job', (name, schedule, persist)),
-                 'enable': 'enable_schedule', (persist)),
-                 'disable': 'disable_schedule', (persist)),
-                 'enable_job': 'enable_job', (name, persist)),
-                 'run_job': 'run_job', (name)),
-                 'disable_job': 'disable_job', (name, persist)),
-                 'postpone_job': 'postpone_job', (name, data)),
-                 'skip_job': 'skip_job', (name, data)),
-                 'reload': 'reload', (schedule)),
-                 'list': 'list', (where)),
-                 'save_schedule': 'save_schedule', ()),
-                 'get_next_fire_time': 'get_next_fire_time', (name))}
+                 'add': ('add_job', (schedule, persist)),
+                 'modify': ('modify_job', (name, schedule, persist)),
+                 'enable': ('enable_schedule', (persist)),
+                 'disable': ('disable_schedule', (persist)),
+                 'enable_job': ('enable_job', (name, persist)),
+                 'run_job': ('run_job', (name)),
+                 'disable_job': ('disable_job', (name, persist)),
+                 'postpone_job': ('postpone_job', (name, data)),
+                 'skip_job': ('skip_job', (name, data)),
+                 'reload': ('reload', (schedule)),
+                 'list': ('list', (where)),
+                 'save_schedule': ('save_schedule', ()),
+                 'get_next_fire_time': ('get_next_fire_time', (name))}
 
         # Call the appropriate schedule function
         try:
@@ -2274,16 +2274,16 @@ class Minion(MinionBase):
         include_opts = data.get('include_opts', None)
 
         funcs = {'add': ('add_beacon', (name, beacon_data)),
-                 'modify': 'modify_beacon', (name, beacon_data)),
-                 'delete': 'delete_beacon', (name)),
-                 'enable': 'enable_beacons', ()),
-                 'disable': 'disable_beacons', ()),
-                 'enable_beacon': 'enable_beacon', (name)),
-                 'disable_beacon': 'disable_beacon', (name)),
-                 'list': 'list_beacons', (include_opts, include_pillar)),
-                 'list_available': 'list_available_beacons', ()),
-                 'validate_beacon': 'validate_beacon', (name, beacon_data)),
-                 'reset': 'reset', ())}
+                 'modify': ('modify_beacon', (name, beacon_data)),
+                 'delete': ('delete_beacon', (name)),
+                 'enable': ('enable_beacons', ()),
+                 'disable': ('disable_beacons', ()),
+                 'enable_beacon': ('enable_beacon', (name)),
+                 'disable_beacon': ('disable_beacon', (name)),
+                 'list': ('list_beacons', (include_opts, include_pillar)),
+                 'list_available': ('list_available_beacons', ()),
+                 'validate_beacon': ('validate_beacon', (name, beacon_data)),
+                 'reset': ('reset', ())}
 
         # Call the appropriate beacon function
         try:
