@@ -216,9 +216,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         """
             Test to reboot the system
         """
-        with patch(
-            "salt.modules.win_system.shutdown", MagicMock(return_value=True)
-        ) as shutdown:
+        with patch("salt.modules.win_system.shutdown", MagicMock(return_value=True)):
             self.assertEqual(win_system.reboot(), True)
 
     @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
@@ -288,19 +286,15 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         with patch(
             "salt.modules.win_system.windll.kernel32.SetComputerNameExW",
             MagicMock(return_value=True),
+        ), patch.object(
+            win_system, "get_computer_name", MagicMock(return_value="salt")
+        ), patch.object(
+            win_system, "get_pending_computer_name", MagicMock(return_value="salt_new"),
         ):
-            with patch.object(
-                win_system, "get_computer_name", MagicMock(return_value="salt")
-            ):
-                with patch.object(
-                    win_system,
-                    "get_pending_computer_name",
-                    MagicMock(return_value="salt_new"),
-                ):
-                    self.assertDictEqual(
-                        win_system.set_computer_name("salt_new"),
-                        {"Computer Name": {"Current": "salt", "Pending": "salt_new"}},
-                    )
+            self.assertDictEqual(
+                win_system.set_computer_name("salt_new"),
+                {"Computer Name": {"Current": "salt", "Pending": "salt_new"}},
+            )
         # Test set_computer_name failure
         with patch(
             "salt.modules.win_system.windll.kernel32.SetComputerNameExW",
@@ -470,24 +464,33 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         """
             Test to join a computer to an Active Directory domain
         """
-        with patch("salt.modules.win_system._join_domain", MagicMock(return_value=0)):
-            with patch(
-                "salt.modules.win_system.get_domain_workgroup",
-                MagicMock(return_value={"Workgroup": "Workgroup"}),
-            ):
-                self.assertDictEqual(
-                    win_system.join_domain("saltstack", "salt", "salt@123"),
-                    {"Domain": "saltstack", "Restart": False},
-                )
+        with patch(
+            "salt.modules.win_system._join_domain", MagicMock(return_value=0)
+        ), patch(
+            "salt.modules.win_system.get_domain_workgroup",
+            MagicMock(return_value={"Workgroup": "Workgroup"}),
+        ):
+            self.assertDictEqual(
+                win_system.join_domain("saltstack", "salt", "salt@123"),
+                {"Domain": "saltstack", "Restart": False},
+            )
 
-            with patch(
-                "salt.modules.win_system.get_domain_workgroup",
-                MagicMock(return_value={"Domain": "saltstack"}),
-            ):
-                self.assertEqual(
-                    win_system.join_domain("saltstack", "salt", "salt@123"),
-                    "Already joined to saltstack",
-                )
+    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    def test_join_domain_already_joined(self):
+        """
+            Test to join a computer to an Active Directory domain when it is
+            already joined
+        """
+        with patch(
+            "salt.modules.win_system._join_domain", MagicMock(return_value=0)
+        ), patch(
+            "salt.modules.win_system.get_domain_workgroup",
+            MagicMock(return_value={"Domain": "saltstack"}),
+        ):
+            self.assertEqual(
+                win_system.join_domain("saltstack", "salt", "salt@123"),
+                "Already joined to saltstack",
+            )
 
     def test_get_system_time(self):
         """
