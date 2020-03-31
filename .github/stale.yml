@@ -36,4 +36,3 @@ closeComment: false
 
 # Limit to only `issues` or `pulls`
 only: issues
-
