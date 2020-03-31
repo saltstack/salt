@@ -11,8 +11,6 @@ import os
 import shutil
 from time import time
 
-import pygit2
-
 # Import salt libs
 import salt.fileserver.gitfs
 import salt.utils.files
@@ -23,6 +21,18 @@ from salt.exceptions import FileserverConfigError
 import tests.support.paths
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
+
+
+
+try:
+    HAS_PYGIT2 = salt.utils.gitfs.PYGIT2_VERSION >= salt.utils.gitfs.PYGIT2_MINVER \
+        and salt.utils.gitfs.LIBGIT2_VERSION >= salt.utils.gitfs.LIBGIT2_MINVER
+except AttributeError:
+    HAS_PYGIT2 = False
+
+
+if HAS_PYGIT2:
+    import pygit2
 
 
 # GLOBALS
@@ -99,13 +109,6 @@ class TestGitFSProvider(TestCase):
                                 role_class,
                                 *args,
                                 **kwargs)
-
-
-try:
-    HAS_PYGIT2 = salt.utils.gitfs.PYGIT2_VERSION >= salt.utils.gitfs.PYGIT2_MINVER \
-        and salt.utils.gitfs.LIBGIT2_VERSION >= salt.utils.gitfs.LIBGIT2_MINVER
-except AttributeError:
-    HAS_PYGIT2 = False
 
 
 @skipIf(not HAS_PYGIT2, 'This host lacks proper pygit2 support')
