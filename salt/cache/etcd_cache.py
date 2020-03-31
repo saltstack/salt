@@ -133,8 +133,8 @@ def _cache_update(bank):
             data = client.read(etcd_key, recursive=True)
             cache = {'last_update': datetime.datetime.now()}
             cache['data'] = {}
-            for leave in data.leaves:
-                cache['data'][leave.key] = leave.value
+            for leaf in data.leaves:
+                cache['data'][leaf.key] = leaf.value
         except Exception as exc:
             raise SaltCacheError(
                 'There was an error caching the key, {0}: {1}'.format(
