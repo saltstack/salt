@@ -1,11 +1,5 @@
-{% if grains['kernel'] == 'Windows' %}
-  {% set TMP = "C:\\Windows\\Temp\\" %}
-{% else %}
-  {% set TMP = "/tmp/" %}
-{% endif %}
-
 {% set file = salt['pillar.get']('pillardoesnotexist', 'defaultvalue') %}
 
 create_file:
   file.managed:
-    - name: {{ TMP }}filepillar-{{ file }}
+    - name: {{ salt['runtests_helpers.get_salt_temp_dir_for_path']('filepillar-' + file) }}

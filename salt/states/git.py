@@ -1742,7 +1742,7 @@ def latest(name,
             except CommandExecutionError:
                 new_rev = None
 
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.error(
                 'Unexpected exception in git.latest state',
                 exc_info=True
@@ -2041,7 +2041,7 @@ def latest(name,
             except CommandExecutionError:
                 new_rev = None
 
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.error(
                 'Unexpected exception in git.latest state',
                 exc_info=True
@@ -2594,7 +2594,7 @@ def detached(name,
                                   output_encoding=output_encoding)
             comments.append('{0} cloned to {1}'.format(name, target))
 
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.error(
                 'Unexpected exception in git.detached state',
                 exc_info=True
@@ -2850,7 +2850,7 @@ def cloned(name,
                                    user=user,
                                    password=password,
                                    output_encoding=output_encoding)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             ret['comment'] = six.text_type(exc)
             return ret
         else:
@@ -3467,7 +3467,7 @@ def mod_run_check(cmd_kwargs, onlyif, unless):
                 if __salt__['cmd.retcode'](command, **cmd_kwargs) == 0:
                     # Command exited with a zero retcode
                     continue
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.exception(
                     'The following onlyif command raised an error: %s',
                     command
@@ -3494,7 +3494,7 @@ def mod_run_check(cmd_kwargs, onlyif, unless):
                 if __salt__['cmd.retcode'](command, **cmd_kwargs) != 0:
                     # Command exited with a non-zero retcode
                     break
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.exception(
                     'The following unless command raised an error: %s',
                     command

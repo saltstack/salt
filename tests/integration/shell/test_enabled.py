@@ -7,15 +7,12 @@ import textwrap
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.paths import FILES
 from tests.support.unit import skipIf
+from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt Libs
 import salt.utils.platform
 import salt.utils.files
-
-
-STATE_DIR = os.path.join(FILES, 'file', 'base')
 
 
 class EnabledTest(ModuleCase):
@@ -57,7 +54,7 @@ class EnabledTest(ModuleCase):
         '''
         state_name = 'template_shell_enabled'
         state_filename = state_name + '.sls'
-        state_file = os.path.join(STATE_DIR, state_filename)
+        state_file = os.path.join(RUNTIME_VARS.BASE_FILES, state_filename)
 
         enabled_ret = '3 saltines'  # the result of running self.cmd in a shell
         ret_key = 'test_|-shell_enabled_|-{0}_|-configurable_test_state'.format(enabled_ret)
@@ -85,7 +82,7 @@ class EnabledTest(ModuleCase):
         '''
         state_name = 'template_shell_disabled'
         state_filename = state_name + '.sls'
-        state_file = os.path.join(STATE_DIR, state_filename)
+        state_file = os.path.join(RUNTIME_VARS.BASE_FILES, state_filename)
 
         # the result of running self.cmd not in a shell
         disabled_ret = ('first second third | wc -l ; export SALTY_VARIABLE=saltines '

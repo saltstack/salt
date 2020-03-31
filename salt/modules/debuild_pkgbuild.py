@@ -253,7 +253,7 @@ def _create_pbuilders(env, runas='root'):
             idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies>`.
 
     runas : root
-        .. versionadded:: fluorine
+        .. versionadded:: 2019.2.1
 
         User to create the files and directories
 
@@ -364,7 +364,7 @@ def make_src_pkg(dest_dir, spec, sources, env=None, saltenv='base', runas='root'
 
 
     runas : root
-        .. versionadded:: fluorine
+        .. versionadded:: 2019.2.1
 
         User to create the files and directories
 
@@ -513,7 +513,7 @@ def build(runas,
     dsc_dir = tempfile.mkdtemp()
     try:
         dscs = make_src_pkg(dsc_dir, spec, sources, env, saltenv, runas)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         shutil.rmtree(dsc_dir)
         log.error('Failed to make src package, exception \'{0}\''.format(exc))
         return ret
@@ -575,7 +575,7 @@ def build(runas,
                         shutil.copy(full, bdist)
                         ret.setdefault('Packages', []).append(bdist)
 
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.error('Error building from \'{0}\', execption \'{1}\''.format(dsc, exc))
 
     # remove any Packages file created for local dependency processing
@@ -698,7 +698,7 @@ def make_repo(repodir,
     with salt.utils.files.fopen(repoconfopts, 'w') as fow:
         fow.write(salt.utils.stringutils.to_str(repocfg_opts))
 
-    cmd = 'chown {0}:{1} -R {2}'.format(runas, runas, repoconf)
+    cmd = 'chown {0}:{0} -R {1}'.format(runas, repoconf)
     retrc = __salt__['cmd.retcode'](cmd, runas='root')
     if retrc != 0:
         raise SaltInvocationError(

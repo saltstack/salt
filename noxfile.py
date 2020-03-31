@@ -5,6 +5,7 @@ noxfile
 
 Nox configuration script
 '''
+# pylint: disable=resource-leakage
 
 # Import Python libs
 from __future__ import absolute_import, unicode_literals, print_function
@@ -53,6 +54,9 @@ RUNTESTS_LOGFILE = os.path.join(
     'artifacts', 'logs',
     'runtests-{}.log'.format(datetime.datetime.now().strftime('%Y%m%d%H%M%S.%f'))
 )
+
+# Prevent Python from writing bytecode
+os.environ[str('PYTHONDONTWRITEBYTECODE')] = str('1')
 
 
 def _create_ci_directories():
@@ -147,10 +151,16 @@ def _install_system_packages(session):
             '/usr/lib/python{py_version}/dist-packages/*apt*'
         ]
     }
-    for key in ('ubuntu-14.04', 'ubuntu-16.04', 'ubuntu-18.04', 'debian-8', 'debian-9'):
-        system_python_packages[key] = system_python_packages['__debian_based_distros__']
 
     distro = _get_distro_info(session)
+    if not distro['id'].startswith(('debian', 'ubuntu')):
+        # This only applies to debian based distributions
+        return
+
+    system_python_packages['{id}-{version}'.format(**distro)] = \
+            system_python_packages['{id}-{version_parts[major]}'.format(**distro)] = \
+            system_python_packages['__debian_based_distros__'][:]
+
     distro_keys = [
         '{id}'.format(**distro),
         '{id}-{version}'.format(**distro),
@@ -292,6 +302,7 @@ def _install_requirements(session, transport, *extra_requirements):
         requirements_files = [
             os.path.join('pkg', 'osx', 'req.txt'),
             os.path.join('pkg', 'osx', 'req_ext.txt'),
+            os.path.join('pkg', 'osx', 'req_pyobjc.txt'),
             os.path.join('requirements', 'static', 'darwin.in')
         ]
 
@@ -339,7 +350,7 @@ def _install_requirements(session, transport, *extra_requirements):
 
 
 def _run_with_coverage(session, *test_cmd):
-    session.install('--progress-bar=off', 'coverage==4.5.3', silent=PIP_INSTALL_SILENT)
+    session.install('--progress-bar=off', 'coverage==5.0.1', silent=PIP_INSTALL_SILENT)
     session.run('coverage', 'erase')
     python_path_env_var = os.environ.get('PYTHONPATH') or None
     if python_path_env_var is None:
@@ -350,19 +361,23 @@ def _run_with_coverage(session, *test_cmd):
             python_path_entries.remove(SITECUSTOMIZE_DIR)
         python_path_entries.insert(0, SITECUSTOMIZE_DIR)
         python_path_env_var = os.pathsep.join(python_path_entries)
+
+    env = {
+        # The updated python path so that sitecustomize is importable
+        'PYTHONPATH': python_path_env_var,
+        # The full path to the .coverage data file. Makes sure we always write
+        # them to the same directory
+        'COVERAGE_FILE': os.path.abspath(os.path.join(REPO_ROOT, '.coverage')),
+        # Instruct sub processes to also run under coverage
+        'COVERAGE_PROCESS_START': os.path.join(REPO_ROOT, '.coveragerc')
+    }
+    if IS_DARWIN:
+        # Don't nuke our multiprocessing efforts objc!
+        # https://stackoverflow.com/questions/50168647/multiprocessing-causes-python-to-crash-and-gives-an-error-may-have-been-in-progr
+        env['OBJC_DISABLE_INITIALIZE_FORK_SAFETY'] = 'YES'
+
     try:
-        session.run(
-            *test_cmd,
-            env={
-                # The updated python path so that sitecustomize is importable
-                'PYTHONPATH': python_path_env_var,
-                # The full path to the .coverage data file. Makes sure we always write
-                # them to the same directory
-                'COVERAGE_FILE': os.path.abspath(os.path.join(REPO_ROOT, '.coverage')),
-                # Instruct sub processes to also run under coverage
-                'COVERAGE_PROCESS_START': os.path.join(REPO_ROOT, '.coveragerc')
-            }
-        )
+        session.run(*test_cmd, env=env)
     finally:
         # Always combine and generate the XML coverage report
         try:
@@ -394,8 +409,14 @@ def _runtests(session, coverage, cmd_args):
         if coverage is True:
             _run_with_coverage(session, 'coverage', 'run', os.path.join('tests', 'runtests.py'), *cmd_args)
         else:
-            session.run('python', os.path.join('tests', 'runtests.py'), *cmd_args)
-    except CommandFailed:
+            cmd_args = ['python', os.path.join('tests', 'runtests.py')] + list(cmd_args)
+            env = None
+            if IS_DARWIN:
+                # Don't nuke our multiprocessing efforts objc!
+                # https://stackoverflow.com/questions/50168647/multiprocessing-causes-python-to-crash-and-gives-an-error-may-have-been-in-progr
+                env = {'OBJC_DISABLE_INITIALIZE_FORK_SAFETY': 'YES'}
+            session.run(*cmd_args, env=env)
+    except CommandFailed:  # pylint: disable=try-except-raise
         # Disabling re-running failed tests for the time being
         raise
 
@@ -455,7 +476,7 @@ def _runtests(session, coverage, cmd_args):
 @nox.parametrize('crypto', [None, 'm2crypto', 'pycryptodomex'])
 def runtests_parametrized(session, coverage, transport, crypto):
     # Install requirements
-    _install_requirements(session, transport, 'unittest-xml-reporting==2.2.1')
+    _install_requirements(session, transport, 'unittest-xml-reporting==2.5.2')
 
     if crypto:
         if crypto == 'm2crypto':
@@ -845,22 +866,55 @@ def _pytest(session, coverage, cmd_args):
     # Create required artifacts directories
     _create_ci_directories()
 
+    env = None
+    if IS_DARWIN:
+        # Don't nuke our multiprocessing efforts objc!
+        # https://stackoverflow.com/questions/50168647/multiprocessing-causes-python-to-crash-and-gives-an-error-may-have-been-in-progr
+        env = {'OBJC_DISABLE_INITIALIZE_FORK_SAFETY': 'YES'}
+
     try:
         if coverage is True:
             _run_with_coverage(session, 'coverage', 'run', '-m', 'py.test', *cmd_args)
         else:
-            session.run('py.test', *cmd_args)
-    except CommandFailed:
+            session.run('py.test', *cmd_args, env=env)
+    except CommandFailed:  # pylint: disable=try-except-raise
+        # Not rerunning failed tests for now
+        raise
+
+        # pylint: disable=unreachable
         # Re-run failed tests
         session.log('Re-running failed tests')
+
+        for idx, parg in enumerate(cmd_args):
+            if parg.startswith('--junitxml='):
+                cmd_args[idx] = parg.replace('.xml', '-rerun-failed.xml')
         cmd_args.append('--lf')
         if coverage is True:
             _run_with_coverage(session, 'coverage', 'run', '-m', 'py.test', *cmd_args)
         else:
-            session.run('py.test', *cmd_args)
+            session.run('py.test', *cmd_args, env=env)
+        # pylint: enable=unreachable
 
 
-def _lint(session, rcfile, flags, paths):
+class Tee:
+    '''
+    Python class to mimic linux tee behaviour
+    '''
+    def __init__(self, first, second):
+        self._first = first
+        self._second = second
+
+    def write(self, b):
+        wrote = self._first.write(b)
+        self._first.flush()
+        self._second.write(b)
+        self._second.flush()
+
+    def fileno(self):
+        return self._first.fileno()
+
+
+def _lint(session, rcfile, flags, paths, tee_output=True):
     _install_requirements(session, 'zeromq')
     requirements_file = 'requirements/static/lint.in'
     distro_constraints = [
@@ -874,40 +928,82 @@ def _lint(session, rcfile, flags, paths):
             '--constraint', distro_constraint
         ])
     session.install(*install_command, silent=PIP_INSTALL_SILENT)
-    session.run('pylint', '--version')
-    pylint_report_path = os.environ.get('PYLINT_REPORT')
+
+    if tee_output:
+        session.run('pylint', '--version')
+        pylint_report_path = os.environ.get('PYLINT_REPORT')
 
     cmd_args = [
         'pylint',
         '--rcfile={}'.format(rcfile)
     ] + list(flags) + list(paths)
 
-    stdout = tempfile.TemporaryFile(mode='w+b')
+    cmd_kwargs = {
+        'env': {'PYTHONUNBUFFERED': '1'}
+    }
+
+    if tee_output:
+        stdout = tempfile.TemporaryFile(mode='w+b')
+        cmd_kwargs['stdout'] = Tee(stdout, sys.__stdout__)
+
     lint_failed = False
     try:
-        session.run(*cmd_args, stdout=stdout)
+        session.run(*cmd_args, **cmd_kwargs)
     except CommandFailed:
         lint_failed = True
         raise
     finally:
-        stdout.seek(0)
-        contents = stdout.read()
-        if contents:
-            if IS_PY3:
-                contents = contents.decode('utf-8')
-            else:
-                contents = contents.encode('utf-8')
-            sys.stdout.write(contents)
-            sys.stdout.flush()
-            if pylint_report_path:
-                # Write report
-                with open(pylint_report_path, 'w') as wfh:
-                    wfh.write(contents)
-                session.log('Report file written to %r', pylint_report_path)
-        stdout.close()
+        if tee_output:
+            stdout.seek(0)
+            contents = stdout.read()
+            if contents:
+                if IS_PY3:
+                    contents = contents.decode('utf-8')
+                else:
+                    contents = contents.encode('utf-8')
+                sys.stdout.write(contents)
+                sys.stdout.flush()
+                if pylint_report_path:
+                    # Write report
+                    with open(pylint_report_path, 'w') as wfh:
+                        wfh.write(contents)
+                    session.log('Report file written to %r', pylint_report_path)
+            stdout.close()
 
 
-@nox.session(python='2.7')
+def _lint_pre_commit(session, rcfile, flags, paths):
+    if 'VIRTUAL_ENV' not in os.environ:
+        session.error(
+            'This should be running from within a virtualenv and '
+            '\'VIRTUAL_ENV\' was not found as an environment variable.'
+        )
+    if 'pre-commit' not in os.environ['VIRTUAL_ENV']:
+        session.error(
+            'This should be running from within a pre-commit virtualenv and '
+            '\'VIRTUAL_ENV\'({}) does not appear to be a pre-commit virtualenv.'.format(
+                os.environ['VIRTUAL_ENV']
+            )
+        )
+    from nox.virtualenv import VirtualEnv
+    # Let's patch nox to make it run inside the pre-commit virtualenv
+    try:
+        session._runner.venv = VirtualEnv(  # pylint: disable=unexpected-keyword-arg
+            os.environ['VIRTUAL_ENV'],
+            interpreter=session._runner.func.python,
+            reuse_existing=True,
+            venv=True
+        )
+    except TypeError:
+        # This is still nox-py2
+        session._runner.venv = VirtualEnv(
+            os.environ['VIRTUAL_ENV'],
+            interpreter=session._runner.func.python,
+            reuse_existing=True,
+        )
+    _lint(session, rcfile, flags, paths, tee_output=False)
+
+
+@nox.session(python='3')
 def lint(session):
     '''
     Run PyLint against Salt and it's test suite. Set PYLINT_REPORT to a path to capture output.
@@ -916,34 +1012,64 @@ def lint(session):
     session.notify('lint-tests-{}'.format(session.python))
 
 
-@nox.session(python='2.7', name='lint-salt')
+@nox.session(python='3', name='lint-salt')
 def lint_salt(session):
     '''
     Run PyLint against Salt. Set PYLINT_REPORT to a path to capture output.
     '''
     flags = [
-        '--disable=I,W1307,C0411,C0413,W8410,str-format-in-logging'
+        '--disable=I'
     ]
     if session.posargs:
         paths = session.posargs
     else:
-        paths = ['setup.py', 'salt/']
-    _lint(session, '.testing.pylintrc', flags, paths)
+        paths = ['setup.py', 'noxfile.py', 'salt/']
+    _lint(session, '.pylintrc', flags, paths)
 
 
-@nox.session(python='2.7', name='lint-tests')
+@nox.session(python='3', name='lint-tests')
 def lint_tests(session):
     '''
     Run PyLint against Salt and it's test suite. Set PYLINT_REPORT to a path to capture output.
     '''
     flags = [
-        '--disable=I,W0232,E1002,W1307,C0411,C0413,W8410,str-format-in-logging'
+        '--disable=I'
     ]
     if session.posargs:
         paths = session.posargs
     else:
         paths = ['tests/']
-    _lint(session, '.testing.pylintrc', flags, paths)
+    _lint(session, '.pylintrc', flags, paths)
+
+
+@nox.session(python=False, name='lint-salt-pre-commit')
+def lint_salt_pre_commit(session):
+    '''
+    Run PyLint against Salt. Set PYLINT_REPORT to a path to capture output.
+    '''
+    flags = [
+        '--disable=I'
+    ]
+    if session.posargs:
+        paths = session.posargs
+    else:
+        paths = ['setup.py', 'noxfile.py', 'salt/']
+    _lint_pre_commit(session, '.pylintrc', flags, paths)
+
+
+@nox.session(python=False, name='lint-tests-pre-commit')
+def lint_tests_pre_commit(session):
+    '''
+    Run PyLint against Salt and it's test suite. Set PYLINT_REPORT to a path to capture output.
+    '''
+    flags = [
+        '--disable=I'
+    ]
+    if session.posargs:
+        paths = session.posargs
+    else:
+        paths = ['tests/']
+    _lint_pre_commit(session, '.pylintrc', flags, paths)
 
 
 @nox.session(python='3')
@@ -982,7 +1108,7 @@ def docs_html(session, compress):
     session.run('make', 'clean', external=True)
     session.run('make', 'html', 'SPHINXOPTS=-W', external=True)
     if compress:
-        session.run('tar', '-czvf', 'html-archive.tar.gz', '_build/html', external=True)
+        session.run('tar', '-cJvf', 'html-archive.tar.xz', '_build/html', external=True)
     os.chdir('..')
 
 
@@ -1015,5 +1141,5 @@ def docs_man(session, compress, update):
         session.run('rm', '-rf', 'man/', external=True)
         session.run('cp', '-Rp', '_build/man', 'man/', external=True)
     if compress:
-        session.run('tar', '-czvf', 'man-archive.tar.gz', '_build/man', external=True)
+        session.run('tar', '-cJvf', 'man-archive.tar.xz', '_build/man', external=True)
     os.chdir('..')

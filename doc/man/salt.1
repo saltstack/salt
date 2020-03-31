@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "SALT" "1" "Oct 02, 2019" "2019.2.2" "Salt"
+.TH "SALT" "1" "Mar 10, 2020" "3000.1" "Salt"
 .SH NAME
 salt \- salt
 .
@@ -267,17 +267,6 @@ Some outputters are formatted only for data returned from specific functions.
 If an outputter is used that does not support the data passed into it, then
 Salt will fall back on the \fBpprint\fP outputter and display the return data
 using the Python \fBpprint\fP standard library module.
-.sp
-\fBNOTE:\fP
-.INDENT 7.0
-.INDENT 3.5
-If using \fB\-\-out=json\fP, you will probably want \fB\-\-static\fP as well.
-Without the static option, you will get a separate JSON string per minion
-which makes JSON output invalid as a whole.
-This is due to using an iterative outputter. So if you want to feed it
-to a JSON parser, use \fB\-\-static\fP as well.
-.UNINDENT
-.UNINDENT
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -328,6 +317,17 @@ output. One of \(aqfull\(aq, \(aqterse\(aq, \(aqmixed\(aq, \(aqchanges\(aq or
 .B \-\-state\-verbose=STATE_VERBOSE, \-\-state_verbose=STATE_VERBOSE
 Override the configured state_verbose value for minion
 output. Set to True or False. Default: none.
+.UNINDENT
+.sp
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
+If using \fB\-\-out=json\fP, you will probably want \fB\-\-static\fP as well.
+Without the static option, you will get a separate JSON string per minion
+which makes JSON output invalid as a whole.
+This is due to using an iterative outputter. So if you want to feed it
+to a JSON parser, use \fB\-\-static\fP as well.
+.UNINDENT
 .UNINDENT
 .SH SEE ALSO
 .sp

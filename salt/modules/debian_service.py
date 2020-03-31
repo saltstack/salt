@@ -328,7 +328,7 @@ def enabled(name, **kwargs):
 
 def disabled(name):
     '''
-    Return True if the named service is enabled, false otherwise
+    Return True if the named service is disabled, false otherwise
 
     CLI Example:
 

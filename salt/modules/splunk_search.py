@@ -246,7 +246,7 @@ def list_all(prefix=None, app=None, owner=None, description_contains=None,
     name = "splunk_search.list_all get defaults"
     try:
         client.saved_searches.delete(name)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         pass
     search = client.saved_searches.create(name, search="nothing")
     defaults = dict(search.content)

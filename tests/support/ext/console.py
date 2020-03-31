@@ -46,7 +46,7 @@ def _getTerminalSize_windows():
         h = ctypes.windll.kernel32.GetStdHandle(-12)
         csbi = ctypes.create_string_buffer(22)
         res = ctypes.windll.kernel32.GetConsoleScreenBufferInfo(h, csbi)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return None
     if res:
         (bufx, bufy, curx, cury, wattr,
@@ -74,7 +74,7 @@ def _getTerminalSize_tput():
         output = proc.communicate(input=None)
         rows = int(output[0])
         return (cols, rows)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return None
 
 
@@ -84,7 +84,7 @@ def _getTerminalSize_linux():
             cr = struct.unpack(
                 b'hh', fcntl.ioctl(fd, termios.TIOCGWINSZ, '1234')
             )
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             return None
         return cr
     cr = ioctl_GWINSZ(0) or ioctl_GWINSZ(1) or ioctl_GWINSZ(2)
@@ -93,12 +93,12 @@ def _getTerminalSize_linux():
             fd = os.open(os.ctermid(), os.O_RDONLY)
             cr = ioctl_GWINSZ(fd)
             os.close(fd)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             pass
     if not cr:
         try:
             cr = (os.environ['LINES'], os.environ['COLUMNS'])
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             return None
     return int(cr[1]), int(cr[0])
 

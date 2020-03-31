@@ -1076,7 +1076,7 @@ def create(vm_):
                 exc_info_on_loglevel=logging.DEBUG
             )
             return False
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error(
             'Error creating %s on OpenNebula\n\n'
             'The following exception was thrown when trying to '
@@ -4566,7 +4566,7 @@ def _list_nodes(full=False):
         for nic in vm.find('TEMPLATE').findall('NIC'):
             try:
                 private_ips.append(nic.find('IP').text)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 pass
 
         vms[name]['id'] = vm.find('ID').text

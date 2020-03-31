@@ -38,7 +38,7 @@ class TestGrainsCore(ModuleCase):
         physmem = self.run_function('sysctl.get', ['hw.physmem'])
         self.assertEqual(
             self.run_function('grains.items')['mem_total'],
-            int(physmem) / 1048576
+            int(physmem) // 1048576
         )
 
     @skipIf(not salt.utils.platform.is_openbsd(), 'Only run on OpenBSD')
@@ -49,7 +49,7 @@ class TestGrainsCore(ModuleCase):
         swapmem = self.run_function('cmd.run', ['swapctl -sk']).split(' ')[1]
         self.assertEqual(
             self.run_function('grains.items')['swap_total'],
-            int(swapmem) / 1048576
+            int(swapmem) // 1048576
         )
 
 
@@ -59,7 +59,7 @@ class TestGrainsReg(ModuleCase, LoaderModuleMockMixin):
     '''
 
     def setup_loader_modules(self):
-        self.opts = opts = salt.config.DEFAULT_MINION_OPTS
+        self.opts = opts = salt.config.DEFAULT_MINION_OPTS.copy()
         utils = salt.loader.utils(opts, whitelist=['reg'])
         return {
             salt.modules.reg: {

@@ -293,7 +293,7 @@ def build(runas,
     try:
         srpms = make_src_pkg(srpm_build_dir, spec, sources,
                              env, template, saltenv, runas)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         shutil.rmtree(srpm_build_dir)
         log.error('Failed to make src package')
         return ret
@@ -356,7 +356,7 @@ def build(runas,
                             raise
                     shutil.copy(full, log_file)
                     ret.setdefault('Log Files', []).append(log_file)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.error('Error building from %s: %s', srpm, exc)
         finally:
             shutil.rmtree(results_dir)
