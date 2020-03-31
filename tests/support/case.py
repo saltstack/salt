@@ -27,6 +27,7 @@ import time
 from datetime import datetime, timedelta
 
 # Import 3rd-party libs
+import salt.utils.files
 from salt.ext import six
 from salt.ext.six.moves import cStringIO  # pylint: disable=import-error
 from tests.support.cli_scripts import ScriptPathMixin
@@ -83,26 +84,21 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin
             timeout=timeout,
         )
 
-    def run_ssh(
-        self,
-        arg_str,
-        with_retcode=False,
-        timeout=25,
-        catch_stderr=False,
-        wipe=False,
-        raw=False,
-        **kwargs
-    ):
-        """
+    def run_ssh(self, arg_str, with_retcode=False, timeout=25,
+                catch_stderr=False, wipe=False, raw=False, roster_file=None, **kwargs):
+        '''
         Execute salt-ssh
-        """
-        arg_str = "{0} {1} -c {2} -i --priv {3} --roster-file {4} localhost {5} --out=json".format(
-            " -W" if wipe else "",
-            " -r" if raw else "",
+        '''
+        if not roster_file:
+            roster_file = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'roster')
+
+        arg_str = '{0} {1} -c {2} -i --priv {3} --roster-file {4} localhost {5} --out=json'.format(
+            ' -W' if wipe else '',
+            ' -r' if raw else '',
             self.config_dir,
-            os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "key_test"),
-            os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "roster"),
-            arg_str,
+            os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'key_test'),
+            roster_file,
+            arg_str
         )
         return self.run_script(
             "salt-ssh",
@@ -527,37 +523,29 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
         log.debug("Result of run_spm for command '%s': %s", arg_str, ret)
         return ret
 
-    def run_ssh(
-        self,
-        arg_str,
-        with_retcode=False,
-        catch_stderr=False,
-        timeout=RUN_TIMEOUT,
-        wipe=True,
-        raw=False,
-        **kwargs
-    ):
-        """
+    def run_ssh(self, arg_str, with_retcode=False, catch_stderr=False,  # pylint: disable=W0221
+                timeout=RUN_TIMEOUT, wipe=True, raw=False, roster_file=None, **kwargs):
+        '''
         Execute salt-ssh
-        """
-        arg_str = "{0} -ldebug{1} -c {2} -i --priv {3} --roster-file {4} --out=json localhost {5}".format(
-            " -W" if wipe else "",
-            " -r" if raw else "",
+        '''
+        if not roster_file:
+            roster_file = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'roster')
+
+        arg_str = '{0} -ldebug{1} -c {2} -i --priv {3} --roster-file {4} --out=json localhost {5}'.format(
+            ' -W' if wipe else '',
+            ' -r' if raw else '',
             self.config_dir,
-            os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "key_test"),
-            os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "roster"),
-            arg_str,
-        )
-        ret = self.run_script(
-            "salt-ssh",
-            arg_str,
-            with_retcode=with_retcode,
-            catch_stderr=catch_stderr,
-            timeout=timeout,
-            raw=True,
-            **kwargs
-        )
-        log.debug("Result of run_ssh for command '%s %s': %s", arg_str, kwargs, ret)
+            os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'key_test'),
+            roster_file,
+            arg_str)
+        ret = self.run_script('salt-ssh',
+                              arg_str,
+                              with_retcode=with_retcode,
+                              catch_stderr=catch_stderr,
+                              timeout=timeout,
+                              raw=True,
+                              **kwargs)
+        log.debug('Result of run_ssh for command \'%s %s\': %s', arg_str, kwargs, ret)
         return ret
 
     # pylint: enable=arguments-differ
@@ -750,9 +738,6 @@ class SPMCase(TestCase, AdaptedConfigurationTestCaseMixin):
         for f_dir in dirs:
             os.makedirs(f_dir)
 
-        # Late import
-        import salt.utils.files
-
         with salt.utils.files.fopen(self.formula_sls, "w") as fp:
             fp.write(
                 textwrap.dedent(
@@ -807,7 +792,6 @@ class SPMCase(TestCase, AdaptedConfigurationTestCaseMixin):
             }
         )
 
-        import salt.utils.files
         import salt.utils.yaml
 
         if not os.path.isdir(config["formula_path"]):
@@ -826,9 +810,6 @@ class SPMCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
         repo_conf_dir = self.config["spm_repos_config"] + ".d"
         os.makedirs(repo_conf_dir)
-
-        # Late import
-        import salt.utils.files
 
         with salt.utils.files.fopen(os.path.join(repo_conf_dir, "spm.repo"), "w") as fp:
             fp.write(
@@ -1122,6 +1103,20 @@ class SSHCase(ShellCase):
             return salt.utils.json.loads(ret)["localhost"]
         except Exception:  # pylint: disable=broad-except
             return ret
+
+    def custom_roster(self, new_roster, data):
+        '''
+        helper method to create a custom roster to use for a ssh test
+        '''
+        roster = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'roster')
+
+        with salt.utils.files.fopen(roster, 'r') as fp_:
+            conf = salt.utils.yaml.safe_load(fp_)
+
+        conf['localhost'].update(data)
+
+        with salt.utils.files.fopen(new_roster, 'w') as fp_:
+            salt.utils.yaml.safe_dump(conf, fp_)
 
 
 class ClientCase(AdaptedConfigurationTestCaseMixin, TestCase):
