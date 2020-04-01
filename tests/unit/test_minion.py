@@ -409,6 +409,60 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         with patch.object(salt.utils.process.SignalHandlingProcess, 'start', mock_start):
             io_loop.run_sync(lambda: minion._handle_decoded_payload(job_data))
 
+    def test_ack_event_multi(self):
+        mock_opts = self.get_config('minion', from_scratch=True)
+        mock_opts["acknowledge_jobs"] = True
+        mock_opts["return"] = None
+
+        minion = MagicMock()
+        minion.opts = mock_opts
+        minion.connected = False
+
+        with patch('os.path.join'), patch('salt.utils.files.fopen'), patch('salt.utils.process.appendproctitle'):
+            salt.minion.Minion._thread_multi_return(minion, mock_opts, {"jid": "test-jid", "fun": ["test.ping"], "arg": [], "ret": None})
+            minion._fire_master.assert_called_with(tag="salt/job/test-jid/ack/{0}".format(mock_opts["id"]))
+
+    def test_ack_event_multi_disabled(self):
+        mock_opts = self.get_config('minion', from_scratch=True)
+        mock_opts["acknowledge_jobs"] = False
+        mock_opts["return"] = None
+
+        minion = MagicMock()
+        minion.opts = mock_opts
+        minion.connected = False
+
+        with patch('os.path.join'), patch('salt.utils.files.fopen'), patch('salt.utils.process.appendproctitle'):
+            salt.minion.Minion._thread_multi_return(minion, mock_opts, {"jid": "test-jid", "fun": ["test.ping"], "arg": [], "ret": None})
+            with self.assertRaises(AssertionError):
+                minion._fire_master.assert_called_with(tag="salt/job/test-jid/ack/{0}".format(mock_opts["id"]))
+
+    def test_ack_event_single(self):
+        mock_opts = self.get_config('minion', from_scratch=True)
+        mock_opts["acknowledge_jobs"] = True
+        mock_opts["return"] = None
+
+        minion = MagicMock()
+        minion.opts = mock_opts
+        minion.connected = False
+
+        with patch('os.path.join'), patch('salt.utils.files.fopen'), patch('salt.utils.process.appendproctitle'):
+            salt.minion.Minion._thread_return(minion, mock_opts, {"jid": "test-jid", "fun": "test.ping", "arg": [], "ret": None})
+            minion._fire_master.assert_called_with(tag="salt/job/test-jid/ack/{0}".format(mock_opts["id"]))
+
+    def test_ack_event_single_disabled(self):
+        mock_opts = self.get_config('minion', from_scratch=True)
+        mock_opts["acknowledge_jobs"] = False
+        mock_opts["return"] = None
+
+        minion = MagicMock()
+        minion.opts = mock_opts
+        minion.connected = False
+
+        with patch('os.path.join'), patch('salt.utils.files.fopen'), patch('salt.utils.process.appendproctitle'):
+            salt.minion.Minion._thread_return(minion, mock_opts, {"jid": "test-jid", "fun": "test.ping", "arg": [], "ret": None})
+            with self.assertRaises(AssertionError):
+                minion._fire_master.assert_called_with(tag="salt/job/test-jid/ack/{0}".format(mock_opts["id"]))
+
 
 class MinionAsyncTestCase(TestCase, AdaptedConfigurationTestCaseMixin, salt.ext.tornado.testing.AsyncTestCase):
 

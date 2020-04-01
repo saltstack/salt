@@ -764,7 +764,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
         '''
         return self.run_function(_function, args, **kw)
 
-    def run_function(self, function, arg=(), minion_tgt='minion', timeout=300, master_tgt=None, **kwargs):
+    def run_function(self, function, arg=(), minion_tgt='minion', timeout=300, master_tgt=None, jid='', **kwargs):
         '''
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
@@ -786,6 +786,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
                           function,
                           arg,
                           timeout=timeout,
+                          jid=jid,
                           kwarg=kwargs)
 
         if RUNTIME_VARS.PYTEST_SESSION:
@@ -860,7 +861,7 @@ class MultimasterModuleCase(ModuleCase, SaltMultimasterClientTestCaseMixin):
     Execute a module function
     '''
 
-    def run_function(self, function, arg=(), minion_tgt='mm-minion', timeout=300, master_tgt='mm-master', **kwargs):
+    def run_function(self, function, arg=(), minion_tgt='mm-minion', timeout=300, master_tgt='mm-master', jid='', **kwargs):
         '''
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
@@ -889,6 +890,7 @@ class MultimasterModuleCase(ModuleCase, SaltMultimasterClientTestCaseMixin):
                           function,
                           arg,
                           timeout=timeout,
+                          jid=jid,
                           kwarg=kwargs)
 
         if RUNTIME_VARS.PYTEST_SESSION:

@@ -123,6 +123,7 @@ salt/grains/*:
 salt/proxy/*:
   - integration.proxy.test_shell
   - integration.proxy.test_simple
+  - integration.proxy.test_job
 
 salt/state.py:
   - integration.modules.test_state_jinja_filters
@@ -172,6 +173,7 @@ salt/loader.py:
 salt/minion.py:
   - integration.client.test_syndic
   - integration.minion.test_blackout
+  - integration.minion.test_job
   - integration.minion.test_pillar
   - integration.minion.test_timeout
   - integration.shell.test_matcher

@@ -78,6 +78,11 @@ Job events
     :var user: The name of the user that ran the command as defined in Salt's
         Publisher ACL or external auth.
 
+.. salt:event:: salt/job/<JID>/ack/<MID>
+
+    Fired as a new job is received by minion.
+    Must be enabled using the :conf_minion:`acknowledge_jobs` option.
+
 .. salt:event:: salt/job/<JID>/ret/<MID>
 
     Fired each time a minion returns data for a job.

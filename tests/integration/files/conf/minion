@@ -115,3 +115,6 @@ autosign_grains:
 discovery: false
 sdbvault:
   driver: vault
+
+# SEP-17 related config option
+acknowledge_jobs: True

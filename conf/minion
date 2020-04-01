@@ -904,3 +904,6 @@
 ############################################
 # Default match type for filtering events tags: startswith, endswith, find, regex, fnmatch
 #event_match_type: startswith
+
+# Configure minion to fire event when new job is received.
+#acknowledge_jobs: False
