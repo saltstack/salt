@@ -58,7 +58,7 @@ Management of SmartOS Standalone Compute Nodes
               label: 'test kvm'
               owner: 'sjorge'
             disks:
-              disk0
+              disk0:
                 size: 2048
                 model: virtio
                 compression: lz4
@@ -111,6 +111,12 @@ Management of SmartOS Standalone Compute Nodes
     they get removed via add_*, set_*, update_*, and remove_*. Properties must
     be manually reset to their default value.
     The same behavior as when using 'vmadm update'.
+    
+.. warning::
+
+    For HVM (bhyve and KVM) brands the `image_uuid` field should go on the boot disks,
+    this disk should NOT have a size specified. (See man vmadm)
+
 '''
 from __future__ import absolute_import, unicode_literals, print_function
 
