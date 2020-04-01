@@ -3736,7 +3736,7 @@ def directory(name,
             dir_mode = None
 
         if 'silent' in recurse_set:
-            ret['pchanges'] = 'Changes silenced'
+            ret['changes'] = 'Changes silenced'
 
         check_files = 'ignore_files' not in recurse_set
         check_dirs = 'ignore_dirs' not in recurse_set
