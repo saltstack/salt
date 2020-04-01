@@ -1621,7 +1621,7 @@ class Minion(MinionBase):
         log.info('Starting a new job %s with PID %s', data['jid'], sdata['pid'])
 
         # send ack
-        if minion_instance.opts.get('acknowledge_jobs', False) and self.connected:
+        if minion_instance.opts.get('acknowledge_jobs', False) and minion_instance.connected:
             acktag = tagify([data['jid'], 'ack', opts['id']], 'job')
             minion_instance._fire_master(tag=acktag)
 
@@ -1842,7 +1842,7 @@ class Minion(MinionBase):
         log.info('Starting a new job with PID %s', sdata['pid'])
 
         # send ack
-        if minion_instance.opts.get('acknowledge_jobs', False) and self.connected:
+        if minion_instance.opts.get('acknowledge_jobs', False) and minion_instance.connected:
             acktag = tagify([data['jid'], 'ack', opts['id']], 'job')
             minion_instance._fire_master(tag=acktag)
 
