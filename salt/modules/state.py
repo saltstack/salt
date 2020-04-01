@@ -42,6 +42,7 @@ import salt.utils.stringutils
 import salt.utils.url
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.loader import _format_cached_grains
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -2246,7 +2247,7 @@ def pkg(pkg_path, pkg_sum, hash_type, test=None, **kwargs):
     roster_grains_json = os.path.join(root, "roster_grains.json")
     if os.path.isfile(roster_grains_json):
         with salt.utils.files.fopen(roster_grains_json, "r") as fp_:
-            roster_grains = salt.utils.json.load(fp_)
+            roster_grains = _format_cached_grains(salt.utils.json.load(fp_))
 
     if os.path.isfile(roster_grains_json):
         popts["grains"] = roster_grains
