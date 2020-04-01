@@ -19,7 +19,6 @@ import salt.utils.path
 import salt.utils.platform
 import salt.utils.user
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -474,20 +473,10 @@ def clear_password(name, runas=None):
     return _format_response(res, msg)
 
 
-def check_password(name, password, runas=None):
+def _get_server_version(runas=None):
     '''
-    .. versionadded:: 2016.3.0
-
-    Checks if a user's password is valid.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' rabbitmq.check_password rabbit_user password
+    Uses rabbitmqctl to get the version of the running rabbitmq server
     '''
-    # try to get the rabbitmq-version - adapted from _get_rabbitmq_plugin
-
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()
 
@@ -507,13 +496,31 @@ def check_password(name, password, runas=None):
 
         server_version = server_version.group(1).split('-')[0]
         version = [int(i) for i in server_version.split('.')]
+
+        if len(version) < 3:
+            raise ValueError
     except ValueError:
-        version = (0, 0, 0)
-    if len(version) < 3:
-        version = (0, 0, 0)
+        version = None
+
+    return version
+
+
+def check_password(name, password, runas=None):
+    '''
+    .. versionadded:: 2016.3.0
+
+    Checks if a user's password is valid.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' rabbitmq.check_password rabbit_user password
+    '''
+    version = _get_server_version(runas=runas)
 
     # rabbitmq introduced a native api to check a username and password in version 3.5.7.
-    if tuple(version) >= (3, 5, 7):
+    if version is None or tuple(version) >= (3, 5, 7):
         if salt.utils.platform.is_windows():
             # On Windows, if the password contains a special character
             # such as '|', normal execution will fail. For example:
@@ -920,10 +927,7 @@ def list_policies(vhost="/", runas=None):
     _check_response(res)
     output = res['stdout']
 
-    if __grains__['os_family'] != 'FreeBSD':
-        version = __salt__['pkg.version']('rabbitmq-server').split('-')[0]
-    else:
-        version = __salt__['pkg.version']('rabbitmq').split('-')[0]
+    version = _get_server_version(runas=runas)
 
     for line in _output_lines_to_list(output):
         parts = line.split('\t')
@@ -936,7 +940,7 @@ def list_policies(vhost="/", runas=None):
             ret[vhost] = {}
         ret[vhost][name] = {}
 
-        if _LooseVersion(version) >= _LooseVersion("3.7"):
+        if version is None or tuple(version) >= (3, 7):
             # in version 3.7 the position of apply_to and pattern has been
             # switched
             ret[vhost][name]['pattern'] = parts[2]
