@@ -500,6 +500,9 @@ def check_password(name, password, runas=None):
         server_version = re.search(r'\{rabbit,"RabbitMQ","(.+)"\}', res)
 
         if server_version is None:
+            server_version = re.search(r'^RabbitMQ version: (.*)$', res, re.M)
+
+        if server_version is None:
             raise ValueError
 
         server_version = server_version.group(1).split('-')[0]
