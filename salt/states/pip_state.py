@@ -51,7 +51,7 @@ def purge_pip():
         return
     pip_related_entries = [
         (k, v) for (k, v) in sys.modules.items()
-        or getattr(v, '__module__', '').startswith('pip.')
+        if getattr(v, '__module__', '').startswith('pip.')
         or (isinstance(v, types.ModuleType) and v.__name__.startswith('pip.'))
     ]
     for name, entry in pip_related_entries:
@@ -96,21 +96,8 @@ try:
     HAS_PIP = True
 except ImportError:
     HAS_PIP = False
-    # Remove references to the loaded pip module above so reloading works
-    import sys
-    pip_related_entries = [
-        (k, v) for (k, v) in sys.modules.items()
-        or getattr(v, '__module__', '').startswith('pip.')
-        or (isinstance(v, types.ModuleType) and v.__name__.startswith('pip.'))
-    ]
-    for name, entry in pip_related_entries:
-        sys.modules.pop(name)
-        del entry
+    purge_pip()
 
-    del pip
-    sys_modules_pip = sys.modules.pop('pip', None)
-    if sys_modules_pip is not None:
-        del sys_modules_pip
 
 if HAS_PIP is True:
     if not hasattr(purge_pip, '__pip_ver__'):
@@ -121,7 +108,7 @@ if HAS_PIP is True:
         purge_pip.__pip_ver__ = pip.__version__
     if salt.utils.versions.compare(ver1=pip.__version__,
                                    oper='>=',
-                                   ver2='18.1'):
+                                   ver2='10.0'):
         from pip._internal.exceptions import InstallationError  # pylint: disable=E0611,E0401
     elif salt.utils.versions.compare(ver1=pip.__version__,
                                      oper='>=',
@@ -953,6 +940,7 @@ def installed(name,
                     'Collecting',
                     'Cloning',
                     'Cleaning up...',
+                    'Looking in indexes',
                 ]
                 for line in pip_install_call.get('stdout', '').split('\n'):
                     if not any(

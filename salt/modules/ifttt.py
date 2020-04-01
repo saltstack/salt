@@ -6,7 +6,7 @@ Support for IFTTT
 
 Requires an ``api_key`` in ``/etc/salt/minion``:
 
-.. code-block: yaml
+.. code-block:: yaml
 
     ifttt:
       secret_key: '280d4699-a817-4719-ba6f-ca56e573e44f'
