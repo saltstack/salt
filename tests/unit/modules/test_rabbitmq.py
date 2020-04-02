@@ -19,6 +19,176 @@ import salt.modules.rabbitmq as rabbitmq
 from salt.exceptions import CommandExecutionError
 
 
+RABBITMQ_3_5_7_STATUS = """Status of node rabbit@gandalf ...
+[{pid,2988},
+ {running_applications,
+     [{rabbitmq_shovel_management,"Shovel Status","3.5.7"},
+      {rabbitmq_management,"RabbitMQ Management Console","3.5.7"},
+      {rabbitmq_web_dispatch,"RabbitMQ Web Dispatcher","3.5.7"},
+      {webmachine,"webmachine","1.10.3-rmq3.5.7-gite9359c7"},
+      {mochiweb,"MochiMedia Web Server","2.7.0-rmq3.5.7-git680dba8"},
+      {rabbitmq_shovel,"Data Shovel for RabbitMQ","3.5.7"},
+      {rabbitmq_management_agent,"RabbitMQ Management Agent","3.5.7"},
+      {rabbit,"RabbitMQ","3.5.7"},
+      {ssl,"Erlang/OTP SSL application","7.3.3.2"},
+      {public_key,"Public key infrastructure","1.1.1"},
+      {crypto,"CRYPTO","3.6.3.1"},
+      {asn1,"The Erlang ASN1 compiler version 4.0.2","4.0.2"},
+      {amqp_client,"RabbitMQ AMQP Client","3.5.7"},
+      {xmerl,"XML parser","1.3.10"},
+      {os_mon,"CPO  CXC 138 46","2.4"},
+      {mnesia,"MNESIA  CXC 138 12","4.13.4"},
+      {inets,"INETS  CXC 138 49","6.2.4.1"},
+      {sasl,"SASL  CXC 138 11","2.7"},
+      {stdlib,"ERTS  CXC 138 10","2.8"},
+      {kernel,"ERTS  CXC 138 10","4.2"}]},
+ {os,{unix,linux}},
+ {erlang_version,
+     "Erlang/OTP 18 [erts-7.3.1.4] [source] [64-bit] [smp:8:8] [async-threads:64] [hipe] [kernel-poll:true]\n"},
+ {memory,
+     [{total,86817752},
+      {connection_readers,2807320},
+      {connection_writers,413248},
+      {connection_channels,1989064},
+      {connection_other,3832384},
+      {queue_procs,4740376},
+      {queue_slave_procs,0},
+      {plugins,514048},
+      {other_proc,20519496},
+      {mnesia,65560},
+      {mgmt_db,2570616},
+      {msg_index,47264},
+      {other_ets,1767392},
+      {binary,11929008},
+      {code,22817793},
+      {atom,842665},
+      {other_system,11961518}]},
+ {alarms,[]},
+ {listeners,[{clustering,25672,"::"},{'amqp/ssl',5671,"::"}]},
+ {vm_memory_high_watermark,0.4},
+ {vm_memory_limit,13455246950},
+ {disk_free_limit,50000000},
+ {disk_free,38402478080},
+ {file_descriptors,
+     [{total_limit,29900},
+      {total_used,96},
+      {sockets_limit,26908},
+      {sockets_used,93}]},
+ {processes,[{limit,1048576},{used,1298}]},
+ {run_queue,0},
+ {uptime,3788208}]
+"""
+
+RABBITMQ_3_8_2_STATUS = """Status of node rabbit@localhost ...
+Runtime
+
+OS PID: 2120
+OS: Linux
+Uptime (seconds): 68586
+RabbitMQ version: 3.8.2
+Node name: rabbit@localhost
+Erlang configuration: Erlang/OTP 22 [erts-10.6.4] [source] [64-bit] [smp:2:2] [ds:2:2:10] [async-threads:64] [hipe]
+Erlang processes: 634 used, 1048576 limit
+Scheduler run queue: 1
+Cluster heartbeat timeout (net_ticktime): 60
+
+Plugins
+
+Enabled plugin file: /etc/rabbitmq/enabled_plugins
+Enabled plugins:
+
+ * rabbitmq_shovel_management
+ * rabbitmq_management
+ * rabbitmq_web_dispatch
+ * rabbitmq_shovel
+ * rabbitmq_management_agent
+ * amqp_client
+ * cowboy
+ * amqp10_client
+ * amqp10_common
+ * cowlib
+
+Data directory
+
+Node data directory: /var/lib/rabbitmq/mnesia/rabbit@localhost
+
+Config files
+
+ * /etc/rabbitmq/rabbitmq.config
+
+Log file(s)
+
+ * /var/log/rabbitmq/rabbit@localhost.log
+ * /var/log/rabbitmq/rabbit@localhost_upgrade.log
+
+Alarms
+
+(none)
+
+Memory
+
+Calculation strategy: rss
+Memory high watermark setting: 0.4 of available memory, computed to: 1.6295 gb
+code: 0.0308 gb (30.37 %)
+other_proc: 0.0301 gb (29.59 %)
+allocated_unused: 0.0162 gb (15.95 %)
+other_system: 0.0127 gb (12.54 %)
+other_ets: 0.0032 gb (3.17 %)
+plugins: 0.0027 gb (2.68 %)
+atom: 0.0015 gb (1.5 %)
+connection_other: 0.0013 gb (1.32 %)
+mgmt_db: 0.0009 gb (0.88 %)
+reserved_unallocated: 0.0008 gb (0.78 %)
+binary: 0.0004 gb (0.35 %)
+metrics: 0.0003 gb (0.25 %)
+msg_index: 0.0002 gb (0.23 %)
+queue_procs: 0.0001 gb (0.14 %)
+mnesia: 0.0001 gb (0.11 %)
+connection_readers: 0.0001 gb (0.07 %)
+quorum_ets: 0.0 gb (0.04 %)
+connection_writers: 0.0 gb (0.02 %)
+connection_channels: 0.0 gb (0.01 %)
+queue_slave_procs: 0.0 gb (0.0 %)
+quorum_queue_procs: 0.0 gb (0.0 %)
+
+File Descriptors
+
+Total: 14, limit: 32671
+Sockets: 8, limit: 29401
+
+Free Disk Space
+
+Low free disk space watermark: 0.05 gb
+Free disk space: 6.765 gb
+
+Totals
+
+Connection count: 3
+Queue count: 6
+Virtual host count: 1
+
+Listeners
+
+Interface: [::], port: 25672, protocol: clustering, purpose: inter-node and CLI tool communication
+Interface: [::], port: 5671, protocol: amqp/ssl, purpose: AMQP 0-9-1 and AMQP 1.0 over TLS
+Interface: [::], port: 55672, protocol: http, purpose: HTTP API
+"""
+
+
+def no_more_cmds(cmd, *args, **kwargs):
+    raise AssertionError("No mock for command {cmd}".format(cmd=cmd))
+
+
+def mock_run_rabbitmqctl_status(output, default=no_more_cmds):
+    def cmd_run(cmd, *args, **kwargs):
+        if cmd == [rabbitmq.RABBITMQCTL, 'status']:
+            return output
+        else:
+            return default(cmd, *args, **kwargs)
+
+    return cmd_run
+
+
 class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.rabbitmq
@@ -383,9 +553,9 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         and name based on the data returned from rabbitmqctl list_policies.
         '''
         mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack', 'stderr': ''})
-        mock_pkg = MagicMock(return_value='3.7')
-        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run, 'pkg.version': mock_pkg}), \
-                patch.dict(rabbitmq.__grains__, {'os_family': ''}):
+        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}), \
+                patch.dict(rabbitmq.__grains__, {'os_family': ''}), \
+                patch.object(rabbitmq, '_get_server_version', return_value=[3, 8, 2]):
             self.assertDictEqual(rabbitmq.list_policies(), {})
 
     def test_list_policies_freebsd(self):
@@ -394,9 +564,9 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         and name based on the data returned from rabbitmqctl list_policies.
         '''
         mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack', 'stderr': ''})
-        mock_pkg = MagicMock(return_value='3.7')
-        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run, 'pkg.version': mock_pkg}), \
-                patch.dict(rabbitmq.__grains__, {'os_family': 'FreeBSD'}):
+        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}), \
+                patch.dict(rabbitmq.__grains__, {'os_family': 'FreeBSD'}), \
+                patch.object(rabbitmq, '_get_server_version', return_value=[3, 8, 2]):
             self.assertDictEqual(rabbitmq.list_policies(), {})
 
     def test_list_policies_old_version(self):
@@ -405,9 +575,9 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         and name based on the data returned from rabbitmqctl list_policies.
         '''
         mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack', 'stderr': ''})
-        mock_pkg = MagicMock(return_value='3.0')
-        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run, 'pkg.version': mock_pkg}), \
-                patch.dict(rabbitmq.__grains__, {'os_family': ''}):
+        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}), \
+                patch.dict(rabbitmq.__grains__, {'os_family': ''}), \
+                patch.object(rabbitmq, '_get_server_version', return_value=[3, 5, 7]):
             self.assertDictEqual(rabbitmq.list_policies(), {})
 
     # 'set_policy' function tests: 1
@@ -441,9 +611,9 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         based on rabbitmqctl list_policies.
         '''
         mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack', 'stderr': ''})
-        mock_pkg = MagicMock(return_value='3.0')
-        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run, 'pkg.version': mock_pkg}), \
-                patch.dict(rabbitmq.__grains__, {'os_family': ''}):
+        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}), \
+                patch.dict(rabbitmq.__grains__, {'os_family': ''}), \
+                patch.object(rabbitmq, '_get_server_version', return_value=[3, 8, 2]):
             self.assertFalse(rabbitmq.policy_exists('/', 'HA'))
 
     # 'list_available_plugins' function tests: 2
@@ -642,3 +812,47 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         })
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
             self.assertRaises(CommandExecutionError, rabbitmq.delete_upstream, 'remote-name')
+
+    # '_get_server_version' function tests: 2
+
+    def test__get_server_version_old(self):
+        '''
+        Test if the version from the old (pre-3.7) rabbitmqctl status is parsed correctly
+        '''
+        with patch.dict(rabbitmq.__salt__, {'cmd.run': mock_run_rabbitmqctl_status(RABBITMQ_3_5_7_STATUS)}):
+            self.assertListEqual(rabbitmq._get_server_version(), [3, 5, 7])
+
+    def test__get_server_version_post_3_7(self):
+        '''
+        Test if the version from the new (post-3.7) rabbitmqctl status is parsed correctly
+        '''
+        with patch.dict(rabbitmq.__salt__, {'cmd.run': mock_run_rabbitmqctl_status(RABBITMQ_3_8_2_STATUS)}):
+            self.assertListEqual(rabbitmq._get_server_version(), [3, 8, 2])
+
+    # 'check_password' function tests: 2
+
+    def test_check_password_old_api(self):
+        '''
+        Test if check_password uses the old API on old versions (pre-3.5.7)
+        '''
+        mock_run_all = MagicMock(return_value={'retcode': 0, 'stdout': '', 'stderr': ''})
+        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run_all}), \
+                patch.dict(rabbitmq.__grains__, {'os_family': ''}), \
+                patch.object(rabbitmq, '_get_server_version', return_value=[3, 5, 6]):
+            result = rabbitmq.check_password('saltstack', 'dummy')
+            self.assertTrue(result)
+            # Ensure "authenticate_user" API is NOT being used
+            self.assertNotEqual(mock_run_all.call_args.args[0][1], 'authenticate_user')
+
+    def test_check_password_new_api(self):
+        '''
+        Test if check_password uses the new API on new versions (post-3.5.7)
+        '''
+        mock_run_all = MagicMock(return_value={'retcode': 0, 'stdout': '', 'stderr': ''})
+        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run_all}), \
+                patch.dict(rabbitmq.__grains__, {'os_family': ''}), \
+                patch.object(rabbitmq, '_get_server_version', return_value=[3, 5, 7]):
+            result = rabbitmq.check_password('saltstack', 'dummy')
+            self.assertTrue(result)
+            # Ensure "authenticate_user" API is being used
+            self.assertEqual(mock_run_all.call_args.args[0][1], 'authenticate_user')
