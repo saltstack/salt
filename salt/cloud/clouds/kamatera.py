@@ -42,9 +42,6 @@ from salt.exceptions import (
 # Get logging started
 log = logging.getLogger(__name__)
 
-# The epoch of the last time a query was made
-LASTCALL = int(time.mktime(datetime.datetime.now().timetuple()))
-
 # Human-readable status fields (documentation: https://www.linode.com/api/linode/linode.list)
 LINODE_STATUS = {
     'boot_failed': {
@@ -195,157 +192,15 @@ def avail_locations(call=None):
         }
 
 
-def boot(name=None, kwargs=None, call=None):
-    '''
-    Boot a Linode.
-
-    name
-        The name of the Linode to boot. Can be used instead of ``linode_id``.
-
-    linode_id
-        The ID of the Linode to boot. If provided, will be used as an
-        alternative to ``name`` and reduces the number of API calls to
-        Linode by one. Will be preferred over ``name``.
-
-    config_id
-        The ID of the Config to boot. Required.
-
-    check_running
-        Defaults to True. If set to False, overrides the call to check if
-        the VM is running before calling the linode.boot API call. Change
-        ``check_running`` to True is useful during the boot call in the
-        create function, since the new VM will not be running yet.
-
-    Can be called as an action (which requires a name):
-
-    .. code-block:: bash
-
-        salt-cloud -a boot my-instance config_id=10
-
-    ...or as a function (which requires either a name or linode_id):
-
-    .. code-block:: bash
-
-        salt-cloud -f boot my-linode-config name=my-instance config_id=10
-        salt-cloud -f boot my-linode-config linode_id=1225876 config_id=10
-    '''
-    if name is None and call == 'action':
-        raise SaltCloudSystemExit(
-            'The boot action requires a \'name\'.'
-        )
-
-    if kwargs is None:
-        kwargs = {}
-
-    linode_id = kwargs.get('linode_id', None)
-    config_id = kwargs.get('config_id', None)
-    check_running = kwargs.get('check_running', True)
-
-    if call == 'function':
-        name = kwargs.get('name', None)
-
-    if name is None and linode_id is None:
-        raise SaltCloudSystemExit(
-            'The boot function requires either a \'name\' or a \'linode_id\'.'
-        )
-
-    if config_id is None:
-        raise SaltCloudSystemExit(
-            'The boot function requires a \'config_id\'.'
-        )
-
-    if linode_id is None:
-        linode_id = get_linode_id_from_name(name)
-        linode_item = name
-    else:
-        linode_item = linode_id
-
-    # Check if Linode is running first
-    if check_running is True:
-        status = get_linode(kwargs={'linode_id': linode_id})['STATUS']
-        if status == '1':
-            raise SaltCloudSystemExit(
-                'Cannot boot Linode {0}. '
-                'Linode {0} is already running.'.format(linode_item)
-            )
-
-    # Boot the VM and get the JobID from Linode
-    response = _query('linode', 'boot',
-                      args={'LinodeID': linode_id,
-                            'ConfigID': config_id})['DATA']
-    boot_job_id = response['JobID']
-
-    if not _wait_for_job(linode_id, boot_job_id):
-        log.error('Boot failed for Linode %s.', linode_item)
-        return False
-
-    return True
-
-
-def clone(kwargs=None, call=None):
-    '''
-    Clone a Linode.
-
-    linode_id
-        The ID of the Linode to clone. Required.
-
-    datacenter_id
-        The ID of the Datacenter where the Linode will be placed. Required.
-
-    plan_id
-        The ID of the plan (size) of the Linode. Required.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt-cloud -f clone my-linode-config linode_id=1234567 datacenter_id=2 plan_id=5
-    '''
-    if call == 'action':
-        raise SaltCloudSystemExit(
-            'The clone function must be called with -f or --function.'
-        )
-
-    if kwargs is None:
-        kwargs = {}
-
-    linode_id = kwargs.get('linode_id', None)
-    datacenter_id = kwargs.get('datacenter_id', None)
-    plan_id = kwargs.get('plan_id', None)
-    required_params = [linode_id, datacenter_id, plan_id]
-
-    for item in required_params:
-        if item is None:
-            raise SaltCloudSystemExit(
-                'The clone function requires a \'linode_id\', \'datacenter_id\', '
-                'and \'plan_id\' to be provided.'
-            )
-
-    clone_args = {
-        'LinodeID': linode_id,
-        'DatacenterID': datacenter_id,
-        'PlanID': plan_id
-    }
-
-    return _query('linode', 'clone', args=clone_args)
-
-
 def create(vm_):
     '''
-    Create a single Linode VM.
+    Create a single Kamatera server.
     '''
     name = vm_['name']
-    try:
-        # Check for required profile parameters before sending any API calls.
-        if vm_['profile'] and config.is_profile_configured(__opts__,
-                                                           __active_provider_name__ or 'linode',
-                                                           vm_['profile'],
-                                                           vm_=vm_) is False:
-            return False
-    except AttributeError:
-        pass
-
-    if _validate_name(name) is False:
+    profile = vm_.get('profile')
+    if (not profile or not config.is_profile_configured(
+        __opts__, __active_provider_name__ or 'kamatera', vm_['profile'], vm_=vm_)
+    ):
         return False
 
     __utils__['cloud.fire_event'](
@@ -356,86 +211,48 @@ def create(vm_):
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
-
     log.info('Creating Cloud VM %s', name)
 
-    data = {}
-    kwargs = {'name': name}
+    def _getval(key, default=None):
+        val = config.get_cloud_config_value(key, vm_, __opts__, default=None)
+        if not val and default is None:
+            raise SaltCloudException('missing required profile option: %s' % key)
+        else:
+            return val or default
 
-    plan_id = None
-    size = vm_.get('size')
-    if size:
-        kwargs['size'] = size
-        plan_id = get_plan_id(kwargs={'label': size})
-
-    datacenter_id = None
-    location = vm_.get('location')
-    if location:
-        try:
-            datacenter_id = get_datacenter_id(location)
-        except KeyError:
-            # Linode's default datacenter is Dallas, but we still have to set one to
-            # use the create function from Linode's API. Dallas's datacenter id is 2.
-            datacenter_id = 2
-
-    clonefrom_name = vm_.get('clonefrom')
-    cloning = True if clonefrom_name else False
-    if cloning:
-        linode_id = get_linode_id_from_name(clonefrom_name)
-        clone_source = get_linode(kwargs={'linode_id': linode_id})
-
-        kwargs = {
-            'clonefrom': clonefrom_name,
-            'image': 'Clone of {0}'.format(clonefrom_name),
-        }
-
-        if size is None:
-            size = clone_source['TOTALRAM']
-            kwargs['size'] = size
-            plan_id = clone_source['PLANID']
-
-        if location is None:
-            datacenter_id = clone_source['DATACENTERID']
-
-        # Create new Linode from cloned Linode
-        try:
-            result = clone(kwargs={'linode_id': linode_id,
-                                   'datacenter_id': datacenter_id,
-                                   'plan_id': plan_id})
-        except Exception as err:  # pylint: disable=broad-except
-            log.error(
-                'Error cloning \'%s\' on Linode.\n\n'
-                'The following exception was thrown by Linode when trying to '
-                'clone the specified machine:\n%s',
-                clonefrom_name, err, exc_info_on_loglevel=logging.DEBUG
-            )
-            return False
+    request_data = {
+        "name": name,
+        "password": _getval('password', '__generate__'),
+        "passwordValidate": _getval('password', '__generate__'),
+        'ssh-key': _getval('ssh_pub_key', ''),
+        "datacenter": _getval('location'),
+        "image": _getval('image'),
+        "cpu": '%s%s' % (_getval('cpu_cores'), _getval('cpu_type')),
+        "ram": _getval('ram_mb'),
+        "disk": ' '.join([
+            'size=%d' % disksize for disksize
+            in [_getval('disk_size_gb')] + _getval('extra_disk_sizes_gb', [])
+        ]),
+        "dailybackup": 'yes' if _getval('daily_backup', False) else 'no',
+        "managed": 'yes' if _getval('managed', False) else 'no',
+        "network": ' '.join([','.join([
+            '%s=%s' % (k, v) for k, v
+            in network.items()]) for network in _getval('networks', [{'name': 'wan', 'ip': 'auto'}])]),
+        "quantity": 1,
+        "billingcycle": _getval('billing_cycle', 'hourly'),
+        "monthlypackage": _getval('monthly_traffic_package', ''),
+        "poweronaftercreate": 'yes'
+    }
+    response = _request('service/server', 'POST', request_data)
+    if not _getval('password', ''):
+        command_ids = response['commandIds']
+        generated_password = response['password']
     else:
-        kwargs['image'] = vm_['image']
-
-        # Create Linode
-        try:
-            result = _query('linode', 'create', args={
-                'PLANID': plan_id,
-                'DATACENTERID': datacenter_id
-            })
-        except Exception as err:  # pylint: disable=broad-except
-            log.error(
-                'Error creating %s on Linode\n\n'
-                'The following exception was thrown by Linode when trying to '
-                'run the initial deployment:\n%s',
-                name, err, exc_info_on_loglevel=logging.DEBUG
-            )
-            return False
-
-    if 'ERRORARRAY' in result:
-        for error_data in result['ERRORARRAY']:
-            log.error(
-                'Error creating %s on Linode\n\n'
-                'The Linode API returned the following: %s\n',
-                name, error_data['ERRORMESSAGE']
-            )
-            return False
+        command_ids = response
+        generated_password = None
+    if len(command_ids) != 1:
+        raise SaltCloudException('invalid Kamatera response')
+    command_id = command_ids[0]
 
     __utils__['cloud.fire_event'](
         'event',
@@ -446,76 +263,45 @@ def create(vm_):
         transport=__opts__['transport']
     )
 
-    node_id = _clean_data(result)['LinodeID']
-    data['id'] = node_id
-
-    if not _wait_for_status(node_id, status=(_get_status_id_by_name('brand_new'))):
-        log.error(
-            'Error creating %s on LINODE\n\n'
-            'while waiting for initial ready status',
-            name, exc_info_on_loglevel=logging.DEBUG
-        )
-
-    # Update the Linode's Label to reflect the given VM name
-    update_linode(node_id, update_args={'Label': name})
-    log.debug('Set name for %s - was linode%s.', name, node_id)
-
-    # Add private IP address if requested
-    private_ip_assignment = get_private_ip(vm_)
-    if private_ip_assignment:
-        create_private_ip(node_id)
-
-    # Define which ssh_interface to use
-    ssh_interface = _get_ssh_interface(vm_)
-
-    # If ssh_interface is set to use private_ips, but assign_private_ip
-    # wasn't set to True, let's help out and create a private ip.
-    if ssh_interface == 'private_ips' and private_ip_assignment is False:
-        create_private_ip(node_id)
-        private_ip_assignment = True
-
-    if cloning:
-        config_id = get_config_id(kwargs={'linode_id': node_id})['config_id']
-    else:
-        # Create disks and get ids
-        log.debug('Creating disks for %s', name)
-        root_disk_id = create_disk_from_distro(vm_, node_id)['DiskID']
-        swap_disk_id = create_swap_disk(vm_, node_id)['DiskID']
-
-        # Create a ConfigID using disk ids
-        config_id = create_config(kwargs={'name': name,
-                                          'linode_id': node_id,
-                                          'root_disk_id': root_disk_id,
-                                          'swap_disk_id': swap_disk_id})['ConfigID']
-
-    # Boot the Linode
-    boot(kwargs={'linode_id': node_id,
-                 'config_id': config_id,
-                 'check_running': False})
-
-    node_data = get_linode(kwargs={'linode_id': node_id})
-    ips = get_ips(node_id)
-    state = int(node_data['STATUS'])
-
-    data['image'] = kwargs['image']
-    data['name'] = name
-    data['size'] = size
-    data['state'] = _get_status_descr_by_id(state)
-    data['private_ips'] = ips['private_ips']
-    data['public_ips'] = ips['public_ips']
-
+    command = _wait_command(command_id, _getval)
+    create_log = command['log']
+    try:
+        created_at = datetime.datetime.strptime(command['completed'], '%Y-%m-%d %H:%M:%S')
+    except Exception:
+        created_at = None
+    name_lines = [line for line in create_log.split("\n") if line.startswith('Name: ')]
+    if len(name_lines) != 1:
+        raise SaltCloudException('invalid create log: ' + create_log)
+    created_name = name_lines[0].replace('Name: ', '')
+    tmp_servers = _list_servers(name_regex=created_name)
+    if len(tmp_servers) != 1:
+        raise SaltCloudException('invalid list servers response')
+    server = tmp_servers[0]
+    server['extra']['create_command'] = command
+    server['extra']['created_at'] = created_at
+    server['extra']['generated_password'] = generated_password
+    public_ips = []
+    private_ips = []
+    for network in server['networks']:
+        if network.get('network').startswith('wan-'):
+            public_ips += network.get('ips', [])
+        else:
+            private_ips += network.get('ips', [])
+    data = dict(
+        image=_getval('image'),
+        name=server['name'],
+        size='%s%s-%smb-%sgb' % (server['cpu_cores'], server['cpu_type'], server['ram_mb'], server['disk_size_gb']),
+        state=server['state'],
+        private_ips=private_ips,
+        public_ips=public_ips
+    )
     # Pass the correct IP address to the bootstrap ssh_host key
-    if ssh_interface == 'private_ips':
-        vm_['ssh_host'] = data['private_ips'][0]
-    else:
-        vm_['ssh_host'] = data['public_ips'][0]
-
+    vm_['ssh_host'] = data['public_ips'][0]
     # If a password wasn't supplied in the profile or provider config, set it now.
-    vm_['password'] = get_password(vm_)
-
+    vm_['password'] = _getval('password', generated_password)
     # Make public_ips and private_ips available to the bootstrap script.
-    vm_['public_ips'] = ips['public_ips']
-    vm_['private_ips'] = ips['private_ips']
+    vm_['public_ips'] = public_ips
+    vm_['private_ips'] = private_ips
 
     # Send event that the instance has booted.
     __utils__['cloud.fire_event'](
@@ -529,12 +315,10 @@ def create(vm_):
 
     # Bootstrap!
     ret = __utils__['cloud.bootstrap'](vm_, __opts__)
-
     ret.update(data)
 
     log.info('Created Cloud VM \'%s\'', name)
     log.debug('\'%s\' VM creation details:\n%s', name, pprint.pformat(data))
-
     __utils__['cloud.fire_event'](
         'event',
         'created instance',
@@ -986,23 +770,6 @@ def get_linode_id_from_name(name):
         )
 
 
-def get_password(vm_):
-    r'''
-    Return the password to use for a VM.
-
-    vm\_
-        The configuration to obtain the password from.
-    '''
-    return config.get_cloud_config_value(
-        'password', vm_, __opts__,
-        default=config.get_cloud_config_value(
-            'passwd', vm_, __opts__,
-            search_global=False
-        ),
-        search_global=False
-    )
-
-
 def _decode_linode_plan_label(label):
     '''
     Attempts to decode a user-supplied Linode plan label
@@ -1057,38 +824,6 @@ def _decode_linode_plan_label(label):
             label = new_label
 
     return sizes[label]['PLANID']
-
-
-def get_plan_id(kwargs=None, call=None):
-    '''
-    Returns the Linode Plan ID.
-
-    label
-        The label, or name, of the plan to get the ID from.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt-cloud -f get_plan_id linode label="Linode 1024"
-    '''
-    if call == 'action':
-        raise SaltCloudException(
-            'The show_instance action must be called with -f or --function.'
-        )
-
-    if kwargs is None:
-        kwargs = {}
-
-    label = kwargs.get('label', None)
-    if label is None:
-        raise SaltCloudException(
-            'The get_plan_id function requires a \'label\'.'
-        )
-
-    label = _decode_linode_plan_label(label)
-
-    return label
 
 
 def get_private_ip(vm_):
@@ -1553,141 +1288,67 @@ def _request(path, method='GET', request_data=None):
         return result['dict']['response']
 
 
-def _wait_for_job(linode_id, job_id, timeout=300, quiet=True):
-    '''
-    Wait for a Job to return.
-
-    linode_id
-        The ID of the Linode to wait on. Required.
-
-    job_id
-        The ID of the job to wait for.
-
-    timeout
-        The amount of time to wait for a status to update.
-
-    quiet
-        Log status updates to debug logs when True. Otherwise, logs to info.
-    '''
-    interval = 5
-    iterations = int(timeout / interval)
-
-    for i in range(0, iterations):
-        jobs_result = _query('linode',
-                             'job.list',
-                             args={'LinodeID': linode_id})['DATA']
-        if jobs_result[0]['JOBID'] == job_id and jobs_result[0]['HOST_SUCCESS'] == 1:
-            return True
-
-        time.sleep(interval)
-        log.log(
-            logging.INFO if not quiet else logging.DEBUG,
-            'Still waiting on Job %s for Linode %s.', job_id, linode_id
-        )
-    return False
+def _get_command_status(command_id):
+    response = _request('/service/queue?id=' + str(command_id))
+    if len(response) != 1:
+        raise SaltCloudException('invalid response for command id ' + str(command_id))
+    return response[0]
 
 
-def _wait_for_status(linode_id, status=None, timeout=300, quiet=True):
-    '''
-    Wait for a certain status from Linode.
-
-    linode_id
-        The ID of the Linode to wait on. Required.
-
-    status
-        The status to look for to update.
-
-    timeout
-        The amount of time to wait for a status to update.
-
-    quiet
-        Log status updates to debug logs when False. Otherwise, logs to info.
-    '''
-    if status is None:
-        status = _get_status_id_by_name('brand_new')
-
-    status_desc_waiting = _get_status_descr_by_id(status)
-
-    interval = 5
-    iterations = int(timeout / interval)
-
-    for i in range(0, iterations):
-        result = get_linode(kwargs={'linode_id': linode_id})
-
-        if result['STATUS'] == status:
-            return True
-
-        status_desc_result = _get_status_descr_by_id(result['STATUS'])
-
-        time.sleep(interval)
-        log.log(
-            logging.INFO if not quiet else logging.DEBUG,
-            'Status for Linode %s is \'%s\', waiting for \'%s\'.',
-            linode_id, status_desc_result, status_desc_waiting
-        )
-
-    return False
+def _wait_command(command_id, _getval):
+    wait_poll_interval_seconds = _getval('wait_poll_interval_seconds', 2)
+    wait_timeout_seconds = _getval('wait_timeout_seconds', 600)
+    start_time = datetime.datetime.now()
+    time.sleep(wait_poll_interval_seconds)
+    while True:
+        max_time = start_time + datetime.timedelta(seconds=wait_timeout_seconds)
+        if max_time < datetime.datetime.now():
+            raise SaltCloudException('Timeout waiting for command (timeout_seconds=%s, command_id=%s)' % (str(wait_timeout_seconds), str(command_id)))
+        time.sleep(wait_poll_interval_seconds)
+        command = _get_command_status(command_id)
+        status = command.get('status')
+        if status == 'complete':
+            return command
+        elif status == 'error':
+            raise SaltCloudException('Command failed: ' + command.get('log'))
 
 
-def _get_status_descr_by_id(status_id):
-    '''
-    Return linode status by ID
-
-    status_id
-        linode VM status ID
-    '''
-    for status_name, status_data in six.iteritems(LINODE_STATUS):
-        if status_data['code'] == int(status_id):
-            return status_data['descr']
-    return LINODE_STATUS.get(status_id, None)
-
-
-def _get_status_id_by_name(status_name):
-    '''
-    Return linode status description by internalstatus name
-
-    status_name
-        internal linode VM status name
-    '''
-    return LINODE_STATUS.get(status_name, {}).get('code', None)
-
-
-def _validate_name(name):
-    '''
-    Checks if the provided name fits Linode's labeling parameters.
-
-    .. versionadded:: 2015.5.6
-
-    name
-        The VM name to validate
-    '''
-    name = six.text_type(name)
-    name_length = len(name)
-    regex = re.compile(r'^[a-zA-Z0-9][A-Za-z0-9_-]*[a-zA-Z0-9]$')
-
-    if name_length < 3 or name_length > 48:
-        ret = False
-    elif not re.match(regex, name):
-        ret = False
+def _list_servers(name_regex=None, names=None):
+    request_data = {'allow-no-servers': True}
+    if names:
+        servers = []
+        for name in names:
+            for server in _list_servers(name_regex=name):
+                servers.append(server)
+        return servers
     else:
-        ret = True
-
-    if ret is False:
-        log.warning(
-            'A Linode label may only contain ASCII letters or numbers, dashes, and '
-            'underscores, must begin and end with letters or numbers, and be at least '
-            'three characters in length.'
-        )
-
-    return ret
+        if not name_regex:
+            name_regex = '.*'
+        request_data['name'] = name_regex
+    return list(map(_get_server, _request('/service/server/info', method='POST', request_data=request_data)))
 
 
-def _get_ssh_interface(vm_):
-    '''
-    Return the ssh_interface type to connect to. Either 'public_ips' (default)
-    or 'private_ips'.
-    '''
-    return config.get_cloud_config_value(
-        'ssh_interface', vm_, __opts__, default='public_ips',
-        search_global=False
+def _get_server(server):
+    server_cpu = server.pop('cpu')
+    server_disk_sizes = server.pop('diskSizes')
+    res_server = dict(
+        id=server.pop('id'),
+        name=server.pop('name'),
+        state='running' if server.pop('power') == 'on' else 'stopped',
+        datacenter=server.pop('datacenter'),
+        cpu_type=server_cpu[-1],
+        cpu_cores=int(server_cpu[:-1]),
+        ram_mb=int(server.pop('ram')),
+        disk_size_gb=int(server_disk_sizes[0]),
+        extra_disk_sizes_gb=list(map(int, server_disk_sizes[1:])),
+        networks=server.pop('networks'),
+        daily_backup=server.pop('backup') == "1",
+        managed=server.pop('managed') == "1",
+        billing_cycle=server.pop('billing'),
+        monthly_traffic_package=server.pop('traffic'),
+        price_monthly_on=server.pop('priceMonthlyOn'),
+        price_hourly_on=server.pop('priceHourlyOn'),
+        price_hourly_off=server.pop('priceHourlyOff')
     )
+    res_server['extra'] = server
+    return res_server

@@ -3397,7 +3397,8 @@ def is_profile_configured(opts, provider, profile_name, vm_=None):
     # Most drivers need a size, but some do not.
     non_size_drivers = ['opennebula', 'parallels', 'proxmox', 'scaleway',
                         'softlayer', 'softlayer_hw', 'vmware', 'vsphere',
-                        'virtualbox', 'libvirt', 'oneandone', 'profitbricks']
+                        'virtualbox', 'libvirt', 'oneandone', 'profitbricks',
+                        'kamatera']
 
     provider_key = opts['providers'][alias][driver]
     profile_key = opts['providers'][alias][driver]['profiles'][profile_name]

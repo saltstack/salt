@@ -1,5 +1,5 @@
 =================================
-Getting Started With DigitalOcean
+Getting Started With Kamatera
 =================================
 
 `Kamatera`_ is a global cloud services platform provider, providing enterprise-grade
@@ -40,10 +40,12 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or in the
     my-kamatera-profile:
       provider: my-kamatera-config
       location: EU
+      # use salt-cloud --list-sizes to get available cpu types and options
       cpu_type: B
       cpu_cores: 2
       ram_mb: 2048
       # primary disk size
+      # use salt-cloud -f avail_server_options to get available disk sizes
       disk_size_gb: 50
       # up to 3 additional disks
       extra_disk_sizes_gb:
@@ -51,15 +53,19 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or in the
         - 200
       # hourly / monthly
       billing_cycle: monthly
-      # only relevant for monthly billing cycle
+      # traffic package is only relevant for monthly billing cycle
+      # use salt-cloud -f avail_server_options to get available traffic packages
       monthly_traffic_package: t5000
-      image: EU:6000C2906124e1e8c8c68c13f340aae7
+      # use salt-cloud --list-images to get available image IDs
+      image: EU:6000C29a5a7220dcf84716e7bba74215
       # up to 4 network interfaces can be attached
+      # network name 'wan' provides a public IP
+      # you can add additional private networks in the Kamatera web-ui
       networks:
         - name: wan
           ip: auto
         # - name: my-lan-id
-            ip: auto
+        #   ip: auto
       # whether to enable daily backups for the created server
       daily_backup: false
       # whether to provide managed support service
