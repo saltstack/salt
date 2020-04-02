@@ -10,6 +10,7 @@
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
+import os
 import sys
 import subprocess
 
@@ -18,6 +19,7 @@ from tests.support.mixins import LoaderModuleMockMixin, SaltReturnAssertsMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import MagicMock, patch
 from tests.support.helpers import dedent, VirtualEnv
+from tests.support.runtests import RUNTIME_VARS
 
 # Import salt libs
 import salt.version
@@ -260,6 +262,71 @@ class PipStateTest(TestCase, SaltReturnAssertsMixin, LoaderModuleMockMixin):
                         'packages are already installed',
                         {'test': ret}
                     )
+
+    def test_install_requirements_custom_pypi(self):
+        '''
+        test requirement parsing for both when a custom
+        pypi index-url is set and when it is not and
+        the requirement is already installed.
+        '''
+
+        # create requirements file
+        req_filename = os.path.join(
+            RUNTIME_VARS.TMP_STATE_TREE, 'custom-pypi-requirements.txt'
+        )
+        with salt.utils.files.fopen(req_filename, 'wb') as reqf:
+            reqf.write(b'pep8\n')
+
+        site_pkgs = '/tmp/pip-env/lib/python3.7/site-packages'
+        check_stdout = [('Looking in indexes: https://custom-pypi-url.org,'
+                         'https://pypi.org/simple/\nRequirement already satisfied: pep8 in {1}'
+                         '(from -r /tmp/files/prod/{0} (line 1)) (1.7.1)'.format(req_filename, site_pkgs)),
+                        ('Requirement already satisfied: pep8 in {1}'
+                         '(from -r /tmp/files/prod/{0} (line1)) (1.7.1)'.format(req_filename, site_pkgs))]
+        pip_version = pip.__version__
+        mock_pip_version = MagicMock(return_value=pip_version)
+
+        for stdout in check_stdout:
+            pip_install = MagicMock(return_value={'retcode': 0, 'stdout': stdout})
+            with patch.dict(pip_state.__salt__, {'pip.version': mock_pip_version}):
+                with patch.dict(pip_state.__salt__, {'pip.install': pip_install}):
+                    ret = pip_state.installed(name='', requirements=req_filename)
+                    self.assertSaltTrueReturn({'test': ret})
+                    assert 'Requirements were already installed.' == ret['comment']
+
+    def test_install_requirements_custom_pypi_changes(self):
+        '''
+        test requirement parsing for both when a custom
+        pypi index-url is set and when it is not and
+        the requirement is not installed.
+        '''
+
+        # create requirements file
+        req_filename = os.path.join(
+            RUNTIME_VARS.TMP_STATE_TREE, 'custom-pypi-requirements.txt'
+        )
+        with salt.utils.files.fopen(req_filename, 'wb') as reqf:
+            reqf.write(b'pep8\n')
+
+        site_pkgs = '/tmp/pip-env/lib/python3.7/site-packages'
+        check_stdout = [('Looking in indexes: https://custom-pypi-url.org,'
+                         'https://pypi.org/simple/\nCollecting pep8\n  Using cached'
+                         'https://custom-pypi-url.org//packages/42/3f/669429cef5acb4/pep8-1.7.1-py2.py3-none-any.whl'
+                         ' (41 kB)\nInstalling collected packages: pep8\nSuccessfully installed pep8-1.7.1'),
+                        ('Collecting pep8\n  Using cached'
+                         'https://custom-pypi-url.org//packages/42/3f/669429cef5acb4/pep8-1.7.1-py2.py3-none-any.whl'
+                         ' (41 kB)\nInstalling collected packages: pep8\nSuccessfully installed pep8-1.7.1')]
+
+        pip_version = pip.__version__
+        mock_pip_version = MagicMock(return_value=pip_version)
+
+        for stdout in check_stdout:
+            pip_install = MagicMock(return_value={'retcode': 0, 'stdout': stdout})
+            with patch.dict(pip_state.__salt__, {'pip.version': mock_pip_version}):
+                with patch.dict(pip_state.__salt__, {'pip.install': pip_install}):
+                    ret = pip_state.installed(name='', requirements=req_filename)
+                    self.assertSaltTrueReturn({'test': ret})
+                    assert 'Successfully processed requirements file {0}.'.format(req_filename) == ret['comment']
 
     def test_install_in_editable_mode(self):
         '''
