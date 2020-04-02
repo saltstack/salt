@@ -169,7 +169,7 @@ def read_secret(path, key=None):
 
         {% set mysecret = salt['vault'].read_secret('secret/my/secret')['data'] %}
 
-    .. versionchanged:: Neon
+    .. versionchanged:: Sodium
     '''
     version2 = __utils__['vault.is_v2'](path)
     if version2['v2']:
@@ -280,7 +280,7 @@ def destroy_secret(path, *args):
     Destory specified secret version at the path in vault. The vault policy
     used must allow this. Only supported on Vault KV version 2
 
-    .. versionadded:: neon
+    .. versionadded:: Sodium
 
     CLI Example:
 
