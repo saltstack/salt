@@ -11,7 +11,7 @@ import time
 # Import Salt Testing Libs
 from tests.support.unit import skipIf
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, flaky
+from tests.support.helpers import destructiveTest
 from tests.support.paths import FILES
 
 # Import Salt Libs
@@ -76,26 +76,22 @@ class VaultTestCase(ModuleCase):
             self.run_state('docker_container.absent', name='vault')
             self.run_state('docker_image.absent', name='vault', force=True)
 
-    @flaky
     def test_write_read_secret(self):
         write_return = self.run_function('vault.write_secret', path='secret/my/secret', user='foo', password='bar')
         self.assertEqual(write_return, True)
         assert self.run_function('vault.read_secret', arg=['secret/my/secret']) == {'password': 'bar', 'user': 'foo'}
         assert self.run_function('vault.read_secret', arg=['secret/my/secret', 'user']) == 'foo'
 
-    @flaky
     def test_write_raw_read_secret(self):
         assert self.run_function('vault.write_raw',
                                  path='secret/my/secret2',
                                  raw={"user2": "foo2", "password2": "bar2"}) is True
         assert self.run_function('vault.read_secret', arg=['secret/my/secret2']) == {'password2': 'bar2', 'user2': 'foo2'}
 
-    @flaky
     def test_delete_secret(self):
         assert self.run_function('vault.write_secret', path='secret/my/secret', user='foo', password='bar') is True
         assert self.run_function('vault.delete_secret', arg=['secret/my/secret']) is True
 
-    @flaky
     def test_list_secrets(self):
         assert self.run_function('vault.write_secret', path='secret/my/secret', user='foo', password='bar') is True
         assert self.run_function('vault.list_secrets', arg=['secret/my/']) == {'keys': ['secret']}
@@ -156,7 +152,6 @@ class VaultTestCaseCurrent(ModuleCase):
             self.run_state('docker_container.absent', name='vault')
             self.run_state('docker_image.absent', name='vault', force=True)
 
-    @flaky
     def test_write_read_secret_kv2(self):
         write_return = self.run_function('vault.write_secret', path='secret/my/secret', user='foo', password='bar')
         # write_secret output:
@@ -176,7 +171,6 @@ class VaultTestCaseCurrent(ModuleCase):
         read_return = self.run_function('vault.read_secret', arg=['secret/my/secret', 'user'])
         self.assertEqual(read_return, 'foo')
 
-    @flaky
     def test_list_secrets_kv2(self):
         write_return = self.run_function('vault.write_secret', path='secret/my/secret', user='foo', password='bar')
         expected_write = {'destroyed': False, 'deletion_time': ''}
@@ -185,7 +179,6 @@ class VaultTestCaseCurrent(ModuleCase):
         list_return = self.run_function('vault.list_secrets', arg=['secret/my/'])
         self.assertIn('secret', list_return['keys'])
 
-    @flaky
     def test_write_raw_read_secret_kv2(self):
         write_return = self.run_function('vault.write_raw',
                                            path='secret/my/secret2',
@@ -197,7 +190,6 @@ class VaultTestCaseCurrent(ModuleCase):
         expected_read = {'data': {'password2': 'bar2', 'user2': 'foo2'}}
         self.assertDictContainsSubset(expected_read, read_return)
 
-    @flaky
     def test_delete_secret_kv2(self):
         write_return = self.run_function('vault.write_secret', path='secret/my/secret3', user3='foo3', password3='bar3')
         expected_write = {'destroyed': False, 'deletion_time': ''}
@@ -206,7 +198,6 @@ class VaultTestCaseCurrent(ModuleCase):
         delete_return = self.run_function('vault.delete_secret', arg=['secret/my/secret3'])
         self.assertEqual(delete_return, True)
 
-    @flaky
     def test_destroy_secret_kv2(self):
         write_return = self.run_function('vault.write_secret', path='secret/my/secret4', user3='foo4', password4='bar4')
         expected_write = {'destroyed': False, 'deletion_time': ''}
