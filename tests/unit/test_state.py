@@ -264,6 +264,7 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             with patch.object(state_obj, '_run_check', return_value=mock):
                 self.assertDictContainsSubset(expected_result, state_obj.call(low_data))
 
+
 class HighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     def setUp(self):
         root_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
