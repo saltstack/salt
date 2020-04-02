@@ -637,11 +637,21 @@ def _gen_xml(
             "device": disk.get("device", "disk"),
             "target_dev": "{0}{1}".format(prefix, string.ascii_lowercase[i]),
             "disk_bus": disk["model"],
-            "type": disk["format"],
+            "format": disk.get("format", "raw"),
             "index": six.text_type(i),
         }
-        if "source_file" and disk["source_file"]:
+        if disk.get("source_file"):
             disk_context["source_file"] = disk["source_file"]
+            disk_context["type"] = "file"
+        elif disk.get("pool"):
+            # If we had no source_file, then we want a volume
+            disk_context["type"] = "volume"
+            disk_context["pool"] = disk["pool"]
+            disk_context["volume"] = disk["filename"]
+
+        else:
+            # No source and no pool is a removable device, use file type
+            disk_context["type"] = "file"
 
         if hypervisor in ["qemu", "kvm", "bhyve", "xen"]:
             disk_context["address"] = False
@@ -980,7 +990,80 @@ def _qemu_image_create(disk, create_overlay=False, saltenv="base"):
     return img_dest
 
 
-def _disk_profile(profile, hypervisor, disks, vm_name, **kwargs):
+def _seed_image(seed_cmd, img_path, name, config, install, pub_key, priv_key):
+    """
+    Helper function to seed an existing image. Note that this doesn't
+    handle volumes.
+    """
+    log.debug("Seeding image")
+    __salt__[seed_cmd](
+        img_path,
+        id_=name,
+        config=config,
+        install=install,
+        pub_key=pub_key,
+        priv_key=priv_key,
+    )
+
+
+def _disk_volume_create(conn, disk, seeder=None, saltenv="base"):
+    """
+    Create a disk volume for use in a VM
+    """
+    if disk.get("overlay_image"):
+        raise SaltInvocationError(
+            "Disk overlay_image property is not supported when creating volumes,"
+            "use backing_store_path and backing_store_format instead."
+        )
+
+    pool = conn.storagePoolLookupByName(disk["pool"])
+
+    # Use existing volume if possible
+    if disk["filename"] in pool.listVolumes():
+        return
+
+    pool_type = ElementTree.fromstring(pool.XMLDesc()).get("type")
+
+    backing_path = disk.get("backing_store_path")
+    backing_format = disk.get("backing_store_format")
+    backing_store = None
+    if (
+        backing_path
+        and backing_format
+        and (disk.get("format") == "qcow2" or pool_type == "logical")
+    ):
+        backing_store = {"path": backing_path, "format": backing_format}
+
+    if backing_store and disk.get("image"):
+        raise SaltInvocationError(
+            "Using a template image with a backing store is not possible, "
+            "choose either of them."
+        )
+
+    vol_xml = _gen_vol_xml(
+        disk["filename"],
+        disk.get("size", 0),
+        format=disk.get("format"),
+        backing_store=backing_store,
+    )
+    _define_vol_xml_str(conn, vol_xml, disk.get("pool"))
+
+    if disk.get("image"):
+        log.debug("Caching disk template image: %s", disk.get("image"))
+        cached_path = __salt__["cp.cache_file"](disk.get("image"), saltenv)
+
+        if seeder:
+            seeder(cached_path)
+        _volume_upload(
+            conn,
+            disk["pool"],
+            disk["filename"],
+            cached_path,
+            sparse=disk.get("format") == "qcow2",
+        )
+
+
+def _disk_profile(conn, profile, hypervisor, disks, vm_name):
     """
     Gather the disk profile from the config or apply the default based
     on the active hypervisor
@@ -1023,9 +1106,9 @@ def _disk_profile(profile, hypervisor, disks, vm_name, **kwargs):
     if hypervisor == "vmware":
         overlay = {"format": "vmdk", "model": "scsi", "device": "disk"}
     elif hypervisor in ["qemu", "kvm"]:
-        overlay = {"format": "qcow2", "device": "disk", "model": "virtio"}
+        overlay = {"device": "disk", "model": "virtio"}
     elif hypervisor == "xen":
-        overlay = {"format": "qcow2", "device": "disk", "model": "xen"}
+        overlay = {"device": "disk", "model": "xen"}
     elif hypervisor in ["bhyve"]:
         overlay = {"format": "raw", "model": "virtio", "sparse_volume": False}
     else:
@@ -1051,6 +1134,9 @@ def _disk_profile(profile, hypervisor, disks, vm_name, **kwargs):
                 else:
                     disklist.append(udisk)
 
+    # Get pool capabilities once to get default format later
+    pool_caps = _pool_capabilities(conn)
+
     for disk in disklist:
         # Add the missing properties that have defaults
         for key, val in six.iteritems(overlay):
@@ -1058,45 +1144,71 @@ def _disk_profile(profile, hypervisor, disks, vm_name, **kwargs):
                 disk[key] = val
 
         # We may have an already computed source_file (i.e. image not created by our module)
-        if "source_file" in disk and disk["source_file"]:
+        if disk.get("source_file") and os.path.exists(disk["source_file"]):
             disk["filename"] = os.path.basename(disk["source_file"])
-        elif "source_file" not in disk:
-            _fill_disk_filename(vm_name, disk, hypervisor, **kwargs)
+            if not disk.get("format"):
+                disk["format"] = "qcow2"
+        elif disk.get("device", "disk") == "disk":
+            _fill_disk_filename(conn, vm_name, disk, hypervisor, pool_caps)
 
     return disklist
 
 
-def _fill_disk_filename(vm_name, disk, hypervisor, **kwargs):
+def _fill_disk_filename(conn, vm_name, disk, hypervisor, pool_caps):
     """
     Compute the disk file name and update it in the disk value.
     """
-    # Compute the filename
-    disk["filename"] = "{0}_{1}.{2}".format(vm_name, disk["name"], disk["format"])
+    # Compute the filename without extension since it may not make sense for some pool types
+    disk["filename"] = "{0}_{1}".format(vm_name, disk["name"])
 
     # Compute the source file path
     base_dir = disk.get("pool", None)
     if hypervisor in ["qemu", "kvm", "xen"]:
         # Compute the base directory from the pool property. We may have either a path
         # or a libvirt pool name there.
-        # If the pool is a known libvirt one with a target path, use it as target path
         if not base_dir:
             base_dir = _get_images_dir()
+
+        # If the pool is a known libvirt one, skip the filename since a libvirt volume will be created later
+        if base_dir not in conn.listStoragePools():
+            # For path-based disks, keep the qcow2 default format
+            if not disk.get("format"):
+                disk["format"] = "qcow2"
+            disk["filename"] = "{0}.{1}".format(disk["filename"], disk["format"])
+            disk["source_file"] = os.path.join(base_dir, disk["filename"])
         else:
-            if not base_dir.startswith("/"):
-                # The pool seems not to be a path, lookup for pool infos
-                infos = pool_info(base_dir, **kwargs)
-                pool = infos[base_dir] if base_dir in infos else None
-                if (
-                    not pool
-                    or not pool["target_path"]
-                    or pool["target_path"].startswith("/dev")
-                ):
-                    raise CommandExecutionError(
-                        "Unable to create new disk {0}, specified pool {1} does not exist "
-                        "or is unsupported".format(disk["name"], base_dir)
+            if "pool" not in disk:
+                disk["pool"] = base_dir
+            pool_obj = conn.storagePoolLookupByName(base_dir)
+            pool_xml = ElementTree.fromstring(pool_obj.XMLDesc())
+            pool_type = pool_xml.get("type")
+
+            # Is the user wanting to reuse an existing volume?
+            if disk.get("source_file"):
+                if not disk.get("source_file") in pool_obj.listVolumes():
+                    raise SaltInvocationError(
+                        "{} volume doesn't exist in pool {}".format(
+                            disk.get("source_file"), base_dir
+                        )
                     )
-                base_dir = pool["target_path"]
-        disk["source_file"] = os.path.join(base_dir, disk["filename"])
+                disk["filename"] = disk["source_file"]
+                del disk["source_file"]
+
+            # Get the default format from the pool capabilities
+            if not disk.get("format"):
+                volume_options = (
+                    [
+                        type_caps.get("options", {}).get("volume", {})
+                        for type_caps in pool_caps.get("pool_types")
+                        if type_caps["name"] == pool_type
+                    ]
+                    or [{}]
+                )[0]
+                # Still prefer qcow2 if possible
+                if "qcow2" in volume_options.get("targetFormatType", []):
+                    disk["format"] = "qcow2"
+                else:
+                    disk["format"] = volume_options.get("default_format", None)
 
     elif hypervisor == "bhyve" and vm_name:
         disk["filename"] = "{0}.{1}".format(vm_name, disk["name"])
@@ -1104,11 +1216,10 @@ def _fill_disk_filename(vm_name, disk, hypervisor, **kwargs):
             "/dev/zvol", base_dir or "", disk["filename"]
         )
 
-        disk["source_file"] = os.path.join(base_dir, disk["filename"])
-
     elif hypervisor in ["esxi", "vmware"]:
         if not base_dir:
             base_dir = __salt__["config.get"]("virt:storagepool", "[0] ")
+        disk["filename"] = "{0}.{1}".format(disk["filename"], disk["format"])
         disk["source_file"] = "{0}{1}".format(base_dir, disk["filename"])
 
 
@@ -1433,7 +1544,12 @@ def init(
 
     pool
         Path to the folder or name of the pool where disks should be created.
-        (Default: depends on hypervisor)
+        (Default: depends on hypervisor and the virt:storagepool configuration)
+
+        .. versionchanged:: sodium
+
+        If the value contains no '/', it is considered a pool name where to create a volume.
+        Using volumes will be mandatory for some pools types like rdb, iscsi, etc.
 
     model
         One of the disk busses allowed by libvirt (Default: depends on hypervisor)
@@ -1444,14 +1560,38 @@ def init(
         Path to the image to use for the disk. If no image is provided, an empty disk will be created
         (Default: ``None``)
 
+        Note that some pool types do not support uploading an image. This list can evolve with libvirt
+        versions.
+
     overlay_image
         ``True`` to create a QCOW2 disk image with ``image`` as backing file. If ``False``
         the file pointed to by the ``image`` property will simply be copied. (Default: ``False``)
+
+        .. versionchanged:: sodium
+
+        This property is only valid on path-based disks, not on volumes. To create a volume with a
+        backing store, set the ``backing_store_path`` and ``backing_store_format`` properties.
+
+    backing_store_path
+        Path to the backing store image to use. This can also be the name of a volume to use as
+        backing store within the same pool.
+
+        .. versionadded:: sodium
+
+    backing_store_format
+        Image format of the disk or volume to use as backing store. This property is mandatory when
+        using ``backing_store_path`` to avoid `problems <https://libvirt.org/kbase/backing_chains.html#troubleshooting>`_
+
+        .. versionadded:: sodium
 
     source_file
         Absolute path to the disk image to use. Not to be confused with ``image`` parameter. This
         parameter is useful to use disk images that are created outside of this module. Can also
         be ``None`` for devices that have no associated image like cdroms.
+
+        .. versionchanged:: sodium
+
+        For volume disks, this can be the name of a volume already existing in the storage pool.
 
     device
         Type of device of the disk. Can be one of 'disk', 'cdrom', 'floppy' or 'lun'.
@@ -1538,7 +1678,7 @@ def init(
         virt_hypervisor = hypervisor
         if not virt_hypervisor:
             # Use the machine types as possible values
-            # Prefer "kvm" over the others if available
+            # Prefer 'kvm' over the others if available
             hypervisors = sorted(
                 {
                     x
@@ -1550,7 +1690,7 @@ def init(
             )
             virt_hypervisor = "kvm" if "kvm" in hypervisors else hypervisors[0]
 
-        # esxi used to be a possible value for the hypervisor: map it to vmware since it"s the same
+        # esxi used to be a possible value for the hypervisor: map it to vmware since it's the same
         virt_hypervisor = "vmware" if virt_hypervisor == "esxi" else virt_hypervisor
 
         log.debug("Using hypervisor %s", virt_hypervisor)
@@ -1560,10 +1700,14 @@ def init(
         # the disks are computed as follows:
         # 1 - get the disks defined in the profile
         # 3 - update the disks from the profile with the ones from the user. The matching key is the name.
-        diskp = _disk_profile(disk, virt_hypervisor, disks, name, **kwargs)
+        diskp = _disk_profile(conn, disk, virt_hypervisor, disks, name)
 
         # Create multiple disks, empty or from specified images.
         for _disk in diskp:
+            # No need to create an image for cdrom devices
+            if _disk.get("device", "disk") == "cdrom":
+                continue
+
             log.debug("Creating disk for VM [ %s ]: %s", name, _disk)
 
             if virt_hypervisor == "vmware":
@@ -1581,29 +1725,35 @@ def init(
                     vol_xml = _gen_vol_xml(
                         filename, _disk["size"], format=_disk["format"]
                     )
-                    define_vol_xml_str(vol_xml, pool=_disk.get("pool"))
+                    _define_vol_xml_str(conn, vol_xml, pool=_disk.get("pool"))
 
             elif virt_hypervisor in ["qemu", "kvm", "xen"]:
+
+                def seeder(path):
+                    _seed_image(
+                        seed_cmd,
+                        path,
+                        name,
+                        kwargs.get("config"),
+                        install,
+                        pub_key,
+                        priv_key,
+                    )
+
                 create_overlay = _disk.get("overlay_image", False)
-                if _disk["source_file"]:
+                format = _disk.get("format")
+                if _disk.get("source_file"):
                     if os.path.exists(_disk["source_file"]):
                         img_dest = _disk["source_file"]
                     else:
                         img_dest = _qemu_image_create(_disk, create_overlay, saltenv)
                 else:
+                    _disk_volume_create(conn, _disk, seeder if seed else None, saltenv)
                     img_dest = None
 
                 # Seed only if there is an image specified
                 if seed and img_dest and _disk.get("image", None):
-                    log.debug("Seed command is %s", seed_cmd)
-                    __salt__[seed_cmd](
-                        img_dest,
-                        id_=name,
-                        config=kwargs.get("config"),
-                        install=install,
-                        pub_key=pub_key,
-                        priv_key=priv_key,
-                    )
+                    seeder(img_dest)
 
             elif hypervisor in ["bhyve"]:
                 img_dest = _zfs_image_create(
@@ -1647,14 +1797,9 @@ def init(
             **kwargs
         )
         conn.defineXML(vm_xml)
-    except libvirtError as err:
-        # check if failure is due to this domain already existing
-        if "domain '{}' already exists".format(name) in six.text_type(err):
-            # continue on to seeding
-            log.warning(err)
-        else:
-            conn.close()
-            raise err  # a real error we should report upwards
+    except libvirt.libvirtError as err:
+        conn.close()
+        raise CommandExecutionError(err.get_error_message())
 
     if start:
         log.debug("Starting VM %s", name)
@@ -1958,7 +2103,7 @@ def update(
 
     # Compute the XML to get the disks, interfaces and graphics
     hypervisor = desc.get("type")
-    all_disks = _disk_profile(disk_profile, hypervisor, disks, name, **kwargs)
+    all_disks = _disk_profile(conn, disk_profile, hypervisor, disks, name)
 
     if boot is not None:
         boot = _handle_remote_boot_params(boot)

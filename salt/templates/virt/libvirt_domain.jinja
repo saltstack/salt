@@ -28,16 +28,19 @@
         </os>
         <devices>
                 {% for disk in disks %}
-                <disk type='file' device='{{ disk.device }}'>
-                        {% if 'source_file' in disk %}
+                <disk type='{{ disk.type }}' device='{{ disk.device }}'>
+                        {% if disk.type == 'file' and 'source_file' in disk -%}
                         <source file='{{ disk.source_file }}' />
+                        {% endif %}
+                        {% if disk.type == 'volume' and 'pool' in disk -%}
+                        <source pool='{{ disk.pool }}' volume='{{ disk.volume }}' />
                         {% endif %}
                         <target dev='{{ disk.target_dev }}' bus='{{ disk.disk_bus }}' />
                         {% if disk.address -%}
                         <address type='drive' controller='0' bus='0' target='0' unit='{{ disk.index }}' />
                         {% endif %}
                         {% if disk.driver -%}
-                        <driver name='qemu' type='{{ disk.type }}' cache='none' io='native'/>
+                        <driver name='qemu' type='{{ disk.format}}' cache='none' io='native'/>
                         {% endif %}
                 </disk>
                 {% endfor %}
