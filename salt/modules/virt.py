@@ -4938,14 +4938,14 @@ def network_define(name, bridge, forward, ipv4_config=None, ipv6_config=None, **
     )
     try:
         conn.networkDefineXML(net_xml)
-    except libvirtError as err:
+    except libvirt.libvirtError as err:
         log.warning(err)
         conn.close()
         raise err  # a real error we should report upwards
 
     try:
         network = conn.networkLookupByName(name)
-    except libvirtError as err:
+    except libvirt.libvirtError as err:
         log.warning(err)
         conn.close()
         raise err  # a real error we should report upwards
@@ -5570,7 +5570,7 @@ def pool_define(
             pool = conn.storagePoolDefineXML(pool_xml)
             if start:
                 pool.create()
-    except libvirtError as err:
+    except libvirt.libvirtError as err:
         raise err  # a real error we should report upwards
     finally:
         conn.close()
