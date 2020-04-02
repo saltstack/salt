@@ -29,7 +29,7 @@ except ImportError:
     HAS_NETMIKO = False
 
 try:
-    import napalm.base.netmiko_helpers
+    import napalm.base.netmiko_helpers  # pylint: disable=no-name-in-module
     HAS_NETMIKO_HELPERS = True
 except ImportError:
     HAS_NETMIKO_HELPERS = False

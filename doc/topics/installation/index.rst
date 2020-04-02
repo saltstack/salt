@@ -104,6 +104,21 @@ Salt should run on any Unix-like platform so long as the dependencies are met.
   * `PyCrypto`_ - The Python cryptography toolkit
 
 
+.. warning::
+
+    For historical reasons, Salt requires PyCrypto as a "lowest common
+    denominator". However, `PyCrypto is unmaintained`_ and best practice is to
+    manually upgrade to use a more maintained library such as `PyCryptodome`_. See
+    `Issue #52674`_ and `Issue #54115`_ for more info
+
+
+.. _PyCrypto is unmaintained: https://github.com/dlitz/pycrypto/issues/301#issue-551975699
+.. _PyCryptodome: https://pypi.org/project/pycryptodome/
+.. _Issue #52674: https://github.com/saltstack/salt/issues/52674
+.. _Issue #54115: https://github.com/saltstack/salt/issues/54115
+
+
+
 Salt defaults to the `ZeroMQ`_ transport. The ``--salt-transport`` installation
 option is available, but currently only supports the ``szeromq`` option. This
 may be expanded in the future.
@@ -177,4 +192,5 @@ SaltStack states and execution modules to build Salt and a specified set of
 dependencies, from which a platform specific repository can be built.
 
 https://github.com/saltstack/salt-pack
+
 
