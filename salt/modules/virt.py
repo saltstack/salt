@@ -4359,6 +4359,20 @@ def _parse_caps_host(host):
     return result
 
 
+def _capabilities(conn):
+    """
+    Return the hypervisor connection capabilities.
+
+    :param conn: opened libvirt connection to use
+    """
+    caps = ElementTree.fromstring(conn.getCapabilities())
+
+    return {
+        "host": _parse_caps_host(caps.find("host")),
+        "guests": [_parse_caps_guest(guest) for guest in caps.findall("guest")],
+    }
+
+
 def capabilities(**kwargs):
     """
     Return the hypervisor connection capabilities.
@@ -4376,13 +4390,13 @@ def capabilities(**kwargs):
         salt '*' virt.capabilities
     """
     conn = __get_conn(**kwargs)
-    caps = ElementTree.fromstring(conn.getCapabilities())
-    conn.close()
-
-    return {
-        "host": _parse_caps_host(caps.find("host")),
-        "guests": [_parse_caps_guest(guest) for guest in caps.findall("guest")],
-    }
+    try:
+        caps = _capabilities(conn)
+    except libvirt.libvirtError as err:
+        raise CommandExecutionError(str(err))
+    finally:
+        conn.close()
+    return caps
 
 
 def _parse_caps_enum(node):
