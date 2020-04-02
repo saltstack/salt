@@ -5,7 +5,7 @@ certifi
 cffi==1.12.2
 CherryPy==17.4.1
 click==7.0
-cryptography==2.8
+cryptography==2.6.1
 enum34==1.1.6
 futures==3.2.0 ; python_version < "3.0"
 gitpython==2.1.15
@@ -20,7 +20,6 @@ psutil==5.6.1
 pyasn1==0.4.5
 pycparser==2.19
 pycryptodome==3.8.1
-pyopenssl==19.1.0
 python-dateutil==2.8.0
 python-gnupg==0.4.4
 pyyaml==5.1.2
