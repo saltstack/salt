@@ -47,6 +47,7 @@ def __virtual__():
         return 'pagerduty_escalation_policy'
     return (False, 'pagerduty_util module could not be loaded')
 
+
 def present(profile='pagerduty', subdomain=None, api_key=None, **kwargs):
     '''
     Ensure that a pagerduty escalation policy exists.  Will create or update as needed.
