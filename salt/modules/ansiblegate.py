@@ -54,7 +54,13 @@ try:
 except ImportError:
     ansible = None
 
+# Function alias to make sure not to shadow built-in's
+__func_alias__ = {
+    'list_': 'list'
+}
+
 __virtualname__ = "ansible"
+
 log = logging.getLogger(__name__)
 
 
@@ -303,7 +309,7 @@ def help(module=None, *args):
             'Available sections on module "{}"'.format(
                 module.__name__.replace("ansible.modules.", "")
             )
-        ] = [i for i in doc.keys()] # pylint: disable=consider-iterating-dictionary
+        ] = list(doc)
     else:
         for arg in args:
             info = doc.get(arg)
@@ -314,7 +320,7 @@ def help(module=None, *args):
 
 
 @depends("ansible")
-def list(pattern=None):
+def list_(pattern=None):
     """
     Lists available modules.
     :return:
