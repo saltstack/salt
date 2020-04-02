@@ -111,7 +111,7 @@ Management of SmartOS Standalone Compute Nodes
     they get removed via add_*, set_*, update_*, and remove_*. Properties must
     be manually reset to their default value.
     The same behavior as when using 'vmadm update'.
-    
+
 .. warning::
 
     For HVM (bhyve and KVM) brands the `image_uuid` field should go on the boot disks,
