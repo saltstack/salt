@@ -9,6 +9,9 @@ Remove this section if not relevant
 ### New Behavior
 Remove this section if not relevant
 
+### Docs & changelog written?
+Yes/No 
+
 ### Tests written?
 **[NOTICE] Bug fixes or features added to Salt require tests.**
 Please review the [test documentation](https://docs.saltstack.com/en/latest/topics/tutorials/writing_tests.html) for details on how to implement tests into Salt's test suite.
