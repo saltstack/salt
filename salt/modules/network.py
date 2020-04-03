@@ -2106,7 +2106,7 @@ def fqdns():
         results = pool.map(_lookup_fqdn, addresses)
         pool.close()
         pool.join()
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error("Exception while creating a ThreadPool for resolving FQDNs: %s", exc)
 
     for item in results:
