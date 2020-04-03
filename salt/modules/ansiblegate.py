@@ -43,6 +43,7 @@ import salt.utils.json
 import salt.utils.platform
 import salt.utils.timed_subprocess
 import salt.utils.yaml
+import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, LoaderError
 from salt.ext import six
 from salt.utils.decorators import depends
@@ -186,10 +187,7 @@ class AnsibleModuleCaller(object):
             timeout=self.timeout,
         )
         proc_out.run()
-        if six.PY2:
-            proc_out_stdout = proc_out.stdout
-        else:
-            proc_out_stdout = proc_out.stdout.decode()
+        proc_out_stdout = salt.utils.stringutils.to_str(proc_out.stdout)
         proc_exc = salt.utils.timed_subprocess.TimedProc(
             [sys.executable, module.__file__],
             stdin=proc_out_stdout,
