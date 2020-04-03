@@ -1,6 +1,7 @@
-@Library('salt@master-1.6') _
+@Library('salt@bryce-test') _
 
 runDocs(
-    env: env)
+    env: env,
+    run_on_docs_pr: true)
 
 // vim: ft=groovy

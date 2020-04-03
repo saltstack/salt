@@ -1,4 +1,4 @@
-@Library('salt@master-1.6') _
+@Library('salt@bryce-test') _
 
 runTestSuite(
     concurrent_builds: 1,
@@ -11,6 +11,7 @@ runTestSuite(
     nox_passthrough_opts: '--ssh-tests',
     python_version: 'py3',
     testrun_timeout: 6,
-    use_spot_instances: true)
+    use_spot_instances: true,
+    run_on_docs_pr: true)
 
 // vim: ft=groovy
