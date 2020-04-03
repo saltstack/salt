@@ -23,7 +23,13 @@ A clear and concise description of what you expected to happen.
 If applicable, add screenshots to help explain your problem.
 
 **Versions Report**
+<details><summary>salt --versions-report</summary>
 (Provided by running salt --versions-report. Please also mention any differences in master/minion versions.) 
+
+```
+PASTE HERE
+```
+</details>
 
 **Additional context**
 Add any other context about the problem here.
