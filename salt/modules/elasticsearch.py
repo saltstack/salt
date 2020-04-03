@@ -63,7 +63,7 @@ log = logging.getLogger(__name__)
 # Import third party libs
 try:
     import elasticsearch
-    from elasticsearch import RequestsHttpConnection
+    from elasticsearch import RequestsHttpConnection  # pylint: disable=no-name-in-module
     logging.getLogger('elasticsearch').setLevel(logging.CRITICAL)
     HAS_ELASTICSEARCH = True
 except ImportError:
@@ -267,7 +267,7 @@ def cluster_stats(nodes=None, hosts=None, profile=None):
 
 def cluster_get_settings(flat_settings=False, include_defaults=False, hosts=None, profile=None):
     '''
-    .. versionadded:: Neon
+    .. versionadded:: 3000
 
     Return Elasticsearch cluster settings.
 
@@ -291,7 +291,7 @@ def cluster_get_settings(flat_settings=False, include_defaults=False, hosts=None
 
 def cluster_put_settings(body=None, flat_settings=False, hosts=None, profile=None):
     '''
-    .. versionadded:: Neon
+    .. versionadded:: 3000
 
     Set Elasticsearch cluster settings.
 
@@ -693,7 +693,7 @@ def index_close(index, allow_no_indices=True, expand_wildcards='open', ignore_un
 
 def index_get_settings(hosts=None, profile=None, **kwargs):
     '''
-    .. versionadded:: Neon
+    .. versionadded:: 3000
 
     Check for the existence of an index and if it exists, return its settings
     http://www.elastic.co/guide/en/elasticsearch/reference/current/indices-get-settings.html
@@ -742,7 +742,7 @@ def index_get_settings(hosts=None, profile=None, **kwargs):
 
 def index_put_settings(body=None, hosts=None, profile=None, source=None, **kwargs):
     '''
-    .. versionadded:: Neon
+    .. versionadded:: 3000
 
     Update existing index settings
     https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-update-settings.html
@@ -1383,7 +1383,7 @@ def snapshot_delete(repository, snapshot, hosts=None, profile=None):
 
 def flush_synced(hosts=None, profile=None, **kwargs):
     '''
-    .. versionadded:: Neon
+    .. versionadded:: 3000
 
     Perform a normal flush, then add a generated unique marker (sync_id) to all shards.
     http://www.elastic.co/guide/en/elasticsearch/reference/current/indices-synced-flush.html
