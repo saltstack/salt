@@ -357,7 +357,7 @@ Changelog for v2016.11.4..v2016.11.5
 
     * 75e6bc0aa3 Fix two issues with pip.install
 
-* **ISSUE** `#39531`_: (`ypid`_) Use yaml.safe_* instaed of yaml.load / yaml.dump / … (refs: `#40751`_)
+* **ISSUE** `#39531`_: (`ypid`_) Use yaml.safe_* instead of yaml.load / yaml.dump / … (refs: `#40751`_)
 
 * **PR** `#40751`_: (`rallytime`_) Use Salt's SaltYamlSafeLoader and SafeOrderedDumper classes for yaml.load/dump
   @ *2017-04-28 12:56:06 UTC*
