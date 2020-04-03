@@ -2,7 +2,7 @@
 '''
 Azure (ARM) DNS State Module
 
-.. versionadded:: Sodium
+.. versionadded:: 3000
 
 :maintainer: <devops@eitr.tech>
 :maturity: new
@@ -132,7 +132,7 @@ def zone_present(name, resource_group, etag=None, if_match=None, if_none_match=N
                  registration_virtual_networks=None, resolution_virtual_networks=None,
                  tags=None, zone_type='Public', connection_auth=None, **kwargs):
     '''
-    .. versionadded:: Sodium
+    .. versionadded:: 3000
 
     Ensure a DNS zone exists.
 
@@ -299,7 +299,7 @@ def zone_present(name, resource_group, etag=None, if_match=None, if_none_match=N
 
 def zone_absent(name, resource_group, connection_auth=None):
     '''
-    .. versionadded:: Sodium
+    .. versionadded:: 3000
 
     Ensure a DNS zone does not exist in the resource group.
 
@@ -365,7 +365,7 @@ def record_set_present(name, zone_name, resource_group, record_type, if_match=No
                        ns_records=None, ptr_records=None, srv_records=None, txt_records=None, cname_record=None,
                        soa_record=None, caa_records=None, connection_auth=None, **kwargs):
     '''
-    .. versionadded:: Sodium
+    .. versionadded:: 3000
 
     Ensure a record set exists in a DNS zone.
 
@@ -618,7 +618,7 @@ def record_set_present(name, zone_name, resource_group, record_type, if_match=No
 
 def record_set_absent(name, zone_name, resource_group, connection_auth=None):
     '''
-    .. versionadded:: Sodium
+    .. versionadded:: 3000
 
     Ensure a record set does not exist in the DNS zone.
 

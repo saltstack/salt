@@ -27,7 +27,7 @@ Salt engines are configured under an ``engines`` top-level section in your Salt 
          port: 5959
          proto: tcp
 
-.. versionadded:: Neon
+.. versionadded:: 3000
 
 Multiple copies of a particular Salt engine can be configured by including the ``engine_module`` parameter in the engine configuration.
 

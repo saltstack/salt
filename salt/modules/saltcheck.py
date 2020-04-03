@@ -20,7 +20,7 @@ folder, and should be named the same as the associated state. The ``id`` of a te
 same manner as in salt state files and should be unique and descriptive.
 
 
-.. versionadded:: Neon
+.. versionadded:: 3000
     The ``saltcheck-tests`` folder can be customized using the ``saltcheck_test_location`` minion
     configuration setting.  This setting is a relative path from the formula's ``salt://`` path
     to the test files.
@@ -375,7 +375,7 @@ def report_highstate_tests(saltenv=None):
 
         salt '*' saltcheck.report_highstate_tests
 
-    .. versionadded:: Neon
+    .. versionadded:: 3000
     '''
     if not saltenv:
         if 'saltenv' in __opts__ and __opts__['saltenv']:
@@ -1133,8 +1133,8 @@ class StateTestLoader(object):
                                     '{0}.tst'.format(split_sls[-1]))
                     ])
                     # for this state, find matching test files and load them
-                    cached_copied_files = set(cached_copied_files)
-                    for this_cached_test_file in list(cached_copied_files):
+                    cached_copied_files = list(set(cached_copied_files))
+                    for this_cached_test_file in cached_copied_files:
                         if this_cached_test_file.endswith(tuple(sls_path_names)):
                             self.test_files.add(this_cached_test_file)
                             cached_copied_files.remove(this_cached_test_file)

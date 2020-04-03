@@ -302,6 +302,7 @@ def _install_requirements(session, transport, *extra_requirements):
         requirements_files = [
             os.path.join('pkg', 'osx', 'req.txt'),
             os.path.join('pkg', 'osx', 'req_ext.txt'),
+            os.path.join('pkg', 'osx', 'req_pyobjc.txt'),
             os.path.join('requirements', 'static', 'darwin.in')
         ]
 
@@ -475,7 +476,7 @@ def _runtests(session, coverage, cmd_args):
 @nox.parametrize('crypto', [None, 'm2crypto', 'pycryptodomex'])
 def runtests_parametrized(session, coverage, transport, crypto):
     # Install requirements
-    _install_requirements(session, transport, 'unittest-xml-reporting==2.2.1')
+    _install_requirements(session, transport, 'unittest-xml-reporting==2.5.2')
 
     if crypto:
         if crypto == 'm2crypto':
