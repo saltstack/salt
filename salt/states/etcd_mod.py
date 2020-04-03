@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-'''
+"""
 Manage etcd Keys
 ================
 
@@ -115,37 +115,38 @@ Available Functions
           - profile: my_etcd_config
           - watch:
             - file: /some/file.txt
-'''
+"""
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Define the module's virtual name
-__virtualname__ = 'etcd'
+__virtualname__ = "etcd"
 
 # Function aliases
 __func_alias__ = {
-    'set_': 'set',
+    "set_": "set",
 }
 
 # Import third party libs
 try:
     import salt.utils.etcd_util  # pylint: disable=W0611
+
     HAS_ETCD = True
 except ImportError:
     HAS_ETCD = False
 
 
 def __virtual__():
-    '''
+    """
     Only return if python-etcd is installed
-    '''
+    """
 
     return __virtualname__ if HAS_ETCD else False
 
 
 def set_(name, value, profile=None, **kwargs):
-    '''
+    """
     Set a key in etcd
 
     name
@@ -163,37 +164,35 @@ def set_(name, value, profile=None, **kwargs):
               etcd.host: 127.0.0.1
               etcd.port: 4001
 
-    '''
+    """
 
     created = False
 
     rtn = {
-        'name': name,
-        'comment': 'Key contains correct value',
-        'result': True,
-        'changes': {}
+        "name": name,
+        "comment": "Key contains correct value",
+        "result": True,
+        "changes": {},
     }
 
-    current = __salt__['etcd.get'](name, profile=profile, **kwargs)
+    current = __salt__["etcd.get"](name, profile=profile, **kwargs)
     if not current:
         created = True
 
-    result = __salt__['etcd.set'](name, value, profile=profile, **kwargs)
+    result = __salt__["etcd.set"](name, value, profile=profile, **kwargs)
 
     if result and result != current:
         if created:
-            rtn['comment'] = 'New key created'
+            rtn["comment"] = "New key created"
         else:
-            rtn['comment'] = 'Key value updated'
-        rtn['changes'] = {
-            name: value
-        }
+            rtn["comment"] = "Key value updated"
+        rtn["changes"] = {name: value}
 
     return rtn
 
 
 def wait_set(name, value, profile=None, **kwargs):
-    '''
+    """
     Set a key in etcd only if the watch statement calls it. This function is
     also aliased as ``wait_set``.
 
@@ -211,18 +210,13 @@ def wait_set(name, value, profile=None, **kwargs):
               etcd.host: 127.0.0.1
               etcd.port: 4001
 
-    '''
+    """
 
-    return {
-        'name': name,
-        'changes': {},
-        'result': True,
-        'comment': ''
-    }
+    return {"name": name, "changes": {}, "result": True, "comment": ""}
 
 
 def directory(name, profile=None, **kwargs):
-    '''
+    """
     Create a directory in etcd.
 
     name
@@ -236,35 +230,28 @@ def directory(name, profile=None, **kwargs):
             my_etd_config:
               etcd.host: 127.0.0.1
               etcd.port: 4001
-    '''
+    """
 
     created = False
 
-    rtn = {
-        'name': name,
-        'comment': 'Directory exists',
-        'result': True,
-        'changes': {}
-    }
+    rtn = {"name": name, "comment": "Directory exists", "result": True, "changes": {}}
 
-    current = __salt__['etcd.get'](name, profile=profile, recurse=True, **kwargs)
+    current = __salt__["etcd.get"](name, profile=profile, recurse=True, **kwargs)
     if not current:
         created = True
 
-    result = __salt__['etcd.set'](name, None, directory=True, profile=profile, **kwargs)
+    result = __salt__["etcd.set"](name, None, directory=True, profile=profile, **kwargs)
 
     if result and result != current:
         if created:
-            rtn['comment'] = 'New directory created'
-            rtn['changes'] = {
-                name: 'Created'
-            }
+            rtn["comment"] = "New directory created"
+            rtn["changes"] = {name: "Created"}
 
     return rtn
 
 
 def rm(name, recurse=False, profile=None, **kwargs):
-    '''
+    """
     Deletes a key from etcd
 
     name
@@ -282,31 +269,25 @@ def rm(name, recurse=False, profile=None, **kwargs):
             my_etd_config:
               etcd.host: 127.0.0.1
               etcd.port: 4001
-    '''
+    """
 
-    rtn = {
-        'name': name,
-        'result': True,
-        'changes': {}
-    }
+    rtn = {"name": name, "result": True, "changes": {}}
 
-    if not __salt__['etcd.get'](name, profile=profile, **kwargs):
-        rtn['comment'] = 'Key does not exist'
+    if not __salt__["etcd.get"](name, profile=profile, **kwargs):
+        rtn["comment"] = "Key does not exist"
         return rtn
 
-    if __salt__['etcd.rm'](name, recurse=recurse, profile=profile, **kwargs):
-        rtn['comment'] = 'Key removed'
-        rtn['changes'] = {
-            name: 'Deleted'
-        }
+    if __salt__["etcd.rm"](name, recurse=recurse, profile=profile, **kwargs):
+        rtn["comment"] = "Key removed"
+        rtn["changes"] = {name: "Deleted"}
     else:
-        rtn['comment'] = 'Unable to remove key'
+        rtn["comment"] = "Unable to remove key"
 
     return rtn
 
 
 def wait_rm(name, recurse=False, profile=None, **kwargs):
-    '''
+    """
     Deletes a key from etcd only if the watch statement calls it.
     This function is also aliased as ``wait_rm``.
 
@@ -324,18 +305,13 @@ def wait_rm(name, recurse=False, profile=None, **kwargs):
             my_etd_config:
               etcd.host: 127.0.0.1
               etcd.port: 4001
-    '''
+    """
 
-    return {
-        'name': name,
-        'changes': {},
-        'result': True,
-        'comment': ''
-    }
+    return {"name": name, "changes": {}, "result": True, "comment": ""}
 
 
 def mod_watch(name, **kwargs):
-    '''
+    """
     The etcd watcher, called to invoke the watch command.
     When called, execute a etcd function based on a watch call requisite.
 
@@ -344,25 +320,20 @@ def mod_watch(name, **kwargs):
         :ref:`requisite <requisites>`. It should not be called directly.
 
         Parameters for this function should be set by the state being triggered.
-    '''
+    """
 
     # Watch to set etcd key
-    if kwargs.get('sfun') in ['wait_set_key', 'wait_set']:
-        return set_(
-            name,
-            kwargs.get('value'),
-            kwargs.get('profile'))
+    if kwargs.get("sfun") in ["wait_set_key", "wait_set"]:
+        return set_(name, kwargs.get("value"), kwargs.get("profile"))
 
     # Watch to rm etcd key
-    if kwargs.get('sfun') in ['wait_rm_key', 'wait_rm']:
-        return rm(
-            name,
-            kwargs.get('profile'))
+    if kwargs.get("sfun") in ["wait_rm_key", "wait_rm"]:
+        return rm(name, kwargs.get("profile"))
 
     return {
-        'name': name,
-        'changes': {},
-        'comment': 'etcd.{0[sfun]} does not work with the watch requisite, '
-                   'please use etcd.wait_set or etcd.wait_rm'.format(kwargs),
-        'result': False
+        "name": name,
+        "changes": {},
+        "comment": "etcd.{0[sfun]} does not work with the watch requisite, "
+        "please use etcd.wait_set or etcd.wait_rm".format(kwargs),
+        "result": False,
     }

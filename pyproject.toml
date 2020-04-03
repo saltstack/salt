@@ -3,4 +3,5 @@ exclude= '''
 \(
     salt/ext
   | tests/kitchen
+  | templates
 )/
