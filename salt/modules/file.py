@@ -3929,11 +3929,11 @@ def get_selinux_context(path):
 
         salt '*' file.get_selinux_context /etc/hosts
     """
-    out = __salt__["cmd.run"](["ls", "-Z", path], python_shell=False)
+    cmd_ret = __salt__["cmd.run_all"](["stat", "-c", "%C", path], python_shell=False)
 
-    try:
-        ret = re.search(r"\w+:\w+:\w+:\w+", out).group(0)
-    except AttributeError:
+    if cmd_ret["retcode"] == 0:
+        ret = cmd_ret["stdout"]
+    else:
         ret = "No selinux context information is available for {0}".format(path)
 
     return ret
