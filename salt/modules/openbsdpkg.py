@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Package support for OpenBSD
 
 .. note::
@@ -21,13 +21,13 @@ Package support for OpenBSD
       - vim--no_x11
       - ruby%2.3
 
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import copy
-import re
 import logging
+import re
 
 # Import Salt libs
 import salt.utils.data
@@ -38,24 +38,27 @@ log = logging.getLogger(__name__)
 
 # FIXME: replace guesswork with `pkg_info -z` to correctly identify package
 #        flavors and branches
-__PKG_RE = re.compile('^((?:[^-]+|-(?![0-9]))+)-([0-9][^-]*)(?:-(.*))?$')
+__PKG_RE = re.compile("^((?:[^-]+|-(?![0-9]))+)-([0-9][^-]*)(?:-(.*))?$")
 
 # Define the module's virtual name
-__virtualname__ = 'pkg'
+__virtualname__ = "pkg"
 
 
 def __virtual__():
-    '''
+    """
     Set the virtual pkg module if the os is OpenBSD
-    '''
-    if __grains__['os'] == 'OpenBSD':
+    """
+    if __grains__["os"] == "OpenBSD":
         return __virtualname__
-    return (False, 'The openbsdpkg execution module cannot be loaded: '
-            'only available on OpenBSD systems.')
+    return (
+        False,
+        "The openbsdpkg execution module cannot be loaded: "
+        "only available on OpenBSD systems.",
+    )
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
-    '''
+    """
     List the packages currently installed as a dict::
 
         {'<package_name>': '<version>'}
@@ -65,41 +68,42 @@ def list_pkgs(versions_as_list=False, **kwargs):
     .. code-block:: bash
 
         salt '*' pkg.list_pkgs
-    '''
+    """
     versions_as_list = salt.utils.data.is_true(versions_as_list)
     # not yet implemented or not applicable
-    if any([salt.utils.data.is_true(kwargs.get(x))
-            for x in ('removed', 'purge_desired')]):
+    if any(
+        [salt.utils.data.is_true(kwargs.get(x)) for x in ("removed", "purge_desired")]
+    ):
         return {}
 
-    if 'pkg.list_pkgs' in __context__:
+    if "pkg.list_pkgs" in __context__:
         if versions_as_list:
-            return __context__['pkg.list_pkgs']
+            return __context__["pkg.list_pkgs"]
         else:
-            ret = copy.deepcopy(__context__['pkg.list_pkgs'])
-            __salt__['pkg_resource.stringify'](ret)
+            ret = copy.deepcopy(__context__["pkg.list_pkgs"])
+            __salt__["pkg_resource.stringify"](ret)
             return ret
 
     ret = {}
-    cmd = 'pkg_info -q -a'
-    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
+    cmd = "pkg_info -q -a"
+    out = __salt__["cmd.run_stdout"](cmd, output_loglevel="trace")
     for line in out.splitlines():
         try:
             pkgname, pkgver, flavor = __PKG_RE.match(line).groups()
         except AttributeError:
             continue
-        pkgname += '--{0}'.format(flavor) if flavor else ''
-        __salt__['pkg_resource.add_pkg'](ret, pkgname, pkgver)
+        pkgname += "--{0}".format(flavor) if flavor else ""
+        __salt__["pkg_resource.add_pkg"](ret, pkgname, pkgver)
 
-    __salt__['pkg_resource.sort_pkglist'](ret)
-    __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
+    __salt__["pkg_resource.sort_pkglist"](ret)
+    __context__["pkg.list_pkgs"] = copy.deepcopy(ret)
     if not versions_as_list:
-        __salt__['pkg_resource.stringify'](ret)
+        __salt__["pkg_resource.stringify"](ret)
     return ret
 
 
 def latest_version(*names, **kwargs):
-    '''
+    """
     Return the latest version of the named package available for upgrade or
     installation. If more than one package name is specified, a dict of
     name/version pairs is returned.
@@ -112,18 +116,20 @@ def latest_version(*names, **kwargs):
     .. code-block:: bash
 
         salt '*' pkg.latest_version <package name>
-    '''
-    kwargs.pop('refresh', True)
+    """
+    kwargs.pop("refresh", True)
 
     pkgs = list_pkgs()
     ret = {}
     # Initialize the dict with empty strings
     for name in names:
-        ret[name] = ''
+        ret[name] = ""
 
         # Query the repository for the package name
-        cmd = 'pkg_info -Q {0}'.format(name)
-        out = __salt__['cmd.run_stdout'](cmd, python_shell=False, output_loglevel='trace')
+        cmd = "pkg_info -Q {0}".format(name)
+        out = __salt__["cmd.run_stdout"](
+            cmd, python_shell=False, output_loglevel="trace"
+        )
 
         # Since we can only query instead of request the specific package
         # we'll have to go through the returned list and find what we
@@ -135,7 +141,7 @@ def latest_version(*names, **kwargs):
             except AttributeError:
                 continue
 
-            match = re.match(r'.*\(installed\)$', pkgver)
+            match = re.match(r".*\(installed\)$", pkgver)
             if match:
                 # Package is explicitly marked as installed already,
                 # so skip any further comparison and move on to the
@@ -145,18 +151,15 @@ def latest_version(*names, **kwargs):
             # First check if we need to look for flavors before
             # looking at unflavored packages.
             if "{0}--{1}".format(pkgname, flavor) == name:
-                pkgname += '--{0}'.format(flavor)
+                pkgname += "--{0}".format(flavor)
             elif pkgname == name:
                 pass
             else:
                 # No match just move on.
                 continue
 
-            cur = pkgs.get(pkgname, '')
-            if not cur or salt.utils.versions.compare(
-                ver1=cur,
-                oper='<',
-                ver2=pkgver):
+            cur = pkgs.get(pkgname, "")
+            if not cur or salt.utils.versions.compare(ver1=cur, oper="<", ver2=pkgver):
                 ret[pkgname] = pkgver
 
     # Return a string if only one package name passed
@@ -166,7 +169,7 @@ def latest_version(*names, **kwargs):
 
 
 def version(*names, **kwargs):
-    '''
+    """
     Returns a string representing the package version or an empty string if not
     installed. If more than one package name is specified, a dict of
     name/version pairs is returned.
@@ -177,12 +180,12 @@ def version(*names, **kwargs):
 
         salt '*' pkg.version <package name>
         salt '*' pkg.version <package1> <package2> <package3> ...
-    '''
-    return __salt__['pkg_resource.version'](*names, **kwargs)
+    """
+    return __salt__["pkg_resource.version"](*names, **kwargs)
 
 
 def install(name=None, pkgs=None, sources=None, **kwargs):
-    '''
+    """
     Install the passed package
 
     Return a dict containing the new package names and versions::
@@ -208,9 +211,9 @@ def install(name=None, pkgs=None, sources=None, **kwargs):
     .. code-block:: bash
 
         salt '*' pkg.install sources='[{"<pkg name>": "salt://pkgs/<pkg filename>"}]'
-    '''
+    """
     try:
-        pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
+        pkg_params, pkg_type = __salt__["pkg_resource.parse_targets"](
             name, pkgs, sources, **kwargs
         )
     except MinionError as exc:
@@ -224,34 +227,30 @@ def install(name=None, pkgs=None, sources=None, **kwargs):
     for pkg in pkg_params:
         # A special case for OpenBSD package "branches" is also required in
         # salt/states/pkg.py
-        if pkg_type == 'repository':
-            stem, branch = (pkg.split('%') + [''])[:2]
-            base, flavor = (stem.split('--') + [''])[:2]
-            pkg = '{0}--{1}%{2}'.format(base, flavor, branch)
-        cmd = 'pkg_add -x -I {0}'.format(pkg)
-        out = __salt__['cmd.run_all'](
-            cmd,
-            python_shell=False,
-            output_loglevel='trace'
-        )
-        if out['retcode'] != 0 and out['stderr']:
-            errors.append(out['stderr'])
+        if pkg_type == "repository":
+            stem, branch = (pkg.split("%") + [""])[:2]
+            base, flavor = (stem.split("--") + [""])[:2]
+            pkg = "{0}--{1}%{2}".format(base, flavor, branch)
+        cmd = "pkg_add -x -I {0}".format(pkg)
+        out = __salt__["cmd.run_all"](cmd, python_shell=False, output_loglevel="trace")
+        if out["retcode"] != 0 and out["stderr"]:
+            errors.append(out["stderr"])
 
-    __context__.pop('pkg.list_pkgs', None)
+    __context__.pop("pkg.list_pkgs", None)
     new = list_pkgs()
     ret = salt.utils.data.compare_dicts(old, new)
 
     if errors:
         raise CommandExecutionError(
-            'Problem encountered installing package(s)',
-            info={'errors': errors, 'changes': ret}
+            "Problem encountered installing package(s)",
+            info={"errors": errors, "changes": ret},
         )
 
     return ret
 
 
 def remove(name=None, pkgs=None, purge=False, **kwargs):
-    '''
+    """
     Remove a single package with pkg_delete
 
     Multiple Package Options:
@@ -272,10 +271,12 @@ def remove(name=None, pkgs=None, purge=False, **kwargs):
         salt '*' pkg.remove <package name>
         salt '*' pkg.remove <package1>,<package2>,<package3>
         salt '*' pkg.remove pkgs='["foo", "bar"]'
-    '''
+    """
     try:
-        pkg_params = [x.split('--')[0] for x in
-                      __salt__['pkg_resource.parse_targets'](name, pkgs)[0]]
+        pkg_params = [
+            x.split("--")[0]
+            for x in __salt__["pkg_resource.parse_targets"](name, pkgs)[0]
+        ]
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
@@ -284,38 +285,34 @@ def remove(name=None, pkgs=None, purge=False, **kwargs):
     if not targets:
         return {}
 
-    cmd = ['pkg_delete', '-Ix', '-Ddependencies']
+    cmd = ["pkg_delete", "-Ix", "-Ddependencies"]
 
     if purge:
-        cmd.append('-cqq')
+        cmd.append("-cqq")
 
     cmd.extend(targets)
 
-    out = __salt__['cmd.run_all'](
-        cmd,
-        python_shell=False,
-        output_loglevel='trace'
-    )
-    if out['retcode'] != 0 and out['stderr']:
-        errors = [out['stderr']]
+    out = __salt__["cmd.run_all"](cmd, python_shell=False, output_loglevel="trace")
+    if out["retcode"] != 0 and out["stderr"]:
+        errors = [out["stderr"]]
     else:
         errors = []
 
-    __context__.pop('pkg.list_pkgs', None)
+    __context__.pop("pkg.list_pkgs", None)
     new = list_pkgs()
     ret = salt.utils.data.compare_dicts(old, new)
 
     if errors:
         raise CommandExecutionError(
-            'Problem encountered removing package(s)',
-            info={'errors': errors, 'changes': ret}
+            "Problem encountered removing package(s)",
+            info={"errors": errors, "changes": ret},
         )
 
     return ret
 
 
 def purge(name=None, pkgs=None, **kwargs):
-    '''
+    """
     Remove a package and extra configuration files.
 
     name
@@ -340,12 +337,12 @@ def purge(name=None, pkgs=None, **kwargs):
         salt '*' pkg.purge <package name>
         salt '*' pkg.purge <package1>,<package2>,<package3>
         salt '*' pkg.purge pkgs='["foo", "bar"]'
-    '''
+    """
     return remove(name=name, pkgs=pkgs, purge=True)
 
 
 def upgrade_available(name):
-    '''
+    """
     Check whether or not an upgrade is available for a given package
 
     .. versionadded:: 2019.2.0
@@ -355,14 +352,12 @@ def upgrade_available(name):
     .. code-block:: bash
 
         salt '*' pkg.upgrade_available <package name>
-    '''
-    return latest_version(name) != ''
+    """
+    return latest_version(name) != ""
 
 
-def upgrade(name=None,
-            pkgs=None,
-            **kwargs):
-    '''
+def upgrade(name=None, pkgs=None, **kwargs):
+    """
     Run a full package upgrade (``pkg_add -u``), or upgrade a specific package
     if ``name`` or ``pkgs`` is provided.
     ``name`` is ignored when ``pkgs`` is specified.
@@ -382,13 +377,13 @@ def upgrade(name=None,
 
         salt '*' pkg.upgrade
         salt '*' pkg.upgrade python%2.7
-    '''
+    """
     old = list_pkgs()
 
-    cmd = ['pkg_add', '-Ix', '-u']
+    cmd = ["pkg_add", "-Ix", "-u"]
 
-    if kwargs.get('noop', False):
-        cmd.append('-n')
+    if kwargs.get("noop", False):
+        cmd.append("-n")
 
     if pkgs:
         cmd.extend(pkgs)
@@ -397,17 +392,16 @@ def upgrade(name=None,
 
     # Now run the upgrade, compare the list of installed packages before and
     # after and we have all the info we need.
-    result = __salt__['cmd.run_all'](cmd, output_loglevel='trace',
-                                     python_shell=False)
+    result = __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
 
-    __context__.pop('pkg.list_pkgs', None)
+    __context__.pop("pkg.list_pkgs", None)
     new = list_pkgs()
     ret = salt.utils.data.compare_dicts(old, new)
 
-    if result['retcode'] != 0:
+    if result["retcode"] != 0:
         raise CommandExecutionError(
-                'Problem encountered upgrading packages',
-                info={'changes': ret, 'result': result}
+            "Problem encountered upgrading packages",
+            info={"changes": ret, "result": result},
         )
 
     return ret

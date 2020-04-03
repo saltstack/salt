@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Manage Launch Configurations
 
 .. versionadded:: 2014.7.0
@@ -97,42 +97,44 @@ and autoscale groups are completely dependent on each other.
             keyid: GKTADJGHEIQSXMKKRBJ08H
             key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
             region: us-east-1
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
+
 from salt.exceptions import SaltInvocationError
 
 
 def __virtual__():
-    '''
+    """
     Only load if boto is available.
-    '''
-    return 'boto_lc' if 'boto_asg.exists' in __salt__ else False
+    """
+    return "boto_lc" if "boto_asg.exists" in __salt__ else False
 
 
 def present(
-        name,
-        image_id,
-        key_name=None,
-        vpc_id=None,
-        vpc_name=None,
-        security_groups=None,
-        user_data=None,
-        cloud_init=None,
-        instance_type='m1.small',
-        kernel_id=None,
-        ramdisk_id=None,
-        block_device_mappings=None,
-        delete_on_termination=None,
-        instance_monitoring=False,
-        spot_price=None,
-        instance_profile_name=None,
-        ebs_optimized=False,
-        associate_public_ip_address=None,
-        region=None,
-        key=None,
-        keyid=None,
-        profile=None):
-    '''
+    name,
+    image_id,
+    key_name=None,
+    vpc_id=None,
+    vpc_name=None,
+    security_groups=None,
+    user_data=None,
+    cloud_init=None,
+    instance_type="m1.small",
+    kernel_id=None,
+    ramdisk_id=None,
+    block_device_mappings=None,
+    delete_on_termination=None,
+    instance_monitoring=False,
+    spot_price=None,
+    instance_profile_name=None,
+    ebs_optimized=False,
+    associate_public_ip_address=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+):
+    """
     Ensure the launch configuration exists.
 
     name
@@ -240,27 +242,26 @@ def present(
     profile
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
-    '''
+    """
     if user_data and cloud_init:
-        raise SaltInvocationError('user_data and cloud_init are mutually'
-                                  ' exclusive options.')
-    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
-    exists = __salt__['boto_asg.launch_configuration_exists'](name,
-                                                              region=region,
-                                                              key=key,
-                                                              keyid=keyid,
-                                                              profile=profile)
+        raise SaltInvocationError(
+            "user_data and cloud_init are mutually" " exclusive options."
+        )
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
+    exists = __salt__["boto_asg.launch_configuration_exists"](
+        name, region=region, key=key, keyid=keyid, profile=profile
+    )
     if not exists:
-        if __opts__['test']:
-            msg = 'Launch configuration set to be created.'
-            ret['comment'] = msg
-            ret['result'] = None
+        if __opts__["test"]:
+            msg = "Launch configuration set to be created."
+            ret["comment"] = msg
+            ret["result"] = None
             return ret
         if cloud_init:
-            user_data = __salt__['boto_asg.get_cloud_init_mime'](cloud_init)
+            user_data = __salt__["boto_asg.get_cloud_init_mime"](cloud_init)
         # TODO: Ensure image_id, key_name, security_groups and instance_profile
         # exist, or throw an invocation error.
-        created = __salt__['boto_asg.create_launch_configuration'](
+        created = __salt__["boto_asg.create_launch_configuration"](
             name,
             image_id,
             key_name=key_name,
@@ -281,25 +282,21 @@ def present(
             region=region,
             key=key,
             keyid=keyid,
-            profile=profile)
+            profile=profile,
+        )
         if created:
-            ret['changes']['old'] = None
-            ret['changes']['new'] = name
+            ret["changes"]["old"] = None
+            ret["changes"]["new"] = name
         else:
-            ret['result'] = False
-            ret['comment'] = 'Failed to create launch configuration.'
+            ret["result"] = False
+            ret["comment"] = "Failed to create launch configuration."
     else:
-        ret['comment'] = 'Launch configuration present.'
+        ret["comment"] = "Launch configuration present."
     return ret
 
 
-def absent(
-        name,
-        region=None,
-        key=None,
-        keyid=None,
-        profile=None):
-    '''
+def absent(name, region=None, key=None, keyid=None, profile=None):
+    """
     Ensure the named launch configuration is deleted.
 
     name
@@ -317,31 +314,26 @@ def absent(
     profile
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
-    '''
-    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
-    exists = __salt__['boto_asg.launch_configuration_exists'](name,
-                                                              region=region,
-                                                              key=key,
-                                                              keyid=keyid,
-                                                              profile=profile)
+    """
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
+    exists = __salt__["boto_asg.launch_configuration_exists"](
+        name, region=region, key=key, keyid=keyid, profile=profile
+    )
     if exists:
-        if __opts__['test']:
-            ret['comment'] = 'Launch configuration set to be deleted.'
-            ret['result'] = None
+        if __opts__["test"]:
+            ret["comment"] = "Launch configuration set to be deleted."
+            ret["result"] = None
             return ret
-        deleted = __salt__['boto_asg.delete_launch_configuration'](
-                                                              name,
-                                                              region=region,
-                                                              key=key,
-                                                              keyid=keyid,
-                                                              profile=profile)
+        deleted = __salt__["boto_asg.delete_launch_configuration"](
+            name, region=region, key=key, keyid=keyid, profile=profile
+        )
         if deleted:
-            ret['changes']['old'] = name
-            ret['changes']['new'] = None
-            ret['comment'] = 'Deleted launch configuration.'
+            ret["changes"]["old"] = name
+            ret["changes"]["new"] = None
+            ret["comment"] = "Deleted launch configuration."
         else:
-            ret['result'] = False
-            ret['comment'] = 'Failed to delete launch configuration.'
+            ret["result"] = False
+            ret["comment"] = "Failed to delete launch configuration."
     else:
-        ret['comment'] = 'Launch configuration does not exist.'
+        ret["comment"] = "Launch configuration does not exist."
     return ret
