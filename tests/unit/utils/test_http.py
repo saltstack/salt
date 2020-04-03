@@ -128,6 +128,16 @@ class HTTPTestCase(TestCase):
         result = http.query(url, raise_error=False)
         assert result == {"body": None}, result
 
+    def test_query_error_handling(self):
+        ret = http.query(
+                'http://127.0.0.1:0'
+                )
+        self.assertEqual(ret, {'error': '[Errno 111] Connection refused'})
+        ret = http.query(
+                'http://myfoobardomainthatnotexist'
+                )
+        self.assertEqual(ret, {'error': '[Errno -2] Name or service not known'})
+
     def test_requests_multipart_formdata_post(self):
         """
         Test handling of a multipart/form-data POST using the requests backend
