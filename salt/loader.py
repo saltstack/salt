@@ -1213,7 +1213,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         self.module_dirs = module_dirs
         self.tag = tag
-        self.loaded_base_name = loaded_base_name or LOADED_BASE_NAME
+        self.loaded_base_name = "{}_{}".format(loaded_base_name or LOADED_BASE_NAME, id(self))
         self.mod_type_check = mod_type_check or _mod_type
 
         if "__context__" not in self.pack:
@@ -1269,6 +1269,12 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         _generate_module("{0}.int.{1}".format(self.loaded_base_name, tag))
         _generate_module("{0}.ext".format(self.loaded_base_name))
         _generate_module("{0}.ext.{1}".format(self.loaded_base_name, tag))
+
+    def clean_modules(self):
+        for name in list(sys.modules):
+            if name.startswith(self.loaded_base_name):
+                 mod = sys.modules.pop(name)
+                 del mod
 
     def __getitem__(self, item):
         """
