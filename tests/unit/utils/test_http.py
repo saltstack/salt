@@ -130,13 +130,15 @@ class HTTPTestCase(TestCase):
 
     def test_query_error_handling(self):
         ret = http.query(
-                'http://127.0.0.1:0'
-                )
-        self.assertEqual(ret, {'error': '[Errno 111] Connection refused'})
+            'http://127.0.0.1:0'
+        )
+        self.assertTrue(isinstance(ret, dict))
+        self.assertTrue(isinstance(ret.get('error', None), str))
         ret = http.query(
-                'http://myfoobardomainthatnotexist'
-                )
-        self.assertEqual(ret, {'error': '[Errno -2] Name or service not known'})
+            'http://myfoobardomainthatnotexist'
+            )
+        self.assertTrue(isinstance(ret, dict))
+        self.assertTrue(isinstance(ret.get('error', None), str))
 
     def test_requests_multipart_formdata_post(self):
         """
