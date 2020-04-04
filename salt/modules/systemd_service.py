@@ -19,6 +19,7 @@ import os
 import fnmatch
 import re
 import shlex
+import time
 
 # Import Salt libs
 import salt.utils.files
@@ -172,7 +173,7 @@ def _default_runlevel():
                 line = salt.utils.stringutils.to_unicode(line)
                 if line.startswith('env DEFAULT_RUNLEVEL'):
                     runlevel = line.split('=')[-1].strip()
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return '2'
 
     # Look for an optional "legacy" override in /etc/inittab
@@ -182,7 +183,7 @@ def _default_runlevel():
                 line = salt.utils.stringutils.to_unicode(line)
                 if not line.startswith('#') and 'initdefault' in line:
                     runlevel = line.split(':')[1]
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         pass
 
     # The default runlevel can also be set via the kernel command-line.
@@ -197,7 +198,7 @@ def _default_runlevel():
                     if arg in valid_strings:
                         runlevel = arg
                         break
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         pass
 
     return runlevel
@@ -1062,22 +1063,29 @@ def force_reload(name, no_block=True, unmask=False, unmask_runtime=False):
 
 # The unused sig argument is required to maintain consistency with the API
 # established by Salt's service management states.
-def status(name, sig=None):  # pylint: disable=unused-argument
+def status(name, sig=None, wait=3):  # pylint: disable=unused-argument
     '''
-    Return the status for a service via systemd.
-    If the name contains globbing, a dict mapping service name to True/False
+    Check whether or not a service is active.
+    If the name contains globbing, a dict mapping service names to True/False
     values is returned.
 
     .. versionchanged:: 2018.3.0
         The service name can now be a glob (e.g. ``salt*``)
 
-    Args:
-        name (str): The name of the service to check
-        sig (str): Not implemented
+    name
+        The name of the service to check
 
-    Returns:
-        bool: True if running, False otherwise
-        dict: Maps service name to True if running, False otherwise
+    sig
+        Not implemented, but required to be accepted as it is passed by service
+        states
+
+    wait : 3
+        If the service is in the process of changing states (i.e. it is in
+        either the ``activating`` or ``deactivating`` state), wait up to this
+        amount of seconds (checking again periodically) before determining
+        whether the service is active.
+
+        .. versionadded:: 2019.2.3
 
     CLI Example:
 
@@ -1085,21 +1093,36 @@ def status(name, sig=None):  # pylint: disable=unused-argument
 
         salt '*' service.status <service name> [service signature]
     '''
+    def _get_status(service):
+        ret = __salt__['cmd.run_all'](_systemctl_cmd('is-active', service),
+                                      python_shell=False,
+                                      ignore_retcode=True,
+                                      redirect_stderr=True)
+        return ret['retcode'] == 0, ret['stdout']
+
     contains_globbing = bool(re.search(r'\*|\?|\[.+\]', name))
     if contains_globbing:
         services = fnmatch.filter(get_all(), name)
     else:
         services = [name]
-    results = {}
+    ret = {}
     for service in services:
         _check_for_unit_changes(service)
-        results[service] = __salt__['cmd.retcode'](
-            _systemctl_cmd('is-active', service),
-            python_shell=False,
-            ignore_retcode=True) == 0
+        ret[service], _message = _get_status(service)
+        if not ret[service]:
+            # Check if the service is in the process of activating/deactivating
+            start_time = time.time()
+            # match both 'activating' and 'deactivating'
+            while 'activating' in _message \
+                    and (time.time() - start_time <= wait):
+                time.sleep(0.5)
+                ret[service], _message = _get_status(service)
+                if ret[service]:
+                    break
+
     if contains_globbing:
-        return results
-    return results[name]
+        return ret
+    return ret[name]
 
 
 # **kwargs is required to maintain consistency with the API established by

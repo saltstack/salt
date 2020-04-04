@@ -95,7 +95,7 @@ def show_link(name):
             return contents.splitlines(True)[1].rstrip('\n')
     except OSError:
         log.error('alternatives: %s does not exist', name)
-    except (IOError, IndexError) as exc:
+    except (IOError, IndexError) as exc:  # pylint: disable=duplicate-except
         log.error(
             'alternatives: unable to get master link for %s. '
             'Exception: %s', name, exc

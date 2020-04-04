@@ -24,7 +24,7 @@ log = logging.getLogger(__name__)
 # Import third party libs
 try:
     from celery import Celery
-    from celery.exceptions import TimeoutError
+    from celery.exceptions import TimeoutError  # pylint: disable=no-name-in-module
     HAS_CELERY = True
 except ImportError:
     HAS_CELERY = False
