@@ -4,6 +4,7 @@
 <% platformsfile = ENV['SALT_KITCHEN_PLATFORMS'] || '.kitchen/platforms.yml' %>
 <% driverfile = ENV['SALT_KITCHEN_DRIVER'] || '.kitchen/driver.yml' %>
 <% verifierfile = ENV['SALT_KITCHEN_VERIFIER'] || '.kitchen/verifier.yml' %>
+<% golden_images_branch = ENV['GOLDEN_IMAGES_CI_BRANCH'] || 'latest' %>
 
 <% if File.exists?(driverfile) %>
 <%= ERB.new(File.read(driverfile)).result %>
@@ -20,6 +21,7 @@ driver:
     - sys_admin
   disable_upstart: false
   provision_command:
+    - systemctl enable sshd
     - echo 'L /run/docker.sock - - - - /docker.sock' > /etc/tmpfiles.d/docker.conf
 transport:
   name: rsync
@@ -27,21 +29,16 @@ transport:
 
 provisioner:
   name: salt_solo
-  salt_install: bootstrap
-  salt_version: latest
-  salt_bootstrap_url: https://bootstrap.saltstack.com
-  salt_bootstrap_options: -X -p rsync git v<%= version %>
+  salt_version: false
+  salt_install: false
+  run_salt_call: false
+  install_after_init_environment: false
   log_level: info
   sudo: true
   require_chef: false
   retry_on_exit_code:
     - 139
   max_retries: 2
-  remote_states:
-    name: git://github.com/saltstack/salt-jenkins.git
-    branch: master
-    repo: git
-    testingdir: /testing
   salt_copy_filter:
     - __pycache__
     - '*.pyc'
@@ -51,95 +48,96 @@ provisioner:
     - .kitchen
     - artifacts
     - Gemfile.lock
-  state_top:
-    base:
-      "os:Windows":
-        - match: grain
-        - windows
-      "*":
-        - <%= ENV['KITCHEN_STATE'] || 'git.salt' %>
-  pillars:
-    top.sls:
-      base:
-        "*":
-          - jenkins
-        "os:Windows":
-          - match: grain
-          - windows
-    jenkins.sls:
-      testing_dir: "{{salt.config.get('root_dir')|replace('\\', '\\\\')}}/testing"
-      clone_repo: false
-      salttesting_namespec: salttesting==2017.6.1
-    windows.sls:
-      virtualenv_path: 'c:\Python27\Scripts\pip.exe'
+  # Remote states needs to be defined and under it testingdir or else
+  # the local directory isn't copied over to the VM's/Containers that
+  # get spun up.
+  remote_states:
+    testingdir: /testing
+  state_top: {}
+  pillars: {}
 <% if File.exists?(platformsfile) %>
 <%= ERB.new(File.read(platformsfile)).result %>
 <% else %>
 platforms:
-  - name: fedora
-    driver_config:
-      image: fedora:latest
-      run_command: /usr/lib/systemd/systemd
-    provisioner:
-      salt_bootstrap_options: -X -p rsync git v<%= version %> >/dev/null
-  - name: centos-7
-    driver_config:
-      run_command: /usr/lib/systemd/systemd
-  - name: centos-6
-    driver_config:
-      run_command: /sbin/init
-      provision_command:
-        - yum install -y upstart
-    provisioner:
-      salt_bootstrap_options: -P -p rsync -y -x python2.7 -X git v<%= version %> >/dev/null
-  - name: ubuntu-18.04
-    driver_config:
-      run_command: /lib/systemd/systemd
-  - name: ubuntu-16.04
-    driver_config:
-      run_command: /lib/systemd/systemd
-  - name: ubuntu-14.04
-    driver_config:
-      run_command: /sbin/init
-      provision_command:
-        - rm -f /sbin/initctl
-        - dpkg-divert --local --rename --remove /sbin/initctl
-  - name: debian-8
-    driver_config:
-      run_command: /lib/systemd/systemd
-      provision_command:
-        - apt-get install -y dbus
-        - echo 'L /run/docker.sock - - - - /docker.sock' > /etc/tmpfiles.d/docker.conf
-  - name: debian-9
-    driver_config:
-      run_command: /lib/systemd/systemd
   - name: arch
     driver_config:
-      image: archlinux/base
+      image: <%= ENV['SALT_DOCKER_IMAGE'] || 'saltstack/ci-arch-lts' %>
       run_command: /usr/lib/systemd/systemd
+      run_options: --entrypoint=/usr/lib/systemd/systemd
+  - name: amazon-2
+    driver_config:
+      image: <%= ENV['SALT_DOCKER_IMAGE'] || 'saltstack/ci-amazon-2' %>
+      run_command: /usr/lib/systemd/systemd
+      run_options: --entrypoint=/usr/lib/systemd/systemd
+  - name: centos-7
+    driver_config:
+      image: <%= ENV['SALT_DOCKER_IMAGE'] || 'saltstack/ci-centos-7' %>
+      run_command: /usr/lib/systemd/systemd
+      run_options: --entrypoint=/usr/lib/systemd/systemd
+  - name: centos-8
+    driver_config:
+      image: <%= ENV['SALT_DOCKER_IMAGE'] || 'saltstack/ci-centos-8' %>
+      run_command: /usr/lib/systemd/systemd
+      run_options: --entrypoint=/usr/lib/systemd/systemd
+  - name: debian-9
+    driver_config:
+      image: <%= ENV['SALT_DOCKER_IMAGE'] || 'saltstack/ci-debian-9' %>
+      run_command: /lib/systemd/systemd
+      run_options: --entrypoint=/lib/systemd/systemd
       provision_command:
-        - pacman -Syu --noconfirm systemd
-        - systemctl enable sshd
+        - systemctl enable ssh
         - echo 'L /run/docker.sock - - - - /docker.sock' > /etc/tmpfiles.d/docker.conf
-    provisioner:
-      salt_bootstrap_options: -X -p rsync git v<%= version %> >/dev/null
+  - name: debian-10
+    driver_config:
+      image: <%= ENV['SALT_DOCKER_IMAGE'] || 'saltstack/ci-debian-10' %>
+      run_command: /lib/systemd/systemd
+      run_options: --entrypoint=/lib/systemd/systemd
+      provision_command:
+        - systemctl enable ssh
+        - echo 'L /run/docker.sock - - - - /docker.sock' > /etc/tmpfiles.d/docker.conf
+  - name: fedora-30
+    driver_config:
+      image: <%= ENV['SALT_DOCKER_IMAGE'] || 'saltstack/ci-fedora-30' %>
+      run_command: /usr/lib/systemd/systemd
+      run_options: --entrypoint=/usr/lib/systemd/systemd
+  - name: fedora-31
+    driver_config:
+      image: <%= ENV['SALT_DOCKER_IMAGE'] || 'saltstack/ci-fedora-31' %>
+      run_command: /usr/lib/systemd/systemd
+      run_options: --entrypoint=/usr/lib/systemd/systemd
+  - name: fedora-32
+    driver_config:
+      image: <%= ENV['SALT_DOCKER_IMAGE'] || 'saltstack/ci-fedora-32' %>
+      run_command: /usr/lib/systemd/systemd
+      run_options: --entrypoint=/usr/lib/systemd/systemd
   - name: opensuse-15
     driver_config:
-      image: opensuse/leap:15.0
+      image: <%= ENV['SALT_DOCKER_IMAGE'] || 'saltstack/ci-opensuse-15' %>
       run_command: /usr/lib/systemd/systemd
-      provision_command:
-        - zypper --non-interactive install --auto-agree-with-licenses dbus-1
-        - systemctl enable sshd.service
-        - echo 'L /run/docker.sock - - - - /docker.sock' > /etc/tmpfiles.d/docker.conf
-    provisioner:
-      salt_bootstrap_options: -qXU -x python2 git v<%= @version %>
-  - name: opensuse-42.3
+      run_options: --entrypoint=/usr/lib/systemd/systemd
+  - name: ubuntu-16.04
     driver_config:
-      image: opensuse/leap:42.3
-      run_command: /usr/lib/systemd/systemd
+      image: <%= ENV['SALT_DOCKER_IMAGE'] || 'saltstack/ci-ubuntu-1604' %>
+      run_command: /lib/systemd/systemd
+      run_options: --entrypoint=/lib/systemd/systemd
       provision_command:
-        - zypper --non-interactive install --auto-agree-with-licenses dbus-1
-        - systemctl enable sshd.service
+        - systemctl enable ssh
+        - echo 'L /run/docker.sock - - - - /docker.sock' > /etc/tmpfiles.d/docker.conf
+  - name: ubuntu-18.04
+    driver_config:
+      image: <%= ENV['SALT_DOCKER_IMAGE'] || 'saltstack/ci-ubuntu-1804' %>
+      run_command: /lib/systemd/systemd
+      run_options: --entrypoint=/lib/systemd/systemd
+      provision_command:
+        - systemctl enable ssh
+        - echo 'L /run/docker.sock - - - - /docker.sock' > /etc/tmpfiles.d/docker.conf
+  - name: ubuntu-20.04
+    driver_config:
+      image: <%= ENV['SALT_DOCKER_IMAGE'] || 'saltstack/ci-ubuntu-2004' %>
+      run_command: /lib/systemd/systemd
+      run_options: --entrypoint=/lib/systemd/systemd
+      provision_command:
+        - systemctl enable ssh
         - echo 'L /run/docker.sock - - - - /docker.sock' > /etc/tmpfiles.d/docker.conf
 <% if vagrant != false %>
   - name: windows-2012r2
@@ -163,14 +161,6 @@ platforms:
         winrm set winrm/config/winrs '@{MaxMemoryPerShellMB="5000"}'
       salt_bootstrap_url: https://raw.githubusercontent.com/saltstack/salt-bootstrap/develop/bootstrap-salt.ps1
       salt_bootstrap_options: ''
-    verifier:
-      windows: true
-      types:
-        - unit
-      coverage_xml: false
-      save:
-        $env:TEMP/salt-runtests.log: artifacts/logs/salt-runtests.log
-        /salt/var/log/salt/minion: artifacts/logs/minion
   - name: windows-2016
     driver:
       box: mwrock/Windows2016
@@ -197,51 +187,20 @@ platforms:
         winrm set winrm/config/winrs '@{MaxMemoryPerShellMB="5000"}'
       salt_bootstrap_url: https://raw.githubusercontent.com/saltstack/salt-bootstrap/develop/bootstrap-salt.ps1
       salt_bootstrap_options: ''
-    verifier:
-      windows: true
-      types:
-        - unit
-      coverage_xml: false
-      xml: /tmp/xml-unittests-output/
-      save:
-        /tmp/xml-unittests-output/: artifacts/
-        $env:TEMP/salt-runtests.log: artifacts/logs/salt-runtests.log
-        /salt/var/log/salt/minion: artifacts/logs/minion
 <% end %>
 <% end %>
 suites:
-  - name: py2
-    verifier:
-      python_bin: python2.7
   - name: py3
-    excludes:
-      - centos-6
-      - ubuntu-14.04
-    verifier:
-      python_bin: python3
-    provisioner:
-      pillars:
-        jenkins.sls:
-          py3: true
-        windows.sls:
-          virtualenv_path: 'c:\Python35\Scripts\pip.exe'
-
 <% if File.exists?(verifierfile) %>
 <%= ERB.new(File.read(verifierfile)).result %>
 <% else %>
 verifier:
-  name: runtests
-  sudo: true
+  name: nox
   run_destructive: true
+  coverage: true
+  junitxml: true
+  sudo: true
   transport: zeromq
-  enable_filenames: true
-  types:
-    - ssh
-  xml: /tmp/xml-unittests-output/
-  coverage_xml: /tmp/coverage.xml
-  save:
-    /tmp/xml-unittests-output: artifacts/
-    /tmp/coverage.xml: artifacts/coverage/coverage.xml
-    /tmp/kitchen/var/log/salt/minion: artifacts/logs/minion
-    /tmp/salt-runtests.log: artifacts/logs/salt-runtests.log
+  sysinfo: true
+  sys_stats: true
 <% end %>
