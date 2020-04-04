@@ -58,7 +58,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
     '''
 
     def setup_loader_modules(self):
-        return {zypper: {'rpm': None}}
+        return {zypper: {'rpm': None}, pkg_resource: {}}
 
     def setUp(self):
         self.new_repo_config = dict(
@@ -459,6 +459,10 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                                                 '--from', "Dummy", '--from', 'Dummy2', '--no-allow-vendor-change',
                                                 '--debug-solver')
 
+                with patch('salt.modules.zypperpkg.list_pkgs', MagicMock(side_effect=[{"vim": "1.1"}, {"vim": "1.1"}])):
+                    ret = zypper.upgrade(dist_upgrade=False, fromrepo=["Dummy", "Dummy2"], dryrun=False)
+                    zypper_mock.assert_any_call('update', '--auto-agree-with-licenses', '--repo', "Dummy", '--repo', 'Dummy2')
+
                 with patch('salt.modules.zypperpkg.list_pkgs', MagicMock(side_effect=[{"vim": "1.1"}, {"vim": "1.2"}])):
                     ret = zypper.upgrade(dist_upgrade=True, fromrepo=["Dummy", "Dummy2"], novendorchange=True)
                     self.assertDictEqual(ret, {"vim": {"old": "1.1", "new": "1.2"}})
@@ -602,7 +606,8 @@ Repository 'DUMMY' not found by its alias, number, or URI.
              patch.dict(zypper.__grains__, {'osarch': 'x86_64'}), \
              patch.dict(zypper.__salt__, {'pkg_resource.add_pkg': _add_data}), \
              patch.dict(zypper.__salt__, {'pkg_resource.format_pkg_list': pkg_resource.format_pkg_list}), \
-             patch.dict(zypper.__salt__, {'pkg_resource.stringify': MagicMock()}):
+             patch.dict(zypper.__salt__, {'pkg_resource.stringify': MagicMock()}), \
+             patch.dict(pkg_resource.__salt__, {'pkg.parse_arch': zypper.parse_arch}):
             pkgs = zypper.list_pkgs(attr=['epoch', 'release', 'arch', 'install_date_time_t'])
             self.assertFalse(pkgs.get('gpg-pubkey', False))
             for pkg_name, pkg_attr in {
@@ -611,57 +616,129 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                     'release': '129.686',
                     'arch': 'noarch',
                     'install_date_time_t': 1498636511,
+                    'epoch': None,
                 }],
                 'yast2-ftp-server': [{
                     'version': '3.1.8',
                     'release': '8.1',
                     'arch': 'x86_64',
                     'install_date_time_t': 1499257798,
+                    'epoch': None,
                 }],
                 'protobuf-java': [{
                     'version': '2.6.1',
                     'release': '3.1.develHead',
                     'install_date_time_t': 1499257756,
                     'arch': 'noarch',
+                    'epoch': None,
                 }],
                 'susemanager-build-keys-web': [{
                     'version': '12.0',
                     'release': '5.1.develHead',
                     'arch': 'noarch',
                     'install_date_time_t': 1498636510,
+                    'epoch': None,
                 }],
                 'apache-commons-cli': [{
                     'version': '1.2',
                     'release': '1.233',
                     'arch': 'noarch',
                     'install_date_time_t': 1498636510,
+                    'epoch': None,
                 }],
                 'kernel-default': [{
                     'version': '4.4.138',
                     'release': '94.39.1',
                     'arch': 'x86_64',
-                    'install_date_time_t': 1529936067
+                    'install_date_time_t': 1529936067,
+                    'epoch': None,
                 },
                 {
                     'version': '4.4.73',
                     'release': '5.1',
                     'arch': 'x86_64',
                     'install_date_time_t': 1503572639,
+                    'epoch': None,
                 }],
-                'perseus-dummy.i586': [{
+                'perseus-dummy': [{
                     'version': '1.1',
                     'release': '1.1',
                     'arch': 'i586',
                     'install_date_time_t': 1529936062,
+                    'epoch': None,
                 }],
                 'jose4j': [{
                     'arch': 'noarch',
                     'version': '0.4.4',
                     'release': '2.1.develHead',
                     'install_date_time_t': 1499257756,
+                    'epoch': None,
                 }]}.items():
                 self.assertTrue(pkgs.get(pkg_name))
                 self.assertEqual(pkgs[pkg_name], pkg_attr)
+
+    def test_list_pkgs_with_attr_multiple_versions(self):
+        '''
+        Test packages listing with the attr parameter reporting multiple version installed
+
+        :return:
+        '''
+        def _add_data(data, key, value):
+            data.setdefault(key, []).append(value)
+
+        rpm_out = [
+            'glibc_|-2.12_|-1.212.el6_|-i686_|-_|-1542394210',
+            'glibc_|-2.12_|-1.212.el6_|-x86_64_|-_|-1542394204',
+            'virt-what_|-1.13_|-8.el7_|-x86_64_|-_|-1487838486',
+            'virt-what_|-1.10_|-2.el7_|-x86_64_|-_|-1387838486',
+        ]
+
+        with patch.dict(zypper.__grains__, {'osarch': 'x86_64'}), \
+             patch.dict(zypper.__salt__, {'cmd.run': MagicMock(return_value=os.linesep.join(rpm_out))}), \
+             patch.dict(zypper.__salt__, {'pkg_resource.add_pkg': _add_data}), \
+             patch.dict(zypper.__salt__, {'pkg_resource.format_pkg_list': pkg_resource.format_pkg_list}), \
+             patch.dict(zypper.__salt__, {'pkg_resource.stringify': MagicMock()}), \
+             patch.dict(pkg_resource.__salt__, {'pkg.parse_arch': zypper.parse_arch}):
+            pkgs = zypper.list_pkgs(attr=['epoch', 'release', 'arch', 'install_date_time_t'])
+            expected_pkg_list = {
+                'glibc': [
+                    {
+                        'version': '2.12',
+                        'release': '1.212.el6',
+                        'install_date_time_t': 1542394210,
+                        'arch': 'i686',
+                        'epoch': None
+                    },
+                    {
+                        'version': '2.12',
+                        'release': '1.212.el6',
+                        'install_date_time_t': 1542394204,
+                        'arch': 'x86_64',
+                        'epoch': None
+                    }
+                ],
+                'virt-what': [
+                    {
+                        'version': '1.10',
+                        'release': '2.el7',
+                        'install_date_time_t': 1387838486,
+                        'arch': 'x86_64',
+                        'epoch': None
+                    },
+                    {
+                        'version': '1.13',
+                        'release': '8.el7',
+                        'install_date_time_t': 1487838486,
+                        'arch': 'x86_64',
+                        'epoch': None
+                    }
+                ]
+            }
+            for pkgname, pkginfo in pkgs.items():
+                if six.PY3:
+                    self.assertCountEqual(pkginfo, expected_pkg_list[pkgname])
+                else:
+                    self.assertItemsEqual(pkginfo, expected_pkg_list[pkgname])
 
     def test_list_patches(self):
         '''

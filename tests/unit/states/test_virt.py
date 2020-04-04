@@ -246,7 +246,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                                               mem=2048,
                                               image='/path/to/img.qcow2'), ret)
             init_mock.assert_called_with('myvm', cpu=2, mem=2048, image='/path/to/img.qcow2',
-                                         os_type=None, arch=None,
+                                         os_type=None, arch=None, boot=None,
                                          disk=None, disks=None, nic=None, interfaces=None,
                                          graphics=None, hypervisor=None,
                                          seed=True, install=True, pub_key=None, priv_key=None,
@@ -311,6 +311,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                                          graphics=graphics,
                                          hypervisor='qemu',
                                          seed=False,
+                                         boot=None,
                                          install=False,
                                          pub_key='/path/to/key.pub',
                                          priv_key='/path/to/key',
@@ -334,6 +335,22 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                         'result': True,
                         'comment': 'Domain myvm updated, restart to fully apply the changes'})
             self.assertDictEqual(virt.running('myvm', update=True, cpu=2), ret)
+
+        # Working update case when running with boot params
+        boot = {
+            'kernel': '/root/f8-i386-vmlinuz',
+            'initrd': '/root/f8-i386-initrd',
+            'cmdline': 'console=ttyS0 ks=http://example.com/f8-i386/os/'
+        }
+
+        with patch.dict(virt.__salt__, {  # pylint: disable=no-member
+                    'virt.vm_state': MagicMock(return_value={'myvm': 'running'}),
+                    'virt.update': MagicMock(return_value={'definition': True, 'cpu': True})
+                }):
+            ret.update({'changes': {'myvm': {'definition': True, 'cpu': True}},
+                        'result': True,
+                        'comment': 'Domain myvm updated, restart to fully apply the changes'})
+            self.assertDictEqual(virt.running('myvm', update=True, boot=boot), ret)
 
         # Working update case when stopped
         with patch.dict(virt.__salt__, {  # pylint: disable=no-member
@@ -599,6 +616,19 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                                                       'bridge',
                                                       vport='openvswitch',
                                                       tag=180,
+                                                      ipv4_config={
+                                                        'cidr': '192.168.2.0/24',
+                                                        'dhcp_ranges': [
+                                                            {'start': '192.168.2.10', 'end': '192.168.2.25'},
+                                                            {'start': '192.168.2.110', 'end': '192.168.2.125'},
+                                                        ]
+                                                      },
+                                                      ipv6_config={
+                                                        'cidr': '2001:db8:ca2:2::1/64',
+                                                        'dhcp_ranges': [
+                                                            {'start': '2001:db8:ca2:1::10', 'end': '2001:db8:ca2::1f'},
+                                                        ]
+                                                      },
                                                       autostart=False,
                                                       connection='myconnection',
                                                       username='user',
@@ -610,6 +640,19 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                                            tag=180,
                                            autostart=False,
                                            start=True,
+                                           ipv4_config={
+                                             'cidr': '192.168.2.0/24',
+                                             'dhcp_ranges': [
+                                                 {'start': '192.168.2.10', 'end': '192.168.2.25'},
+                                                 {'start': '192.168.2.110', 'end': '192.168.2.125'},
+                                             ]
+                                           },
+                                           ipv6_config={
+                                             'cidr': '2001:db8:ca2:2::1/64',
+                                             'dhcp_ranges': [
+                                                 {'start': '2001:db8:ca2:1::10', 'end': '2001:db8:ca2::1f'},
+                                             ]
+                                           },
                                            connection='myconnection',
                                            username='user',
                                            password='secret')

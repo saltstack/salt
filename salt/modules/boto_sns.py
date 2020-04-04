@@ -203,7 +203,7 @@ def unsubscribe(topic, subscription_arn, region=None, key=None, keyid=None, prof
     try:
         conn.unsubscribe(subscription_arn)
         log.info('Unsubscribe %s to %s topic', subscription_arn, topic)
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         log.error('Unsubscribe Error', exc_info=True)
         return False
     else:

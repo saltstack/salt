@@ -138,7 +138,7 @@ def datasource_exists(name, jboss_config, datasource_properties, recreate=False,
             read_result = __salt__['jboss7.read_datasource'](jboss_config=jboss_config, name=name, profile=profile)
             ds_new_properties = read_result['result']
     else:
-        if ds_result['err_code'] == 'JBAS014807':  # ok, resource not exists:
+        if ds_result['err_code'] in ('JBAS014807', 'WFLYCTL0216'):  # ok, resource not exists:
             create_result = __salt__['jboss7.create_datasource'](jboss_config=jboss_config, name=name, datasource_properties=datasource_properties, profile=profile)
             if create_result['success']:
                 read_result = __salt__['jboss7.read_datasource'](jboss_config=jboss_config, name=name, profile=profile)
@@ -246,7 +246,7 @@ def bindings_exist(name, jboss_config, bindings, profile=None):
                 else:
                     raise CommandExecutionError(update_result['failure-description'])
         else:
-            if query_result['err_code'] == 'JBAS014807':  # ok, resource not exists:
+            if query_result['err_code'] in ('JBAS014807', 'WFLYCTL0216'):  # ok, resource not exists:
                 create_result = __salt__['jboss7.create_simple_binding'](binding_name=key, value=value, jboss_config=jboss_config, profile=profile)
                 if create_result['success']:
                     has_changed = True
@@ -470,7 +470,7 @@ def __get_artifact(salt_source):
                 if manage_result['changes']:
                     changed = True
 
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-except
                 log.debug(traceback.format_exc())
                 comment = 'Unable to manage file: {0}'.format(e)
 

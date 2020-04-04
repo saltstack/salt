@@ -34,6 +34,7 @@ cloud modules
     scaleway
     softlayer
     softlayer_hw
+    tencentcloud
     vagrant
     virtualbox
     vmware

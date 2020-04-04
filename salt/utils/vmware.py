@@ -93,6 +93,7 @@ import salt.utils.stringutils
 # Import Third Party Libs
 from salt.ext import six
 from salt.ext.six.moves.http_client import BadStatusLine  # pylint: disable=E0611
+# pylint: disable=no-name-in-module
 try:
     from pyVim.connect import GetSi, SmartConnect, Disconnect, GetStub, \
             SoapStubAdapter
@@ -108,7 +109,7 @@ try:
 
 except ImportError:
     HAS_VSPHERE_SDK = False
-
+# pylint: enable=no-name-in-module
 try:
     import gssapi
     import base64
@@ -245,7 +246,7 @@ def _get_service_instance(host, username, password, protocol,
         if principal is not None and domain is not None:
             try:
                 token = get_gssapi_token(principal, host, domain)
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 raise salt.exceptions.VMwareConnectionError(six.text_type(exc))
         else:
             err_msg = 'Login mechanism \'{0}\' was specified but the' \
@@ -309,7 +310,7 @@ def _get_service_instance(host, username, password, protocol,
                         b64token=token,
                         mechanism=mechanism
                     )
-                except Exception as exc:
+                except Exception as exc:  # pylint: disable=broad-except
                     log.exception(exc)
                     err_msg = exc.msg if hasattr(exc, 'msg') else six.text_type(exc)
                     raise salt.exceptions.VMwareConnectionError(

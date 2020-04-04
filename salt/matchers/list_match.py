@@ -28,7 +28,7 @@ def match(tgt, opts=None):
         # tgt is not a string, maybe it's a sequence type?
         try:
             return opts['id'] in tgt
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             # tgt was likely some invalid type
             return False
 

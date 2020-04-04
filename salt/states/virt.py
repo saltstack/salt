@@ -264,7 +264,8 @@ def running(name,
             username=None,
             password=None,
             os_type=None,
-            arch=None):
+            arch=None,
+            boot=None):
     '''
     Starts an existing guest, or defines and starts a new VM with specified arguments.
 
@@ -342,12 +343,29 @@ def running(name,
         The default value is taken from the host capabilities, with a preference for ``hvm``.
         Only used when creating a new virtual machine.
 
-        .. versionadded:: Neon
+        .. versionadded:: 3000
     :param arch:
         architecture of the virtual machine. The default value is taken from the host capabilities,
         but ``x86_64`` is prefed over ``i686``. Only used when creating a new virtual machine.
 
-        .. versionadded:: Neon
+        .. versionadded:: 3000
+
+    :param boot:
+        Specifies kernel for the virtual machine, as well as boot parameters
+        for the virtual machine. This is an optionl parameter, and all of the
+        keys are optional within the dictionary. If a remote path is provided
+        to kernel or initrd, salt will handle the downloading of the specified
+        remote fild, and will modify the XML accordingly.
+
+        .. code-block:: python
+
+            {
+                'kernel': '/root/f8-i386-vmlinuz',
+                'initrd': '/root/f8-i386-initrd',
+                'cmdline': 'console=ttyS0 ks=http://example.com/f8-i386/os/'
+            }
+
+        .. versionadded:: 3000
 
     .. rubric:: Example States
 
@@ -383,9 +401,9 @@ def running(name,
                 type: network
                 source: admin
             - graphics:
-              - type: spice
+                type: spice
                 listen:
-                  - type: address
+                    type: address
                     address: 192.168.0.125
 
     '''
@@ -413,7 +431,8 @@ def running(name,
                                                      live=False,
                                                      connection=connection,
                                                      username=username,
-                                                     password=password)
+                                                     password=password,
+                                                     boot=boot)
                     if status['definition']:
                         action_msg = 'updated and started'
                 __salt__['virt.start'](name)
@@ -431,7 +450,8 @@ def running(name,
                                                      graphics=graphics,
                                                      connection=connection,
                                                      username=username,
-                                                     password=password)
+                                                     password=password,
+                                                     boot=boot)
                     ret['changes'][name] = status
                     if status.get('errors', None):
                         ret['comment'] = 'Domain {0} updated, but some live update(s) failed'.format(name)
@@ -466,7 +486,8 @@ def running(name,
                                   priv_key=priv_key,
                                   connection=connection,
                                   username=username,
-                                  password=password)
+                                  password=password,
+                                  boot=boot)
             ret['changes'][name] = 'Domain defined and started'
             ret['comment'] = 'Domain {0} defined and started'.format(name)
     except libvirt.libvirtError as err:
@@ -637,6 +658,8 @@ def network_running(name,
                     forward,
                     vport=None,
                     tag=None,
+                    ipv4_config=None,
+                    ipv6_config=None,
                     autostart=True,
                     connection=None,
                     username=None,
@@ -644,6 +667,25 @@ def network_running(name,
     '''
     Defines and starts a new network with specified arguments.
 
+    :param bridge: Bridge name
+    :param forward: Forward mode(bridge, router, nat)
+    :param vport: Virtualport type (Default: ``'None'``)
+    :param tag: Vlan tag (Default: ``'None'``)
+    :param ipv4_config:
+        IPv4 network configuration. See the :py:func`virt.network_define
+        <salt.modules.virt.network_define>` function corresponding parameter documentation
+        for more details on this dictionary.
+        (Default: None).
+
+        .. versionadded:: 3000
+    :param ipv6_config:
+        IPv6 network configuration. See the :py:func`virt.network_define
+        <salt.modules.virt.network_define>` function corresponding parameter documentation
+        for more details on this dictionary.
+        (Default: None).
+
+        .. versionadded:: 3000
+    :param autostart: Network autostart (default ``'True'``)
     :param connection: libvirt connection URI, overriding defaults
 
         .. versionadded:: 2019.2.0
@@ -669,6 +711,21 @@ def network_running(name,
             - tag: 180
             - autostart: True
 
+    .. code-block:: yaml
+
+        network_name:
+          virt.network_define:
+            - bridge: natted
+            - forward: nat
+            - ipv4_config:
+                cidr: 192.168.42.0/24
+                dhcp_ranges:
+                  - start: 192.168.42.10
+                    end: 192.168.42.25
+                  - start: 192.168.42.100
+                    end: 192.168.42.150
+            - autostart: True
+
     '''
     ret = {'name': name,
            'changes': {},
@@ -691,6 +748,8 @@ def network_running(name,
                                             forward,
                                             vport=vport,
                                             tag=tag,
+                                            ipv4_config=ipv4_config,
+                                            ipv6_config=ipv6_config,
                                             autostart=autostart,
                                             start=True,
                                             connection=connection,
@@ -911,7 +970,7 @@ def pool_deleted(name,
           uyuni_virt.pool_deleted:
             - purge: True
 
-    .. versionadded:: Neon
+    .. versionadded:: 3000
     '''
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
 

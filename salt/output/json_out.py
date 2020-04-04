@@ -79,9 +79,7 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
             sort_keys = True
 
         elif isinstance(indent, int):
-            if indent >= 0:
-                indent = indent
-            else:
+            if indent < 0:
                 indent = None
 
         return salt.utils.json.dumps(data, default=repr, indent=indent, sort_keys=sort_keys)

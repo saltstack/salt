@@ -24,7 +24,6 @@ class Mockredis(object):
         '''
         Mock ConnectionError class
         '''
-        pass
 
 
 class MockConnect(object):

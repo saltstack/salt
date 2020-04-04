@@ -222,7 +222,7 @@ def remove(release):
     if salt.utils.systemd.has_scope(__context__) \
             and __salt__['config.get']('systemd.scope', True):
         cmd.extend(['systemd-run', '--scope'])
-    cmd.extend([_yum(), '-y', 'remove', target])
+    cmd.extend([_yum(), '-y', 'remove', target])  # pylint: disable=not-callable
 
     # Execute the command
     out = __salt__['cmd.run_all'](

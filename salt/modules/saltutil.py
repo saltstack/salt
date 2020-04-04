@@ -176,7 +176,7 @@ def update(version=None):
         return ret
     try:
         app.cleanup()
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         ret['_error'] = 'Unable to cleanup. Error: {0}'.format(exc)
     restarted = {}
     for service in __opts__['update_restart_services']:
@@ -922,7 +922,7 @@ def sync_pillar(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blackl
 
 def sync_executors(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
     '''
-    .. versionadded:: Neon
+    .. versionadded:: 3000
 
     Sync executors from ``salt://_executors`` to the minion
 

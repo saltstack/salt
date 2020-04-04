@@ -123,7 +123,7 @@ class Serial(object):
                 ret = salt.utils.msgpack.loads(msg, **loads_kwargs)
             if six.PY3 and encoding is None and not raw:
                 ret = salt.transport.frame.decode_embedded_strs(ret)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.critical(
                 'Could not deserialize msgpack message. This often happens '
                 'when trying to read a file not in binary mode. '

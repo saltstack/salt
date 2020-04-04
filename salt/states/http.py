@@ -57,7 +57,7 @@ def query(name, match=None, match_type='string', status=None, status_type='strin
         complex pattern matching is required. Additionally, if a list of strings representing
         statuses is given, the type ``list`` can be used.
 
-        .. versionadded:: Neon
+        .. versionadded:: 3000
 
         .. note::
 
@@ -204,7 +204,7 @@ def wait_for_successful_query(name, wait_for=300, **kwargs):
             ret = query(name, **kwargs)
             if ret['result']:
                 return ret
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             caught_exception = exc
 
         if time.time() > starttime + wait_for:

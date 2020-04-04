@@ -28,12 +28,12 @@ except ImportError:
 # Import 3rd-party libs
 # pylint: disable=import-error
 try:
-    import tornado.escape
-    import tornado.testing
-    import tornado.concurrent
-    from tornado.testing import AsyncTestCase, AsyncHTTPTestCase, gen_test
-    from tornado.httpclient import HTTPRequest, HTTPError
-    from tornado.websocket import websocket_connect
+    import salt.ext.tornado.escape
+    import salt.ext.tornado.testing
+    import salt.ext.tornado.concurrent
+    from salt.ext.tornado.testing import AsyncTestCase, AsyncHTTPTestCase, gen_test
+    from salt.ext.tornado.httpclient import HTTPRequest, HTTPError
+    from salt.ext.tornado.websocket import websocket_connect
     import salt.netapi.rest_tornado as rest_tornado
     from salt.netapi.rest_tornado import saltnado
     HAS_TORNADO = True
@@ -125,7 +125,7 @@ class SaltnadoTestCase(TestCase, AdaptedConfigurationTestCaseMixin, AsyncHTTPTes
             del self.application
 
     def build_tornado_app(self, urls):
-        application = tornado.web.Application(urls, debug=True)
+        application = salt.ext.tornado.web.Application(urls, debug=True)
 
         application.auth = self.auth
         application.opts = self.opts
@@ -143,7 +143,7 @@ class SaltnadoTestCase(TestCase, AdaptedConfigurationTestCaseMixin, AsyncHTTPTes
             if response.headers.get('Content-Type') == 'application/json':
                 response._body = response.body.decode('utf-8')
             else:
-                response._body = tornado.escape.native_str(response.body)
+                response._body = salt.ext.tornado.escape.native_str(response.body)
         return response
 
     def fetch(self, path, **kwargs):
@@ -156,7 +156,7 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
             def get(self, *args, **kwargs):
                 return self.echo_stuff()
 
-            def post(self):
+            def post(self):  # pylint: disable=arguments-differ
                 return self.echo_stuff()
 
             def echo_stuff(self):
@@ -779,7 +779,7 @@ class TestSaltnadoUtils(AsyncTestCase):
         # create a few futures
         futures = []
         for x in range(0, 3):
-            future = tornado.concurrent.Future()
+            future = salt.ext.tornado.concurrent.Future()
             future.add_done_callback(self.stop)
             futures.append(future)
 
