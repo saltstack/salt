@@ -1178,8 +1178,8 @@ class StateTestLoader(object):
                                     '{0}.tst'.format(split_sls[-1]))
                     ])
                     # for this state, find matching test files and load them
-                    cached_copied_files = set(cached_copied_files)
-                    for this_cached_test_file in list(cached_copied_files):
+                    cached_copied_files = list(set(cached_copied_files))
+                    for this_cached_test_file in cached_copied_files:
                         if this_cached_test_file.endswith(tuple(sls_path_names)):
                             self.test_files.add(this_cached_test_file)
                             cached_copied_files.remove(this_cached_test_file)

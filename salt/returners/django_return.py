@@ -39,7 +39,7 @@ log = logging.getLogger(__name__)
 HAS_DJANGO = False
 
 try:
-    from django import dispatch
+    from django import dispatch  # pylint: disable=E0611
     HAS_DJANGO = True
 except ImportError:
     HAS_DJANGO = False

@@ -12,8 +12,10 @@ import salt.utils.platform
 
 try:
     import wmi
+    import salt.utils.winapi
+    HAS_LIBS = True
 except ImportError:
-    pass
+    HAS_LIBS = False
 
 log = logging.getLogger(__name__)
 
@@ -22,14 +24,24 @@ def __virtual__():
     '''
     Only works on Windows systems
     '''
-    if salt.utils.platform.is_windows():
-        return 'win_dns_client'
-    return (False, "Module win_dns_client: module only works on Windows systems")
+    if not salt.utils.platform.is_windows():
+        return False, 'Module win_dns_client: module only works on Windows ' \
+                      'systems'
+    if not HAS_LIBS:
+        return False, 'Module win_dns_client: missing required libraries'
+    return 'win_dns_client'
 
 
 def get_dns_servers(interface='Local Area Connection'):
     '''
     Return a list of the configured DNS servers of the specified interface
+
+    Args:
+        interface (str): The name of the network interface. This is the name as
+        it appears in the Control Panel under Network Connections
+
+    Returns:
+        list: A list of dns servers
 
     CLI Example:
 
@@ -121,7 +133,14 @@ def dns_dhcp(interface='Local Area Connection'):
 
 def get_dns_config(interface='Local Area Connection'):
     '''
-    Get the type of DNS configuration (dhcp / static)
+    Get the type of DNS configuration (dhcp / static).
+
+    Args:
+        interface (str): The name of the network interface. This is the
+        Description in the Network Connection Details for the device
+
+    Returns:
+        bool: ``True`` if DNS is configured, otherwise ``False``
 
     CLI Example:
 

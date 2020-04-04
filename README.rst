@@ -34,6 +34,14 @@ documentation.
 
 `<https://docs.saltstack.com/en/latest/>`_
 
+Security Advisory
+=================
+
+For historical reasons, Salt requires PyCrypto as a "lowest common
+denominator". However, `PyCrypto is unmaintained`_ and best practice is to
+manually upgrade to use a more maintained library such as `PyCryptodome`_. See
+`Issue #52674`_ and `Issue #54115`_ for more info
+
 Engage SaltStack
 ================
 
@@ -66,3 +74,7 @@ services`_ offerings.
 .. _SaltStack education offerings: http://saltstack.com/training/
 .. _SaltStack Certified Engineer (SSCE): http://saltstack.com/certification/
 .. _SaltStack professional services: http://saltstack.com/services/
+.. _PyCrypto is unmaintained: https://github.com/dlitz/pycrypto/issues/301#issue-551975699
+.. _PyCryptodome: https://pypi.org/project/pycryptodome/
+.. _Issue #52674: https://github.com/saltstack/salt/issues/52674
+.. _Issue #54115: https://github.com/saltstack/salt/issues/54115

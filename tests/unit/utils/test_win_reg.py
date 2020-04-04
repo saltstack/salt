@@ -630,12 +630,17 @@ class WinFunctionsTestCase(TestCase):
         Should always return integer
         '''
         vdata = 1
+        expected = 1
         result = win_reg.cast_vdata(vdata=vdata, vtype='REG_DWORD')
-        self.assertTrue(isinstance(result, six.integer_types))
+        self.assertEqual(result, expected)
 
         vdata = '1'
         result = win_reg.cast_vdata(vdata=vdata, vtype='REG_DWORD')
-        self.assertTrue(isinstance(result, six.integer_types))
+        self.assertEqual(result, expected)
+
+        vdata = '0000001'
+        result = win_reg.cast_vdata(vdata=vdata, vtype='REG_DWORD')
+        self.assertEqual(result, expected)
 
     def test_cast_vdata_reg_expand_sz(self):
         '''
