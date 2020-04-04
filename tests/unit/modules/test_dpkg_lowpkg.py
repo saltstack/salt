@@ -5,6 +5,7 @@
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import os
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -99,3 +100,69 @@ class DpkgTestCase(TestCase, LoaderModuleMockMixin):
                                        'stdout': 'Salt'})
         with patch.dict(dpkg.__salt__, {'cmd.run_all': mock}):
             self.assertEqual(dpkg.file_dict('httpd'), 'Error:  error')
+
+    def test_info(self):
+        '''
+        Test package info
+        '''
+        mock = MagicMock(return_value={'retcode': 0,
+                                       'stderr': '',
+                                       'stdout':
+                                           os.linesep.join([
+                                               'package:bash',
+                                               'revision:',
+                                               'architecture:amd64',
+                                               'maintainer:Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>',
+                                               'summary:',
+                                               'source:bash',
+                                               'version:4.4.18-2ubuntu1',
+                                               'section:shells',
+                                               'installed_size:1588',
+                                               'size:',
+                                               'MD5:',
+                                               'SHA1:',
+                                               'SHA256:',
+                                               'origin:',
+                                               'homepage:http://tiswww.case.edu/php/chet/bash/bashtop.html',
+                                               'status:ii ',
+                                               '======',
+                                               'description:GNU Bourne Again SHell',
+                                               ' Bash is an sh-compatible command language interpreter that executes',
+                                               ' commands read from the standard input or from a file.  Bash also',
+                                               ' incorporates useful features from the Korn and C shells (ksh and csh).',
+                                               ' .',
+                                               ' Bash is ultimately intended to be a conformant implementation of the',
+                                               ' IEEE POSIX Shell and Tools specification (IEEE Working Group 1003.2).',
+                                               ' .',
+                                               ' The Programmable Completion Code, by Ian Macdonald, is now found in',
+                                               ' the bash-completion package.',
+                                               '------'
+                                               ])})
+
+        with patch.dict(dpkg.__salt__, {'cmd.run_all': mock}), \
+             patch.dict(dpkg.__grains__, {'os': 'Ubuntu', 'osrelease_info': (18, 4)}), \
+             patch('salt.utils.path.which', MagicMock(return_value=False)), \
+             patch('os.path.exists', MagicMock(return_value=False)),\
+             patch('os.path.getmtime', MagicMock(return_value=1560199259.0)):
+            self.assertDictEqual(dpkg.info('bash'),
+                                 {'bash': {'architecture': 'amd64',
+                                           'description': os.linesep.join([
+                                               'GNU Bourne Again SHell',
+                                               ' Bash is an sh-compatible command language interpreter that executes',
+                                               ' commands read from the standard input or from a file.  Bash also',
+                                               ' incorporates useful features from the Korn and C shells (ksh and csh).',
+                                               ' .',
+                                               ' Bash is ultimately intended to be a conformant implementation of the',
+                                               ' IEEE POSIX Shell and Tools specification (IEEE Working Group 1003.2).',
+                                               ' .',
+                                               ' The Programmable Completion Code, by Ian Macdonald, is now found in',
+                                               ' the bash-completion package.' + os.linesep
+                                           ]),
+                                           'homepage': 'http://tiswww.case.edu/php/chet/bash/bashtop.html',
+                                           'maintainer': 'Ubuntu Developers '
+                                                         '<ubuntu-devel-discuss@lists.ubuntu.com>',
+                                           'package': 'bash',
+                                           'section': 'shells',
+                                           'source': 'bash',
+                                           'status': 'ii',
+                                           'version': '4.4.18-2ubuntu1'}})

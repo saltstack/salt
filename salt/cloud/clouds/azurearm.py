@@ -560,7 +560,7 @@ def list_nodes_full(call=None):
                 node['network_profile']['network_interfaces'][index].update(netiface)
                 node['public_ips'].extend(pubips)
                 node['private_ips'].extend(privips)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             pass
 
         node_ret[node['name']] = node
@@ -885,7 +885,7 @@ def create_network_interface(call=None, kwargs=None):
     )
     try:
         poller.wait()
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.warning('Network interface creation could not be polled. '
                  'It is likely that we are reusing an existing interface. (%s)', exc)
 
@@ -1020,7 +1020,7 @@ def request_instance(vm_):
         try:
             with salt.utils.files.fopen(ssh_publickeyfile, 'r') as spkc_:
                 ssh_publickeyfile_contents = spkc_.read()
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             raise SaltCloudConfigError(
                 "Failed to read ssh publickey file '{0}': "
                 "{1}".format(ssh_publickeyfile,
@@ -1305,7 +1305,7 @@ def request_instance(vm_):
                 'settings': settings,
                 'protected_settings': None
             }
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.exception('Failed to encode userdata: %s', exc)
 
     params = VirtualMachine(
@@ -1751,7 +1751,7 @@ def list_blobs(call=None, kwargs=None):  # pylint: disable=unused-argument
                                'last_modified': blob.properties.last_modified.isoformat(),
                                'server_encrypted': blob.properties.server_encrypted,
                              }
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.warning(six.text_type(exc))
 
     return ret
@@ -1789,7 +1789,7 @@ def delete_managed_disk(call=None, kwargs=None):  # pylint: disable=unused-argum
 
     try:
         compconn.disks.delete(kwargs['resource_group'], kwargs['blob'])
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error('Error deleting managed disk %s - %s', kwargs.get('blob'), six.text_type(exc))
         return False
 

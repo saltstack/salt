@@ -637,7 +637,7 @@ release code-named *2017.7.0*.
     Generate baseline proxy minion grains
     '''
     from __future__ import absolute_import
-    import salt.utils
+    import salt.utils.platform
 
     __proxyenabled__ = ['rest_sample']
 
@@ -706,7 +706,7 @@ Example from ``salt/grains/rest_sample.py``:
     Generate baseline proxy minion grains
     '''
     from __future__ import absolute_import
-    import salt.utils
+    import salt.utils.platform
 
     __proxyenabled__ = ['rest_sample']
 

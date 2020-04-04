@@ -82,7 +82,7 @@ def update_progress(opts, progress, progress_iter, out):
 def progress_end(progress_iter):
     try:
         progress_iter.stop()
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         pass
     return None
 

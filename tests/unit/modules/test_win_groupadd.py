@@ -51,14 +51,12 @@ class MockGroupObj(object):
         This should be a no-op unless we want to test raising an error, in
         which case this should be overridden in a subclass.
         '''
-        pass
 
     def Remove(self, name):
         '''
         This should be a no-op unless we want to test raising an error, in
         which case this should be overridden in a subclass.
         '''
-        pass
 
 
 sam_mock = MagicMock(side_effect=lambda x: 'HOST\\' + x)

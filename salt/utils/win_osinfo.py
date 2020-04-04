@@ -85,7 +85,7 @@ def get_join_info():
     Gets information about the domain/workgroup. This will tell you if the
     system is joined to a domain or a workgroup
 
-    .. version-added:: 2018.3.4
+    .. versionadded:: 2018.3.4
 
     Returns:
         dict: A dictionary containing the domain/workgroup and it's status

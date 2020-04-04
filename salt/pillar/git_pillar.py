@@ -350,6 +350,21 @@ When ``__env__`` is specified as the branch name, ``all_saltenvs`` per-remote co
         - __env__ https://mydomain.tld/pillar-appdata.git:
           - mountpoint: web/server/
 
+.. _git_pillar_update_interval:
+
+git_pillar_update_interval
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 3000
+
+This option defines the default update interval (in seconds) for git_pillar
+remotes. The update is handled within the global loop, hence
+``git_pillar_update_interval`` should be a multiple of ``loop_interval``.
+
+.. code-block:: yaml
+
+    git_pillar_update_interval: 120
+
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 

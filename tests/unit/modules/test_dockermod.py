@@ -35,6 +35,85 @@ def _docker_py_version():
     return (0,)
 
 
+class DockerUnitTestCase(TestCase, LoaderModuleMockMixin):
+    def fake_run(self, *args, **kwargs):
+        print(args, kwargs)
+        return '{}'
+
+    def setup_loader_modules(self):
+        return {
+            docker_mod: {
+                '__utils__': {
+                    'state.get_sls_opts': MagicMock(return_value={
+                        'pillarenv': MagicMock(),
+                        'pillar': {},
+                        'grains': {},
+                    }),
+                    'args.clean_kwargs': lambda **x: x,
+                },
+                '__salt__': {
+                    'config.option': MagicMock(return_value=None),
+                    'cmd.run': self.fake_run,
+                },
+                '__opts__': {
+                    'id': 'dockermod-unit-test',
+                },
+            },
+        }
+
+    def test_trans_tar_should_have_grains_in_sls_opts_including_pillar_override(self):
+        container_name = 'fnord'
+        expected_grains = {
+            'roscivs': 'bottia',
+            'fnord': 'dronf',
+            'salt': 'NaCl',
+        }
+        expected_pillars = {
+            'this': {
+                'is': {
+                    'my': {
+                        'pillar': 'data',
+                    },
+                },
+            },
+        }
+        extra_pillar_data = {'some': 'extras'}
+        fake_trans_tar = MagicMock(return_value=b'hi')
+        patch_trans_tar = patch(
+            'salt.modules.dockermod._prepare_trans_tar',
+            fake_trans_tar,
+        )
+        patch_call = patch(
+            'salt.modules.dockermod.call',
+            MagicMock(return_value=expected_grains),
+        )
+        fake_get_pillar = MagicMock()
+        fake_get_pillar.compile_pillar.return_value = expected_pillars
+        patch_pillar = patch(
+            'salt.modules.dockermod.salt.pillar.get_pillar',
+            MagicMock(return_value=fake_get_pillar),
+        )
+        patch_run_all = patch(
+            'salt.modules.dockermod.run_all',
+            MagicMock(return_value={'retcode': 1, 'stderr': 'early exit test'}),
+        )
+        with patch_trans_tar, patch_call, patch_pillar, patch_run_all:
+            docker_mod.sls(container_name, pillar=extra_pillar_data)
+            # TODO: It would be fine if we could make this test require less magic numbers -W. Werner, 2019-08-27
+            actual_sls_opts = fake_trans_tar.call_args[0][1]
+            self.assertDictContainsSubset(
+                expected_grains,
+                actual_sls_opts['grains'],
+                'Docker container grains not provided to thin client creation',
+            )
+            expected_pillars.update(extra_pillar_data)
+            self.assertDictContainsSubset(
+                expected_pillars,
+                actual_sls_opts['pillar'],
+                'Docker container pillar not provided to thin client creation',
+            )
+
+
 @skipIf(docker_mod.HAS_DOCKER_PY is False, 'docker-py must be installed to run these tests. Skipping.')
 class DockerTestCase(TestCase, LoaderModuleMockMixin):
     '''
@@ -849,7 +928,7 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         inspect_container_mock = MagicMock(side_effect=_inspect_container_effect)
 
         with patch.object(docker_mod, 'inspect_container', inspect_container_mock):
-            ret = docker_mod.compare_container('container1', 'container2')
+            ret = docker_mod.compare_container('container1', 'container2')  # pylint: disable=not-callable
             self.assertEqual(ret, {})
 
     def test_compare_container_env_order(self):
@@ -878,7 +957,7 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         inspect_container_mock = MagicMock(side_effect=_inspect_container_effect)
 
         with patch.object(docker_mod, 'inspect_container', inspect_container_mock):
-            ret = docker_mod.compare_container('container1', 'container2')
+            ret = docker_mod.compare_container('container1', 'container2')  # pylint: disable=not-callable
             self.assertEqual(ret, {})
 
     def test_resolve_tag(self):

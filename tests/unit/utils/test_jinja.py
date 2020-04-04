@@ -157,7 +157,7 @@ class TestSaltCacheLoader(TestCase):
         tmpl_dir = os.path.join(self.template_dir, 'hello_simple')
         self.assertEqual(res[1], tmpl_dir)
         assert res[2](), 'Template up to date?'
-        assert len(loader._file_client.requests)
+        assert loader._file_client.requests
         self.assertEqual(loader._file_client.requests[0]['path'], 'salt://hello_simple')
 
     def get_loader(self, opts=None, saltenv='base'):
@@ -1090,6 +1090,26 @@ class TestCustomExtensions(TestCase):
                       .render(data={'foo': 'bar'})
         self.assertEqual(rendered, '1')
 
+    def test_camel_to_snake_case(self):
+        '''
+        Test the `to_snake_case` Jinja filter.
+        '''
+        rendered = render_jinja_tmpl('{{ \'abcdEfghhIjkLmnoP\' | to_snake_case }}',
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, 'abcd_efghh_ijk_lmno_p')
+
+    def test_snake_to_camel_case(self):
+        '''
+        Test the `to_camelcase` Jinja filter.
+        '''
+        rendered = render_jinja_tmpl('{{ \'the_fox_jumped_over_the_lazy_dog\' | to_camelcase }}',
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, 'theFoxJumpedOverTheLazyDog')
+
+        rendered = render_jinja_tmpl('{{ \'the_fox_jumped_over_the_lazy_dog\' | to_camelcase(uppercamel=True) }}',
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, 'TheFoxJumpedOverTheLazyDog')
+
     def test_is_ip(self):
         '''
         Test the `is_ip` Jinja filter.
@@ -1431,6 +1451,16 @@ class TestCustomExtensions(TestCase):
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
         self.assertEqual(rendered, 'random')
 
+    def test_json_query(self):
+        '''
+        Test the `json_query` Jinja filter.
+        '''
+        rendered = render_jinja_tmpl(
+            "{{ [1, 2, 3] | json_query('[1]')}}",
+            dict(opts=self.local_opts, saltenv='test', salt=self.local_salt)
+        )
+        self.assertEqual(rendered, '2')
+
     # def test_print(self):
     #     env = Environment(extensions=[SerializerExtension])
     #     source = '{% import_yaml "toto.foo" as docu %}'
@@ -1447,7 +1477,7 @@ class TestDotNotationLookup(ModuleCase):
     '''
     Tests to call Salt functions via Jinja with various lookup syntaxes
     '''
-    def setUp(self, *args, **kwargs):
+    def setUp(self):
         functions = {
             'mocktest.ping': lambda: True,
             'mockgrains.get': lambda x: 'jerry',

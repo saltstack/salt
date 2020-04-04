@@ -10,7 +10,7 @@ import os
 import shutil
 import tempfile
 import textwrap
-import tornado.ioloop
+import salt.ext.tornado.ioloop
 import logging
 import stat
 try:
@@ -73,7 +73,7 @@ def _rmtree_error(func, path, excinfo):
 
 def _clear_instance_map():
     try:
-        del salt.utils.gitfs.GitFS.instance_map[tornado.ioloop.IOLoop.current()]
+        del salt.utils.gitfs.GitFS.instance_map[salt.ext.tornado.ioloop.IOLoop.current()]
     except KeyError:
         pass
 
@@ -92,8 +92,6 @@ class GitfsConfigTestCase(TestCase, LoaderModuleMockMixin):
             'transport': 'zeromq',
             'gitfs_mountpoint': '',
             'gitfs_saltenv': [],
-            'gitfs_env_whitelist': [],
-            'gitfs_env_blacklist': [],
             'gitfs_saltenv_whitelist': [],
             'gitfs_saltenv_blacklist': [],
             'gitfs_user': '',
@@ -316,6 +314,51 @@ class GitFSTestFuncs(object):
             # the envs list, but the branches should not.
             self.assertEqual(ret, ['base', 'foo'])
 
+    def test_saltenv_blacklist(self):
+        '''
+        test saltenv_blacklist
+        '''
+        opts = salt.utils.yaml.safe_load(textwrap.dedent('''\
+            gitfs_saltenv_blacklist: base
+            '''))
+        with patch.dict(gitfs.__opts__, opts):
+            gitfs.update()
+            ret = gitfs.envs(ignore_cache=True)
+            assert 'base' not in ret
+            assert UNICODE_ENVNAME in ret
+            assert 'mytag' in ret
+
+    def test_saltenv_whitelist(self):
+        '''
+        test saltenv_whitelist
+        '''
+        opts = salt.utils.yaml.safe_load(textwrap.dedent('''\
+            gitfs_saltenv_whitelist: base
+            '''))
+        with patch.dict(gitfs.__opts__, opts):
+            gitfs.update()
+            ret = gitfs.envs(ignore_cache=True)
+            assert 'base' in ret
+            assert UNICODE_ENVNAME not in ret
+            assert 'mytag' not in ret
+
+    def test_env_deprecated_opts(self):
+        '''
+        ensure deprecated options gitfs_env_whitelist
+        and gitfs_env_blacklist do not cause gitfs to
+        not load.
+        '''
+        opts = salt.utils.yaml.safe_load(textwrap.dedent('''\
+            gitfs_env_whitelist: base
+            gitfs_env_blacklist: ''
+            '''))
+        with patch.dict(gitfs.__opts__, opts):
+            gitfs.update()
+            ret = gitfs.envs(ignore_cache=True)
+            assert 'base' in ret
+            assert UNICODE_ENVNAME in ret
+            assert 'mytag' in ret
+
     def test_disable_saltenv_mapping_global_with_mapping_defined_per_remote(self):
         '''
         Test the global gitfs_disable_saltenv_mapping config option, combined
@@ -401,7 +444,8 @@ class GitFSTestBase(object):
 
         shutil.copytree(
             salt.ext.six.text_type(RUNTIME_VARS.BASE_FILES),
-            salt.ext.six.text_type(cls.tmp_repo_dir + '/')
+            salt.ext.six.text_type(cls.tmp_repo_dir + '/'),
+            symlinks=True
         )
 
         repo = git.Repo.init(cls.tmp_repo_dir)
@@ -488,8 +532,6 @@ class GitPythonTest(GitFSTestBase, GitFSTestFuncs, TestCase, LoaderModuleMockMix
             'transport': 'zeromq',
             'gitfs_mountpoint': '',
             'gitfs_saltenv': [],
-            'gitfs_env_whitelist': [],
-            'gitfs_env_blacklist': [],
             'gitfs_saltenv_whitelist': [],
             'gitfs_saltenv_blacklist': [],
             'gitfs_user': '',
@@ -534,8 +576,6 @@ class Pygit2Test(GitFSTestBase, GitFSTestFuncs, TestCase, LoaderModuleMockMixin)
             'transport': 'zeromq',
             'gitfs_mountpoint': '',
             'gitfs_saltenv': [],
-            'gitfs_env_whitelist': [],
-            'gitfs_env_blacklist': [],
             'gitfs_saltenv_whitelist': [],
             'gitfs_saltenv_blacklist': [],
             'gitfs_user': '',

@@ -24,6 +24,7 @@ import tempfile
 import functools
 import subprocess
 import multiprocessing
+from collections import OrderedDict
 
 # Import Salt Testing Libs
 from tests.support.mock import patch
@@ -94,8 +95,8 @@ class AdaptedConfigurationTestCaseMixin(object):
 
     @staticmethod
     def get_temp_config(config_for, **config_overrides):
-        rootdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
-        conf_dir = os.path.join(rootdir, 'conf')
+        rootdir = config_overrides.get('root_dir', tempfile.mkdtemp(dir=RUNTIME_VARS.TMP))
+        conf_dir = config_overrides.pop('conf_dir', os.path.join(rootdir, 'conf'))
         for key in ('cachedir', 'pki_dir', 'sock_dir'):
             if key not in config_overrides:
                 config_overrides[key] = key
@@ -323,9 +324,15 @@ class SaltMultimasterClientTestCaseMixin(AdaptedConfigurationTestCaseMixin):
         # Late import
         import salt.client
         if 'runtime_clients' not in RUNTIME_VARS.RUNTIME_CONFIGS:
-            mopts = self.get_config(self._salt_client_config_file_name_, from_scratch=True)
-            RUNTIME_VARS.RUNTIME_CONFIGS['runtime_clients'] = salt.client.get_local_client(mopts=mopts)
-        return RUNTIME_VARS.RUNTIME_CONFIGS['runtime_clients']
+            RUNTIME_VARS.RUNTIME_CONFIGS['runtime_clients'] = OrderedDict()
+
+        runtime_clients = RUNTIME_VARS.RUNTIME_CONFIGS['runtime_clients']
+        for master_id in ('mm-master', 'mm-sub-master'):
+            if master_id in runtime_clients:
+                continue
+            mopts = self.get_config(master_id.replace('-', '_'), from_scratch=True)
+            runtime_clients[master_id] = salt.client.get_local_client(mopts=mopts)
+        return runtime_clients
 
 
 class ShellCaseCommonTestsMixin(CheckShellBinaryNameAndVersionMixin):
@@ -743,7 +750,7 @@ def _fetch_events(q, opts):
     while True:
         try:
             events = event.get_event(full=False)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             # This is broad but we'll see all kinds of issues right now
             # if we drop the proc out from under the socket while we're reading
             log.exception("Exception caught while getting events %r", exc)

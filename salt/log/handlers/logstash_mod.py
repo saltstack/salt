@@ -167,6 +167,7 @@ from salt.log.setup import LOG_LEVELS
 from salt.log.mixins import NewStyleClassMixIn
 import salt.utils.json
 import salt.utils.network
+import salt.utils.stringutils
 
 # Import Third party libs
 from salt.ext import six
@@ -378,7 +379,7 @@ class DatagramLogstashHandler(logging.handlers.DatagramHandler):
     '''
 
     def makePickle(self, record):
-        return self.format(record)
+        return salt.utils.stringutils.to_bytes(self.format(record))
 
 
 class ZMQLogstashHander(logging.Handler, NewStyleClassMixIn):
@@ -416,7 +417,7 @@ class ZMQLogstashHander(logging.Handler, NewStyleClassMixIn):
         return self._publisher
 
     def emit(self, record):
-        formatted_object = self.format(record)
+        formatted_object = salt.utils.stringutils.to_bytes(self.format(record))
         self.publisher.send(formatted_object)
 
     def close(self):

@@ -10,7 +10,6 @@ import copy
 import errno
 import hashlib
 import logging
-import msgpack
 import multiprocessing
 import os
 import pipes
@@ -64,6 +63,7 @@ import salt.utils.data
 import salt.utils.event
 import salt.utils.files
 import salt.utils.path
+import salt.utils.msgpack
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.versions
@@ -709,7 +709,7 @@ def wait_for_fun(fun, timeout=900, **kwargs):
             response = fun(**kwargs)
             if not isinstance(response, bool):
                 return response
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.debug('Caught exception in wait_for_fun: %s', exc)
             time.sleep(1)
             log.debug('Retrying function %s on  (try %s)', fun, trycount)
@@ -1014,7 +1014,7 @@ def wait_for_psexecsvc(host, port, username, password, timeout=900):
             stdout, stderr, ret_code = run_psexec_command(
                 'cmd.exe', '/c hostname', host, username, password, port=port
             )
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.exception("Unable to execute command")
         if ret_code == 0:
             log.debug('psexec connected...')
@@ -1118,7 +1118,7 @@ def validate_windows_cred(host,
             stdout, stderr, ret_code = run_psexec_command(
                 'cmd.exe', '/c hostname', host, username, password, port=445
             )
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.exception("Exceoption while executing psexec")
         if ret_code == 0:
             break
@@ -1181,7 +1181,7 @@ def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
             return False
         except SaltCloudPasswordError:
             raise
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             if trycount >= maxtries:
                 return False
             time.sleep(trysleep)
@@ -1284,7 +1284,7 @@ def deploy_windows(host,
                     'C$',
                     conn=smb_conn,
                 )
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-except
                 log.debug("Exception copying master_sign.pub file %s to minion", master_sign_pub_file)
 
         # Copy over win_installer
@@ -2274,7 +2274,7 @@ def win_cmd(command, **kwargs):
         proc.poll_and_read_until_finish()
         proc.communicate()
         return proc.returncode
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         log.exception('Failed to execute command \'%s\'', logging_command)
     # Signal an error
     return 1
@@ -2450,7 +2450,7 @@ def remove_sshkey(host, known_hosts=None):
                 known_hosts = '{0}/.ssh/known_hosts'.format(
                     pwd.getpwuid(os.getuid()).pwd_dir
                 )
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 pass
 
     if known_hosts is not None:
@@ -2629,7 +2629,7 @@ def cachedir_index_add(minion_id, profile, driver, provider, base=None):
     if os.path.exists(index_file):
         mode = 'rb' if six.PY3 else 'r'
         with salt.utils.files.fopen(index_file, mode) as fh_:
-            index = salt.utils.data.decode(msgpack.load(fh_, encoding=MSGPACK_ENCODING))
+            index = salt.utils.data.decode(salt.utils.msgpack.msgpack.load(fh_, encoding=MSGPACK_ENCODING))
     else:
         index = {}
 
@@ -2646,7 +2646,7 @@ def cachedir_index_add(minion_id, profile, driver, provider, base=None):
 
     mode = 'wb' if six.PY3 else 'w'
     with salt.utils.files.fopen(index_file, mode) as fh_:
-        msgpack.dump(index, fh_, encoding=MSGPACK_ENCODING)
+        salt.utils.msgpack.dump(index, fh_, encoding=MSGPACK_ENCODING)
 
     unlock_file(index_file)
 
@@ -2663,7 +2663,7 @@ def cachedir_index_del(minion_id, base=None):
     if os.path.exists(index_file):
         mode = 'rb' if six.PY3 else 'r'
         with salt.utils.files.fopen(index_file, mode) as fh_:
-            index = salt.utils.data.decode(msgpack.load(fh_, encoding=MSGPACK_ENCODING))
+            index = salt.utils.data.decode(salt.utils.msgpack.load(fh_, encoding=MSGPACK_ENCODING))
     else:
         return
 
@@ -2672,7 +2672,7 @@ def cachedir_index_del(minion_id, base=None):
 
     mode = 'wb' if six.PY3 else 'w'
     with salt.utils.files.fopen(index_file, mode) as fh_:
-        msgpack.dump(index, fh_, encoding=MSGPACK_ENCODING)
+        salt.utils.msgpack.dump(index, fh_, encoding=MSGPACK_ENCODING)
 
     unlock_file(index_file)
 
@@ -2730,7 +2730,7 @@ def request_minion_cachedir(
     path = os.path.join(base, 'requested', fname)
     mode = 'wb' if six.PY3 else 'w'
     with salt.utils.files.fopen(path, mode) as fh_:
-        msgpack.dump(data, fh_, encoding=MSGPACK_ENCODING)
+        salt.utils.msgpack.dump(data, fh_, encoding=MSGPACK_ENCODING)
 
 
 def change_minion_cachedir(
@@ -2762,12 +2762,13 @@ def change_minion_cachedir(
     path = os.path.join(base, cachedir, fname)
 
     with salt.utils.files.fopen(path, 'r') as fh_:
-        cache_data = salt.utils.data.decode(msgpack.load(fh_, encoding=MSGPACK_ENCODING))
+        cache_data = salt.utils.data.decode(
+            salt.utils.msgpack.load(fh_, encoding=MSGPACK_ENCODING))
 
     cache_data.update(data)
 
     with salt.utils.files.fopen(path, 'w') as fh_:
-        msgpack.dump(cache_data, fh_, encoding=MSGPACK_ENCODING)
+        salt.utils.msgpack.dump(cache_data, fh_, encoding=MSGPACK_ENCODING)
 
 
 def activate_minion_cachedir(minion_id, base=None):
@@ -2841,7 +2842,8 @@ def list_cache_nodes_full(opts=None, provider=None, base=None):
                 minion_id = fname[:-2]  # strip '.p' from end of msgpack filename
                 mode = 'rb' if six.PY3 else 'r'
                 with salt.utils.files.fopen(fpath, mode) as fh_:
-                    minions[driver][prov][minion_id] = salt.utils.data.decode(msgpack.load(fh_, encoding=MSGPACK_ENCODING))
+                    minions[driver][prov][minion_id] = salt.utils.data.decode(
+                        salt.utils.msgpack.load(fh_, encoding=MSGPACK_ENCODING))
 
     return minions
 
@@ -3002,7 +3004,7 @@ def cache_node_list(nodes, provider, opts):
         path = os.path.join(prov_dir, '{0}.p'.format(node))
         mode = 'wb' if six.PY3 else 'w'
         with salt.utils.files.fopen(path, mode) as fh_:
-            msgpack.dump(nodes[node], fh_, encoding=MSGPACK_ENCODING)
+            salt.utils.msgpack.dump(nodes[node], fh_, encoding=MSGPACK_ENCODING)
 
 
 def cache_node(node, provider, opts):
@@ -3028,7 +3030,7 @@ def cache_node(node, provider, opts):
     path = os.path.join(prov_dir, '{0}.p'.format(node['name']))
     mode = 'wb' if six.PY3 else 'w'
     with salt.utils.files.fopen(path, mode) as fh_:
-        msgpack.dump(node, fh_, encoding=MSGPACK_ENCODING)
+        salt.utils.msgpack.dump(node, fh_, encoding=MSGPACK_ENCODING)
 
 
 def missing_node_cache(prov_dir, node_list, provider, opts):
@@ -3103,7 +3105,8 @@ def diff_node_cache(prov_dir, node, new_data, opts):
 
     with salt.utils.files.fopen(path, 'r') as fh_:
         try:
-            cache_data = salt.utils.data.decode(msgpack.load(fh_, encoding=MSGPACK_ENCODING))
+            cache_data = salt.utils.data.decode(
+                salt.utils.msgpack.load(fh_, encoding=MSGPACK_ENCODING))
         except ValueError:
             log.warning('Cache for %s was corrupt: Deleting', node)
             cache_data = {}
@@ -3134,7 +3137,7 @@ def _strip_cache_events(data, opts):
     are configured in the main Salt Cloud configuration file, usually
     ``/etc/salt/cloud``.
 
-    .. code-block: yaml
+    .. code-block:: yaml
 
         cache_event_strip_fields:
           - password

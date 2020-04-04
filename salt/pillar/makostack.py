@@ -472,7 +472,7 @@ def _process_stack_cfg(cfg, stack, minion_id, pillar, namespace):
         except exceptions.TopLevelLookupException as e:
             log.info('Stack template "%s" not found.', path)
             continue
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             log.info('Ignoring Stack template "%s":', path)
             log.info('%s', exceptions.text_error_template().render())
             continue
@@ -553,6 +553,6 @@ def _parse_top_cfg(content):
         obj = salt.utils.yaml.safe_load(content)
         if isinstance(obj, list):
             return obj
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         pass
     return content.splitlines()

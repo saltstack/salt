@@ -37,7 +37,7 @@ def get_script_path(bin_dir, script_name):
             script_name=script_name,
             executable=sys.executable,
             code_dir=RUNTIME_VARS.CODE_DIR,
-            inject_sitecustomize=True
+            inject_sitecustomize='COVERAGE_PROCESS_START' in os.environ
         )
     log.info('Returning script path %r', script_path)
     return script_path
