@@ -22,6 +22,7 @@ except ImportError:
 import salt.utils.dictupdate
 import salt.utils.stringutils
 import salt.utils.yaml
+import salt.utils.json
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
 from salt.utils.decorators.jinja import jinja_filter
@@ -599,8 +600,9 @@ def traverse_dict_and_list(data, key, default=None, delimiter=DEFAULT_TARGET_DEL
                     return default
         else:
             try:
+                ptr = salt.utils.json.loads(salt.utils.json.dumps(ptr))
                 ptr = ptr[each]
-            except (KeyError, TypeError):
+            except KeyError:
                 return default
     return ptr
 
