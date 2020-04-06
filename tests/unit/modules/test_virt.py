@@ -10,7 +10,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 import os
-import re
 import shutil
 import tempfile
 
@@ -634,9 +633,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(iface.find("source").attrib["bridge"], "br0")
         self.assertEqual(iface.find("model").attrib["type"], "virtio")
 
-        mac = iface.find("mac").attrib["address"]
-        self.assertTrue(re.match("^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$", mac, re.I))
-
     def test_gen_xml_for_esxi_default_profile(self):
         """
         Test virt._gen_xml(), ESXi/vmware default profile case
@@ -667,9 +663,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(iface.attrib["type"], "bridge")
         self.assertEqual(iface.find("source").attrib["bridge"], "DEFAULT")
         self.assertEqual(iface.find("model").attrib["type"], "e1000")
-
-        mac = iface.find("mac").attrib["address"]
-        self.assertTrue(re.match("^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$", mac, re.I))
 
     def test_gen_xml_for_xen_default_profile(self):
         """
@@ -915,8 +908,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         controllers = root.findall(".//devices/controller")
         # There should be no controller
         self.assertTrue(len(controllers) == 0)
-        # kvm mac address shoud start with 52:54:00
-        self.assertTrue("mac address='52:54:00" in xml_data)
 
     def test_diff_disks(self):
         """
@@ -1751,12 +1742,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                         "source": "default",
                         "mac": "52:54:00:39:02:b1",
                     },
-                    {
-                        "name": "eth1",
-                        "type": "network",
-                        "source": "oldnet",
-                        "mac": "52:54:00:39:02:b2",
-                    },
+                    {"name": "eth1", "type": "network", "source": "oldnet"},
                 ],
                 graphics={
                     "type": "spice",
@@ -1995,14 +1981,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertIn("name", interface_attrs)
                 self.assertIn("model", interface_attrs)
                 self.assertEqual(interface_attrs["model"], "virtio")
-                self.assertIn("mac", interface_attrs)
-                self.assertTrue(
-                    re.match(
-                        "^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$",
-                        interface_attrs["mac"],
-                        re.I,
-                    )
-                )
 
     def test_get_xml(self):
         """
