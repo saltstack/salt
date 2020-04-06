@@ -78,9 +78,10 @@ in the roster for a specific minion or use the `roster_defaults` to set it for a
 This script will only run if the thin dir is not currently on the minion. This means it will
 only run on the first run of salt-ssh or if you have recently wiped out your thin dir. If
 you want to intentionally run the script again you have a couple of options:
-  - Wipe out your thin dir by using the -w salt-ssh arg.
-  - Set ssh_run_pre_flight to True in the config
-  - Run salt-ssh with the --pre-flight arg.
+
+* Wipe out your thin dir by using the -w salt-ssh arg.
+* Set ssh_run_pre_flight to True in the config
+* Run salt-ssh with the --pre-flight arg.
 
 .. _roster_defaults:
 

@@ -44,6 +44,7 @@ run this script.
 
 The `ssh_pre_flight` script will only run if the thin dir is not currently on the
 minion. If you want to force the script to run you have the following options:
-  - Wipe the thin dir on the targeted minion using the -w arg.
-  - Set ssh_run_pre_flight to True in the config.
-  - Run salt-ssh with the --pre-flight arg.
+
+* Wipe the thin dir on the targeted minion using the -w arg.
+* Set ssh_run_pre_flight to True in the config.
+* Run salt-ssh with the --pre-flight arg.

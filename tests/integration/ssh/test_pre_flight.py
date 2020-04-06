@@ -5,7 +5,6 @@ Test for ssh_pre_flight roster option
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import os
-import shutil
 
 # Import salt testing libs
 from tests.support.case import SSHCase
