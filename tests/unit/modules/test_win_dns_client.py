@@ -10,11 +10,7 @@ import types
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import (
-    MagicMock,
-    patch,
-    Mock,
-)
+from tests.support.mock import MagicMock, patch, Mock
 
 # Import Salt Libs
 import salt.modules.win_dns_client as win_dns_client
@@ -68,7 +64,6 @@ class WinDnsClientTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.win_dns_client
     '''
-
     def setup_loader_modules(self):
         # wmi and pythoncom modules are platform specific...
         mock_pythoncom = types.ModuleType(
@@ -89,8 +84,7 @@ class WinDnsClientTestCase(TestCase, LoaderModuleMockMixin):
         Test if it return a list of the configured DNS servers
         of the specified interface.
         '''
-        with patch('salt.utils', Mockwinapi), \
-                patch('salt.utils.winapi.Com', MagicMock()), \
+        with patch('salt.utils.winapi.Com', MagicMock()), \
                 patch.object(self.WMI, 'Win32_NetworkAdapter',
                              return_value=[Mockwmi()]), \
                 patch.object(self.WMI, 'Win32_NetworkAdapterConfiguration',
@@ -159,3 +153,22 @@ class WinDnsClientTestCase(TestCase, LoaderModuleMockMixin):
                              return_value=[Mockwmi()]), \
                 patch.object(wmi, 'WMI', Mock(return_value=self.WMI)):
             self.assertTrue(win_dns_client.get_dns_config())
+
+    @patch('salt.utils.platform.is_windows')
+    def test___virtual__non_windows(self, mock):
+        mock.return_value = False
+        result = win_dns_client.__virtual__()
+        expected = (False, 'Module win_dns_client: module only works on '
+                           'Windows systems')
+        self.assertEqual(result, expected)
+
+    @patch.object(win_dns_client, 'HAS_LIBS', False)
+    def test___virtual__missing_libs(self):
+        result = win_dns_client.__virtual__()
+        expected = (False, 'Module win_dns_client: missing required libraries')
+        self.assertEqual(result, expected)
+
+    def test___virtual__(self):
+        result = win_dns_client.__virtual__()
+        expected = 'win_dns_client'
+        self.assertEqual(result, expected)

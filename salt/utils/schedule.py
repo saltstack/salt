@@ -1019,7 +1019,7 @@ class Schedule(object):
 
                 if when < now - loop_interval and \
                         not data.get('_run', False) and \
-                        not data.get('run', False) and \
+                        not run and \
                         not data['_splay']:
                     data['_next_fire_time'] = None
                     data['_continue'] = True

@@ -14,6 +14,7 @@ from tests.support.runtests import RUNTIME_VARS
 import tests.support.helpers
 
 # Import Salt libs
+import salt
 import salt.ext.six
 import salt.modules.cmdmod
 import salt.utils.platform
@@ -95,3 +96,10 @@ class VendorTornadoTest(TestCase):
             log.error("Test found bad line: %s", line)
             valid_lines.append(line)
         assert valid_lines == [], len(valid_lines)
+
+    def test_regression_56063(self):
+        importer = salt.TornadoImporter()
+        try:
+            importer.find_module('tornado')
+        except TypeError:
+            assert False, 'TornadoImporter raised type error when one argument passed'
