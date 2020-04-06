@@ -991,6 +991,15 @@ class Single(object):
 
         return self.execute_script(script)
 
+    def check_thin_dir(self):
+        '''
+        check if the thindir exists on the remote machine
+        '''
+        stdout, stderr, retcode = self.shell.exec_cmd('test -d {0}'.format(self.thin_dir))
+        if retcode != 0:
+            return False
+        return True
+
     def deploy(self):
         """
         Deploy salt-thin
@@ -1026,8 +1035,8 @@ class Single(object):
         stdout = stderr = retcode = None
 
         if self.ssh_pre_flight:
-            if os.path.exists(self.thin_dir):
-                log.debug('{0} thin dir already exists. Not running ssh_pre_flight script'.format(self.thin_dir))
+            if self.check_thin_dir() and not self.opts.get('ssh_run_pre_flight', False):
+                log.info('{0} thin dir already exists. Not running ssh_pre_flight script'.format(self.thin_dir))
             elif not os.path.exists(self.ssh_pre_flight):
                 log.error('The ssh_pre_flight script {0} does not exist'.format(self.ssh_pre_flight))
             else:
@@ -1035,7 +1044,7 @@ class Single(object):
                 if stderr:
                     log.error('Error running ssh_pre_flight script {0}'.format(self.ssh_pre_file))
                     return stdout, stderr, retcode
-                log.debug('Successfully ran the ssh_pre_flight script: {0}'.format(self.ssh_pre_file))
+                log.info('Successfully ran the ssh_pre_flight script: {0}'.format(self.ssh_pre_file))
 
         if self.opts.get("raw_shell", False):
             cmd_str = " ".join([self._escape_arg(arg) for arg in self.argv])

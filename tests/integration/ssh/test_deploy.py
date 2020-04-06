@@ -10,10 +10,6 @@ import shutil
 
 # Import salt testing libs
 from tests.support.case import SSHCase
-from tests.support.runtests import RUNTIME_VARS
-
-# Import salt libs
-import salt.utils.yaml
 
 
 class SSHTest(SSHCase):
@@ -37,26 +33,6 @@ class SSHTest(SSHCase):
         os.path.isdir(thin_dir)
         os.path.exists(os.path.join(thin_dir, "salt-call"))
         os.path.exists(os.path.join(thin_dir, "running_data"))
-
-    def test_ssh_pre_flight(self):
-        '''
-        test ssh when ssh_pre_flight is set
-        ensure the script runs successfully
-        '''
-        roster = os.path.join(RUNTIME_VARS.TMP, 'pre_flight_roster')
-
-        data = {'ssh_pre_flight': os.path.join(RUNTIME_VARS.TMP, 'ssh_pre_flight.sh')}
-        self.custom_roster(roster, data)
-
-        test_script = os.path.join(RUNTIME_VARS.TMP,
-                'test-pre-flight-script-worked.txt')
-
-        with salt.utils.files.fopen(data['ssh_pre_flight'], 'w') as fp_:
-            fp_.write('touch {0}'.format(test_script))
-
-        ret = self.run_function('test.ping', roster_file=roster)
-
-        assert os.path.exists(test_script)
 
     def tearDown(self):
         """

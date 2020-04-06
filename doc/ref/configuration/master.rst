@@ -1341,6 +1341,15 @@ salt-ssh.
       groupA: minion1,minion2
       groupB: minion1,minion3
 
+.. conf_master:: ssh_run_pre_flight
+
+Default: False
+
+Run the ssh_pre_flight script defined in the salt-ssh roster. Be default
+the script will only run when the thin dir does not exist on the targeted
+minion. This will force the script to run and not check if the thin dir
+exists first.
+
 .. conf_master:: thin_extra_mods
 
 ``thin_extra_mods``

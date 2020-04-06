@@ -177,7 +177,7 @@ class SSHSingleTests(TestCase):
         mock_cmd = MagicMock(return_value=cmd_ret)
         patch_flight = patch('salt.client.ssh.Single.run_ssh_pre_flight', mock_flight)
         patch_cmd = patch('salt.client.ssh.Single.cmd_block', mock_cmd)
-        patch_os = patch('os.path.exists', side_effect=[False, True])
+        patch_os = patch('os.path.exists', side_effect=[True])
 
         with patch_os, patch_flight, patch_cmd:
             ret = single.run()
@@ -207,7 +207,7 @@ class SSHSingleTests(TestCase):
         mock_cmd = MagicMock(return_value=cmd_ret)
         patch_flight = patch('salt.client.ssh.Single.run_ssh_pre_flight', mock_flight)
         patch_cmd = patch('salt.client.ssh.Single.cmd_block', mock_cmd)
-        patch_os = patch('os.path.exists', side_effect=[False, True])
+        patch_os = patch('os.path.exists', side_effect=[True])
 
         with patch_os, patch_flight, patch_cmd:
             ret = single.run()
@@ -237,7 +237,7 @@ class SSHSingleTests(TestCase):
         mock_cmd = MagicMock(return_value=cmd_ret)
         patch_flight = patch('salt.client.ssh.Single.run_ssh_pre_flight', mock_flight)
         patch_cmd = patch('salt.client.ssh.Single.cmd_block', mock_cmd)
-        patch_os = patch('os.path.exists', side_effect=[False, False])
+        patch_os = patch('os.path.exists', side_effect=[False])
 
         with patch_os, patch_flight, patch_cmd:
             ret = single.run()
@@ -262,11 +262,11 @@ class SSHSingleTests(TestCase):
                 mine=False,
                 **target)
 
-        cmd_ret = ('', 'Error running script', 1)
+        cmd_ret = ('', '', 0)
         mock_flight = MagicMock(return_value=cmd_ret)
         mock_cmd = MagicMock(return_value=cmd_ret)
         patch_flight = patch('salt.client.ssh.Single.run_ssh_pre_flight', mock_flight)
-        patch_cmd = patch('salt.client.ssh.Single.cmd_block', mock_cmd)
+        patch_cmd = patch('salt.client.ssh.shell.Shell.exec_cmd', mock_cmd)
         patch_os = patch('os.path.exists', return_value=True)
 
         with patch_os, patch_flight, patch_cmd:
