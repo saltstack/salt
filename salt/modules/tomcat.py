@@ -85,6 +85,7 @@ from salt.ext.six.moves.urllib.request import (
 
 # Import Salt libs
 import salt.utils.data
+import salt.utils.stringutils
 
 log = logging.getLogger(__name__)
 
@@ -262,7 +263,7 @@ def _wget(cmd, opts=None, url='http://localhost:8080/manager', timeout=180):
     # Force all byte strings to utf-8 strings, for python >= 3.4
     for key, item in enumerate(ret['msg']):
         try:
-            ret['msg'][key] = item.decode('utf-8')
+            ret['msg'][key] = salt.utils.stringutils.to_unicode(item, 'utf-8')
         except (UnicodeDecodeError, AttributeError):
             pass
 
