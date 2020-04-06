@@ -11,6 +11,8 @@ Remove this section if not relevant
 
 ### Docs & changelog written?
 Yes/No 
+- [ ] Docs
+- [ ] Changelog
 
 ### Tests written?
 **[NOTICE] Bug fixes or features added to Salt require tests.**
