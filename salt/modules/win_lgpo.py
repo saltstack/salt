@@ -5658,7 +5658,7 @@ def _getDataFromRegPolData(search_string, policy_data, return_value_name=False):
                     match.start() : (
                         policy_data.index("]".encode("utf-16-le"), match.end())
                     )
-                ].split(encoded_semicolon)
+                ].split(encoded_semicolon, 4)
                 if len(pol_entry) >= 2:
                     valueName = pol_entry[1].decode("utf-16-le").rstrip(chr(0))
                 if len(pol_entry) >= 5:
@@ -9100,6 +9100,11 @@ def _get_policy_adm_setting(
                         ):
                             log.trace("explicitValue list, we will return value names")
                             return_value_name = True
+                        regex_str = [r'(?!\*', r'\*',
+                                     'D', 'e', 'l', 'V', 'a', 'l', 's',
+                                     r'\.', ')']
+                        delvals_regex = '\x00'.join(regex_str)
+                        delvals_regex = salt.utils.stringutils.to_bytes(delvals_regex)
                         if _regexSearchRegPolData(
                             re.escape(
                                 _processValueItem(
@@ -9111,7 +9116,7 @@ def _get_policy_adm_setting(
                                     check_deleted=False,
                                 )
                             )
-                            + salt.utils.stringutils.to_bytes(r"(?!\*\*delvals\.)"),
+                            + delvals_regex,
                             policy_data=policy_file_data,
                         ):
                             configured_value = _getDataFromRegPolData(
