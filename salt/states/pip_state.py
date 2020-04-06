@@ -940,6 +940,7 @@ def installed(name,
                     'Collecting',
                     'Cloning',
                     'Cleaning up...',
+                    'Looking in indexes',
                 ]
                 for line in pip_install_call.get('stdout', '').split('\n'):
                     if not any(
