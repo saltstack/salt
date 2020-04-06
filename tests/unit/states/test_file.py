@@ -1290,7 +1290,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                         ret = {'name': name,
                                'result': False,
                                'comment': 'Directory /etc/testdir updated',
-                               'changes': {'Recursion': 'Changes silenced'}}
+                               'changes': {'recursion': 'Changes silenced'}}
                         with patch.dict(filestate.__salt__, {'file.check_perms': mock_perms}):
                             with patch.object(os.path, 'isdir', mock_t):
                                 self.assertDictEqual(filestate.directory
