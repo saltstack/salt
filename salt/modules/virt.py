@@ -2213,18 +2213,22 @@ def update(
     # Set the new definition
     if need_update:
         # Create missing disks if needed
-        if changes["disk"]:
-            for idx, item in enumerate(changes["disk"]["sorted"]):
-                source_file = all_disks[idx]["source_file"]
-                if (
-                    item in changes["disk"]["new"]
-                    and source_file
-                    and not os.path.isfile(source_file)
-                    and not test
-                ):
-                    _qemu_image_create(all_disks[idx])
-
         try:
+            if changes["disk"]:
+                for idx, item in enumerate(changes["disk"]["sorted"]):
+                    source_file = all_disks[idx].get("source_file")
+                    # We don't want to create image disks for cdrom devices
+                    if all_disks[idx].get("device", "disk") == "cdrom":
+                        continue
+                    if (
+                        item in changes["disk"]["new"]
+                        and source_file
+                        and not os.path.isfile(source_file)
+                    ):
+                        _qemu_image_create(all_disks[idx])
+                    elif item in changes["disk"]["new"] and not source_file:
+                        _disk_volume_create(conn, all_disks[idx])
+
             if not test:
                 conn.defineXML(
                     salt.utils.stringutils.to_str(ElementTree.tostring(desc))

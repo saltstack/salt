@@ -1421,9 +1421,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                   <alias name='virtio-disk0'/>
                   <address type='pci' domain='0x0000' bus='0x00' slot='0x07' function='0x0'/>
                 </disk>
-                <disk type='file' device='disk'>
+                <disk type='volume' device='disk'>
                   <driver name='qemu' type='qcow2'/>
-                  <source file='{0}{1}my_vm_data.qcow2'/>
+                  <source pool='default' volume='my_vm_data'/>
                   <backingStore/>
                   <target dev='vdb' bus='virtio'/>
                   <alias name='virtio-disk1'/>
@@ -1638,9 +1638,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 )
 
                 self.assertListEqual(
-                    [os.path.join(root_dir, "my_vm_data.qcow2")],
+                    ["my_vm_data"],
                     [
-                        ET.fromstring(disk).find("source").get("file")
+                        ET.fromstring(disk).find("source").get("volume")
                         for disk in ret["disk"]["detached"]
                     ],
                 )
@@ -1722,6 +1722,10 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual("vnc", setxml.find("devices/graphics").get("type"))
 
         # Update with no diff case
+        pool_mock = MagicMock()
+        pool_mock.XMLDesc.return_value = "<pool type='dir'></pool>"
+        self.mock_conn.storagePoolLookupByName.return_value = pool_mock
+        self.mock_conn.listStoragePools.return_value = ["default"]
         self.assertEqual(
             {
                 "definition": False,
@@ -1733,7 +1737,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 cpu=1,
                 mem=1024,
                 disk_profile="default",
-                disks=[{"name": "data", "size": 2048}],
+                disks=[{"name": "data", "size": 2048, "pool": "default"}],
                 nic_profile="myprofile",
                 interfaces=[
                     {
