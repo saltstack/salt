@@ -52,7 +52,9 @@
                 {% for nic in nics %}
                 <interface type='{{ nic.type }}'>
                     <source {{ nic.type }}='{{ nic.source }}'/>
+                    {% if nic.get('mac') -%}
                     <mac address='{{ nic.mac }}'/>
+                    {%- endif %}
                     {% if nic.model %}<model type='{{ nic.model }}'/>{% endif %}
                 </interface>
                 {% endfor %}

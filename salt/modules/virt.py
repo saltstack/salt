@@ -1272,19 +1272,8 @@ def _complete_nics(interfaces, hypervisor):
             if key not in attributes or not attributes[key]:
                 attributes[key] = value
 
-    def _assign_mac(attributes, hypervisor):
-        """
-        Compute mac address for NIC depending on hypervisor
-        """
-        if hypervisor in ["qemu", "kvm"]:
-            attributes["mac"] = salt.utils.network.gen_mac(prefix="52:54:00")
-        else:
-            attributes["mac"] = salt.utils.network.gen_mac()
-
     for interface in interfaces:
         _normalize_net_types(interface)
-        if interface.get("mac", None) is None:
-            _assign_mac(interface, hypervisor)
         if hypervisor in overlays:
             _apply_default_overlay(interface)
 
@@ -1850,15 +1839,22 @@ def _nics_equal(nic1, nic2):
             "source": nic.find("source").attrib[nic.attrib["type"]]
             if nic.find("source") is not None
             else None,
-            "mac": nic.find("mac").attrib["address"].lower()
-            if nic.find("mac") is not None
-            else None,
             "model": nic.find("model").attrib["type"]
             if nic.find("model") is not None
             else None,
         }
 
-    return _filter_nic(nic1) == _filter_nic(nic2)
+    def _get_mac(nic):
+        return (
+            nic.find("mac").attrib["address"].lower()
+            if nic.find("mac") is not None
+            else None
+        )
+
+    mac1 = _get_mac(nic1)
+    mac2 = _get_mac(nic2)
+    macs_equal = not mac1 or not mac2 or mac1 == mac2
+    return _filter_nic(nic1) == _filter_nic(nic2) and macs_equal
 
 
 def _graphics_equal(gfx1, gfx2):
@@ -1969,16 +1965,7 @@ def _diff_interface_lists(old, new):
     :param old: list of ElementTree nodes representing the old interfaces
     :param new: list of ElementTree nodes representing the new interfaces
     """
-    diff = _diff_lists(old, new, _nics_equal)
-
-    # Remove duplicated addresses mac addresses and let libvirt generate them for us
-    macs = [nic.find("mac").get("address") for nic in diff["unchanged"]]
-    for nic in diff["new"]:
-        mac = nic.find("mac")
-        if mac.get("address") in macs:
-            nic.remove(mac)
-
-    return diff
+    return _diff_lists(old, new, _nics_equal)
 
 
 def _diff_graphics_lists(old, new):
