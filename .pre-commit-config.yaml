@@ -416,6 +416,16 @@ repos:
           - --py-version=3.7
           - --platform=linux
 
+  - repo: https://github.com/timothycrosley/isort
+    rev: '1e78a9acf3110e1f9721feb591f89a451fc9876a'
+    hooks:
+      - id: isort
+
+  - repo: https://github.com/psf/black
+    rev: stable
+    hooks:
+      - id: black
+        language_version: python3.7
 
   - repo: https://github.com/saltstack/salt-nox-pre-commit
     rev: master
