@@ -784,7 +784,7 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
             log.debug("Processed CLI output:")
             log.debug(processed_cli_output)
             if not processed_cli_output["result"]:
-                log.debug("Apparently this did not work, returnin the raw output")
+                log.debug("Apparently this did not work, returning the raw output")
                 processed_command_output = command_output
                 processed_cli_outputs[
                     "comment"
