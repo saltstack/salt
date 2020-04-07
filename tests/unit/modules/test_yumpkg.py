@@ -1174,10 +1174,10 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                 yumpkg._get_yum_config()
 
     def test_group_install(self):
-        '''
+        """
         Test group_install uses the correct keys from group_info and installs
         default and mandatory packages.
-        '''
+        """
         groupinfo_output = """
         Group: Printing Client
          Group-Id: print-client
@@ -1203,17 +1203,34 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
            samba-krb5-printing
         """
         install = MagicMock()
-        with patch.dict(yumpkg.__salt__, {'cmd.run_stdout': MagicMock(return_value=groupinfo_output)}):
-            with patch.dict(yumpkg.__salt__, {'cmd.run': MagicMock(return_value='')}):
-                with patch.dict(yumpkg.__salt__, {'pkg_resource.format_pkg_list': MagicMock(return_value={})}):
-                    with patch.object(yumpkg, 'install', install):
-                        yumpkg.group_install('Printing Client')
+        with patch.dict(
+            yumpkg.__salt__,
+            {"cmd.run_stdout": MagicMock(return_value=groupinfo_output)},
+        ):
+            with patch.dict(yumpkg.__salt__, {"cmd.run": MagicMock(return_value="")}):
+                with patch.dict(
+                    yumpkg.__salt__,
+                    {"pkg_resource.format_pkg_list": MagicMock(return_value={})},
+                ):
+                    with patch.object(yumpkg, "install", install):
+                        yumpkg.group_install("Printing Client")
                         install.assert_called_once_with(
-                        pkgs=[
-                            'cups', 'cups-pk-helper', 'enscript', 'ghostscript-cups',
-                            'colord', 'gutenprint', 'gutenprint-cups', 'hpijs',
-                            'paps', 'pnm2ppa', 'python-smbc', 'system-config-printer',
-                            'system-config-printer-udev'])
+                            pkgs=[
+                                "cups",
+                                "cups-pk-helper",
+                                "enscript",
+                                "ghostscript-cups",
+                                "colord",
+                                "gutenprint",
+                                "gutenprint-cups",
+                                "hpijs",
+                                "paps",
+                                "pnm2ppa",
+                                "python-smbc",
+                                "system-config-printer",
+                                "system-config-printer-udev",
+                            ]
+                        )
 
 
 @skipIf(pytest is None, "PyTest is missing")
