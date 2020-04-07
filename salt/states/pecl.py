@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Installation of PHP Extensions Using pecl
 =========================================
 
@@ -17,7 +17,7 @@ requisite to a pkg.installed state for the package which provides pecl
       pecl.installed:
         - require:
           - pkg: php-pear
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import salt libs
@@ -25,18 +25,16 @@ from salt.ext import six
 
 
 def __virtual__():
-    '''
+    """
     Only load if the pecl module is available in __salt__
-    '''
-    return 'pecl' if 'pecl.list' in __salt__ else False
+    """
+    return "pecl" if "pecl.list" in __salt__ else False
 
 
-def installed(name,
-              version=None,
-              defaults=False,
-              force=False,
-              preferred_state='stable'):
-    '''
+def installed(
+    name, version=None, defaults=False, force=False, preferred_state="stable"
+):
+    """
     .. versionadded:: 0.17.0
 
     Make sure that a pecl extension is installed.
@@ -58,76 +56,70 @@ def installed(name,
 
     preferred_state
         The pecl extension state to install
-    '''
+    """
     # Check to see if we have a designated version
     if not isinstance(version, six.string_types) and version is not None:
         version = six.text_type(version)
 
-    ret = {'name': name,
-           'result': None,
-           'comment': '',
-           'changes': {}}
+    ret = {"name": name, "result": None, "comment": "", "changes": {}}
 
-    if '/' in name:
-        channel, package = name.split('/')
+    if "/" in name:
+        channel, package = name.split("/")
     else:
         channel = None
         package = name
-    installed_pecls = __salt__['pecl.list'](channel)
+    installed_pecls = __salt__["pecl.list"](channel)
 
     if package in installed_pecls:
         # The package is only installed if version is absent or matches
-        if (version is None or version in installed_pecls[package]) \
-                and preferred_state in installed_pecls[package]:
-            ret['result'] = True
-            ret['comment'] = ('Pecl extension {0} is already installed.'
-                              .format(name))
+        if (
+            version is None or version in installed_pecls[package]
+        ) and preferred_state in installed_pecls[package]:
+            ret["result"] = True
+            ret["comment"] = "Pecl extension {0} is already installed.".format(name)
             return ret
 
     if version is not None:
         # Modify the name to include the version and proceed.
-        name = '{0}-{1}'.format(name, version)
+        name = "{0}-{1}".format(name, version)
 
-    if __opts__['test']:
-        ret['comment'] = ('Pecl extension {0} would have been installed'
-                          .format(name))
+    if __opts__["test"]:
+        ret["comment"] = "Pecl extension {0} would have been installed".format(name)
         return ret
-    if __salt__['pecl.install'](name, defaults=defaults, force=force,
-                                preferred_state=preferred_state):
-        ret['result'] = True
-        ret['changes'][name] = 'Installed'
-        ret['comment'] = ('Pecl extension {0} was successfully installed'
-                          .format(name))
+    if __salt__["pecl.install"](
+        name, defaults=defaults, force=force, preferred_state=preferred_state
+    ):
+        ret["result"] = True
+        ret["changes"][name] = "Installed"
+        ret["comment"] = "Pecl extension {0} was successfully installed".format(name)
     else:
-        ret['result'] = False
-        ret['comment'] = 'Could not install pecl extension {0}.'.format(name)
+        ret["result"] = False
+        ret["comment"] = "Could not install pecl extension {0}.".format(name)
 
     return ret
 
 
 def removed(name):
-    '''
+    """
     Make sure that a pecl extension is not installed.
 
     name
         The pecl extension name to uninstall
-    '''
-    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
-    if name not in __salt__['pecl.list']():
-        ret['result'] = True
-        ret['comment'] = 'Pecl extension {0} is not installed.'.format(name)
+    """
+    ret = {"name": name, "result": None, "comment": "", "changes": {}}
+    if name not in __salt__["pecl.list"]():
+        ret["result"] = True
+        ret["comment"] = "Pecl extension {0} is not installed.".format(name)
         return ret
 
-    if __opts__['test']:
-        ret['comment'] = ('Pecl extension {0} would have been removed'
-                          .format(name))
+    if __opts__["test"]:
+        ret["comment"] = "Pecl extension {0} would have been removed".format(name)
         return ret
-    if __salt__['pecl.uninstall'](name):
-        ret['result'] = True
-        ret['changes'][name] = 'Removed'
-        ret['comment'] = ('Pecl extension {0} was successfully removed.'
-                          .format(name))
+    if __salt__["pecl.uninstall"](name):
+        ret["result"] = True
+        ret["changes"][name] = "Removed"
+        ret["comment"] = "Pecl extension {0} was successfully removed.".format(name)
     else:
-        ret['result'] = False
-        ret['comment'] = 'Could not remove pecl extension {0}.'.format(name)
+        ret["result"] = False
+        ret["comment"] = "Could not remove pecl extension {0}.".format(name)
     return ret

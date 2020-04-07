@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Use Openstack Neutron data as a Pillar source. Will list all networks listed
 inside of Neutron, to all minions.
 
@@ -41,15 +41,17 @@ name after the Keystone profile name:
 
     ext_pillar:
       - neutron: my_openstack_config neutron_networks
-'''
+"""
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 
 # Import Salt Libs
 try:
     import salt.utils.openstack.neutron as suoneu
+
     HAS_NEUTRON = True
 except NameError as exc:
     HAS_NEUTRON = False
@@ -59,35 +61,33 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     Only return if python-neutronclient is installed
-    '''
+    """
     return HAS_NEUTRON
 
 
 def _auth(profile=None):
-    '''
+    """
     Set up neutron credentials
-    '''
-    credentials = __salt__['config.option'](profile)
+    """
+    credentials = __salt__["config.option"](profile)
     kwargs = {
-        'username': credentials['keystone.user'],
-        'password': credentials['keystone.password'],
-        'tenant_name': credentials['keystone.tenant'],
-        'auth_url': credentials['keystone.auth_url'],
-        'region_name': credentials.get('keystone.region_name', None),
-        'service_type': credentials['keystone.service_type'],
+        "username": credentials["keystone.user"],
+        "password": credentials["keystone.password"],
+        "tenant_name": credentials["keystone.tenant"],
+        "auth_url": credentials["keystone.auth_url"],
+        "region_name": credentials.get("keystone.region_name", None),
+        "service_type": credentials["keystone.service_type"],
     }
 
     return suoneu.SaltNeutron(**kwargs)
 
 
-def ext_pillar(minion_id,
-               pillar,  # pylint: disable=W0613
-               conf):
-    '''
+def ext_pillar(minion_id, pillar, conf):  # pylint: disable=W0613
+    """
     Check neutron for all data
-    '''
+    """
     comps = conf.split()
 
     profile = None
@@ -97,9 +97,9 @@ def ext_pillar(minion_id,
     conn = _auth(profile)
     ret = {}
     networks = conn.list_networks()
-    for network in networks['networks']:
-        ret[network['name']] = network
+    for network in networks["networks"]:
+        ret[network["name"]] = network
 
     if len(comps) < 2:
-        comps.append('networks')
+        comps.append("networks")
     return {comps[1]: ret}
