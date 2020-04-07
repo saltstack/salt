@@ -13,8 +13,14 @@ import sys
 from tests.support.mock import MagicMock, patch
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase
-from zypp_plugin import BogusIO
+from tests.support.unit import TestCase, skipIf
+
+try:
+    from zypp_plugin import BogusIO
+
+    HAS_ZYPP_PLUGIN = True
+except ImportError:
+    HAS_ZYPP_PLUGIN = False
 
 if sys.version_info >= (3,):
     BUILTINS_OPEN = "builtins.open"
@@ -27,6 +33,7 @@ ZYPPNOTIFY_FILE = os.path.sep.join(
 )
 
 
+@skipIf(not HAS_ZYPP_PLUGIN, "zypp_plugin is missing.")
 class ZyppPluginsTestCase(TestCase):
     """
     Test shipped libzypp plugins.
