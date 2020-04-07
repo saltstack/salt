@@ -1600,7 +1600,7 @@ def installed(
                       - /etc/nginx/nginx.conf
                       - 'user www-data;'
 
-        The above examples uses different methods to reasonably ensure
+        The above examples use different methods to reasonably ensure
         that a package has already been installed. First, with checking for a
         file that would be created with the package. Second, by checking for
         specific text within a file that would be created or managed by salt.
