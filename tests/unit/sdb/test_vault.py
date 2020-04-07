@@ -75,7 +75,7 @@ class TestVaultSDB(LoaderModuleMockMixin, TestCase):
         """
         mock_vault = MagicMock()
         mock_vault.return_value.status_code = 200
-        mock_vault.return_value.json.return_value = [{"data": {"bar": "test"}}]
+        mock_vault.return_value.json.return_value = {"data": {"bar": "test"}}
         with patch.dict(vault.__utils__, {"vault.make_request": mock_vault}):
             self.assertEqual(vault.get("sdb://myvault/path/to/foo/bar"), "test")
 
@@ -90,7 +90,7 @@ class TestVaultSDB(LoaderModuleMockMixin, TestCase):
         """
         mock_vault = MagicMock()
         mock_vault.return_value.status_code = 200
-        mock_vault.return_value.json.return_value = [{"data": {"bar": "test"}}]
+        mock_vault.return_value.json.return_value = {"data": {"bar": "test"}}
         with patch.dict(vault.__utils__, {"vault.make_request": mock_vault}):
             self.assertEqual(vault.get("sdb://myvault/path/to/foo?bar"), "test")
 
@@ -119,7 +119,7 @@ class TestVaultSDB(LoaderModuleMockMixin, TestCase):
         """
         mock_vault = MagicMock()
         mock_vault.return_value.status_code = 200
-        mock_vault.return_value.json.return_value = [{"data": {"bar": "test"}}]
+        mock_vault.return_value.json.return_value = {"data": {"bar": "test"}}
         with patch.dict(vault.__utils__, {"vault.make_request": mock_vault}):
             self.assertIsNone(vault.get("sdb://myvault/path/to/foo/foo"))
 
