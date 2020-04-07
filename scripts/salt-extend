@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-'''
+"""
 Quickstart for creating an/or extending the functionality of your SaltStack installation
 
     usage: salt-extend [-h] [--extension EXTENSION]
@@ -18,10 +18,11 @@ Quickstart for creating an/or extending the functionality of your SaltStack inst
                             Short description of what the module does.
       --no-merge            Don't merge the module into the salt directory, keep
                             in a temp location
-'''
+"""
 import logging
-from salt.scripts import salt_extend
 import sys
+
+from salt.scripts import salt_extend
 
 PY26 = sys.version_info[0] == 2 and sys.version_info[1] == 6
 
@@ -29,31 +30,31 @@ PY26 = sys.version_info[0] == 2 and sys.version_info[1] == 6
 def _parse_args_argparse():
     import argparse
 
-    parser = argparse.ArgumentParser(description="Quickly boilerplate an extension to SaltStack")
+    parser = argparse.ArgumentParser(
+        description="Quickly boilerplate an extension to SaltStack"
+    )
     parser.add_argument(
-        "--extension",
-        "-e",
-        help="Extension type, e.g. 'module', 'state'.")
+        "--extension", "-e", help="Extension type, e.g. 'module', 'state'."
+    )
     parser.add_argument(
         "--salt-directory",
         "-o",
-        help="Directory where your salt installation is kept (defaults to .).")
+        help="Directory where your salt installation is kept (defaults to .).",
+    )
+    parser.add_argument("--name", "-n", help="Module name.")
     parser.add_argument(
-        "--name",
-        "-n",
-        help="Module name.")
-    parser.add_argument(
-        "--description",
-        "-d",
-        help="Short description of what the module does.")
+        "--description", "-d", help="Short description of what the module does."
+    )
     parser.add_argument(
         "--no-merge",
         help="Don't merge the module into the salt directory, keep in a temp location",
-        action="store_true")
+        action="store_true",
+    )
     parser.add_argument(
         "--debug",
         help="Display detailed logs whilst applying templates",
-        action="store_true")
+        action="store_true",
+    )
     return parser.parse_args()
 
 
@@ -62,33 +63,31 @@ def _parse_args_optparse():
 
     parser = OptionParser(usage="Quickly boilerplate an extension to SaltStack")
     parser.add_option(
-        "--extension",
-        "-e",
-        help="Extension type, e.g. 'module', 'state'.")
+        "--extension", "-e", help="Extension type, e.g. 'module', 'state'."
+    )
     parser.add_option(
         "--salt-directory",
         "-o",
-        help="Directory where your salt installation is kept (defaults to .).")
+        help="Directory where your salt installation is kept (defaults to .).",
+    )
+    parser.add_option("--name", "-n", help="Module name.")
     parser.add_option(
-        "--name",
-        "-n",
-        help="Module name.")
-    parser.add_option(
-        "--description",
-        "-d",
-        help="Short description of what the module does.")
+        "--description", "-d", help="Short description of what the module does."
+    )
     parser.add_option(
         "--no-merge",
         help="Don't merge the module into the salt directory, keep in a temp location",
-        action="store_true")
+        action="store_true",
+    )
     parser.add_option(
         "--debug",
         help="Display detailed logs whilst applying templates",
-        action="store_true")
+        action="store_true",
+    )
     return parser.parse_args()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     if PY26:
         (args, _) = _parse_args_optparse()
     else:
@@ -100,4 +99,5 @@ if __name__ == '__main__':
         name=args.name,
         description=args.description,
         salt_dir=args.salt_directory,
-        merge=not args.no_merge)
+        merge=not args.no_merge,
+    )
