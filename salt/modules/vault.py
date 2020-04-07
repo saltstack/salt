@@ -290,7 +290,6 @@ def destroy_secret(path, *args):
     """
     log.debug("Destroying vault secrets for %s in %s", __grains__["id"], path)
     data = {"versions": list(args)}
-    log.info("RRRRR destroy data: %s", data)
     version2 = __utils__["vault.is_v2"](path)
     if version2["v2"]:
         path = version2["destroy"]
