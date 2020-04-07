@@ -33,7 +33,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
             opts, whitelist=["network", "path", "platform", "stringutils"]
         )
         return {
-            network: {"__utils__": utils,},
+            network: {"__utils__": utils},
         }
 
     def test_wol_bad_mac(self):
