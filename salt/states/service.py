@@ -504,8 +504,10 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
     if warnings:
         _add_warnings(ret, warnings)
 
-    if salt.utils.platform.is_windows() and kwargs.get("timeout", False):
-        start_kwargs.update({"timeout": kwargs.get("timeout")})
+    if salt.utils.platform.is_windows():
+        for arg in ['timeout', 'with_deps', 'with_parents']:
+            if kwargs.get(arg, False):
+                start_kwargs.update({arg: kwargs.get(arg)})
 
     try:
         func_ret = __salt__["service.start"](name, **start_kwargs)
@@ -659,8 +661,10 @@ def dead(name, enable=None, sig=None, init_delay=None, **kwargs):
     if warnings:
         _add_warnings(ret, warnings)
 
-    if salt.utils.platform.is_windows() and kwargs.get("timeout", False):
-        stop_kwargs.update({"timeout": kwargs.get("timeout")})
+    if salt.utils.platform.is_windows():
+        for arg in ['timeout', 'with_deps', 'with_parents']:
+            if kwargs.get(arg, False):
+                stop_kwargs.update({arg: kwargs.get(arg)})
 
     func_ret = __salt__["service.stop"](name, **stop_kwargs)
     if not func_ret:
