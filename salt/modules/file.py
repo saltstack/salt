@@ -2404,16 +2404,6 @@ def replace(
                         # Content was found, so set found.
                         found = True
 
-<<<<<<< HEAD
-                orig_file = (
-                    r_data.read(filesize).splitlines(True)
-                    if isinstance(r_data, mmap.mmap)
-                    else r_data.splitlines(True)
-                )
-                new_file = result.splitlines(True)
-
-=======
->>>>>>> 5be59c2bcb...  Fix file.replace idempotency
     except (OSError, IOError) as exc:
         raise CommandExecutionError(
             "Unable to open file '{0}'. " "Exception: {1}".format(path, exc)
