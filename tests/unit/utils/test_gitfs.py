@@ -16,17 +16,18 @@ import salt.fileserver.gitfs
 import salt.utils.files
 import salt.utils.gitfs
 import salt.utils.platform
-from salt.exceptions import FileserverConfigError
 
 # Import Salt Testing libs
 import tests.support.paths
+from salt.exceptions import FileserverConfigError
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
-
 try:
-    HAS_PYGIT2 = salt.utils.gitfs.PYGIT2_VERSION >= salt.utils.gitfs.PYGIT2_MINVER \
+    HAS_PYGIT2 = (
+        salt.utils.gitfs.PYGIT2_VERSION >= salt.utils.gitfs.PYGIT2_MINVER
         and salt.utils.gitfs.LIBGIT2_VERSION >= salt.utils.gitfs.LIBGIT2_MINVER
+    )
 except AttributeError:
     HAS_PYGIT2 = False
 
@@ -113,34 +114,38 @@ class TestGitFSProvider(TestCase):
                             )
 
 
-@skipIf(not HAS_PYGIT2, 'This host lacks proper pygit2 support')
-@skipIf(salt.utils.platform.is_windows(),
-        'Skip Pygit2 on windows, due to pygit2 access error on windows')
+@skipIf(not HAS_PYGIT2, "This host lacks proper pygit2 support")
+@skipIf(
+    salt.utils.platform.is_windows(),
+    "Skip Pygit2 on windows, due to pygit2 access error on windows",
+)
 class TestPygit2(TestCase):
     def _prepare_remote_repository(self, path):
         shutil.rmtree(path, ignore_errors=True)
 
-        filecontent = 'This is an empty README file'
-        filename = 'README'
+        filecontent = "This is an empty README file"
+        filename = "README"
 
         signature = pygit2.Signature(
-            'Dummy Commiter', 'dummy@dummy.com', int(time()), 0)
+            "Dummy Commiter", "dummy@dummy.com", int(time()), 0
+        )
 
         repository = pygit2.init_repository(path, False)
         builder = repository.TreeBuilder()
         tree = builder.write()
         commit = repository.create_commit(
-            'HEAD', signature, signature,
-            'Create master branch', tree, [])
-        repository.create_reference('refs/tags/simple_tag', commit)
+            "HEAD", signature, signature, "Create master branch", tree, []
+        )
+        repository.create_reference("refs/tags/simple_tag", commit)
 
-        with salt.utils.files.fopen(os.path.join(repository.workdir, filename), 'w') as file:
+        with salt.utils.files.fopen(
+            os.path.join(repository.workdir, filename), "w"
+        ) as file:
             file.write(filecontent)
 
         blob = repository.create_blob_fromworkdir(filename)
         builder = repository.TreeBuilder()
-        builder.insert(
-            filename, blob, pygit2.GIT_FILEMODE_BLOB)
+        builder.insert(filename, blob, pygit2.GIT_FILEMODE_BLOB)
         tree = builder.write()
 
         repository.index.read()
@@ -148,75 +153,94 @@ class TestPygit2(TestCase):
         repository.index.write()
 
         commit = repository.create_commit(
-            'HEAD', signature, signature,
-            'Added a README', tree, [repository.head.target])
+            "HEAD",
+            signature,
+            signature,
+            "Added a README",
+            tree,
+            [repository.head.target],
+        )
         repository.create_tag(
-            'annotated_tag', commit,
-            pygit2.GIT_OBJ_COMMIT, signature, 'some message')
+            "annotated_tag", commit, pygit2.GIT_OBJ_COMMIT, signature, "some message"
+        )
 
     def _prepare_cache_repository(self, remote, cache):
         opts = {
-            'cachedir': cache,
-            '__role': 'minion',
-            'gitfs_disable_saltenv_mapping': False, 'gitfs_base': 'master',
-            'gitfs_insecure_auth': False,
-            'gitfs_mountpoint': '',
-            'gitfs_passphrase': '',
-            'gitfs_password': '',
-            'gitfs_privkey': '',
-            'gitfs_provider': 'pygit2',
-            'gitfs_pubkey': '',
-            'gitfs_ref_types': ['branch', 'tag', 'sha'],
-            'gitfs_refspecs': ['+refs/heads/*:refs/remotes/origin/*', '+refs/tags/*:refs/tags/*'],
-            'gitfs_root': '',
-            'gitfs_saltenv_blacklist': [],
-            'gitfs_saltenv_whitelist': [],
-            'gitfs_ssl_verify': True,
-            'gitfs_update_interval': 3,
-            'gitfs_user': '',
-            'verified_gitfs_provider': 'pygit2'
+            "cachedir": cache,
+            "__role": "minion",
+            "gitfs_disable_saltenv_mapping": False,
+            "gitfs_base": "master",
+            "gitfs_insecure_auth": False,
+            "gitfs_mountpoint": "",
+            "gitfs_passphrase": "",
+            "gitfs_password": "",
+            "gitfs_privkey": "",
+            "gitfs_provider": "pygit2",
+            "gitfs_pubkey": "",
+            "gitfs_ref_types": ["branch", "tag", "sha"],
+            "gitfs_refspecs": [
+                "+refs/heads/*:refs/remotes/origin/*",
+                "+refs/tags/*:refs/tags/*",
+            ],
+            "gitfs_root": "",
+            "gitfs_saltenv_blacklist": [],
+            "gitfs_saltenv_whitelist": [],
+            "gitfs_ssl_verify": True,
+            "gitfs_update_interval": 3,
+            "gitfs_user": "",
+            "verified_gitfs_provider": "pygit2",
         }
         per_remote_defaults = {
-            'base': 'master',
-            'disable_saltenv_mapping': False,
-            'insecure_auth': False,
-            'ref_types': ['branch', 'tag', 'sha'],
-            'passphrase': '', 'mountpoint': '',
-            'password': '',
-            'privkey': '',
-            'pubkey': '',
-            'refspecs': ['+refs/heads/*:refs/remotes/origin/*', '+refs/tags/*:refs/tags/*'],
-            'root': '',
-            'saltenv_blacklist': [],
-            'saltenv_whitelist': [],
-            'ssl_verify': True,
-            'update_interval': 60,
-            'user': ''
+            "base": "master",
+            "disable_saltenv_mapping": False,
+            "insecure_auth": False,
+            "ref_types": ["branch", "tag", "sha"],
+            "passphrase": "",
+            "mountpoint": "",
+            "password": "",
+            "privkey": "",
+            "pubkey": "",
+            "refspecs": [
+                "+refs/heads/*:refs/remotes/origin/*",
+                "+refs/tags/*:refs/tags/*",
+            ],
+            "root": "",
+            "saltenv_blacklist": [],
+            "saltenv_whitelist": [],
+            "ssl_verify": True,
+            "update_interval": 60,
+            "user": "",
         }
-        per_remote_only = ('all_saltenvs', 'name', 'saltenv')
+        per_remote_only = ("all_saltenvs", "name", "saltenv")
         override_params = tuple(per_remote_defaults.keys())
-        cache_root = os.path.join(cache, 'gitfs')
-        role = 'gitfs'
+        cache_root = os.path.join(cache, "gitfs")
+        role = "gitfs"
         shutil.rmtree(cache_root, ignore_errors=True)
         provider = salt.utils.gitfs.Pygit2(
-            opts, remote, per_remote_defaults,
-            per_remote_only, override_params, cache_root, role)
+            opts,
+            remote,
+            per_remote_defaults,
+            per_remote_only,
+            override_params,
+            cache_root,
+            role,
+        )
         return provider
 
     def test_checkout(self):
-        remote = os.path.join(tests.support.paths.TMP, 'pygit2-repo')
-        cache = os.path.join(tests.support.paths.TMP, 'pygit2-repo-cache')
+        remote = os.path.join(tests.support.paths.TMP, "pygit2-repo")
+        cache = os.path.join(tests.support.paths.TMP, "pygit2-repo-cache")
         self._prepare_remote_repository(remote)
         provider = self._prepare_cache_repository(remote, cache)
         provider.remotecallbacks = None
         provider.credentials = None
         provider.init_remote()
         provider.fetch()
-        provider.branch = 'master'
+        provider.branch = "master"
         self.assertIn(provider.cachedir, provider.checkout())
-        provider.branch = 'simple_tag'
+        provider.branch = "simple_tag"
         self.assertIn(provider.cachedir, provider.checkout())
-        provider.branch = 'annotated_tag'
+        provider.branch = "annotated_tag"
         self.assertIn(provider.cachedir, provider.checkout())
-        provider.branch = 'does_not_exist'
+        provider.branch = "does_not_exist"
         self.assertIsNone(provider.checkout())
