@@ -7,6 +7,7 @@ Define some generic socket functions for network modules
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import collections
 import itertools
 import logging
 import os
@@ -16,7 +17,6 @@ import re
 import socket
 import subprocess
 import types
-import collections
 from string import ascii_letters, digits
 
 # Import salt libs
