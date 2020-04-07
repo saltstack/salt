@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Manage Data Pipelines
 
 .. versionadded:: 2016.3.0
@@ -47,10 +47,11 @@ config:
               startAt: FIRST_ACTIVATION_DATE_TIME
       - parameter_values:
           myDDBTableName: my-dynamo-table
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import copy
 import datetime
 import difflib
@@ -63,21 +64,30 @@ from salt.ext.six.moves import zip
 
 
 def __virtual__():
-    '''
+    """
     Only load if boto is available.
-    '''
-    return 'boto_datapipeline' if 'boto_datapipeline.create_pipeline' in __salt__ else False
+    """
+    return (
+        "boto_datapipeline"
+        if "boto_datapipeline.create_pipeline" in __salt__
+        else False
+    )
 
 
-def present(name, pipeline_objects=None,
-            pipeline_objects_from_pillars='boto_datapipeline_pipeline_objects',
-            parameter_objects=None,
-            parameter_objects_from_pillars='boto_datapipeline_parameter_objects',
-            parameter_values=None,
-            parameter_values_from_pillars='boto_datapipeline_parameter_values',
-            region=None,
-            key=None, keyid=None, profile=None):
-    '''
+def present(
+    name,
+    pipeline_objects=None,
+    pipeline_objects_from_pillars="boto_datapipeline_pipeline_objects",
+    parameter_objects=None,
+    parameter_objects_from_pillars="boto_datapipeline_parameter_objects",
+    parameter_values=None,
+    parameter_values_from_pillars="boto_datapipeline_parameter_values",
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+):
+    """
     Ensure the data pipeline exists with matching definition.
 
     name
@@ -113,8 +123,8 @@ def present(name, pipeline_objects=None,
     profile
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
-    '''
-    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    """
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
     pipeline_objects = pipeline_objects or {}
     parameter_objects = parameter_objects or {}
@@ -131,145 +141,150 @@ def present(name, pipeline_objects=None,
         profile=profile,
     )
     if present:
-        ret['comment'] = 'AWS data pipeline {0} present'.format(name)
+        ret["comment"] = "AWS data pipeline {0} present".format(name)
         return ret
 
-    if __opts__['test']:
-        ret['comment'] = 'Data pipeline {0} is set to be created or updated'.format(name)
-        ret['result'] = None
+    if __opts__["test"]:
+        ret["comment"] = "Data pipeline {0} is set to be created or updated".format(
+            name
+        )
+        ret["result"] = None
         return ret
 
-    result_create_pipeline = __salt__['boto_datapipeline.create_pipeline'](
-        name,
-        name,
-        region=region,
-        key=key,
-        keyid=keyid,
-        profile=profile,
+    result_create_pipeline = __salt__["boto_datapipeline.create_pipeline"](
+        name, name, region=region, key=key, keyid=keyid, profile=profile,
     )
-    if 'error' in result_create_pipeline:
-        ret['result'] = False
-        ret['comment'] = 'Failed to create data pipeline {0}: {1}'.format(
-            name, result_create_pipeline['error'])
+    if "error" in result_create_pipeline:
+        ret["result"] = False
+        ret["comment"] = "Failed to create data pipeline {0}: {1}".format(
+            name, result_create_pipeline["error"]
+        )
         return ret
 
-    pipeline_id = result_create_pipeline['result']
+    pipeline_id = result_create_pipeline["result"]
 
-    result_pipeline_definition = __salt__['boto_datapipeline.put_pipeline_definition'](
+    result_pipeline_definition = __salt__["boto_datapipeline.put_pipeline_definition"](
         pipeline_id,
         _pipeline_objects(pipeline_objects_from_pillars, pipeline_objects),
-        parameter_objects=_parameter_objects(parameter_objects_from_pillars, parameter_objects),
-        parameter_values=_parameter_values(parameter_values_from_pillars, parameter_values),
+        parameter_objects=_parameter_objects(
+            parameter_objects_from_pillars, parameter_objects
+        ),
+        parameter_values=_parameter_values(
+            parameter_values_from_pillars, parameter_values
+        ),
         region=region,
         key=key,
         keyid=keyid,
         profile=profile,
     )
-    if 'error' in result_pipeline_definition:
+    if "error" in result_pipeline_definition:
         if _immutable_fields_error(result_pipeline_definition):
             # If update not possible, delete and retry
-            result_delete_pipeline = __salt__['boto_datapipeline.delete_pipeline'](
-                pipeline_id,
-                region=region,
-                key=key,
-                keyid=keyid,
-                profile=profile,
+            result_delete_pipeline = __salt__["boto_datapipeline.delete_pipeline"](
+                pipeline_id, region=region, key=key, keyid=keyid, profile=profile,
             )
-            if 'error' in result_delete_pipeline:
-                ret['result'] = False
-                ret['comment'] = 'Failed to delete data pipeline {0}: {1}'.format(
-                    pipeline_id, result_delete_pipeline['error'])
+            if "error" in result_delete_pipeline:
+                ret["result"] = False
+                ret["comment"] = "Failed to delete data pipeline {0}: {1}".format(
+                    pipeline_id, result_delete_pipeline["error"]
+                )
                 return ret
 
-            result_create_pipeline = __salt__['boto_datapipeline.create_pipeline'](
-                name,
-                name,
-                region=region,
-                key=key,
-                keyid=keyid,
-                profile=profile,
+            result_create_pipeline = __salt__["boto_datapipeline.create_pipeline"](
+                name, name, region=region, key=key, keyid=keyid, profile=profile,
             )
-            if 'error' in result_create_pipeline:
-                ret['result'] = False
-                ret['comment'] = 'Failed to create data pipeline {0}: {1}'.format(
-                    name, result_create_pipeline['error'])
+            if "error" in result_create_pipeline:
+                ret["result"] = False
+                ret["comment"] = "Failed to create data pipeline {0}: {1}".format(
+                    name, result_create_pipeline["error"]
+                )
                 return ret
 
-            pipeline_id = result_create_pipeline['result']
+            pipeline_id = result_create_pipeline["result"]
 
-            result_pipeline_definition = __salt__['boto_datapipeline.put_pipeline_definition'](
+            result_pipeline_definition = __salt__[
+                "boto_datapipeline.put_pipeline_definition"
+            ](
                 pipeline_id,
                 _pipeline_objects(pipeline_objects_from_pillars, pipeline_objects),
-                parameter_objects=_parameter_objects(parameter_objects_from_pillars, parameter_objects),
-                parameter_values=_parameter_values(parameter_values_from_pillars, parameter_values),
+                parameter_objects=_parameter_objects(
+                    parameter_objects_from_pillars, parameter_objects
+                ),
+                parameter_values=_parameter_values(
+                    parameter_values_from_pillars, parameter_values
+                ),
                 region=region,
                 key=key,
                 keyid=keyid,
                 profile=profile,
             )
 
-        if 'error' in result_pipeline_definition:
+        if "error" in result_pipeline_definition:
             # Still erroring after possible retry
-            ret['result'] = False
-            ret['comment'] = 'Failed to create data pipeline {0}: {1}'.format(
-                name, result_pipeline_definition['error'])
+            ret["result"] = False
+            ret["comment"] = "Failed to create data pipeline {0}: {1}".format(
+                name, result_pipeline_definition["error"]
+            )
             return ret
 
-    result_activate_pipeline = __salt__['boto_datapipeline.activate_pipeline'](
-        pipeline_id,
-        region=region,
-        key=key,
-        keyid=keyid,
-        profile=profile,
+    result_activate_pipeline = __salt__["boto_datapipeline.activate_pipeline"](
+        pipeline_id, region=region, key=key, keyid=keyid, profile=profile,
     )
-    if 'error' in result_activate_pipeline:
-        ret['result'] = False
-        ret['comment'] = 'Failed to create data pipeline {0}: {1}'.format(
-            name, result_pipeline_definition['error'])
+    if "error" in result_activate_pipeline:
+        ret["result"] = False
+        ret["comment"] = "Failed to create data pipeline {0}: {1}".format(
+            name, result_pipeline_definition["error"]
+        )
         return ret
 
-    pipeline_definition_result = __salt__['boto_datapipeline.get_pipeline_definition'](
+    pipeline_definition_result = __salt__["boto_datapipeline.get_pipeline_definition"](
         pipeline_id,
-        version='active',
+        version="active",
         region=region,
         key=key,
         keyid=keyid,
         profile=profile,
     )
-    if 'error' in pipeline_definition_result:
+    if "error" in pipeline_definition_result:
         new_pipeline_definition = {}
     else:
-        new_pipeline_definition = _standardize(pipeline_definition_result['result'])
+        new_pipeline_definition = _standardize(pipeline_definition_result["result"])
 
     if not old_pipeline_definition:
-        ret['changes']['new'] = 'Pipeline created.'
-        ret['comment'] = 'Data pipeline {0} created'.format(name)
+        ret["changes"]["new"] = "Pipeline created."
+        ret["comment"] = "Data pipeline {0} created".format(name)
     else:
-        ret['changes']['diff'] = _diff(old_pipeline_definition, new_pipeline_definition)
-        ret['comment'] = 'Data pipeline {0} updated'.format(name)
+        ret["changes"]["diff"] = _diff(old_pipeline_definition, new_pipeline_definition)
+        ret["comment"] = "Data pipeline {0} updated".format(name)
 
     return ret
 
 
 def _immutable_fields_error(result_pipeline_definition):
-    '''Return true if update pipeline failed due to immutable fields
+    """Return true if update pipeline failed due to immutable fields
 
     Some fields cannot be changed after a pipeline has been activated.
 
     http://docs.aws.amazon.com/datapipeline/latest/DeveloperGuide/dp-manage-pipeline-modify-console.html#dp-edit-pipeline-limits
-    '''
-    for e in result_pipeline_definition['error']:
+    """
+    for e in result_pipeline_definition["error"]:
         for e2 in e["errors"]:
             if "can not be changed" in e2:
                 return True
     return False
 
 
-def _pipeline_present_with_definition(name, expected_pipeline_objects,
-                                      expected_parameter_objects,
-                                      expected_parameter_values, region, key,
-                                      keyid, profile):
-    '''
+def _pipeline_present_with_definition(
+    name,
+    expected_pipeline_objects,
+    expected_parameter_objects,
+    expected_parameter_values,
+    region,
+    key,
+    keyid,
+    profile,
+):
+    """
     Return true if the pipeline exists and the definition matches.
 
     name
@@ -296,38 +311,38 @@ def _pipeline_present_with_definition(name, expected_pipeline_objects,
     profile
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
-    '''
-    result_pipeline_id = __salt__['boto_datapipeline.pipeline_id_from_name'](
-        name,
-        region=region,
-        key=key,
-        keyid=keyid,
-        profile=profile,
+    """
+    result_pipeline_id = __salt__["boto_datapipeline.pipeline_id_from_name"](
+        name, region=region, key=key, keyid=keyid, profile=profile,
     )
-    if 'error' in result_pipeline_id:
+    if "error" in result_pipeline_id:
         return False, {}
 
-    pipeline_id = result_pipeline_id['result']
-    pipeline_definition_result = __salt__['boto_datapipeline.get_pipeline_definition'](
+    pipeline_id = result_pipeline_id["result"]
+    pipeline_definition_result = __salt__["boto_datapipeline.get_pipeline_definition"](
         pipeline_id,
-        version='active',
+        version="active",
         region=region,
         key=key,
         keyid=keyid,
         profile=profile,
     )
-    if 'error' in pipeline_definition_result:
+    if "error" in pipeline_definition_result:
         return False, {}
 
-    pipeline_definition = _standardize(pipeline_definition_result['result'])
+    pipeline_definition = _standardize(pipeline_definition_result["result"])
 
-    pipeline_objects = pipeline_definition.get('pipelineObjects')
-    parameter_objects = pipeline_definition.get('parameterObjects')
-    parameter_values = pipeline_definition.get('parameterValues')
+    pipeline_objects = pipeline_definition.get("pipelineObjects")
+    parameter_objects = pipeline_definition.get("parameterObjects")
+    parameter_values = pipeline_definition.get("parameterValues")
 
-    present = (_recursive_compare(_cleaned(pipeline_objects), _cleaned(expected_pipeline_objects)) and
-               _recursive_compare(parameter_objects, expected_parameter_objects) and
-               _recursive_compare(parameter_values, expected_parameter_values))
+    present = (
+        _recursive_compare(
+            _cleaned(pipeline_objects), _cleaned(expected_pipeline_objects)
+        )
+        and _recursive_compare(parameter_objects, expected_parameter_objects)
+        and _recursive_compare(parameter_values, expected_parameter_values)
+    )
     return present, pipeline_definition
 
 
@@ -340,20 +355,21 @@ def _cleaned(_pipeline_objects):
     """
     pipeline_objects = copy.deepcopy(_pipeline_objects)
     for pipeline_object in pipeline_objects:
-        if pipeline_object['id'] == 'DefaultSchedule':
-            for field_object in pipeline_object['fields']:
-                if field_object['key'] == 'startDateTime':
-                    start_date_time_string = field_object['stringValue']
-                    start_date_time = datetime.datetime.strptime(start_date_time_string,
-                                                                 "%Y-%m-%dT%H:%M:%S")
-                    field_object['stringValue'] = start_date_time.strftime("%H:%M:%S")
+        if pipeline_object["id"] == "DefaultSchedule":
+            for field_object in pipeline_object["fields"]:
+                if field_object["key"] == "startDateTime":
+                    start_date_time_string = field_object["stringValue"]
+                    start_date_time = datetime.datetime.strptime(
+                        start_date_time_string, "%Y-%m-%dT%H:%M:%S"
+                    )
+                    field_object["stringValue"] = start_date_time.strftime("%H:%M:%S")
     return pipeline_objects
 
 
 def _recursive_compare(v1, v2):
-    '''
+    """
     Return v1 == v2. Compares list, dict, recursively.
-    '''
+    """
     if isinstance(v1, list):
         if v2 is None:
             v2 = []
@@ -381,39 +397,42 @@ def _recursive_compare(v1, v2):
 
 
 def _id_or_key(list_item):
-    '''
+    """
     Return the value at key 'id' or 'key'.
-    '''
+    """
     if isinstance(list_item, dict):
-        if 'id' in list_item:
-            return list_item['id']
-        if 'key' in list_item:
-            return list_item['key']
+        if "id" in list_item:
+            return list_item["id"]
+        if "key" in list_item:
+            return list_item["key"]
     return list_item
 
 
 def _diff(old_pipeline_definition, new_pipeline_definition):
-    '''
+    """
     Return string diff of pipeline definitions.
-    '''
-    old_pipeline_definition.pop('ResponseMetadata', None)
-    new_pipeline_definition.pop('ResponseMetadata', None)
+    """
+    old_pipeline_definition.pop("ResponseMetadata", None)
+    new_pipeline_definition.pop("ResponseMetadata", None)
 
-    diff = salt.utils.data.decode(difflib.unified_diff(
-        salt.utils.json.dumps(old_pipeline_definition, indent=4).splitlines(True),
-        salt.utils.json.dumps(new_pipeline_definition, indent=4).splitlines(True),
-    ))
-    return ''.join(diff)  # future lint: disable=blacklisted-function
+    diff = salt.utils.data.decode(
+        difflib.unified_diff(
+            salt.utils.json.dumps(old_pipeline_definition, indent=4).splitlines(True),
+            salt.utils.json.dumps(new_pipeline_definition, indent=4).splitlines(True),
+        )
+    )
+    return "".join(diff)  # future lint: disable=blacklisted-function
 
 
 def _standardize(structure):
-    '''
+    """
     Return standardized format for lists/dictionaries.
 
     Lists of dictionaries are sorted by the value of the dictionary at
     its primary key ('id' or 'key'). OrderedDict's are converted to
     basic dictionaries.
-    '''
+    """
+
     def mutating_helper(structure):
         if isinstance(structure, list):
             structure.sort(key=_id_or_key)
@@ -431,7 +450,7 @@ def _standardize(structure):
 
 
 def _pipeline_objects(pipeline_objects_from_pillars, pipeline_object_overrides):
-    '''
+    """
     Return a list of pipeline objects that compose the pipeline
 
     pipeline_objects_from_pillars
@@ -439,17 +458,17 @@ def _pipeline_objects(pipeline_objects_from_pillars, pipeline_object_overrides):
 
     pipeline_object_overrides
         Pipeline objects to use. Will override objects read from pillars.
-    '''
-    from_pillars = copy.deepcopy(__salt__['pillar.get'](pipeline_objects_from_pillars))
+    """
+    from_pillars = copy.deepcopy(__salt__["pillar.get"](pipeline_objects_from_pillars))
     from_pillars.update(pipeline_object_overrides)
     pipeline_objects = _standardize(_dict_to_list_ids(from_pillars))
     for pipeline_object in pipeline_objects:
-        pipeline_object['fields'] = _properties_from_dict(pipeline_object['fields'])
+        pipeline_object["fields"] = _properties_from_dict(pipeline_object["fields"])
     return pipeline_objects
 
 
 def _parameter_objects(parameter_objects_from_pillars, parameter_object_overrides):
-    '''
+    """
     Return a list of parameter objects that configure the pipeline
 
     parameter_objects_from_pillars
@@ -457,17 +476,19 @@ def _parameter_objects(parameter_objects_from_pillars, parameter_object_override
 
     parameter_object_overrides
         Parameter objects to use. Will override objects read from pillars.
-    '''
-    from_pillars = copy.deepcopy(__salt__['pillar.get'](parameter_objects_from_pillars))
+    """
+    from_pillars = copy.deepcopy(__salt__["pillar.get"](parameter_objects_from_pillars))
     from_pillars.update(parameter_object_overrides)
     parameter_objects = _standardize(_dict_to_list_ids(from_pillars))
     for parameter_object in parameter_objects:
-        parameter_object['attributes'] = _properties_from_dict(parameter_object['attributes'])
+        parameter_object["attributes"] = _properties_from_dict(
+            parameter_object["attributes"]
+        )
     return parameter_objects
 
 
 def _parameter_values(parameter_values_from_pillars, parameter_value_overrides):
-    '''
+    """
     Return a dictionary of parameter values that configure the pipeline
 
     parameter_values_from_pillars
@@ -475,29 +496,29 @@ def _parameter_values(parameter_values_from_pillars, parameter_value_overrides):
 
     parameter_value_overrides
         Parameter values to use. Will override values read from pillars.
-    '''
-    from_pillars = copy.deepcopy(__salt__['pillar.get'](parameter_values_from_pillars))
+    """
+    from_pillars = copy.deepcopy(__salt__["pillar.get"](parameter_values_from_pillars))
     from_pillars.update(parameter_value_overrides)
     parameter_values = _standardize(from_pillars)
-    return _properties_from_dict(parameter_values, key_name='id')
+    return _properties_from_dict(parameter_values, key_name="id")
 
 
 def _dict_to_list_ids(objects):
-    '''
+    """
     Convert a dictionary to a list of dictionaries, where each element has
     a key value pair {'id': key}. This makes it easy to override pillar values
     while still satisfying the boto api.
-    '''
+    """
     list_with_ids = []
     for key, value in six.iteritems(objects):
-        element = {'id': key}
+        element = {"id": key}
         element.update(value)
         list_with_ids.append(element)
     return list_with_ids
 
 
-def _properties_from_dict(d, key_name='key'):
-    '''
+def _properties_from_dict(d, key_name="key"):
+    """
     Transforms dictionary into pipeline object properties.
 
     The output format conforms to boto's specification.
@@ -521,24 +542,18 @@ def _properties_from_dict(d, key_name='key'):
                 'refValue': '2',
             },
         ]
-    '''
+    """
     fields = []
     for key, value in six.iteritems(d):
         if isinstance(value, dict):
-            fields.append({
-                key_name: key,
-                'refValue': value['ref'],
-            })
+            fields.append({key_name: key, "refValue": value["ref"]})
         else:
-            fields.append({
-                key_name: key,
-                'stringValue': value,
-            })
+            fields.append({key_name: key, "stringValue": value})
     return fields
 
 
 def absent(name, region=None, key=None, keyid=None, profile=None):
-    '''
+    """
     Ensure a pipeline with the service_name does not exist
 
     name
@@ -556,33 +571,25 @@ def absent(name, region=None, key=None, keyid=None, profile=None):
     profile
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
-    '''
-    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    """
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
-    result_pipeline_id = __salt__['boto_datapipeline.pipeline_id_from_name'](
-        name,
-        region=region,
-        key=key,
-        keyid=keyid,
-        profile=profile,
+    result_pipeline_id = __salt__["boto_datapipeline.pipeline_id_from_name"](
+        name, region=region, key=key, keyid=keyid, profile=profile,
     )
-    if 'error' not in result_pipeline_id:
-        pipeline_id = result_pipeline_id['result']
-        if __opts__['test']:
-            ret['comment'] = 'Data pipeline {0} set to be deleted.'.format(name)
-            ret['result'] = None
+    if "error" not in result_pipeline_id:
+        pipeline_id = result_pipeline_id["result"]
+        if __opts__["test"]:
+            ret["comment"] = "Data pipeline {0} set to be deleted.".format(name)
+            ret["result"] = None
             return ret
         else:
-            __salt__['boto_datapipeline.delete_pipeline'](
-                pipeline_id,
-                region=region,
-                key=key,
-                keyid=keyid,
-                profile=profile,
+            __salt__["boto_datapipeline.delete_pipeline"](
+                pipeline_id, region=region, key=key, keyid=keyid, profile=profile,
             )
-            ret['changes']['old'] = {'pipeline_id': pipeline_id}
-            ret['changes']['new'] = None
+            ret["changes"]["old"] = {"pipeline_id": pipeline_id}
+            ret["changes"]["new"] = None
     else:
-        ret['comment'] = 'AWS data pipeline {0} absent.'.format(name)
+        ret["comment"] = "AWS data pipeline {0} absent.".format(name)
 
     return ret
