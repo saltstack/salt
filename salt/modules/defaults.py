@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Module to work with salt formula defaults files
 
-'''
+"""
 
 from __future__ import absolute_import, print_function, unicode_literals
+
 import copy
 import logging
 import os
@@ -17,46 +18,45 @@ import salt.utils.json
 import salt.utils.url
 import salt.utils.yaml
 
-__virtualname__ = 'defaults'
+__virtualname__ = "defaults"
 
 log = logging.getLogger(__name__)
 
 
 def _mk_client():
-    '''
+    """
     Create a file client and add it to the context
-    '''
-    if 'cp.fileclient' not in __context__:
-        __context__['cp.fileclient'] = \
-            salt.fileclient.get_file_client(__opts__)
+    """
+    if "cp.fileclient" not in __context__:
+        __context__["cp.fileclient"] = salt.fileclient.get_file_client(__opts__)
 
 
 def _load(formula):
-    '''
+    """
     Generates a list of salt://<formula>/defaults.(json|yaml) files
     and fetches them from the Salt master.
 
     Returns first defaults file as python dict.
-    '''
+    """
 
     # Compute possibilities
     _mk_client()
     paths = []
-    for ext in ('yaml', 'json'):
-        source_url = salt.utils.url.create(formula + '/defaults.' + ext)
+    for ext in ("yaml", "json"):
+        source_url = salt.utils.url.create(formula + "/defaults." + ext)
         paths.append(source_url)
     # Fetch files from master
-    defaults_files = __context__['cp.fileclient'].cache_files(paths)
+    defaults_files = __context__["cp.fileclient"].cache_files(paths)
 
     for file_ in defaults_files:
         if not file_:
             # Skip empty string returned by cp.fileclient.cache_files.
             continue
 
-        suffix = file_.rsplit('.', 1)[-1]
-        if suffix == 'yaml':
+        suffix = file_.rsplit(".", 1)[-1]
+        if suffix == "yaml":
             loader = salt.utils.yaml.safe_load
-        elif suffix == 'json':
+        elif suffix == "json":
             loader = salt.utils.json.load
         else:
             log.debug("Failed to determine loader for %r", file_)
@@ -71,8 +71,8 @@ def _load(formula):
             return defaults or {}
 
 
-def get(key, default=''):
-    '''
+def get(key, default=""):
+    """
     defaults.get is used much like pillar.get except that it will read
     a default value for a pillar from defaults.json or defaults.yaml
     files that are stored in the root of a salt formula.
@@ -88,11 +88,11 @@ def get(key, default=''):
 
     For example, querying ``core:users:root`` will try to load
     ``salt://core/defaults.yaml`` and ``salt://core/defaults.json``.
-    '''
+    """
 
     # Determine formula namespace from query
-    if ':' in key:
-        namespace, key = key.split(':', 1)
+    if ":" in key:
+        namespace, key = key.split(":", 1)
     else:
         namespace, key = key, None
 
@@ -107,7 +107,7 @@ def get(key, default=''):
 
 
 def merge(dest, src, merge_lists=False, in_place=True):
-    '''
+    """
     defaults.merge
         Allows deep merging of dicts in formulas.
 
@@ -125,7 +125,7 @@ def merge(dest, src, merge_lists=False, in_place=True):
 
     It is more typical to use this in a templating language in formulas,
     instead of directly on the command-line.
-    '''
+    """
     if in_place:
         merged = dest
     else:
@@ -134,7 +134,7 @@ def merge(dest, src, merge_lists=False, in_place=True):
 
 
 def deepcopy(source):
-    '''
+    """
     defaults.deepcopy
         Allows deep copy of objects in formulas.
 
@@ -143,12 +143,12 @@ def deepcopy(source):
 
     It is more typical to use this in a templating language in formulas,
     instead of directly on the command-line.
-    '''
+    """
     return copy.deepcopy(source)
 
 
 def update(dest, defaults, merge_lists=True, in_place=True):
-    '''
+    """
     defaults.update
         Allows to set defaults for group of data set e.g. group for nodes.
 
@@ -198,7 +198,7 @@ def update(dest, defaults, merge_lists=True, in_place=True):
 
     It is more typical to use this in a templating language in formulas,
     instead of directly on the command-line.
-    '''
+    """
 
     if in_place:
         nodes = dest
