@@ -94,9 +94,9 @@ class TestVaultSDB(LoaderModuleMockMixin, TestCase):
         with patch.dict(vault.__utils__, {"vault.make_request": mock_vault}):
             self.assertEqual(vault.get("sdb://myvault/path/to/foo?bar"), "test")
 
-        assert mock_vault.call_args_list == [call("GET",
-                                                  "v1/sdb://myvault/path/to/foo",
-                                                  None)]
+        assert mock_vault.call_args_list == [
+            call("GET", "v1/sdb://myvault/path/to/foo", None)
+        ]
 
     def test_get_missing(self):
         """
@@ -108,9 +108,9 @@ class TestVaultSDB(LoaderModuleMockMixin, TestCase):
         with patch.dict(vault.__utils__, {"vault.make_request": mock_vault}):
             self.assertIsNone(vault.get("sdb://myvault/path/to/foo/bar"))
 
-        assert mock_vault.call_args_list == [call("GET",
-                                                  "v1/sdb://myvault/path/to/foo",
-                                                  None)]
+        assert mock_vault.call_args_list == [
+            call("GET", "v1/sdb://myvault/path/to/foo", None)
+        ]
 
     def test_get_missing_key(self):
         """
@@ -123,6 +123,6 @@ class TestVaultSDB(LoaderModuleMockMixin, TestCase):
         with patch.dict(vault.__utils__, {"vault.make_request": mock_vault}):
             self.assertIsNone(vault.get("sdb://myvault/path/to/foo/foo"))
 
-        assert mock_vault.call_args_list == [call("GET",
-                                                  "v1/sdb://myvault/path/to/foo",
-                                                  None)]
+        assert mock_vault.call_args_list == [
+            call("GET", "v1/sdb://myvault/path/to/foo", None)
+        ]
