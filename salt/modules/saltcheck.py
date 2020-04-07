@@ -287,6 +287,9 @@ import os
 import time
 
 # Import Salt libs
+import salt.client
+import salt.exceptions
+import salt.utils.data
 import salt.utils.files
 import salt.utils.functools
 import salt.utils.path
