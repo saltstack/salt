@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Add all extra minion data to the pillar.
 
 :codeauthor: Alexandru.Bleotu@morganstanley.ms.com
@@ -27,17 +27,17 @@ Complete example in etc/salt/master
       - extra_minion_data_in_pillar:
           include: <all>
 
-'''
+"""
 
 
 from __future__ import absolute_import, print_function, unicode_literals
-import logging
 
+import logging
 
 # Set up logging
 log = logging.getLogger(__name__)
 
-__virtualname__ = 'extra_minion_data_in_pillar'
+__virtualname__ = "extra_minion_data_in_pillar"
 
 
 def __virtual__():
@@ -45,9 +45,8 @@ def __virtual__():
 
 
 def ext_pillar(minion_id, pillar, include, extra_minion_data=None):
-
     def get_subtree(key, source_dict):
-        '''
+        """
         Returns a subtree corresponfing to the specified key.
 
         key
@@ -55,10 +54,10 @@ def ext_pillar(minion_id, pillar, include, extra_minion_data=None):
 
         source_dict
             Source dictionary
-        '''
+        """
         ret_dict = aux_dict = {}
         subtree = source_dict
-        subkeys = key.split(':')
+        subkeys = key.split(":")
         # Build an empty intermediate subtree following the subkeys
         for subkey in subkeys[:-1]:
             # The result will be built in aux_dict
@@ -75,14 +74,14 @@ def ext_pillar(minion_id, pillar, include, extra_minion_data=None):
         aux_dict[subkeys[-1]] = subtree[subkeys[-1]]
         return ret_dict
 
-    log.trace('minion_id = %s', minion_id)
-    log.trace('include = %s', include)
-    log.trace('extra_minion_data = %s', extra_minion_data)
+    log.trace("minion_id = %s", minion_id)
+    log.trace("include = %s", include)
+    log.trace("extra_minion_data = %s", extra_minion_data)
     data = {}
 
     if not extra_minion_data:
         return {}
-    if include in ['*', '<all>']:
+    if include in ["*", "<all>"]:
         return extra_minion_data
     data = {}
     for key in include:

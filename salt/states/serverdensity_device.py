@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Monitor Server with Server Density
 ==================================
 
@@ -45,10 +45,11 @@ Example:
 
     'server_name':
       serverdensity_device.monitored
-'''
+"""
 
 # Import python libs
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 
 # Import Salt libs
@@ -67,36 +68,42 @@ log = logging.getLogger(__name__)
 
 
 def _get_salt_params():
-    '''
+    """
     Try to get all sort of parameters for Server Density server info.
 
     NOTE: Missing publicDNS and publicIPs parameters. There might be way of
     getting them with salt-cloud.
-    '''
-    all_stats = __salt__['status.all_status']()
-    all_grains = __salt__['grains.items']()
+    """
+    all_stats = __salt__["status.all_status"]()
+    all_grains = __salt__["grains.items"]()
     params = {}
     try:
-        params['name'] = all_grains['id']
-        params['hostname'] = all_grains['host']
-        if all_grains['kernel'] == 'Darwin':
-            sd_os = {'code': 'mac', 'name': 'Mac'}
+        params["name"] = all_grains["id"]
+        params["hostname"] = all_grains["host"]
+        if all_grains["kernel"] == "Darwin":
+            sd_os = {"code": "mac", "name": "Mac"}
         else:
-            sd_os = {'code': all_grains['kernel'].lower(), 'name': all_grains['kernel']}
-        params['os'] = salt.utils.json.dumps(sd_os)
-        params['cpuCores'] = all_stats['cpuinfo']['cpu cores']
-        params['installedRAM'] = six.text_type(int(all_stats['meminfo']['MemTotal']['value']) / 1024)
-        params['swapSpace'] = six.text_type(int(all_stats['meminfo']['SwapTotal']['value']) / 1024)
-        params['privateIPs'] = salt.utils.json.dumps(all_grains['fqdn_ip4'])
-        params['privateDNS'] = salt.utils.json.dumps(all_grains['fqdn'])
+            sd_os = {"code": all_grains["kernel"].lower(), "name": all_grains["kernel"]}
+        params["os"] = salt.utils.json.dumps(sd_os)
+        params["cpuCores"] = all_stats["cpuinfo"]["cpu cores"]
+        params["installedRAM"] = six.text_type(
+            int(all_stats["meminfo"]["MemTotal"]["value"]) / 1024
+        )
+        params["swapSpace"] = six.text_type(
+            int(all_stats["meminfo"]["SwapTotal"]["value"]) / 1024
+        )
+        params["privateIPs"] = salt.utils.json.dumps(all_grains["fqdn_ip4"])
+        params["privateDNS"] = salt.utils.json.dumps(all_grains["fqdn"])
     except KeyError:
         pass
 
     return params
 
 
-def monitored(name, group=None, salt_name=True, salt_params=True, agent_version=1, **params):
-    '''
+def monitored(
+    name, group=None, salt_name=True, salt_params=True, agent_version=1, **params
+):
+    """
     Device is monitored with Server Density.
 
     name
@@ -147,18 +154,18 @@ def monitored(name, group=None, salt_name=True, salt_params=True, agent_version=
             - group: web-servers
             - cpuCores: 2
             - os: '{"code": "linux", "name": "Linux"}'
-    '''
-    ret = {'name': name, 'changes': {}, 'result': None, 'comment': ''}
+    """
+    ret = {"name": name, "changes": {}, "result": None, "comment": ""}
     params_from_salt = _get_salt_params()
 
     if salt_name:
-        name = params_from_salt.pop('name')
-        ret['name'] = name
+        name = params_from_salt.pop("name")
+        ret["name"] = name
     else:
-        params_from_salt.pop('name')
+        params_from_salt.pop("name")
 
     if group:
-        params['group'] = group
+        params["group"] = group
 
     if agent_version != 2:
         # Anything different from 2 will fallback into the v1.
@@ -172,45 +179,57 @@ def monitored(name, group=None, salt_name=True, salt_params=True, agent_version=
     else:
         params_to_use = params
 
-    device_in_sd = True if __salt__['serverdensity_device.ls'](name=name) else False
-    sd_agent_installed = True if 'sd-agent' in __salt__['pkg.list_pkgs']() else False
+    device_in_sd = True if __salt__["serverdensity_device.ls"](name=name) else False
+    sd_agent_installed = True if "sd-agent" in __salt__["pkg.list_pkgs"]() else False
 
     if device_in_sd and sd_agent_installed:
-        ret['result'] = True
-        ret['comment'] = 'Such server name already exists in this Server Density account. And sd-agent is installed'
-        ret['changes'] = {}
+        ret["result"] = True
+        ret[
+            "comment"
+        ] = "Such server name already exists in this Server Density account. And sd-agent is installed"
+        ret["changes"] = {}
         return ret
 
     if not device_in_sd:
-        device = __salt__['serverdensity_device.create'](name, **params_from_salt)
-        agent_key = device['agentKey']
-        ret['comment'] = 'Device created in Server Density db.'
-        ret['changes'] = {'device_created': device}
-        if __opts__['test']:
-            ret['result'] = None
-            ret['comment'] = 'Device set to be created in Server Density db.'
+        device = __salt__["serverdensity_device.create"](name, **params_from_salt)
+        agent_key = device["agentKey"]
+        ret["comment"] = "Device created in Server Density db."
+        ret["changes"] = {"device_created": device}
+        if __opts__["test"]:
+            ret["result"] = None
+            ret["comment"] = "Device set to be created in Server Density db."
             return ret
     elif device_in_sd:
-        device = __salt__['serverdensity_device.ls'](name=name)[0]
-        agent_key = device['agentKey']
-        ret['comment'] = 'Device was already in Server Density db.'
+        device = __salt__["serverdensity_device.ls"](name=name)[0]
+        agent_key = device["agentKey"]
+        ret["comment"] = "Device was already in Server Density db."
     else:
-        ret['result'] = False
-        ret['comment'] = 'Failed to create device in Server Density DB and this device does not exist in db either.'
-        ret['changes'] = {}
-        if __opts__['test']:
-            ret['result'] = None
-            ret['comment'] = 'Agent is not installed and device is not in the Server Density DB'
+        ret["result"] = False
+        ret[
+            "comment"
+        ] = "Failed to create device in Server Density DB and this device does not exist in db either."
+        ret["changes"] = {}
+        if __opts__["test"]:
+            ret["result"] = None
+            ret[
+                "comment"
+            ] = "Agent is not installed and device is not in the Server Density DB"
         return ret
 
-    if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = 'Server Density agent is set to be installed and device created in the Server Density DB'
+    if __opts__["test"]:
+        ret["result"] = None
+        ret[
+            "comment"
+        ] = "Server Density agent is set to be installed and device created in the Server Density DB"
         return ret
 
-    installed_agent = __salt__['serverdensity_device.install_agent'](agent_key, agent_version)
+    installed_agent = __salt__["serverdensity_device.install_agent"](
+        agent_key, agent_version
+    )
 
-    ret['result'] = True
-    ret['comment'] = 'Successfully installed agent and created device in Server Density db.'
-    ret['changes'] = {'created_device': device, 'installed_agent': installed_agent}
+    ret["result"] = True
+    ret[
+        "comment"
+    ] = "Successfully installed agent and created device in Server Density db."
+    ret["changes"] = {"created_device": device, "installed_agent": installed_agent}
     return ret
