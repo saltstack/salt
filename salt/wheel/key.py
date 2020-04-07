@@ -286,7 +286,7 @@ def key_str(match):
 
 
 def master_key_str():
-    r'''
+    r"""
     Returns master's public key. Returns a dictionary
 
     .. code-block:: python
@@ -295,12 +295,12 @@ def master_key_str():
         {'local': {'master.pub': '-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0B
         ...
         TWugEQpPt\niQIDAQAB\n-----END PUBLIC KEY-----'}}
-    '''
-    keyname = 'master.pub'
-    path_to_pubkey = os.path.join(__opts__['pki_dir'], keyname)
-    with salt.utils.files.fopen(path_to_pubkey, 'r') as fp_:
+    """
+    keyname = "master.pub"
+    path_to_pubkey = os.path.join(__opts__["pki_dir"], keyname)
+    with salt.utils.files.fopen(path_to_pubkey, "r") as fp_:
         keyvalue = salt.utils.stringutils.to_unicode(fp_.read())
-    return {'local': {keyname: keyvalue}}
+    return {"local": {keyname: keyvalue}}
 
 
 def finger(match, hash_type=None):
