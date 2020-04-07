@@ -2,7 +2,7 @@
 
 // Define the maximum time, in hours, that a test run should run for
 def global_timeout = 3
-def salt_target_branch = '2019.2.1'
+def salt_target_branch = '2019.2.4'
 
 properties([
     buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10')),
@@ -30,7 +30,6 @@ wrappedNode('lint', global_timeout, '#jenkins-prod-pr') {
             stage('checkout-scm') {
                 cleanWs notFailBuild: true
                 checkout scm
-                sh 'git fetch --no-tags https://github.com/saltstack/salt.git +refs/heads/${SALT_TARGET_BRANCH}:refs/remotes/origin/${SALT_TARGET_BRANCH}'
             }
 
             // Setup the kitchen required bundle
