@@ -1786,8 +1786,8 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         assert all([isinstance(x, int) for x in info])
 
     def test_path(self):
-        comps = ['foo', 'bar', 'baz']
+        comps = ["foo", "bar", "baz"]
         path = os.path.pathsep.join(comps)
-        with patch.dict(os.environ, {'PATH': path}):
+        with patch.dict(os.environ, {"PATH": path}):
             result = core.path()
-        assert result == {'path': path, 'systempath': comps}, result
+        assert result == {"path": path, "systempath": comps}, result
