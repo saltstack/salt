@@ -1936,8 +1936,8 @@ Repository 'DUMMY' not found by its alias, number, or URI.
     def test__get_installed_patterns(self, get_visible_patterns):
         """Test installed patterns in the system"""
         get_visible_patterns.return_value = {
-            "package-a": {"installed": True, "summary": "description a",},
-            "package-b": {"installed": False, "summary": "description b",},
+            "package-a": {"installed": True, "summary": "description a"},
+            "package-b": {"installed": False, "summary": "description b"},
         }
 
         salt_mock = {
@@ -1949,20 +1949,20 @@ pattern() = package-c"""
         }
         with patch.dict("salt.modules.zypperpkg.__salt__", salt_mock):
             assert zypper._get_installed_patterns() == {
-                "package-a": {"installed": True, "summary": "description a",},
-                "package-c": {"installed": True, "summary": "Non-visible pattern",},
+                "package-a": {"installed": True, "summary": "description a"},
+                "package-c": {"installed": True, "summary": "Non-visible pattern"},
             }
 
     @patch("salt.modules.zypperpkg._get_visible_patterns")
     def test_list_patterns(self, get_visible_patterns):
         """Test available patterns in the repo"""
         get_visible_patterns.return_value = {
-            "package-a": {"installed": True, "summary": "description a",},
-            "package-b": {"installed": False, "summary": "description b",},
+            "package-a": {"installed": True, "summary": "description a"},
+            "package-b": {"installed": False, "summary": "description b"},
         }
         assert zypper.list_patterns() == {
-            "package-a": {"installed": True, "summary": "description a",},
-            "package-b": {"installed": False, "summary": "description b",},
+            "package-a": {"installed": True, "summary": "description a"},
+            "package-b": {"installed": False, "summary": "description b"},
         }
 
     def test__clean_cache_empty(self):

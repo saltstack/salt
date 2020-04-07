@@ -2048,13 +2048,13 @@ def list_locks(root=None):
                 for element in [el for el in meta if el]:
                     if ":" in element:
                         lock.update(
-                            dict([tuple([i.strip() for i in element.split(":", 1)]),])
+                            dict([tuple([i.strip() for i in element.split(":", 1)])])
                         )
                 if lock.get("solvable_name"):
                     locks[lock.pop("solvable_name")] = lock
     except IOError:
         pass
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         log.warning("Detected a problem when accessing {}".format(_locks))
 
     return locks
