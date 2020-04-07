@@ -7,10 +7,9 @@ import logging
 import os.path
 import socket
 
-import salt.modules.network as network
-
 # Import Salt Libs
 import salt.config
+import salt.modules.network as network
 import salt.utils.path
 from salt._compat import ipaddress
 from salt.exceptions import CommandExecutionError
