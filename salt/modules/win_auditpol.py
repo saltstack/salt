@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 A salt module for modifying the audit policies on the machine
 
 Though this module does not set group policy for auditing, it displays how all
@@ -53,28 +53,28 @@ CLI Example:
 
     # Set the state of the "Credential Validation" setting to No Auditing
     salt * auditpol.set_setting name="Credential Validation" value="No Auditing"
-'''
-from __future__ import absolute_import, unicode_literals, print_function
+"""
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt libs
 import salt.utils.platform
 
 # Define the module's virtual name
-__virtualname__ = 'auditpol'
+__virtualname__ = "auditpol"
 
 
 def __virtual__():
-    '''
+    """
     Only works on Windows systems
-    '''
+    """
     if not salt.utils.platform.is_windows():
         return False, "Module win_auditpol: module only available on Windows"
 
     return __virtualname__
 
 
-def get_settings(category='All'):
-    '''
+def get_settings(category="All"):
+    """
     Get the current configuration for all audit settings specified in the
     category
 
@@ -114,12 +114,12 @@ def get_settings(category='All'):
         # Get the current state of all audit settings in the "Account Logon"
         # category
         salt * auditpol.get_settings "Account Logon"
-    '''
-    return __utils__['auditpol.get_settings'](category=category)
+    """
+    return __utils__["auditpol.get_settings"](category=category)
 
 
 def get_setting(name):
-    '''
+    """
     Get the current configuration for the named audit setting
 
     Args:
@@ -138,12 +138,12 @@ def get_setting(name):
 
         # Get current state of the "Credential Validation" setting
         salt * auditpol.get_setting "Credential Validation"
-    '''
-    return __utils__['auditpol.get_setting'](name=name)
+    """
+    return __utils__["auditpol.get_setting"](name=name)
 
 
 def set_setting(name, value):
-    '''
+    """
     Set the configuration for the named audit setting
 
     Args:
@@ -175,5 +175,5 @@ def set_setting(name, value):
 
         # Set the state of the "Credential Validation" setting to No Auditing
         salt * auditpol.set_setting "Credential Validation" "No Auditing"
-    '''
-    return __utils__['auditpol.set_setting'](name=name, value=value)
+    """
+    return __utils__["auditpol.set_setting"](name=name, value=value)

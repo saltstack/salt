@@ -2,6 +2,5 @@
 
 from salt.scripts import salt_unity
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     salt_unity()
