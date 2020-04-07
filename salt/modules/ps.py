@@ -1,31 +1,33 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 A salt interface to psutil, a system and process library.
 See http://code.google.com/p/psutil.
 
 :depends:   - psutil Python module, version 0.3.0 or later
             - python-utmp package (optional)
-'''
+"""
 
 # Import python libs
-from __future__ import absolute_import, unicode_literals, print_function
-import time
+from __future__ import absolute_import, print_function, unicode_literals
+
 import datetime
 import re
+import time
 
 # Import salt libs
 import salt.utils.data
-from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 # Import third party libs
 import salt.utils.decorators.path
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext import six
+
 # pylint: disable=import-error
 try:
     import salt.utils.psutil_compat as psutil
 
     HAS_PSUTIL = True
-    PSUTIL2 = getattr(psutil, 'version_info', ()) >= (2, 0)
+    PSUTIL2 = getattr(psutil, "version_info", ()) >= (2, 0)
 except ImportError:
     HAS_PSUTIL = False
 # pylint: enable=import-error
@@ -33,7 +35,10 @@ except ImportError:
 
 def __virtual__():
     if not HAS_PSUTIL:
-        return False, 'The ps module cannot be loaded: python module psutil not installed.'
+        return (
+            False,
+            "The ps module cannot be loaded: python module psutil not installed.",
+        )
 
     # Functions and attributes used in this execution module seem to have been
     # added as of psutil 0.3.0, from an inspection of the source code. Only
@@ -44,15 +49,20 @@ def __virtual__():
     # as of Dec. 2013 EPEL is on 0.6.1, Debian 7 is on 0.5.1, etc.).
     if psutil.version_info >= (0, 3, 0):
         return True
-    return (False, 'The ps execution module cannot be loaded: the psutil python module version {0} is less than 0.3.0'.format(psutil.version_info))
+    return (
+        False,
+        "The ps execution module cannot be loaded: the psutil python module version {0} is less than 0.3.0".format(
+            psutil.version_info
+        ),
+    )
 
 
 def _get_proc_cmdline(proc):
-    '''
+    """
     Returns the cmdline of a Process instance.
 
     It's backward compatible with < 2.0 versions of psutil.
-    '''
+    """
     try:
         return salt.utils.data.decode(proc.cmdline() if PSUTIL2 else proc.cmdline)
     except (psutil.NoSuchProcess, psutil.AccessDenied):
@@ -60,23 +70,25 @@ def _get_proc_cmdline(proc):
 
 
 def _get_proc_create_time(proc):
-    '''
+    """
     Returns the create_time of a Process instance.
 
     It's backward compatible with < 2.0 versions of psutil.
-    '''
+    """
     try:
-        return salt.utils.data.decode(proc.create_time() if PSUTIL2 else proc.create_time)
+        return salt.utils.data.decode(
+            proc.create_time() if PSUTIL2 else proc.create_time
+        )
     except (psutil.NoSuchProcess, psutil.AccessDenied):
         return None
 
 
 def _get_proc_name(proc):
-    '''
+    """
     Returns the name of a Process instance.
 
     It's backward compatible with < 2.0 versions of psutil.
-    '''
+    """
     try:
         return salt.utils.data.decode(proc.name() if PSUTIL2 else proc.name)
     except (psutil.NoSuchProcess, psutil.AccessDenied):
@@ -84,11 +96,11 @@ def _get_proc_name(proc):
 
 
 def _get_proc_status(proc):
-    '''
+    """
     Returns the status of a Process instance.
 
     It's backward compatible with < 2.0 versions of psutil.
-    '''
+    """
     try:
         return salt.utils.data.decode(proc.status() if PSUTIL2 else proc.status)
     except (psutil.NoSuchProcess, psutil.AccessDenied):
@@ -96,11 +108,11 @@ def _get_proc_status(proc):
 
 
 def _get_proc_username(proc):
-    '''
+    """
     Returns the username of a Process instance.
 
     It's backward compatible with < 2.0 versions of psutil.
-    '''
+    """
     try:
         return salt.utils.data.decode(proc.username() if PSUTIL2 else proc.username)
     except (psutil.NoSuchProcess, psutil.AccessDenied, KeyError):
@@ -108,16 +120,16 @@ def _get_proc_username(proc):
 
 
 def _get_proc_pid(proc):
-    '''
+    """
     Returns the pid of a Process instance.
 
     It's backward compatible with < 2.0 versions of psutil.
-    '''
+    """
     return proc.pid
 
 
 def top(num_processes=5, interval=3):
-    '''
+    """
     Return a list of top CPU consuming processes during the interval.
     num_processes = return the top N CPU consuming processes
     interval = the number of seconds to sample CPU usage over
@@ -129,7 +141,7 @@ def top(num_processes=5, interval=3):
         salt '*' ps.top
 
         salt '*' ps.top 5 10
-    '''
+    """
     result = []
     start_usage = {}
     for pid in psutil.pids():
@@ -161,25 +173,26 @@ def top(num_processes=5, interval=3):
             cmdline = _get_proc_name(process)
         else:
             cmdline = _get_proc_cmdline(process)
-        info = {'cmd': cmdline,
-                'user': _get_proc_username(process),
-                'status': _get_proc_status(process),
-                'pid': _get_proc_pid(process),
-                'create_time': _get_proc_create_time(process),
-                'cpu': {},
-                'mem': {},
+        info = {
+            "cmd": cmdline,
+            "user": _get_proc_username(process),
+            "status": _get_proc_status(process),
+            "pid": _get_proc_pid(process),
+            "create_time": _get_proc_create_time(process),
+            "cpu": {},
+            "mem": {},
         }
         for key, value in six.iteritems(process.cpu_times()._asdict()):
-            info['cpu'][key] = value
+            info["cpu"][key] = value
         for key, value in six.iteritems(process.memory_info()._asdict()):
-            info['mem'][key] = value
+            info["mem"][key] = value
         result.append(info)
 
     return result
 
 
 def get_pid_list():
-    '''
+    """
     Return a list of process ids (PIDs) for all running processes.
 
     CLI Example:
@@ -187,12 +200,12 @@ def get_pid_list():
     .. code-block:: bash
 
         salt '*' ps.get_pid_list
-    '''
+    """
     return psutil.pids()
 
 
 def proc_info(pid, attrs=None):
-    '''
+    """
     Return a dictionary of information for a process id (PID).
 
     CLI Example:
@@ -209,7 +222,7 @@ def proc_info(pid, attrs=None):
         Optional list of desired process attributes.  The list of possible
         attributes can be found here:
         http://pythonhosted.org/psutil/#psutil.Process
-    '''
+    """
     try:
         proc = psutil.Process(pid)
         return proc.as_dict(attrs)
@@ -218,7 +231,7 @@ def proc_info(pid, attrs=None):
 
 
 def kill_pid(pid, signal=15):
-    '''
+    """
     Kill a process by PID.
 
     .. code-block:: bash
@@ -239,7 +252,7 @@ def kill_pid(pid, signal=15):
     .. code-block:: bash
 
         salt 'minion' ps.kill_pid 2000 signal=9
-    '''
+    """
     try:
         psutil.Process(pid).send_signal(signal)
         return True
@@ -248,7 +261,7 @@ def kill_pid(pid, signal=15):
 
 
 def pkill(pattern, user=None, signal=15, full=False):
-    '''
+    """
     Kill processes matching a pattern.
 
     .. code-block:: bash
@@ -283,12 +296,15 @@ def pkill(pattern, user=None, signal=15, full=False):
     .. code-block:: bash
 
         salt '*' ps.pkill bash signal=9 user=tom
-    '''
+    """
 
     killed = []
     for proc in psutil.process_iter():
-        name_match = pattern in ' '.join(_get_proc_cmdline(proc)) if full \
+        name_match = (
+            pattern in " ".join(_get_proc_cmdline(proc))
+            if full
             else pattern in _get_proc_name(proc)
+        )
         user_match = True if user is None else user == _get_proc_username(proc)
         if name_match and user_match:
             try:
@@ -299,11 +315,11 @@ def pkill(pattern, user=None, signal=15, full=False):
     if not killed:
         return None
     else:
-        return {'killed': killed}
+        return {"killed": killed}
 
 
 def pgrep(pattern, user=None, full=False):
-    '''
+    """
     Return the pids for processes matching a pattern.
 
     If full is true, the full command line is searched for a match,
@@ -336,12 +352,15 @@ def pgrep(pattern, user=None, full=False):
     .. code-block:: bash
 
         salt '*' ps.pgrep bash user=tom
-    '''
+    """
 
     procs = []
     for proc in psutil.process_iter():
-        name_match = pattern in ' '.join(_get_proc_cmdline(proc)) if full \
+        name_match = (
+            pattern in " ".join(_get_proc_cmdline(proc))
+            if full
             else pattern in _get_proc_name(proc)
+        )
         user_match = True if user is None else user == _get_proc_username(proc)
         if name_match and user_match:
             procs.append(_get_proc_pid(proc))
@@ -349,7 +368,7 @@ def pgrep(pattern, user=None, full=False):
 
 
 def cpu_percent(interval=0.1, per_cpu=False):
-    '''
+    """
     Return the percent of time the CPU is busy.
 
     interval
@@ -363,7 +382,7 @@ def cpu_percent(interval=0.1, per_cpu=False):
     .. code-block:: bash
 
         salt '*' ps.cpu_percent
-    '''
+    """
     if per_cpu:
         result = list(psutil.cpu_percent(interval, True))
     else:
@@ -372,7 +391,7 @@ def cpu_percent(interval=0.1, per_cpu=False):
 
 
 def cpu_times(per_cpu=False):
-    '''
+    """
     Return the percent of time the CPU spends in each state,
     e.g. user, system, idle, nice, iowait, irq, softirq.
 
@@ -385,7 +404,7 @@ def cpu_times(per_cpu=False):
     .. code-block:: bash
 
         salt '*' ps.cpu_times
-    '''
+    """
     if per_cpu:
         result = [dict(times._asdict()) for times in psutil.cpu_times(True)]
     else:
@@ -394,7 +413,7 @@ def cpu_times(per_cpu=False):
 
 
 def virtual_memory():
-    '''
+    """
     .. versionadded:: 2014.7.0
 
     Return a dict that describes statistics about system memory usage.
@@ -408,15 +427,15 @@ def virtual_memory():
     .. code-block:: bash
 
         salt '*' ps.virtual_memory
-    '''
+    """
     if psutil.version_info < (0, 6, 0):
-        msg = 'virtual_memory is only available in psutil 0.6.0 or greater'
+        msg = "virtual_memory is only available in psutil 0.6.0 or greater"
         raise CommandExecutionError(msg)
     return dict(psutil.virtual_memory()._asdict())
 
 
 def swap_memory():
-    '''
+    """
     .. versionadded:: 2014.7.0
 
     Return a dict that describes swap memory statistics.
@@ -430,15 +449,15 @@ def swap_memory():
     .. code-block:: bash
 
         salt '*' ps.swap_memory
-    '''
+    """
     if psutil.version_info < (0, 6, 0):
-        msg = 'swap_memory is only available in psutil 0.6.0 or greater'
+        msg = "swap_memory is only available in psutil 0.6.0 or greater"
         raise CommandExecutionError(msg)
     return dict(psutil.swap_memory()._asdict())
 
 
 def disk_partitions(all=False):
-    '''
+    """
     Return a list of disk partitions and their device, mount point, and
     filesystem type.
 
@@ -451,14 +470,13 @@ def disk_partitions(all=False):
     .. code-block:: bash
 
         salt '*' ps.disk_partitions
-    '''
-    result = [dict(partition._asdict()) for partition in
-              psutil.disk_partitions(all)]
+    """
+    result = [dict(partition._asdict()) for partition in psutil.disk_partitions(all)]
     return result
 
 
 def disk_usage(path):
-    '''
+    """
     Given a path, return a dict listing the total available space as well as
     the free space, and used space.
 
@@ -467,12 +485,12 @@ def disk_usage(path):
     .. code-block:: bash
 
         salt '*' ps.disk_usage /home
-    '''
+    """
     return dict(psutil.disk_usage(path)._asdict())
 
 
 def disk_partition_usage(all=False):
-    '''
+    """
     Return a list of disk partitions plus the mount point, filesystem and usage
     statistics.
 
@@ -481,15 +499,15 @@ def disk_partition_usage(all=False):
     .. code-block:: bash
 
         salt '*' ps.disk_partition_usage
-    '''
+    """
     result = disk_partitions(all)
     for partition in result:
-        partition.update(disk_usage(partition['mountpoint']))
+        partition.update(disk_usage(partition["mountpoint"]))
     return result
 
 
 def total_physical_memory():
-    '''
+    """
     Return the total number of bytes of physical memory.
 
     CLI Example:
@@ -497,9 +515,9 @@ def total_physical_memory():
     .. code-block:: bash
 
         salt '*' ps.total_physical_memory
-    '''
+    """
     if psutil.version_info < (0, 6, 0):
-        msg = 'virtual_memory is only available in psutil 0.6.0 or greater'
+        msg = "virtual_memory is only available in psutil 0.6.0 or greater"
         raise CommandExecutionError(msg)
     try:
         return psutil.virtual_memory().total
@@ -510,7 +528,7 @@ def total_physical_memory():
 
 
 def num_cpus():
-    '''
+    """
     Return the number of CPUs.
 
     CLI Example:
@@ -518,7 +536,7 @@ def num_cpus():
     .. code-block:: bash
 
         salt '*' ps.num_cpus
-    '''
+    """
     try:
         return psutil.cpu_count()
     except AttributeError:
@@ -528,7 +546,7 @@ def num_cpus():
 
 
 def boot_time(time_format=None):
-    '''
+    """
     Return the boot time in number of seconds since the epoch began.
 
     CLI Example:
@@ -545,7 +563,7 @@ def boot_time(time_format=None):
     .. code-block:: bash
 
         salt '*' ps.boot_time
-    '''
+    """
     try:
         b_time = int(psutil.boot_time())
     except AttributeError:
@@ -558,12 +576,12 @@ def boot_time(time_format=None):
         try:
             return b_time.strftime(time_format)
         except TypeError as exc:
-            raise SaltInvocationError('Invalid format string: {0}'.format(exc))
+            raise SaltInvocationError("Invalid format string: {0}".format(exc))
     return b_time
 
 
 def network_io_counters(interface=None):
-    '''
+    """
     Return network I/O statistics.
 
     CLI Example:
@@ -573,7 +591,7 @@ def network_io_counters(interface=None):
         salt '*' ps.network_io_counters
 
         salt '*' ps.network_io_counters interface=eth0
-    '''
+    """
     if not interface:
         return dict(psutil.net_io_counters()._asdict())
     else:
@@ -585,7 +603,7 @@ def network_io_counters(interface=None):
 
 
 def disk_io_counters(device=None):
-    '''
+    """
     Return disk I/O statistics.
 
     CLI Example:
@@ -595,7 +613,7 @@ def disk_io_counters(device=None):
         salt '*' ps.disk_io_counters
 
         salt '*' ps.disk_io_counters device=sda1
-    '''
+    """
     if not device:
         return dict(psutil.disk_io_counters()._asdict())
     else:
@@ -607,7 +625,7 @@ def disk_io_counters(device=None):
 
 
 def get_users():
-    '''
+    """
     Return logged-in users.
 
     CLI Example:
@@ -615,7 +633,7 @@ def get_users():
     .. code-block:: bash
 
         salt '*' ps.get_users
-    '''
+    """
     try:
         recs = psutil.users()
         return [dict(x._asdict()) for x in recs]
@@ -634,14 +652,20 @@ def get_users():
                     started = rec[8]
                     if isinstance(started, tuple):
                         started = started[0]
-                    result.append({'name': rec[4], 'terminal': rec[2],
-                                   'started': started, 'host': rec[5]})
+                    result.append(
+                        {
+                            "name": rec[4],
+                            "terminal": rec[2],
+                            "started": started,
+                            "host": rec[5],
+                        }
+                    )
         except ImportError:
             return False
 
 
 def lsof(name):
-    '''
+    """
     Retrieve the lsof information of the given process name.
 
     CLI Example:
@@ -649,17 +673,17 @@ def lsof(name):
     .. code-block:: bash
 
         salt '*' ps.lsof apache2
-    '''
+    """
     sanitize_name = six.text_type(name)
-    lsof_infos = __salt__['cmd.run']("lsof -c " + sanitize_name)
+    lsof_infos = __salt__["cmd.run"]("lsof -c " + sanitize_name)
     ret = []
     ret.extend([sanitize_name, lsof_infos])
     return ret
 
 
-@salt.utils.decorators.path.which('netstat')
+@salt.utils.decorators.path.which("netstat")
 def netstat(name):
-    '''
+    """
     Retrieve the netstat information of the given process name.
 
     CLI Example:
@@ -667,9 +691,9 @@ def netstat(name):
     .. code-block:: bash
 
         salt '*' ps.netstat apache2
-    '''
+    """
     sanitize_name = six.text_type(name)
-    netstat_infos = __salt__['cmd.run']("netstat -nap")
+    netstat_infos = __salt__["cmd.run"]("netstat -nap")
     found_infos = []
     ret = []
     for info in netstat_infos.splitlines():
@@ -679,9 +703,9 @@ def netstat(name):
     return ret
 
 
-@salt.utils.decorators.path.which('ss')
+@salt.utils.decorators.path.which("ss")
 def ss(name):
-    '''
+    """
     Retrieve the ss information of the given process name.
 
     CLI Example:
@@ -692,9 +716,9 @@ def ss(name):
 
     .. versionadded:: 2016.11.6
 
-    '''
+    """
     sanitize_name = six.text_type(name)
-    ss_infos = __salt__['cmd.run']("ss -neap")
+    ss_infos = __salt__["cmd.run"]("ss -neap")
     found_infos = []
     ret = []
     for info in ss_infos.splitlines():
@@ -705,7 +729,7 @@ def ss(name):
 
 
 def psaux(name):
-    '''
+    """
     Retrieve information corresponding to a "ps aux" filtered
     with the given pattern. It could be just a name or a regular
     expression (using python search from "re" module).
@@ -715,11 +739,11 @@ def psaux(name):
     .. code-block:: bash
 
         salt '*' ps.psaux www-data.+apache2
-    '''
+    """
     sanitize_name = six.text_type(name)
     pattern = re.compile(sanitize_name)
     salt_exception_pattern = re.compile("salt.+ps.psaux.+")
-    ps_aux = __salt__['cmd.run']("ps aux")
+    ps_aux = __salt__["cmd.run"]("ps aux")
     found_infos = []
     ret = []
     nb_lines = 0

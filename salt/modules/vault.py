@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Functions to interact with Hashicorp Vault.
 
 :maintainer:    SaltStack
@@ -131,17 +131,17 @@ Functions to interact with Hashicorp Vault.
                 - vault.generate_token
 
 .. _vault-setup:
-'''
+"""
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import logging
 
+import logging
 
 log = logging.getLogger(__name__)
 
 
 def read_secret(path, key=None):
-    '''
+    """
     Return the value of key at path in vault, or entire secret
 
     Jinja Example:
@@ -156,25 +156,25 @@ def read_secret(path, key=None):
         secrets:
             first: {{ supersecret.first }}
             second: {{ supersecret.second }}
-    '''
-    log.debug('Reading Vault secret for %s at %s', __grains__['id'], path)
+    """
+    log.debug("Reading Vault secret for %s at %s", __grains__["id"], path)
     try:
-        url = 'v1/{0}'.format(path)
-        response = __utils__['vault.make_request']('GET', url)
+        url = "v1/{0}".format(path)
+        response = __utils__["vault.make_request"]("GET", url)
         if response.status_code != 200:
             response.raise_for_status()
-        data = response.json()['data']
+        data = response.json()["data"]
 
         if key is not None:
             return data[key]
         return data
     except Exception as err:  # pylint: disable=broad-except
-        log.error('Failed to read secret! %s: %s', type(err).__name__, err)
+        log.error("Failed to read secret! %s: %s", type(err).__name__, err)
         return None
 
 
 def write_secret(path, **kwargs):
-    '''
+    """
     Set secret at the path in vault. The vault policy used must allow this.
 
     CLI Example:
@@ -182,24 +182,24 @@ def write_secret(path, **kwargs):
     .. code-block:: bash
 
             salt '*' vault.write_secret "secret/my/secret" user="foo" password="bar"
-    '''
-    log.debug('Writing vault secrets for %s at %s', __grains__['id'], path)
-    data = dict([(x, y) for x, y in kwargs.items() if not x.startswith('__')])
+    """
+    log.debug("Writing vault secrets for %s at %s", __grains__["id"], path)
+    data = dict([(x, y) for x, y in kwargs.items() if not x.startswith("__")])
     try:
-        url = 'v1/{0}'.format(path)
-        response = __utils__['vault.make_request']('POST', url, json=data)
+        url = "v1/{0}".format(path)
+        response = __utils__["vault.make_request"]("POST", url, json=data)
         if response.status_code == 200:
-            return response.json()['data']
+            return response.json()["data"]
         elif response.status_code != 204:
             response.raise_for_status()
         return True
     except Exception as err:  # pylint: disable=broad-except
-        log.error('Failed to write secret! %s: %s', type(err).__name__, err)
+        log.error("Failed to write secret! %s: %s", type(err).__name__, err)
         return False
 
 
 def write_raw(path, raw):
-    '''
+    """
     Set raw data at the path in vault. The vault policy used must allow this.
 
     CLI Example:
@@ -207,23 +207,23 @@ def write_raw(path, raw):
     .. code-block:: bash
 
             salt '*' vault.write_raw "secret/my/secret" '{"user":"foo","password": "bar"}'
-    '''
-    log.debug('Writing vault secrets for %s at %s', __grains__['id'], path)
+    """
+    log.debug("Writing vault secrets for %s at %s", __grains__["id"], path)
     try:
-        url = 'v1/{0}'.format(path)
-        response = __utils__['vault.make_request']('POST', url, json=raw)
+        url = "v1/{0}".format(path)
+        response = __utils__["vault.make_request"]("POST", url, json=raw)
         if response.status_code == 200:
-            return response.json()['data']
+            return response.json()["data"]
         elif response.status_code != 204:
             response.raise_for_status()
         return True
     except Exception as err:  # pylint: disable=broad-except
-        log.error('Failed to write secret! %s: %s', type(err).__name__, err)
+        log.error("Failed to write secret! %s: %s", type(err).__name__, err)
         return False
 
 
 def delete_secret(path):
-    '''
+    """
     Delete secret at the path in vault. The vault policy used must allow this.
 
     CLI Example:
@@ -231,21 +231,21 @@ def delete_secret(path):
     .. code-block:: bash
 
         salt '*' vault.delete_secret "secret/my/secret"
-    '''
-    log.debug('Deleting vault secrets for %s in %s', __grains__['id'], path)
+    """
+    log.debug("Deleting vault secrets for %s in %s", __grains__["id"], path)
     try:
-        url = 'v1/{0}'.format(path)
-        response = __utils__['vault.make_request']('DELETE', url)
+        url = "v1/{0}".format(path)
+        response = __utils__["vault.make_request"]("DELETE", url)
         if response.status_code != 204:
             response.raise_for_status()
         return True
     except Exception as err:  # pylint: disable=broad-except
-        log.error('Failed to delete secret! %s: %s', type(err).__name__, err)
+        log.error("Failed to delete secret! %s: %s", type(err).__name__, err)
         return False
 
 
 def list_secrets(path):
-    '''
+    """
     List secret keys at the path in vault. The vault policy used must allow this.
     The path should end with a trailing slash.
 
@@ -254,14 +254,14 @@ def list_secrets(path):
     .. code-block:: bash
 
             salt '*' vault.list_secrets "secret/my/"
-    '''
-    log.debug('Listing vault secret keys for %s in %s', __grains__['id'], path)
+    """
+    log.debug("Listing vault secret keys for %s in %s", __grains__["id"], path)
     try:
-        url = 'v1/{0}'.format(path)
-        response = __utils__['vault.make_request']('LIST', url)
+        url = "v1/{0}".format(path)
+        response = __utils__["vault.make_request"]("LIST", url)
         if response.status_code != 200:
             response.raise_for_status()
-        return response.json()['data']
+        return response.json()["data"]
     except Exception as err:  # pylint: disable=broad-except
-        log.error('Failed to list secrets! %s: %s', type(err).__name__, err)
+        log.error("Failed to list secrets! %s: %s", type(err).__name__, err)
         return None
