@@ -1,0 +1,12 @@
+---
+stages:
+  - test
+
+demo-test:
+  image: ubuntu:18.04
+  stage: test
+  script:
+    - echo "hello world"
+  only:
+    refs:
+      - schedules
