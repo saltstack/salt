@@ -1,21 +1,22 @@
 # -*- coding: utf-8 -*-
 
-'''
+"""
 Wrapper function for mine operations for salt-ssh
 
 .. versionadded:: 2015.5.0
-'''
+"""
 
 # Import python libs
 from __future__ import absolute_import, print_function
+
 import copy
 
 # Import salt libs
 import salt.client.ssh
 
 
-def get(tgt, fun, tgt_type='glob', roster='flat'):
-    '''
+def get(tgt, fun, tgt_type="glob", roster="flat"):
+    """
     Get data from the mine based on the target, function and tgt_type
 
     This will actually run the function on all targeted minions (like
@@ -34,17 +35,17 @@ def get(tgt, fun, tgt_type='glob', roster='flat'):
         salt-ssh '*' mine.get '*' network.interfaces
         salt-ssh '*' mine.get 'myminion' network.interfaces roster=flat
         salt-ssh '*' mine.get '192.168.5.0' network.ipaddrs roster=scan
-    '''
+    """
     # Set up opts for the SSH object
-    opts = copy.deepcopy(__context__['master_opts'])
+    opts = copy.deepcopy(__context__["master_opts"])
     minopts = copy.deepcopy(__opts__)
     opts.update(minopts)
     if roster:
-        opts['roster'] = roster
-    opts['argv'] = [fun]
-    opts['selected_target_option'] = tgt_type
-    opts['tgt'] = tgt
-    opts['arg'] = []
+        opts["roster"] = roster
+    opts["argv"] = [fun]
+    opts["selected_target_option"] = tgt_type
+    opts["tgt"] = tgt
+    opts["arg"] = []
 
     # Create the SSH object to handle the actual call
     ssh = salt.client.ssh.SSH(opts)
@@ -56,8 +57,8 @@ def get(tgt, fun, tgt_type='glob', roster='flat'):
 
     cret = {}
     for host in rets:
-        if 'return' in rets[host]:
-            cret[host] = rets[host]['return']
+        if "return" in rets[host]:
+            cret[host] = rets[host]["return"]
         else:
             cret[host] = rets[host]
     return cret
