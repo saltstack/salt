@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 This module allows you to manage proxy settings
 
 .. code-block:: bash
 
     salt '*' network.get_http_proxy
-'''
+"""
 
 # Import Python Libs
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 import re
 
@@ -16,23 +17,25 @@ import re
 import salt.utils.platform
 
 log = logging.getLogger(__name__)
-__virtualname__ = 'proxy'
+__virtualname__ = "proxy"
 
 
 def __virtual__():
-    '''
+    """
     Only work on Mac OS and Windows
-    '''
+    """
     if salt.utils.platform.is_darwin() or salt.utils.platform.is_windows():
         return True
-    return False, 'Module proxy: module only works on Windows or MacOS systems'
+    return False, "Module proxy: module only works on Windows or MacOS systems"
 
 
 def _get_proxy_osx(cmd_function, network_service):
     ret = {}
 
-    out = __salt__['cmd.run']('networksetup -{0} {1}'.format(cmd_function, network_service))
-    match = re.match('Enabled: (.*)\nServer: (.*)\nPort: (.*)\n', out)
+    out = __salt__["cmd.run"](
+        "networksetup -{0} {1}".format(cmd_function, network_service)
+    )
+    match = re.match("Enabled: (.*)\nServer: (.*)\nPort: (.*)\n", out)
     if match is not None:
         g = match.groups()
         enabled = True if g[0] == "Yes" else False
@@ -42,26 +45,29 @@ def _get_proxy_osx(cmd_function, network_service):
 
 
 def _set_proxy_osx(cmd_function, server, port, user, password, network_service):
-    cmd = 'networksetup -{0} {1} {2} {3}'.format(cmd_function, network_service, server, port)
+    cmd = "networksetup -{0} {1} {2} {3}".format(
+        cmd_function, network_service, server, port
+    )
 
     if user is not None and password is not None:
-        cmd = cmd + ' On {0} {1}'.format(user, password)
+        cmd = cmd + " On {0} {1}".format(user, password)
 
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__["cmd.run"](cmd)
 
-    return 'error' not in out
+    return "error" not in out
 
 
 def _get_proxy_windows(types=None):
     ret = {}
 
     if types is None:
-        types = ['http', 'https', 'ftp']
+        types = ["http", "https", "ftp"]
 
-    servers = __salt__['reg.read_value'](
-        hive='HKEY_CURRENT_USER',
-        key=r'SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings',
-        vname='ProxyServer')['vdata']
+    servers = __salt__["reg.read_value"](
+        hive="HKEY_CURRENT_USER",
+        key=r"SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings",
+        vname="ProxyServer",
+    )["vdata"]
 
     if servers and "=" in servers:
         split = servers.split(";")
@@ -87,57 +93,62 @@ def _get_proxy_windows(types=None):
                 del ret[key]
 
     # Return enabled info
-    ret['enabled'] = __salt__['reg.read_value'](
-        hive='HKEY_CURRENT_USER',
-        key=r'SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings',
-        vname='ProxyEnable')['vdata'] == 1
+    ret["enabled"] = (
+        __salt__["reg.read_value"](
+            hive="HKEY_CURRENT_USER",
+            key=r"SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings",
+            vname="ProxyEnable",
+        )["vdata"]
+        == 1
+    )
 
     return ret
 
 
-def _set_proxy_windows(server,
-                       port,
-                       types=None,
-                       bypass_hosts=None,
-                       import_winhttp=True):
+def _set_proxy_windows(
+    server, port, types=None, bypass_hosts=None, import_winhttp=True
+):
     if types is None:
-        types = ['http', 'https', 'ftp']
+        types = ["http", "https", "ftp"]
 
-    server_str = ''
+    server_str = ""
     for t in types:
-        server_str += '{0}={1}:{2};'.format(t, server, port)
+        server_str += "{0}={1}:{2};".format(t, server, port)
 
-    __salt__['reg.set_value'](
-        hive='HKEY_CURRENT_USER',
-        key=r'SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings',
-        vname='ProxyServer',
-        vdata=server_str)
+    __salt__["reg.set_value"](
+        hive="HKEY_CURRENT_USER",
+        key=r"SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings",
+        vname="ProxyServer",
+        vdata=server_str,
+    )
 
-    __salt__['reg.set_value'](
-        hive='HKEY_CURRENT_USER',
-        key=r'SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings',
-        vname='ProxyEnable',
+    __salt__["reg.set_value"](
+        hive="HKEY_CURRENT_USER",
+        key=r"SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings",
+        vname="ProxyEnable",
         vdata=1,
-        vtype='REG_DWORD')
+        vtype="REG_DWORD",
+    )
 
     if bypass_hosts is not None:
-        bypass_hosts_str = '<local>;{0}'.format(';'.join(bypass_hosts))
+        bypass_hosts_str = "<local>;{0}".format(";".join(bypass_hosts))
 
-        __salt__['reg.set_value'](
-            hive='HKEY_CURRENT_USER',
-            key=r'SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings',
-            vname='ProxyOverride',
-            vdata=bypass_hosts_str)
+        __salt__["reg.set_value"](
+            hive="HKEY_CURRENT_USER",
+            key=r"SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings",
+            vname="ProxyOverride",
+            vdata=bypass_hosts_str,
+        )
 
     if import_winhttp:
-        cmd = 'netsh winhttp import proxy source=ie'
-        __salt__['cmd.run'](cmd)
+        cmd = "netsh winhttp import proxy source=ie"
+        __salt__["cmd.run"](cmd)
 
     return True
 
 
 def get_http_proxy(network_service="Ethernet"):
-    '''
+    """
     Returns the current http proxy settings
 
     network_service
@@ -149,21 +160,22 @@ def get_http_proxy(network_service="Ethernet"):
     .. code-block:: bash
 
         salt '*' proxy.get_http_proxy Ethernet
-    '''
-    if __grains__['os'] == 'Windows':
-        return _get_proxy_windows(types=['http'])
+    """
+    if __grains__["os"] == "Windows":
+        return _get_proxy_windows(types=["http"])
 
-    return _get_proxy_osx(cmd_function="getwebproxy",
-                          network_service=network_service)
+    return _get_proxy_osx(cmd_function="getwebproxy", network_service=network_service)
 
 
-def set_http_proxy(server,
-                   port,
-                   user=None,
-                   password=None,
-                   network_service="Ethernet",
-                   bypass_hosts=None):
-    '''
+def set_http_proxy(
+    server,
+    port,
+    user=None,
+    password=None,
+    network_service="Ethernet",
+    bypass_hosts=None,
+):
+    """
     Sets the http proxy settings. Note: On Windows this will override any other
     proxy settings you have, the preferred method of updating proxies on windows
     is using set_proxy.
@@ -193,23 +205,24 @@ def set_http_proxy(server,
     .. code-block:: bash
 
         salt '*' proxy.set_http_proxy example.com 1080 user=proxy_user password=proxy_pass network_service=Ethernet
-    '''
-    if __grains__['os'] == 'Windows':
-        return _set_proxy_windows(server=server,
-                                  port=port,
-                                  types=['http'],
-                                  bypass_hosts=bypass_hosts)
+    """
+    if __grains__["os"] == "Windows":
+        return _set_proxy_windows(
+            server=server, port=port, types=["http"], bypass_hosts=bypass_hosts
+        )
 
-    return _set_proxy_osx(cmd_function="setwebproxy",
-                          server=server,
-                          port=port,
-                          user=user,
-                          password=password,
-                          network_service=network_service)
+    return _set_proxy_osx(
+        cmd_function="setwebproxy",
+        server=server,
+        port=port,
+        user=user,
+        password=password,
+        network_service=network_service,
+    )
 
 
 def get_https_proxy(network_service="Ethernet"):
-    '''
+    """
     Returns the current https proxy settings
 
     network_service
@@ -221,21 +234,24 @@ def get_https_proxy(network_service="Ethernet"):
     .. code-block:: bash
 
         salt '*' proxy.get_https_proxy Ethernet
-    '''
-    if __grains__['os'] == 'Windows':
-        return _get_proxy_windows(types=['https'])
+    """
+    if __grains__["os"] == "Windows":
+        return _get_proxy_windows(types=["https"])
 
-    return _get_proxy_osx(cmd_function="getsecurewebproxy",
-                          network_service=network_service)
+    return _get_proxy_osx(
+        cmd_function="getsecurewebproxy", network_service=network_service
+    )
 
 
-def set_https_proxy(server,
-                    port,
-                    user=None,
-                    password=None,
-                    network_service="Ethernet",
-                    bypass_hosts=None):
-    '''
+def set_https_proxy(
+    server,
+    port,
+    user=None,
+    password=None,
+    network_service="Ethernet",
+    bypass_hosts=None,
+):
+    """
     Sets the https proxy settings. Note: On Windows this will override any other
     proxy settings you have, the preferred method of updating proxies on windows
     is using set_proxy.
@@ -265,23 +281,24 @@ def set_https_proxy(server,
     .. code-block:: bash
 
         salt '*' proxy.set_https_proxy example.com 1080 user=proxy_user password=proxy_pass network_service=Ethernet
-    '''
-    if __grains__['os'] == 'Windows':
-        return _set_proxy_windows(server=server,
-                                  port=port,
-                                  types=['https'],
-                                  bypass_hosts=bypass_hosts)
+    """
+    if __grains__["os"] == "Windows":
+        return _set_proxy_windows(
+            server=server, port=port, types=["https"], bypass_hosts=bypass_hosts
+        )
 
-    return _set_proxy_osx(cmd_function="setsecurewebproxy",
-                          server=server,
-                          port=port,
-                          user=user,
-                          password=password,
-                          network_service=network_service)
+    return _set_proxy_osx(
+        cmd_function="setsecurewebproxy",
+        server=server,
+        port=port,
+        user=user,
+        password=password,
+        network_service=network_service,
+    )
 
 
 def get_ftp_proxy(network_service="Ethernet"):
-    '''
+    """
     Returns the current ftp proxy settings
 
     network_service
@@ -293,21 +310,22 @@ def get_ftp_proxy(network_service="Ethernet"):
     .. code-block:: bash
 
         salt '*' proxy.get_ftp_proxy Ethernet
-    '''
-    if __grains__['os'] == 'Windows':
-        return _get_proxy_windows(types=['ftp'])
+    """
+    if __grains__["os"] == "Windows":
+        return _get_proxy_windows(types=["ftp"])
 
-    return _get_proxy_osx(cmd_function="getftpproxy",
-                          network_service=network_service)
+    return _get_proxy_osx(cmd_function="getftpproxy", network_service=network_service)
 
 
-def set_ftp_proxy(server,
-                  port,
-                  user=None,
-                  password=None,
-                  network_service="Ethernet",
-                  bypass_hosts=None):
-    '''
+def set_ftp_proxy(
+    server,
+    port,
+    user=None,
+    password=None,
+    network_service="Ethernet",
+    bypass_hosts=None,
+):
+    """
     Sets the ftp proxy settings
 
     server
@@ -335,23 +353,24 @@ def set_ftp_proxy(server,
     .. code-block:: bash
 
         salt '*' proxy.set_ftp_proxy example.com 1080 user=proxy_user password=proxy_pass network_service=Ethernet
-    '''
-    if __grains__['os'] == 'Windows':
-        return _set_proxy_windows(server=server,
-                                  port=port,
-                                  types=['ftp'],
-                                  bypass_hosts=bypass_hosts)
+    """
+    if __grains__["os"] == "Windows":
+        return _set_proxy_windows(
+            server=server, port=port, types=["ftp"], bypass_hosts=bypass_hosts
+        )
 
-    return _set_proxy_osx(cmd_function="setftpproxy",
-                          server=server,
-                          port=port,
-                          user=user,
-                          password=password,
-                          network_service=network_service)
+    return _set_proxy_osx(
+        cmd_function="setftpproxy",
+        server=server,
+        port=port,
+        user=user,
+        password=password,
+        network_service=network_service,
+    )
 
 
 def get_proxy_bypass(network_service="Ethernet"):
-    '''
+    """
     Returns the current domains that can bypass the proxy
 
     network_service
@@ -364,26 +383,29 @@ def get_proxy_bypass(network_service="Ethernet"):
 
         salt '*' proxy.get_proxy_bypass
 
-    '''
-    if __grains__['os'] == 'Windows':
-        reg_val = __salt__['reg.read_value'](
-            hive='HKEY_CURRENT_USER',
-            key=r'SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings',
-            vname='ProxyOverride')['vdata']
+    """
+    if __grains__["os"] == "Windows":
+        reg_val = __salt__["reg.read_value"](
+            hive="HKEY_CURRENT_USER",
+            key=r"SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings",
+            vname="ProxyOverride",
+        )["vdata"]
 
         # `reg.read_value` returns None if the key doesn't exist
         if reg_val is None:
             return []
 
-        return reg_val.replace('<local>', '').split(';')
+        return reg_val.replace("<local>", "").split(";")
 
-    out = __salt__['cmd.run']('networksetup -getproxybypassdomains {0}'.format(network_service))
+    out = __salt__["cmd.run"](
+        "networksetup -getproxybypassdomains {0}".format(network_service)
+    )
 
     return out.split("\n")
 
 
 def set_proxy_bypass(domains, network_service="Ethernet"):
-    '''
+    """
     Sets the domains that can bypass the proxy
 
     domains
@@ -399,16 +421,18 @@ def set_proxy_bypass(domains, network_service="Ethernet"):
 
         salt '*' proxy.set_proxy_bypass "['127.0.0.1', 'localhost']"
 
-    '''
-    servers_str = ' '.join(domains)
-    cmd = 'networksetup -setproxybypassdomains {0} {1}'.format(network_service, servers_str,)
-    out = __salt__['cmd.run'](cmd)
+    """
+    servers_str = " ".join(domains)
+    cmd = "networksetup -setproxybypassdomains {0} {1}".format(
+        network_service, servers_str,
+    )
+    out = __salt__["cmd.run"](cmd)
 
-    return 'error' not in out
+    return "error" not in out
 
 
 def set_proxy_win(server, port, types=None, bypass_hosts=None):
-    '''
+    """
     Sets the http proxy settings, only works with Windows.
 
     server
@@ -433,16 +457,15 @@ def set_proxy_win(server, port, types=None, bypass_hosts=None):
     .. code-block:: bash
 
         salt '*' proxy.set_http_proxy example.com 1080 types="['http', 'https']"
-    '''
-    if __grains__['os'] == 'Windows':
-        return _set_proxy_windows(server=server,
-                                  port=port,
-                                  types=types,
-                                  bypass_hosts=bypass_hosts)
+    """
+    if __grains__["os"] == "Windows":
+        return _set_proxy_windows(
+            server=server, port=port, types=types, bypass_hosts=bypass_hosts
+        )
 
 
 def get_proxy_win():
-    '''
+    """
     Gets all of the proxy settings in one call, only available on Windows
 
     CLI Example:
@@ -450,6 +473,6 @@ def get_proxy_win():
     .. code-block:: bash
 
         salt '*' proxy.get_proxy_win
-    '''
-    if __grains__['os'] == 'Windows':
+    """
+    if __grains__["os"] == "Windows":
         return _get_proxy_windows()

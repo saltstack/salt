@@ -1,30 +1,30 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Various XML utilities
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 
 def _conv_name(x):
-    '''
+    """
     If this XML tree has an xmlns attribute, then etree will add it
     to the beginning of the tag, like: "{http://path}tag".
-    '''
-    if '}' in x:
-        comps = x.split('}')
+    """
+    if "}" in x:
+        comps = x.split("}")
         name = comps[1]
         return name
     return x
 
 
 def _to_dict(xmltree):
-    '''
+    """
     Converts an XML ElementTree to a dictionary that only contains items.
     This is the default behavior in version 2017.7. This will default to prevent
     unexpected parsing issues on modules dependant on this.
-    '''
+    """
     # If this object has no children, the for..loop below will return nothing
     # for it, so just return a single dict representing it.
     if len(xmltree.getchildren()) < 1:
@@ -51,9 +51,9 @@ def _to_dict(xmltree):
 
 
 def _to_full_dict(xmltree):
-    '''
+    """
     Returns the full XML dictionary including attributes.
-    '''
+    """
     xmldict = {}
 
     for attrName, attrValue in xmltree.attrib.items():
@@ -87,14 +87,14 @@ def _to_full_dict(xmltree):
 
 
 def to_dict(xmltree, attr=False):
-    '''
+    """
     Convert an XML tree into a dict. The tree that is passed in must be an
     ElementTree object.
     Args:
         xmltree: An ElementTree object.
         attr: If true, attributes will be parsed. If false, they will be ignored.
 
-    '''
+    """
     if attr:
         return _to_full_dict(xmltree)
     else:
