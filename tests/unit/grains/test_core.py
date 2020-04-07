@@ -1791,3 +1791,44 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(os.environ, {"PATH": path}):
             result = core.path()
         assert result == {"path": path, "systempath": comps}, result
+
+    @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    @patch("os.path.exists")
+    @patch("salt.utils.platform.is_proxy")
+    def test__hw_data_linux_empty(self, is_proxy, exists):
+        is_proxy.return_value = False
+        exists.return_value = True
+        with patch("salt.utils.files.fopen", mock_open(read_data="")):
+            self.assertEqual(
+                core._hw_data({"kernel": "Linux"}),
+                {
+                    "biosreleasedate": "",
+                    "biosversion": "",
+                    "manufacturer": "",
+                    "productname": "",
+                    "serialnumber": "",
+                    "uuid": "",
+                },
+            )
+
+    @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    @patch("os.path.exists")
+    @patch("salt.utils.platform.is_proxy")
+    def test__hw_data_linux_unicode_error(self, is_proxy, exists):
+        def _fopen(*args):
+            class _File:
+                def __enter__(self):
+                    return self
+
+                def __exit__(self, *args):
+                    pass
+
+                def read(self):
+                    raise UnicodeDecodeError("enconding", b"", 1, 2, "reason")
+
+            return _File()
+
+        is_proxy.return_value = False
+        exists.return_value = True
+        with patch("salt.utils.files.fopen", _fopen):
+            self.assertEqual(core._hw_data({"kernel": "Linux"}), {})
