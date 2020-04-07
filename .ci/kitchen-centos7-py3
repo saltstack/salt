@@ -10,7 +10,7 @@ def distro_name = 'centos'
 def distro_version = '7'
 def python_version = 'py3'
 def test_transport = 'ZeroMQ'
-def salt_target_branch = '2019.2.1'
+def salt_target_branch = '2019.2.4'
 def golden_images_branch = '2019.2'
 def nox_passthrough_opts = '--ssh-tests'
 
@@ -42,7 +42,6 @@ wrappedNode('kitchen-slave', global_timeout, '#jenkins-prod-pr') {
         "SALT_TARGET_BRANCH=${salt_target_branch}",
         "GOLDEN_IMAGES_CI_BRANCH=${golden_images_branch}",
         "CODECOV_FLAGS=${distro_name}${distro_version},${python_version},${test_transport.toLowerCase()}",
-        'PATH=~/.rbenv/shims:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/root/bin',
         'RBENV_VERSION=2.6.3',
         "TEST_SUITE=${python_version}",
         "TEST_PLATFORM=${distro_name}-${distro_version}",
@@ -53,7 +52,6 @@ wrappedNode('kitchen-slave', global_timeout, '#jenkins-prod-pr') {
         stage('Clone') {
             cleanWs notFailBuild: true
             checkout scm
-            sh 'git fetch --no-tags https://github.com/saltstack/salt.git +refs/heads/${SALT_TARGET_BRANCH}:refs/remotes/origin/${SALT_TARGET_BRANCH}'
         }
 
         // Setup the kitchen required bundle
