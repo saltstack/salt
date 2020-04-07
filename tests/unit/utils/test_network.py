@@ -5,8 +5,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import socket
 import textwrap
-import pytest
 
+import pytest
 import salt.exceptions
 
 # Import salt libs
