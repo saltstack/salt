@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Package support for Solaris
 
 .. important::
@@ -7,55 +7,60 @@ Package support for Solaris
     minion, and it is using a different module (or gives an error similar to
     *'pkg.install' is not available*), see :ref:`here
     <module-provider-override>`.
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import copy
-import os
 import logging
+import os
 
 # Import salt libs
 import salt.utils.data
-import salt.utils.functools
 import salt.utils.files
+import salt.utils.functools
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, MinionError
 
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
-__virtualname__ = 'pkg'
+__virtualname__ = "pkg"
 
 
 def __virtual__():
-    '''
+    """
     Set the virtual pkg module if the os is Solaris
-    '''
-    if __grains__['os_family'] == 'Solaris' and float(__grains__['kernelrelease']) <= 5.10:
+    """
+    if (
+        __grains__["os_family"] == "Solaris"
+        and float(__grains__["kernelrelease"]) <= 5.10
+    ):
         return __virtualname__
-    return (False,
-            'The solarispkg execution module failed to load: only available '
-            'on Solaris <= 10.')
+    return (
+        False,
+        "The solarispkg execution module failed to load: only available "
+        "on Solaris <= 10.",
+    )
 
 
 def _write_adminfile(kwargs):
-    '''
+    """
     Create a temporary adminfile based on the keyword arguments passed to
     pkg.install.
-    '''
+    """
     # Set the adminfile default variables
-    email = kwargs.get('email', '')
-    instance = kwargs.get('instance', 'quit')
-    partial = kwargs.get('partial', 'nocheck')
-    runlevel = kwargs.get('runlevel', 'nocheck')
-    idepend = kwargs.get('idepend', 'nocheck')
-    rdepend = kwargs.get('rdepend', 'nocheck')
-    space = kwargs.get('space', 'nocheck')
-    setuid = kwargs.get('setuid', 'nocheck')
-    conflict = kwargs.get('conflict', 'nocheck')
-    action = kwargs.get('action', 'nocheck')
-    basedir = kwargs.get('basedir', 'default')
+    email = kwargs.get("email", "")
+    instance = kwargs.get("instance", "quit")
+    partial = kwargs.get("partial", "nocheck")
+    runlevel = kwargs.get("runlevel", "nocheck")
+    idepend = kwargs.get("idepend", "nocheck")
+    rdepend = kwargs.get("rdepend", "nocheck")
+    space = kwargs.get("space", "nocheck")
+    setuid = kwargs.get("setuid", "nocheck")
+    conflict = kwargs.get("conflict", "nocheck")
+    action = kwargs.get("action", "nocheck")
+    basedir = kwargs.get("basedir", "default")
 
     # Make tempfile to hold the adminfile contents.
     adminfile = salt.utils.files.mkstemp(prefix="salt-")
@@ -63,24 +68,24 @@ def _write_adminfile(kwargs):
     def _write_line(fp_, line):
         fp_.write(salt.utils.stringutils.to_str(line))
 
-    with salt.utils.files.fopen(adminfile, 'w') as fp_:
-        _write_line(fp_, 'email={0}\n'.format(email))
-        _write_line(fp_, 'instance={0}\n'.format(instance))
-        _write_line(fp_, 'partial={0}\n'.format(partial))
-        _write_line(fp_, 'runlevel={0}\n'.format(runlevel))
-        _write_line(fp_, 'idepend={0}\n'.format(idepend))
-        _write_line(fp_, 'rdepend={0}\n'.format(rdepend))
-        _write_line(fp_, 'space={0}\n'.format(space))
-        _write_line(fp_, 'setuid={0}\n'.format(setuid))
-        _write_line(fp_, 'conflict={0}\n'.format(conflict))
-        _write_line(fp_, 'action={0}\n'.format(action))
-        _write_line(fp_, 'basedir={0}\n'.format(basedir))
+    with salt.utils.files.fopen(adminfile, "w") as fp_:
+        _write_line(fp_, "email={0}\n".format(email))
+        _write_line(fp_, "instance={0}\n".format(instance))
+        _write_line(fp_, "partial={0}\n".format(partial))
+        _write_line(fp_, "runlevel={0}\n".format(runlevel))
+        _write_line(fp_, "idepend={0}\n".format(idepend))
+        _write_line(fp_, "rdepend={0}\n".format(rdepend))
+        _write_line(fp_, "space={0}\n".format(space))
+        _write_line(fp_, "setuid={0}\n".format(setuid))
+        _write_line(fp_, "conflict={0}\n".format(conflict))
+        _write_line(fp_, "action={0}\n".format(action))
+        _write_line(fp_, "basedir={0}\n".format(basedir))
 
     return adminfile
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
-    '''
+    """
     List the packages currently installed as a dict:
 
     .. code-block:: python
@@ -92,47 +97,47 @@ def list_pkgs(versions_as_list=False, **kwargs):
     .. code-block:: bash
 
         salt '*' pkg.list_pkgs
-    '''
+    """
     versions_as_list = salt.utils.data.is_true(versions_as_list)
     # not yet implemented or not applicable
-    if any([salt.utils.data.is_true(kwargs.get(x))
-            for x in ('removed', 'purge_desired')]):
+    if any(
+        [salt.utils.data.is_true(kwargs.get(x)) for x in ("removed", "purge_desired")]
+    ):
         return {}
 
-    if 'pkg.list_pkgs' in __context__:
+    if "pkg.list_pkgs" in __context__:
         if versions_as_list:
-            return __context__['pkg.list_pkgs']
+            return __context__["pkg.list_pkgs"]
         else:
-            ret = copy.deepcopy(__context__['pkg.list_pkgs'])
-            __salt__['pkg_resource.stringify'](ret)
+            ret = copy.deepcopy(__context__["pkg.list_pkgs"])
+            __salt__["pkg_resource.stringify"](ret)
             return ret
 
     ret = {}
-    cmd = '/usr/bin/pkginfo -x'
+    cmd = "/usr/bin/pkginfo -x"
 
     # Package information returned two lines per package. On even-offset
     # lines, the package name is in the first column. On odd-offset lines, the
     # package version is in the second column.
-    lines = __salt__['cmd.run'](
-            cmd,
-            output_loglevel='trace',
-            python_shell=False).splitlines()
+    lines = __salt__["cmd.run"](
+        cmd, output_loglevel="trace", python_shell=False
+    ).splitlines()
     for index, line in enumerate(lines):
         if index % 2 == 0:
             name = line.split()[0].strip()
         if index % 2 == 1:
             version_num = line.split()[1].strip()
-            __salt__['pkg_resource.add_pkg'](ret, name, version_num)
+            __salt__["pkg_resource.add_pkg"](ret, name, version_num)
 
-    __salt__['pkg_resource.sort_pkglist'](ret)
-    __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
+    __salt__["pkg_resource.sort_pkglist"](ret)
+    __context__["pkg.list_pkgs"] = copy.deepcopy(ret)
     if not versions_as_list:
-        __salt__['pkg_resource.stringify'](ret)
+        __salt__["pkg_resource.stringify"](ret)
     return ret
 
 
 def latest_version(*names, **kwargs):
-    '''
+    """
     Return the latest version of the named package available for upgrade or
     installation. If more than one package name is specified, a dict of
     name/version pairs is returned.
@@ -150,14 +155,14 @@ def latest_version(*names, **kwargs):
     NOTE: As package repositories are not presently supported for Solaris
     pkgadd, this function will always return an empty string for a given
     package.
-    '''
-    kwargs.pop('refresh', True)
+    """
+    kwargs.pop("refresh", True)
 
     ret = {}
     if not names:
-        return ''
+        return ""
     for name in names:
-        ret[name] = ''
+        ret[name] = ""
 
     # Return a string if only one package name passed
     if len(names) == 1:
@@ -166,11 +171,13 @@ def latest_version(*names, **kwargs):
 
 
 # available_version is being deprecated
-available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
+available_version = salt.utils.functools.alias_function(
+    latest_version, "available_version"
+)
 
 
 def upgrade_available(name):
-    '''
+    """
     Check whether or not an upgrade is available for a given package
 
     CLI Example:
@@ -178,12 +185,12 @@ def upgrade_available(name):
     .. code-block:: bash
 
         salt '*' pkg.upgrade_available <package name>
-    '''
-    return latest_version(name) != ''
+    """
+    return latest_version(name) != ""
 
 
 def version(*names, **kwargs):
-    '''
+    """
     Returns a string representing the package version or an empty string if not
     installed. If more than one package name is specified, a dict of
     name/version pairs is returned.
@@ -194,12 +201,12 @@ def version(*names, **kwargs):
 
         salt '*' pkg.version <package name>
         salt '*' pkg.version <package1> <package2> <package3> ...
-    '''
-    return __salt__['pkg_resource.version'](*names, **kwargs)
+    """
+    return __salt__["pkg_resource.version"](*names, **kwargs)
 
 
-def install(name=None, sources=None, saltenv='base', **kwargs):
-    '''
+def install(name=None, sources=None, saltenv="base", **kwargs):
+    """
     Install the passed package. Can install packages from the following
     sources:
 
@@ -320,15 +327,14 @@ def install(name=None, sources=None, saltenv='base', **kwargs):
     .. note::
         The ID declaration is ignored, as the package name is read from the
         ``sources`` parameter.
-    '''
-    if salt.utils.data.is_true(kwargs.get('refresh')):
-        log.warning('\'refresh\' argument not implemented for solarispkg '
-                    'module')
+    """
+    if salt.utils.data.is_true(kwargs.get("refresh")):
+        log.warning("'refresh' argument not implemented for solarispkg " "module")
 
     # pkgs is not supported, but must be passed here for API compatibility
-    pkgs = kwargs.pop('pkgs', None)
+    pkgs = kwargs.pop("pkgs", None)
     try:
-        pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
+        pkg_params, pkg_type = __salt__["pkg_resource.parse_targets"](
             name, pkgs, sources, **kwargs
         )
     except MinionError as exc:
@@ -342,41 +348,41 @@ def install(name=None, sources=None, saltenv='base', **kwargs):
         return {}
 
     try:
-        if 'admin_source' in kwargs:
-            adminfile = __salt__['cp.cache_file'](kwargs['admin_source'], saltenv)
+        if "admin_source" in kwargs:
+            adminfile = __salt__["cp.cache_file"](kwargs["admin_source"], saltenv)
         else:
             adminfile = _write_adminfile(kwargs)
 
         old = list_pkgs()
-        cmd_prefix = ['/usr/sbin/pkgadd', '-n', '-a', adminfile]
+        cmd_prefix = ["/usr/sbin/pkgadd", "-n", "-a", adminfile]
 
         # Only makes sense in a global zone but works fine in non-globals.
-        if kwargs.get('current_zone_only') == 'True':
-            cmd_prefix += '-G '
+        if kwargs.get("current_zone_only") == "True":
+            cmd_prefix += "-G "
 
         errors = []
         for pkg in pkg_params:
-            cmd = cmd_prefix + ['-d', pkg, 'all']
+            cmd = cmd_prefix + ["-d", pkg, "all"]
             # Install the package{s}
-            out = __salt__['cmd.run_all'](cmd,
-                                          output_loglevel='trace',
-                                          python_shell=False)
+            out = __salt__["cmd.run_all"](
+                cmd, output_loglevel="trace", python_shell=False
+            )
 
-            if out['retcode'] != 0 and out['stderr']:
-                errors.append(out['stderr'])
+            if out["retcode"] != 0 and out["stderr"]:
+                errors.append(out["stderr"])
 
-        __context__.pop('pkg.list_pkgs', None)
+        __context__.pop("pkg.list_pkgs", None)
         new = list_pkgs()
         ret = salt.utils.data.compare_dicts(old, new)
 
         if errors:
             raise CommandExecutionError(
-                'Problem encountered installing package(s)',
-                info={'errors': errors, 'changes': ret}
+                "Problem encountered installing package(s)",
+                info={"errors": errors, "changes": ret},
             )
     finally:
         # Remove the temp adminfile
-        if 'admin_source' not in kwargs:
+        if "admin_source" not in kwargs:
             try:
                 os.remove(adminfile)
             except (NameError, OSError):
@@ -385,8 +391,8 @@ def install(name=None, sources=None, saltenv='base', **kwargs):
     return ret
 
 
-def remove(name=None, pkgs=None, saltenv='base', **kwargs):
-    '''
+def remove(name=None, pkgs=None, saltenv="base", **kwargs):
+    """
     Remove packages with pkgrm
 
     name
@@ -439,9 +445,9 @@ def remove(name=None, pkgs=None, saltenv='base', **kwargs):
         salt '*' pkg.remove SUNWgit
         salt '*' pkg.remove <package1>,<package2>,<package3>
         salt '*' pkg.remove pkgs='["foo", "bar"]'
-    '''
+    """
     try:
-        pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
+        pkg_params = __salt__["pkg_resource.parse_targets"](name, pkgs)[0]
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
@@ -451,35 +457,33 @@ def remove(name=None, pkgs=None, saltenv='base', **kwargs):
         return {}
 
     try:
-        if 'admin_source' in kwargs:
-            adminfile = __salt__['cp.cache_file'](kwargs['admin_source'], saltenv)
+        if "admin_source" in kwargs:
+            adminfile = __salt__["cp.cache_file"](kwargs["admin_source"], saltenv)
         else:
             # Make tempfile to hold the adminfile contents.
             adminfile = _write_adminfile(kwargs)
 
         # Remove the package
-        cmd = ['/usr/sbin/pkgrm', '-n', '-a', adminfile] + targets
-        out = __salt__['cmd.run_all'](cmd,
-                                      python_shell=False,
-                                      output_loglevel='trace')
+        cmd = ["/usr/sbin/pkgrm", "-n", "-a", adminfile] + targets
+        out = __salt__["cmd.run_all"](cmd, python_shell=False, output_loglevel="trace")
 
-        if out['retcode'] != 0 and out['stderr']:
-            errors = [out['stderr']]
+        if out["retcode"] != 0 and out["stderr"]:
+            errors = [out["stderr"]]
         else:
             errors = []
 
-        __context__.pop('pkg.list_pkgs', None)
+        __context__.pop("pkg.list_pkgs", None)
         new = list_pkgs()
         ret = salt.utils.data.compare_dicts(old, new)
 
         if errors:
             raise CommandExecutionError(
-                'Problem encountered removing package(s)',
-                info={'errors': errors, 'changes': ret}
+                "Problem encountered removing package(s)",
+                info={"errors": errors, "changes": ret},
             )
     finally:
         # Remove the temp adminfile
-        if 'admin_source' not in kwargs:
+        if "admin_source" not in kwargs:
             try:
                 os.remove(adminfile)
             except (NameError, OSError):
@@ -489,7 +493,7 @@ def remove(name=None, pkgs=None, saltenv='base', **kwargs):
 
 
 def purge(name=None, pkgs=None, **kwargs):
-    '''
+    """
     Package purges are not supported, this function is identical to
     ``remove()``.
 
@@ -515,5 +519,5 @@ def purge(name=None, pkgs=None, **kwargs):
         salt '*' pkg.purge <package name>
         salt '*' pkg.purge <package1>,<package2>,<package3>
         salt '*' pkg.purge pkgs='["foo", "bar"]'
-    '''
+    """
     return remove(name=name, pkgs=pkgs, **kwargs)
