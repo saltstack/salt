@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Manage CloudTrail Objects
 =========================
 
@@ -50,10 +50,11 @@ config:
             - keyid: GKTADJGHEIQSXMKKRBJ08H
             - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 import os
 
@@ -67,21 +68,29 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     Only load if boto is available.
-    '''
-    return 'boto_cloudwatch_event' if 'boto_cloudwatch_event.exists' in __salt__ else False
+    """
+    return (
+        "boto_cloudwatch_event" if "boto_cloudwatch_event.exists" in __salt__ else False
+    )
 
 
-def present(name, Name=None,
-           ScheduleExpression=None,
-           EventPattern=None,
-           Description=None,
-           RoleArn=None,
-           State=None,
-           Targets=None,
-           region=None, key=None, keyid=None, profile=None):
-    '''
+def present(
+    name,
+    Name=None,
+    ScheduleExpression=None,
+    EventPattern=None,
+    Description=None,
+    RoleArn=None,
+    State=None,
+    Targets=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+):
+    """
     Ensure trail exists.
 
     name
@@ -123,12 +132,8 @@ def present(name, Name=None,
     profile
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
-    '''
-    ret = {'name': Name,
-           'result': True,
-           'comment': '',
-           'changes': {}
-           }
+    """
+    ret = {"name": Name, "result": True, "comment": "", "changes": {}}
 
     Name = Name if Name else name
 
@@ -137,139 +142,194 @@ def present(name, Name=None,
     if Targets is None:
         Targets = []
 
-    r = __salt__['boto_cloudwatch_event.exists'](Name=Name,
-           region=region, key=key, keyid=keyid, profile=profile)
+    r = __salt__["boto_cloudwatch_event.exists"](
+        Name=Name, region=region, key=key, keyid=keyid, profile=profile
+    )
 
-    if 'error' in r:
-        ret['result'] = False
-        ret['comment'] = 'Failed to create event rule: {0}.'.format(r['error']['message'])
+    if "error" in r:
+        ret["result"] = False
+        ret["comment"] = "Failed to create event rule: {0}.".format(
+            r["error"]["message"]
+        )
         return ret
 
-    if not r.get('exists'):
-        if __opts__['test']:
-            ret['comment'] = 'CloudWatch event rule {0} is set to be created.'.format(Name)
-            ret['result'] = None
+    if not r.get("exists"):
+        if __opts__["test"]:
+            ret["comment"] = "CloudWatch event rule {0} is set to be created.".format(
+                Name
+            )
+            ret["result"] = None
             return ret
-        r = __salt__['boto_cloudwatch_event.create_or_update'](Name=Name,
-                   ScheduleExpression=ScheduleExpression,
-                   EventPattern=EventPattern,
-                   Description=Description,
-                   RoleArn=RoleArn,
-                   State=State,
-                   region=region, key=key, keyid=keyid, profile=profile)
-        if not r.get('created'):
-            ret['result'] = False
-            ret['comment'] = 'Failed to create event rule: {0}.'.format(r['error']['message'])
+        r = __salt__["boto_cloudwatch_event.create_or_update"](
+            Name=Name,
+            ScheduleExpression=ScheduleExpression,
+            EventPattern=EventPattern,
+            Description=Description,
+            RoleArn=RoleArn,
+            State=State,
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
+        )
+        if not r.get("created"):
+            ret["result"] = False
+            ret["comment"] = "Failed to create event rule: {0}.".format(
+                r["error"]["message"]
+            )
             return ret
-        _describe = __salt__['boto_cloudwatch_event.describe'](Name,
-                                   region=region, key=key, keyid=keyid, profile=profile)
-        if 'error' in _describe:
-            ret['result'] = False
-            ret['comment'] = 'Failed to create event rule: {0}.'.format(_describe['error']['message'])
-            ret['changes'] = {}
+        _describe = __salt__["boto_cloudwatch_event.describe"](
+            Name, region=region, key=key, keyid=keyid, profile=profile
+        )
+        if "error" in _describe:
+            ret["result"] = False
+            ret["comment"] = "Failed to create event rule: {0}.".format(
+                _describe["error"]["message"]
+            )
+            ret["changes"] = {}
             return ret
-        ret['changes']['old'] = {'rule': None}
-        ret['changes']['new'] = _describe
-        ret['comment'] = 'CloudTrail {0} created.'.format(Name)
+        ret["changes"]["old"] = {"rule": None}
+        ret["changes"]["new"] = _describe
+        ret["comment"] = "CloudTrail {0} created.".format(Name)
 
         if bool(Targets):
-            r = __salt__['boto_cloudwatch_event.put_targets'](Rule=Name,
-                   Targets=Targets,
-                   region=region, key=key, keyid=keyid, profile=profile)
-            if 'error' in r:
-                ret['result'] = False
-                ret['comment'] = 'Failed to create event rule: {0}.'.format(r['error']['message'])
-                ret['changes'] = {}
+            r = __salt__["boto_cloudwatch_event.put_targets"](
+                Rule=Name,
+                Targets=Targets,
+                region=region,
+                key=key,
+                keyid=keyid,
+                profile=profile,
+            )
+            if "error" in r:
+                ret["result"] = False
+                ret["comment"] = "Failed to create event rule: {0}.".format(
+                    r["error"]["message"]
+                )
+                ret["changes"] = {}
                 return ret
-            ret['changes']['new']['rule']['Targets'] = Targets
+            ret["changes"]["new"]["rule"]["Targets"] = Targets
         return ret
 
-    ret['comment'] = os.linesep.join([ret['comment'], 'CloudWatch event rule {0} is present.'.format(Name)])
-    ret['changes'] = {}
+    ret["comment"] = os.linesep.join(
+        [ret["comment"], "CloudWatch event rule {0} is present.".format(Name)]
+    )
+    ret["changes"] = {}
     # trail exists, ensure config matches
-    _describe = __salt__['boto_cloudwatch_event.describe'](Name=Name,
-                                  region=region, key=key, keyid=keyid, profile=profile)
-    if 'error' in _describe:
-        ret['result'] = False
-        ret['comment'] = 'Failed to update event rule: {0}.'.format(_describe['error']['message'])
-        ret['changes'] = {}
+    _describe = __salt__["boto_cloudwatch_event.describe"](
+        Name=Name, region=region, key=key, keyid=keyid, profile=profile
+    )
+    if "error" in _describe:
+        ret["result"] = False
+        ret["comment"] = "Failed to update event rule: {0}.".format(
+            _describe["error"]["message"]
+        )
+        ret["changes"] = {}
         return ret
-    _describe = _describe.get('rule')
+    _describe = _describe.get("rule")
 
-    r = __salt__['boto_cloudwatch_event.list_targets'](Rule=Name,
-                   region=region, key=key, keyid=keyid, profile=profile)
-    if 'error' in r:
-        ret['result'] = False
-        ret['comment'] = 'Failed to update event rule: {0}.'.format(r['error']['message'])
-        ret['changes'] = {}
+    r = __salt__["boto_cloudwatch_event.list_targets"](
+        Rule=Name, region=region, key=key, keyid=keyid, profile=profile
+    )
+    if "error" in r:
+        ret["result"] = False
+        ret["comment"] = "Failed to update event rule: {0}.".format(
+            r["error"]["message"]
+        )
+        ret["changes"] = {}
         return ret
-    _describe['Targets'] = r.get('targets', [])
+    _describe["Targets"] = r.get("targets", [])
 
     need_update = False
-    rule_vars = {'ScheduleExpression': 'ScheduleExpression',
-                 'EventPattern': 'EventPattern',
-                 'Description': 'Description',
-                 'RoleArn': 'RoleArn',
-                 'State': 'State',
-                 'Targets': 'Targets'}
+    rule_vars = {
+        "ScheduleExpression": "ScheduleExpression",
+        "EventPattern": "EventPattern",
+        "Description": "Description",
+        "RoleArn": "RoleArn",
+        "State": "State",
+        "Targets": "Targets",
+    }
     for invar, outvar in six.iteritems(rule_vars):
         if _describe[outvar] != locals()[invar]:
             need_update = True
-            ret['changes'].setdefault('new', {})[invar] = locals()[invar]
-            ret['changes'].setdefault('old', {})[invar] = _describe[outvar]
+            ret["changes"].setdefault("new", {})[invar] = locals()[invar]
+            ret["changes"].setdefault("old", {})[invar] = _describe[outvar]
 
     if need_update:
-        if __opts__['test']:
-            msg = 'CloudWatch event rule {0} set to be modified.'.format(Name)
-            ret['comment'] = msg
-            ret['result'] = None
+        if __opts__["test"]:
+            msg = "CloudWatch event rule {0} set to be modified.".format(Name)
+            ret["comment"] = msg
+            ret["result"] = None
             return ret
 
-        ret['comment'] = os.linesep.join([ret['comment'], 'CloudWatch event rule to be modified'])
-        r = __salt__['boto_cloudwatch_event.create_or_update'](Name=Name,
-                   ScheduleExpression=ScheduleExpression,
-                   EventPattern=EventPattern,
-                   Description=Description,
-                   RoleArn=RoleArn,
-                   State=State,
-                   region=region, key=key, keyid=keyid, profile=profile)
-        if not r.get('created'):
-            ret['result'] = False
-            ret['comment'] = 'Failed to update event rule: {0}.'.format(r['error']['message'])
-            ret['changes'] = {}
+        ret["comment"] = os.linesep.join(
+            [ret["comment"], "CloudWatch event rule to be modified"]
+        )
+        r = __salt__["boto_cloudwatch_event.create_or_update"](
+            Name=Name,
+            ScheduleExpression=ScheduleExpression,
+            EventPattern=EventPattern,
+            Description=Description,
+            RoleArn=RoleArn,
+            State=State,
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
+        )
+        if not r.get("created"):
+            ret["result"] = False
+            ret["comment"] = "Failed to update event rule: {0}.".format(
+                r["error"]["message"]
+            )
+            ret["changes"] = {}
             return ret
 
-        if _describe['Targets'] != Targets:
-            removes = [i.get('Id') for i in _describe['Targets']]
+        if _describe["Targets"] != Targets:
+            removes = [i.get("Id") for i in _describe["Targets"]]
             log.error(Targets)
             if bool(Targets):
                 for target in Targets:
-                    tid = target.get('Id', None)
+                    tid = target.get("Id", None)
                     if tid is not None and tid in removes:
                         ix = removes.index(tid)
                         removes.pop(ix)
-                r = __salt__['boto_cloudwatch_event.put_targets'](Rule=Name,
-                   Targets=Targets,
-                   region=region, key=key, keyid=keyid, profile=profile)
-                if 'error' in r:
-                    ret['result'] = False
-                    ret['comment'] = 'Failed to update event rule: {0}.'.format(r['error']['message'])
-                    ret['changes'] = {}
+                r = __salt__["boto_cloudwatch_event.put_targets"](
+                    Rule=Name,
+                    Targets=Targets,
+                    region=region,
+                    key=key,
+                    keyid=keyid,
+                    profile=profile,
+                )
+                if "error" in r:
+                    ret["result"] = False
+                    ret["comment"] = "Failed to update event rule: {0}.".format(
+                        r["error"]["message"]
+                    )
+                    ret["changes"] = {}
                     return ret
             if bool(removes):
-                r = __salt__['boto_cloudwatch_event.remove_targets'](Rule=Name,
-                           Ids=removes,
-                           region=region, key=key, keyid=keyid, profile=profile)
-                if 'error' in r:
-                    ret['result'] = False
-                    ret['comment'] = 'Failed to update event rule: {0}.'.format(r['error']['message'])
-                    ret['changes'] = {}
+                r = __salt__["boto_cloudwatch_event.remove_targets"](
+                    Rule=Name,
+                    Ids=removes,
+                    region=region,
+                    key=key,
+                    keyid=keyid,
+                    profile=profile,
+                )
+                if "error" in r:
+                    ret["result"] = False
+                    ret["comment"] = "Failed to update event rule: {0}.".format(
+                        r["error"]["message"]
+                    )
+                    ret["changes"] = {}
                     return ret
     return ret
 
 
 def absent(name, Name=None, region=None, key=None, keyid=None, profile=None):
-    '''
+    """
     Ensure CloudWatch event rule with passed properties is absent.
 
     name
@@ -291,62 +351,67 @@ def absent(name, Name=None, region=None, key=None, keyid=None, profile=None):
     profile
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
-    '''
+    """
 
-    ret = {'name': Name,
-           'result': True,
-           'comment': '',
-           'changes': {}
-           }
+    ret = {"name": Name, "result": True, "comment": "", "changes": {}}
 
     Name = Name if Name else name
 
-    r = __salt__['boto_cloudwatch_event.exists'](Name,
-                       region=region, key=key, keyid=keyid, profile=profile)
-    if 'error' in r:
-        ret['result'] = False
-        ret['comment'] = 'Failed to delete event rule: {0}.'.format(r['error']['message'])
+    r = __salt__["boto_cloudwatch_event.exists"](
+        Name, region=region, key=key, keyid=keyid, profile=profile
+    )
+    if "error" in r:
+        ret["result"] = False
+        ret["comment"] = "Failed to delete event rule: {0}.".format(
+            r["error"]["message"]
+        )
         return ret
 
-    if r and not r['exists']:
-        ret['comment'] = 'CloudWatch event rule {0} does not exist.'.format(Name)
+    if r and not r["exists"]:
+        ret["comment"] = "CloudWatch event rule {0} does not exist.".format(Name)
         return ret
 
-    if __opts__['test']:
-        ret['comment'] = 'CloudWatch event rule {0} is set to be removed.'.format(Name)
-        ret['result'] = None
+    if __opts__["test"]:
+        ret["comment"] = "CloudWatch event rule {0} is set to be removed.".format(Name)
+        ret["result"] = None
         return ret
 
     # must remove all targets first
-    r = __salt__['boto_cloudwatch_event.list_targets'](Rule=Name,
-                                    region=region, key=key,
-                                    keyid=keyid, profile=profile)
-    if not r.get('targets'):
-        ret['result'] = False
-        ret['comment'] = 'Failed to delete event rule: {0}.'.format(r['error']['message'])
+    r = __salt__["boto_cloudwatch_event.list_targets"](
+        Rule=Name, region=region, key=key, keyid=keyid, profile=profile
+    )
+    if not r.get("targets"):
+        ret["result"] = False
+        ret["comment"] = "Failed to delete event rule: {0}.".format(
+            r["error"]["message"]
+        )
         return ret
-    ids = [t.get('Id') for t in r['targets']]
+    ids = [t.get("Id") for t in r["targets"]]
     if bool(ids):
-        r = __salt__['boto_cloudwatch_event.remove_targets'](Rule=Name, Ids=ids,
-                                    region=region, key=key,
-                                    keyid=keyid, profile=profile)
-        if 'error' in r:
-            ret['result'] = False
-            ret['comment'] = 'Failed to delete event rule: {0}.'.format(r['error']['message'])
+        r = __salt__["boto_cloudwatch_event.remove_targets"](
+            Rule=Name, Ids=ids, region=region, key=key, keyid=keyid, profile=profile
+        )
+        if "error" in r:
+            ret["result"] = False
+            ret["comment"] = "Failed to delete event rule: {0}.".format(
+                r["error"]["message"]
+            )
             return ret
-        if r.get('failures'):
-            ret['result'] = False
-            ret['comment'] = 'Failed to delete event rule: {0}.'.format(r['failures'])
+        if r.get("failures"):
+            ret["result"] = False
+            ret["comment"] = "Failed to delete event rule: {0}.".format(r["failures"])
             return ret
 
-    r = __salt__['boto_cloudwatch_event.delete'](Name,
-                                    region=region, key=key,
-                                    keyid=keyid, profile=profile)
-    if not r['deleted']:
-        ret['result'] = False
-        ret['comment'] = 'Failed to delete event rule: {0}.'.format(r['error']['message'])
+    r = __salt__["boto_cloudwatch_event.delete"](
+        Name, region=region, key=key, keyid=keyid, profile=profile
+    )
+    if not r["deleted"]:
+        ret["result"] = False
+        ret["comment"] = "Failed to delete event rule: {0}.".format(
+            r["error"]["message"]
+        )
         return ret
-    ret['changes']['old'] = {'rule': Name}
-    ret['changes']['new'] = {'rule': None}
-    ret['comment'] = 'CloudWatch event rule {0} deleted.'.format(Name)
+    ret["changes"]["old"] = {"rule": Name}
+    ret["changes"]["new"] = {"rule": None}
+    ret["comment"] = "CloudWatch event rule {0} deleted.".format(Name)
     return ret
