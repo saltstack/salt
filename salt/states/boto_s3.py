@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Manage S3 Resources
 =================
 
@@ -47,10 +47,11 @@ config:
             - profile: my-profile
 
 :depends: boto3
-'''
+"""
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import copy
 import difflib
 import logging
@@ -63,48 +64,49 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     Only load if boto is available.
-    '''
-    if 'boto_s3.get_object_metadata' not in __salt__:
+    """
+    if "boto_s3.get_object_metadata" not in __salt__:
         return False
-    return 'boto_s3'
+    return "boto_s3"
 
 
 # Keys for `extra_args` that we support.
 # Currently, this excludes the `ACL` and `Grant*` keys.
 # Most keys are stored and returned by AWS:
-STORED_EXTRA_ARGS = frozenset([
-    'CacheControl',
-    'ContentDisposition',
-    'ContentEncoding',
-    'ContentLanguage',
-    'ContentType',
-    'Expires',
-    'Metadata',
-    'ServerSideEncryption',
-    'SSECustomerAlgorithm',
-    'SSECustomerKeyMD5',
-    'SSEKMSKeyId',
-    'StorageClass',
-    'WebsiteRedirectLocation',
-])
+STORED_EXTRA_ARGS = frozenset(
+    [
+        "CacheControl",
+        "ContentDisposition",
+        "ContentEncoding",
+        "ContentLanguage",
+        "ContentType",
+        "Expires",
+        "Metadata",
+        "ServerSideEncryption",
+        "SSECustomerAlgorithm",
+        "SSECustomerKeyMD5",
+        "SSEKMSKeyId",
+        "StorageClass",
+        "WebsiteRedirectLocation",
+    ]
+)
 # However, some keys are only specified on upload,
 # but won't be stored/returned by AWS as metadata:
-UPLOAD_ONLY_EXTRA_ARGS = frozenset([
-    # AWS doesn't store customer provided keys,
-    # can use SSECustomerKeyMD5 to check for correct key
-    'SSECustomerKey',
-    'RequestPayer',
-])
+UPLOAD_ONLY_EXTRA_ARGS = frozenset(
+    [
+        # AWS doesn't store customer provided keys,
+        # can use SSECustomerKeyMD5 to check for correct key
+        "SSECustomerKey",
+        "RequestPayer",
+    ]
+)
 # Some extra args must also be passed along to retrive metadata,
 # namely SSE-C (customer-provided encryption) and RequestPayer args.
-GET_METADATA_EXTRA_ARGS = frozenset([
-    'SSECustomerAlgorithm',
-    'SSECustomerKey',
-    'SSECustomerKeyMD5',
-    'RequestPayer',
-])
+GET_METADATA_EXTRA_ARGS = frozenset(
+    ["SSECustomerAlgorithm", "SSECustomerKey", "SSECustomerKeyMD5", "RequestPayer"]
+)
 
 
 def object_present(
@@ -112,13 +114,13 @@ def object_present(
     source=None,
     hash_type=None,
     extra_args=None,
-    extra_args_from_pillar='boto_s3_object_extra_args',
+    extra_args_from_pillar="boto_s3_object_extra_args",
     region=None,
     key=None,
     keyid=None,
     profile=None,
 ):
-    '''
+    """
     Ensure object exists in S3.
 
     name
@@ -162,73 +164,69 @@ def object_present(
     profile
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
-    '''
+    """
     ret = {
-        'name': name,
-        'comment': '',
-        'changes': {},
+        "name": name,
+        "comment": "",
+        "changes": {},
     }
 
     if extra_args is None:
         extra_args = {}
     combined_extra_args = copy.deepcopy(
-        __salt__['config.option'](extra_args_from_pillar, {})
+        __salt__["config.option"](extra_args_from_pillar, {})
     )
-    __utils__['dictupdate.update'](combined_extra_args, extra_args)
+    __utils__["dictupdate.update"](combined_extra_args, extra_args)
     if combined_extra_args:
         supported_args = STORED_EXTRA_ARGS | UPLOAD_ONLY_EXTRA_ARGS
         combined_extra_args_keys = frozenset(six.iterkeys(combined_extra_args))
         extra_keys = combined_extra_args_keys - supported_args
         if extra_keys:
-            msg = 'extra_args keys {0} are not supported'.format(extra_keys)
-            return {'error': msg}
+            msg = "extra_args keys {0} are not supported".format(extra_keys)
+            return {"error": msg}
 
     # Get the hash of the local file
     if not hash_type:
-        hash_type = __opts__['hash_type']
+        hash_type = __opts__["hash_type"]
     try:
         digest = salt.utils.hashutils.get_hash(source, form=hash_type)
     except IOError as e:
-        ret['result'] = False
-        ret['comment'] = "Could not read local file {0}: {1}".format(
-            source,
-            e,
-        )
+        ret["result"] = False
+        ret["comment"] = "Could not read local file {0}: {1}".format(source, e,)
         return ret
     except ValueError as e:
         # Invalid hash type exception from get_hash
-        ret['result'] = False
-        ret['comment'] = 'Could not hash local file {0}: {1}'.format(
-            source,
-            e,
-        )
+        ret["result"] = False
+        ret["comment"] = "Could not hash local file {0}: {1}".format(source, e,)
         return ret
 
-    HASH_METADATA_KEY = 'salt_managed_content_hash'
-    combined_extra_args.setdefault('Metadata', {})
-    if HASH_METADATA_KEY in combined_extra_args['Metadata']:
+    HASH_METADATA_KEY = "salt_managed_content_hash"
+    combined_extra_args.setdefault("Metadata", {})
+    if HASH_METADATA_KEY in combined_extra_args["Metadata"]:
         # Be lenient, silently allow hash metadata key if digest value matches
-        if combined_extra_args['Metadata'][HASH_METADATA_KEY] != digest:
-            ret['result'] = False
-            ret['comment'] = (
-                'Salt uses the {0} metadata key internally,'
-                'do not pass it to the boto_s3.object_present state.'
+        if combined_extra_args["Metadata"][HASH_METADATA_KEY] != digest:
+            ret["result"] = False
+            ret["comment"] = (
+                "Salt uses the {0} metadata key internally,"
+                "do not pass it to the boto_s3.object_present state."
             ).format(HASH_METADATA_KEY)
             return ret
-    combined_extra_args['Metadata'][HASH_METADATA_KEY] = digest
+    combined_extra_args["Metadata"][HASH_METADATA_KEY] = digest
     # Remove upload-only keys from full set of extra_args
     # to create desired dict for comparisons
     desired_metadata = dict(
-        (k, v) for k, v in six.iteritems(combined_extra_args)
+        (k, v)
+        for k, v in six.iteritems(combined_extra_args)
         if k not in UPLOAD_ONLY_EXTRA_ARGS
     )
 
     # Some args (SSE-C, RequestPayer) must also be passed to get_metadata
     metadata_extra_args = dict(
-        (k, v) for k, v in six.iteritems(combined_extra_args)
+        (k, v)
+        for k, v in six.iteritems(combined_extra_args)
         if k in GET_METADATA_EXTRA_ARGS
     )
-    r = __salt__['boto_s3.get_object_metadata'](
+    r = __salt__["boto_s3.get_object_metadata"](
         name,
         extra_args=metadata_extra_args,
         region=region,
@@ -236,56 +234,54 @@ def object_present(
         keyid=keyid,
         profile=profile,
     )
-    if 'error' in r:
-        ret['result'] = False
-        ret['comment'] = 'Failed to check if S3 object exists: {0}.'.format(
-            r['error'],
-        )
+    if "error" in r:
+        ret["result"] = False
+        ret["comment"] = "Failed to check if S3 object exists: {0}.".format(r["error"],)
         return ret
 
-    if r['result']:
+    if r["result"]:
         # Check if content and metadata match
         # A hash of the content is injected into the metadata,
         # so we can combine both checks into one
         # Only check metadata keys specified by the user,
         # ignore other fields that have been set
         s3_metadata = dict(
-            (k, r['result'][k]) for k in STORED_EXTRA_ARGS
-            if k in desired_metadata and k in r['result']
+            (k, r["result"][k])
+            for k in STORED_EXTRA_ARGS
+            if k in desired_metadata and k in r["result"]
         )
         if s3_metadata == desired_metadata:
-            ret['result'] = True
-            ret['comment'] = 'S3 object {0} is present.'.format(name)
+            ret["result"] = True
+            ret["comment"] = "S3 object {0} is present.".format(name)
             return ret
-        action = 'update'
+        action = "update"
     else:
         s3_metadata = None
-        action = 'create'
+        action = "create"
 
     def _yaml_safe_dump(attrs):
-        '''
+        """
         Safely dump YAML using a readable flow style
-        '''
-        dumper_name = 'IndentedSafeOrderedDumper'
-        dumper = __utils__['yaml.get_dumper'](dumper_name)
-        return __utils__['yaml.dump'](
-            attrs,
-            default_flow_style=False,
-            Dumper=dumper)
+        """
+        dumper_name = "IndentedSafeOrderedDumper"
+        dumper = __utils__["yaml.get_dumper"](dumper_name)
+        return __utils__["yaml.dump"](attrs, default_flow_style=False, Dumper=dumper)
 
-    changes_diff = ''.join(difflib.unified_diff(
-        _yaml_safe_dump(s3_metadata).splitlines(True),
-        _yaml_safe_dump(desired_metadata).splitlines(True),
-    ))
+    changes_diff = "".join(
+        difflib.unified_diff(
+            _yaml_safe_dump(s3_metadata).splitlines(True),
+            _yaml_safe_dump(desired_metadata).splitlines(True),
+        )
+    )
 
-    if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = 'S3 object {0} set to be {1}d.'.format(name, action)
-        ret['comment'] += '\nChanges:\n{0}'.format(changes_diff)
-        ret['changes'] = {'diff': changes_diff}
+    if __opts__["test"]:
+        ret["result"] = None
+        ret["comment"] = "S3 object {0} set to be {1}d.".format(name, action)
+        ret["comment"] += "\nChanges:\n{0}".format(changes_diff)
+        ret["changes"] = {"diff": changes_diff}
         return ret
 
-    r = __salt__['boto_s3.upload_file'](
+    r = __salt__["boto_s3.upload_file"](
         source,
         name,
         extra_args=combined_extra_args,
@@ -295,16 +291,13 @@ def object_present(
         profile=profile,
     )
 
-    if 'error' in r:
-        ret['result'] = False
-        ret['comment'] = 'Failed to {0} S3 object: {1}.'.format(
-            action,
-            r['error'],
-        )
+    if "error" in r:
+        ret["result"] = False
+        ret["comment"] = "Failed to {0} S3 object: {1}.".format(action, r["error"],)
         return ret
 
-    ret['result'] = True
-    ret['comment'] = 'S3 object {0} {1}d.'.format(name, action)
-    ret['comment'] += '\nChanges:\n{0}'.format(changes_diff)
-    ret['changes'] = {'diff': changes_diff}
+    ret["result"] = True
+    ret["comment"] = "S3 object {0} {1}d.".format(name, action)
+    ret["comment"] += "\nChanges:\n{0}".format(changes_diff)
+    ret["changes"] = {"diff": changes_diff}
     return ret
