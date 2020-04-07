@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Provide external pillar data from RethinkDB
 
 .. versionadded:: 2018.3.0
@@ -41,7 +41,7 @@ In the example above the following happens.
 
 Module Documentation
 ====================
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libraries
@@ -50,18 +50,19 @@ import logging
 # Import 3rd party libraries
 try:
     import rethinkdb
+
     HAS_RETHINKDB = True
 except ImportError:
     HAS_RETHINKDB = False
 
-__virtualname__ = 'rethinkdb'
+__virtualname__ = "rethinkdb"
 
 __opts__ = {
-    'rethinkdb.host': 'salt',
-    'rethinkdb.port': '28015',
-    'rethinkdb.database': 'salt',
-    'rethinkdb.username': None,
-    'rethinkdb.password': None
+    "rethinkdb.host": "salt",
+    "rethinkdb.port": "28015",
+    "rethinkdb.database": "salt",
+    "rethinkdb.username": None,
+    "rethinkdb.password": None,
 }
 
 
@@ -75,13 +76,10 @@ def __virtual__():
 log = logging.getLogger(__name__)
 
 
-def ext_pillar(minion_id,
-               pillar,
-               table='pillar',
-               id_field=None,
-               field=None,
-               pillar_key=None):
-    '''
+def ext_pillar(
+    minion_id, pillar, table="pillar", id_field=None, field=None, pillar_key=None
+):
+    """
     Collect minion external pillars from a RethinkDB database
 
     Arguments:
@@ -94,47 +92,58 @@ def ext_pillar(minion_id,
     * `pillar_key`: The salt-master will nest found external pillars under
       this key before merging into the minion pillars. If blank, external
       pillars will be merged at top level
-    '''
-    host = __opts__['rethinkdb.host']
-    port = __opts__['rethinkdb.port']
-    database = __opts__['rethinkdb.database']
-    username = __opts__['rethinkdb.username']
-    password = __opts__['rethinkdb.password']
+    """
+    host = __opts__["rethinkdb.host"]
+    port = __opts__["rethinkdb.port"]
+    database = __opts__["rethinkdb.database"]
+    username = __opts__["rethinkdb.username"]
+    password = __opts__["rethinkdb.password"]
 
-    log.debug('Connecting to %s:%s as user \'%s\' for RethinkDB ext_pillar',
-              host, port, username)
+    log.debug(
+        "Connecting to %s:%s as user '%s' for RethinkDB ext_pillar",
+        host,
+        port,
+        username,
+    )
 
     # Connect to the database
-    conn = rethinkdb.connect(host=host,
-                             port=port,
-                             db=database,
-                             user=username,
-                             password=password)
+    conn = rethinkdb.connect(
+        host=host, port=port, db=database, user=username, password=password
+    )
 
     data = None
 
     try:
 
         if id_field:
-            log.debug('ext_pillar.rethinkdb: looking up pillar. '
-                      'table: %s, field: %s, minion: %s',
-                      table, id_field, minion_id)
+            log.debug(
+                "ext_pillar.rethinkdb: looking up pillar. "
+                "table: %s, field: %s, minion: %s",
+                table,
+                id_field,
+                minion_id,
+            )
 
             if field:
-                data = rethinkdb.table(table).filter(
-                    {id_field: minion_id}).pluck(field).run(conn)
+                data = (
+                    rethinkdb.table(table)
+                    .filter({id_field: minion_id})
+                    .pluck(field)
+                    .run(conn)
+                )
             else:
-                data = rethinkdb.table(table).filter(
-                    {id_field: minion_id}).run(conn)
+                data = rethinkdb.table(table).filter({id_field: minion_id}).run(conn)
 
         else:
-            log.debug('ext_pillar.rethinkdb: looking up pillar. '
-                      'table: %s, field: id, minion: %s',
-                      table, minion_id)
+            log.debug(
+                "ext_pillar.rethinkdb: looking up pillar. "
+                "table: %s, field: id, minion: %s",
+                table,
+                minion_id,
+            )
 
             if field:
-                data = rethinkdb.table(table).get(minion_id).pluck(field).run(
-                    conn)
+                data = rethinkdb.table(table).get(minion_id).pluck(field).run(conn)
             else:
                 data = rethinkdb.table(table).get(minion_id).run(conn)
 
@@ -146,8 +155,10 @@ def ext_pillar(minion_id,
 
         # Return nothing if multiple documents are found for a minion
         if len(data.items) > 1:
-            log.error('ext_pillar.rethinkdb: ambiguous documents found for '
-                      'minion %s', minion_id)
+            log.error(
+                "ext_pillar.rethinkdb: ambiguous documents found for " "minion %s",
+                minion_id,
+            )
             return {}
 
         else:
@@ -159,5 +170,5 @@ def ext_pillar(minion_id,
 
     else:
         # No document found in the database
-        log.debug('ext_pillar.rethinkdb: no document found')
+        log.debug("ext_pillar.rethinkdb: no document found")
         return {}

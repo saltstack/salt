@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Execution module for `ciscoconfparse <http://www.pennington.net/py/ciscoconfparse/index.html>`_
 
 .. versionadded:: 2019.2.0
@@ -18,16 +18,18 @@ See http://www.pennington.net/py/ciscoconfparse/index.html for further details.
 
 This module depends on the Python library with the same name,
 ``ciscoconfparse`` - to install execute: ``pip install ciscoconfparse``.
-'''
+"""
 # Import Python Libs
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, print_function, unicode_literals
+
+from salt.exceptions import SaltException
 
 # Import Salt modules
 from salt.ext import six
-from salt.exceptions import SaltException
 
 try:
     import ciscoconfparse
+
     HAS_CISCOCONFPARSE = True
 except ImportError:
     HAS_CISCOCONFPARSE = False
@@ -36,7 +38,7 @@ except ImportError:
 # module properties
 # ------------------------------------------------------------------------------
 
-__virtualname__ = 'ciscoconfparse'
+__virtualname__ = "ciscoconfparse"
 
 # ------------------------------------------------------------------------------
 # property functions
@@ -46,30 +48,32 @@ __virtualname__ = 'ciscoconfparse'
 def __virtual__():
     return HAS_CISCOCONFPARSE
 
+
 # ------------------------------------------------------------------------------
 # helper functions -- will not be exported
 # ------------------------------------------------------------------------------
 
 
-def _get_ccp(config=None, config_path=None, saltenv='base'):
-    '''
-    '''
+def _get_ccp(config=None, config_path=None, saltenv="base"):
+    """
+    """
     if config_path:
-        config = __salt__['cp.get_file_str'](config_path, saltenv=saltenv)
+        config = __salt__["cp.get_file_str"](config_path, saltenv=saltenv)
         if config is False:
-            raise SaltException('{} is not available'.format(config_path))
+            raise SaltException("{} is not available".format(config_path))
     if isinstance(config, six.string_types):
         config = config.splitlines()
     ccp = ciscoconfparse.CiscoConfParse(config)
     return ccp
+
 
 # ------------------------------------------------------------------------------
 # callable functions
 # ------------------------------------------------------------------------------
 
 
-def find_objects(config=None, config_path=None, regex=None, saltenv='base'):
-    '''
+def find_objects(config=None, config_path=None, regex=None, saltenv="base"):
+    """
     Return all the line objects that match the expression in the ``regex``
     argument.
 
@@ -105,14 +109,14 @@ def find_objects(config=None, config_path=None, regex=None, saltenv='base'):
                                                           regex='Gigabit')
         for obj in objects:
             print(obj.text)
-    '''
+    """
     ccp = _get_ccp(config=config, config_path=config_path, saltenv=saltenv)
     lines = ccp.find_objects(regex)
     return lines
 
 
-def find_lines(config=None, config_path=None, regex=None, saltenv='base'):
-    '''
+def find_lines(config=None, config_path=None, regex=None, saltenv="base"):
+    """
     Return all the lines (as text) that match the expression in the ``regex``
     argument.
 
@@ -148,21 +152,22 @@ def find_lines(config=None, config_path=None, regex=None, saltenv='base'):
             -  ip address dhcp
             -  ip address 172.20.0.1 255.255.255.0
             -  no ip address
-    '''
-    lines = find_objects(config=config,
-                         config_path=config_path,
-                         regex=regex,
-                         saltenv=saltenv)
+    """
+    lines = find_objects(
+        config=config, config_path=config_path, regex=regex, saltenv=saltenv
+    )
     return [line.text for line in lines]
 
 
-def find_objects_w_child(config=None,
-                         config_path=None,
-                         parent_regex=None,
-                         child_regex=None,
-                         ignore_ws=False,
-                         saltenv='base'):
-    '''
+def find_objects_w_child(
+    config=None,
+    config_path=None,
+    parent_regex=None,
+    child_regex=None,
+    ignore_ws=False,
+    saltenv="base",
+):
+    """
     Parse through the children of all parent lines matching ``parent_regex``,
     and return a list of child objects, which matched the ``child_regex``.
 
@@ -205,19 +210,21 @@ def find_objects_w_child(config=None,
                                                                   child_regex='stopbits')
         for obj in objects:
             print(obj.text)
-    '''
+    """
     ccp = _get_ccp(config=config, config_path=config_path, saltenv=saltenv)
     lines = ccp.find_objects_w_child(parent_regex, child_regex, ignore_ws=ignore_ws)
     return lines
 
 
-def find_lines_w_child(config=None,
-                       config_path=None,
-                       parent_regex=None,
-                       child_regex=None,
-                       ignore_ws=False,
-                       saltenv='base'):
-    r'''
+def find_lines_w_child(
+    config=None,
+    config_path=None,
+    parent_regex=None,
+    child_regex=None,
+    ignore_ws=False,
+    saltenv="base",
+):
+    r"""
     Return a list of parent lines (as text)  matching the regular expression
     ``parent_regex`` that have children lines matching ``child_regex``.
 
@@ -251,23 +258,27 @@ def find_lines_w_child(config=None,
 
         salt '*' ciscoconfparse.find_lines_w_child config_path=https://bit.ly/2mAdq7z parent_line='line con' child_line='stopbits'
         salt '*' ciscoconfparse.find_lines_w_child config_path=https://bit.ly/2uIRxau parent_regex='ge-(.*)' child_regex='unit \d+'
-   '''
-    lines = find_objects_w_child(config=config,
-                                 config_path=config_path,
-                                 parent_regex=parent_regex,
-                                 child_regex=child_regex,
-                                 ignore_ws=ignore_ws,
-                                 saltenv=saltenv)
+   """
+    lines = find_objects_w_child(
+        config=config,
+        config_path=config_path,
+        parent_regex=parent_regex,
+        child_regex=child_regex,
+        ignore_ws=ignore_ws,
+        saltenv=saltenv,
+    )
     return [line.text for line in lines]
 
 
-def find_objects_wo_child(config=None,
-                          config_path=None,
-                          parent_regex=None,
-                          child_regex=None,
-                          ignore_ws=False,
-                          saltenv='base'):
-    '''
+def find_objects_wo_child(
+    config=None,
+    config_path=None,
+    parent_regex=None,
+    child_regex=None,
+    ignore_ws=False,
+    saltenv="base",
+):
+    """
     Return a list of parent ``ciscoconfparse.IOSCfgLine`` objects, which matched
     the ``parent_regex`` and whose children did *not* match ``child_regex``.
     Only the parent ``ciscoconfparse.IOSCfgLine`` objects will be returned. For
@@ -313,19 +324,21 @@ def find_objects_wo_child(config=None,
                                                                    child_regex='stopbits')
         for obj in objects:
             print(obj.text)
-   '''
+   """
     ccp = _get_ccp(config=config, config_path=config_path, saltenv=saltenv)
     lines = ccp.find_objects_wo_child(parent_regex, child_regex, ignore_ws=ignore_ws)
     return lines
 
 
-def find_lines_wo_child(config=None,
-                        config_path=None,
-                        parent_regex=None,
-                        child_regex=None,
-                        ignore_ws=False,
-                        saltenv='base'):
-    '''
+def find_lines_wo_child(
+    config=None,
+    config_path=None,
+    parent_regex=None,
+    child_regex=None,
+    ignore_ws=False,
+    saltenv="base",
+):
+    """
     Return a list of parent ``ciscoconfparse.IOSCfgLine`` lines as text, which
     matched the ``parent_regex`` and whose children did *not* match ``child_regex``.
     Only the parent ``ciscoconfparse.IOSCfgLine`` text lines  will be returned.
@@ -361,22 +374,22 @@ def find_lines_wo_child(config=None,
     .. code-block:: bash
 
         salt '*' ciscoconfparse.find_lines_wo_child config_path=https://bit.ly/2mAdq7z parent_line='line con' child_line='stopbits'
-    '''
-    lines = find_objects_wo_child(config=config,
-                                  config_path=config_path,
-                                  parent_regex=parent_regex,
-                                  child_regex=child_regex,
-                                  ignore_ws=ignore_ws,
-                                  saltenv=saltenv)
+    """
+    lines = find_objects_wo_child(
+        config=config,
+        config_path=config_path,
+        parent_regex=parent_regex,
+        child_regex=child_regex,
+        ignore_ws=ignore_ws,
+        saltenv=saltenv,
+    )
     return [line.text for line in lines]
 
 
-def filter_lines(config=None,
-                 config_path=None,
-                 parent_regex=None,
-                 child_regex=None,
-                 saltenv='base'):
-    '''
+def filter_lines(
+    config=None, config_path=None, parent_regex=None, child_regex=None, saltenv="base"
+):
+    """
     Return a list of detailed matches, for the configuration blocks (parent-child
     relationship) whose parent respects the regular expressions configured via
     the ``parent_regex`` argument, and the child matches the ``child_regex``
@@ -421,7 +434,7 @@ def filter_lines(config=None,
                 'child': ' shutdown'
             }
         ]
-    '''
+    """
     ret = []
     ccp = _get_ccp(config=config, config_path=config_path, saltenv=saltenv)
     parent_lines = ccp.find_objects(parent_regex)
@@ -429,15 +442,13 @@ def filter_lines(config=None,
         child_lines = parent_line.re_search_children(child_regex)
         if child_lines:
             for child_line in child_lines:
-                ret.append({
-                    'match': True,
-                    'parent': parent_line.text,
-                    'child': child_line.text
-                })
+                ret.append(
+                    {
+                        "match": True,
+                        "parent": parent_line.text,
+                        "child": child_line.text,
+                    }
+                )
         else:
-            ret.append({
-                'match': False,
-                'parent': parent_line.text,
-                'child': None
-            })
+            ret.append({"match": False, "parent": parent_line.text, "child": None})
     return ret

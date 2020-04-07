@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # encoding: utf-8
-'''
+"""
 Deployment
 ==========
 
@@ -43,40 +43,42 @@ An example Apache virtual host configuration::
         WSGIScriptAlias / /path/to/salt/netapi/rest_cherrypy/wsgi.py
     </VirtualHost>
 
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
-# pylint: disable=C0103
 
 import os
 
 import cherrypy  # pylint: disable=3rd-party-module-not-gated
 
+# pylint: disable=C0103
+
 
 def bootstrap_app():
-    '''
+    """
     Grab the opts dict of the master config by trying to import Salt
-    '''
+    """
     from salt.netapi.rest_cherrypy import app
     import salt.config
 
     __opts__ = salt.config.client_config(
-            os.environ.get('SALT_MASTER_CONFIG', '/etc/salt/master'))
+        os.environ.get("SALT_MASTER_CONFIG", "/etc/salt/master")
+    )
     return app.get_app(__opts__)
 
 
 def get_application(*args):
-    '''
+    """
     Returns a WSGI application function. If you supply the WSGI app and config
     it will use that, otherwise it will try to obtain them from a local Salt
     installation
-    '''
+    """
     opts_tuple = args
 
     def wsgi_app(environ, start_response):
         root, _, conf = opts_tuple or bootstrap_app()
-        cherrypy.config.update({'environment': 'embedded'})
+        cherrypy.config.update({"environment": "embedded"})
 
-        cherrypy.tree.mount(root, '/', conf)
+        cherrypy.tree.mount(root, "/", conf)
         return cherrypy.tree(environ, start_response)
 
     return wsgi_app
