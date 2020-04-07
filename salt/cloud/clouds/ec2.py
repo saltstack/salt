@@ -223,7 +223,7 @@ def _xml_to_dict(xmltree):
     Convert an XML tree into a dict
     """
     if sys.version_info < (2, 7):
-        children_len = len(xmltree.getchildren())
+        children_len = len(list(xmltree))
     else:
         children_len = len(xmltree)
 
@@ -242,7 +242,7 @@ def _xml_to_dict(xmltree):
             name = comps[1]
         if name not in xmldict:
             if sys.version_info < (2, 7):
-                children_len = len(item.getchildren())
+                children_len = len(list(item))
             else:
                 children_len = len(item)
 
@@ -492,7 +492,7 @@ def query(
 
     if setname:
         if sys.version_info < (2, 7):
-            children_len = len(root.getchildren())
+            children_len = len(list(root))
         else:
             children_len = len(root)
 

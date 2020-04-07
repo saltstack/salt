@@ -548,7 +548,7 @@ def query(
 
     if setname:
         if sys.version_info < (2, 7):
-            children_len = len(root.getchildren())
+            children_len = len(list(root))
         else:
             children_len = len(root)
 
