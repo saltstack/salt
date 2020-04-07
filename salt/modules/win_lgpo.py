@@ -6794,6 +6794,7 @@ def _checkAllAdmxPolicies(
                                              'D', 'e', 'l', 'V', 'a', 'l', 's',
                                              r'\.', ')']
                                 delvals_regex = '\x00'.join(regex_str)
+                                delvals_regex = salt.utils.stringutils.to_bytes(delvals_regex)
                                 if _regexSearchRegPolData(
                                     re.escape(
                                         _processValueItem(
