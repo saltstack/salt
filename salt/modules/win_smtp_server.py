@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Module for managing IIS SMTP server configuration on Windows servers.
 The Windows features 'SMTP-Server' and 'Web-WMI' must be installed.
 
 :depends: wmi
 
-'''
+"""
 
 # IIS metabase configuration settings:
 #   https://goo.gl/XCt1uO
@@ -19,14 +19,16 @@ The Windows features 'SMTP-Server' and 'Web-WMI' must be installed.
 #   http://goo.gl/MrybFq
 
 # Import python libs
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 import re
 
-# Import Salt libs
-from salt.exceptions import SaltInvocationError
 import salt.utils.args
 import salt.utils.platform
+
+# Import Salt libs
+from salt.exceptions import SaltInvocationError
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -34,31 +36,32 @@ from salt.ext import six
 try:
     import wmi
     import salt.utils.winapi
+
     _HAS_MODULE_DEPENDENCIES = True
 except ImportError:
     _HAS_MODULE_DEPENDENCIES = False
 
-_DEFAULT_SERVER = 'SmtpSvc/1'
-_WMI_NAMESPACE = 'MicrosoftIISv2'
+_DEFAULT_SERVER = "SmtpSvc/1"
+_WMI_NAMESPACE = "MicrosoftIISv2"
 _LOG = logging.getLogger(__name__)
 
 # Define the module's virtual name
-__virtualname__ = 'win_smtp_server'
+__virtualname__ = "win_smtp_server"
 
 
 def __virtual__():
-    '''
+    """
     Only works on Windows systems.
-    '''
+    """
     if salt.utils.platform.is_windows() and _HAS_MODULE_DEPENDENCIES:
         return __virtualname__
     return False
 
 
 def _get_wmi_setting(wmi_class_name, setting, server):
-    '''
+    """
     Get the value of the setting for the provided class.
-    '''
+    """
     with salt.utils.winapi.Com():
         try:
             connection = wmi.WMI(namespace=_WMI_NAMESPACE)
@@ -67,16 +70,16 @@ def _get_wmi_setting(wmi_class_name, setting, server):
             objs = wmi_class([setting], Name=server)[0]
             ret = getattr(objs, setting)
         except wmi.x_wmi as error:
-            _LOG.error('Encountered WMI error: %s', error.com_error)
+            _LOG.error("Encountered WMI error: %s", error.com_error)
         except (AttributeError, IndexError) as error:
-            _LOG.error('Error getting %s: %s', wmi_class_name, error)
+            _LOG.error("Error getting %s: %s", wmi_class_name, error)
     return ret
 
 
 def _set_wmi_setting(wmi_class_name, setting, value, server):
-    '''
+    """
     Set the value of the setting for the provided class.
-    '''
+    """
     with salt.utils.winapi.Com():
         try:
             connection = wmi.WMI(namespace=_WMI_NAMESPACE)
@@ -84,30 +87,30 @@ def _set_wmi_setting(wmi_class_name, setting, value, server):
 
             objs = wmi_class(Name=server)[0]
         except wmi.x_wmi as error:
-            _LOG.error('Encountered WMI error: %s', error.com_error)
+            _LOG.error("Encountered WMI error: %s", error.com_error)
         except (AttributeError, IndexError) as error:
-            _LOG.error('Error getting %s: %s', wmi_class_name, error)
+            _LOG.error("Error getting %s: %s", wmi_class_name, error)
 
         try:
             setattr(objs, setting, value)
             return True
         except wmi.x_wmi as error:
-            _LOG.error('Encountered WMI error: %s', error.com_error)
+            _LOG.error("Encountered WMI error: %s", error.com_error)
         except AttributeError as error:
-            _LOG.error('Error setting %s: %s', setting, error)
+            _LOG.error("Error setting %s: %s", setting, error)
     return False
 
 
 def _normalize_server_settings(**settings):
-    '''
+    """
     Convert setting values that had been improperly converted to a dict back to a string.
-    '''
+    """
     ret = dict()
     settings = salt.utils.args.clean_kwargs(**settings)
 
     for setting in settings:
         if isinstance(settings[setting], dict):
-            _LOG.debug('Fixing value: %s', settings[setting])
+            _LOG.debug("Fixing value: %s", settings[setting])
             value_from_key = next(six.iterkeys(settings[setting]))
 
             ret[setting] = "{{{0}}}".format(value_from_key)
@@ -117,7 +120,7 @@ def _normalize_server_settings(**settings):
 
 
 def get_log_format_types():
-    '''
+    """
     Get all available log format names and ids.
 
     :return: A dictionary of the log format names and ids.
@@ -128,9 +131,9 @@ def get_log_format_types():
     .. code-block:: bash
 
         salt '*' win_smtp_server.get_log_format_types
-    '''
+    """
     ret = dict()
-    prefix = 'logging/'
+    prefix = "logging/"
 
     with salt.utils.winapi.Com():
         try:
@@ -139,20 +142,20 @@ def get_log_format_types():
 
             # Remove the prefix from the name.
             for obj in objs:
-                name = six.text_type(obj.Name).replace(prefix, '', 1)
+                name = six.text_type(obj.Name).replace(prefix, "", 1)
                 ret[name] = six.text_type(obj.LogModuleId)
         except wmi.x_wmi as error:
-            _LOG.error('Encountered WMI error: %s', error.com_error)
+            _LOG.error("Encountered WMI error: %s", error.com_error)
         except (AttributeError, IndexError) as error:
-            _LOG.error('Error getting IISLogModuleSetting: %s', error)
+            _LOG.error("Error getting IISLogModuleSetting: %s", error)
 
     if not ret:
-        _LOG.error('Unable to get log format types.')
+        _LOG.error("Unable to get log format types.")
     return ret
 
 
 def get_servers():
-    '''
+    """
     Get the SMTP virtual server names.
 
     :return: A list of the SMTP virtual servers.
@@ -163,7 +166,7 @@ def get_servers():
     .. code-block:: bash
 
         salt '*' win_smtp_server.get_servers
-    '''
+    """
     ret = list()
 
     with salt.utils.winapi.Com():
@@ -174,16 +177,16 @@ def get_servers():
             for obj in objs:
                 ret.append(six.text_type(obj.Name))
         except wmi.x_wmi as error:
-            _LOG.error('Encountered WMI error: %s', error.com_error)
+            _LOG.error("Encountered WMI error: %s", error.com_error)
         except (AttributeError, IndexError) as error:
-            _LOG.error('Error getting IIsSmtpServerSetting: %s', error)
+            _LOG.error("Error getting IIsSmtpServerSetting: %s", error)
 
-    _LOG.debug('Found SMTP servers: %s', ret)
+    _LOG.debug("Found SMTP servers: %s", ret)
     return ret
 
 
 def get_server_setting(settings, server=_DEFAULT_SERVER):
-    '''
+    """
     Get the value of the setting for the SMTP virtual server.
 
     :param str settings: A list of the setting names.
@@ -197,11 +200,11 @@ def get_server_setting(settings, server=_DEFAULT_SERVER):
     .. code-block:: bash
 
         salt '*' win_smtp_server.get_server_setting settings="['MaxRecipients']"
-    '''
+    """
     ret = dict()
 
     if not settings:
-        _LOG.warning('No settings provided.')
+        _LOG.warning("No settings provided.")
         return ret
 
     with salt.utils.winapi.Com():
@@ -212,14 +215,14 @@ def get_server_setting(settings, server=_DEFAULT_SERVER):
             for setting in settings:
                 ret[setting] = six.text_type(getattr(objs, setting))
         except wmi.x_wmi as error:
-            _LOG.error('Encountered WMI error: %s', error.com_error)
+            _LOG.error("Encountered WMI error: %s", error.com_error)
         except (AttributeError, IndexError) as error:
-            _LOG.error('Error getting IIsSmtpServerSetting: %s', error)
+            _LOG.error("Error getting IIsSmtpServerSetting: %s", error)
     return ret
 
 
 def set_server_setting(settings, server=_DEFAULT_SERVER):
-    '''
+    """
     Set the value of the setting for the SMTP virtual server.
 
     .. note::
@@ -237,9 +240,9 @@ def set_server_setting(settings, server=_DEFAULT_SERVER):
     .. code-block:: bash
 
         salt '*' win_smtp_server.set_server_setting settings="{'MaxRecipients': '500'}"
-    '''
+    """
     if not settings:
-        _LOG.warning('No settings provided')
+        _LOG.warning("No settings provided")
         return False
 
     # Some fields are formatted like '{data}'. Salt tries to convert these to dicts
@@ -249,7 +252,7 @@ def set_server_setting(settings, server=_DEFAULT_SERVER):
     current_settings = get_server_setting(settings=settings.keys(), server=server)
 
     if settings == current_settings:
-        _LOG.debug('Settings already contain the provided values.')
+        _LOG.debug("Settings already contain the provided values.")
         return True
 
     # Note that we must fetch all properties of IIsSmtpServerSetting below, since
@@ -260,18 +263,20 @@ def set_server_setting(settings, server=_DEFAULT_SERVER):
             connection = wmi.WMI(namespace=_WMI_NAMESPACE)
             objs = connection.IIsSmtpServerSetting(Name=server)[0]
         except wmi.x_wmi as error:
-            _LOG.error('Encountered WMI error: %s', error.com_error)
+            _LOG.error("Encountered WMI error: %s", error.com_error)
         except (AttributeError, IndexError) as error:
-            _LOG.error('Error getting IIsSmtpServerSetting: %s', error)
+            _LOG.error("Error getting IIsSmtpServerSetting: %s", error)
 
         for setting in settings:
-            if six.text_type(settings[setting]) != six.text_type(current_settings[setting]):
+            if six.text_type(settings[setting]) != six.text_type(
+                current_settings[setting]
+            ):
                 try:
                     setattr(objs, setting, settings[setting])
                 except wmi.x_wmi as error:
-                    _LOG.error('Encountered WMI error: %s', error.com_error)
+                    _LOG.error("Encountered WMI error: %s", error.com_error)
                 except AttributeError as error:
-                    _LOG.error('Error setting %s: %s', setting, error)
+                    _LOG.error("Error setting %s: %s", setting, error)
 
     # Get the settings post-change so that we can verify tht all properties
     # were modified successfully. Track the ones that weren't.
@@ -282,15 +287,15 @@ def set_server_setting(settings, server=_DEFAULT_SERVER):
         if six.text_type(settings[setting]) != six.text_type(new_settings[setting]):
             failed_settings[setting] = settings[setting]
     if failed_settings:
-        _LOG.error('Failed to change settings: %s', failed_settings)
+        _LOG.error("Failed to change settings: %s", failed_settings)
         return False
 
-    _LOG.debug('Settings configured successfully: %s', settings.keys())
+    _LOG.debug("Settings configured successfully: %s", settings.keys())
     return True
 
 
 def get_log_format(server=_DEFAULT_SERVER):
-    '''
+    """
     Get the active log format for the SMTP virtual server.
 
     :param str server: The SMTP server name.
@@ -303,21 +308,21 @@ def get_log_format(server=_DEFAULT_SERVER):
     .. code-block:: bash
 
         salt '*' win_smtp_server.get_log_format
-    '''
+    """
     log_format_types = get_log_format_types()
-    format_id = _get_wmi_setting('IIsSmtpServerSetting', 'LogPluginClsid', server)
+    format_id = _get_wmi_setting("IIsSmtpServerSetting", "LogPluginClsid", server)
 
     # Since IIsSmtpServerSetting stores the log type as an id, we need
     # to get the mapping from IISLogModuleSetting and extract the name.
     for key in log_format_types:
         if six.text_type(format_id) == log_format_types[key]:
             return key
-    _LOG.warning('Unable to determine log format.')
+    _LOG.warning("Unable to determine log format.")
     return None
 
 
 def set_log_format(log_format, server=_DEFAULT_SERVER):
-    '''
+    """
     Set the active log format for the SMTP virtual server.
 
     :param str log_format: The log format name.
@@ -331,14 +336,15 @@ def set_log_format(log_format, server=_DEFAULT_SERVER):
     .. code-block:: bash
 
         salt '*' win_smtp_server.set_log_format 'Microsoft IIS Log File Format'
-    '''
-    setting = 'LogPluginClsid'
+    """
+    setting = "LogPluginClsid"
     log_format_types = get_log_format_types()
     format_id = log_format_types.get(log_format, None)
 
     if not format_id:
-        message = ("Invalid log format '{0}' specified. Valid formats:"
-                   ' {1}').format(log_format, log_format_types.keys())
+        message = ("Invalid log format '{0}' specified. Valid formats:" " {1}").format(
+            log_format, log_format_types.keys()
+        )
         raise SaltInvocationError(message)
 
     _LOG.debug("Id for '%s' found: %s", log_format, format_id)
@@ -346,10 +352,10 @@ def set_log_format(log_format, server=_DEFAULT_SERVER):
     current_log_format = get_log_format(server)
 
     if log_format == current_log_format:
-        _LOG.debug('%s already contains the provided format.', setting)
+        _LOG.debug("%s already contains the provided format.", setting)
         return True
 
-    _set_wmi_setting('IIsSmtpServerSetting', setting, format_id, server)
+    _set_wmi_setting("IIsSmtpServerSetting", setting, format_id, server)
 
     new_log_format = get_log_format(server)
     ret = log_format == new_log_format
@@ -362,7 +368,7 @@ def set_log_format(log_format, server=_DEFAULT_SERVER):
 
 
 def get_connection_ip_list(as_wmi_format=False, server=_DEFAULT_SERVER):
-    '''
+    """
     Get the IPGrant list for the SMTP virtual server.
 
     :param bool as_wmi_format: Returns the connection IPs as a list in the format WMI expects.
@@ -376,32 +382,34 @@ def get_connection_ip_list(as_wmi_format=False, server=_DEFAULT_SERVER):
     .. code-block:: bash
 
         salt '*' win_smtp_server.get_connection_ip_list
-    '''
+    """
     ret = dict()
-    setting = 'IPGrant'
-    reg_separator = r',\s*'
+    setting = "IPGrant"
+    reg_separator = r",\s*"
 
     if as_wmi_format:
         ret = list()
 
-    addresses = _get_wmi_setting('IIsIPSecuritySetting', setting, server)
+    addresses = _get_wmi_setting("IIsIPSecuritySetting", setting, server)
 
     # WMI returns the addresses as a tuple of unicode strings, each representing
     # an address/subnet pair. Remove extra spaces that may be present.
     for unnormalized_address in addresses:
         ip_address, subnet = re.split(reg_separator, unnormalized_address)
         if as_wmi_format:
-            ret.append('{0}, {1}'.format(ip_address, subnet))
+            ret.append("{0}, {1}".format(ip_address, subnet))
         else:
             ret[ip_address] = subnet
 
     if not ret:
-        _LOG.debug('%s is empty.', setting)
+        _LOG.debug("%s is empty.", setting)
     return ret
 
 
-def set_connection_ip_list(addresses=None, grant_by_default=False, server=_DEFAULT_SERVER):
-    '''
+def set_connection_ip_list(
+    addresses=None, grant_by_default=False, server=_DEFAULT_SERVER
+):
+    """
     Set the IPGrant list for the SMTP virtual server.
 
     :param str addresses: A dictionary of IP + subnet pairs.
@@ -416,50 +424,55 @@ def set_connection_ip_list(addresses=None, grant_by_default=False, server=_DEFAU
     .. code-block:: bash
 
         salt '*' win_smtp_server.set_connection_ip_list addresses="{'127.0.0.1': '255.255.255.255'}"
-    '''
-    setting = 'IPGrant'
+    """
+    setting = "IPGrant"
     formatted_addresses = list()
 
     # It's okay to accept an empty list for set_connection_ip_list,
     # since an empty list may be desirable.
     if not addresses:
         addresses = dict()
-        _LOG.debug('Empty %s specified.', setting)
+        _LOG.debug("Empty %s specified.", setting)
 
     # Convert addresses to the 'ip_address, subnet' format used by
     # IIsIPSecuritySetting.
     for address in addresses:
-        formatted_addresses.append('{0}, {1}'.format(address.strip(),
-                                                     addresses[address].strip()))
+        formatted_addresses.append(
+            "{0}, {1}".format(address.strip(), addresses[address].strip())
+        )
 
     current_addresses = get_connection_ip_list(as_wmi_format=True, server=server)
 
     # Order is not important, so compare to the current addresses as unordered sets.
     if set(formatted_addresses) == set(current_addresses):
-        _LOG.debug('%s already contains the provided addresses.', setting)
+        _LOG.debug("%s already contains the provided addresses.", setting)
         return True
 
     # First we should check GrantByDefault, and change it if necessary.
-    current_grant_by_default = _get_wmi_setting('IIsIPSecuritySetting', 'GrantByDefault', server)
+    current_grant_by_default = _get_wmi_setting(
+        "IIsIPSecuritySetting", "GrantByDefault", server
+    )
 
     if grant_by_default != current_grant_by_default:
-        _LOG.debug('Setting GrantByDefault to: %s', grant_by_default)
-        _set_wmi_setting('IIsIPSecuritySetting', 'GrantByDefault', grant_by_default, server)
+        _LOG.debug("Setting GrantByDefault to: %s", grant_by_default)
+        _set_wmi_setting(
+            "IIsIPSecuritySetting", "GrantByDefault", grant_by_default, server
+        )
 
-    _set_wmi_setting('IIsIPSecuritySetting', setting, formatted_addresses, server)
+    _set_wmi_setting("IIsIPSecuritySetting", setting, formatted_addresses, server)
 
     new_addresses = get_connection_ip_list(as_wmi_format=True, server=server)
     ret = set(formatted_addresses) == set(new_addresses)
 
     if ret:
-        _LOG.debug('%s configured successfully: %s', setting, formatted_addresses)
+        _LOG.debug("%s configured successfully: %s", setting, formatted_addresses)
         return ret
-    _LOG.error('Unable to configure %s with value: %s', setting, formatted_addresses)
+    _LOG.error("Unable to configure %s with value: %s", setting, formatted_addresses)
     return ret
 
 
 def get_relay_ip_list(server=_DEFAULT_SERVER):
-    '''
+    """
     Get the RelayIpList list for the SMTP virtual server.
 
     :param str server: The SMTP server name.
@@ -478,14 +491,14 @@ def get_relay_ip_list(server=_DEFAULT_SERVER):
     .. code-block:: bash
 
         salt '*' win_smtp_server.get_relay_ip_list
-    '''
+    """
     ret = list()
-    setting = 'RelayIpList'
+    setting = "RelayIpList"
 
-    lines = _get_wmi_setting('IIsSmtpServerSetting', setting, server)
+    lines = _get_wmi_setting("IIsSmtpServerSetting", setting, server)
 
     if not lines:
-        _LOG.debug('%s is empty: %s', setting, lines)
+        _LOG.debug("%s is empty: %s", setting, lines)
         if lines is None:
             lines = [None]
         return list(lines)
@@ -494,15 +507,15 @@ def get_relay_ip_list(server=_DEFAULT_SERVER):
     # need to group them and reassemble them into IP addresses.
     i = 0
     while i < len(lines):
-        octets = [six.text_type(x) for x in lines[i: i + 4]]
-        address = '.'.join(octets)
+        octets = [six.text_type(x) for x in lines[i : i + 4]]
+        address = ".".join(octets)
         ret.append(address)
         i += 4
     return ret
 
 
 def set_relay_ip_list(addresses=None, server=_DEFAULT_SERVER):
-    '''
+    """
     Set the RelayIpList list for the SMTP virtual server.
 
     Due to the unusual way that Windows stores the relay IPs, it is advisable to retrieve
@@ -535,14 +548,14 @@ def set_relay_ip_list(addresses=None, server=_DEFAULT_SERVER):
     .. code-block:: bash
 
         salt '*' win_smtp_server.set_relay_ip_list addresses="['192.168.1.1', '172.16.1.1']"
-    '''
-    setting = 'RelayIpList'
+    """
+    setting = "RelayIpList"
     formatted_addresses = list()
 
     current_addresses = get_relay_ip_list(server)
 
     if list(addresses) == current_addresses:
-        _LOG.debug('%s already contains the provided addresses.', setting)
+        _LOG.debug("%s already contains the provided addresses.", setting)
         return True
 
     if addresses:
@@ -553,19 +566,19 @@ def set_relay_ip_list(addresses=None, server=_DEFAULT_SERVER):
             formatted_addresses = None
         else:
             for address in addresses:
-                for octet in address.split('.'):
+                for octet in address.split("."):
                     formatted_addresses.append(octet)
 
-    _LOG.debug('Formatted %s addresses: %s', setting, formatted_addresses)
+    _LOG.debug("Formatted %s addresses: %s", setting, formatted_addresses)
 
-    _set_wmi_setting('IIsSmtpServerSetting', setting, formatted_addresses, server)
+    _set_wmi_setting("IIsSmtpServerSetting", setting, formatted_addresses, server)
 
     new_addresses = get_relay_ip_list(server)
 
     ret = list(addresses) == new_addresses
 
     if ret:
-        _LOG.debug('%s configured successfully: %s', setting, addresses)
+        _LOG.debug("%s configured successfully: %s", setting, addresses)
         return ret
-    _LOG.error('Unable to configure %s with value: %s', setting, addresses)
+    _LOG.error("Unable to configure %s with value: %s", setting, addresses)
     return ret
