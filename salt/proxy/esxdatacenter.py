@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Proxy Minion interface module for managing VMWare ESXi clusters.
 
 Dependencies
@@ -143,10 +143,11 @@ Associated states are documented in
 :mod:`salt.states.esxdatacenter </ref/states/all/salt.states.esxdatacenter>`.
 Look there to find an example structure for Pillar as well as an example
 ``.sls`` file for configuring an ESX datacenter from scratch.
-'''
+"""
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 import os
 
@@ -156,11 +157,12 @@ from salt.config.schemas.esxdatacenter import EsxdatacenterProxySchema
 from salt.utils.dictupdate import merge
 
 # This must be present or the Salt loader won't load this module.
-__proxyenabled__ = ['esxdatacenter']
+__proxyenabled__ = ["esxdatacenter"]
 
 # External libraries
 try:
     import jsonschema
+
     HAS_JSONSCHEMA = True
 except ImportError:
     HAS_JSONSCHEMA = False
@@ -173,83 +175,89 @@ DETAILS = {}
 # Set up logging
 log = logging.getLogger(__name__)
 # Define the module's virtual name
-__virtualname__ = 'esxdatacenter'
+__virtualname__ = "esxdatacenter"
 
 
 def __virtual__():
-    '''
+    """
     Only load if the vsphere execution module is available.
-    '''
+    """
     if HAS_JSONSCHEMA:
         return __virtualname__
 
-    return False, 'The esxdatacenter proxy module did not load.'
+    return False, "The esxdatacenter proxy module did not load."
 
 
 def init(opts):
-    '''
+    """
     This function gets called when the proxy starts up.
     All login details are cached.
-    '''
-    log.debug('Initting esxdatacenter proxy module in process %s', os.getpid())
-    log.trace('Validating esxdatacenter proxy input')
+    """
+    log.debug("Initting esxdatacenter proxy module in process %s", os.getpid())
+    log.trace("Validating esxdatacenter proxy input")
     schema = EsxdatacenterProxySchema.serialize()
-    log.trace('schema = %s', schema)
-    proxy_conf = merge(opts.get('proxy', {}), __pillar__.get('proxy', {}))
-    log.trace('proxy_conf = %s', proxy_conf)
+    log.trace("schema = %s", schema)
+    proxy_conf = merge(opts.get("proxy", {}), __pillar__.get("proxy", {}))
+    log.trace("proxy_conf = %s", proxy_conf)
     try:
         jsonschema.validate(proxy_conf, schema)
     except jsonschema.exceptions.ValidationError as exc:
         raise salt.exceptions.InvalidConfigError(exc)
 
     # Save mandatory fields in cache
-    for key in ('vcenter', 'datacenter', 'mechanism'):
+    for key in ("vcenter", "datacenter", "mechanism"):
         DETAILS[key] = proxy_conf[key]
 
     # Additional validation
-    if DETAILS['mechanism'] == 'userpass':
-        if 'username' not in proxy_conf:
+    if DETAILS["mechanism"] == "userpass":
+        if "username" not in proxy_conf:
             raise salt.exceptions.InvalidConfigError(
-                'Mechanism is set to \'userpass\', but no '
-                '\'username\' key found in proxy config.')
-        if 'passwords' not in proxy_conf:
+                "Mechanism is set to 'userpass', but no "
+                "'username' key found in proxy config."
+            )
+        if "passwords" not in proxy_conf:
             raise salt.exceptions.InvalidConfigError(
-                'Mechanism is set to \'userpass\', but no '
-                '\'passwords\' key found in proxy config.')
-        for key in ('username', 'passwords'):
+                "Mechanism is set to 'userpass', but no "
+                "'passwords' key found in proxy config."
+            )
+        for key in ("username", "passwords"):
             DETAILS[key] = proxy_conf[key]
     else:
-        if 'domain' not in proxy_conf:
+        if "domain" not in proxy_conf:
             raise salt.exceptions.InvalidConfigError(
-                'Mechanism is set to \'sspi\', but no '
-                '\'domain\' key found in proxy config.')
-        if 'principal' not in proxy_conf:
+                "Mechanism is set to 'sspi', but no "
+                "'domain' key found in proxy config."
+            )
+        if "principal" not in proxy_conf:
             raise salt.exceptions.InvalidConfigError(
-                'Mechanism is set to \'sspi\', but no '
-                '\'principal\' key found in proxy config.')
-        for key in ('domain', 'principal'):
+                "Mechanism is set to 'sspi', but no "
+                "'principal' key found in proxy config."
+            )
+        for key in ("domain", "principal"):
             DETAILS[key] = proxy_conf[key]
 
     # Save optional
-    DETAILS['protocol'] = proxy_conf.get('protocol')
-    DETAILS['port'] = proxy_conf.get('port')
+    DETAILS["protocol"] = proxy_conf.get("protocol")
+    DETAILS["port"] = proxy_conf.get("port")
 
     # Test connection
-    if DETAILS['mechanism'] == 'userpass':
+    if DETAILS["mechanism"] == "userpass":
         # Get the correct login details
-        log.debug('Retrieving credentials and testing vCenter connection for '
-                  'mehchanism \'userpass\'')
+        log.debug(
+            "Retrieving credentials and testing vCenter connection for "
+            "mehchanism 'userpass'"
+        )
         try:
             username, password = find_credentials()
-            DETAILS['password'] = password
+            DETAILS["password"] = password
         except salt.exceptions.SaltSystemExit as err:
-            log.critical('Error: %s', err)
+            log.critical("Error: %s", err)
             return False
     return True
 
 
 def ping():
-    '''
+    """
     Returns True.
 
     CLI Example:
@@ -257,44 +265,45 @@ def ping():
     .. code-block:: bash
 
         salt dc_id test.ping
-    '''
+    """
     return True
 
 
 def shutdown():
-    '''
+    """
     Shutdown the connection to the proxy device. For this proxy,
     shutdown is a no-op.
-    '''
-    log.debug('esxdatacenter proxy shutdown() called...')
+    """
+    log.debug("esxdatacenter proxy shutdown() called...")
 
 
 def find_credentials():
-    '''
+    """
     Cycle through all the possible credentials and return the first one that
     works.
-    '''
+    """
 
     # if the username and password were already found don't fo though the
     # connection process again
-    if 'username' in DETAILS and 'password' in DETAILS:
-        return DETAILS['username'], DETAILS['password']
+    if "username" in DETAILS and "password" in DETAILS:
+        return DETAILS["username"], DETAILS["password"]
 
-    passwords = DETAILS['passwords']
+    passwords = DETAILS["passwords"]
     for password in passwords:
-        DETAILS['password'] = password
-        if not __salt__['vsphere.test_vcenter_connection']():
+        DETAILS["password"] = password
+        if not __salt__["vsphere.test_vcenter_connection"]():
             # We are unable to authenticate
             continue
         # If we have data returned from above, we've successfully authenticated.
-        return DETAILS['username'], password
+        return DETAILS["username"], password
     # We've reached the end of the list without successfully authenticating.
-    raise salt.exceptions.VMwareConnectionError('Cannot complete login due to '
-                                                'incorrect credentials.')
+    raise salt.exceptions.VMwareConnectionError(
+        "Cannot complete login due to " "incorrect credentials."
+    )
 
 
 def get_details():
-    '''
+    """
     Function that returns the cached details
-    '''
+    """
     return DETAILS
