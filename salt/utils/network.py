@@ -1363,7 +1363,7 @@ def _ip_networks(
         if _ip and _net:
             try:
                 ip_net = ipaddress.ip_network("{0}/{1}".format(_ip, _net), strict=False)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 continue
             if not ip_net.is_loopback or include_loopback:
                 ret.add(ip_net)
