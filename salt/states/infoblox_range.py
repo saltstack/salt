@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Infoblox host record managment.
 
 functions accept api_opts:
@@ -8,14 +8,14 @@ functions accept api_opts:
     api_url: server to connect to [default to pillar value]
     api_username:  [default to pillar value]
     api_password:  [default to pillar value]
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 
 def present(name=None, start_addr=None, end_addr=None, data=None, **api_opts):
-    '''
+    """
     Ensure range record is present.
 
     infoblox_range.present:
@@ -91,57 +91,67 @@ def present(name=None, start_addr=None, end_addr=None, data=None, **api_opts):
                 'use_unknown_clients': False,
                 'use_update_dns_on_lease_renewal': False
             }
-    '''
-    ret = {'name': name, 'result': False, 'comment': '', 'changes': {}}
+    """
+    ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not data:
         data = {}
-    if 'name' not in data:
-        data.update({'name': name})
-    if 'start_addr' not in data:
-        data.update({'start_addr': start_addr})
-    if 'end_addr' not in data:
-        data.update({'end_addr': end_addr})
+    if "name" not in data:
+        data.update({"name": name})
+    if "start_addr" not in data:
+        data.update({"start_addr": start_addr})
+    if "end_addr" not in data:
+        data.update({"end_addr": end_addr})
 
-    obj = __salt__['infoblox.get_ipv4_range'](data['start_addr'], data['end_addr'], **api_opts)
+    obj = __salt__["infoblox.get_ipv4_range"](
+        data["start_addr"], data["end_addr"], **api_opts
+    )
     if obj is None:
-        obj = __salt__['infoblox.get_ipv4_range'](start_addr=data['start_addr'], end_addr=None, **api_opts)
+        obj = __salt__["infoblox.get_ipv4_range"](
+            start_addr=data["start_addr"], end_addr=None, **api_opts
+        )
         if obj is None:
-            obj = __salt__['infoblox.get_ipv4_range'](start_addr=None, end_addr=data['end_addr'], **api_opts)
+            obj = __salt__["infoblox.get_ipv4_range"](
+                start_addr=None, end_addr=data["end_addr"], **api_opts
+            )
 
     if obj:
-        diff = __salt__['infoblox.diff_objects'](data, obj)
+        diff = __salt__["infoblox.diff_objects"](data, obj)
         if not diff:
-            ret['result'] = True
-            ret['comment'] = 'supplied fields in correct state'
+            ret["result"] = True
+            ret["comment"] = "supplied fields in correct state"
             return ret
         if diff:
-            if __opts__['test']:
-                ret['result'] = None
-                ret['comment'] = 'would attempt to update record'
+            if __opts__["test"]:
+                ret["result"] = None
+                ret["comment"] = "would attempt to update record"
                 return ret
-            new_obj = __salt__['infoblox.update_object'](obj['_ref'], data=data, **api_opts)
-            ret['result'] = True
-            ret['comment'] = 'record fields updated'
-            ret['changes'] = {'diff': diff}
+            new_obj = __salt__["infoblox.update_object"](
+                obj["_ref"], data=data, **api_opts
+            )
+            ret["result"] = True
+            ret["comment"] = "record fields updated"
+            ret["changes"] = {"diff": diff}
             return ret
 
-    if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = 'would attempt to create record {0}'.format(name)
+    if __opts__["test"]:
+        ret["result"] = None
+        ret["comment"] = "would attempt to create record {0}".format(name)
         return ret
 
-    new_obj_ref = __salt__['infoblox.create_ipv4_range'](data, **api_opts)
-    new_obj = __salt__['infoblox.get_ipv4_range'](data['start_addr'], data['end_addr'], **api_opts)
+    new_obj_ref = __salt__["infoblox.create_ipv4_range"](data, **api_opts)
+    new_obj = __salt__["infoblox.get_ipv4_range"](
+        data["start_addr"], data["end_addr"], **api_opts
+    )
 
-    ret['result'] = True
-    ret['comment'] = 'record created'
-    ret['changes'] = {'old': 'None', 'new': {'_ref': new_obj_ref, 'data': new_obj}}
+    ret["result"] = True
+    ret["comment"] = "record created"
+    ret["changes"] = {"old": "None", "new": {"_ref": new_obj_ref, "data": new_obj}}
     return ret
 
 
 def absent(name=None, start_addr=None, end_addr=None, data=None, **api_opts):
-    '''
+    """
     Ensure the range is removed
 
     Supplying the end of the range is optional.
@@ -156,36 +166,44 @@ def absent(name=None, start_addr=None, end_addr=None, data=None, **api_opts):
         infoblox_range.absent:
             - name:
             - start_addr: 127.0.1.20
-    '''
-    ret = {'name': name, 'result': False, 'comment': '', 'changes': {}}
+    """
+    ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not data:
         data = {}
-    if 'name' not in data:
-        data.update({'name': name})
-    if 'start_addr' not in data:
-        data.update({'start_addr': start_addr})
-    if 'end_addr' not in data:
-        data.update({'end_addr': end_addr})
+    if "name" not in data:
+        data.update({"name": name})
+    if "start_addr" not in data:
+        data.update({"start_addr": start_addr})
+    if "end_addr" not in data:
+        data.update({"end_addr": end_addr})
 
-    obj = __salt__['infoblox.get_ipv4_range'](data['start_addr'], data['end_addr'], **api_opts)
+    obj = __salt__["infoblox.get_ipv4_range"](
+        data["start_addr"], data["end_addr"], **api_opts
+    )
     if obj is None:
-        obj = __salt__['infoblox.get_ipv4_range'](start_addr=data['start_addr'], end_addr=None, **api_opts)
+        obj = __salt__["infoblox.get_ipv4_range"](
+            start_addr=data["start_addr"], end_addr=None, **api_opts
+        )
         if obj is None:
-            obj = __salt__['infoblox.get_ipv4_range'](start_addr=None, end_addr=data['end_addr'], **api_opts)
+            obj = __salt__["infoblox.get_ipv4_range"](
+                start_addr=None, end_addr=data["end_addr"], **api_opts
+            )
 
     if not obj:
-        ret['result'] = True
-        ret['comment'] = 'already deleted'
+        ret["result"] = True
+        ret["comment"] = "already deleted"
         return ret
 
-    if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = 'would attempt to delete range'
+    if __opts__["test"]:
+        ret["result"] = None
+        ret["comment"] = "would attempt to delete range"
         return ret
 
-    if __salt__['infoblox.delete_object'](objref=obj['_ref']):
-        ret['result'] = True
-        ret['changes'] = {'old': 'Found {0} - {1}'.format(start_addr, end_addr),
-                        'new': 'Removed'}
+    if __salt__["infoblox.delete_object"](objref=obj["_ref"]):
+        ret["result"] = True
+        ret["changes"] = {
+            "old": "Found {0} - {1}".format(start_addr, end_addr),
+            "new": "Removed",
+        }
     return ret
