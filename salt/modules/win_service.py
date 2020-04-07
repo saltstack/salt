@@ -118,7 +118,8 @@ def __virtual__():
 class ServiceDependencies(object):
     """
     Helper class which provides functionality to get all dependencies and
-    parents of a Windows service
+    parents of a Windows service.
+
     Args:
         name (str): The name of the service. This is not the display name.
             Use ``get_service_name`` to find the service name.
@@ -158,19 +159,15 @@ class ServiceDependencies(object):
     def _dependencies_recursion(self, name):
         # Using a list here to maintain order
         ret = list()
-        try:
-            dependencies = self._dependencies(name)
-            for dependency in dependencies:
-                indirect_dependencies = self._dependencies_recursion(dependency)
-                for indirect_dependency in indirect_dependencies:
-                    if indirect_dependency not in ret:
-                        ret.append(indirect_dependency)
-            for dependency in dependencies:
-                if dependency not in ret:
-                    ret.append(dependency)
-        except Exception as e:
-            log.debug(e)
-            ret = list()
+        dependencies = self._dependencies(name)
+        for dependency in dependencies:
+            indirect_dependencies = self._dependencies_recursion(dependency)
+            for indirect_dependency in indirect_dependencies:
+                if indirect_dependency not in ret:
+                    ret.append(indirect_dependency)
+        for dependency in dependencies:
+            if dependency not in ret:
+                ret.append(dependency)
         return ret
 
     def _normalize_name(self, references, difference):
@@ -204,35 +201,27 @@ class ServiceDependencies(object):
     def _parents(self, name):
         # Using a list here to maintain order
         ret = list()
-        try:
-            # Sort for predictable behavior
-            for service, dependencies in sorted(self._service_info.items()):
-                if name in dependencies:
-                    if service in ret:
-                        ret.remove(service)
-                    ret.append(service)
-        except Exception as e:
-            log.debug(e)
-            ret = list()
+        # Sort for predictable behavior
+        for service, dependencies in sorted(self._service_info.items()):
+            if name in dependencies:
+                if service in ret:
+                    ret.remove(service)
+                ret.append(service)
         return ret
 
     def _parents_recursion(self, name):
         # Using a list here to maintain order
         ret = list()
-        try:
-            parents = self._parents(name)
-            for parent in parents:
-                if parent not in ret:
-                    ret.append(parent)
-            for parent in parents:
-                indirect_parents = self._parents_recursion(parent)
-                for indirect_parent in indirect_parents:
-                    if indirect_parent in ret:
-                        ret.remove(indirect_parent)
-                    ret.append(indirect_parent)
-        except Exception as e:
-            log.debug(e)
-            ret = list()
+        parents = self._parents(name)
+        for parent in parents:
+            if parent not in ret:
+                ret.append(parent)
+        for parent in parents:
+            indirect_parents = self._parents_recursion(parent)
+            for indirect_parent in indirect_parents:
+                if indirect_parent in ret:
+                    ret.remove(indirect_parent)
+                ret.append(indirect_parent)
         return ret
 
     def parents(self, with_indirect=False):
