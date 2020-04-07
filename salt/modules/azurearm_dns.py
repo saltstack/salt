@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Azure (ARM) DNS Execution Module
 
 .. versionadded:: 3000
@@ -50,10 +50,11 @@ Optional provider parameters:
         * ``AZURE_US_GOV_CLOUD``
         * ``AZURE_GERMAN_CLOUD``
 
-'''
+"""
 
 # Python libs
 from __future__ import absolute_import
+
 import logging
 
 # Azure libs
@@ -62,11 +63,12 @@ try:
     import azure.mgmt.dns.models  # pylint: disable=unused-import
     from msrest.exceptions import SerializationError
     from msrestazure.azure_exceptions import CloudError
+
     HAS_LIBS = True
 except ImportError:
     pass
 
-__virtualname__ = 'azurearm_dns'
+__virtualname__ = "azurearm_dns"
 
 log = logging.getLogger(__name__)
 
@@ -75,16 +77,16 @@ def __virtual__():
     if not HAS_LIBS:
         return (
             False,
-            'The following dependencies are required to use the AzureARM modules: '
-            'Microsoft Azure SDK for Python >= 2.0rc6, '
-            'MS REST Azure (msrestazure) >= 0.4'
+            "The following dependencies are required to use the AzureARM modules: "
+            "Microsoft Azure SDK for Python >= 2.0rc6, "
+            "MS REST Azure (msrestazure) >= 0.4",
         )
 
     return __virtualname__
 
 
 def record_set_create_or_update(name, zone_name, resource_group, record_type, **kwargs):
-    '''
+    """
     .. versionadded:: 3000
 
     Creates or updates a record set within a DNS zone.
@@ -107,13 +109,17 @@ def record_set_create_or_update(name, zone_name, resource_group, record_type, **
         salt-call azurearm_dns.record_set_create_or_update myhost myzone testgroup A
             arecords='[{ipv4_address: 10.0.0.1}]' ttl=300
 
-    '''
-    dnsconn = __utils__['azurearm.get_client']('dns', **kwargs)
+    """
+    dnsconn = __utils__["azurearm.get_client"]("dns", **kwargs)
 
     try:
-        record_set_model = __utils__['azurearm.create_object_model']('dns', 'RecordSet', **kwargs)
+        record_set_model = __utils__["azurearm.create_object_model"](
+            "dns", "RecordSet", **kwargs
+        )
     except TypeError as exc:
-        result = {'error': 'The object model could not be built. ({0})'.format(str(exc))}
+        result = {
+            "error": "The object model could not be built. ({0})".format(str(exc))
+        }
         return result
 
     try:
@@ -123,21 +129,23 @@ def record_set_create_or_update(name, zone_name, resource_group, record_type, **
             resource_group_name=resource_group,
             record_type=record_type,
             parameters=record_set_model,
-            if_match=kwargs.get('if_match'),
-            if_none_match=kwargs.get('if_none_match')
+            if_match=kwargs.get("if_match"),
+            if_none_match=kwargs.get("if_none_match"),
         )
         result = record_set.as_dict()
     except CloudError as exc:
-        __utils__['azurearm.log_cloud_error']('dns', str(exc), **kwargs)
-        result = {'error': str(exc)}
+        __utils__["azurearm.log_cloud_error"]("dns", str(exc), **kwargs)
+        result = {"error": str(exc)}
     except SerializationError as exc:
-        result = {'error': 'The object model could not be parsed. ({0})'.format(str(exc))}
+        result = {
+            "error": "The object model could not be parsed. ({0})".format(str(exc))
+        }
 
     return result
 
 
 def record_set_delete(name, zone_name, resource_group, record_type, **kwargs):
-    '''
+    """
     .. versionadded:: 3000
 
     Deletes a record set from a DNS zone. This operation cannot be undone.
@@ -159,26 +167,26 @@ def record_set_delete(name, zone_name, resource_group, record_type, **kwargs):
 
         salt-call azurearm_dns.record_set_delete myhost myzone testgroup A
 
-    '''
+    """
     result = False
-    dnsconn = __utils__['azurearm.get_client']('dns', **kwargs)
+    dnsconn = __utils__["azurearm.get_client"]("dns", **kwargs)
     try:
         record_set = dnsconn.record_sets.delete(
             relative_record_set_name=name,
             zone_name=zone_name,
             resource_group_name=resource_group,
             record_type=record_type,
-            if_match=kwargs.get('if_match')
+            if_match=kwargs.get("if_match"),
         )
         result = True
     except CloudError as exc:
-        __utils__['azurearm.log_cloud_error']('dns', str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("dns", str(exc), **kwargs)
 
     return result
 
 
 def record_set_get(name, zone_name, resource_group, record_type, **kwargs):
-    '''
+    """
     .. versionadded:: 3000
 
     Get a dictionary representing a record set's properties.
@@ -199,26 +207,28 @@ def record_set_get(name, zone_name, resource_group, record_type, **kwargs):
 
         salt-call azurearm_dns.record_set_get '@' myzone testgroup SOA
 
-    '''
-    dnsconn = __utils__['azurearm.get_client']('dns', **kwargs)
+    """
+    dnsconn = __utils__["azurearm.get_client"]("dns", **kwargs)
     try:
         record_set = dnsconn.record_sets.get(
             relative_record_set_name=name,
             zone_name=zone_name,
             resource_group_name=resource_group,
-            record_type=record_type
+            record_type=record_type,
         )
         result = record_set.as_dict()
 
     except CloudError as exc:
-        __utils__['azurearm.log_cloud_error']('dns', str(exc), **kwargs)
-        result = {'error': str(exc)}
+        __utils__["azurearm.log_cloud_error"]("dns", str(exc), **kwargs)
+        result = {"error": str(exc)}
 
     return result
 
 
-def record_sets_list_by_type(zone_name, resource_group, record_type, top=None, recordsetnamesuffix=None, **kwargs):
-    '''
+def record_sets_list_by_type(
+    zone_name, resource_group, record_type, top=None, recordsetnamesuffix=None, **kwargs
+):
+    """
     .. versionadded:: 3000
 
     Lists the record sets of a specified type in a DNS zone.
@@ -245,31 +255,33 @@ def record_sets_list_by_type(zone_name, resource_group, record_type, top=None, r
 
         salt-call azurearm_dns.record_sets_list_by_type myzone testgroup SOA
 
-    '''
+    """
     result = {}
-    dnsconn = __utils__['azurearm.get_client']('dns', **kwargs)
+    dnsconn = __utils__["azurearm.get_client"]("dns", **kwargs)
     try:
-        record_sets = __utils__['azurearm.paged_object_to_list'](
+        record_sets = __utils__["azurearm.paged_object_to_list"](
             dnsconn.record_sets.list_by_type(
                 zone_name=zone_name,
                 resource_group_name=resource_group,
                 record_type=record_type,
                 top=top,
-                recordsetnamesuffix=recordsetnamesuffix
+                recordsetnamesuffix=recordsetnamesuffix,
             )
         )
 
         for record_set in record_sets:
-            result[record_set['name']] = record_set
+            result[record_set["name"]] = record_set
     except CloudError as exc:
-        __utils__['azurearm.log_cloud_error']('dns', str(exc), **kwargs)
-        result = {'error': str(exc)}
+        __utils__["azurearm.log_cloud_error"]("dns", str(exc), **kwargs)
+        result = {"error": str(exc)}
 
     return result
 
 
-def record_sets_list_by_dns_zone(zone_name, resource_group, top=None, recordsetnamesuffix=None, **kwargs):
-    '''
+def record_sets_list_by_dns_zone(
+    zone_name, resource_group, top=None, recordsetnamesuffix=None, **kwargs
+):
+    """
     .. versionadded:: 3000
 
     Lists all record sets in a DNS zone.
@@ -292,30 +304,30 @@ def record_sets_list_by_dns_zone(zone_name, resource_group, top=None, recordsetn
 
         salt-call azurearm_dns.record_sets_list_by_dns_zone myzone testgroup
 
-    '''
+    """
     result = {}
-    dnsconn = __utils__['azurearm.get_client']('dns', **kwargs)
+    dnsconn = __utils__["azurearm.get_client"]("dns", **kwargs)
     try:
-        record_sets = __utils__['azurearm.paged_object_to_list'](
+        record_sets = __utils__["azurearm.paged_object_to_list"](
             dnsconn.record_sets.list_by_dns_zone(
                 zone_name=zone_name,
                 resource_group_name=resource_group,
                 top=top,
-                recordsetnamesuffix=recordsetnamesuffix
+                recordsetnamesuffix=recordsetnamesuffix,
             )
         )
 
         for record_set in record_sets:
-            result[record_set['name']] = record_set
+            result[record_set["name"]] = record_set
     except CloudError as exc:
-        __utils__['azurearm.log_cloud_error']('dns', str(exc), **kwargs)
-        result = {'error': str(exc)}
+        __utils__["azurearm.log_cloud_error"]("dns", str(exc), **kwargs)
+        result = {"error": str(exc)}
 
     return result
 
 
 def zone_create_or_update(name, resource_group, **kwargs):
-    '''
+    """
     .. versionadded:: 3000
 
     Creates or updates a DNS zone. Does not modify DNS records within the zone.
@@ -330,23 +342,29 @@ def zone_create_or_update(name, resource_group, **kwargs):
 
         salt-call azurearm_dns.zone_create_or_update myzone testgroup
 
-    '''
+    """
     # DNS zones are global objects
-    kwargs['location'] = 'global'
+    kwargs["location"] = "global"
 
-    dnsconn = __utils__['azurearm.get_client']('dns', **kwargs)
+    dnsconn = __utils__["azurearm.get_client"]("dns", **kwargs)
 
     # Convert list of ID strings to list of dictionaries with id key.
-    if isinstance(kwargs.get('registration_virtual_networks'), list):
-        kwargs['registration_virtual_networks'] = [{'id': vnet} for vnet in kwargs['registration_virtual_networks']]
+    if isinstance(kwargs.get("registration_virtual_networks"), list):
+        kwargs["registration_virtual_networks"] = [
+            {"id": vnet} for vnet in kwargs["registration_virtual_networks"]
+        ]
 
-    if isinstance(kwargs.get('resolution_virtual_networks'), list):
-        kwargs['resolution_virtual_networks'] = [{'id': vnet} for vnet in kwargs['resolution_virtual_networks']]
+    if isinstance(kwargs.get("resolution_virtual_networks"), list):
+        kwargs["resolution_virtual_networks"] = [
+            {"id": vnet} for vnet in kwargs["resolution_virtual_networks"]
+        ]
 
     try:
-        zone_model = __utils__['azurearm.create_object_model']('dns', 'Zone', **kwargs)
+        zone_model = __utils__["azurearm.create_object_model"]("dns", "Zone", **kwargs)
     except TypeError as exc:
-        result = {'error': 'The object model could not be built. ({0})'.format(str(exc))}
+        result = {
+            "error": "The object model could not be built. ({0})".format(str(exc))
+        }
         return result
 
     try:
@@ -354,21 +372,23 @@ def zone_create_or_update(name, resource_group, **kwargs):
             zone_name=name,
             resource_group_name=resource_group,
             parameters=zone_model,
-            if_match=kwargs.get('if_match'),
-            if_none_match=kwargs.get('if_none_match')
+            if_match=kwargs.get("if_match"),
+            if_none_match=kwargs.get("if_none_match"),
         )
         result = zone.as_dict()
     except CloudError as exc:
-        __utils__['azurearm.log_cloud_error']('dns', str(exc), **kwargs)
-        result = {'error': str(exc)}
+        __utils__["azurearm.log_cloud_error"]("dns", str(exc), **kwargs)
+        result = {"error": str(exc)}
     except SerializationError as exc:
-        result = {'error': 'The object model could not be parsed. ({0})'.format(str(exc))}
+        result = {
+            "error": "The object model could not be parsed. ({0})".format(str(exc))
+        }
 
     return result
 
 
 def zone_delete(name, resource_group, **kwargs):
-    '''
+    """
     .. versionadded:: 3000
 
     Delete a DNS zone within a resource group.
@@ -383,25 +403,25 @@ def zone_delete(name, resource_group, **kwargs):
 
         salt-call azurearm_dns.zone_delete myzone testgroup
 
-    '''
+    """
     result = False
-    dnsconn = __utils__['azurearm.get_client']('dns', **kwargs)
+    dnsconn = __utils__["azurearm.get_client"]("dns", **kwargs)
     try:
         zone = dnsconn.zones.delete(
             zone_name=name,
             resource_group_name=resource_group,
-            if_match=kwargs.get('if_match')
+            if_match=kwargs.get("if_match"),
         )
         zone.wait()
         result = True
     except CloudError as exc:
-        __utils__['azurearm.log_cloud_error']('dns', str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("dns", str(exc), **kwargs)
 
     return result
 
 
 def zone_get(name, resource_group, **kwargs):
-    '''
+    """
     .. versionadded:: 3000
 
     Get a dictionary representing a DNS zone's properties, but not the
@@ -417,24 +437,21 @@ def zone_get(name, resource_group, **kwargs):
 
         salt-call azurearm_dns.zone_get myzone testgroup
 
-    '''
-    dnsconn = __utils__['azurearm.get_client']('dns', **kwargs)
+    """
+    dnsconn = __utils__["azurearm.get_client"]("dns", **kwargs)
     try:
-        zone = dnsconn.zones.get(
-            zone_name=name,
-            resource_group_name=resource_group
-        )
+        zone = dnsconn.zones.get(zone_name=name, resource_group_name=resource_group)
         result = zone.as_dict()
 
     except CloudError as exc:
-        __utils__['azurearm.log_cloud_error']('dns', str(exc), **kwargs)
-        result = {'error': str(exc)}
+        __utils__["azurearm.log_cloud_error"]("dns", str(exc), **kwargs)
+        result = {"error": str(exc)}
 
     return result
 
 
 def zones_list_by_resource_group(resource_group, top=None, **kwargs):
-    '''
+    """
     .. versionadded:: 3000
 
     Lists the DNS zones in a resource group.
@@ -451,28 +468,27 @@ def zones_list_by_resource_group(resource_group, top=None, **kwargs):
 
         salt-call azurearm_dns.zones_list_by_resource_group testgroup
 
-    '''
+    """
     result = {}
-    dnsconn = __utils__['azurearm.get_client']('dns', **kwargs)
+    dnsconn = __utils__["azurearm.get_client"]("dns", **kwargs)
     try:
-        zones = __utils__['azurearm.paged_object_to_list'](
+        zones = __utils__["azurearm.paged_object_to_list"](
             dnsconn.zones.list_by_resource_group(
-                resource_group_name=resource_group,
-                top=top
+                resource_group_name=resource_group, top=top
             )
         )
 
         for zone in zones:
-            result[zone['name']] = zone
+            result[zone["name"]] = zone
     except CloudError as exc:
-        __utils__['azurearm.log_cloud_error']('dns', str(exc), **kwargs)
-        result = {'error': str(exc)}
+        __utils__["azurearm.log_cloud_error"]("dns", str(exc), **kwargs)
+        result = {"error": str(exc)}
 
     return result
 
 
 def zones_list(top=None, **kwargs):
-    '''
+    """
     .. versionadded:: 3000
 
     Lists the DNS zones in all resource groups in a subscription.
@@ -487,16 +503,16 @@ def zones_list(top=None, **kwargs):
 
         salt-call azurearm_dns.zones_list
 
-    '''
+    """
     result = {}
-    dnsconn = __utils__['azurearm.get_client']('dns', **kwargs)
+    dnsconn = __utils__["azurearm.get_client"]("dns", **kwargs)
     try:
-        zones = __utils__['azurearm.paged_object_to_list'](dnsconn.zones.list(top=top))
+        zones = __utils__["azurearm.paged_object_to_list"](dnsconn.zones.list(top=top))
 
         for zone in zones:
-            result[zone['name']] = zone
+            result[zone["name"]] = zone
     except CloudError as exc:
-        __utils__['azurearm.log_cloud_error']('dns', str(exc), **kwargs)
-        result = {'error': str(exc)}
+        __utils__["azurearm.log_cloud_error"]("dns", str(exc), **kwargs)
+        result = {"error": str(exc)}
 
     return result

@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Configuration disposable regularly scheduled tasks for at.
 ==========================================================
 
 The at state can be add disposable regularly scheduled tasks for your system.
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
@@ -17,14 +17,14 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     Most everything has the ability to support at(1)
-    '''
-    return 'at.at' in __salt__
+    """
+    return "at.at" in __salt__
 
 
 def present(name, timespec, tag=None, user=None, job=None, unique_tag=False):
-    '''
+    """
     .. versionchanged:: 2017.7.0
 
     Add a job to queue.
@@ -55,78 +55,56 @@ def present(name, timespec, tag=None, user=None, job=None, unique_tag=False):
             - tag: love
             - user: jam
 
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': True,
-           'comment': ''}
+    """
+    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
     # if job is missing, use name
     if not job:
         job = name
 
     # quick return on test=True
-    if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = 'job {0} added and will run on {1}'.format(
-            job,
-            timespec,
-        )
+    if __opts__["test"]:
+        ret["result"] = None
+        ret["comment"] = "job {0} added and will run on {1}".format(job, timespec,)
         return ret
 
     # quick return if unique_tag and job exists
     if unique_tag:
         if not tag:
-            ret['result'] = False
-            ret['comment'] = 'no tag provided and unique_tag is set to True'
+            ret["result"] = False
+            ret["comment"] = "no tag provided and unique_tag is set to True"
             return ret
-        elif len(__salt__['at.jobcheck'](tag=tag)['jobs']) > 0:
-            ret['comment'] = 'atleast one job with tag {tag} exists.'.format(
-                tag=tag
-            )
+        elif len(__salt__["at.jobcheck"](tag=tag)["jobs"]) > 0:
+            ret["comment"] = "atleast one job with tag {tag} exists.".format(tag=tag)
             return ret
 
     # create job
     if user:
-        luser = __salt__['user.info'](user)
+        luser = __salt__["user.info"](user)
         if not luser:
-            ret['result'] = False
-            ret['comment'] = 'user {0} does not exists'.format(user)
+            ret["result"] = False
+            ret["comment"] = "user {0} does not exists".format(user)
             return ret
-        ret['comment'] = 'job {0} added and will run as {1} on {2}'.format(
-            job,
-            user,
-            timespec,
+        ret["comment"] = "job {0} added and will run as {1} on {2}".format(
+            job, user, timespec,
         )
-        res = __salt__['at.at'](
-            timespec,
-            job,
-            tag=tag,
-            runas=user,
-        )
+        res = __salt__["at.at"](timespec, job, tag=tag, runas=user,)
     else:
-        ret['comment'] = 'job {0} added and will run on {1}'.format(
-            job,
-            timespec,
-        )
-        res = __salt__['at.at'](
-            timespec,
-            job,
-            tag=tag,
-        )
+        ret["comment"] = "job {0} added and will run on {1}".format(job, timespec,)
+        res = __salt__["at.at"](timespec, job, tag=tag,)
 
     # set ret['changes']
-    if 'jobs' in res and len(res['jobs']) > 0:
-        ret['changes'] = res['jobs'][0]
-    if 'error' in res:
-        ret['result'] = False
-        ret['comment'] = res['error']
+    if "jobs" in res and len(res["jobs"]) > 0:
+        ret["changes"] = res["jobs"][0]
+    if "error" in res:
+        ret["result"] = False
+        ret["comment"] = res["error"]
 
     return ret
 
 
 def absent(name, jobid=None, **kwargs):
-    '''
+    """
     .. versionchanged:: 2017.7.0
 
     Remove a job from queue
@@ -180,50 +158,47 @@ def absent(name, jobid=None, **kwargs):
 
     .. note:
         all other filters are ignored and only job with id 4 is removed
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': True,
-           'comment': ''}
+    """
+    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
     # limit was never support
-    if 'limit' in kwargs:
-        ret['comment'] = 'limit parameter not supported {0}'.format(name)
-        ret['result'] = False
+    if "limit" in kwargs:
+        ret["comment"] = "limit parameter not supported {0}".format(name)
+        ret["result"] = False
         return ret
 
     # quick return on test=True
-    if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = 'removed ? job(s)'
+    if __opts__["test"]:
+        ret["result"] = None
+        ret["comment"] = "removed ? job(s)"
         return ret
 
     # remove specific job
     if jobid:
-        jobs = __salt__['at.atq'](jobid)
-        if 'jobs' in jobs and len(jobs['jobs']) == 0:
-            ret['result'] = True
-            ret['comment'] = 'job with id {jobid} not present'.format(
-                jobid=jobid
-            )
+        jobs = __salt__["at.atq"](jobid)
+        if "jobs" in jobs and len(jobs["jobs"]) == 0:
+            ret["result"] = True
+            ret["comment"] = "job with id {jobid} not present".format(jobid=jobid)
             return ret
-        elif 'jobs' in jobs and len(jobs['jobs']) == 1:
-            if 'job' in jobs['jobs'][0] and jobs['jobs'][0]['job']:
-                res = __salt__['at.atrm'](jobid)
-                ret['result'] = jobid in res['jobs']['removed']
-                if ret['result']:
-                    ret['comment'] = 'job with id {jobid} was removed'.format(
+        elif "jobs" in jobs and len(jobs["jobs"]) == 1:
+            if "job" in jobs["jobs"][0] and jobs["jobs"][0]["job"]:
+                res = __salt__["at.atrm"](jobid)
+                ret["result"] = jobid in res["jobs"]["removed"]
+                if ret["result"]:
+                    ret["comment"] = "job with id {jobid} was removed".format(
                         jobid=jobid
                     )
                 else:
-                    ret['comment'] = 'failed to remove job with id {jobid}'.format(
+                    ret["comment"] = "failed to remove job with id {jobid}".format(
                         jobid=jobid
                     )
-                ret['changes']['removed'] = res['jobs']['removed']
+                ret["changes"]["removed"] = res["jobs"]["removed"]
                 return ret
         else:
-            ret['result'] = False
-            ret['comment'] = 'more than one job was return for job with id {jobid}'.format(
+            ret["result"] = False
+            ret[
+                "comment"
+            ] = "more than one job was return for job with id {jobid}".format(
                 jobid=jobid
             )
             return ret
@@ -231,22 +206,24 @@ def absent(name, jobid=None, **kwargs):
     # remove jobs based on filter
     if kwargs:
         # we pass kwargs to at.jobcheck
-        opts = list(list(map(str, [j['job'] for j in __salt__['at.jobcheck'](**kwargs)['jobs']])))
-        res = __salt__['at.atrm'](*opts)
+        opts = list(
+            list(
+                map(str, [j["job"] for j in __salt__["at.jobcheck"](**kwargs)["jobs"]])
+            )
+        )
+        res = __salt__["at.atrm"](*opts)
     else:
         # arguments to filter with, removing everything!
-        res = __salt__['at.atrm']('all')
+        res = __salt__["at.atrm"]("all")
 
-    if len(res['jobs']['removed']) > 0:
-        ret['changes']['removed'] = res['jobs']['removed']
-    ret['comment'] = 'removed {count} job(s)'.format(
-        count=len(res['jobs']['removed'])
-    )
+    if len(res["jobs"]["removed"]) > 0:
+        ret["changes"]["removed"] = res["jobs"]["removed"]
+    ret["comment"] = "removed {count} job(s)".format(count=len(res["jobs"]["removed"]))
     return ret
 
 
 def watch(name, timespec, tag=None, user=None, job=None, unique_tag=False):
-    '''
+    """
     .. versionadded:: 2017.7.0
 
     Add an at job if trigger by watch
@@ -279,17 +256,12 @@ def watch(name, timespec, tag=None, user=None, job=None, unique_tag=False):
             - watch:
                 - file: /etc/salt/minion
 
-    '''
-    return {
-        'name': name,
-        'changes': {},
-        'result': True,
-        'comment': ''
-    }
+    """
+    return {"name": name, "changes": {}, "result": True, "comment": ""}
 
 
 def mod_watch(name, **kwargs):
-    '''
+    """
     The at watcher, called to invoke the watch command.
 
     .. note::
@@ -301,16 +273,13 @@ def mod_watch(name, **kwargs):
     name
         The name of the atjob
 
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': False,
-           'comment': ''}
+    """
+    ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
-    if kwargs['sfun'] == 'watch':
-        for p in ['sfun', '__reqs__']:
+    if kwargs["sfun"] == "watch":
+        for p in ["sfun", "__reqs__"]:
             del kwargs[p]
-        kwargs['name'] = name
+        kwargs["name"] = name
         ret = present(**kwargs)
 
     return ret
