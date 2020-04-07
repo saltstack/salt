@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Initialization of PostgreSQL data directory
 ===========================================
 
@@ -20,29 +20,34 @@ data directory.
         - locale: C
         - runas: postgres
 
-'''
-from __future__ import absolute_import, unicode_literals, print_function
+"""
+from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():
-    '''
+    """
     Only load if the postgres module is present
-    '''
-    if 'postgres.datadir_init' not in __salt__:
-        return (False, 'Unable to load postgres module.  Make sure `postgres.bins_dir` is set.')
+    """
+    if "postgres.datadir_init" not in __salt__:
+        return (
+            False,
+            "Unable to load postgres module.  Make sure `postgres.bins_dir` is set.",
+        )
     return True
 
 
-def present(name,
-        user=None,
-        password=None,
-        auth='password',
-        encoding='UTF8',
-        locale=None,
-        runas=None,
-        waldir=None,
-        checksums=False):
-    '''
+def present(
+    name,
+    user=None,
+    password=None,
+    auth="password",
+    encoding="UTF8",
+    locale=None,
+    runas=None,
+    waldir=None,
+    checksums=False,
+):
+    """
     Initialize the PostgreSQL data directory
 
     name
@@ -78,41 +83,35 @@ def present(name,
 
     runas
         The system user the operation should be performed on behalf of
-    '''
-    _cmt = 'Postgres data directory {0} is already present'.format(name)
-    ret = {
-        'name': name,
-        'changes': {},
-        'result': True,
-        'comment': _cmt}
+    """
+    _cmt = "Postgres data directory {0} is already present".format(name)
+    ret = {"name": name, "changes": {}, "result": True, "comment": _cmt}
 
-    if not __salt__['postgres.datadir_exists'](name=name):
-        if __opts__['test']:
-            ret['result'] = None
-            _cmt = 'Postgres data directory {0} is set to be initialized'\
-                .format(name)
-            ret['comment'] = _cmt
+    if not __salt__["postgres.datadir_exists"](name=name):
+        if __opts__["test"]:
+            ret["result"] = None
+            _cmt = "Postgres data directory {0} is set to be initialized".format(name)
+            ret["comment"] = _cmt
             return ret
 
         kwargs = dict(
-                user=user,
-                password=password,
-                auth=auth,
-                encoding=encoding,
-                locale=locale,
-                waldir=waldir,
-                checksums=checksums,
-                runas=runas)
+            user=user,
+            password=password,
+            auth=auth,
+            encoding=encoding,
+            locale=locale,
+            waldir=waldir,
+            checksums=checksums,
+            runas=runas,
+        )
 
-        if __salt__['postgres.datadir_init'](name, **kwargs):
-            _cmt = 'Postgres data directory {0} has been initialized'\
-                .format(name)
-            ret['comment'] = _cmt
-            ret['changes'][name] = 'Present'
+        if __salt__["postgres.datadir_init"](name, **kwargs):
+            _cmt = "Postgres data directory {0} has been initialized".format(name)
+            ret["comment"] = _cmt
+            ret["changes"][name] = "Present"
         else:
-            _cmt = 'Postgres data directory {0} initialization failed'\
-                .format(name)
-            ret['result'] = False
-            ret['comment'] = _cmt
+            _cmt = "Postgres data directory {0} initialization failed".format(name)
+            ret["result"] = False
+            ret["comment"] = _cmt
 
     return ret
