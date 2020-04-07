@@ -331,6 +331,9 @@ class ArgsTestCase(TestCase):
         self.assertEqual(_yamlify_arg('...'), '...')
         self.assertEqual(_yamlify_arg(' ...'), ' ...')
 
+        # Make sure that non-printable whitespace is not YAML-loaded
+        self.assertEqual(_yamlify_arg('foo\t\nbar'), 'foo\t\nbar')
+
 
 class KwargRegexTest(TestCase):
     def test_arguments_regex(self):
