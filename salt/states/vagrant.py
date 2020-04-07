@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-r'''
+r"""
 Manage Vagrant VMs
 ==================
 
@@ -48,34 +48,35 @@ value will select the ``primary`` (or only) machine in the Vagrantfile.
       table: sdb  # ... using this table name.
       create_table: True  # if not present
 
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import fnmatch
 
+import salt.ext.six as six
+
 # Import Salt libs
 import salt.utils.args
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-import salt.ext.six as six
 
-__virtualname__ = 'vagrant'
+__virtualname__ = "vagrant"
 
 
 def __virtual__():
-    '''
+    """
     Only if vagrant module is available.
 
     :return:
-    '''
+    """
 
-    if 'vagrant.version' in __salt__:
+    if "vagrant.version" in __salt__:
         return __virtualname__
     return False
 
 
 def _vagrant_call(node, function, section, comment, status_when_done=None, **kwargs):
-    '''
+    """
     Helper to call the vagrant functions. Wildcards supported.
 
     :param node: The Salt-id or wildcard
@@ -84,51 +85,51 @@ def _vagrant_call(node, function, section, comment, status_when_done=None, **kwa
     :param comment: what the state reply should say
     :param status_when_done: the Vagrant status expected for this state
     :return:  the dictionary for the state reply
-    '''
-    ret = {'name': node, 'changes': {}, 'result': True, 'comment': ''}
+    """
+    ret = {"name": node, "changes": {}, "result": True, "comment": ""}
 
     targeted_nodes = []
     if isinstance(node, six.string_types):
         try:  # use shortcut if a single node name
-            if __salt__['vagrant.get_vm_info'](node):
+            if __salt__["vagrant.get_vm_info"](node):
                 targeted_nodes = [node]
         except SaltInvocationError:
             pass
 
     if not targeted_nodes:  # the shortcut failed, do this the hard way
-        all_domains = __salt__['vagrant.list_domains']()
+        all_domains = __salt__["vagrant.list_domains"]()
         targeted_nodes = fnmatch.filter(all_domains, node)
     changed_nodes = []
     ignored_nodes = []
     for node in targeted_nodes:
         if status_when_done:
             try:
-                present_state = __salt__['vagrant.vm_state'](node)[0]
-                if present_state['state'] == status_when_done:
+                present_state = __salt__["vagrant.vm_state"](node)[0]
+                if present_state["state"] == status_when_done:
                     continue  # no change is needed
             except (IndexError, SaltInvocationError, CommandExecutionError):
                 pass
         try:
-            response = __salt__['vagrant.{0}'.format(function)](node, **kwargs)
+            response = __salt__["vagrant.{0}".format(function)](node, **kwargs)
             if isinstance(response, dict):
-                response = response['name']
-            changed_nodes.append({'node': node, function: response})
+                response = response["name"]
+            changed_nodes.append({"node": node, function: response})
         except (SaltInvocationError, CommandExecutionError) as err:
-            ignored_nodes.append({'node': node, 'issue': six.text_type(err)})
+            ignored_nodes.append({"node": node, "issue": six.text_type(err)})
     if not changed_nodes:
-        ret['result'] = True
-        ret['comment'] = 'No changes seen'
+        ret["result"] = True
+        ret["comment"] = "No changes seen"
         if ignored_nodes:
-            ret['changes'] = {'ignored': ignored_nodes}
+            ret["changes"] = {"ignored": ignored_nodes}
     else:
-        ret['changes'] = {section: changed_nodes}
-        ret['comment'] = comment
+        ret["changes"] = {section: changed_nodes}
+        ret["comment"] = comment
 
     return ret
 
 
 def running(name, **kwargs):
-    r'''
+    r"""
     Defines and starts a new VM with specified arguments, or restart a
     VM (or group of VMs). (Runs ``vagrant up``.)
 
@@ -163,68 +164,70 @@ def running(name, **kwargs):
             - vagrant_runas: my_username
             - machine: machine1
 
-    '''
-    if '*' in name or '?' in name:
+    """
+    if "*" in name or "?" in name:
 
-        return _vagrant_call(name, 'start', 'restarted',
-                             "Machine has been restarted", "running")
+        return _vagrant_call(
+            name, "start", "restarted", "Machine has been restarted", "running"
+        )
 
     else:
 
-        ret = {'name': name,
-               'changes': {},
-               'result': True,
-               'comment': '{0} is already running'.format(name)
-               }
+        ret = {
+            "name": name,
+            "changes": {},
+            "result": True,
+            "comment": "{0} is already running".format(name),
+        }
 
         try:
-            info = __salt__['vagrant.vm_state'](name)
-            if info[0]['state'] != 'running':
-                __salt__['vagrant.start'](name)
-                ret['changes'][name] = 'Machine started'
-                ret['comment'] = 'Node {0} started'.format(name)
+            info = __salt__["vagrant.vm_state"](name)
+            if info[0]["state"] != "running":
+                __salt__["vagrant.start"](name)
+                ret["changes"][name] = "Machine started"
+                ret["comment"] = "Node {0} started".format(name)
         except (SaltInvocationError, CommandExecutionError):
             #  there was no viable existing machine to start
             ret, kwargs = _find_init_change(name, ret, **kwargs)
-            kwargs['start'] = True
-            __salt__['vagrant.init'](name, **kwargs)
-            ret['changes'][name] = 'Node defined and started'
-            ret['comment'] = 'Node {0} defined and started'.format(name)
+            kwargs["start"] = True
+            __salt__["vagrant.init"](name, **kwargs)
+            ret["changes"][name] = "Node defined and started"
+            ret["comment"] = "Node {0} defined and started".format(name)
 
         return ret
 
 
 def _find_init_change(name, ret, **kwargs):
-    '''
+    """
     look for changes from any previous init of machine.
 
     :return: modified ret and kwargs
-    '''
+    """
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
-    if 'vm' in kwargs:
-        kwargs.update(kwargs.pop('vm'))
+    if "vm" in kwargs:
+        kwargs.update(kwargs.pop("vm"))
     # the state processing eats 'runas' so we rename
-    kwargs['runas'] = kwargs.pop('vagrant_runas', '')
+    kwargs["runas"] = kwargs.pop("vagrant_runas", "")
     try:
-        vm_ = __salt__['vagrant.get_vm_info'](name)
+        vm_ = __salt__["vagrant.get_vm_info"](name)
     except SaltInvocationError:
         vm_ = {}
         for key, value in kwargs.items():
-            ret['changes'][key] = {'old': None, 'new': value}
+            ret["changes"][key] = {"old": None, "new": value}
     if vm_:  # test for changed values
         for key in vm_:
-            value = vm_[key] or ''  # supply a blank if value is None
-            if key != 'name':  # will be missing in kwargs
-                new = kwargs.get(key, '')
+            value = vm_[key] or ""  # supply a blank if value is None
+            if key != "name":  # will be missing in kwargs
+                new = kwargs.get(key, "")
                 if new != value:
-                    if key == 'machine' and new == '':
+                    if key == "machine" and new == "":
                         continue  # we don't know the default machine name
-                    ret['changes'][key] = {'old': value, 'new': new}
+                    ret["changes"][key] = {"old": value, "new": new}
     return ret, kwargs
 
 
 def initialized(name, **kwargs):
-    r'''
+    r"""
     Defines a new VM with specified arguments, but does not start it.
 
     :param name: the Salt_id node name you wish your VM to have.
@@ -259,29 +262,30 @@ def initialized(name, **kwargs):
         start_nodes:
           vagrant.start:
             - name: node_name?
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': True,
-           'comment': 'The VM is already correctly defined'
-           }
+    """
+    ret = {
+        "name": name,
+        "changes": {},
+        "result": True,
+        "comment": "The VM is already correctly defined",
+    }
 
     # define a machine to start later
     ret, kwargs = _find_init_change(name, ret, **kwargs)
 
-    if ret['changes'] == {}:
+    if ret["changes"] == {}:
         return ret
 
-    kwargs['start'] = False
-    __salt__['vagrant.init'](name, **kwargs)
-    ret['changes'][name] = 'Node initialized'
-    ret['comment'] = 'Node {0} defined but not started.'.format(name)
+    kwargs["start"] = False
+    __salt__["vagrant.init"](name, **kwargs)
+    ret["changes"][name] = "Node initialized"
+    ret["comment"] = "Node {0} defined but not started.".format(name)
 
     return ret
 
 
 def stopped(name):
-    '''
+    """
     Stops a VM (or VMs) by shutting it (them) down nicely. (Runs ``vagrant halt``)
 
     :param name: May be a Salt_id node, or a POSIX-style wildcard string.
@@ -290,14 +294,15 @@ def stopped(name):
 
         node_name:
           vagrant.stopped
-    '''
+    """
 
-    return _vagrant_call(name, 'shutdown', 'stopped',
-                         'Machine has been shut down', 'poweroff')
+    return _vagrant_call(
+        name, "shutdown", "stopped", "Machine has been shut down", "poweroff"
+    )
 
 
 def powered_off(name):
-    '''
+    """
     Stops a VM (or VMs) by power off.  (Runs ``vagrant halt``.)
 
     This method is provided for compatibility with other VM-control
@@ -309,14 +314,15 @@ def powered_off(name):
 
         node_name:
           vagrant.unpowered
-    '''
+    """
 
-    return _vagrant_call(name, 'stop', 'unpowered',
-                         'Machine has been powered off', 'poweroff')
+    return _vagrant_call(
+        name, "stop", "unpowered", "Machine has been powered off", "poweroff"
+    )
 
 
 def destroyed(name):
-    '''
+    """
     Stops a VM (or VMs) and removes all references to it (them). (Runs ``vagrant destroy``.)
 
     Subsequent re-use of the same machine will requere another operation of ``vagrant.running``
@@ -328,14 +334,13 @@ def destroyed(name):
 
         node_name:
           vagrant.destroyed
-    '''
+    """
 
-    return _vagrant_call(name, 'destroy', 'destroyed',
-                         'Machine has been removed')
+    return _vagrant_call(name, "destroy", "destroyed", "Machine has been removed")
 
 
 def paused(name):
-    '''
+    """
     Stores the state of a VM (or VMs) for fast restart. (Runs ``vagrant suspend``.)
 
     :param name: May be a Salt_id node or a POSIX-style wildcard string.
@@ -344,14 +349,13 @@ def paused(name):
 
         node_name:
           vagrant.paused
-    '''
+    """
 
-    return _vagrant_call(name, 'pause', 'paused',
-                         'Machine has been suspended', 'saved')
+    return _vagrant_call(name, "pause", "paused", "Machine has been suspended", "saved")
 
 
 def rebooted(name):
-    '''
+    """
     Reboots a running, paused, or stopped VM (or VMs). (Runs ``vagrant reload``.)
 
     The  will re-run the provisioning
@@ -362,6 +366,6 @@ def rebooted(name):
 
         node_name:
           vagrant.reloaded
-    '''
+    """
 
-    return _vagrant_call(name, 'reboot', 'rebooted', 'Machine has been reloaded')
+    return _vagrant_call(name, "reboot", "rebooted", "Machine has been reloaded")
