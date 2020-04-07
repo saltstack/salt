@@ -2383,9 +2383,11 @@ def replace(
                     # Identity check the potential change
                     has_changes = True if pattern != repl else has_changes
 
-                orig_file = r_data.read(filesize).splitlines(True) \
-                    if isinstance(r_data, mmap.mmap) \
+                orig_file = (
+                    r_data.read(filesize).splitlines(True)
+                    if isinstance(r_data, mmap.mmap)
                     else r_data.splitlines(True)
+                )
                 new_file = result.splitlines(True)
 
                 if orig_file == new_file:
