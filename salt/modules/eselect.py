@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Support for eselect, Gentoo's configuration and management tool.
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 
 # Import salt libs
@@ -14,16 +15,21 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     Only work on Gentoo systems with eselect installed
-    '''
-    if __grains__['os'] == 'Gentoo' and salt.utils.path.which('eselect'):
-        return 'eselect'
-    return (False, 'The eselect execution module cannot be loaded: either the system is not Gentoo or the eselect binary is not in the path.')
+    """
+    if __grains__["os"] == "Gentoo" and salt.utils.path.which("eselect"):
+        return "eselect"
+    return (
+        False,
+        "The eselect execution module cannot be loaded: either the system is not Gentoo or the eselect binary is not in the path.",
+    )
 
 
-def exec_action(module, action, module_parameter=None, action_parameter=None, state_only=False):
-    '''
+def exec_action(
+    module, action, module_parameter=None, action_parameter=None, state_only=False
+):
+    """
     Execute an arbitrary action on a module.
 
     module
@@ -46,15 +52,16 @@ def exec_action(module, action, module_parameter=None, action_parameter=None, st
     .. code-block:: bash
 
         salt '*' eselect.exec_action php update action_parameter='apache2'
-    '''
-    out = __salt__['cmd.run'](
-        'eselect --brief --colour=no {0} {1} {2} {3}'.format(
-            module, module_parameter or '', action, action_parameter or ''),
-        python_shell=False
+    """
+    out = __salt__["cmd.run"](
+        "eselect --brief --colour=no {0} {1} {2} {3}".format(
+            module, module_parameter or "", action, action_parameter or ""
+        ),
+        python_shell=False,
     )
-    out = out.strip().split('\n')
+    out = out.strip().split("\n")
 
-    if out[0].startswith('!!! Error'):
+    if out[0].startswith("!!! Error"):
         return False
 
     if state_only:
@@ -70,7 +77,7 @@ def exec_action(module, action, module_parameter=None, action_parameter=None, st
 
 
 def get_modules():
-    '''
+    """
     List available ``eselect`` modules.
 
     CLI Example:
@@ -78,20 +85,20 @@ def get_modules():
     .. code-block:: bash
 
         salt '*' eselect.get_modules
-    '''
+    """
     modules = []
-    module_list = exec_action('modules', 'list', action_parameter='--only-names')
+    module_list = exec_action("modules", "list", action_parameter="--only-names")
     if not module_list:
         return None
 
     for module in module_list:
-        if module not in ['help', 'usage', 'version']:
+        if module not in ["help", "usage", "version"]:
             modules.append(module)
     return modules
 
 
 def get_target_list(module, action_parameter=None):
-    '''
+    """
     List available targets for the given module.
 
     module
@@ -107,8 +114,8 @@ def get_target_list(module, action_parameter=None):
     .. code-block:: bash
 
         salt '*' eselect.get_target_list kernel
-    '''
-    exec_output = exec_action(module, 'list', action_parameter=action_parameter)
+    """
+    exec_output = exec_action(module, "list", action_parameter=action_parameter)
     if not exec_output:
         return None
 
@@ -122,7 +129,7 @@ def get_target_list(module, action_parameter=None):
 
 
 def get_current_target(module, module_parameter=None, action_parameter=None):
-    '''
+    """
     Get the currently selected target for the given module.
 
     module
@@ -145,19 +152,24 @@ def get_current_target(module, module_parameter=None, action_parameter=None):
     .. code-block:: bash
 
         salt '*' eselect.get_current_target kernel
-    '''
-    result = exec_action(module, 'show', module_parameter=module_parameter, action_parameter=action_parameter)[0]
+    """
+    result = exec_action(
+        module,
+        "show",
+        module_parameter=module_parameter,
+        action_parameter=action_parameter,
+    )[0]
     if not result:
         return None
 
-    if result == '(unset)':
+    if result == "(unset)":
         return None
 
     return result
 
 
 def set_target(module, target, module_parameter=None, action_parameter=None):
-    '''
+    """
     Set the target for the given module.
     Target can be specified by index or name.
 
@@ -184,18 +196,24 @@ def set_target(module, target, module_parameter=None, action_parameter=None):
     .. code-block:: bash
 
         salt '*' eselect.set_target kernel linux-3.17.5-gentoo
-    '''
+    """
     if action_parameter:
-        action_parameter = '{0} {1}'.format(action_parameter, target)
+        action_parameter = "{0} {1}".format(action_parameter, target)
     else:
         action_parameter = target
 
     # get list of available modules
     if module not in get_modules():
-        log.error('Module {0} not available'.format(module))
+        log.error("Module {0} not available".format(module))
         return False
 
-    exec_result = exec_action(module, 'set', module_parameter=module_parameter, action_parameter=action_parameter, state_only=True)
+    exec_result = exec_action(
+        module,
+        "set",
+        module_parameter=module_parameter,
+        action_parameter=action_parameter,
+        state_only=True,
+    )
     if exec_result:
         return exec_result
     return False
