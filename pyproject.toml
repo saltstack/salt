@@ -1,0 +1,7 @@
+[tool.black]
+exclude= '''
+\(
+    salt/ext
+  | tests/kitchen
+  | templates
+)/
