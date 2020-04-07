@@ -2227,7 +2227,9 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         """
         self._add_runtime_pillar(pillar={"test": False})
         testfile = os.path.join(RUNTIME_VARS.TMP, "testfile")
-        comment = "The file {0} is set to be changed\nNote: No changes made, actual changes may\nbe different due to other states.".format(testfile)
+        comment = "The file {0} is set to be changed\nNote: No changes made, actual changes may\nbe different due to other states.".format(
+            testfile
+        )
         ret = self.run_function("state.test", ["core"])
 
         for key, val in ret.items():
@@ -2239,14 +2241,16 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         test state.test forces test kwarg to True even when pillar and kwarg are set
         to False
         """
-        self._add_runtime_pillar(pillar={'test': False})
-        testfile = os.path.join(RUNTIME_VARS.TMP, 'testfile')
-        comment = 'The file {0} is set to be changed\nNote: No changes made, actual changes may\nbe different due to other states.'.format(testfile)
-        ret = self.run_function('state.test', ['core'], test=False)
+        self._add_runtime_pillar(pillar={"test": False})
+        testfile = os.path.join(RUNTIME_VARS.TMP, "testfile")
+        comment = "The file {0} is set to be changed\nNote: No changes made, actual changes may\nbe different due to other states.".format(
+            testfile
+        )
+        ret = self.run_function("state.test", ["core"], test=False)
 
         for key, val in ret.items():
-            self.assertEqual(val['comment'], comment)
-            self.assertEqual(val['changes'], {'newfile': testfile})
+            self.assertEqual(val["comment"], comment)
+            self.assertEqual(val["changes"], {"newfile": testfile})
 
     @skipIf(
         six.PY3 and salt.utils.platform.is_darwin(), "Test is broken on macosx and PY3"

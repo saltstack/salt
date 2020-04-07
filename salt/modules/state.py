@@ -60,7 +60,7 @@ __outputter__ = {
     "template": "highstate",
     "template_str": "highstate",
     "apply_": "highstate",
-    "test": "highstate",  
+    "test": "highstate",
     "request": "highstate",
     "check_request": "highstate",
     "run_request": "highstate",
@@ -814,7 +814,7 @@ def test(*args, **kwargs):
 
     return ret
 
-  
+
 def request(mods=None, **kwargs):
     """
     .. versionadded:: 2015.5.0
