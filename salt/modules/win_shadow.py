@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Manage the shadow file
 
 .. important::
@@ -7,28 +7,28 @@ Manage the shadow file
     minion, and it is using a different module (or gives an error similar to
     *'shadow.info' is not available*), see :ref:`here
     <module-provider-override>`.
-'''
+"""
 # Import Python libs
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt libs
 import salt.utils.platform
 
 # Define the module's virtual name
-__virtualname__ = 'shadow'
+__virtualname__ = "shadow"
 
 
 def __virtual__():
-    '''
+    """
     Only works on Windows systems
-    '''
+    """
     if salt.utils.platform.is_windows():
         return __virtualname__
-    return (False, 'Module win_shadow: module only works on Windows systems.')
+    return (False, "Module win_shadow: module only works on Windows systems.")
 
 
 def info(name):
-    '''
+    """
     Return information for the specified user
     This is just returns dummy data so that salt states can work.
 
@@ -39,33 +39,37 @@ def info(name):
     .. code-block:: bash
 
         salt '*' shadow.info root
-    '''
-    info = __salt__['user.info'](name=name)
+    """
+    info = __salt__["user.info"](name=name)
 
-    ret = {'name': name,
-           'passwd': '',
-           'lstchg': '',
-           'min': '',
-           'max': '',
-           'warn': '',
-           'inact': '',
-           'expire': ''}
+    ret = {
+        "name": name,
+        "passwd": "",
+        "lstchg": "",
+        "min": "",
+        "max": "",
+        "warn": "",
+        "inact": "",
+        "expire": "",
+    }
 
     if info:
-        ret = {'name': info['name'],
-               'passwd': 'Unavailable',
-               'lstchg': info['password_changed'],
-               'min': '',
-               'max': '',
-               'warn': '',
-               'inact': '',
-               'expire': info['expiration_date']}
+        ret = {
+            "name": info["name"],
+            "passwd": "Unavailable",
+            "lstchg": info["password_changed"],
+            "min": "",
+            "max": "",
+            "warn": "",
+            "inact": "",
+            "expire": info["expiration_date"],
+        }
 
     return ret
 
 
 def set_expire(name, expire):
-    '''
+    """
     Set the expiration date for a user account.
 
     :param name: The name of the user account to edit.
@@ -80,12 +84,12 @@ def set_expire(name, expire):
     .. code-block:: bash
 
         salt '*' shadow.set_expire <username> 2016/7/1
-    '''
-    return __salt__['user.update'](name, expiration_date=expire)
+    """
+    return __salt__["user.update"](name, expiration_date=expire)
 
 
 def require_password_change(name):
-    '''
+    """
     Require the user to change their password the next time they log in.
 
     :param name: The name of the user account to require a password change.
@@ -98,12 +102,12 @@ def require_password_change(name):
     .. code-block:: bash
 
         salt '*' shadow.require_password_change <username>
-    '''
-    return __salt__['user.update'](name, expired=True)
+    """
+    return __salt__["user.update"](name, expired=True)
 
 
 def unlock_account(name):
-    '''
+    """
     Unlocks a user account.
 
     :param name: The name of the user account to unlock.
@@ -116,12 +120,12 @@ def unlock_account(name):
     .. code-block:: bash
 
         salt '*' shadow.unlock_account <username>
-    '''
-    return __salt__['user.update'](name, unlock_account=True)
+    """
+    return __salt__["user.update"](name, unlock_account=True)
 
 
 def set_password(name, password):
-    '''
+    """
     Set the password for a named user.
 
     :param str name: The name of the user account
@@ -136,5 +140,5 @@ def set_password(name, password):
     .. code-block:: bash
 
         salt '*' shadow.set_password root mysecretpassword
-    '''
-    return __salt__['user.update'](name=name, password=password)
+    """
+    return __salt__["user.update"](name=name, password=password)
