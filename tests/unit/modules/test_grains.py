@@ -8,6 +8,7 @@ import os
 
 import salt.modules.grains as grainsmod
 import salt.utils.dictupdate as dictupdate
+import salt.utils.event
 
 # Import Salt libs
 from salt.exceptions import SaltException
@@ -706,3 +707,15 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(res)
             res = grainsmod.equals("b:z", "aval")
             self.assertFalse(res)
+
+    def test_grains_setval_refresh_pillar(self):
+        '''
+        Test whether refresh_pillar kwarg in grains.setval is controlling
+        refresh_pillar event correctly
+        '''
+        ret = grainsmod.setval('test_grains_setval_refresh_pillar', 'saltopotamus')
+        self.assertTrue(salt.utils.event.get_event(tag="refresh_pillar", match_type="find"))
+        ret = grainsmod.setval('test_grains_setval_refresh_pillar', 'saltopotamus', refresh_pillar=True)
+        self.assertTrue(salt.utils.event.get_event(tag="refresh_pillar", match_type="find"))
+        ret = grainsmod.setval('test_grains_setval_refresh_pillar', 'saltopotamus', refresh_pillar=False)
+        self.assertFalse(salt.utils.event.get_event(tag="refresh_pillar", match_type="find"))
