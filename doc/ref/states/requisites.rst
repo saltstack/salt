@@ -68,7 +68,7 @@ first line in the stanza) or the ``- name`` parameter.
     - require:
       - pkg: vim
 
-Glog matching in requisites
+Glob matching in requisites
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: 0.9.8
