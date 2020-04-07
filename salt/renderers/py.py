@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Pure python state renderer
 ==========================
 
@@ -109,45 +109,48 @@ Full Example
 
         return config
 
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os
 
-# Import salt libs
-from salt.exceptions import SaltRenderError
 import salt.utils.templates
 
+# Import salt libs
+from salt.exceptions import SaltRenderError
 
-def render(template, saltenv='base', sls='', tmplpath=None, **kws):
-    '''
+
+def render(template, saltenv="base", sls="", tmplpath=None, **kws):
+    """
     Render the python module's components
 
     :rtype: string
-    '''
+    """
     template = tmplpath
     if not os.path.isfile(template):
-        raise SaltRenderError('Template {0} is not a file!'.format(template))
+        raise SaltRenderError("Template {0} is not a file!".format(template))
 
     tmp_data = salt.utils.templates.py(
-            template,
-            True,
-            __salt__=__salt__,
-            salt=__salt__,
-            __grains__=__grains__,
-            grains=__grains__,
-            __opts__=__opts__,
-            opts=__opts__,
-            __pillar__=__pillar__,
-            pillar=__pillar__,
-            __env__=saltenv,
-            saltenv=saltenv,
-            __sls__=sls,
-            sls=sls,
-            **kws)
-    if not tmp_data.get('result', False):
-        raise SaltRenderError(tmp_data.get('data',
-            'Unknown render error in py renderer'))
+        template,
+        True,
+        __salt__=__salt__,
+        salt=__salt__,
+        __grains__=__grains__,
+        grains=__grains__,
+        __opts__=__opts__,
+        opts=__opts__,
+        __pillar__=__pillar__,
+        pillar=__pillar__,
+        __env__=saltenv,
+        saltenv=saltenv,
+        __sls__=sls,
+        sls=sls,
+        **kws
+    )
+    if not tmp_data.get("result", False):
+        raise SaltRenderError(
+            tmp_data.get("data", "Unknown render error in py renderer")
+        )
 
-    return tmp_data['data']
+    return tmp_data["data"]
