@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-'''
+"""
 Provide authentication using YubiKey.
 
 .. versionadded:: 2015.5.0
@@ -36,31 +36,34 @@ two values in your /etc/salt/master configuration.
 Please wait five to ten minutes after generating the key before testing so that
 the API key will be updated on all the YubiCloud servers.
 
-'''
+"""
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
-from __future__ import print_function
+
 import logging
 
 log = logging.getLogger(__name__)
 
 try:
     from yubico_client import Yubico, yubico_exceptions
+
     HAS_YUBICO = True
 except ImportError:
     HAS_YUBICO = False
 
 
 def __get_yubico_users(username):
-    '''
+    """
     Grab the YubiKey Client ID & Secret Key
-    '''
+    """
     user = {}
 
     try:
-        if __opts__['yubico_users'].get(username, None):
-            (user['id'], user['key']) = list(__opts__['yubico_users'][username].values())
+        if __opts__["yubico_users"].get(username, None):
+            (user["id"], user["key"]) = list(
+                __opts__["yubico_users"][username].values()
+            )
         else:
             return None
     except KeyError:
@@ -70,17 +73,17 @@ def __get_yubico_users(username):
 
 
 def auth(username, password):
-    '''
+    """
     Authenticate against yubico server
-    '''
+    """
     _cred = __get_yubico_users(username)
 
-    client = Yubico(_cred['id'], _cred['key'])
+    client = Yubico(_cred["id"], _cred["key"])
 
     try:
         return client.verify(password)
     except yubico_exceptions.StatusCodeError as e:
-        log.info('Unable to verify YubiKey `%s`', e)
+        log.info("Unable to verify YubiKey `%s`", e)
         return False
 
 
@@ -88,10 +91,10 @@ def groups(username, *args, **kwargs):
     return False
 
 
-if __name__ == '__main__':
-    __opts__ = {'yubico_users': {'damian': {'id': '12345', 'key': 'ABC123'}}}
+if __name__ == "__main__":
+    __opts__ = {"yubico_users": {"damian": {"id": "12345", "key": "ABC123"}}}
 
-    if auth('damian', 'OPT'):
+    if auth("damian", "OPT"):
         print("Authenticated")
     else:
         print("Failed to authenticate")
