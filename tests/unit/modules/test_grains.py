@@ -714,8 +714,9 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
         Test that refresh_pillar kwarg is being passed correctly from grains.setval to saltutil.refresh_grains
         '''
         ret = grainsmod.setval('test_grains_setval_refresh_pillar', 'saltopotamus')
-        self.assertTrue(grainsmod["__salt__"]["saltutil.refresh_grains"].assert_called_with(refresh_pillar=True))
+        grainsmod.__salt__["saltutil.refresh_grains"].assert_called_with(refresh_pillar=True)
         ret = grainsmod.setval('test_grains_setval_refresh_pillar', 'saltopotamus', refresh_pillar=True)
-        self.assertTrue(grainsmod["__salt__"]["saltutil.refresh_grains"].assert_called_with(refresh_pillar=True))
+        grainsmod.__salt__["saltutil.refresh_grains"].assert_called_with(refresh_pillar=True)
         ret = grainsmod.setval('test_grains_setval_refresh_pillar', 'saltopotamus', refresh_pillar=False)
-        self.assertTrue(grainsmod["__salt__"]["saltutil.refresh_grains"].assert_called_with(refresh_pillar=False))
+        grainsmod.__salt__["saltutil.refresh_grains"].assert_called_with(refresh_pillar=False)
+
