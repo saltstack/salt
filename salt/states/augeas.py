@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Configuration management using Augeas
 
 .. versionadded:: 0.17.0
@@ -26,36 +26,36 @@ Augeas_ can be used to manage configuration files.
     For affected Debian/Ubuntu hosts, installing ``libpython2.7`` has been
     known to resolve the issue.
 
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
+
+import difflib
+import logging
+import os.path
 
 # Import python libs
 import re
-import os.path
-import logging
-import difflib
 
 # Import Salt libs
 import salt.utils.args
 import salt.utils.files
 import salt.utils.stringutils
 from salt.ext import six
-
 from salt.modules.augeas_cfg import METHOD_MAP
 
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    return 'augeas' if 'augeas.execute' in __salt__ else False
+    return "augeas" if "augeas.execute" in __salt__ else False
 
 
 def _workout_filename(filename):
-    '''
+    """
     Recursively workout the file name from an augeas change
-    '''
-    if os.path.isfile(filename) or filename == '/':
-        if filename == '/':
+    """
+    if os.path.isfile(filename) or filename == "/":
+        if filename == "/":
             filename = None
         return filename
     else:
@@ -63,44 +63,49 @@ def _workout_filename(filename):
 
 
 def _check_filepath(changes):
-    '''
+    """
     Ensure all changes are fully qualified and affect only one file.
     This ensures that the diff output works and a state change is not
     incorrectly reported.
-    '''
+    """
     filename = None
     for change_ in changes:
         try:
-            cmd, arg = change_.split(' ', 1)
+            cmd, arg = change_.split(" ", 1)
 
             if cmd not in METHOD_MAP:
-                error = 'Command {0} is not supported (yet)'.format(cmd)
+                error = "Command {0} is not supported (yet)".format(cmd)
                 raise ValueError(error)
             method = METHOD_MAP[cmd]
             parts = salt.utils.args.shlex_split(arg)
-            if method in ['set', 'setm', 'move', 'remove']:
+            if method in ["set", "setm", "move", "remove"]:
                 filename_ = parts[0]
             else:
                 _, _, filename_ = parts
-            if not filename_.startswith('/files'):
-                error = 'Changes should be prefixed with ' \
-                        '/files if no context is provided,' \
-                        ' change: {0}'.format(change_)
+            if not filename_.startswith("/files"):
+                error = (
+                    "Changes should be prefixed with "
+                    "/files if no context is provided,"
+                    " change: {0}".format(change_)
+                )
                 raise ValueError(error)
-            filename_ = re.sub('^/files|/$', '', filename_)
+            filename_ = re.sub("^/files|/$", "", filename_)
             if filename is not None:
                 if filename != filename_:
-                    error = 'Changes should be made to one ' \
-                            'file at a time, detected changes ' \
-                            'to {0} and {1}'.format(filename, filename_)
+                    error = (
+                        "Changes should be made to one "
+                        "file at a time, detected changes "
+                        "to {0} and {1}".format(filename, filename_)
+                    )
                     raise ValueError(error)
             filename = filename_
         except (ValueError, IndexError) as err:
             log.error(err)
-            if 'error' not in locals():
-                error = 'Invalid formatted command, ' \
-                               'see debug log for details: {0}' \
-                               .format(change_)
+            if "error" not in locals():
+                error = (
+                    "Invalid formatted command, "
+                    "see debug log for details: {0}".format(change_)
+                )
             else:
                 error = six.text_type(err)
             raise ValueError(error)
@@ -110,9 +115,8 @@ def _check_filepath(changes):
     return filename
 
 
-def change(name, context=None, changes=None, lens=None,
-        load_path=None, **kwargs):
-    '''
+def change(name, context=None, changes=None, lens=None, load_path=None, **kwargs):
+    """
     .. versionadded:: 2014.7.0
 
     This state replaces :py:func:`~salt.states.augeas.setvalue`.
@@ -256,68 +260,65 @@ def change(name, context=None, changes=None, lens=None,
 
     http://augeas.net/docs/references/lenses/files/services-aug.html#Services.record
 
-    '''
-    ret = {'name': name, 'result': False, 'comment': '', 'changes': {}}
+    """
+    ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not changes or not isinstance(changes, list):
-        ret['comment'] = '\'changes\' must be specified as a list'
+        ret["comment"] = "'changes' must be specified as a list"
         return ret
 
     if load_path is not None:
         if not isinstance(load_path, list):
-            ret['comment'] = '\'load_path\' must be specified as a list'
+            ret["comment"] = "'load_path' must be specified as a list"
             return ret
         else:
-            load_path = ':'.join(load_path)
+            load_path = ":".join(load_path)
 
     filename = None
     if context is None:
         try:
             filename = _check_filepath(changes)
         except ValueError as err:
-            ret['comment'] = 'Error: {0}'.format(err)
+            ret["comment"] = "Error: {0}".format(err)
             return ret
     else:
-        filename = re.sub('^/files|/$', '', context)
+        filename = re.sub("^/files|/$", "", context)
 
-    if __opts__['test']:
-        ret['result'] = True
-        ret['comment'] = 'Executing commands'
+    if __opts__["test"]:
+        ret["result"] = True
+        ret["comment"] = "Executing commands"
         if context:
-            ret['comment'] += ' in file "{0}":\n'.format(context)
-        ret['comment'] += "\n".join(changes)
+            ret["comment"] += ' in file "{0}":\n'.format(context)
+        ret["comment"] += "\n".join(changes)
         return ret
 
     old_file = []
     if filename is not None and os.path.isfile(filename):
-        with salt.utils.files.fopen(filename, 'r') as file_:
-            old_file = [salt.utils.stringutils.to_unicode(x)
-                        for x in file_.readlines()]
+        with salt.utils.files.fopen(filename, "r") as file_:
+            old_file = [salt.utils.stringutils.to_unicode(x) for x in file_.readlines()]
 
-    result = __salt__['augeas.execute'](
-        context=context, lens=lens,
-        commands=changes, load_path=load_path)
-    ret['result'] = result['retval']
+    result = __salt__["augeas.execute"](
+        context=context, lens=lens, commands=changes, load_path=load_path
+    )
+    ret["result"] = result["retval"]
 
-    if ret['result'] is False:
-        ret['comment'] = 'Error: {0}'.format(result['error'])
+    if ret["result"] is False:
+        ret["comment"] = "Error: {0}".format(result["error"])
         return ret
 
     if filename is not None and os.path.isfile(filename):
-        with salt.utils.files.fopen(filename, 'r') as file_:
-            new_file = [salt.utils.stringutils.to_unicode(x)
-                        for x in file_.readlines()]
-            diff = ''.join(
-                difflib.unified_diff(old_file, new_file, n=0))
+        with salt.utils.files.fopen(filename, "r") as file_:
+            new_file = [salt.utils.stringutils.to_unicode(x) for x in file_.readlines()]
+            diff = "".join(difflib.unified_diff(old_file, new_file, n=0))
 
         if diff:
-            ret['comment'] = 'Changes have been saved'
-            ret['changes'] = {'diff': diff}
+            ret["comment"] = "Changes have been saved"
+            ret["changes"] = {"diff": diff}
         else:
-            ret['comment'] = 'No changes made'
+            ret["comment"] = "No changes made"
 
     else:
-        ret['comment'] = 'Changes have been saved'
-        ret['changes'] = {'updates': changes}
+        ret["comment"] = "Changes have been saved"
+        ret["changes"] = {"updates": changes}
 
     return ret
