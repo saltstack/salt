@@ -13,7 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-'''
+"""
 State to synchronize files and directories with rsync.
 
 .. versionadded:: 2016.3.0
@@ -25,9 +25,10 @@ State to synchronize files and directories with rsync.
         - source: /home
         - force: True
 
-'''
+"""
 
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 import os
 
@@ -37,26 +38,32 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     Only if Rsync is available.
 
     :return:
-    '''
-    return salt.utils.path.which('rsync') and 'rsync' or False
+    """
+    return salt.utils.path.which("rsync") and "rsync" or False
 
 
 def _get_summary(rsync_out):
-    '''
+    """
     Get summary from the rsync successful output.
-    '''
+    """
 
-    return "- " + "\n- ".join([elm for elm in rsync_out.split("\n\n")[-1].replace("  ", "\n").split("\n") if elm])
+    return "- " + "\n- ".join(
+        [
+            elm
+            for elm in rsync_out.split("\n\n")[-1].replace("  ", "\n").split("\n")
+            if elm
+        ]
+    )
 
 
 def _get_changes(rsync_out):
-    '''
+    """
     Get changes from the rsync successful output.
-    '''
+    """
     copied = list()
     deleted = list()
 
@@ -67,27 +74,30 @@ def _get_changes(rsync_out):
             copied.append(line)
 
     ret = {
-        'copied': os.linesep.join(sorted(copied)) or "N/A",
-        'deleted': os.linesep.join(sorted(deleted)) or "N/A",
+        "copied": os.linesep.join(sorted(copied)) or "N/A",
+        "deleted": os.linesep.join(sorted(deleted)) or "N/A",
     }
 
     # Return whether anything really changed
-    ret['changed'] = not ((ret['copied'] == 'N/A') and (ret['deleted'] == 'N/A'))
+    ret["changed"] = not ((ret["copied"] == "N/A") and (ret["deleted"] == "N/A"))
 
     return ret
 
 
-def synchronized(name, source,
-                 delete=False,
-                 force=False,
-                 update=False,
-                 passwordfile=None,
-                 exclude=None,
-                 excludefrom=None,
-                 prepare=False,
-                 dryrun=False,
-                 additional_opts=None):
-    '''
+def synchronized(
+    name,
+    source,
+    delete=False,
+    force=False,
+    update=False,
+    passwordfile=None,
+    exclude=None,
+    excludefrom=None,
+    prepare=False,
+    dryrun=False,
+    additional_opts=None,
+):
+    """
     Guarantees that the source directory is always copied to the target.
 
     name
@@ -127,44 +137,49 @@ def synchronized(name, source,
         Pass additional options to rsync, should be included as a list.
 
         .. versionadded:: 2018.3.0
-    '''
+    """
 
-    ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
+    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
     if not os.path.exists(name) and not force and not prepare:
-        ret['result'] = False
-        ret['comment'] = "Destination directory {dest} was not found.".format(dest=name)
+        ret["result"] = False
+        ret["comment"] = "Destination directory {dest} was not found.".format(dest=name)
     else:
         if not os.path.exists(name) and prepare:
             os.makedirs(name)
 
-        if __opts__['test']:
+        if __opts__["test"]:
             dryrun = True
 
-        result = __salt__['rsync.rsync'](source, name, delete=delete,
-                                         force=force, update=update,
-                                         passwordfile=passwordfile,
-                                         exclude=exclude,
-                                         excludefrom=excludefrom,
-                                         dryrun=dryrun,
-                                         additional_opts=additional_opts)
+        result = __salt__["rsync.rsync"](
+            source,
+            name,
+            delete=delete,
+            force=force,
+            update=update,
+            passwordfile=passwordfile,
+            exclude=exclude,
+            excludefrom=excludefrom,
+            dryrun=dryrun,
+            additional_opts=additional_opts,
+        )
 
-        if __opts__['test'] or dryrun:
-            ret['result'] = None
-            ret['comment'] = _get_summary(result['stdout'])
+        if __opts__["test"] or dryrun:
+            ret["result"] = None
+            ret["comment"] = _get_summary(result["stdout"])
             return ret
 
         # Failed
-        if result.get('retcode'):
-            ret['result'] = False
-            ret['comment'] = result['stderr']
+        if result.get("retcode"):
+            ret["result"] = False
+            ret["comment"] = result["stderr"]
         # Changed
-        elif _get_changes(result['stdout'])['changed']:
-            ret['comment'] = _get_summary(result['stdout'])
-            ret['changes'] = _get_changes(result['stdout'])
-            del ret['changes']['changed']  # Don't need to print the boolean
+        elif _get_changes(result["stdout"])["changed"]:
+            ret["comment"] = _get_summary(result["stdout"])
+            ret["changes"] = _get_changes(result["stdout"])
+            del ret["changes"]["changed"]  # Don't need to print the boolean
         # Clean
         else:
-            ret['comment'] = _get_summary(result['stdout'])
-            ret['changes'] = {}
+            ret["comment"] = _get_summary(result["stdout"])
+            ret["changes"] = {}
     return ret
