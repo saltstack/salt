@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Manage LXD profiles.
 
 .. versionadded:: 2019.2.0
@@ -26,36 +26,44 @@ Manage LXD profiles.
 :maturity: new
 :depends: python-pylxd
 :platform: Linux
-'''
+"""
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import os.path
 
-# Import salt libs
-from salt.exceptions import CommandExecutionError
-from salt.exceptions import SaltInvocationError
 import salt.ext.six as six
 
-__docformat__ = 'restructuredtext en'
+# Import salt libs
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
-__virtualname__ = 'lxd'
+__docformat__ = "restructuredtext en"
 
-_password_config_key = 'core.trust_password'
+__virtualname__ = "lxd"
+
+_password_config_key = "core.trust_password"
 
 
 def __virtual__():
-    '''
+    """
     Only load if the lxd module is available in __salt__
-    '''
-    return __virtualname__ if 'lxd.version' in __salt__ else False
+    """
+    return __virtualname__ if "lxd.version" in __salt__ else False
 
 
-def init(name, storage_backend='dir', trust_password=None,
-         network_address=None, network_port=None, storage_create_device=None,
-         storage_create_loop=None, storage_pool=None,
-         done_file='%SALT_CONFIG_DIR%/lxd_initialized'):
-    '''
+def init(
+    name,
+    storage_backend="dir",
+    trust_password=None,
+    network_address=None,
+    network_port=None,
+    storage_create_device=None,
+    storage_create_loop=None,
+    storage_pool=None,
+    done_file="%SALT_CONFIG_DIR%/lxd_initialized",
+):
+    """
     Initalizes the LXD Daemon, as LXD doesn't tell if its initialized
     we touch the the done_file and check if it exist.
 
@@ -89,51 +97,51 @@ def init(name, storage_backend='dir', trust_password=None,
         Path where we check that this method has been called,
         as it can run only once and theres currently no way
         to ask LXD if init has been called.
-    '''
+    """
 
     ret = {
-        'name': name,
-        'storage_backend': storage_backend,
-        'trust_password': True if trust_password is not None else False,
-        'network_address': network_address,
-        'network_port': network_port,
-        'storage_create_device': storage_create_device,
-        'storage_create_loop': storage_create_loop,
-        'storage_pool': storage_pool,
-        'done_file': done_file,
+        "name": name,
+        "storage_backend": storage_backend,
+        "trust_password": True if trust_password is not None else False,
+        "network_address": network_address,
+        "network_port": network_port,
+        "storage_create_device": storage_create_device,
+        "storage_create_loop": storage_create_loop,
+        "storage_pool": storage_pool,
+        "done_file": done_file,
     }
 
     # TODO: Get a better path and don't hardcode '/etc/salt'
-    done_file = done_file.replace('%SALT_CONFIG_DIR%', '/etc/salt')
+    done_file = done_file.replace("%SALT_CONFIG_DIR%", "/etc/salt")
     if os.path.exists(done_file):
         # Success we already did that.
-        return _success(ret, 'LXD is already initialized')
+        return _success(ret, "LXD is already initialized")
 
-    if __opts__['test']:
-        return _success(ret, 'Would initialize LXD')
+    if __opts__["test"]:
+        return _success(ret, "Would initialize LXD")
 
     # We always touch the done_file, so when LXD is already initialized
     # we don't run this over and over.
-    __salt__['file.touch'](done_file)
+    __salt__["file.touch"](done_file)
 
     try:
-        __salt__['lxd.init'](
+        __salt__["lxd.init"](
             storage_backend if storage_backend else None,
             trust_password if trust_password else None,
             network_address if network_address else None,
             network_port if network_port else None,
             storage_create_device if storage_create_device else None,
             storage_create_loop if storage_create_loop else None,
-            storage_pool if storage_pool else None
+            storage_pool if storage_pool else None,
         )
     except CommandExecutionError as e:
         return _error(ret, six.text_type(e))
 
-    return _success(ret, 'Initialized the LXD Daemon')
+    return _success(ret, "Initialized the LXD Daemon")
 
 
 def config_managed(name, value, force_password=False):
-    '''
+    """
     Manage a LXD Server config setting.
 
     name :
@@ -148,52 +156,46 @@ def config_managed(name, value, force_password=False):
         As we can't retrieve the password from LXD we can't check
         if the current one is the same as the given one.
 
-    '''
+    """
     ret = {
-        'name': name,
-        'value': value if name != 'core.trust_password' else True,
-        'force_password': force_password
+        "name": name,
+        "value": value if name != "core.trust_password" else True,
+        "force_password": force_password,
     }
 
     try:
-        current_value = __salt__['lxd.config_get'](name)
+        current_value = __salt__["lxd.config_get"](name)
     except CommandExecutionError as e:
         return _error(ret, six.text_type(e))
 
-    if (name == _password_config_key and
-            (not force_password or not current_value)):
+    if name == _password_config_key and (not force_password or not current_value):
         msg = (
-            ('"{0}" is already set '
-             '(we don\'t known if the password is correct)').format(name)
-        )
+            '"{0}" is already set ' "(we don't known if the password is correct)"
+        ).format(name)
         return _success(ret, msg)
 
     elif six.text_type(value) == current_value:
-        msg = ('"{0}" is already set to "{1}"'.format(name, value))
+        msg = '"{0}" is already set to "{1}"'.format(name, value)
         return _success(ret, msg)
 
-    if __opts__['test']:
+    if __opts__["test"]:
         if name == _password_config_key:
-            msg = 'Would set the LXD password'
-            ret['changes'] = {'password': msg}
+            msg = "Would set the LXD password"
+            ret["changes"] = {"password": msg}
             return _unchanged(ret, msg)
         else:
             msg = 'Would set the "{0}" to "{1}"'.format(name, value)
-            ret['changes'] = {name: msg}
+            ret["changes"] = {name: msg}
             return _unchanged(ret, msg)
 
-    result_msg = ''
+    result_msg = ""
     try:
-        result_msg = __salt__['lxd.config_set'](name, value)[0]
+        result_msg = __salt__["lxd.config_set"](name, value)[0]
         if name == _password_config_key:
-            ret['changes'] = {
-                name: 'Changed the password'
-            }
+            ret["changes"] = {name: "Changed the password"}
         else:
-            ret['changes'] = {
-                name: 'Changed from "{0}" to {1}"'.format(
-                    current_value, value
-                )
+            ret["changes"] = {
+                name: 'Changed from "{0}" to {1}"'.format(current_value, value)
             }
     except CommandExecutionError as e:
         return _error(ret, six.text_type(e))
@@ -202,7 +204,7 @@ def config_managed(name, value, force_password=False):
 
 
 def authenticate(name, remote_addr, password, cert, key, verify_cert=True):
-    '''
+    """
     Authenticate with a remote peer.
 
     .. notes:
@@ -240,19 +242,17 @@ def authenticate(name, remote_addr, password, cert, key, verify_cert=True):
 
     name:
         Ignore this. This is just here for salt.
-    '''
+    """
     ret = {
-        'name': name,
-        'remote_addr': remote_addr,
-        'cert': cert,
-        'key': key,
-        'verify_cert': verify_cert
+        "name": name,
+        "remote_addr": remote_addr,
+        "cert": cert,
+        "key": key,
+        "verify_cert": verify_cert,
     }
 
     try:
-        client = __salt__['lxd.pylxd_client_get'](
-            remote_addr, cert, key, verify_cert
-        )
+        client = __salt__["lxd.pylxd_client_get"](remote_addr, cert, key, verify_cert)
     except SaltInvocationError as e:
         return _error(ret, six.text_type(e))
     except CommandExecutionError as e:
@@ -262,45 +262,39 @@ def authenticate(name, remote_addr, password, cert, key, verify_cert=True):
         return _success(ret, "Already authenticated.")
 
     try:
-        result = __salt__['lxd.authenticate'](
+        result = __salt__["lxd.authenticate"](
             remote_addr, password, cert, key, verify_cert
         )
     except CommandExecutionError as e:
         return _error(ret, six.text_type(e))
 
     if result is not True:
-        return _error(
-            ret,
-            "Failed to authenticate with peer: {0}".format(remote_addr)
-        )
+        return _error(ret, "Failed to authenticate with peer: {0}".format(remote_addr))
 
     msg = "Successfully authenticated with peer: {0}".format(remote_addr)
-    ret['changes'] = msg
-    return _success(
-        ret,
-        msg
-    )
+    ret["changes"] = msg
+    return _success(ret, msg)
 
 
 def _success(ret, success_msg):
-    ret['result'] = True
-    ret['comment'] = success_msg
-    if 'changes' not in ret:
-        ret['changes'] = {}
+    ret["result"] = True
+    ret["comment"] = success_msg
+    if "changes" not in ret:
+        ret["changes"] = {}
     return ret
 
 
 def _unchanged(ret, msg):
-    ret['result'] = None
-    ret['comment'] = msg
-    if 'changes' not in ret:
-        ret['changes'] = {}
+    ret["result"] = None
+    ret["comment"] = msg
+    if "changes" not in ret:
+        ret["changes"] = {}
     return ret
 
 
 def _error(ret, err_msg):
-    ret['result'] = False
-    ret['comment'] = err_msg
-    if 'changes' not in ret:
-        ret['changes'] = {}
+    ret["result"] = False
+    ret["comment"] = err_msg
+    if "changes" not in ret:
+        ret["changes"] = {}
     return ret

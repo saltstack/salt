@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Create an Event in PagerDuty
 ============================
 
@@ -16,21 +16,21 @@ runs.
         - details: 'This is a much more detailed message'
         - service_key: 9abcd123456789efabcde362783cdbaf
         - profile: my-pagerduty-account
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():
-    '''
+    """
     Only load if the pygerduty module is available in __salt__
-    '''
-    return 'pagerduty' if 'pagerduty.create_event' in __salt__ else False
+    """
+    return "pagerduty" if "pagerduty.create_event" in __salt__ else False
 
 
 def create_event(name, details, service_key, profile):
-    '''
+    """
     Create an event on the PagerDuty service
 
     .. code-block:: yaml
@@ -56,20 +56,14 @@ def create_event(name, details, service_key, profile):
     profile
         This refers to the configuration profile to use to connect to the
         PagerDuty service.
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': None,
-           'comment': ''}
-    if __opts__['test']:
-        ret['comment'] = 'Need to create event: {0}'.format(name)
+    """
+    ret = {"name": name, "changes": {}, "result": None, "comment": ""}
+    if __opts__["test"]:
+        ret["comment"] = "Need to create event: {0}".format(name)
         return ret
-    __salt__['pagerduty.create_event'](
-        description=name,
-        details=details,
-        service_key=service_key,
-        profile=profile,
+    __salt__["pagerduty.create_event"](
+        description=name, details=details, service_key=service_key, profile=profile,
     )
-    ret['result'] = True
-    ret['comment'] = 'Created event: {0}'.format(name)
+    ret["result"] = True
+    ret["comment"] = "Created event: {0}".format(name)
     return ret

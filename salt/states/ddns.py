@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Dynamic DNS updates
 ===================
 
@@ -24,16 +24,16 @@ Example:
         - data: 111.222.333.444
         - nameserver: 123.234.345.456
         - keyfile: /srv/salt/dnspy_tsig_key.txt
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():
-    return 'ddns' if 'ddns.update' in __salt__ else False
+    return "ddns" if "ddns.update" in __salt__ else False
 
 
-def present(name, zone, ttl, data, rdtype='A', **kwargs):
-    '''
+def present(name, zone, ttl, data, rdtype="A", **kwargs):
+    """
     Ensures that the named DNS record is present with the given ttl.
 
     name
@@ -59,40 +59,41 @@ def present(name, zone, ttl, data, rdtype='A', **kwargs):
         nameserver, keyfile, keyname).  Note that the nsupdate key file can’t
         be reused by this function, the keyfile and other arguments must
         follow the `dnspython <http://www.dnspython.org/>`_ spec.
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': False,
-           'comment': ''}
+    """
+    ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
-    if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = '{0} record "{1}" will be updated'.format(rdtype, name)
+    if __opts__["test"]:
+        ret["result"] = None
+        ret["comment"] = '{0} record "{1}" will be updated'.format(rdtype, name)
         return ret
 
-    status = __salt__['ddns.update'](zone, name, ttl, rdtype, data, **kwargs)
+    status = __salt__["ddns.update"](zone, name, ttl, rdtype, data, **kwargs)
 
     if status is None:
-        ret['result'] = True
-        ret['comment'] = '{0} record "{1}" already present with ttl of {2}'.format(
-                rdtype, name, ttl)
+        ret["result"] = True
+        ret["comment"] = '{0} record "{1}" already present with ttl of {2}'.format(
+            rdtype, name, ttl
+        )
     elif status:
-        ret['result'] = True
-        ret['comment'] = 'Updated {0} record for "{1}"'.format(rdtype, name)
-        ret['changes'] = {'name': name,
-                          'zone': zone,
-                          'ttl': ttl,
-                          'rdtype': rdtype,
-                          'data': data
-                         }
+        ret["result"] = True
+        ret["comment"] = 'Updated {0} record for "{1}"'.format(rdtype, name)
+        ret["changes"] = {
+            "name": name,
+            "zone": zone,
+            "ttl": ttl,
+            "rdtype": rdtype,
+            "data": data,
+        }
     else:
-        ret['result'] = False
-        ret['comment'] = 'Failed to create or update {0} record for "{1}"'.format(rdtype, name)
+        ret["result"] = False
+        ret["comment"] = 'Failed to create or update {0} record for "{1}"'.format(
+            rdtype, name
+        )
     return ret
 
 
 def absent(name, zone, data=None, rdtype=None, **kwargs):
-    '''
+    """
     Ensures that the named DNS record is absent.
 
     name
@@ -116,30 +117,24 @@ def absent(name, zone, data=None, rdtype=None, **kwargs):
         nameserver, keyfile, keyname).  Note that the nsupdate key file can’t
         be reused by this function, the keyfile and other arguments must
         follow the `dnspython <http://www.dnspython.org/>`_ spec.
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': False,
-           'comment': ''}
+    """
+    ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
-    if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = '{0} record "{1}" will be deleted'.format(rdtype, name)
+    if __opts__["test"]:
+        ret["result"] = None
+        ret["comment"] = '{0} record "{1}" will be deleted'.format(rdtype, name)
         return ret
 
-    status = __salt__['ddns.delete'](zone, name, rdtype, data, **kwargs)
+    status = __salt__["ddns.delete"](zone, name, rdtype, data, **kwargs)
 
     if status is None:
-        ret['result'] = True
-        ret['comment'] = 'No matching DNS record(s) present'
+        ret["result"] = True
+        ret["comment"] = "No matching DNS record(s) present"
     elif status:
-        ret['result'] = True
-        ret['comment'] = 'Deleted DNS record(s)'
-        ret['changes'] = {'Deleted': {'name': name,
-                                      'zone': zone
-                                     }
-                         }
+        ret["result"] = True
+        ret["comment"] = "Deleted DNS record(s)"
+        ret["changes"] = {"Deleted": {"name": name, "zone": zone}}
     else:
-        ret['result'] = False
-        ret['comment'] = 'Failed to delete DNS record(s)'
+        ret["result"] = False
+        ret["comment"] = "Failed to delete DNS record(s)"
     return ret
