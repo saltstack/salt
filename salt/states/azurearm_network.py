@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Azure (ARM) Network State Module
 
 .. versionadded:: 2019.2.0
@@ -85,10 +85,11 @@ Azure (ARM) Network State Module
                 - resource_group: my_rg
                 - connection_auth: {{ profile }}
 
-'''
+"""
 
 # Python libs
 from __future__ import absolute_import
+
 import logging
 
 # Salt libs
@@ -97,21 +98,32 @@ try:
 except ImportError:
     six_range = range
 
-__virtualname__ = 'azurearm_network'
+__virtualname__ = "azurearm_network"
 
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     Only make this state available if the azurearm_network module is available.
-    '''
-    return __virtualname__ if 'azurearm_network.check_ip_address_availability' in __salt__ else False
+    """
+    return (
+        __virtualname__
+        if "azurearm_network.check_ip_address_availability" in __salt__
+        else False
+    )
 
 
-def virtual_network_present(name, address_prefixes, resource_group, dns_servers=None,
-                            tags=None, connection_auth=None, **kwargs):
-    '''
+def virtual_network_present(
+    name,
+    address_prefixes,
+    resource_group,
+    dns_servers=None,
+    tags=None,
+    connection_auth=None,
+    **kwargs
+):
+    """
     .. versionadded:: 2019.2.0
 
     Ensure a virtual network exists.
@@ -154,93 +166,95 @@ def virtual_network_present(name, address_prefixes, resource_group, dns_servers=
                 - require:
                   - azurearm_resource: Ensure resource group exists
 
-    '''
-    ret = {
-        'name': name,
-        'result': False,
-        'comment': '',
-        'changes': {}
-    }
+    """
+    ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret['comment'] = 'Connection information must be specified via connection_auth dictionary!'
+        ret[
+            "comment"
+        ] = "Connection information must be specified via connection_auth dictionary!"
         return ret
 
-    vnet = __salt__['azurearm_network.virtual_network_get'](
-        name,
-        resource_group,
-        azurearm_log_level='info',
-        **connection_auth
+    vnet = __salt__["azurearm_network.virtual_network_get"](
+        name, resource_group, azurearm_log_level="info", **connection_auth
     )
 
-    if 'error' not in vnet:
-        tag_changes = __utils__['dictdiffer.deep_diff'](vnet.get('tags', {}), tags or {})
+    if "error" not in vnet:
+        tag_changes = __utils__["dictdiffer.deep_diff"](
+            vnet.get("tags", {}), tags or {}
+        )
         if tag_changes:
-            ret['changes']['tags'] = tag_changes
+            ret["changes"]["tags"] = tag_changes
 
         dns_changes = set(dns_servers or []).symmetric_difference(
-            set(vnet.get('dhcp_options', {}).get('dns_servers', [])))
+            set(vnet.get("dhcp_options", {}).get("dns_servers", []))
+        )
         if dns_changes:
-            ret['changes']['dns_servers'] = {
-                'old': vnet.get('dhcp_options', {}).get('dns_servers', []),
-                'new': dns_servers,
+            ret["changes"]["dns_servers"] = {
+                "old": vnet.get("dhcp_options", {}).get("dns_servers", []),
+                "new": dns_servers,
             }
 
         addr_changes = set(address_prefixes or []).symmetric_difference(
-            set(vnet.get('address_space', {}).get('address_prefixes', [])))
+            set(vnet.get("address_space", {}).get("address_prefixes", []))
+        )
         if addr_changes:
-            ret['changes']['address_space'] = {
-                'address_prefixes': {
-                    'old': vnet.get('address_space', {}).get('address_prefixes', []),
-                    'new': address_prefixes,
+            ret["changes"]["address_space"] = {
+                "address_prefixes": {
+                    "old": vnet.get("address_space", {}).get("address_prefixes", []),
+                    "new": address_prefixes,
                 }
             }
 
-        if kwargs.get('enable_ddos_protection', False) != vnet.get('enable_ddos_protection'):
-            ret['changes']['enable_ddos_protection'] = {
-                'old': vnet.get('enable_ddos_protection'),
-                'new': kwargs.get('enable_ddos_protection')
+        if kwargs.get("enable_ddos_protection", False) != vnet.get(
+            "enable_ddos_protection"
+        ):
+            ret["changes"]["enable_ddos_protection"] = {
+                "old": vnet.get("enable_ddos_protection"),
+                "new": kwargs.get("enable_ddos_protection"),
             }
 
-        if kwargs.get('enable_vm_protection', False) != vnet.get('enable_vm_protection'):
-            ret['changes']['enable_vm_protection'] = {
-                'old': vnet.get('enable_vm_protection'),
-                'new': kwargs.get('enable_vm_protection')
+        if kwargs.get("enable_vm_protection", False) != vnet.get(
+            "enable_vm_protection"
+        ):
+            ret["changes"]["enable_vm_protection"] = {
+                "old": vnet.get("enable_vm_protection"),
+                "new": kwargs.get("enable_vm_protection"),
             }
 
-        if not ret['changes']:
-            ret['result'] = True
-            ret['comment'] = 'Virtual network {0} is already present.'.format(name)
+        if not ret["changes"]:
+            ret["result"] = True
+            ret["comment"] = "Virtual network {0} is already present.".format(name)
             return ret
 
-        if __opts__['test']:
-            ret['result'] = None
-            ret['comment'] = 'Virtual network {0} would be updated.'.format(name)
+        if __opts__["test"]:
+            ret["result"] = None
+            ret["comment"] = "Virtual network {0} would be updated.".format(name)
             return ret
 
     else:
-        ret['changes'] = {
-            'old': {},
-            'new': {
-                'name': name,
-                'resource_group': resource_group,
-                'address_space': {'address_prefixes': address_prefixes},
-                'dhcp_options': {'dns_servers': dns_servers},
-                'enable_ddos_protection': kwargs.get('enable_ddos_protection', False),
-                'enable_vm_protection': kwargs.get('enable_vm_protection', False),
-                'tags': tags,
-            }
+        ret["changes"] = {
+            "old": {},
+            "new": {
+                "name": name,
+                "resource_group": resource_group,
+                "address_space": {"address_prefixes": address_prefixes},
+                "dhcp_options": {"dns_servers": dns_servers},
+                "enable_ddos_protection": kwargs.get("enable_ddos_protection", False),
+                "enable_vm_protection": kwargs.get("enable_vm_protection", False),
+                "tags": tags,
+            },
         }
 
-    if __opts__['test']:
-        ret['comment'] = 'Virtual network {0} would be created.'.format(name)
-        ret['result'] = None
+    if __opts__["test"]:
+        ret["comment"] = "Virtual network {0} would be created.".format(name)
+        ret["result"] = None
         return ret
 
     vnet_kwargs = kwargs.copy()
     vnet_kwargs.update(connection_auth)
 
-    vnet = __salt__['azurearm_network.virtual_network_create_or_update'](
+    vnet = __salt__["azurearm_network.virtual_network_create_or_update"](
         name=name,
         resource_group=resource_group,
         address_prefixes=address_prefixes,
@@ -249,17 +263,19 @@ def virtual_network_present(name, address_prefixes, resource_group, dns_servers=
         **vnet_kwargs
     )
 
-    if 'error' not in vnet:
-        ret['result'] = True
-        ret['comment'] = 'Virtual network {0} has been created.'.format(name)
+    if "error" not in vnet:
+        ret["result"] = True
+        ret["comment"] = "Virtual network {0} has been created.".format(name)
         return ret
 
-    ret['comment'] = 'Failed to create virtual network {0}! ({1})'.format(name, vnet.get('error'))
+    ret["comment"] = "Failed to create virtual network {0}! ({1})".format(
+        name, vnet.get("error")
+    )
     return ret
 
 
 def virtual_network_absent(name, resource_group, connection_auth=None):
-    '''
+    """
     .. versionadded:: 2019.2.0
 
     Ensure a virtual network does not exist in the resource group.
@@ -273,57 +289,58 @@ def virtual_network_absent(name, resource_group, connection_auth=None):
     :param connection_auth:
         A dict with subscription and authentication parameters to be used in connecting to the
         Azure Resource Manager API.
-    '''
-    ret = {
-        'name': name,
-        'result': False,
-        'comment': '',
-        'changes': {}
-    }
+    """
+    ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret['comment'] = 'Connection information must be specified via connection_auth dictionary!'
+        ret[
+            "comment"
+        ] = "Connection information must be specified via connection_auth dictionary!"
         return ret
 
-    vnet = __salt__['azurearm_network.virtual_network_get'](
-        name,
-        resource_group,
-        azurearm_log_level='info',
-        **connection_auth
+    vnet = __salt__["azurearm_network.virtual_network_get"](
+        name, resource_group, azurearm_log_level="info", **connection_auth
     )
 
-    if 'error' in vnet:
-        ret['result'] = True
-        ret['comment'] = 'Virtual network {0} was not found.'.format(name)
+    if "error" in vnet:
+        ret["result"] = True
+        ret["comment"] = "Virtual network {0} was not found.".format(name)
         return ret
 
-    elif __opts__['test']:
-        ret['comment'] = 'Virtual network {0} would be deleted.'.format(name)
-        ret['result'] = None
-        ret['changes'] = {
-            'old': vnet,
-            'new': {},
+    elif __opts__["test"]:
+        ret["comment"] = "Virtual network {0} would be deleted.".format(name)
+        ret["result"] = None
+        ret["changes"] = {
+            "old": vnet,
+            "new": {},
         }
         return ret
 
-    deleted = __salt__['azurearm_network.virtual_network_delete'](name, resource_group, **connection_auth)
+    deleted = __salt__["azurearm_network.virtual_network_delete"](
+        name, resource_group, **connection_auth
+    )
 
     if deleted:
-        ret['result'] = True
-        ret['comment'] = 'Virtual network {0} has been deleted.'.format(name)
-        ret['changes'] = {
-            'old': vnet,
-            'new': {}
-        }
+        ret["result"] = True
+        ret["comment"] = "Virtual network {0} has been deleted.".format(name)
+        ret["changes"] = {"old": vnet, "new": {}}
         return ret
 
-    ret['comment'] = 'Failed to delete virtual network {0}!'.format(name)
+    ret["comment"] = "Failed to delete virtual network {0}!".format(name)
     return ret
 
 
-def subnet_present(name, address_prefix, virtual_network, resource_group,
-                   security_group=None, route_table=None, connection_auth=None, **kwargs):
-    '''
+def subnet_present(
+    name,
+    address_prefix,
+    virtual_network,
+    resource_group,
+    security_group=None,
+    route_table=None,
+    connection_auth=None,
+    **kwargs
+):
+    """
     .. versionadded:: 2019.2.0
 
     Ensure a subnet exists.
@@ -368,83 +385,77 @@ def subnet_present(name, address_prefix, virtual_network, resource_group,
                   - azurearm_network: Ensure network security group exists
                   - azurearm_network: Ensure route table exists
 
-    '''
-    ret = {
-        'name': name,
-        'result': False,
-        'comment': '',
-        'changes': {}
-    }
+    """
+    ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret['comment'] = 'Connection information must be specified via connection_auth dictionary!'
+        ret[
+            "comment"
+        ] = "Connection information must be specified via connection_auth dictionary!"
         return ret
 
-    snet = __salt__['azurearm_network.subnet_get'](
+    snet = __salt__["azurearm_network.subnet_get"](
         name,
         virtual_network,
         resource_group,
-        azurearm_log_level='info',
+        azurearm_log_level="info",
         **connection_auth
     )
 
-    if 'error' not in snet:
-        if address_prefix != snet.get('address_prefix'):
-            ret['changes']['address_prefix'] = {
-                'old': snet.get('address_prefix'),
-                'new': address_prefix
+    if "error" not in snet:
+        if address_prefix != snet.get("address_prefix"):
+            ret["changes"]["address_prefix"] = {
+                "old": snet.get("address_prefix"),
+                "new": address_prefix,
             }
 
         nsg_name = None
-        if snet.get('network_security_group'):
-            nsg_name = snet['network_security_group']['id'].split('/')[-1]
+        if snet.get("network_security_group"):
+            nsg_name = snet["network_security_group"]["id"].split("/")[-1]
 
         if security_group and (security_group != nsg_name):
-            ret['changes']['network_security_group'] = {
-                'old': nsg_name,
-                'new': security_group
+            ret["changes"]["network_security_group"] = {
+                "old": nsg_name,
+                "new": security_group,
             }
 
         rttbl_name = None
-        if snet.get('route_table'):
-            rttbl_name = snet['route_table']['id'].split('/')[-1]
+        if snet.get("route_table"):
+            rttbl_name = snet["route_table"]["id"].split("/")[-1]
 
         if route_table and (route_table != rttbl_name):
-            ret['changes']['route_table'] = {
-                'old': rttbl_name,
-                'new': route_table
-            }
+            ret["changes"]["route_table"] = {"old": rttbl_name, "new": route_table}
 
-        if not ret['changes']:
-            ret['result'] = True
-            ret['comment'] = 'Subnet {0} is already present.'.format(name)
+        if not ret["changes"]:
+            ret["result"] = True
+            ret["comment"] = "Subnet {0} is already present.".format(name)
             return ret
 
-        if __opts__['test']:
-            ret['result'] = None
-            ret['comment'] = 'Subnet {0} would be updated.'.format(name)
+        if __opts__["test"]:
+            ret["result"] = None
+            ret["comment"] = "Subnet {0} would be updated.".format(name)
             return ret
 
     else:
-        ret['changes'] = {
-            'old': {},
-            'new': {
-                'name': name,
-                'address_prefix': address_prefix,
-                'network_security_group': security_group,
-                'route_table': route_table
-            }
+        ret["changes"] = {
+            "old": {},
+            "new": {
+                "name": name,
+                "address_prefix": address_prefix,
+                "network_security_group": security_group,
+                "route_table": route_table,
+            },
         }
 
-    if __opts__['test']:
-        ret['comment'] = 'Subnet {0} would be created.'.format(name)
-        ret['result'] = None
+    if __opts__["test"]:
+        ret["comment"] = "Subnet {0} would be created.".format(name)
+        ret["result"] = None
         return ret
 
     snet_kwargs = kwargs.copy()
     snet_kwargs.update(connection_auth)
 
-    snet = __salt__['azurearm_network.subnet_create_or_update'](
+    snet = __salt__["azurearm_network.subnet_create_or_update"](
         name=name,
         virtual_network=virtual_network,
         resource_group=resource_group,
@@ -454,17 +465,19 @@ def subnet_present(name, address_prefix, virtual_network, resource_group,
         **snet_kwargs
     )
 
-    if 'error' not in snet:
-        ret['result'] = True
-        ret['comment'] = 'Subnet {0} has been created.'.format(name)
+    if "error" not in snet:
+        ret["result"] = True
+        ret["comment"] = "Subnet {0} has been created.".format(name)
         return ret
 
-    ret['comment'] = 'Failed to create subnet {0}! ({1})'.format(name, snet.get('error'))
+    ret["comment"] = "Failed to create subnet {0}! ({1})".format(
+        name, snet.get("error")
+    )
     return ret
 
 
 def subnet_absent(name, virtual_network, resource_group, connection_auth=None):
-    '''
+    """
     .. versionadded:: 2019.2.0
 
     Ensure a virtual network does not exist in the virtual network.
@@ -481,58 +494,55 @@ def subnet_absent(name, virtual_network, resource_group, connection_auth=None):
     :param connection_auth:
         A dict with subscription and authentication parameters to be used in connecting to the
         Azure Resource Manager API.
-    '''
-    ret = {
-        'name': name,
-        'result': False,
-        'comment': '',
-        'changes': {}
-    }
+    """
+    ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret['comment'] = 'Connection information must be specified via connection_auth dictionary!'
+        ret[
+            "comment"
+        ] = "Connection information must be specified via connection_auth dictionary!"
         return ret
 
-    snet = __salt__['azurearm_network.subnet_get'](
+    snet = __salt__["azurearm_network.subnet_get"](
         name,
         virtual_network,
         resource_group,
-        azurearm_log_level='info',
+        azurearm_log_level="info",
         **connection_auth
     )
 
-    if 'error' in snet:
-        ret['result'] = True
-        ret['comment'] = 'Subnet {0} was not found.'.format(name)
+    if "error" in snet:
+        ret["result"] = True
+        ret["comment"] = "Subnet {0} was not found.".format(name)
         return ret
 
-    elif __opts__['test']:
-        ret['comment'] = 'Subnet {0} would be deleted.'.format(name)
-        ret['result'] = None
-        ret['changes'] = {
-            'old': snet,
-            'new': {},
+    elif __opts__["test"]:
+        ret["comment"] = "Subnet {0} would be deleted.".format(name)
+        ret["result"] = None
+        ret["changes"] = {
+            "old": snet,
+            "new": {},
         }
         return ret
 
-    deleted = __salt__['azurearm_network.subnet_delete'](name, virtual_network, resource_group, **connection_auth)
+    deleted = __salt__["azurearm_network.subnet_delete"](
+        name, virtual_network, resource_group, **connection_auth
+    )
 
     if deleted:
-        ret['result'] = True
-        ret['comment'] = 'Subnet {0} has been deleted.'.format(name)
-        ret['changes'] = {
-            'old': snet,
-            'new': {}
-        }
+        ret["result"] = True
+        ret["comment"] = "Subnet {0} has been deleted.".format(name)
+        ret["changes"] = {"old": snet, "new": {}}
         return ret
 
-    ret['comment'] = 'Failed to delete subnet {0}!'.format(name)
+    ret["comment"] = "Failed to delete subnet {0}!".format(name)
     return ret
 
 
-def network_security_group_present(name, resource_group, tags=None, security_rules=None, connection_auth=None,
-                                   **kwargs):
-    '''
+def network_security_group_present(
+    name, resource_group, tags=None, security_rules=None, connection_auth=None, **kwargs
+):
+    """
     .. versionadded:: 2019.2.0
 
     Ensure a network security group exists.
@@ -591,70 +601,68 @@ def network_security_group_present(name, resource_group, tags=None, security_rul
                 - require:
                   - azurearm_resource: Ensure resource group exists
 
-    '''
-    ret = {
-        'name': name,
-        'result': False,
-        'comment': '',
-        'changes': {}
-    }
+    """
+    ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret['comment'] = 'Connection information must be specified via connection_auth dictionary!'
+        ret[
+            "comment"
+        ] = "Connection information must be specified via connection_auth dictionary!"
         return ret
 
-    nsg = __salt__['azurearm_network.network_security_group_get'](
-        name,
-        resource_group,
-        azurearm_log_level='info',
-        **connection_auth
+    nsg = __salt__["azurearm_network.network_security_group_get"](
+        name, resource_group, azurearm_log_level="info", **connection_auth
     )
 
-    if 'error' not in nsg:
-        tag_changes = __utils__['dictdiffer.deep_diff'](nsg.get('tags', {}), tags or {})
+    if "error" not in nsg:
+        tag_changes = __utils__["dictdiffer.deep_diff"](nsg.get("tags", {}), tags or {})
         if tag_changes:
-            ret['changes']['tags'] = tag_changes
+            ret["changes"]["tags"] = tag_changes
 
         if security_rules:
-            comp_ret = __utils__['azurearm.compare_list_of_dicts'](nsg.get('security_rules', []), security_rules)
+            comp_ret = __utils__["azurearm.compare_list_of_dicts"](
+                nsg.get("security_rules", []), security_rules
+            )
 
-            if comp_ret.get('comment'):
-                ret['comment'] = '"security_rules" {0}'.format(comp_ret['comment'])
+            if comp_ret.get("comment"):
+                ret["comment"] = '"security_rules" {0}'.format(comp_ret["comment"])
                 return ret
 
-            if comp_ret.get('changes'):
-                ret['changes']['security_rules'] = comp_ret['changes']
+            if comp_ret.get("changes"):
+                ret["changes"]["security_rules"] = comp_ret["changes"]
 
-        if not ret['changes']:
-            ret['result'] = True
-            ret['comment'] = 'Network security group {0} is already present.'.format(name)
+        if not ret["changes"]:
+            ret["result"] = True
+            ret["comment"] = "Network security group {0} is already present.".format(
+                name
+            )
             return ret
 
-        if __opts__['test']:
-            ret['result'] = None
-            ret['comment'] = 'Network security group {0} would be updated.'.format(name)
+        if __opts__["test"]:
+            ret["result"] = None
+            ret["comment"] = "Network security group {0} would be updated.".format(name)
             return ret
 
     else:
-        ret['changes'] = {
-            'old': {},
-            'new': {
-                'name': name,
-                'resource_group': resource_group,
-                'tags': tags,
-                'security_rules': security_rules,
-            }
+        ret["changes"] = {
+            "old": {},
+            "new": {
+                "name": name,
+                "resource_group": resource_group,
+                "tags": tags,
+                "security_rules": security_rules,
+            },
         }
 
-    if __opts__['test']:
-        ret['comment'] = 'Network security group {0} would be created.'.format(name)
-        ret['result'] = None
+    if __opts__["test"]:
+        ret["comment"] = "Network security group {0} would be created.".format(name)
+        ret["result"] = None
         return ret
 
     nsg_kwargs = kwargs.copy()
     nsg_kwargs.update(connection_auth)
 
-    nsg = __salt__['azurearm_network.network_security_group_create_or_update'](
+    nsg = __salt__["azurearm_network.network_security_group_create_or_update"](
         name=name,
         resource_group=resource_group,
         tags=tags,
@@ -662,17 +670,19 @@ def network_security_group_present(name, resource_group, tags=None, security_rul
         **nsg_kwargs
     )
 
-    if 'error' not in nsg:
-        ret['result'] = True
-        ret['comment'] = 'Network security group {0} has been created.'.format(name)
+    if "error" not in nsg:
+        ret["result"] = True
+        ret["comment"] = "Network security group {0} has been created.".format(name)
         return ret
 
-    ret['comment'] = 'Failed to create network security group {0}! ({1})'.format(name, nsg.get('error'))
+    ret["comment"] = "Failed to create network security group {0}! ({1})".format(
+        name, nsg.get("error")
+    )
     return ret
 
 
 def network_security_group_absent(name, resource_group, connection_auth=None):
-    '''
+    """
     .. versionadded:: 2019.2.0
 
     Ensure a network security group does not exist in the resource group.
@@ -686,60 +696,68 @@ def network_security_group_absent(name, resource_group, connection_auth=None):
     :param connection_auth:
         A dict with subscription and authentication parameters to be used in connecting to the
         Azure Resource Manager API.
-    '''
-    ret = {
-        'name': name,
-        'result': False,
-        'comment': '',
-        'changes': {}
-    }
+    """
+    ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret['comment'] = 'Connection information must be specified via connection_auth dictionary!'
+        ret[
+            "comment"
+        ] = "Connection information must be specified via connection_auth dictionary!"
         return ret
 
-    nsg = __salt__['azurearm_network.network_security_group_get'](
-        name,
-        resource_group,
-        azurearm_log_level='info',
-        **connection_auth
+    nsg = __salt__["azurearm_network.network_security_group_get"](
+        name, resource_group, azurearm_log_level="info", **connection_auth
     )
 
-    if 'error' in nsg:
-        ret['result'] = True
-        ret['comment'] = 'Network security group {0} was not found.'.format(name)
+    if "error" in nsg:
+        ret["result"] = True
+        ret["comment"] = "Network security group {0} was not found.".format(name)
         return ret
 
-    elif __opts__['test']:
-        ret['comment'] = 'Network security group {0} would be deleted.'.format(name)
-        ret['result'] = None
-        ret['changes'] = {
-            'old': nsg,
-            'new': {},
+    elif __opts__["test"]:
+        ret["comment"] = "Network security group {0} would be deleted.".format(name)
+        ret["result"] = None
+        ret["changes"] = {
+            "old": nsg,
+            "new": {},
         }
         return ret
 
-    deleted = __salt__['azurearm_network.network_security_group_delete'](name, resource_group, **connection_auth)
+    deleted = __salt__["azurearm_network.network_security_group_delete"](
+        name, resource_group, **connection_auth
+    )
 
     if deleted:
-        ret['result'] = True
-        ret['comment'] = 'Network security group {0} has been deleted.'.format(name)
-        ret['changes'] = {
-            'old': nsg,
-            'new': {}
-        }
+        ret["result"] = True
+        ret["comment"] = "Network security group {0} has been deleted.".format(name)
+        ret["changes"] = {"old": nsg, "new": {}}
         return ret
 
-    ret['comment'] = 'Failed to delete network security group {0}!'.format(name)
+    ret["comment"] = "Failed to delete network security group {0}!".format(name)
     return ret
 
 
-def security_rule_present(name, access, direction, priority, protocol, security_group, resource_group,
-                          destination_address_prefix=None, destination_port_range=None, source_address_prefix=None,
-                          source_port_range=None, description=None, destination_address_prefixes=None,
-                          destination_port_ranges=None, source_address_prefixes=None, source_port_ranges=None,
-                          connection_auth=None, **kwargs):
-    '''
+def security_rule_present(
+    name,
+    access,
+    direction,
+    priority,
+    protocol,
+    security_group,
+    resource_group,
+    destination_address_prefix=None,
+    destination_port_range=None,
+    source_address_prefix=None,
+    source_port_range=None,
+    description=None,
+    destination_address_prefixes=None,
+    destination_port_ranges=None,
+    source_address_prefixes=None,
+    source_port_ranges=None,
+    connection_auth=None,
+    **kwargs
+):
+    """
     .. versionadded:: 2019.2.0
 
     Ensure a security rule exists.
@@ -829,201 +847,211 @@ def security_rule_present(name, access, direction, priority, protocol, security_
                 - require:
                   - azurearm_network: Ensure network security group exists
 
-    '''
-    ret = {
-        'name': name,
-        'result': False,
-        'comment': '',
-        'changes': {}
-    }
+    """
+    ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret['comment'] = 'Connection information must be specified via connection_auth dictionary!'
+        ret[
+            "comment"
+        ] = "Connection information must be specified via connection_auth dictionary!"
         return ret
 
     exclusive_params = [
-        ('source_port_ranges', 'source_port_range'),
-        ('source_address_prefixes', 'source_address_prefix'),
-        ('destination_port_ranges', 'destination_port_range'),
-        ('destination_address_prefixes', 'destination_address_prefix'),
+        ("source_port_ranges", "source_port_range"),
+        ("source_address_prefixes", "source_address_prefix"),
+        ("destination_port_ranges", "destination_port_range"),
+        ("destination_address_prefixes", "destination_address_prefix"),
     ]
 
     for params in exclusive_params:
         # pylint: disable=eval-used
         if not eval(params[0]) and not eval(params[1]):
-            ret['comment'] = 'Either the {0} or {1} parameter must be provided!'.format(params[0], params[1])
+            ret["comment"] = "Either the {0} or {1} parameter must be provided!".format(
+                params[0], params[1]
+            )
             return ret
         # pylint: disable=eval-used
         if eval(params[0]):
             # pylint: disable=eval-used
             if not isinstance(eval(params[0]), list):
-                ret['comment'] = 'The {0} parameter must be a list!'.format(params[0])
+                ret["comment"] = "The {0} parameter must be a list!".format(params[0])
                 return ret
             # pylint: disable=exec-used
-            exec('{0} = None'.format(params[1]))
+            exec("{0} = None".format(params[1]))
 
-    rule = __salt__['azurearm_network.security_rule_get'](
+    rule = __salt__["azurearm_network.security_rule_get"](
         name,
         security_group,
         resource_group,
-        azurearm_log_level='info',
+        azurearm_log_level="info",
         **connection_auth
     )
 
-    if 'error' not in rule:
+    if "error" not in rule:
         # access changes
-        if access.capitalize() != rule.get('access'):
-            ret['changes']['access'] = {
-                'old': rule.get('access'),
-                'new': access
-            }
+        if access.capitalize() != rule.get("access"):
+            ret["changes"]["access"] = {"old": rule.get("access"), "new": access}
 
         # description changes
-        if description != rule.get('description'):
-            ret['changes']['description'] = {
-                'old': rule.get('description'),
-                'new': description
+        if description != rule.get("description"):
+            ret["changes"]["description"] = {
+                "old": rule.get("description"),
+                "new": description,
             }
 
         # direction changes
-        if direction.capitalize() != rule.get('direction'):
-            ret['changes']['direction'] = {
-                'old': rule.get('direction'),
-                'new': direction
+        if direction.capitalize() != rule.get("direction"):
+            ret["changes"]["direction"] = {
+                "old": rule.get("direction"),
+                "new": direction,
             }
 
         # priority changes
-        if int(priority) != rule.get('priority'):
-            ret['changes']['priority'] = {
-                'old': rule.get('priority'),
-                'new': priority
-            }
+        if int(priority) != rule.get("priority"):
+            ret["changes"]["priority"] = {"old": rule.get("priority"), "new": priority}
 
         # protocol changes
-        if protocol.lower() != rule.get('protocol', '').lower():
-            ret['changes']['protocol'] = {
-                'old': rule.get('protocol'),
-                'new': protocol
-            }
+        if protocol.lower() != rule.get("protocol", "").lower():
+            ret["changes"]["protocol"] = {"old": rule.get("protocol"), "new": protocol}
 
         # destination_port_range changes
-        if destination_port_range != rule.get('destination_port_range'):
-            ret['changes']['destination_port_range'] = {
-                'old': rule.get('destination_port_range'),
-                'new': destination_port_range
+        if destination_port_range != rule.get("destination_port_range"):
+            ret["changes"]["destination_port_range"] = {
+                "old": rule.get("destination_port_range"),
+                "new": destination_port_range,
             }
 
         # source_port_range changes
-        if source_port_range != rule.get('source_port_range'):
-            ret['changes']['source_port_range'] = {
-                'old': rule.get('source_port_range'),
-                'new': source_port_range
+        if source_port_range != rule.get("source_port_range"):
+            ret["changes"]["source_port_range"] = {
+                "old": rule.get("source_port_range"),
+                "new": source_port_range,
             }
 
         # destination_port_ranges changes
-        if sorted(destination_port_ranges or []) != sorted(rule.get('destination_port_ranges', [])):
-            ret['changes']['destination_port_ranges'] = {
-                'old': rule.get('destination_port_ranges'),
-                'new': destination_port_ranges
+        if sorted(destination_port_ranges or []) != sorted(
+            rule.get("destination_port_ranges", [])
+        ):
+            ret["changes"]["destination_port_ranges"] = {
+                "old": rule.get("destination_port_ranges"),
+                "new": destination_port_ranges,
             }
 
         # source_port_ranges changes
-        if sorted(source_port_ranges or []) != sorted(rule.get('source_port_ranges', [])):
-            ret['changes']['source_port_ranges'] = {
-                'old': rule.get('source_port_ranges'),
-                'new': source_port_ranges
+        if sorted(source_port_ranges or []) != sorted(
+            rule.get("source_port_ranges", [])
+        ):
+            ret["changes"]["source_port_ranges"] = {
+                "old": rule.get("source_port_ranges"),
+                "new": source_port_ranges,
             }
 
         # destination_address_prefix changes
-        if (destination_address_prefix or '').lower() != rule.get('destination_address_prefix', '').lower():
-            ret['changes']['destination_address_prefix'] = {
-                'old': rule.get('destination_address_prefix'),
-                'new': destination_address_prefix
+        if (destination_address_prefix or "").lower() != rule.get(
+            "destination_address_prefix", ""
+        ).lower():
+            ret["changes"]["destination_address_prefix"] = {
+                "old": rule.get("destination_address_prefix"),
+                "new": destination_address_prefix,
             }
 
         # source_address_prefix changes
-        if (source_address_prefix or '').lower() != rule.get('source_address_prefix', '').lower():
-            ret['changes']['source_address_prefix'] = {
-                'old': rule.get('source_address_prefix'),
-                'new': source_address_prefix
+        if (source_address_prefix or "").lower() != rule.get(
+            "source_address_prefix", ""
+        ).lower():
+            ret["changes"]["source_address_prefix"] = {
+                "old": rule.get("source_address_prefix"),
+                "new": source_address_prefix,
             }
 
         # destination_address_prefixes changes
-        if sorted(destination_address_prefixes or []) != sorted(rule.get('destination_address_prefixes', [])):
-            if len(destination_address_prefixes or []) != len(rule.get('destination_address_prefixes', [])):
-                ret['changes']['destination_address_prefixes'] = {
-                    'old': rule.get('destination_address_prefixes'),
-                    'new': destination_address_prefixes
+        if sorted(destination_address_prefixes or []) != sorted(
+            rule.get("destination_address_prefixes", [])
+        ):
+            if len(destination_address_prefixes or []) != len(
+                rule.get("destination_address_prefixes", [])
+            ):
+                ret["changes"]["destination_address_prefixes"] = {
+                    "old": rule.get("destination_address_prefixes"),
+                    "new": destination_address_prefixes,
                 }
             else:
-                local_dst_addrs, remote_dst_addrs = (sorted(destination_address_prefixes),
-                                                     sorted(rule.get('destination_address_prefixes')))
+                local_dst_addrs, remote_dst_addrs = (
+                    sorted(destination_address_prefixes),
+                    sorted(rule.get("destination_address_prefixes")),
+                )
                 for idx in six_range(0, len(local_dst_addrs)):
                     if local_dst_addrs[idx].lower() != remote_dst_addrs[idx].lower():
-                        ret['changes']['destination_address_prefixes'] = {
-                            'old': rule.get('destination_address_prefixes'),
-                            'new': destination_address_prefixes
+                        ret["changes"]["destination_address_prefixes"] = {
+                            "old": rule.get("destination_address_prefixes"),
+                            "new": destination_address_prefixes,
                         }
                         break
 
         # source_address_prefixes changes
-        if sorted(source_address_prefixes or []) != sorted(rule.get('source_address_prefixes', [])):
-            if len(source_address_prefixes or []) != len(rule.get('source_address_prefixes', [])):
-                ret['changes']['source_address_prefixes'] = {
-                    'old': rule.get('source_address_prefixes'),
-                    'new': source_address_prefixes
+        if sorted(source_address_prefixes or []) != sorted(
+            rule.get("source_address_prefixes", [])
+        ):
+            if len(source_address_prefixes or []) != len(
+                rule.get("source_address_prefixes", [])
+            ):
+                ret["changes"]["source_address_prefixes"] = {
+                    "old": rule.get("source_address_prefixes"),
+                    "new": source_address_prefixes,
                 }
             else:
-                local_src_addrs, remote_src_addrs = (sorted(source_address_prefixes),
-                                                     sorted(rule.get('source_address_prefixes')))
+                local_src_addrs, remote_src_addrs = (
+                    sorted(source_address_prefixes),
+                    sorted(rule.get("source_address_prefixes")),
+                )
                 for idx in six_range(0, len(local_src_addrs)):
                     if local_src_addrs[idx].lower() != remote_src_addrs[idx].lower():
-                        ret['changes']['source_address_prefixes'] = {
-                            'old': rule.get('source_address_prefixes'),
-                            'new': source_address_prefixes
+                        ret["changes"]["source_address_prefixes"] = {
+                            "old": rule.get("source_address_prefixes"),
+                            "new": source_address_prefixes,
                         }
                         break
 
-        if not ret['changes']:
-            ret['result'] = True
-            ret['comment'] = 'Security rule {0} is already present.'.format(name)
+        if not ret["changes"]:
+            ret["result"] = True
+            ret["comment"] = "Security rule {0} is already present.".format(name)
             return ret
 
-        if __opts__['test']:
-            ret['result'] = None
-            ret['comment'] = 'Security rule {0} would be updated.'.format(name)
+        if __opts__["test"]:
+            ret["result"] = None
+            ret["comment"] = "Security rule {0} would be updated.".format(name)
             return ret
 
     else:
-        ret['changes'] = {
-            'old': {},
-            'new': {
-                'name': name,
-                'access': access,
-                'description': description,
-                'direction': direction,
-                'priority': priority,
-                'protocol': protocol,
-                'destination_address_prefix': destination_address_prefix,
-                'destination_address_prefixes': destination_address_prefixes,
-                'destination_port_range': destination_port_range,
-                'destination_port_ranges': destination_port_ranges,
-                'source_address_prefix': source_address_prefix,
-                'source_address_prefixes': source_address_prefixes,
-                'source_port_range': source_port_range,
-                'source_port_ranges': source_port_ranges,
-            }
+        ret["changes"] = {
+            "old": {},
+            "new": {
+                "name": name,
+                "access": access,
+                "description": description,
+                "direction": direction,
+                "priority": priority,
+                "protocol": protocol,
+                "destination_address_prefix": destination_address_prefix,
+                "destination_address_prefixes": destination_address_prefixes,
+                "destination_port_range": destination_port_range,
+                "destination_port_ranges": destination_port_ranges,
+                "source_address_prefix": source_address_prefix,
+                "source_address_prefixes": source_address_prefixes,
+                "source_port_range": source_port_range,
+                "source_port_ranges": source_port_ranges,
+            },
         }
 
-    if __opts__['test']:
-        ret['comment'] = 'Security rule {0} would be created.'.format(name)
-        ret['result'] = None
+    if __opts__["test"]:
+        ret["comment"] = "Security rule {0} would be created.".format(name)
+        ret["result"] = None
         return ret
 
     rule_kwargs = kwargs.copy()
     rule_kwargs.update(connection_auth)
 
-    rule = __salt__['azurearm_network.security_rule_create_or_update'](
+    rule = __salt__["azurearm_network.security_rule_create_or_update"](
         name=name,
         access=access,
         description=description,
@@ -1043,17 +1071,19 @@ def security_rule_present(name, access, direction, priority, protocol, security_
         **rule_kwargs
     )
 
-    if 'error' not in rule:
-        ret['result'] = True
-        ret['comment'] = 'Security rule {0} has been created.'.format(name)
+    if "error" not in rule:
+        ret["result"] = True
+        ret["comment"] = "Security rule {0} has been created.".format(name)
         return ret
 
-    ret['comment'] = 'Failed to create security rule {0}! ({1})'.format(name, rule.get('error'))
+    ret["comment"] = "Failed to create security rule {0}! ({1})".format(
+        name, rule.get("error")
+    )
     return ret
 
 
 def security_rule_absent(name, security_group, resource_group, connection_auth=None):
-    '''
+    """
     .. versionadded:: 2019.2.0
 
     Ensure a security rule does not exist in the network security group.
@@ -1070,59 +1100,67 @@ def security_rule_absent(name, security_group, resource_group, connection_auth=N
     :param connection_auth:
         A dict with subscription and authentication parameters to be used in connecting to the
         Azure Resource Manager API.
-    '''
-    ret = {
-        'name': name,
-        'result': False,
-        'comment': '',
-        'changes': {}
-    }
+    """
+    ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret['comment'] = 'Connection information must be specified via connection_auth dictionary!'
+        ret[
+            "comment"
+        ] = "Connection information must be specified via connection_auth dictionary!"
         return ret
 
-    rule = __salt__['azurearm_network.security_rule_get'](
+    rule = __salt__["azurearm_network.security_rule_get"](
         name,
         security_group,
         resource_group,
-        azurearm_log_level='info',
+        azurearm_log_level="info",
         **connection_auth
     )
 
-    if 'error' in rule:
-        ret['result'] = True
-        ret['comment'] = 'Security rule {0} was not found.'.format(name)
+    if "error" in rule:
+        ret["result"] = True
+        ret["comment"] = "Security rule {0} was not found.".format(name)
         return ret
 
-    elif __opts__['test']:
-        ret['comment'] = 'Security rule {0} would be deleted.'.format(name)
-        ret['result'] = None
-        ret['changes'] = {
-            'old': rule,
-            'new': {},
+    elif __opts__["test"]:
+        ret["comment"] = "Security rule {0} would be deleted.".format(name)
+        ret["result"] = None
+        ret["changes"] = {
+            "old": rule,
+            "new": {},
         }
         return ret
 
-    deleted = __salt__['azurearm_network.security_rule_delete'](name, security_group, resource_group, **connection_auth)
+    deleted = __salt__["azurearm_network.security_rule_delete"](
+        name, security_group, resource_group, **connection_auth
+    )
 
     if deleted:
-        ret['result'] = True
-        ret['comment'] = 'Security rule {0} has been deleted.'.format(name)
-        ret['changes'] = {
-            'old': rule,
-            'new': {}
-        }
+        ret["result"] = True
+        ret["comment"] = "Security rule {0} has been deleted.".format(name)
+        ret["changes"] = {"old": rule, "new": {}}
         return ret
 
-    ret['comment'] = 'Failed to delete security rule {0}!'.format(name)
+    ret["comment"] = "Failed to delete security rule {0}!".format(name)
     return ret
 
 
-def load_balancer_present(name, resource_group, sku=None, frontend_ip_configurations=None, backend_address_pools=None,
-                          load_balancing_rules=None, probes=None, inbound_nat_rules=None, inbound_nat_pools=None,
-                          outbound_nat_rules=None, tags=None, connection_auth=None, **kwargs):
-    '''
+def load_balancer_present(
+    name,
+    resource_group,
+    sku=None,
+    frontend_ip_configurations=None,
+    backend_address_pools=None,
+    load_balancing_rules=None,
+    probes=None,
+    inbound_nat_rules=None,
+    inbound_nat_pools=None,
+    outbound_nat_rules=None,
+    tags=None,
+    connection_auth=None,
+    **kwargs
+):
+    """
     .. versionadded:: 2019.2.0
 
     Ensure a load balancer exists.
@@ -1285,176 +1323,181 @@ def load_balancer_present(name, resource_group, sku=None, frontend_ip_configurat
                   - azurearm_resource: Ensure resource group exists
                   - azurearm_network: Ensure public IP exists
 
-    '''
-    ret = {
-        'name': name,
-        'result': False,
-        'comment': '',
-        'changes': {}
-    }
+    """
+    ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret['comment'] = 'Connection information must be specified via connection_auth dictionary!'
+        ret[
+            "comment"
+        ] = "Connection information must be specified via connection_auth dictionary!"
         return ret
 
     if sku:
-        sku = {'name': sku.capitalize()}
+        sku = {"name": sku.capitalize()}
 
-    load_bal = __salt__['azurearm_network.load_balancer_get'](
-        name,
-        resource_group,
-        azurearm_log_level='info',
-        **connection_auth
+    load_bal = __salt__["azurearm_network.load_balancer_get"](
+        name, resource_group, azurearm_log_level="info", **connection_auth
     )
 
-    if 'error' not in load_bal:
+    if "error" not in load_bal:
         # tag changes
-        tag_changes = __utils__['dictdiffer.deep_diff'](load_bal.get('tags', {}), tags or {})
+        tag_changes = __utils__["dictdiffer.deep_diff"](
+            load_bal.get("tags", {}), tags or {}
+        )
         if tag_changes:
-            ret['changes']['tags'] = tag_changes
+            ret["changes"]["tags"] = tag_changes
 
         # sku changes
         if sku:
-            sku_changes = __utils__['dictdiffer.deep_diff'](load_bal.get('sku', {}), sku)
+            sku_changes = __utils__["dictdiffer.deep_diff"](
+                load_bal.get("sku", {}), sku
+            )
             if sku_changes:
-                ret['changes']['sku'] = sku_changes
+                ret["changes"]["sku"] = sku_changes
 
         # frontend_ip_configurations changes
         if frontend_ip_configurations:
-            comp_ret = __utils__['azurearm.compare_list_of_dicts'](
-                load_bal.get('frontend_ip_configurations', []),
+            comp_ret = __utils__["azurearm.compare_list_of_dicts"](
+                load_bal.get("frontend_ip_configurations", []),
                 frontend_ip_configurations,
-                ['public_ip_address', 'subnet']
+                ["public_ip_address", "subnet"],
             )
 
-            if comp_ret.get('comment'):
-                ret['comment'] = '"frontend_ip_configurations" {0}'.format(comp_ret['comment'])
+            if comp_ret.get("comment"):
+                ret["comment"] = '"frontend_ip_configurations" {0}'.format(
+                    comp_ret["comment"]
+                )
                 return ret
 
-            if comp_ret.get('changes'):
-                ret['changes']['frontend_ip_configurations'] = comp_ret['changes']
+            if comp_ret.get("changes"):
+                ret["changes"]["frontend_ip_configurations"] = comp_ret["changes"]
 
         # backend_address_pools changes
         if backend_address_pools:
-            comp_ret = __utils__['azurearm.compare_list_of_dicts'](
-                load_bal.get('backend_address_pools', []),
-                backend_address_pools
+            comp_ret = __utils__["azurearm.compare_list_of_dicts"](
+                load_bal.get("backend_address_pools", []), backend_address_pools
             )
 
-            if comp_ret.get('comment'):
-                ret['comment'] = '"backend_address_pools" {0}'.format(comp_ret['comment'])
+            if comp_ret.get("comment"):
+                ret["comment"] = '"backend_address_pools" {0}'.format(
+                    comp_ret["comment"]
+                )
                 return ret
 
-            if comp_ret.get('changes'):
-                ret['changes']['backend_address_pools'] = comp_ret['changes']
+            if comp_ret.get("changes"):
+                ret["changes"]["backend_address_pools"] = comp_ret["changes"]
 
         # probes changes
         if probes:
-            comp_ret = __utils__['azurearm.compare_list_of_dicts'](load_bal.get('probes', []), probes)
+            comp_ret = __utils__["azurearm.compare_list_of_dicts"](
+                load_bal.get("probes", []), probes
+            )
 
-            if comp_ret.get('comment'):
-                ret['comment'] = '"probes" {0}'.format(comp_ret['comment'])
+            if comp_ret.get("comment"):
+                ret["comment"] = '"probes" {0}'.format(comp_ret["comment"])
                 return ret
 
-            if comp_ret.get('changes'):
-                ret['changes']['probes'] = comp_ret['changes']
+            if comp_ret.get("changes"):
+                ret["changes"]["probes"] = comp_ret["changes"]
 
         # load_balancing_rules changes
         if load_balancing_rules:
-            comp_ret = __utils__['azurearm.compare_list_of_dicts'](
-                load_bal.get('load_balancing_rules', []),
+            comp_ret = __utils__["azurearm.compare_list_of_dicts"](
+                load_bal.get("load_balancing_rules", []),
                 load_balancing_rules,
-                ['frontend_ip_configuration', 'backend_address_pool', 'probe']
+                ["frontend_ip_configuration", "backend_address_pool", "probe"],
             )
 
-            if comp_ret.get('comment'):
-                ret['comment'] = '"load_balancing_rules" {0}'.format(comp_ret['comment'])
+            if comp_ret.get("comment"):
+                ret["comment"] = '"load_balancing_rules" {0}'.format(
+                    comp_ret["comment"]
+                )
                 return ret
 
-            if comp_ret.get('changes'):
-                ret['changes']['load_balancing_rules'] = comp_ret['changes']
+            if comp_ret.get("changes"):
+                ret["changes"]["load_balancing_rules"] = comp_ret["changes"]
 
         # inbound_nat_rules changes
         if inbound_nat_rules:
-            comp_ret = __utils__['azurearm.compare_list_of_dicts'](
-                load_bal.get('inbound_nat_rules', []),
+            comp_ret = __utils__["azurearm.compare_list_of_dicts"](
+                load_bal.get("inbound_nat_rules", []),
                 inbound_nat_rules,
-                ['frontend_ip_configuration']
+                ["frontend_ip_configuration"],
             )
 
-            if comp_ret.get('comment'):
-                ret['comment'] = '"inbound_nat_rules" {0}'.format(comp_ret['comment'])
+            if comp_ret.get("comment"):
+                ret["comment"] = '"inbound_nat_rules" {0}'.format(comp_ret["comment"])
                 return ret
 
-            if comp_ret.get('changes'):
-                ret['changes']['inbound_nat_rules'] = comp_ret['changes']
+            if comp_ret.get("changes"):
+                ret["changes"]["inbound_nat_rules"] = comp_ret["changes"]
 
         # inbound_nat_pools changes
         if inbound_nat_pools:
-            comp_ret = __utils__['azurearm.compare_list_of_dicts'](
-                load_bal.get('inbound_nat_pools', []),
+            comp_ret = __utils__["azurearm.compare_list_of_dicts"](
+                load_bal.get("inbound_nat_pools", []),
                 inbound_nat_pools,
-                ['frontend_ip_configuration']
+                ["frontend_ip_configuration"],
             )
 
-            if comp_ret.get('comment'):
-                ret['comment'] = '"inbound_nat_pools" {0}'.format(comp_ret['comment'])
+            if comp_ret.get("comment"):
+                ret["comment"] = '"inbound_nat_pools" {0}'.format(comp_ret["comment"])
                 return ret
 
-            if comp_ret.get('changes'):
-                ret['changes']['inbound_nat_pools'] = comp_ret['changes']
+            if comp_ret.get("changes"):
+                ret["changes"]["inbound_nat_pools"] = comp_ret["changes"]
 
         # outbound_nat_rules changes
         if outbound_nat_rules:
-            comp_ret = __utils__['azurearm.compare_list_of_dicts'](
-                load_bal.get('outbound_nat_rules', []),
+            comp_ret = __utils__["azurearm.compare_list_of_dicts"](
+                load_bal.get("outbound_nat_rules", []),
                 outbound_nat_rules,
-                ['frontend_ip_configuration']
+                ["frontend_ip_configuration"],
             )
 
-            if comp_ret.get('comment'):
-                ret['comment'] = '"outbound_nat_rules" {0}'.format(comp_ret['comment'])
+            if comp_ret.get("comment"):
+                ret["comment"] = '"outbound_nat_rules" {0}'.format(comp_ret["comment"])
                 return ret
 
-            if comp_ret.get('changes'):
-                ret['changes']['outbound_nat_rules'] = comp_ret['changes']
+            if comp_ret.get("changes"):
+                ret["changes"]["outbound_nat_rules"] = comp_ret["changes"]
 
-        if not ret['changes']:
-            ret['result'] = True
-            ret['comment'] = 'Load balancer {0} is already present.'.format(name)
+        if not ret["changes"]:
+            ret["result"] = True
+            ret["comment"] = "Load balancer {0} is already present.".format(name)
             return ret
 
-        if __opts__['test']:
-            ret['result'] = None
-            ret['comment'] = 'Load balancer {0} would be updated.'.format(name)
+        if __opts__["test"]:
+            ret["result"] = None
+            ret["comment"] = "Load balancer {0} would be updated.".format(name)
             return ret
 
     else:
-        ret['changes'] = {
-            'old': {},
-            'new': {
-                'name': name,
-                'sku': sku,
-                'tags': tags,
-                'frontend_ip_configurations': frontend_ip_configurations,
-                'backend_address_pools': backend_address_pools,
-                'load_balancing_rules': load_balancing_rules,
-                'probes': probes,
-                'inbound_nat_rules': inbound_nat_rules,
-                'inbound_nat_pools': inbound_nat_pools,
-                'outbound_nat_rules': outbound_nat_rules,
-            }
+        ret["changes"] = {
+            "old": {},
+            "new": {
+                "name": name,
+                "sku": sku,
+                "tags": tags,
+                "frontend_ip_configurations": frontend_ip_configurations,
+                "backend_address_pools": backend_address_pools,
+                "load_balancing_rules": load_balancing_rules,
+                "probes": probes,
+                "inbound_nat_rules": inbound_nat_rules,
+                "inbound_nat_pools": inbound_nat_pools,
+                "outbound_nat_rules": outbound_nat_rules,
+            },
         }
 
-    if __opts__['test']:
-        ret['comment'] = 'Load balancer {0} would be created.'.format(name)
-        ret['result'] = None
+    if __opts__["test"]:
+        ret["comment"] = "Load balancer {0} would be created.".format(name)
+        ret["result"] = None
         return ret
 
     lb_kwargs = kwargs.copy()
     lb_kwargs.update(connection_auth)
 
-    load_bal = __salt__['azurearm_network.load_balancer_create_or_update'](
+    load_bal = __salt__["azurearm_network.load_balancer_create_or_update"](
         name=name,
         resource_group=resource_group,
         sku=sku,
@@ -1469,17 +1512,19 @@ def load_balancer_present(name, resource_group, sku=None, frontend_ip_configurat
         **lb_kwargs
     )
 
-    if 'error' not in load_bal:
-        ret['result'] = True
-        ret['comment'] = 'Load balancer {0} has been created.'.format(name)
+    if "error" not in load_bal:
+        ret["result"] = True
+        ret["comment"] = "Load balancer {0} has been created.".format(name)
         return ret
 
-    ret['comment'] = 'Failed to create load balancer {0}! ({1})'.format(name, load_bal.get('error'))
+    ret["comment"] = "Failed to create load balancer {0}! ({1})".format(
+        name, load_bal.get("error")
+    )
     return ret
 
 
 def load_balancer_absent(name, resource_group, connection_auth=None):
-    '''
+    """
     .. versionadded:: 2019.2.0
 
     Ensure a load balancer does not exist in the resource group.
@@ -1493,58 +1538,60 @@ def load_balancer_absent(name, resource_group, connection_auth=None):
     :param connection_auth:
         A dict with subscription and authentication parameters to be used in connecting to the
         Azure Resource Manager API.
-    '''
-    ret = {
-        'name': name,
-        'result': False,
-        'comment': '',
-        'changes': {}
-    }
+    """
+    ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret['comment'] = 'Connection information must be specified via connection_auth dictionary!'
+        ret[
+            "comment"
+        ] = "Connection information must be specified via connection_auth dictionary!"
         return ret
 
-    load_bal = __salt__['azurearm_network.load_balancer_get'](
-        name,
-        resource_group,
-        azurearm_log_level='info',
-        **connection_auth
+    load_bal = __salt__["azurearm_network.load_balancer_get"](
+        name, resource_group, azurearm_log_level="info", **connection_auth
     )
 
-    if 'error' in load_bal:
-        ret['result'] = True
-        ret['comment'] = 'Load balancer {0} was not found.'.format(name)
+    if "error" in load_bal:
+        ret["result"] = True
+        ret["comment"] = "Load balancer {0} was not found.".format(name)
         return ret
 
-    elif __opts__['test']:
-        ret['comment'] = 'Load balancer {0} would be deleted.'.format(name)
-        ret['result'] = None
-        ret['changes'] = {
-            'old': load_bal,
-            'new': {},
+    elif __opts__["test"]:
+        ret["comment"] = "Load balancer {0} would be deleted.".format(name)
+        ret["result"] = None
+        ret["changes"] = {
+            "old": load_bal,
+            "new": {},
         }
         return ret
 
-    deleted = __salt__['azurearm_network.load_balancer_delete'](name, resource_group, **connection_auth)
+    deleted = __salt__["azurearm_network.load_balancer_delete"](
+        name, resource_group, **connection_auth
+    )
 
     if deleted:
-        ret['result'] = True
-        ret['comment'] = 'Load balancer {0} has been deleted.'.format(name)
-        ret['changes'] = {
-            'old': load_bal,
-            'new': {}
-        }
+        ret["result"] = True
+        ret["comment"] = "Load balancer {0} has been deleted.".format(name)
+        ret["changes"] = {"old": load_bal, "new": {}}
         return ret
 
-    ret['comment'] = 'Failed to delete load balancer {0}!'.format(name)
+    ret["comment"] = "Failed to delete load balancer {0}!".format(name)
     return ret
 
 
-def public_ip_address_present(name, resource_group, tags=None, sku=None, public_ip_allocation_method=None,
-                              public_ip_address_version=None, dns_settings=None, idle_timeout_in_minutes=None,
-                              connection_auth=None, **kwargs):
-    '''
+def public_ip_address_present(
+    name,
+    resource_group,
+    tags=None,
+    sku=None,
+    public_ip_allocation_method=None,
+    public_ip_address_version=None,
+    dns_settings=None,
+    idle_timeout_in_minutes=None,
+    connection_auth=None,
+    **kwargs
+):
+    """
     .. versionadded:: 2019.2.0
 
     Ensure a public IP address exists.
@@ -1603,110 +1650,113 @@ def public_ip_address_present(name, resource_group, tags=None, sku=None, public_
                 - require:
                   - azurearm_resource: Ensure resource group exists
 
-    '''
-    ret = {
-        'name': name,
-        'result': False,
-        'comment': '',
-        'changes': {}
-    }
+    """
+    ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret['comment'] = 'Connection information must be specified via connection_auth dictionary!'
+        ret[
+            "comment"
+        ] = "Connection information must be specified via connection_auth dictionary!"
         return ret
 
     if sku:
-        sku = {'name': sku.capitalize()}
+        sku = {"name": sku.capitalize()}
 
-    pub_ip = __salt__['azurearm_network.public_ip_address_get'](
-        name,
-        resource_group,
-        azurearm_log_level='info',
-        **connection_auth
+    pub_ip = __salt__["azurearm_network.public_ip_address_get"](
+        name, resource_group, azurearm_log_level="info", **connection_auth
     )
 
-    if 'error' not in pub_ip:
+    if "error" not in pub_ip:
         # tag changes
-        tag_changes = __utils__['dictdiffer.deep_diff'](pub_ip.get('tags', {}), tags or {})
+        tag_changes = __utils__["dictdiffer.deep_diff"](
+            pub_ip.get("tags", {}), tags or {}
+        )
         if tag_changes:
-            ret['changes']['tags'] = tag_changes
+            ret["changes"]["tags"] = tag_changes
 
         # dns_settings changes
         if dns_settings:
             if not isinstance(dns_settings, dict):
-                ret['comment'] = 'DNS settings must be provided as a dictionary!'
+                ret["comment"] = "DNS settings must be provided as a dictionary!"
                 return ret
 
             for key in dns_settings:
-                if dns_settings[key] != pub_ip.get('dns_settings', {}).get(key):
-                    ret['changes']['dns_settings'] = {
-                        'old': pub_ip.get('dns_settings'),
-                        'new': dns_settings
+                if dns_settings[key] != pub_ip.get("dns_settings", {}).get(key):
+                    ret["changes"]["dns_settings"] = {
+                        "old": pub_ip.get("dns_settings"),
+                        "new": dns_settings,
                     }
                     break
 
         # sku changes
         if sku:
-            sku_changes = __utils__['dictdiffer.deep_diff'](pub_ip.get('sku', {}), sku)
+            sku_changes = __utils__["dictdiffer.deep_diff"](pub_ip.get("sku", {}), sku)
             if sku_changes:
-                ret['changes']['sku'] = sku_changes
+                ret["changes"]["sku"] = sku_changes
 
         # public_ip_allocation_method changes
         if public_ip_allocation_method:
-            if public_ip_allocation_method.capitalize() != pub_ip.get('public_ip_allocation_method'):
-                ret['changes']['public_ip_allocation_method'] = {
-                    'old': pub_ip.get('public_ip_allocation_method'),
-                    'new': public_ip_allocation_method
+            if public_ip_allocation_method.capitalize() != pub_ip.get(
+                "public_ip_allocation_method"
+            ):
+                ret["changes"]["public_ip_allocation_method"] = {
+                    "old": pub_ip.get("public_ip_allocation_method"),
+                    "new": public_ip_allocation_method,
                 }
 
         # public_ip_address_version changes
         if public_ip_address_version:
-            if public_ip_address_version.lower() != pub_ip.get('public_ip_address_version', '').lower():
-                ret['changes']['public_ip_address_version'] = {
-                    'old': pub_ip.get('public_ip_address_version'),
-                    'new': public_ip_address_version
+            if (
+                public_ip_address_version.lower()
+                != pub_ip.get("public_ip_address_version", "").lower()
+            ):
+                ret["changes"]["public_ip_address_version"] = {
+                    "old": pub_ip.get("public_ip_address_version"),
+                    "new": public_ip_address_version,
                 }
 
         # idle_timeout_in_minutes changes
-        if idle_timeout_in_minutes and (int(idle_timeout_in_minutes) != pub_ip.get('idle_timeout_in_minutes')):
-            ret['changes']['idle_timeout_in_minutes'] = {
-                'old': pub_ip.get('idle_timeout_in_minutes'),
-                'new': idle_timeout_in_minutes
+        if idle_timeout_in_minutes and (
+            int(idle_timeout_in_minutes) != pub_ip.get("idle_timeout_in_minutes")
+        ):
+            ret["changes"]["idle_timeout_in_minutes"] = {
+                "old": pub_ip.get("idle_timeout_in_minutes"),
+                "new": idle_timeout_in_minutes,
             }
 
-        if not ret['changes']:
-            ret['result'] = True
-            ret['comment'] = 'Public IP address {0} is already present.'.format(name)
+        if not ret["changes"]:
+            ret["result"] = True
+            ret["comment"] = "Public IP address {0} is already present.".format(name)
             return ret
 
-        if __opts__['test']:
-            ret['result'] = None
-            ret['comment'] = 'Public IP address {0} would be updated.'.format(name)
+        if __opts__["test"]:
+            ret["result"] = None
+            ret["comment"] = "Public IP address {0} would be updated.".format(name)
             return ret
 
     else:
-        ret['changes'] = {
-            'old': {},
-            'new': {
-                'name': name,
-                'tags': tags,
-                'dns_settings': dns_settings,
-                'sku': sku,
-                'public_ip_allocation_method': public_ip_allocation_method,
-                'public_ip_address_version': public_ip_address_version,
-                'idle_timeout_in_minutes': idle_timeout_in_minutes,
-            }
+        ret["changes"] = {
+            "old": {},
+            "new": {
+                "name": name,
+                "tags": tags,
+                "dns_settings": dns_settings,
+                "sku": sku,
+                "public_ip_allocation_method": public_ip_allocation_method,
+                "public_ip_address_version": public_ip_address_version,
+                "idle_timeout_in_minutes": idle_timeout_in_minutes,
+            },
         }
 
-    if __opts__['test']:
-        ret['comment'] = 'Public IP address {0} would be created.'.format(name)
-        ret['result'] = None
+    if __opts__["test"]:
+        ret["comment"] = "Public IP address {0} would be created.".format(name)
+        ret["result"] = None
         return ret
 
     pub_ip_kwargs = kwargs.copy()
     pub_ip_kwargs.update(connection_auth)
 
-    pub_ip = __salt__['azurearm_network.public_ip_address_create_or_update'](
+    pub_ip = __salt__["azurearm_network.public_ip_address_create_or_update"](
         name=name,
         resource_group=resource_group,
         sku=sku,
@@ -1718,17 +1768,19 @@ def public_ip_address_present(name, resource_group, tags=None, sku=None, public_
         **pub_ip_kwargs
     )
 
-    if 'error' not in pub_ip:
-        ret['result'] = True
-        ret['comment'] = 'Public IP address {0} has been created.'.format(name)
+    if "error" not in pub_ip:
+        ret["result"] = True
+        ret["comment"] = "Public IP address {0} has been created.".format(name)
         return ret
 
-    ret['comment'] = 'Failed to create public IP address {0}! ({1})'.format(name, pub_ip.get('error'))
+    ret["comment"] = "Failed to create public IP address {0}! ({1})".format(
+        name, pub_ip.get("error")
+    )
     return ret
 
 
 def public_ip_address_absent(name, resource_group, connection_auth=None):
-    '''
+    """
     .. versionadded:: 2019.2.0
 
     Ensure a public IP address does not exist in the resource group.
@@ -1742,59 +1794,65 @@ def public_ip_address_absent(name, resource_group, connection_auth=None):
     :param connection_auth:
         A dict with subscription and authentication parameters to be used in connecting to the
         Azure Resource Manager API.
-    '''
-    ret = {
-        'name': name,
-        'result': False,
-        'comment': '',
-        'changes': {}
-    }
+    """
+    ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret['comment'] = 'Connection information must be specified via connection_auth dictionary!'
+        ret[
+            "comment"
+        ] = "Connection information must be specified via connection_auth dictionary!"
         return ret
 
-    pub_ip = __salt__['azurearm_network.public_ip_address_get'](
-        name,
-        resource_group,
-        azurearm_log_level='info',
-        **connection_auth
+    pub_ip = __salt__["azurearm_network.public_ip_address_get"](
+        name, resource_group, azurearm_log_level="info", **connection_auth
     )
 
-    if 'error' in pub_ip:
-        ret['result'] = True
-        ret['comment'] = 'Public IP address {0} was not found.'.format(name)
+    if "error" in pub_ip:
+        ret["result"] = True
+        ret["comment"] = "Public IP address {0} was not found.".format(name)
         return ret
 
-    elif __opts__['test']:
-        ret['comment'] = 'Public IP address {0} would be deleted.'.format(name)
-        ret['result'] = None
-        ret['changes'] = {
-            'old': pub_ip,
-            'new': {},
+    elif __opts__["test"]:
+        ret["comment"] = "Public IP address {0} would be deleted.".format(name)
+        ret["result"] = None
+        ret["changes"] = {
+            "old": pub_ip,
+            "new": {},
         }
         return ret
 
-    deleted = __salt__['azurearm_network.public_ip_address_delete'](name, resource_group, **connection_auth)
+    deleted = __salt__["azurearm_network.public_ip_address_delete"](
+        name, resource_group, **connection_auth
+    )
 
     if deleted:
-        ret['result'] = True
-        ret['comment'] = 'Public IP address {0} has been deleted.'.format(name)
-        ret['changes'] = {
-            'old': pub_ip,
-            'new': {}
-        }
+        ret["result"] = True
+        ret["comment"] = "Public IP address {0} has been deleted.".format(name)
+        ret["changes"] = {"old": pub_ip, "new": {}}
         return ret
 
-    ret['comment'] = 'Failed to delete public IP address {0}!'.format(name)
+    ret["comment"] = "Failed to delete public IP address {0}!".format(name)
     return ret
 
 
-def network_interface_present(name, ip_configurations, subnet, virtual_network, resource_group, tags=None,
-                              virtual_machine=None, network_security_group=None, dns_settings=None, mac_address=None,
-                              primary=None, enable_accelerated_networking=None, enable_ip_forwarding=None,
-                              connection_auth=None, **kwargs):
-    '''
+def network_interface_present(
+    name,
+    ip_configurations,
+    subnet,
+    virtual_network,
+    resource_group,
+    tags=None,
+    virtual_machine=None,
+    network_security_group=None,
+    dns_settings=None,
+    mac_address=None,
+    primary=None,
+    enable_accelerated_networking=None,
+    enable_ip_forwarding=None,
+    connection_auth=None,
+    **kwargs
+):
+    """
     .. versionadded:: 2019.2.0
 
     Ensure a network interface exists.
@@ -1880,148 +1938,146 @@ def network_interface_present(name, ip_configurations, subnet, virtual_network, 
                   - azurearm_network: Ensure network security group exists
                   - azurearm_network: Ensure another public IP exists
 
-    '''
-    ret = {
-        'name': name,
-        'result': False,
-        'comment': '',
-        'changes': {}
-    }
+    """
+    ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret['comment'] = 'Connection information must be specified via connection_auth dictionary!'
+        ret[
+            "comment"
+        ] = "Connection information must be specified via connection_auth dictionary!"
         return ret
 
-    iface = __salt__['azurearm_network.network_interface_get'](
-        name,
-        resource_group,
-        azurearm_log_level='info',
-        **connection_auth
+    iface = __salt__["azurearm_network.network_interface_get"](
+        name, resource_group, azurearm_log_level="info", **connection_auth
     )
 
-    if 'error' not in iface:
+    if "error" not in iface:
         # tag changes
-        tag_changes = __utils__['dictdiffer.deep_diff'](iface.get('tags', {}), tags or {})
+        tag_changes = __utils__["dictdiffer.deep_diff"](
+            iface.get("tags", {}), tags or {}
+        )
         if tag_changes:
-            ret['changes']['tags'] = tag_changes
+            ret["changes"]["tags"] = tag_changes
 
         # mac_address changes
-        if mac_address and (mac_address != iface.get('mac_address')):
-            ret['changes']['mac_address'] = {
-                'old': iface.get('mac_address'),
-                'new': mac_address
+        if mac_address and (mac_address != iface.get("mac_address")):
+            ret["changes"]["mac_address"] = {
+                "old": iface.get("mac_address"),
+                "new": mac_address,
             }
 
         # primary changes
         if primary is not None:
-            if primary != iface.get('primary', True):
-                ret['changes']['primary'] = {
-                    'old': iface.get('primary'),
-                    'new': primary
+            if primary != iface.get("primary", True):
+                ret["changes"]["primary"] = {
+                    "old": iface.get("primary"),
+                    "new": primary,
                 }
 
         # enable_accelerated_networking changes
         if enable_accelerated_networking is not None:
-            if enable_accelerated_networking != iface.get('enable_accelerated_networking'):
-                ret['changes']['enable_accelerated_networking'] = {
-                    'old': iface.get('enable_accelerated_networking'),
-                    'new': enable_accelerated_networking
+            if enable_accelerated_networking != iface.get(
+                "enable_accelerated_networking"
+            ):
+                ret["changes"]["enable_accelerated_networking"] = {
+                    "old": iface.get("enable_accelerated_networking"),
+                    "new": enable_accelerated_networking,
                 }
 
         # enable_ip_forwarding changes
         if enable_ip_forwarding is not None:
-            if enable_ip_forwarding != iface.get('enable_ip_forwarding'):
-                ret['changes']['enable_ip_forwarding'] = {
-                    'old': iface.get('enable_ip_forwarding'),
-                    'new': enable_ip_forwarding
+            if enable_ip_forwarding != iface.get("enable_ip_forwarding"):
+                ret["changes"]["enable_ip_forwarding"] = {
+                    "old": iface.get("enable_ip_forwarding"),
+                    "new": enable_ip_forwarding,
                 }
 
         # network_security_group changes
         nsg_name = None
-        if iface.get('network_security_group'):
-            nsg_name = iface['network_security_group']['id'].split('/')[-1]
+        if iface.get("network_security_group"):
+            nsg_name = iface["network_security_group"]["id"].split("/")[-1]
 
         if network_security_group and (network_security_group != nsg_name):
-            ret['changes']['network_security_group'] = {
-                'old': nsg_name,
-                'new': network_security_group
+            ret["changes"]["network_security_group"] = {
+                "old": nsg_name,
+                "new": network_security_group,
             }
 
         # virtual_machine changes
         vm_name = None
-        if iface.get('virtual_machine'):
-            vm_name = iface['virtual_machine']['id'].split('/')[-1]
+        if iface.get("virtual_machine"):
+            vm_name = iface["virtual_machine"]["id"].split("/")[-1]
 
         if virtual_machine and (virtual_machine != vm_name):
-            ret['changes']['virtual_machine'] = {
-                'old': vm_name,
-                'new': virtual_machine
-            }
+            ret["changes"]["virtual_machine"] = {"old": vm_name, "new": virtual_machine}
 
         # dns_settings changes
         if dns_settings:
             if not isinstance(dns_settings, dict):
-                ret['comment'] = 'DNS settings must be provided as a dictionary!'
+                ret["comment"] = "DNS settings must be provided as a dictionary!"
                 return ret
 
             for key in dns_settings:
-                if dns_settings[key].lower() != iface.get('dns_settings', {}).get(key, '').lower():
-                    ret['changes']['dns_settings'] = {
-                        'old': iface.get('dns_settings'),
-                        'new': dns_settings
+                if (
+                    dns_settings[key].lower()
+                    != iface.get("dns_settings", {}).get(key, "").lower()
+                ):
+                    ret["changes"]["dns_settings"] = {
+                        "old": iface.get("dns_settings"),
+                        "new": dns_settings,
                     }
                     break
 
         # ip_configurations changes
-        comp_ret = __utils__['azurearm.compare_list_of_dicts'](
-            iface.get('ip_configurations', []),
+        comp_ret = __utils__["azurearm.compare_list_of_dicts"](
+            iface.get("ip_configurations", []),
             ip_configurations,
-            ['public_ip_address', 'subnet']
+            ["public_ip_address", "subnet"],
         )
 
-        if comp_ret.get('comment'):
-            ret['comment'] = '"ip_configurations" {0}'.format(comp_ret['comment'])
+        if comp_ret.get("comment"):
+            ret["comment"] = '"ip_configurations" {0}'.format(comp_ret["comment"])
             return ret
 
-        if comp_ret.get('changes'):
-            ret['changes']['ip_configurations'] = comp_ret['changes']
+        if comp_ret.get("changes"):
+            ret["changes"]["ip_configurations"] = comp_ret["changes"]
 
-        if not ret['changes']:
-            ret['result'] = True
-            ret['comment'] = 'Network interface {0} is already present.'.format(name)
+        if not ret["changes"]:
+            ret["result"] = True
+            ret["comment"] = "Network interface {0} is already present.".format(name)
             return ret
 
-        if __opts__['test']:
-            ret['result'] = None
-            ret['comment'] = 'Network interface {0} would be updated.'.format(name)
+        if __opts__["test"]:
+            ret["result"] = None
+            ret["comment"] = "Network interface {0} would be updated.".format(name)
             return ret
 
     else:
-        ret['changes'] = {
-            'old': {},
-            'new': {
-                'name': name,
-                'ip_configurations': ip_configurations,
-                'dns_settings': dns_settings,
-                'network_security_group': network_security_group,
-                'virtual_machine': virtual_machine,
-                'enable_accelerated_networking': enable_accelerated_networking,
-                'enable_ip_forwarding': enable_ip_forwarding,
-                'mac_address': mac_address,
-                'primary': primary,
-                'tags': tags,
-            }
+        ret["changes"] = {
+            "old": {},
+            "new": {
+                "name": name,
+                "ip_configurations": ip_configurations,
+                "dns_settings": dns_settings,
+                "network_security_group": network_security_group,
+                "virtual_machine": virtual_machine,
+                "enable_accelerated_networking": enable_accelerated_networking,
+                "enable_ip_forwarding": enable_ip_forwarding,
+                "mac_address": mac_address,
+                "primary": primary,
+                "tags": tags,
+            },
         }
 
-    if __opts__['test']:
-        ret['comment'] = 'Network interface {0} would be created.'.format(name)
-        ret['result'] = None
+    if __opts__["test"]:
+        ret["comment"] = "Network interface {0} would be created.".format(name)
+        ret["result"] = None
         return ret
 
     iface_kwargs = kwargs.copy()
     iface_kwargs.update(connection_auth)
 
-    iface = __salt__['azurearm_network.network_interface_create_or_update'](
+    iface = __salt__["azurearm_network.network_interface_create_or_update"](
         name=name,
         subnet=subnet,
         virtual_network=virtual_network,
@@ -2038,17 +2094,19 @@ def network_interface_present(name, ip_configurations, subnet, virtual_network, 
         **iface_kwargs
     )
 
-    if 'error' not in iface:
-        ret['result'] = True
-        ret['comment'] = 'Network interface {0} has been created.'.format(name)
+    if "error" not in iface:
+        ret["result"] = True
+        ret["comment"] = "Network interface {0} has been created.".format(name)
         return ret
 
-    ret['comment'] = 'Failed to create network interface {0}! ({1})'.format(name, iface.get('error'))
+    ret["comment"] = "Failed to create network interface {0}! ({1})".format(
+        name, iface.get("error")
+    )
     return ret
 
 
 def network_interface_absent(name, resource_group, connection_auth=None):
-    '''
+    """
     .. versionadded:: 2019.2.0
 
     Ensure a network interface does not exist in the resource group.
@@ -2062,57 +2120,57 @@ def network_interface_absent(name, resource_group, connection_auth=None):
     :param connection_auth:
         A dict with subscription and authentication parameters to be used in connecting to the
         Azure Resource Manager API.
-    '''
-    ret = {
-        'name': name,
-        'result': False,
-        'comment': '',
-        'changes': {}
-    }
+    """
+    ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret['comment'] = 'Connection information must be specified via connection_auth dictionary!'
+        ret[
+            "comment"
+        ] = "Connection information must be specified via connection_auth dictionary!"
         return ret
 
-    iface = __salt__['azurearm_network.network_interface_get'](
-        name,
-        resource_group,
-        azurearm_log_level='info',
-        **connection_auth
+    iface = __salt__["azurearm_network.network_interface_get"](
+        name, resource_group, azurearm_log_level="info", **connection_auth
     )
 
-    if 'error' in iface:
-        ret['result'] = True
-        ret['comment'] = 'Network interface {0} was not found.'.format(name)
+    if "error" in iface:
+        ret["result"] = True
+        ret["comment"] = "Network interface {0} was not found.".format(name)
         return ret
 
-    elif __opts__['test']:
-        ret['comment'] = 'Network interface {0} would be deleted.'.format(name)
-        ret['result'] = None
-        ret['changes'] = {
-            'old': iface,
-            'new': {},
+    elif __opts__["test"]:
+        ret["comment"] = "Network interface {0} would be deleted.".format(name)
+        ret["result"] = None
+        ret["changes"] = {
+            "old": iface,
+            "new": {},
         }
         return ret
 
-    deleted = __salt__['azurearm_network.network_interface_delete'](name, resource_group, **connection_auth)
+    deleted = __salt__["azurearm_network.network_interface_delete"](
+        name, resource_group, **connection_auth
+    )
 
     if deleted:
-        ret['result'] = True
-        ret['comment'] = 'Network interface {0} has been deleted.'.format(name)
-        ret['changes'] = {
-            'old': iface,
-            'new': {}
-        }
+        ret["result"] = True
+        ret["comment"] = "Network interface {0} has been deleted.".format(name)
+        ret["changes"] = {"old": iface, "new": {}}
         return ret
 
-    ret['comment'] = 'Failed to delete network interface {0}!)'.format(name)
+    ret["comment"] = "Failed to delete network interface {0}!)".format(name)
     return ret
 
 
-def route_table_present(name, resource_group, tags=None, routes=None, disable_bgp_route_propagation=None,
-                        connection_auth=None, **kwargs):
-    '''
+def route_table_present(
+    name,
+    resource_group,
+    tags=None,
+    routes=None,
+    disable_bgp_route_propagation=None,
+    connection_auth=None,
+    **kwargs
+):
+    """
     .. versionadded:: 2019.2.0
 
     Ensure a route table exists.
@@ -2160,80 +2218,80 @@ def route_table_present(name, resource_group, tags=None, routes=None, disable_bg
                 - require:
                   - azurearm_resource: Ensure resource group exists
 
-    '''
-    ret = {
-        'name': name,
-        'result': False,
-        'comment': '',
-        'changes': {}
-    }
+    """
+    ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret['comment'] = 'Connection information must be specified via connection_auth dictionary!'
+        ret[
+            "comment"
+        ] = "Connection information must be specified via connection_auth dictionary!"
         return ret
 
-    rt_tbl = __salt__['azurearm_network.route_table_get'](
-        name,
-        resource_group,
-        azurearm_log_level='info',
-        **connection_auth
+    rt_tbl = __salt__["azurearm_network.route_table_get"](
+        name, resource_group, azurearm_log_level="info", **connection_auth
     )
 
-    if 'error' not in rt_tbl:
+    if "error" not in rt_tbl:
         # tag changes
-        tag_changes = __utils__['dictdiffer.deep_diff'](rt_tbl.get('tags', {}), tags or {})
+        tag_changes = __utils__["dictdiffer.deep_diff"](
+            rt_tbl.get("tags", {}), tags or {}
+        )
         if tag_changes:
-            ret['changes']['tags'] = tag_changes
+            ret["changes"]["tags"] = tag_changes
 
         # disable_bgp_route_propagation changes
         # pylint: disable=line-too-long
-        if disable_bgp_route_propagation and (disable_bgp_route_propagation != rt_tbl.get('disable_bgp_route_propagation')):
-            ret['changes']['disable_bgp_route_propagation'] = {
-                'old': rt_tbl.get('disable_bgp_route_propagation'),
-                'new': disable_bgp_route_propagation
+        if disable_bgp_route_propagation and (
+            disable_bgp_route_propagation != rt_tbl.get("disable_bgp_route_propagation")
+        ):
+            ret["changes"]["disable_bgp_route_propagation"] = {
+                "old": rt_tbl.get("disable_bgp_route_propagation"),
+                "new": disable_bgp_route_propagation,
             }
 
         # routes changes
         if routes:
-            comp_ret = __utils__['azurearm.compare_list_of_dicts'](rt_tbl.get('routes', []), routes)
+            comp_ret = __utils__["azurearm.compare_list_of_dicts"](
+                rt_tbl.get("routes", []), routes
+            )
 
-            if comp_ret.get('comment'):
-                ret['comment'] = '"routes" {0}'.format(comp_ret['comment'])
+            if comp_ret.get("comment"):
+                ret["comment"] = '"routes" {0}'.format(comp_ret["comment"])
                 return ret
 
-            if comp_ret.get('changes'):
-                ret['changes']['routes'] = comp_ret['changes']
+            if comp_ret.get("changes"):
+                ret["changes"]["routes"] = comp_ret["changes"]
 
-        if not ret['changes']:
-            ret['result'] = True
-            ret['comment'] = 'Route table {0} is already present.'.format(name)
+        if not ret["changes"]:
+            ret["result"] = True
+            ret["comment"] = "Route table {0} is already present.".format(name)
             return ret
 
-        if __opts__['test']:
-            ret['result'] = None
-            ret['comment'] = 'Route table {0} would be updated.'.format(name)
+        if __opts__["test"]:
+            ret["result"] = None
+            ret["comment"] = "Route table {0} would be updated.".format(name)
             return ret
 
     else:
-        ret['changes'] = {
-            'old': {},
-            'new': {
-                'name': name,
-                'tags': tags,
-                'routes': routes,
-                'disable_bgp_route_propagation': disable_bgp_route_propagation,
-            }
+        ret["changes"] = {
+            "old": {},
+            "new": {
+                "name": name,
+                "tags": tags,
+                "routes": routes,
+                "disable_bgp_route_propagation": disable_bgp_route_propagation,
+            },
         }
 
-    if __opts__['test']:
-        ret['comment'] = 'Route table {0} would be created.'.format(name)
-        ret['result'] = None
+    if __opts__["test"]:
+        ret["comment"] = "Route table {0} would be created.".format(name)
+        ret["result"] = None
         return ret
 
     rt_tbl_kwargs = kwargs.copy()
     rt_tbl_kwargs.update(connection_auth)
 
-    rt_tbl = __salt__['azurearm_network.route_table_create_or_update'](
+    rt_tbl = __salt__["azurearm_network.route_table_create_or_update"](
         name=name,
         resource_group=resource_group,
         disable_bgp_route_propagation=disable_bgp_route_propagation,
@@ -2242,17 +2300,19 @@ def route_table_present(name, resource_group, tags=None, routes=None, disable_bg
         **rt_tbl_kwargs
     )
 
-    if 'error' not in rt_tbl:
-        ret['result'] = True
-        ret['comment'] = 'Route table {0} has been created.'.format(name)
+    if "error" not in rt_tbl:
+        ret["result"] = True
+        ret["comment"] = "Route table {0} has been created.".format(name)
         return ret
 
-    ret['comment'] = 'Failed to create route table {0}! ({1})'.format(name, rt_tbl.get('error'))
+    ret["comment"] = "Failed to create route table {0}! ({1})".format(
+        name, rt_tbl.get("error")
+    )
     return ret
 
 
 def route_table_absent(name, resource_group, connection_auth=None):
-    '''
+    """
     .. versionadded:: 2019.2.0
 
     Ensure a route table does not exist in the resource group.
@@ -2266,57 +2326,58 @@ def route_table_absent(name, resource_group, connection_auth=None):
     :param connection_auth:
         A dict with subscription and authentication parameters to be used in connecting to the
         Azure Resource Manager API.
-    '''
-    ret = {
-        'name': name,
-        'result': False,
-        'comment': '',
-        'changes': {}
-    }
+    """
+    ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret['comment'] = 'Connection information must be specified via connection_auth dictionary!'
+        ret[
+            "comment"
+        ] = "Connection information must be specified via connection_auth dictionary!"
         return ret
 
-    rt_tbl = __salt__['azurearm_network.route_table_get'](
-        name,
-        resource_group,
-        azurearm_log_level='info',
-        **connection_auth
+    rt_tbl = __salt__["azurearm_network.route_table_get"](
+        name, resource_group, azurearm_log_level="info", **connection_auth
     )
 
-    if 'error' in rt_tbl:
-        ret['result'] = True
-        ret['comment'] = 'Route table {0} was not found.'.format(name)
+    if "error" in rt_tbl:
+        ret["result"] = True
+        ret["comment"] = "Route table {0} was not found.".format(name)
         return ret
 
-    elif __opts__['test']:
-        ret['comment'] = 'Route table {0} would be deleted.'.format(name)
-        ret['result'] = None
-        ret['changes'] = {
-            'old': rt_tbl,
-            'new': {},
+    elif __opts__["test"]:
+        ret["comment"] = "Route table {0} would be deleted.".format(name)
+        ret["result"] = None
+        ret["changes"] = {
+            "old": rt_tbl,
+            "new": {},
         }
         return ret
 
-    deleted = __salt__['azurearm_network.route_table_delete'](name, resource_group, **connection_auth)
+    deleted = __salt__["azurearm_network.route_table_delete"](
+        name, resource_group, **connection_auth
+    )
 
     if deleted:
-        ret['result'] = True
-        ret['comment'] = 'Route table {0} has been deleted.'.format(name)
-        ret['changes'] = {
-            'old': rt_tbl,
-            'new': {}
-        }
+        ret["result"] = True
+        ret["comment"] = "Route table {0} has been deleted.".format(name)
+        ret["changes"] = {"old": rt_tbl, "new": {}}
         return ret
 
-    ret['comment'] = 'Failed to delete route table {0}!'.format(name)
+    ret["comment"] = "Failed to delete route table {0}!".format(name)
     return ret
 
 
-def route_present(name, address_prefix, next_hop_type, route_table, resource_group, next_hop_ip_address=None,
-                  connection_auth=None, **kwargs):
-    '''
+def route_present(
+    name,
+    address_prefix,
+    next_hop_type,
+    route_table,
+    resource_group,
+    next_hop_ip_address=None,
+    connection_auth=None,
+    **kwargs
+):
+    """
     .. versionadded:: 2019.2.0
 
     Ensure a route exists within a route table.
@@ -2360,75 +2421,70 @@ def route_present(name, address_prefix, next_hop_type, route_table, resource_gro
                 - require:
                   - azurearm_network: Ensure route table exists
 
-    '''
-    ret = {
-        'name': name,
-        'result': False,
-        'comment': '',
-        'changes': {}
-    }
+    """
+    ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret['comment'] = 'Connection information must be specified via connection_auth dictionary!'
+        ret[
+            "comment"
+        ] = "Connection information must be specified via connection_auth dictionary!"
         return ret
 
-    route = __salt__['azurearm_network.route_get'](
-        name,
-        route_table,
-        resource_group,
-        azurearm_log_level='info',
-        **connection_auth
+    route = __salt__["azurearm_network.route_get"](
+        name, route_table, resource_group, azurearm_log_level="info", **connection_auth
     )
 
-    if 'error' not in route:
-        if address_prefix != route.get('address_prefix'):
-            ret['changes']['address_prefix'] = {
-                'old': route.get('address_prefix'),
-                'new': address_prefix
+    if "error" not in route:
+        if address_prefix != route.get("address_prefix"):
+            ret["changes"]["address_prefix"] = {
+                "old": route.get("address_prefix"),
+                "new": address_prefix,
             }
 
-        if next_hop_type.lower() != route.get('next_hop_type', '').lower():
-            ret['changes']['next_hop_type'] = {
-                'old': route.get('next_hop_type'),
-                'new': next_hop_type
+        if next_hop_type.lower() != route.get("next_hop_type", "").lower():
+            ret["changes"]["next_hop_type"] = {
+                "old": route.get("next_hop_type"),
+                "new": next_hop_type,
             }
 
-        if next_hop_type.lower() == 'virtualappliance' and next_hop_ip_address != route.get('next_hop_ip_address'):
-            ret['changes']['next_hop_ip_address'] = {
-                'old': route.get('next_hop_ip_address'),
-                'new': next_hop_ip_address
+        if next_hop_type.lower() == "virtualappliance" and next_hop_ip_address != route.get(
+            "next_hop_ip_address"
+        ):
+            ret["changes"]["next_hop_ip_address"] = {
+                "old": route.get("next_hop_ip_address"),
+                "new": next_hop_ip_address,
             }
 
-        if not ret['changes']:
-            ret['result'] = True
-            ret['comment'] = 'Route {0} is already present.'.format(name)
+        if not ret["changes"]:
+            ret["result"] = True
+            ret["comment"] = "Route {0} is already present.".format(name)
             return ret
 
-        if __opts__['test']:
-            ret['result'] = None
-            ret['comment'] = 'Route {0} would be updated.'.format(name)
+        if __opts__["test"]:
+            ret["result"] = None
+            ret["comment"] = "Route {0} would be updated.".format(name)
             return ret
 
     else:
-        ret['changes'] = {
-            'old': {},
-            'new': {
-                'name': name,
-                'address_prefix': address_prefix,
-                'next_hop_type': next_hop_type,
-                'next_hop_ip_address': next_hop_ip_address
-            }
+        ret["changes"] = {
+            "old": {},
+            "new": {
+                "name": name,
+                "address_prefix": address_prefix,
+                "next_hop_type": next_hop_type,
+                "next_hop_ip_address": next_hop_ip_address,
+            },
         }
 
-    if __opts__['test']:
-        ret['comment'] = 'Route {0} would be created.'.format(name)
-        ret['result'] = None
+    if __opts__["test"]:
+        ret["comment"] = "Route {0} would be created.".format(name)
+        ret["result"] = None
         return ret
 
     route_kwargs = kwargs.copy()
     route_kwargs.update(connection_auth)
 
-    route = __salt__['azurearm_network.route_create_or_update'](
+    route = __salt__["azurearm_network.route_create_or_update"](
         name=name,
         route_table=route_table,
         resource_group=resource_group,
@@ -2438,17 +2494,19 @@ def route_present(name, address_prefix, next_hop_type, route_table, resource_gro
         **route_kwargs
     )
 
-    if 'error' not in route:
-        ret['result'] = True
-        ret['comment'] = 'Route {0} has been created.'.format(name)
+    if "error" not in route:
+        ret["result"] = True
+        ret["comment"] = "Route {0} has been created.".format(name)
         return ret
 
-    ret['comment'] = 'Failed to create route {0}! ({1})'.format(name, route.get('error'))
+    ret["comment"] = "Failed to create route {0}! ({1})".format(
+        name, route.get("error")
+    )
     return ret
 
 
 def route_absent(name, route_table, resource_group, connection_auth=None):
-    '''
+    """
     .. versionadded:: 2019.2.0
 
     Ensure a route table does not exist in the resource group.
@@ -2465,50 +2523,42 @@ def route_absent(name, route_table, resource_group, connection_auth=None):
     :param connection_auth:
         A dict with subscription and authentication parameters to be used in connecting to the
         Azure Resource Manager API.
-    '''
-    ret = {
-        'name': name,
-        'result': False,
-        'comment': '',
-        'changes': {}
-    }
+    """
+    ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret['comment'] = 'Connection information must be specified via connection_auth dictionary!'
+        ret[
+            "comment"
+        ] = "Connection information must be specified via connection_auth dictionary!"
         return ret
 
-    route = __salt__['azurearm_network.route_get'](
-        name,
-        route_table,
-        resource_group,
-        azurearm_log_level='info',
-        **connection_auth
+    route = __salt__["azurearm_network.route_get"](
+        name, route_table, resource_group, azurearm_log_level="info", **connection_auth
     )
 
-    if 'error' in route:
-        ret['result'] = True
-        ret['comment'] = 'Route {0} was not found.'.format(name)
+    if "error" in route:
+        ret["result"] = True
+        ret["comment"] = "Route {0} was not found.".format(name)
         return ret
 
-    elif __opts__['test']:
-        ret['comment'] = 'Route {0} would be deleted.'.format(name)
-        ret['result'] = None
-        ret['changes'] = {
-            'old': route,
-            'new': {},
+    elif __opts__["test"]:
+        ret["comment"] = "Route {0} would be deleted.".format(name)
+        ret["result"] = None
+        ret["changes"] = {
+            "old": route,
+            "new": {},
         }
         return ret
 
-    deleted = __salt__['azurearm_network.route_delete'](name, route_table, resource_group, **connection_auth)
+    deleted = __salt__["azurearm_network.route_delete"](
+        name, route_table, resource_group, **connection_auth
+    )
 
     if deleted:
-        ret['result'] = True
-        ret['comment'] = 'Route {0} has been deleted.'.format(name)
-        ret['changes'] = {
-            'old': route,
-            'new': {}
-        }
+        ret["result"] = True
+        ret["comment"] = "Route {0} has been deleted.".format(name)
+        ret["changes"] = {"old": route, "new": {}}
         return ret
 
-    ret['comment'] = 'Failed to delete route {0}!'.format(name)
+    ret["comment"] = "Failed to delete route {0}!".format(name)
     return ret
