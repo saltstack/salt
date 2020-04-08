@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Manage Windows features via the ServerManager powershell module. Can install and
 remove roles/features.
 
@@ -7,29 +7,30 @@ remove roles/features.
 :platform:      Windows Server 2008R2 or greater
 :depends:       win_servermanager.install
 :depends:       win_servermanager.remove
-'''
-from __future__ import absolute_import, unicode_literals, print_function
+"""
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import salt modules
 import salt.utils.data
-import salt.utils.versions
 
 
 def __virtual__():
-    '''
+    """
     Load only if win_servermanager is loaded
-    '''
-    return 'win_servermanager' if 'win_servermanager.install' in __salt__ else False
+    """
+    return "win_servermanager" if "win_servermanager.install" in __salt__ else False
 
 
-def installed(name,
-              features=None,
-              recurse=False,
-              restart=False,
-              source=None,
-              exclude=None,
-              **kwargs):
-    '''
+def installed(
+    name,
+    features=None,
+    recurse=False,
+    restart=False,
+    source=None,
+    exclude=None,
+    **kwargs
+):
+    """
     Install the windows feature. To install a single feature, use the ``name``
     parameter. To install multiple features, use the ``features`` parameter.
 
@@ -58,7 +59,10 @@ def installed(name,
         recurse (Optional[bool]):
             Install all sub-features as well. If the feature is installed but
             one of its sub-features are not installed set this will install
-            additional sub-features
+            additional sub-features. This argument was previously renamed from
+            ``force``. To ensure backwards compatibility ``force`` will
+            continue to work but please update your states to use the preferred
+            ``recurse`` arg.
 
         source (Optional[str]):
             Path to the source files if missing from the target system. None
@@ -112,95 +116,84 @@ def installed(name,
               - SNMP-Service
             - exclude:
               - Web-Server
-    '''
-    if 'force' in kwargs:
-        salt.utils.versions.warn_until(
-            'Neon',
-            'Parameter \'force\' has been detected in the argument list. This'
-            'parameter is no longer used and has been replaced by \'recurse\''
-            'as of Salt 2018.3.0. This warning will be removed in Salt Neon.'
-        )
-        kwargs.pop('force')
+    """
+    if "force" in kwargs:
+        kwargs.pop("force")
 
-    ret = {'name': name,
-           'result': True,
-           'changes': {},
-           'comment': ''}
+    ret = {"name": name, "result": True, "changes": {}, "comment": ""}
 
     # Check if features is not passed, use name. Split commas
     if features is None:
-        features = name.split(',')
+        features = name.split(",")
 
     # Make sure features is a list, split commas
     if not isinstance(features, list):
-        features = features.split(',')
+        features = features.split(",")
 
     # Determine if the feature is installed
-    old = __salt__['win_servermanager.list_installed']()
+    old = __salt__["win_servermanager.list_installed"]()
 
     cur_feat = []
     for feature in features:
 
         if feature not in old:
-            ret['changes'][feature] = \
-                'Will be installed recurse={0}'.format(recurse)
+            ret["changes"][feature] = "Will be installed recurse={0}".format(recurse)
         elif recurse:
-            ret['changes'][feature] = \
-                'Already installed but might install sub-features'
+            ret["changes"][feature] = "Already installed but might install sub-features"
         else:
             cur_feat.append(feature)
 
     if cur_feat:
-        cur_feat.insert(0, 'The following features are already installed:')
-        ret['comment'] = '\n- '.join(cur_feat)
+        cur_feat.insert(0, "The following features are already installed:")
+        ret["comment"] = "\n- ".join(cur_feat)
 
-    if not ret['changes']:
+    if not ret["changes"]:
         return ret
 
-    if __opts__['test']:
-        ret['result'] = None
+    if __opts__["test"]:
+        ret["result"] = None
         return ret
 
     # Install the features
-    status = __salt__['win_servermanager.install'](
-        features, recurse=recurse, restart=restart, source=source,
-        exclude=exclude)
+    status = __salt__["win_servermanager.install"](
+        features, recurse=recurse, restart=restart, source=source, exclude=exclude
+    )
 
-    ret['result'] = status['Success']
+    ret["result"] = status["Success"]
 
     # Show items failed to install
     fail_feat = []
     new_feat = []
     rem_feat = []
-    for feature in status['Features']:
+    for feature in status["Features"]:
         # Features that failed to install or be removed
-        if not status['Features'][feature].get('Success', True):
-            fail_feat.append('- {0}'.format(feature))
+        if not status["Features"][feature].get("Success", True):
+            fail_feat.append("- {0}".format(feature))
         # Features that installed
-        elif '(exclude)' not in status['Features'][feature]['Message']:
-            new_feat.append('- {0}'.format(feature))
+        elif "(exclude)" not in status["Features"][feature]["Message"]:
+            new_feat.append("- {0}".format(feature))
         # Show items that were removed because they were part of `exclude`
-        elif '(exclude)' in status['Features'][feature]['Message']:
-            rem_feat.append('- {0}'.format(feature))
+        elif "(exclude)" in status["Features"][feature]["Message"]:
+            rem_feat.append("- {0}".format(feature))
 
     if fail_feat:
-        fail_feat.insert(0, 'Failed to install the following:')
+        fail_feat.insert(0, "Failed to install the following:")
     if new_feat:
-        new_feat.insert(0, 'Installed the following:')
+        new_feat.insert(0, "Installed the following:")
     if rem_feat:
-        rem_feat.insert(0, 'Removed the following (exclude):')
+        rem_feat.insert(0, "Removed the following (exclude):")
 
-    ret['comment'] = '\n'.join(fail_feat + new_feat + rem_feat)
+    ret["comment"] = "\n".join(fail_feat + new_feat + rem_feat)
 
     # Get the changes
-    new = __salt__['win_servermanager.list_installed']()
-    ret['changes'] = salt.utils.data.compare_dicts(old, new)
+    new = __salt__["win_servermanager.list_installed"]()
+    ret["changes"] = salt.utils.data.compare_dicts(old, new)
 
     return ret
 
 
 def removed(name, features=None, remove_payload=False, restart=False):
-    '''
+    """
     Remove the windows feature To remove a single feature, use the ``name``
     parameter. To remove multiple features, use the ``features`` parameter.
 
@@ -261,70 +254,68 @@ def removed(name, features=None, remove_payload=False, restart=False):
               - XPX-Viewer
               - SNMP-Service
             - restart: True
-    '''
-    ret = {'name': name,
-           'result': True,
-           'changes': {},
-           'comment': ''}
+    """
+    ret = {"name": name, "result": True, "changes": {}, "comment": ""}
 
     # Check if features is not passed, use name. Split commas
     if features is None:
-        features = name.split(',')
+        features = name.split(",")
 
     # Make sure features is a list, split commas
     if not isinstance(features, list):
-        features = features.split(',')
+        features = features.split(",")
 
     # Determine if the feature is installed
-    old = __salt__['win_servermanager.list_installed']()
+    old = __salt__["win_servermanager.list_installed"]()
 
     rem_feat = []
     for feature in features:
 
         if feature in old:
-            ret['changes'][feature] = 'Will be removed'
+            ret["changes"][feature] = "Will be removed"
         else:
             rem_feat.append(feature)
 
     if rem_feat:
-        rem_feat.insert(0, 'The following features are not installed:')
-        ret['comment'] = '\n- '.join(rem_feat)
+        rem_feat.insert(0, "The following features are not installed:")
+        ret["comment"] = "\n- ".join(rem_feat)
 
-    if not ret['changes']:
+    if not ret["changes"]:
         return ret
 
-    if __opts__['test']:
-        ret['result'] = None
+    if __opts__["test"]:
+        ret["result"] = None
         return ret
 
     # Remove the features
-    status = __salt__['win_servermanager.remove'](
-        features, remove_payload=remove_payload, restart=restart)
+    status = __salt__["win_servermanager.remove"](
+        features, remove_payload=remove_payload, restart=restart
+    )
 
-    ret['result'] = status['Success']
+    ret["result"] = status["Success"]
 
     # Some items failed to uninstall
     fail_feat = []
     rem_feat = []
-    for feature in status['Features']:
+    for feature in status["Features"]:
         # Use get because sometimes 'Success' isn't defined such as when the
         # feature is already uninstalled
-        if not status['Features'][feature].get('Success', True):
+        if not status["Features"][feature].get("Success", True):
             # Show items that failed to uninstall
-            fail_feat.append('- {0}'.format(feature))
+            fail_feat.append("- {0}".format(feature))
         else:
             # Show items that uninstalled
-            rem_feat.append('- {0}'.format(feature))
+            rem_feat.append("- {0}".format(feature))
 
     if fail_feat:
-        fail_feat.insert(0, 'Failed to remove the following:')
+        fail_feat.insert(0, "Failed to remove the following:")
     if rem_feat:
-        rem_feat.insert(0, 'Removed the following:')
+        rem_feat.insert(0, "Removed the following:")
 
-    ret['comment'] = '\n'.join(fail_feat + rem_feat)
+    ret["comment"] = "\n".join(fail_feat + rem_feat)
 
     # Get the changes
-    new = __salt__['win_servermanager.list_installed']()
-    ret['changes'] = salt.utils.data.compare_dicts(old, new)
+    new = __salt__["win_servermanager.list_installed"]()
+    ret["changes"] = salt.utils.data.compare_dicts(old, new)
 
     return ret

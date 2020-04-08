@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Utility functions for zfs
 
 These functions are for dealing with type conversion and basic execution
@@ -11,193 +11,207 @@ These functions are for dealing with type conversion and basic execution
 
 .. versionadded:: 2018.3.1
 
-'''
+"""
 
 # Import python libs
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, print_function, unicode_literals
+
+import logging
+import math
 import os
 import re
-import math
-import logging
 from numbers import Number
 
-# Import salt libs
-from salt.utils.decorators import memoize as real_memoize
-from salt.utils.odict import OrderedDict
-from salt.utils.stringutils import to_num as str_to_num
 import salt.modules.cmdmod
 
 # Import 3rd-party libs
 from salt.ext.six.moves import zip
 
+# Import salt libs
+from salt.utils.decorators import memoize as real_memoize
+from salt.utils.odict import OrderedDict
+from salt.utils.stringutils import to_num as str_to_num
+
 # Size conversion data
-re_zfs_size = re.compile(r'^(\d+|\d+(?=\d*)\.\d+)([KkMmGgTtPpEe][Bb]?)$')
-zfs_size = ['K', 'M', 'G', 'T', 'P', 'E']
+re_zfs_size = re.compile(r"^(\d+|\d+(?=\d*)\.\d+)([KkMmGgTtPpEe][Bb]?)$")
+zfs_size = ["K", "M", "G", "T", "P", "E"]
 
 log = logging.getLogger(__name__)
 
 
 def _check_retcode(cmd):
-    '''
+    """
     Simple internal wrapper for cmdmod.retcode
-    '''
-    return salt.modules.cmdmod.retcode(cmd, output_loglevel='quiet', ignore_retcode=True) == 0
+    """
+    return (
+        salt.modules.cmdmod.retcode(cmd, output_loglevel="quiet", ignore_retcode=True)
+        == 0
+    )
 
 
 def _exec(**kwargs):
-    '''
+    """
     Simple internal wrapper for cmdmod.run
-    '''
-    if 'ignore_retcode' not in kwargs:
-        kwargs['ignore_retcode'] = True
-    if 'output_loglevel' not in kwargs:
-        kwargs['output_loglevel'] = 'quiet'
+    """
+    if "ignore_retcode" not in kwargs:
+        kwargs["ignore_retcode"] = True
+    if "output_loglevel" not in kwargs:
+        kwargs["output_loglevel"] = "quiet"
     return salt.modules.cmdmod.run_all(**kwargs)
 
 
-def _merge_last(values, merge_after, merge_with=' '):
-    '''
+def _merge_last(values, merge_after, merge_with=" "):
+    """
     Merge values all values after X into the last value
-    '''
+    """
     if len(values) > merge_after:
-        values = values[0:(merge_after-1)] + [merge_with.join(values[(merge_after-1):])]
+        values = values[0 : (merge_after - 1)] + [
+            merge_with.join(values[(merge_after - 1) :])
+        ]
 
     return values
 
 
 def _property_normalize_name(name):
-    '''
+    """
     Normalizes property names
-    '''
-    if '@' in name:
-        name = name[:name.index('@')+1]
+    """
+    if "@" in name:
+        name = name[: name.index("@") + 1]
     return name
 
 
 def _property_detect_type(name, values):
-    '''
+    """
     Detect the datatype of a property
-    '''
-    value_type = 'str'
-    if values.startswith('on | off'):
-        value_type = 'bool'
-    elif values.startswith('yes | no'):
-        value_type = 'bool_alt'
-    elif values in ['<size>', '<size> | none']:
-        value_type = 'size'
-    elif values in ['<count>', '<count> | none', '<guid>']:
-        value_type = 'numeric'
-    elif name in ['sharenfs', 'sharesmb', 'canmount']:
-        value_type = 'bool'
-    elif name in ['version', 'copies']:
-        value_type = 'numeric'
+    """
+    value_type = "str"
+    if values.startswith("on | off"):
+        value_type = "bool"
+    elif values.startswith("yes | no"):
+        value_type = "bool_alt"
+    elif values in ["<size>", "<size> | none"]:
+        value_type = "size"
+    elif values in ["<count>", "<count> | none", "<guid>"]:
+        value_type = "numeric"
+    elif name in ["sharenfs", "sharesmb", "canmount"]:
+        value_type = "bool"
+    elif name in ["version", "copies"]:
+        value_type = "numeric"
     return value_type
 
 
 def _property_create_dict(header, data):
-    '''
+    """
     Create a property dict
-    '''
+    """
     prop = dict(zip(header, _merge_last(data, len(header))))
-    prop['name'] = _property_normalize_name(prop['property'])
-    prop['type'] = _property_detect_type(prop['name'], prop['values'])
-    prop['edit'] = from_bool(prop['edit'])
-    if 'inherit' in prop:
-        prop['inherit'] = from_bool(prop['inherit'])
-    del prop['property']
+    prop["name"] = _property_normalize_name(prop["property"])
+    prop["type"] = _property_detect_type(prop["name"], prop["values"])
+    prop["edit"] = from_bool(prop["edit"])
+    if "inherit" in prop:
+        prop["inherit"] = from_bool(prop["inherit"])
+    del prop["property"]
     return prop
 
 
 def _property_parse_cmd(cmd, alias=None):
-    '''
+    """
     Parse output of zpool/zfs get command
-    '''
+    """
     if not alias:
         alias = {}
     properties = {}
 
     # NOTE: append get to command
-    if cmd[-3:] != 'get':
-        cmd += ' get'
+    if cmd[-3:] != "get":
+        cmd += " get"
 
     # NOTE: parse output
     prop_hdr = []
-    for prop_data in _exec(cmd=cmd)['stderr'].split('\n'):
-        # NOTE: make the line data more managable
+    for prop_data in _exec(cmd=cmd)["stderr"].split("\n"):
+        # NOTE: make the line data more manageable
         prop_data = prop_data.lower().split()
 
         # NOTE: skip empty lines
         if not prop_data:
             continue
         # NOTE: parse header
-        elif prop_data[0] == 'property':
+        elif prop_data[0] == "property":
             prop_hdr = prop_data
             continue
         # NOTE: skip lines after data
-        elif not prop_hdr or prop_data[1] not in ['no', 'yes']:
+        elif not prop_hdr or prop_data[1] not in ["no", "yes"]:
             continue
 
         # NOTE: create property dict
         prop = _property_create_dict(prop_hdr, prop_data)
 
         # NOTE: add property to dict
-        properties[prop['name']] = prop
-        if prop['name'] in alias:
-            properties[alias[prop['name']]] = prop
+        properties[prop["name"]] = prop
+        if prop["name"] in alias:
+            properties[alias[prop["name"]]] = prop
 
         # NOTE: cleanup some duplicate data
-        del prop['name']
+        del prop["name"]
     return properties
 
 
-def _auto(direction, name, value, source='auto', convert_to_human=True):
-    '''
+def _auto(direction, name, value, source="auto", convert_to_human=True):
+    """
     Internal magic for from_auto and to_auto
-    '''
+    """
     # NOTE: check direction
-    if direction not in ['to', 'from']:
+    if direction not in ["to", "from"]:
         return value
 
     # NOTE: collect property data
     props = property_data_zpool()
-    if source == 'zfs':
+    if source == "zfs":
         props = property_data_zfs()
-    elif source == 'auto':
+    elif source == "auto":
         props.update(property_data_zfs())
 
     # NOTE: figure out the conversion type
-    value_type = props[name]['type'] if name in props else 'str'
+    value_type = props[name]["type"] if name in props else "str"
 
     # NOTE: convert
-    if value_type == 'size' and direction == 'to':
-        return globals()['{}_{}'.format(direction, value_type)](value, convert_to_human)
+    if value_type == "size" and direction == "to":
+        return globals()["{}_{}".format(direction, value_type)](value, convert_to_human)
 
-    return globals()['{}_{}'.format(direction, value_type)](value)
+    return globals()["{}_{}".format(direction, value_type)](value)
 
 
 @real_memoize
 def _zfs_cmd():
-    '''
+    """
     Return the path of the zfs binary if present
-    '''
+    """
     # Get the path to the zfs binary.
-    return salt.utils.path.which('zfs')
+    return salt.utils.path.which("zfs")
 
 
 @real_memoize
 def _zpool_cmd():
-    '''
+    """
     Return the path of the zpool binary if present
-    '''
+    """
     # Get the path to the zfs binary.
-    return salt.utils.path.which('zpool')
+    return salt.utils.path.which("zpool")
 
 
-def _command(source, command, flags=None, opts=None,
-             property_name=None, property_value=None,
-             filesystem_properties=None, pool_properties=None,
-             target=None):
-    '''
+def _command(
+    source,
+    command,
+    flags=None,
+    opts=None,
+    property_name=None,
+    property_value=None,
+    filesystem_properties=None,
+    pool_properties=None,
+    target=None,
+):
+    """
     Build and properly escape a zfs command
 
     .. note::
@@ -206,9 +220,9 @@ def _command(source, command, flags=None, opts=None,
         to_auto(from_auto('input_here')), you do not need to do so
         your self first.
 
-    '''
+    """
     # NOTE: start with the zfs binary and command
-    cmd = [_zpool_cmd() if source == 'zpool' else _zfs_cmd(), command]
+    cmd = [_zpool_cmd() if source == "zpool" else _zfs_cmd(), command]
 
     # NOTE: append flags if we have any
     if flags is None:
@@ -217,7 +231,7 @@ def _command(source, command, flags=None, opts=None,
         cmd.append(flag)
 
     # NOTE: append options
-    #       we pass through 'sorted' to garentee the same order
+    #       we pass through 'sorted' to guarantee the same order
     if opts is None:
         opts = {}
     for opt in sorted(opts):
@@ -228,26 +242,40 @@ def _command(source, command, flags=None, opts=None,
             cmd.append(to_str(val))
 
     # NOTE: append filesystem properties (really just options with a key/value)
-    #       we pass through 'sorted' to garentee the same order
+    #       we pass through 'sorted' to guarantee the same order
     if filesystem_properties is None:
         filesystem_properties = {}
     for fsopt in sorted(filesystem_properties):
-        cmd.append('-O' if source == 'zpool' else '-o')
-        cmd.append('{key}={val}'.format(
-            key=fsopt,
-            val=to_auto(fsopt, filesystem_properties[fsopt], source='zfs', convert_to_human=False),
-        ))
+        cmd.append("-O" if source == "zpool" else "-o")
+        cmd.append(
+            "{key}={val}".format(
+                key=fsopt,
+                val=to_auto(
+                    fsopt,
+                    filesystem_properties[fsopt],
+                    source="zfs",
+                    convert_to_human=False,
+                ),
+            )
+        )
 
     # NOTE: append pool properties (really just options with a key/value)
-    #       we pass through 'sorted' to garentee the same order
+    #       we pass through 'sorted' to guarantee the same order
     if pool_properties is None:
         pool_properties = {}
     for fsopt in sorted(pool_properties):
-        cmd.append('-o')
-        cmd.append('{key}={val}'.format(
-            key=fsopt,
-            val=to_auto(fsopt, pool_properties[fsopt], source='zpool', convert_to_human=False),
-        ))
+        cmd.append("-o")
+        cmd.append(
+            "{key}={val}".format(
+                key=fsopt,
+                val=to_auto(
+                    fsopt,
+                    pool_properties[fsopt],
+                    source="zpool",
+                    convert_to_human=False,
+                ),
+            )
+        )
 
     # NOTE: append property and value
     #       the set command takes a key=value pair, we need to support this
@@ -258,10 +286,12 @@ def _command(source, command, flags=None, opts=None,
             if not isinstance(property_value, list):
                 property_value = [property_value]
             for key, val in zip(property_name, property_value):
-                cmd.append('{key}={val}'.format(
-                    key=key,
-                    val=to_auto(key, val, source=source, convert_to_human=False),
-                ))
+                cmd.append(
+                    "{key}={val}".format(
+                        key=key,
+                        val=to_auto(key, val, source=source, convert_to_human=False),
+                    )
+                )
         else:
             cmd.append(property_name)
 
@@ -276,49 +306,49 @@ def _command(source, command, flags=None, opts=None,
                 continue
             cmd.append(to_str(tgt))
 
-    return ' '.join(cmd)
+    return " ".join(cmd)
 
 
 def is_supported():
-    '''
+    """
     Check the system for ZFS support
-    '''
+    """
     # Check for supported platforms
     # NOTE: ZFS on Windows is in development
     # NOTE: ZFS on NetBSD is in development
     on_supported_platform = False
     if salt.utils.platform.is_sunos():
         on_supported_platform = True
-    elif salt.utils.platform.is_freebsd() and _check_retcode('kldstat -q -m zfs'):
+    elif salt.utils.platform.is_freebsd() and _check_retcode("kldstat -q -m zfs"):
         on_supported_platform = True
-    elif salt.utils.platform.is_linux() and os.path.exists('/sys/module/zfs'):
+    elif salt.utils.platform.is_linux() and os.path.exists("/sys/module/zfs"):
         on_supported_platform = True
-    elif salt.utils.platform.is_linux() and salt.utils.path.which('zfs-fuse'):
+    elif salt.utils.platform.is_linux() and salt.utils.path.which("zfs-fuse"):
         on_supported_platform = True
-    elif salt.utils.platform.is_darwin() and \
-         os.path.exists('/Library/Extensions/zfs.kext') and \
-         os.path.exists('/dev/zfs'):
+    elif (
+        salt.utils.platform.is_darwin()
+        and os.path.exists("/Library/Extensions/zfs.kext")
+        and os.path.exists("/dev/zfs")
+    ):
         on_supported_platform = True
 
     # Additional check for the zpool command
-    return (salt.utils.path.which('zpool') and on_supported_platform) is True
+    return (salt.utils.path.which("zpool") and on_supported_platform) is True
 
 
 @real_memoize
 def has_feature_flags():
-    '''
+    """
     Check if zpool-features is available
-    '''
+    """
     # get man location
-    man = salt.utils.path.which('man')
-    return _check_retcode('{man} zpool-features'.format(
-        man=man
-    )) if man else False
+    man = salt.utils.path.which("man")
+    return _check_retcode("{man} zpool-features".format(man=man)) if man else False
 
 
 @real_memoize
 def property_data_zpool():
-    '''
+    """
     Return a dict of zpool properties
 
     .. note::
@@ -330,43 +360,51 @@ def property_data_zpool():
 
     .. warning::
 
-        This data is probed from the output of 'zpool get' with some suplimental
-        data that is hardcoded. There is no better way to get this informatio aside
+        This data is probed from the output of 'zpool get' with some supplemental
+        data that is hardcoded. There is no better way to get this information aside
         from reading the code.
 
-    '''
+    """
     # NOTE: man page also mentions a few short forms
-    property_data = _property_parse_cmd(_zpool_cmd(), {
-        'allocated': 'alloc',
-        'autoexpand': 'expand',
-        'autoreplace': 'replace',
-        'listsnapshots': 'listsnaps',
-        'fragmentation': 'frag',
-    })
+    property_data = _property_parse_cmd(
+        _zpool_cmd(),
+        {
+            "allocated": "alloc",
+            "autoexpand": "expand",
+            "autoreplace": "replace",
+            "listsnapshots": "listsnaps",
+            "fragmentation": "frag",
+        },
+    )
 
     # NOTE: zpool status/iostat has a few extra fields
     zpool_size_extra = [
-        'capacity-alloc', 'capacity-free',
-        'operations-read', 'operations-write',
-        'bandwith-read', 'bandwith-write',
-        'read', 'write',
+        "capacity-alloc",
+        "capacity-free",
+        "operations-read",
+        "operations-write",
+        "bandwith-read",
+        "bandwith-write",
+        "read",
+        "write",
     ]
     zpool_numeric_extra = [
-        'cksum', 'cap',
+        "cksum",
+        "cap",
     ]
 
     for prop in zpool_size_extra:
         property_data[prop] = {
-            'edit': False,
-            'type': 'size',
-            'values': '<size>',
+            "edit": False,
+            "type": "size",
+            "values": "<size>",
         }
 
     for prop in zpool_numeric_extra:
         property_data[prop] = {
-            'edit': False,
-            'type': 'numeric',
-            'values': '<count>',
+            "edit": False,
+            "type": "numeric",
+            "values": "<count>",
         }
 
     return property_data
@@ -374,7 +412,7 @@ def property_data_zpool():
 
 @real_memoize
 def property_data_zfs():
-    '''
+    """
     Return a dict of zfs properties
 
     .. note::
@@ -387,30 +425,33 @@ def property_data_zfs():
 
     .. warning::
 
-        This data is probed from the output of 'zfs get' with some suplimental
-        data that is hardcoded. There is no better way to get this informatio aside
+        This data is probed from the output of 'zfs get' with some supplemental
+        data that is hardcoded. There is no better way to get this information aside
         from reading the code.
 
-    '''
-    return _property_parse_cmd(_zfs_cmd(), {
-        'available': 'avail',
-        'logicalreferenced': 'lrefer.',
-        'logicalused': 'lused.',
-        'referenced': 'refer',
-        'volblocksize': 'volblock',
-        'compression': 'compress',
-        'readonly': 'rdonly',
-        'recordsize': 'recsize',
-        'refreservation': 'refreserv',
-        'reservation': 'reserv',
-    })
+    """
+    return _property_parse_cmd(
+        _zfs_cmd(),
+        {
+            "available": "avail",
+            "logicalreferenced": "lrefer.",
+            "logicalused": "lused.",
+            "referenced": "refer",
+            "volblocksize": "volblock",
+            "compression": "compress",
+            "readonly": "rdonly",
+            "recordsize": "recsize",
+            "refreservation": "refreserv",
+            "reservation": "reserv",
+        },
+    )
 
 
 def from_numeric(value):
-    '''
+    """
     Convert zfs numeric to python int
-    '''
-    if value == 'none':
+    """
+    if value == "none":
         value = None
     elif value:
         value = str_to_num(value)
@@ -418,66 +459,66 @@ def from_numeric(value):
 
 
 def to_numeric(value):
-    '''
+    """
     Convert python int to zfs numeric
-    '''
+    """
     value = from_numeric(value)
     if value is None:
-        value = 'none'
+        value = "none"
     return value
 
 
 def from_bool(value):
-    '''
+    """
     Convert zfs bool to python bool
-    '''
-    if value in ['on', 'yes']:
+    """
+    if value in ["on", "yes"]:
         value = True
-    elif value in ['off', 'no']:
+    elif value in ["off", "no"]:
         value = False
-    elif value == 'none':
+    elif value == "none":
         value = None
 
     return value
 
 
 def from_bool_alt(value):
-    '''
+    """
     Convert zfs bool_alt to python bool
-    '''
+    """
     return from_bool(value)
 
 
 def to_bool(value):
-    '''
+    """
     Convert python bool to zfs on/off bool
-    '''
+    """
     value = from_bool(value)
     if isinstance(value, bool):
-        value = 'on' if value else 'off'
+        value = "on" if value else "off"
     elif value is None:
-        value = 'none'
+        value = "none"
 
     return value
 
 
 def to_bool_alt(value):
-    '''
+    """
     Convert python to zfs yes/no value
-    '''
+    """
     value = from_bool_alt(value)
     if isinstance(value, bool):
-        value = 'yes' if value else 'no'
+        value = "yes" if value else "no"
     elif value is None:
-        value = 'none'
+        value = "none"
 
     return value
 
 
 def from_size(value):
-    '''
-    Convert zfs size (human readble) to python int (bytes)
-    '''
+    """
+    Convert zfs size (human readable) to python int (bytes)
+    """
     match_size = re_zfs_size.match(str(value))
     if match_size:
         v_unit = match_size.group(2).upper()[0]
@@ -493,14 +534,14 @@ def from_size(value):
 
 
 def to_size(value, convert_to_human=True):
-    '''
+    """
     Convert python int (bytes) to zfs size
 
     NOTE: http://src.illumos.org/source/xref/illumos-gate/usr/src/lib/pyzfs/common/util.py#114
-    '''
+    """
     value = from_size(value)
     if value is None:
-        value = 'none'
+        value = "none"
 
     if isinstance(value, Number) and value > 1024 and convert_to_human:
         v_power = int(math.floor(math.log(value, 1024)))
@@ -510,16 +551,10 @@ def to_size(value, convert_to_human=True):
         #       see libzfs implementation linked above
         v_size_float = float(value) / v_multiplier
         if v_size_float == int(v_size_float):
-            value = "{:.0f}{}".format(
-                v_size_float,
-                zfs_size[v_power-1],
-            )
+            value = "{:.0f}{}".format(v_size_float, zfs_size[v_power - 1],)
         else:
             for v_precision in ["{:.2f}{}", "{:.1f}{}", "{:.0f}{}"]:
-                v_size = v_precision.format(
-                    v_size_float,
-                    zfs_size[v_power-1],
-                )
+                v_size = v_precision.format(v_size_float, zfs_size[v_power - 1],)
                 if len(v_size) <= 5:
                     value = v_size
                     break
@@ -528,10 +563,10 @@ def to_size(value, convert_to_human=True):
 
 
 def from_str(value):
-    '''
+    """
     Decode zfs safe string (used for name, path, ...)
-    '''
-    if value == 'none':
+    """
+    if value == "none":
         value = None
     if value:
         value = str(value)
@@ -543,56 +578,56 @@ def from_str(value):
 
 
 def to_str(value):
-    '''
+    """
     Encode zfs safe string (used for name, path, ...)
-    '''
+    """
     value = from_str(value)
 
     if value:
         value = value.replace('"', '\\"')
-        if ' ' in value:
+        if " " in value:
             value = '"' + value + '"'
     elif value is None:
-        value = 'none'
+        value = "none"
 
     return value
 
 
-def from_auto(name, value, source='auto'):
-    '''
+def from_auto(name, value, source="auto"):
+    """
     Convert zfs value to python value
-    '''
-    return _auto('from', name, value, source)
+    """
+    return _auto("from", name, value, source)
 
 
-def to_auto(name, value, source='auto', convert_to_human=True):
-    '''
+def to_auto(name, value, source="auto", convert_to_human=True):
+    """
     Convert python value to zfs value
-    '''
-    return _auto('to', name, value, source, convert_to_human)
+    """
+    return _auto("to", name, value, source, convert_to_human)
 
 
-def from_auto_dict(values, source='auto'):
-    '''
+def from_auto_dict(values, source="auto"):
+    """
     Pass an entire dictionary to from_auto
 
     .. note::
         The key will be passed as the name
 
-    '''
+    """
     for name, value in values.items():
         values[name] = from_auto(name, value, source)
 
     return values
 
 
-def to_auto_dict(values, source='auto', convert_to_human=True):
-    '''
+def to_auto_dict(values, source="auto", convert_to_human=True):
+    """
     Pass an entire dictionary to to_auto
 
     .. note::
         The key will be passed as the name
-    '''
+    """
     for name, value in values.items():
         values[name] = to_auto(name, value, source, convert_to_human)
 
@@ -600,29 +635,36 @@ def to_auto_dict(values, source='auto', convert_to_human=True):
 
 
 def is_snapshot(name):
-    '''
+    """
     Check if name is a valid snapshot name
-    '''
-    return from_str(name).count('@') == 1
+    """
+    return from_str(name).count("@") == 1
 
 
 def is_bookmark(name):
-    '''
+    """
     Check if name is a valid bookmark name
-    '''
-    return from_str(name).count('#') == 1
+    """
+    return from_str(name).count("#") == 1
 
 
 def is_dataset(name):
-    '''
+    """
     Check if name is a valid filesystem or volume name
-    '''
+    """
     return not is_snapshot(name) and not is_bookmark(name)
 
 
-def zfs_command(command, flags=None, opts=None, property_name=None, property_value=None,
-                filesystem_properties=None, target=None):
-    '''
+def zfs_command(
+    command,
+    flags=None,
+    opts=None,
+    property_name=None,
+    property_value=None,
+    filesystem_properties=None,
+    target=None,
+):
+    """
     Build and properly escape a zfs command
 
     .. note::
@@ -631,9 +673,9 @@ def zfs_command(command, flags=None, opts=None, property_name=None, property_val
         to_auto(from_auto('input_here')), you do not need to do so
         your self first.
 
-    '''
+    """
     return _command(
-        'zfs',
+        "zfs",
         command=command,
         flags=flags,
         opts=opts,
@@ -645,9 +687,17 @@ def zfs_command(command, flags=None, opts=None, property_name=None, property_val
     )
 
 
-def zpool_command(command, flags=None, opts=None, property_name=None, property_value=None,
-                  filesystem_properties=None, pool_properties=None, target=None):
-    '''
+def zpool_command(
+    command,
+    flags=None,
+    opts=None,
+    property_name=None,
+    property_value=None,
+    filesystem_properties=None,
+    pool_properties=None,
+    target=None,
+):
+    """
     Build and properly escape a zpool command
 
     .. note::
@@ -656,9 +706,9 @@ def zpool_command(command, flags=None, opts=None, property_name=None, property_v
         to_auto(from_auto('input_here')), you do not need to do so
         your self first.
 
-    '''
+    """
     return _command(
-        'zpool',
+        "zpool",
         command=command,
         flags=flags,
         opts=opts,
@@ -671,12 +721,12 @@ def zpool_command(command, flags=None, opts=None, property_name=None, property_v
 
 
 def parse_command_result(res, label=None):
-    '''
+    """
     Parse the result of a zpool/zfs command
 
     .. note::
 
-        Output on failure is rather predicatable.
+        Output on failure is rather predictable.
         - retcode > 0
         - each 'error' is a line on stderr
         - optional 'Usage:' block under those with hits
@@ -684,28 +734,29 @@ def parse_command_result(res, label=None):
         We simple check those and return a OrderedDict were
         we set label = True|False and error = error_messages
 
-    '''
+    """
     ret = OrderedDict()
 
     if label:
-        ret[label] = res['retcode'] == 0
+        ret[label] = res["retcode"] == 0
 
-    if res['retcode'] != 0:
-        ret['error'] = []
-        for error in res['stderr'].splitlines():
-            if error.lower().startswith('usage:'):
+    if res["retcode"] != 0:
+        ret["error"] = []
+        for error in res["stderr"].splitlines():
+            if error.lower().startswith("usage:"):
                 break
             if error.lower().startswith("use '-f'"):
-                error = error.replace('-f', 'force=True')
+                error = error.replace("-f", "force=True")
             if error.lower().startswith("use '-r'"):
-                error = error.replace('-r', 'recursive=True')
-            ret['error'].append(error)
+                error = error.replace("-r", "recursive=True")
+            ret["error"].append(error)
 
-        if ret['error']:
-            ret['error'] = "\n".join(ret['error'])
+        if ret["error"]:
+            ret["error"] = "\n".join(ret["error"])
         else:
-            del ret['error']
+            del ret["error"]
 
     return ret
+
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

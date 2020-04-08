@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Management of Docker images
 
 .. versionadded:: 2017.7.0
@@ -34,49 +34,53 @@ module (formerly called **dockerng**) in the 2017.7.0 release.
     To pull from a Docker registry, authentication must be configured. See
     :ref:`here <docker-authentication>` for more information on how to
     configure access to docker registries in :ref:`Pillar <pillar>` data.
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
+
+import salt.utils.args
 
 # Import salt libs
 import salt.utils.docker
-import salt.utils.args
-from salt.ext.six.moves import zip
-from salt.ext import six
 from salt.exceptions import CommandExecutionError
+from salt.ext import six
+from salt.ext.six.moves import zip
 
 # Enable proper logging
 log = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 # Define the module's virtual name
-__virtualname__ = 'docker_image'
-__virtual_aliases__ = ('moby_image',)
+__virtualname__ = "docker_image"
+__virtual_aliases__ = ("moby_image",)
 
 
 def __virtual__():
-    '''
+    """
     Only load if the docker execution module is available
-    '''
-    if 'docker.version' in __salt__:
+    """
+    if "docker.version" in __salt__:
         return __virtualname__
-    return (False, __salt__.missing_fun_string('docker.version'))
+    return (False, __salt__.missing_fun_string("docker.version"))
 
 
-def present(name,
-            tag=None,
-            build=None,
-            load=None,
-            force=False,
-            insecure_registry=False,
-            client_timeout=salt.utils.docker.CLIENT_TIMEOUT,
-            dockerfile=None,
-            sls=None,
-            base='opensuse/python',
-            saltenv='base',
-            pillarenv=None,
-            pillar=None,
-            **kwargs):
-    '''
+def present(
+    name,
+    tag=None,
+    build=None,
+    load=None,
+    force=False,
+    insecure_registry=False,
+    client_timeout=salt.utils.docker.CLIENT_TIMEOUT,
+    dockerfile=None,
+    sls=None,
+    base="opensuse/python",
+    saltenv="base",
+    pillarenv=None,
+    pillar=None,
+    **kwargs
+):
+    """
     .. versionchanged:: 2018.3.0
         The ``tag`` argument has been added. It is now required unless pulling
         from a registry.
@@ -208,11 +212,8 @@ def present(name,
             ``pillar_roots`` or an external Pillar source.
 
         .. versionadded:: 2018.3.0
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': False,
-           'comment': ''}
+    """
+    ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
     if not isinstance(name, six.string_types):
         name = six.text_type(name)
@@ -220,163 +221,158 @@ def present(name,
     # At most one of the args that result in an image being built can be used
     num_build_args = len([x for x in (build, load, sls) if x is not None])
     if num_build_args > 1:
-        ret['comment'] = \
-            'Only one of \'build\', \'load\', or \'sls\' is permitted.'
+        ret["comment"] = "Only one of 'build', 'load', or 'sls' is permitted."
         return ret
     elif num_build_args == 1:
         # If building, we need the tag to be specified
         if not tag:
-            ret['comment'] = (
-                'The \'tag\' argument is required if any one of \'build\', '
-                '\'load\', or \'sls\' is used.'
+            ret["comment"] = (
+                "The 'tag' argument is required if any one of 'build', "
+                "'load', or 'sls' is used."
             )
             return ret
         if not isinstance(tag, six.string_types):
             tag = six.text_type(tag)
-        full_image = ':'.join((name, tag))
+        full_image = ":".join((name, tag))
     else:
         if tag:
-            name = '{0}:{1}'.format(name, tag)
+            name = "{0}:{1}".format(name, tag)
         full_image = name
 
     try:
-        image_info = __salt__['docker.inspect_image'](full_image)
+        image_info = __salt__["docker.inspect_image"](full_image)
     except CommandExecutionError as exc:
         msg = exc.__str__()
-        if '404' in msg:
+        if "404" in msg:
             # Image not present
             image_info = None
         else:
-            ret['comment'] = msg
+            ret["comment"] = msg
             return ret
 
     if image_info is not None:
         # Specified image is present
         if not force:
-            ret['result'] = True
-            ret['comment'] = 'Image {0} already present'.format(full_image)
+            ret["result"] = True
+            ret["comment"] = "Image {0} already present".format(full_image)
             return ret
 
     if build or sls:
-        action = 'built'
+        action = "built"
     elif load:
-        action = 'loaded'
+        action = "loaded"
     else:
-        action = 'pulled'
+        action = "pulled"
 
-    if __opts__['test']:
-        ret['result'] = None
+    if __opts__["test"]:
+        ret["result"] = None
         if (image_info is not None and force) or image_info is None:
-            ret['comment'] = 'Image {0} will be {1}'.format(full_image, action)
+            ret["comment"] = "Image {0} will be {1}".format(full_image, action)
             return ret
 
     if build:
         # Get the functions default value and args
-        argspec = salt.utils.args.get_function_argspec(__salt__['docker.build'])
+        argspec = salt.utils.args.get_function_argspec(__salt__["docker.build"])
         # Map any if existing args from kwargs into the build_args dictionary
         build_args = dict(list(zip(argspec.args, argspec.defaults)))
-        for k, v in build_args.items():
-            if k in kwargs.get('kwargs', {}):
-                build_args[k] = kwargs.get('kwargs', {}).get(k)
+        for k in build_args:
+            if k in kwargs.get("kwargs", {}):
+                build_args[k] = kwargs.get("kwargs", {}).get(k)
         try:
             # map values passed from the state to the build args
-            build_args['path'] = build
-            build_args['repository'] = name
-            build_args['tag'] = tag
-            build_args['dockerfile'] = dockerfile
-            image_update = __salt__['docker.build'](**build_args)
-        except Exception as exc:
-            ret['comment'] = (
-                'Encountered error building {0} as {1}: {2}'.format(
-                    build, full_image, exc
-                )
+            build_args["path"] = build
+            build_args["repository"] = name
+            build_args["tag"] = tag
+            build_args["dockerfile"] = dockerfile
+            image_update = __salt__["docker.build"](**build_args)
+        except Exception as exc:  # pylint: disable=broad-except
+            ret["comment"] = "Encountered error building {0} as {1}: {2}".format(
+                build, full_image, exc
             )
             return ret
-        if image_info is None or image_update['Id'] != image_info['Id'][:12]:
-            ret['changes'] = image_update
+        if image_info is None or image_update["Id"] != image_info["Id"][:12]:
+            ret["changes"] = image_update
 
     elif sls:
         _locals = locals()
-        sls_build_kwargs = {k: _locals[k] for k in ('saltenv', 'pillarenv', 'pillar')
-                            if _locals[k] is not None}
+        sls_build_kwargs = {
+            k: _locals[k]
+            for k in ("saltenv", "pillarenv", "pillar")
+            if _locals[k] is not None
+        }
         try:
-            image_update = __salt__['docker.sls_build'](repository=name,
-                                                        tag=tag,
-                                                        base=base,
-                                                        mods=sls,
-                                                        **sls_build_kwargs)
-        except Exception as exc:
-            ret['comment'] = (
-                'Encountered error using SLS {0} for building {1}: {2}'
-                .format(sls, full_image, exc)
+            image_update = __salt__["docker.sls_build"](
+                repository=name, tag=tag, base=base, mods=sls, **sls_build_kwargs
+            )
+        except Exception as exc:  # pylint: disable=broad-except
+            ret[
+                "comment"
+            ] = "Encountered error using SLS {0} for building {1}: {2}".format(
+                sls, full_image, exc
             )
             return ret
-        if image_info is None or image_update['Id'] != image_info['Id'][:12]:
-            ret['changes'] = image_update
+        if image_info is None or image_update["Id"] != image_info["Id"][:12]:
+            ret["changes"] = image_update
 
     elif load:
         try:
-            image_update = __salt__['docker.load'](path=load,
-                                                   repository=name,
-                                                   tag=tag)
-        except Exception as exc:
-            ret['comment'] = (
-                'Encountered error loading {0} as {1}: {2}'
-                .format(load, full_image, exc)
+            image_update = __salt__["docker.load"](path=load, repository=name, tag=tag)
+        except Exception as exc:  # pylint: disable=broad-except
+            ret["comment"] = "Encountered error loading {0} as {1}: {2}".format(
+                load, full_image, exc
             )
             return ret
-        if image_info is None or image_update.get('Layers', []):
-            ret['changes'] = image_update
+        if image_info is None or image_update.get("Layers", []):
+            ret["changes"] = image_update
 
     else:
         try:
-            image_update = __salt__['docker.pull'](
-                name,
-                insecure_registry=insecure_registry,
-                client_timeout=client_timeout
+            image_update = __salt__["docker.pull"](
+                name, insecure_registry=insecure_registry, client_timeout=client_timeout
             )
-        except Exception as exc:
-            ret['comment'] = \
-                'Encountered error pulling {0}: {1}'.format(full_image, exc)
+        except Exception as exc:  # pylint: disable=broad-except
+            ret["comment"] = "Encountered error pulling {0}: {1}".format(
+                full_image, exc
+            )
             return ret
-        if (image_info is not None and image_info['Id'][:12] == image_update
-                .get('Layers', {})
-                .get('Already_Pulled', [None])[0]):
+        if (
+            image_info is not None
+            and image_info["Id"][:12]
+            == image_update.get("Layers", {}).get("Already_Pulled", [None])[0]
+        ):
             # Image was pulled again (because of force) but was also
             # already there. No new image was available on the registry.
             pass
-        elif image_info is None or image_update.get('Layers', {}).get('Pulled'):
+        elif image_info is None or image_update.get("Layers", {}).get("Pulled"):
             # Only add to the changes dict if layers were pulled
-            ret['changes'] = image_update
+            ret["changes"] = image_update
 
     error = False
 
     try:
-        __salt__['docker.inspect_image'](full_image)
+        __salt__["docker.inspect_image"](full_image)
     except CommandExecutionError as exc:
         msg = exc.__str__()
-        if '404' not in msg:
-            error = 'Failed to inspect image \'{0}\' after it was {1}: {2}'.format(
+        if "404" not in msg:
+            error = "Failed to inspect image '{0}' after it was {1}: {2}".format(
                 full_image, action, msg
             )
 
     if error:
-        ret['comment'] = error
+        ret["comment"] = error
     else:
-        ret['result'] = True
-        if not ret['changes']:
-            ret['comment'] = (
-                'Image \'{0}\' was {1}, but there were no changes'.format(
-                    name, action
-                )
+        ret["result"] = True
+        if not ret["changes"]:
+            ret["comment"] = "Image '{0}' was {1}, but there were no changes".format(
+                name, action
             )
         else:
-            ret['comment'] = 'Image \'{0}\' was {1}'.format(full_image, action)
+            ret["comment"] = "Image '{0}' was {1}".format(full_image, action)
     return ret
 
 
 def absent(name=None, images=None, force=False):
-    '''
+    """
     Ensure that an image is absent from the Minion. Image names can be
     specified either using ``repo:tag`` notation, or just the repo name (in
     which case a tag of ``latest`` is assumed).
@@ -428,14 +424,11 @@ def absent(name=None, images=None, force=False):
 
             For more granular control, setting a pillar variable named
             ``docker.force.image_name`` will affect only the named image.
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': False,
-           'comment': ''}
+    """
+    ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
     if not name and not images:
-        ret['comment'] = 'One of \'name\' and \'images\' must be provided'
+        ret["comment"] = "One of 'name' and 'images' must be provided"
         return ret
     elif images is not None:
         targets = images
@@ -444,66 +437,59 @@ def absent(name=None, images=None, force=False):
 
     to_delete = []
     for target in targets:
-        resolved_tag = __salt__['docker.resolve_tag'](target)
+        resolved_tag = __salt__["docker.resolve_tag"](target)
         if resolved_tag is not False:
             to_delete.append(resolved_tag)
 
     if not to_delete:
-        ret['result'] = True
+        ret["result"] = True
         if len(targets) == 1:
-            ret['comment'] = 'Image {0} is not present'.format(name)
+            ret["comment"] = "Image {0} is not present".format(name)
         else:
-            ret['comment'] = 'All specified images are not present'
+            ret["comment"] = "All specified images are not present"
         return ret
 
-    if __opts__['test']:
-        ret['result'] = None
+    if __opts__["test"]:
+        ret["result"] = None
         if len(to_delete) == 1:
-            ret['comment'] = 'Image {0} will be removed'.format(to_delete[0])
+            ret["comment"] = "Image {0} will be removed".format(to_delete[0])
         else:
-            ret['comment'] = (
-                'The following images will be removed: {0}'.format(
-                    ', '.join(to_delete)
-                )
+            ret["comment"] = "The following images will be removed: {0}".format(
+                ", ".join(to_delete)
             )
         return ret
 
-    result = __salt__['docker.rmi'](*to_delete, force=force)
-    post_tags = __salt__['docker.list_tags']()
+    result = __salt__["docker.rmi"](*to_delete, force=force)
+    post_tags = __salt__["docker.list_tags"]()
     failed = [x for x in to_delete if x in post_tags]
 
     if failed:
         if [x for x in to_delete if x not in post_tags]:
-            ret['changes'] = result
-            ret['comment'] = (
-                'The following image(s) failed to be removed: {0}'.format(
-                    ', '.join(failed)
-                )
+            ret["changes"] = result
+            ret["comment"] = "The following image(s) failed to be removed: {0}".format(
+                ", ".join(failed)
             )
         else:
-            ret['comment'] = 'None of the specified images were removed'
-            if 'Errors' in result:
-                ret['comment'] += (
-                    '. The following errors were encountered: {0}'
-                    .format('; '.join(result['Errors']))
+            ret["comment"] = "None of the specified images were removed"
+            if "Errors" in result:
+                ret["comment"] += ". The following errors were encountered: {0}".format(
+                    "; ".join(result["Errors"])
                 )
     else:
-        ret['changes'] = result
+        ret["changes"] = result
         if len(to_delete) == 1:
-            ret['comment'] = 'Image {0} was removed'.format(to_delete[0])
+            ret["comment"] = "Image {0} was removed".format(to_delete[0])
         else:
-            ret['comment'] = (
-                'The following images were removed: {0}'.format(
-                    ', '.join(to_delete)
-                )
+            ret["comment"] = "The following images were removed: {0}".format(
+                ", ".join(to_delete)
             )
-        ret['result'] = True
+        ret["result"] = True
 
     return ret
 
 
 def mod_watch(name, sfun=None, **kwargs):
-    '''
+    """
     The docker_image  watcher, called to invoke the watch command.
 
     .. note::
@@ -511,14 +497,15 @@ def mod_watch(name, sfun=None, **kwargs):
         :ref:`requisite <requisites>`. It should not be called directly.
 
         Parameters for this function should be set by the state being triggered.
-    '''
-    if sfun == 'present':
+    """
+    if sfun == "present":
         # Force image to be updated
-        kwargs['force'] = True
+        kwargs["force"] = True
         return present(name, **kwargs)
 
-    return {'name': name,
-            'changes': {},
-            'result': False,
-            'comment': 'watch requisite is not implemented for '
-                       '{0}'.format(sfun)}
+    return {
+        "name": name,
+        "changes": {},
+        "result": False,
+        "comment": "watch requisite is not implemented for " "{0}".format(sfun),
+    }

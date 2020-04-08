@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Arista pyeapi
 =============
 
@@ -88,24 +88,23 @@ outside a ``pyeapi`` Proxy, e.g.:
     Remember that the above applies only when not running in a ``pyeapi`` Proxy
     Minion. If you want to use the :mod:`pyeapi Proxy <salt.proxy.arista_pyeapi>`,
     please follow the documentation notes for a proper setup.
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python stdlib
 import difflib
 import logging
 
+from salt.exceptions import CommandExecutionError
+
 # Import Salt libs
 from salt.ext import six
-from salt.exceptions import CommandExecutionError
-try:
-    from salt.utils.args import clean_kwargs
-except ImportError:
-    from salt.utils import clean_kwargs
+from salt.utils.args import clean_kwargs
 
 # Import third party libs
 try:
     import pyeapi
+
     HAS_PYEAPI = True
 except ImportError:
     HAS_PYEAPI = False
@@ -114,10 +113,10 @@ except ImportError:
 # execution module properties
 # -----------------------------------------------------------------------------
 
-__proxyenabled__ = ['*']
+__proxyenabled__ = ["*"]
 # Any Proxy Minion should be able to execute these
 
-__virtualname__ = 'pyeapi'
+__virtualname__ = "pyeapi"
 # The Execution Module will be identified as ``pyeapi``
 
 # -----------------------------------------------------------------------------
@@ -127,14 +126,14 @@ __virtualname__ = 'pyeapi'
 log = logging.getLogger(__name__)
 
 PYEAPI_INIT_KWARGS = [
-    'transport',
-    'host',
-    'username',
-    'password',
-    'enablepwd',
-    'port',
-    'timeout',
-    'return_node'
+    "transport",
+    "host",
+    "username",
+    "password",
+    "enablepwd",
+    "port",
+    "timeout",
+    "return_node",
 ]
 
 # -----------------------------------------------------------------------------
@@ -143,12 +142,16 @@ PYEAPI_INIT_KWARGS = [
 
 
 def __virtual__():
-    '''
+    """
     Execution module available only if pyeapi is installed.
-    '''
+    """
     if not HAS_PYEAPI:
-        return False, 'The pyeapi execution module requires pyeapi library to be installed: ``pip install pyeapi``'
+        return (
+            False,
+            "The pyeapi execution module requires pyeapi library to be installed: ``pip install pyeapi``",
+        )
     return __virtualname__
+
 
 # -----------------------------------------------------------------------------
 # helper functions
@@ -156,18 +159,21 @@ def __virtual__():
 
 
 def _prepare_connection(**kwargs):
-    '''
+    """
     Prepare the connection with the remote network device, and clean up the key
     value pairs, removing the args used for the connection init.
-    '''
-    pyeapi_kwargs = __salt__['config.get']('pyeapi', {})
+    """
+    pyeapi_kwargs = __salt__["config.get"]("pyeapi", {})
     pyeapi_kwargs.update(kwargs)  # merge the CLI args with the opts/pillar
-    init_kwargs, fun_kwargs = __utils__['args.prepare_kwargs'](pyeapi_kwargs, PYEAPI_INIT_KWARGS)
-    if 'transport' not in init_kwargs:
-        init_kwargs['transport'] = 'https'
+    init_kwargs, fun_kwargs = __utils__["args.prepare_kwargs"](
+        pyeapi_kwargs, PYEAPI_INIT_KWARGS
+    )
+    if "transport" not in init_kwargs:
+        init_kwargs["transport"] = "https"
     conn = pyeapi.client.connect(**init_kwargs)
-    node = pyeapi.client.Node(conn, enablepwd=init_kwargs.get('enablepwd'))
+    node = pyeapi.client.Node(conn, enablepwd=init_kwargs.get("enablepwd"))
     return node, fun_kwargs
+
 
 # -----------------------------------------------------------------------------
 # callable functions
@@ -175,7 +181,7 @@ def _prepare_connection(**kwargs):
 
 
 def get_connection(**kwargs):
-    '''
+    """
     Return the connection object to the pyeapi Node.
 
     .. warning::
@@ -195,16 +201,16 @@ def get_connection(**kwargs):
                                                  username='example',
                                                  password='example')
         show_ver = conn.run_commands(['show version', 'show interfaces'])
-    '''
+    """
     kwargs = clean_kwargs(**kwargs)
-    if 'pyeapi.conn' in __proxy__:
-        return __proxy__['pyeapi.conn']()
+    if "pyeapi.conn" in __proxy__:
+        return __proxy__["pyeapi.conn"]()
     conn, kwargs = _prepare_connection(**kwargs)
     return conn
 
 
 def call(method, *args, **kwargs):
-    '''
+    """
     Invoke an arbitrary pyeapi method.
 
     method
@@ -272,17 +278,17 @@ def call(method, *args, **kwargs):
     .. code-block:: bash
 
         salt '*' pyeapi.call run_commands "['show version']"
-    '''
+    """
     kwargs = clean_kwargs(**kwargs)
-    if 'pyeapi.call' in __proxy__:
-        return __proxy__['pyeapi.call'](method, *args, **kwargs)
+    if "pyeapi.call" in __proxy__:
+        return __proxy__["pyeapi.call"](method, *args, **kwargs)
     conn, kwargs = _prepare_connection(**kwargs)
     ret = getattr(conn, method)(*args, **kwargs)
     return ret
 
 
 def run_commands(*commands, **kwargs):
-    '''
+    """
     Sends the commands over the transport to the device.
 
     This function sends the commands to the device using the nodes
@@ -377,30 +383,30 @@ def run_commands(*commands, **kwargs):
                 52:54:00:3f:e6:d0
             version:
                 4.18.1F
-    '''
-    encoding = kwargs.pop('encoding', 'json')
-    send_enable = kwargs.pop('send_enable', True)
-    output = call('run_commands',
-                  commands,
-                  encoding=encoding,
-                  send_enable=send_enable,
-                  **kwargs)
-    if encoding == 'text':
+    """
+    encoding = kwargs.pop("encoding", "json")
+    send_enable = kwargs.pop("send_enable", True)
+    output = call(
+        "run_commands", commands, encoding=encoding, send_enable=send_enable, **kwargs
+    )
+    if encoding == "text":
         ret = []
         for res in output:
-            ret.append(res['output'])
+            ret.append(res["output"])
         return ret
     return output
 
 
-def config(commands=None,
-           config_file=None,
-           template_engine='jinja',
-           context=None,
-           defaults=None,
-           saltenv='base',
-           **kwargs):
-    '''
+def config(
+    commands=None,
+    config_file=None,
+    template_engine="jinja",
+    context=None,
+    defaults=None,
+    saltenv="base",
+    **kwargs
+):
+    """
     Configures the node with the specified commands.
 
     This method is used to send configuration commands to the node.  It
@@ -504,41 +510,38 @@ def config(commands=None,
         salt '*' pyeapi.config commands="['ntp server 1.2.3.4', 'ntp server 5.6.7.8']"
         salt '*' pyeapi.config config_file=salt://config.txt
         salt '*' pyeapi.config config_file=https://bit.ly/2LGLcDy context="{'servers': ['1.2.3.4']}"
-    '''
+    """
     initial_config = get_config(as_string=True, **kwargs)
     if config_file:
-        file_str = __salt__['cp.get_file_str'](config_file, saltenv=saltenv)
+        file_str = __salt__["cp.get_file_str"](config_file, saltenv=saltenv)
         if file_str is False:
-            raise CommandExecutionError('Source file {} not found'.format(config_file))
-        log.debug('Fetched from %s', config_file)
+            raise CommandExecutionError("Source file {} not found".format(config_file))
+        log.debug("Fetched from %s", config_file)
         log.debug(file_str)
     elif commands:
         if isinstance(commands, (six.string_types, six.text_type)):
             commands = [commands]
-        file_str = '\n'.join(commands)
+        file_str = "\n".join(commands)
         # unify all the commands in a single file, to render them in a go
     if template_engine:
-        file_str = __salt__['file.apply_template_on_contents'](file_str,
-                                                               template_engine,
-                                                               context,
-                                                               defaults,
-                                                               saltenv)
-        log.debug('Rendered:')
+        file_str = __salt__["file.apply_template_on_contents"](
+            file_str, template_engine, context, defaults, saltenv
+        )
+        log.debug("Rendered:")
         log.debug(file_str)
     # whatever the source of the commands would be, split them line by line
     commands = [line for line in file_str.splitlines() if line.strip()]
     # push the commands one by one, removing empty lines
-    configured = call('config', commands, **kwargs)
+    configured = call("config", commands, **kwargs)
     current_config = get_config(as_string=True, **kwargs)
-    diff = difflib.unified_diff(initial_config.splitlines(1)[4:], current_config.splitlines(1)[4:])
-    return ''.join([x.replace('\r', '') for x in diff])
+    diff = difflib.unified_diff(
+        initial_config.splitlines(1)[4:], current_config.splitlines(1)[4:]
+    )
+    return "".join([x.replace("\r", "") for x in diff])
 
 
-def get_config(config='running-config',
-               params=None,
-               as_string=False,
-               **kwargs):
-    '''
+def get_config(config="running-config", params=None, as_string=False, **kwargs):
+    """
     Retrieves the config from the device.
 
     This method will retrieve the config from the node as either a string
@@ -615,16 +618,14 @@ def get_config(config='running-config',
         salt '*' pyeapi.get_config
         salt '*' pyeapi.get_config params='section snmp-server'
         salt '*' pyeapi.get_config config='startup-config'
-    '''
-    return call('get_config',
-                config=config,
-                params=params,
-                as_string=as_string,
-                **kwargs)
+    """
+    return call(
+        "get_config", config=config, params=params, as_string=as_string, **kwargs
+    )
 
 
-def section(regex, config='running-config', **kwargs):
-    '''
+def section(regex, config="running-config", **kwargs):
+    """
     Return a section of the config.
 
     regex
@@ -692,5 +693,5 @@ def section(regex, config='running-config', **kwargs):
     .. code-block:: bash
 
         salt '*'
-    '''
-    return call('section', regex, config=config, **kwargs)
+    """
+    return call("section", regex, config=config, **kwargs)

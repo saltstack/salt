@@ -1,37 +1,38 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Create ssh executor system
-'''
+"""
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import base64
+import binascii
 import copy
+import datetime
 import getpass
+import hashlib
 import logging
 import multiprocessing
-import subprocess
-import hashlib
-import tarfile
 import os
 import re
+import subprocess
 import sys
+import tarfile
+import tempfile
 import time
 import uuid
-import tempfile
-import binascii
-import sys
-import datetime
 
-# Import salt libs
-import salt.output
 import salt.client.ssh.shell
 import salt.client.ssh.wrapper
 import salt.config
-import salt.exceptions
 import salt.defaults.exitcodes
-import salt.log
+import salt.exceptions
 import salt.loader
+import salt.log
 import salt.minion
+
+# Import salt libs
+import salt.output
 import salt.roster
 import salt.serializers.yaml
 import salt.state
@@ -47,23 +48,24 @@ import salt.utils.stringutils
 import salt.utils.thin
 import salt.utils.url
 import salt.utils.verify
-from salt.utils.platform import is_windows
-from salt.utils.process import Process
-import salt.roster
-from salt.template import compile_template
 
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import input  # pylint: disable=import-error,redefined-builtin
+from salt.template import compile_template
+from salt.utils.platform import is_windows
+from salt.utils.process import Process
+from salt.utils.zeromq import zmq
+
 try:
     import saltwinshell
+
     HAS_WINSHELL = True
 except ImportError:
     HAS_WINSHELL = False
-from salt.utils.zeromq import zmq
 
 # The directory where salt thin is deployed
-DEFAULT_THIN_DIR = '/var/tmp/.%%USER%%_%%FQDNUUID%%_salt'
+DEFAULT_THIN_DIR = "/var/tmp/.%%USER%%_%%FQDNUUID%%_salt"
 
 # RSTR is just a delimiter to distinguish the beginning of salt STDOUT
 # and STDERR.  There is no special meaning.  Messages prior to RSTR in
@@ -78,11 +80,11 @@ DEFAULT_THIN_DIR = '/var/tmp/.%%USER%%_%%FQDNUUID%%_salt'
 #    Failure in SHIM
 # RSTR in stderr, No RSTR in stdout:
 #    Undefined behavior
-RSTR = '_edbc7885e4f9aac9b83b35999b68d015148caf467b78fa39c05f669c0ff89878'
+RSTR = "_edbc7885e4f9aac9b83b35999b68d015148caf467b78fa39c05f669c0ff89878"
 
 # The regex to find RSTR in output - Must be on an output line by itself
 # NOTE - must use non-grouping match groups or output splitting will fail.
-RSTR_RE = r'(?:^|\r?\n)' + RSTR + r'(?:\r?\n|$)'
+RSTR_RE = r"(?:^|\r?\n)" + RSTR + r"(?:\r?\n|$)"
 
 # METHODOLOGY:
 #
@@ -127,9 +129,10 @@ RSTR_RE = r'(?:^|\r?\n)' + RSTR + r'(?:\r?\n|$)'
 # to be able to define the string with indentation for readability but
 # still strip the white space for compactness and to avoid issues with
 # some multi-line embedded python code having indentation errors
-SSH_SH_SHIM = \
-    '\n'.join(
-        [s.strip() for s in r'''/bin/sh << 'EOF'
+SSH_SH_SHIM = "\n".join(
+    [
+        s.strip()
+        for s in r'''/bin/sh << 'EOF'
 set -e
 set -u
 DEBUG="{{DEBUG}}"
@@ -184,13 +187,17 @@ echo "ERROR: Unable to locate appropriate python command" >&2
 exit $EX_PYTHON_INVALID
 EOF'''.format(
             EX_THIN_PYTHON_INVALID=salt.defaults.exitcodes.EX_THIN_PYTHON_INVALID,
-            ).split('\n')])
+        ).split(
+            "\n"
+        )
+    ]
+)
 
 if not is_windows():
-    shim_file = os.path.join(os.path.dirname(__file__), 'ssh_py_shim.py')
+    shim_file = os.path.join(os.path.dirname(__file__), "ssh_py_shim.py")
     if not os.path.exists(shim_file):
         # On esky builds we only have the .pyc file
-        shim_file += 'c'
+        shim_file += "c"
     with salt.utils.files.fopen(shim_file) as ssh_py_shim:
         SSH_PY_SHIM = ssh_py_shim.read()
 
@@ -198,162 +205,152 @@ log = logging.getLogger(__name__)
 
 
 class SSH(object):
-    '''
+    """
     Create an SSH execution system
-    '''
-    ROSTER_UPDATE_FLAG = '#__needs_update'
+    """
+
+    ROSTER_UPDATE_FLAG = "#__needs_update"
 
     def __init__(self, opts):
         self.__parsed_rosters = {SSH.ROSTER_UPDATE_FLAG: True}
-        pull_sock = os.path.join(opts['sock_dir'], 'master_event_pull.ipc')
+        pull_sock = os.path.join(opts["sock_dir"], "master_event_pull.ipc")
         if os.path.exists(pull_sock) and zmq:
             self.event = salt.utils.event.get_event(
-                    'master',
-                    opts['sock_dir'],
-                    opts['transport'],
-                    opts=opts,
-                    listen=False)
+                "master", opts["sock_dir"], opts["transport"], opts=opts, listen=False
+            )
         else:
             self.event = None
         self.opts = opts
-        if self.opts['regen_thin']:
-            self.opts['ssh_wipe'] = True
-        if not salt.utils.path.which('ssh'):
-            raise salt.exceptions.SaltSystemExit(code=-1,
-                msg='No ssh binary found in path -- ssh must be installed for salt-ssh to run. Exiting.')
-        self.opts['_ssh_version'] = ssh_version()
-        self.tgt_type = self.opts['selected_target_option'] \
-            if self.opts['selected_target_option'] else 'glob'
+        if self.opts["regen_thin"]:
+            self.opts["ssh_wipe"] = True
+        if not salt.utils.path.which("ssh"):
+            raise salt.exceptions.SaltSystemExit(
+                code=-1,
+                msg="No ssh binary found in path -- ssh must be installed for salt-ssh to run. Exiting.",
+            )
+        self.opts["_ssh_version"] = ssh_version()
+        self.tgt_type = (
+            self.opts["selected_target_option"]
+            if self.opts["selected_target_option"]
+            else "glob"
+        )
         self._expand_target()
-        self.roster = salt.roster.Roster(self.opts, self.opts.get('roster', 'flat'))
-        self.targets = self.roster.targets(
-                self.opts['tgt'],
-                self.tgt_type)
+        self.roster = salt.roster.Roster(self.opts, self.opts.get("roster", "flat"))
+        self.targets = self.roster.targets(self.opts["tgt"], self.tgt_type)
         if not self.targets:
             self._update_targets()
         # If we're in a wfunc, we need to get the ssh key location from the
         # top level opts, stored in __master_opts__
-        if '__master_opts__' in self.opts:
-            if self.opts['__master_opts__'].get('ssh_use_home_key') and \
-                    os.path.isfile(os.path.expanduser('~/.ssh/id_rsa')):
-                priv = os.path.expanduser('~/.ssh/id_rsa')
+        if "__master_opts__" in self.opts:
+            if self.opts["__master_opts__"].get("ssh_use_home_key") and os.path.isfile(
+                os.path.expanduser("~/.ssh/id_rsa")
+            ):
+                priv = os.path.expanduser("~/.ssh/id_rsa")
             else:
-                priv = self.opts['__master_opts__'].get(
-                        'ssh_priv',
-                        os.path.join(
-                            self.opts['__master_opts__']['pki_dir'],
-                            'ssh',
-                            'salt-ssh.rsa'
-                            )
-                        )
+                priv = self.opts["__master_opts__"].get(
+                    "ssh_priv",
+                    os.path.join(
+                        self.opts["__master_opts__"]["pki_dir"], "ssh", "salt-ssh.rsa"
+                    ),
+                )
         else:
             priv = self.opts.get(
-                    'ssh_priv',
-                    os.path.join(
-                        self.opts['pki_dir'],
-                        'ssh',
-                        'salt-ssh.rsa'
-                        )
-                    )
-        if priv != 'agent-forwarding':
+                "ssh_priv", os.path.join(self.opts["pki_dir"], "ssh", "salt-ssh.rsa")
+            )
+        if priv != "agent-forwarding":
             if not os.path.isfile(priv):
                 try:
                     salt.client.ssh.shell.gen_key(priv)
                 except OSError:
                     raise salt.exceptions.SaltClientError(
-                        'salt-ssh could not be run because it could not generate keys.\n\n'
-                        'You can probably resolve this by executing this script with '
-                        'increased permissions via sudo or by running as root.\n'
-                        'You could also use the \'-c\' option to supply a configuration '
-                        'directory that you have permissions to read and write to.'
+                        "salt-ssh could not be run because it could not generate keys.\n\n"
+                        "You can probably resolve this by executing this script with "
+                        "increased permissions via sudo or by running as root.\n"
+                        "You could also use the '-c' option to supply a configuration "
+                        "directory that you have permissions to read and write to."
                     )
         self.defaults = {
-            'user': self.opts.get(
-                'ssh_user',
-                salt.config.DEFAULT_MASTER_OPTS['ssh_user']
+            "user": self.opts.get(
+                "ssh_user", salt.config.DEFAULT_MASTER_OPTS["ssh_user"]
             ),
-            'port': self.opts.get(
-                'ssh_port',
-                salt.config.DEFAULT_MASTER_OPTS['ssh_port']
+            "port": self.opts.get(
+                "ssh_port", salt.config.DEFAULT_MASTER_OPTS["ssh_port"]
             ),
-            'passwd': self.opts.get(
-                'ssh_passwd',
-                salt.config.DEFAULT_MASTER_OPTS['ssh_passwd']
+            "passwd": self.opts.get(
+                "ssh_passwd", salt.config.DEFAULT_MASTER_OPTS["ssh_passwd"]
             ),
-            'priv': priv,
-            'priv_passwd': self.opts.get(
-                'ssh_priv_passwd',
-                salt.config.DEFAULT_MASTER_OPTS['ssh_priv_passwd']
+            "priv": priv,
+            "priv_passwd": self.opts.get(
+                "ssh_priv_passwd", salt.config.DEFAULT_MASTER_OPTS["ssh_priv_passwd"]
             ),
-            'timeout': self.opts.get(
-                'ssh_timeout',
-                salt.config.DEFAULT_MASTER_OPTS['ssh_timeout']
-            ) + self.opts.get(
-                'timeout',
-                salt.config.DEFAULT_MASTER_OPTS['timeout']
-            ),
-            'sudo': self.opts.get(
-                'ssh_sudo',
-                salt.config.DEFAULT_MASTER_OPTS['ssh_sudo']
-            ),
-            'sudo_user': self.opts.get(
-                'ssh_sudo_user',
-                salt.config.DEFAULT_MASTER_OPTS['ssh_sudo_user']
-            ),
-            'identities_only': self.opts.get(
-                'ssh_identities_only',
-                salt.config.DEFAULT_MASTER_OPTS['ssh_identities_only']
-            ),
-            'remote_port_forwards': self.opts.get(
-                'ssh_remote_port_forwards'
-            ),
-            'ssh_options': self.opts.get(
-                'ssh_options'
+            "timeout": self.opts.get(
+                "ssh_timeout", salt.config.DEFAULT_MASTER_OPTS["ssh_timeout"]
             )
+            + self.opts.get("timeout", salt.config.DEFAULT_MASTER_OPTS["timeout"]),
+            "sudo": self.opts.get(
+                "ssh_sudo", salt.config.DEFAULT_MASTER_OPTS["ssh_sudo"]
+            ),
+            "sudo_user": self.opts.get(
+                "ssh_sudo_user", salt.config.DEFAULT_MASTER_OPTS["ssh_sudo_user"]
+            ),
+            "identities_only": self.opts.get(
+                "ssh_identities_only",
+                salt.config.DEFAULT_MASTER_OPTS["ssh_identities_only"],
+            ),
+            "remote_port_forwards": self.opts.get("ssh_remote_port_forwards"),
+            "ssh_options": self.opts.get("ssh_options"),
         }
-        if self.opts.get('rand_thin_dir'):
-            self.defaults['thin_dir'] = os.path.join(
-                    '/var/tmp',
-                    '.{0}'.format(uuid.uuid4().hex[:6]))
-            self.opts['ssh_wipe'] = 'True'
+        if self.opts.get("rand_thin_dir"):
+            self.defaults["thin_dir"] = os.path.join(
+                "/var/tmp", ".{0}".format(uuid.uuid4().hex[:6])
+            )
+            self.opts["ssh_wipe"] = "True"
         self.serial = salt.payload.Serial(opts)
         self.returners = salt.loader.returners(self.opts, {})
         self.fsclient = salt.fileclient.FSClient(self.opts)
-        self.thin = salt.utils.thin.gen_thin(self.opts['cachedir'],
-                                             extra_mods=self.opts.get('thin_extra_mods'),
-                                             overwrite=self.opts['regen_thin'],
-                                             python2_bin=self.opts['python2_bin'],
-                                             python3_bin=self.opts['python3_bin'],
-                                             extended_cfg=self.opts.get('ssh_ext_alternatives'))
+        self.thin = salt.utils.thin.gen_thin(
+            self.opts["cachedir"],
+            extra_mods=self.opts.get("thin_extra_mods"),
+            overwrite=self.opts["regen_thin"],
+            python2_bin=self.opts["python2_bin"],
+            python3_bin=self.opts["python3_bin"],
+            extended_cfg=self.opts.get("ssh_ext_alternatives"),
+        )
         self.mods = mod_data(self.fsclient)
 
     def _get_roster(self):
-        '''
+        """
         Read roster filename as a key to the data.
         :return:
-        '''
+        """
         roster_file = salt.roster.get_roster_file(self.opts)
         if roster_file not in self.__parsed_rosters:
-            roster_data = compile_template(roster_file, salt.loader.render(self.opts, {}),
-                                           self.opts['renderer'], self.opts['renderer_blacklist'],
-                                           self.opts['renderer_whitelist'])
+            roster_data = compile_template(
+                roster_file,
+                salt.loader.render(self.opts, {}),
+                self.opts["renderer"],
+                self.opts["renderer_blacklist"],
+                self.opts["renderer_whitelist"],
+            )
             self.__parsed_rosters[roster_file] = roster_data
         return roster_file
 
     def _expand_target(self):
-        '''
+        """
         Figures out if the target is a reachable host without wildcards, expands if any.
         :return:
-        '''
+        """
         # TODO: Support -L
-        target = self.opts['tgt']
+        target = self.opts["tgt"]
         if isinstance(target, list):
             return
 
-        hostname = self.opts['tgt'].split('@')[-1]
-        needs_expansion = '*' not in hostname and \
-                          salt.utils.network.is_reachable_host(hostname) and \
-                          salt.utils.network.is_ip(hostname)
+        hostname = self.opts["tgt"].split("@")[-1]
+        needs_expansion = (
+            "*" not in hostname
+            and salt.utils.network.is_reachable_host(hostname)
+            and salt.utils.network.is_ip(hostname)
+        )
         if needs_expansion:
             hostname = salt.utils.network.ip_to_host(hostname)
             if hostname is None:
@@ -364,187 +361,198 @@ class SSH(object):
                 roster_data = self.__parsed_rosters[roster_filename]
                 if not isinstance(roster_data, bool):
                     for host_id in roster_data:
-                        if hostname in [host_id, roster_data.get('host')]:
-                            if hostname != self.opts['tgt']:
-                                self.opts['tgt'] = hostname
+                        if hostname in [host_id, roster_data.get("host")]:
+                            if hostname != self.opts["tgt"]:
+                                self.opts["tgt"] = hostname
                             self.__parsed_rosters[self.ROSTER_UPDATE_FLAG] = False
                             return
 
     def _update_roster(self):
-        '''
+        """
         Update default flat roster with the passed in information.
         :return:
-        '''
+        """
         roster_file = self._get_roster()
         if os.access(roster_file, os.W_OK):
             if self.__parsed_rosters[self.ROSTER_UPDATE_FLAG]:
-                with salt.utils.files.fopen(roster_file, 'a') as roster_fp:
-                    roster_fp.write('# Automatically added by "{s_user}" at {s_time}\n{hostname}:\n    host: '
-                                    '{hostname}\n    user: {user}'
-                                    '\n    passwd: {passwd}\n'.format(s_user=getpass.getuser(),
-                                                                      s_time=datetime.datetime.utcnow().isoformat(),
-                                                                      hostname=self.opts.get('tgt', ''),
-                                                                      user=self.opts.get('ssh_user', ''),
-                                                                      passwd=self.opts.get('ssh_passwd', '')))
-                log.info('The host {0} has been added to the roster {1}'.format(self.opts.get('tgt', ''),
-                                                                                roster_file))
+                with salt.utils.files.fopen(roster_file, "a") as roster_fp:
+                    roster_fp.write(
+                        '# Automatically added by "{s_user}" at {s_time}\n{hostname}:\n    host: '
+                        "{hostname}\n    user: {user}"
+                        "\n    passwd: {passwd}\n".format(
+                            s_user=getpass.getuser(),
+                            s_time=datetime.datetime.utcnow().isoformat(),
+                            hostname=self.opts.get("tgt", ""),
+                            user=self.opts.get("ssh_user", ""),
+                            passwd=self.opts.get("ssh_passwd", ""),
+                        )
+                    )
+                log.info(
+                    "The host {0} has been added to the roster {1}".format(
+                        self.opts.get("tgt", ""), roster_file
+                    )
+                )
         else:
-            log.error('Unable to update roster {0}: access denied'.format(roster_file))
+            log.error("Unable to update roster {0}: access denied".format(roster_file))
 
     def _update_targets(self):
-        '''
+        """
         Uptade targets in case hostname was directly passed without the roster.
         :return:
-        '''
+        """
 
-        hostname = self.opts.get('tgt', '')
-        if '@' in hostname:
-            user, hostname = hostname.split('@', 1)
+        hostname = self.opts.get("tgt", "")
+        if "@" in hostname:
+            user, hostname = hostname.split("@", 1)
         else:
-            user = self.opts.get('ssh_user')
-        if hostname == '*':
-            hostname = ''
+            user = self.opts.get("ssh_user")
+        if hostname == "*":
+            hostname = ""
 
         if salt.utils.network.is_reachable_host(hostname):
             hostname = salt.utils.network.ip_to_host(hostname)
-            self.opts['tgt'] = hostname
+            self.opts["tgt"] = hostname
             self.targets[hostname] = {
-                'passwd': self.opts.get('ssh_passwd', ''),
-                'host': hostname,
-                'user': user,
+                "passwd": self.opts.get("ssh_passwd", ""),
+                "host": hostname,
+                "user": user,
             }
-            if self.opts.get('ssh_update_roster'):
+            if self.opts.get("ssh_update_roster"):
                 self._update_roster()
 
     def get_pubkey(self):
-        '''
+        """
         Return the key string for the SSH public key
-        '''
-        if '__master_opts__' in self.opts and \
-                self.opts['__master_opts__'].get('ssh_use_home_key') and \
-                os.path.isfile(os.path.expanduser('~/.ssh/id_rsa')):
-            priv = os.path.expanduser('~/.ssh/id_rsa')
+        """
+        if (
+            "__master_opts__" in self.opts
+            and self.opts["__master_opts__"].get("ssh_use_home_key")
+            and os.path.isfile(os.path.expanduser("~/.ssh/id_rsa"))
+        ):
+            priv = os.path.expanduser("~/.ssh/id_rsa")
         else:
             priv = self.opts.get(
-                    'ssh_priv',
-                    os.path.join(
-                        self.opts['pki_dir'],
-                        'ssh',
-                        'salt-ssh.rsa'
-                        )
-                    )
-        pub = '{0}.pub'.format(priv)
-        with salt.utils.files.fopen(pub, 'r') as fp_:
-            return '{0} rsa root@master'.format(fp_.read().split()[1])
+                "ssh_priv", os.path.join(self.opts["pki_dir"], "ssh", "salt-ssh.rsa")
+            )
+        pub = "{0}.pub".format(priv)
+        with salt.utils.files.fopen(pub, "r") as fp_:
+            return "{0} rsa root@master".format(fp_.read().split()[1])
 
     def key_deploy(self, host, ret):
-        '''
+        """
         Deploy the SSH key if the minions don't auth
-        '''
-        if not isinstance(ret[host], dict) or self.opts.get('ssh_key_deploy'):
+        """
+        if not isinstance(ret[host], dict) or self.opts.get("ssh_key_deploy"):
             target = self.targets[host]
-            if target.get('passwd', False) or self.opts['ssh_passwd']:
+            if target.get("passwd", False) or self.opts["ssh_passwd"]:
                 self._key_deploy_run(host, target, False)
             return ret
-        if ret[host].get('stderr', '').count('Permission denied'):
+        if ret[host].get("stderr", "").count("Permission denied"):
             target = self.targets[host]
             # permission denied, attempt to auto deploy ssh key
-            print(('Permission denied for host {0}, do you want to deploy '
-                   'the salt-ssh key? (password required):').format(host))
-            deploy = input('[Y/n] ')
-            if deploy.startswith(('n', 'N')):
+            print(
+                (
+                    "Permission denied for host {0}, do you want to deploy "
+                    "the salt-ssh key? (password required):"
+                ).format(host)
+            )
+            deploy = input("[Y/n] ")
+            if deploy.startswith(("n", "N")):
                 return ret
-            target['passwd'] = getpass.getpass(
-                    'Password for {0}@{1}: '.format(target['user'], host)
-                )
+            target["passwd"] = getpass.getpass(
+                "Password for {0}@{1}: ".format(target["user"], host)
+            )
             return self._key_deploy_run(host, target, True)
         return ret
 
     def _key_deploy_run(self, host, target, re_run=True):
-        '''
+        """
         The ssh-copy-id routine
-        '''
+        """
         argv = [
-            'ssh.set_auth_key',
-            target.get('user', 'root'),
+            "ssh.set_auth_key",
+            target.get("user", "root"),
             self.get_pubkey(),
         ]
 
         single = Single(
-                self.opts,
-                argv,
-                host,
-                mods=self.mods,
-                fsclient=self.fsclient,
-                thin=self.thin,
-                **target)
-        if salt.utils.path.which('ssh-copy-id'):
+            self.opts,
+            argv,
+            host,
+            mods=self.mods,
+            fsclient=self.fsclient,
+            thin=self.thin,
+            **target
+        )
+        if salt.utils.path.which("ssh-copy-id"):
             # we have ssh-copy-id, use it!
             stdout, stderr, retcode = single.shell.copy_id()
         else:
             stdout, stderr, retcode = single.run()
         if re_run:
-            target.pop('passwd')
+            target.pop("passwd")
             single = Single(
-                    self.opts,
-                    self.opts['argv'],
-                    host,
-                    mods=self.mods,
-                    fsclient=self.fsclient,
-                    thin=self.thin,
-                    **target)
+                self.opts,
+                self.opts["argv"],
+                host,
+                mods=self.mods,
+                fsclient=self.fsclient,
+                thin=self.thin,
+                **target
+            )
             stdout, stderr, retcode = single.cmd_block()
             try:
                 data = salt.utils.json.find_json(stdout)
-                return {host: data.get('local', data)}
-            except Exception:
+                return {host: data.get("local", data)}
+            except Exception:  # pylint: disable=broad-except
                 if stderr:
                     return {host: stderr}
-                return {host: 'Bad Return'}
+                return {host: "Bad Return"}
         if salt.defaults.exitcodes.EX_OK != retcode:
             return {host: stderr}
         return {host: stdout}
 
     def handle_routine(self, que, opts, host, target, mine=False):
-        '''
+        """
         Run the routine in a "Thread", put a dict on the queue
-        '''
+        """
         opts = copy.deepcopy(opts)
         single = Single(
-                opts,
-                opts['argv'],
-                host,
-                mods=self.mods,
-                fsclient=self.fsclient,
-                thin=self.thin,
-                mine=mine,
-                **target)
-        ret = {'id': single.id}
+            opts,
+            opts["argv"],
+            host,
+            mods=self.mods,
+            fsclient=self.fsclient,
+            thin=self.thin,
+            mine=mine,
+            **target
+        )
+        ret = {"id": single.id}
         stdout, stderr, retcode = single.run()
         # This job is done, yield
         try:
             data = salt.utils.json.find_json(stdout)
-            if len(data) < 2 and 'local' in data:
-                ret['ret'] = data['local']
+            if len(data) < 2 and "local" in data:
+                ret["ret"] = data["local"]
             else:
-                ret['ret'] = {
-                    'stdout': stdout,
-                    'stderr': stderr,
-                    'retcode': retcode,
+                ret["ret"] = {
+                    "stdout": stdout,
+                    "stderr": stderr,
+                    "retcode": retcode,
                 }
-        except Exception:
-            ret['ret'] = {
-                'stdout': stdout,
-                'stderr': stderr,
-                'retcode': retcode,
+        except Exception:  # pylint: disable=broad-except
+            ret["ret"] = {
+                "stdout": stdout,
+                "stderr": stderr,
+                "retcode": retcode,
             }
         que.put(ret)
 
     def handle_ssh(self, mine=False):
-        '''
+        """
         Spin up the needed threads or processes and execute the subsequent
         routines
-        '''
+        """
         que = multiprocessing.Queue()
         running = {}
         target_iter = self.targets.__iter__()
@@ -553,9 +561,9 @@ class SSH(object):
         init = False
         while True:
             if not self.targets:
-                log.error('No matching targets found in roster.')
+                log.error("No matching targets found in roster.")
                 break
-            if len(running) < self.opts.get('ssh_max_procs', 25) and not init:
+            if len(running) < self.opts.get("ssh_max_procs", 25) and not init:
                 try:
                     host = next(target_iter)
                 except StopIteration:
@@ -564,68 +572,69 @@ class SSH(object):
                 for default in self.defaults:
                     if default not in self.targets[host]:
                         self.targets[host][default] = self.defaults[default]
-                if 'host' not in self.targets[host]:
-                    self.targets[host]['host'] = host
-                if self.targets[host].get('winrm') and not HAS_WINSHELL:
+                if "host" not in self.targets[host]:
+                    self.targets[host]["host"] = host
+                if self.targets[host].get("winrm") and not HAS_WINSHELL:
                     returned.add(host)
                     rets.add(host)
-                    log_msg = 'Please contact sales@saltstack.com for access to the enterprise saltwinshell module.'
+                    log_msg = "Please contact sales@saltstack.com for access to the enterprise saltwinshell module."
                     log.debug(log_msg)
-                    no_ret = {'fun_args': [],
-                              'jid': None,
-                              'return': log_msg,
-                              'retcode': 1,
-                              'fun': '',
-                              'id': host}
+                    no_ret = {
+                        "fun_args": [],
+                        "jid": None,
+                        "return": log_msg,
+                        "retcode": 1,
+                        "fun": "",
+                        "id": host,
+                    }
                     yield {host: no_ret}
                     continue
                 args = (
-                        que,
-                        self.opts,
-                        host,
-                        self.targets[host],
-                        mine,
-                        )
-                routine = Process(
-                                target=self.handle_routine,
-                                args=args)
+                    que,
+                    self.opts,
+                    host,
+                    self.targets[host],
+                    mine,
+                )
+                routine = Process(target=self.handle_routine, args=args)
                 routine.start()
-                running[host] = {'thread': routine}
+                running[host] = {"thread": routine}
                 continue
             ret = {}
             try:
                 ret = que.get(False)
-                if 'id' in ret:
-                    returned.add(ret['id'])
-                    yield {ret['id']: ret['ret']}
-            except Exception:
+                if "id" in ret:
+                    returned.add(ret["id"])
+                    yield {ret["id"]: ret["ret"]}
+            except Exception:  # pylint: disable=broad-except
                 # This bare exception is here to catch spurious exceptions
                 # thrown by que.get during healthy operation. Please do not
                 # worry about this bare exception, it is entirely here to
                 # control program flow.
                 pass
             for host in running:
-                if not running[host]['thread'].is_alive():
+                if not running[host]["thread"].is_alive():
                     if host not in returned:
                         # Try to get any returns that came through since we
                         # last checked
                         try:
                             while True:
                                 ret = que.get(False)
-                                if 'id' in ret:
-                                    returned.add(ret['id'])
-                                    yield {ret['id']: ret['ret']}
-                        except Exception:
+                                if "id" in ret:
+                                    returned.add(ret["id"])
+                                    yield {ret["id"]: ret["ret"]}
+                        except Exception:  # pylint: disable=broad-except
                             pass
 
                         if host not in returned:
-                            error = ('Target \'{0}\' did not return any data, '
-                                     'probably due to an error.').format(host)
-                            ret = {'id': host,
-                                   'ret': error}
+                            error = (
+                                "Target '{0}' did not return any data, "
+                                "probably due to an error."
+                            ).format(host)
+                            ret = {"id": host, "ret": error}
                             log.error(error)
-                            yield {ret['id']: ret['ret']}
-                    running[host]['thread'].join()
+                            yield {ret["id"]: ret["ret"]}
+                    running[host]["thread"].join()
                     rets.add(host)
             for host in rets:
                 if host in running:
@@ -633,45 +642,51 @@ class SSH(object):
             if len(rets) >= len(self.targets):
                 break
             # Sleep when limit or all threads started
-            if len(running) >= self.opts.get('ssh_max_procs', 25) or len(self.targets) >= len(running):
+            if len(running) >= self.opts.get("ssh_max_procs", 25) or len(
+                self.targets
+            ) >= len(running):
                 time.sleep(0.1)
 
     def run_iter(self, mine=False, jid=None):
-        '''
+        """
         Execute and yield returns as they come in, do not print to the display
 
         mine
             The Single objects will use mine_functions defined in the roster,
             pillar, or master config (they will be checked in that order) and
             will modify the argv with the arguments from mine_functions
-        '''
-        fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
-        jid = self.returners[fstr](passed_jid=jid or self.opts.get('jid', None))
+        """
+        fstr = "{0}.prep_jid".format(self.opts["master_job_cache"])
+        jid = self.returners[fstr](passed_jid=jid or self.opts.get("jid", None))
 
         # Save the invocation information
-        argv = self.opts['argv']
+        argv = self.opts["argv"]
 
-        if self.opts.get('raw_shell', False):
-            fun = 'ssh._raw'
+        if self.opts.get("raw_shell", False):
+            fun = "ssh._raw"
             args = argv
         else:
-            fun = argv[0] if argv else ''
+            fun = argv[0] if argv else ""
             args = argv[1:]
 
         job_load = {
-            'jid': jid,
-            'tgt_type': self.tgt_type,
-            'tgt': self.opts['tgt'],
-            'user': self.opts['user'],
-            'fun': fun,
-            'arg': args,
-            }
+            "jid": jid,
+            "tgt_type": self.tgt_type,
+            "tgt": self.opts["tgt"],
+            "user": self.opts["user"],
+            "fun": fun,
+            "arg": args,
+        }
 
         # save load to the master job cache
-        if self.opts['master_job_cache'] == 'local_cache':
-            self.returners['{0}.save_load'.format(self.opts['master_job_cache'])](jid, job_load, minions=self.targets.keys())
+        if self.opts["master_job_cache"] == "local_cache":
+            self.returners["{0}.save_load".format(self.opts["master_job_cache"])](
+                jid, job_load, minions=self.targets.keys()
+            )
         else:
-            self.returners['{0}.save_load'.format(self.opts['master_job_cache'])](jid, job_load)
+            self.returners["{0}.save_load".format(self.opts["master_job_cache"])](
+                jid, job_load
+            )
 
         for ret in self.handle_ssh(mine=mine):
             host = next(six.iterkeys(ret))
@@ -679,92 +694,96 @@ class SSH(object):
             if self.event:
                 id_, data = next(six.iteritems(ret))
                 if isinstance(data, six.text_type):
-                    data = {'return': data}
-                if 'id' not in data:
-                    data['id'] = id_
-                data['jid'] = jid  # make the jid in the payload the same as the jid in the tag
+                    data = {"return": data}
+                if "id" not in data:
+                    data["id"] = id_
+                data[
+                    "jid"
+                ] = jid  # make the jid in the payload the same as the jid in the tag
                 self.event.fire_event(
-                    data,
-                    salt.utils.event.tagify(
-                        [jid, 'ret', host],
-                        'job'))
+                    data, salt.utils.event.tagify([jid, "ret", host], "job")
+                )
             yield ret
 
     def cache_job(self, jid, id_, ret, fun):
-        '''
+        """
         Cache the job information
-        '''
-        self.returners['{0}.returner'.format(self.opts['master_job_cache'])]({'jid': jid,
-                                                                              'id': id_,
-                                                                              'return': ret,
-                                                                              'fun': fun})
+        """
+        self.returners["{0}.returner".format(self.opts["master_job_cache"])](
+            {"jid": jid, "id": id_, "return": ret, "fun": fun}
+        )
 
     def run(self, jid=None):
-        '''
+        """
         Execute the overall routine, print results via outputters
-        '''
-        if self.opts.get('list_hosts'):
+        """
+        if self.opts.get("list_hosts"):
             self._get_roster()
             ret = {}
             for roster_file in self.__parsed_rosters:
-                if roster_file.startswith('#'):
+                if roster_file.startswith("#"):
                     continue
                 ret[roster_file] = {}
                 for host_id in self.__parsed_rosters[roster_file]:
-                    hostname = self.__parsed_rosters[roster_file][host_id]['host']
+                    hostname = self.__parsed_rosters[roster_file][host_id]["host"]
                     ret[roster_file][host_id] = hostname
-            salt.output.display_output(ret, 'nested', self.opts)
+            salt.output.display_output(ret, "nested", self.opts)
             sys.exit()
 
-        fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
-        jid = self.returners[fstr](passed_jid=jid or self.opts.get('jid', None))
+        fstr = "{0}.prep_jid".format(self.opts["master_job_cache"])
+        jid = self.returners[fstr](passed_jid=jid or self.opts.get("jid", None))
 
         # Save the invocation information
-        argv = self.opts['argv']
+        argv = self.opts["argv"]
 
-        if self.opts.get('raw_shell', False):
-            fun = 'ssh._raw'
+        if self.opts.get("raw_shell", False):
+            fun = "ssh._raw"
             args = argv
         else:
-            fun = argv[0] if argv else ''
+            fun = argv[0] if argv else ""
             args = argv[1:]
 
         job_load = {
-            'jid': jid,
-            'tgt_type': self.tgt_type,
-            'tgt': self.opts['tgt'],
-            'user': self.opts['user'],
-            'fun': fun,
-            'arg': args,
-            }
+            "jid": jid,
+            "tgt_type": self.tgt_type,
+            "tgt": self.opts["tgt"],
+            "user": self.opts["user"],
+            "fun": fun,
+            "arg": args,
+        }
 
         # save load to the master job cache
         try:
             if isinstance(jid, bytes):
-                jid = jid.decode('utf-8')
-            if self.opts['master_job_cache'] == 'local_cache':
-                self.returners['{0}.save_load'.format(self.opts['master_job_cache'])](jid, job_load, minions=self.targets.keys())
+                jid = jid.decode("utf-8")
+            if self.opts["master_job_cache"] == "local_cache":
+                self.returners["{0}.save_load".format(self.opts["master_job_cache"])](
+                    jid, job_load, minions=self.targets.keys()
+                )
             else:
-                self.returners['{0}.save_load'.format(self.opts['master_job_cache'])](jid, job_load)
-        except Exception as exc:
+                self.returners["{0}.save_load".format(self.opts["master_job_cache"])](
+                    jid, job_load
+                )
+        except Exception as exc:  # pylint: disable=broad-except
             log.exception(exc)
             log.error(
-                'Could not save load with returner %s: %s',
-                self.opts['master_job_cache'], exc
+                "Could not save load with returner %s: %s",
+                self.opts["master_job_cache"],
+                exc,
             )
 
-        if self.opts.get('verbose'):
-            msg = 'Executing job with jid {0}'.format(jid)
+        if self.opts.get("verbose"):
+            msg = "Executing job with jid {0}".format(jid)
             print(msg)
-            print('-' * len(msg) + '\n')
-            print('')
+            print("-" * len(msg) + "\n")
+            print("")
         sret = {}
-        outputter = self.opts.get('output', 'nested')
+        outputter = self.opts.get("output", "nested")
         final_exit = 0
         for ret in self.handle_ssh():
             host = next(six.iterkeys(ret))
             if isinstance(ret[host], dict):
-                host_ret = ret[host].get('retcode', 0)
+                host_ret = ret[host].get("retcode", 0)
                 if host_ret != 0:
                     final_exit = 1
             else:
@@ -774,109 +793,107 @@ class SSH(object):
             self.cache_job(jid, host, ret[host], fun)
             ret = self.key_deploy(host, ret)
 
-            if isinstance(ret[host], dict) and (ret[host].get('stderr') or '').startswith('ssh:'):
-                ret[host] = ret[host]['stderr']
+            if isinstance(ret[host], dict) and (
+                ret[host].get("stderr") or ""
+            ).startswith("ssh:"):
+                ret[host] = ret[host]["stderr"]
 
             if not isinstance(ret[host], dict):
                 p_data = {host: ret[host]}
-            elif 'return' not in ret[host]:
+            elif "return" not in ret[host]:
                 p_data = ret
             else:
-                outputter = ret[host].get('out', self.opts.get('output', 'nested'))
-                p_data = {host: ret[host].get('return', {})}
-            if self.opts.get('static'):
+                outputter = ret[host].get("out", self.opts.get("output", "nested"))
+                p_data = {host: ret[host].get("return", {})}
+            if self.opts.get("static"):
                 sret.update(p_data)
             else:
-                salt.output.display_output(
-                        p_data,
-                        outputter,
-                        self.opts)
+                salt.output.display_output(p_data, outputter, self.opts)
             if self.event:
                 id_, data = next(six.iteritems(ret))
                 if isinstance(data, six.text_type):
-                    data = {'return': data}
-                if 'id' not in data:
-                    data['id'] = id_
-                data['jid'] = jid  # make the jid in the payload the same as the jid in the tag
+                    data = {"return": data}
+                if "id" not in data:
+                    data["id"] = id_
+                data[
+                    "jid"
+                ] = jid  # make the jid in the payload the same as the jid in the tag
                 self.event.fire_event(
-                    data,
-                    salt.utils.event.tagify(
-                        [jid, 'ret', host],
-                        'job'))
-        if self.opts.get('static'):
-            salt.output.display_output(
-                    sret,
-                    outputter,
-                    self.opts)
+                    data, salt.utils.event.tagify([jid, "ret", host], "job")
+                )
+        if self.opts.get("static"):
+            salt.output.display_output(sret, outputter, self.opts)
         if final_exit:
             sys.exit(salt.defaults.exitcodes.EX_AGGREGATE)
 
 
 class Single(object):
-    '''
+    """
     Hold onto a single ssh execution
-    '''
+    """
+
     # 1. Get command ready
     # 2. Check if target has salt
     # 3. deploy salt-thin
     # 4. execute requested command via salt-thin
     def __init__(
-            self,
-            opts,
-            argv,
-            id_,
-            host,
-            user=None,
-            port=None,
-            passwd=None,
-            priv=None,
-            priv_passwd=None,
-            timeout=30,
-            sudo=False,
-            tty=False,
-            mods=None,
-            fsclient=None,
-            thin=None,
-            mine=False,
-            minion_opts=None,
-            identities_only=False,
-            sudo_user=None,
-            remote_port_forwards=None,
-            winrm=False,
-            ssh_options=None,
-            **kwargs):
+        self,
+        opts,
+        argv,
+        id_,
+        host,
+        user=None,
+        port=None,
+        passwd=None,
+        priv=None,
+        priv_passwd=None,
+        timeout=30,
+        sudo=False,
+        tty=False,
+        mods=None,
+        fsclient=None,
+        thin=None,
+        mine=False,
+        minion_opts=None,
+        identities_only=False,
+        sudo_user=None,
+        remote_port_forwards=None,
+        winrm=False,
+        ssh_options=None,
+        **kwargs
+    ):
         # Get mine setting and mine_functions if defined in kwargs (from roster)
         self.mine = mine
-        self.mine_functions = kwargs.get('mine_functions')
-        self.cmd_umask = kwargs.get('cmd_umask', None)
+        self.mine_functions = kwargs.get("mine_functions")
+        self.cmd_umask = kwargs.get("cmd_umask", None)
 
         self.winrm = winrm
 
         self.opts = opts
         self.tty = tty
-        if kwargs.get('disable_wipe'):
+        if kwargs.get("disable_wipe"):
             self.wipe = False
         else:
-            self.wipe = bool(self.opts.get('ssh_wipe'))
-        if kwargs.get('thin_dir'):
-            self.thin_dir = kwargs['thin_dir']
+            self.wipe = bool(self.opts.get("ssh_wipe"))
+        if kwargs.get("thin_dir"):
+            self.thin_dir = kwargs["thin_dir"]
         elif self.winrm:
             saltwinshell.set_winvars(self)
-            self.python_env = kwargs.get('ssh_python_env')
+            self.python_env = kwargs.get("ssh_python_env")
         else:
             if user:
-                thin_dir = DEFAULT_THIN_DIR.replace('%%USER%%', user)
+                thin_dir = DEFAULT_THIN_DIR.replace("%%USER%%", user)
             else:
-                thin_dir = DEFAULT_THIN_DIR.replace('%%USER%%', 'root')
+                thin_dir = DEFAULT_THIN_DIR.replace("%%USER%%", "root")
             self.thin_dir = thin_dir.replace(
-                '%%FQDNUUID%%',
-                uuid.uuid3(uuid.NAMESPACE_DNS,
-                           salt.utils.network.get_fqhostname()).hex[:6]
+                "%%FQDNUUID%%",
+                uuid.uuid3(uuid.NAMESPACE_DNS, salt.utils.network.get_fqhostname()).hex[
+                    :6
+                ],
             )
-        self.opts['thin_dir'] = self.thin_dir
+        self.opts["thin_dir"] = self.thin_dir
         self.fsclient = fsclient
-        self.context = {'master_opts': self.opts,
-                        'fileclient': self.fsclient}
+        self.context = {"master_opts": self.opts, "fileclient": self.fsclient}
 
         if isinstance(argv, six.string_types):
             self.argv = [argv]
@@ -887,36 +904,40 @@ class Single(object):
         self.id = id_
 
         self.mods = mods if isinstance(mods, dict) else {}
-        args = {'host': host,
-                'user': user,
-                'port': port,
-                'passwd': passwd,
-                'priv': priv,
-                'priv_passwd': priv_passwd,
-                'timeout': timeout,
-                'sudo': sudo,
-                'tty': tty,
-                'mods': self.mods,
-                'identities_only': identities_only,
-                'sudo_user': sudo_user,
-                'remote_port_forwards': remote_port_forwards,
-                'winrm': winrm,
-                'ssh_options': ssh_options}
+        args = {
+            "host": host,
+            "user": user,
+            "port": port,
+            "passwd": passwd,
+            "priv": priv,
+            "priv_passwd": priv_passwd,
+            "timeout": timeout,
+            "sudo": sudo,
+            "tty": tty,
+            "mods": self.mods,
+            "identities_only": identities_only,
+            "sudo_user": sudo_user,
+            "remote_port_forwards": remote_port_forwards,
+            "winrm": winrm,
+            "ssh_options": ssh_options,
+        }
         # Pre apply changeable defaults
         self.minion_opts = {
-                    'grains_cache': True,
-                    'log_file': 'salt-call.log',
-                }
-        self.minion_opts.update(opts.get('ssh_minion_opts', {}))
+            "grains_cache": True,
+            "log_file": "salt-call.log",
+        }
+        self.minion_opts.update(opts.get("ssh_minion_opts", {}))
         if minion_opts is not None:
             self.minion_opts.update(minion_opts)
         # Post apply system needed defaults
-        self.minion_opts.update({
-                    'root_dir': os.path.join(self.thin_dir, 'running_data'),
-                    'id': self.id,
-                    'sock_dir': '/',
-                    'fileserver_list_cache_time': 3,
-                })
+        self.minion_opts.update(
+            {
+                "root_dir": os.path.join(self.thin_dir, "running_data"),
+                "id": self.id,
+                "sock_dir": "/",
+                "fileserver_list_cache_time": 3,
+            }
+        )
         self.minion_config = salt.serializers.yaml.serialize(self.minion_opts)
         self.target = kwargs
         self.target.update(args)
@@ -925,59 +946,56 @@ class Single(object):
         self.shell = salt.client.ssh.shell.gen_shell(opts, **args)
         if self.winrm:
             # Determine if Windows client is x86 or AMD64
-            arch, _, _ = self.shell.exec_cmd('powershell $ENV:PROCESSOR_ARCHITECTURE')
+            arch, _, _ = self.shell.exec_cmd("powershell $ENV:PROCESSOR_ARCHITECTURE")
             self.arch = arch.strip()
-        self.thin = thin if thin else salt.utils.thin.thin_path(opts['cachedir'])
+        self.thin = thin if thin else salt.utils.thin.thin_path(opts["cachedir"])
 
     def __arg_comps(self):
-        '''
+        """
         Return the function name and the arg list
-        '''
-        fun = self.argv[0] if self.argv else ''
+        """
+        fun = self.argv[0] if self.argv else ""
         parsed = salt.utils.args.parse_input(
-            self.argv[1:],
-            condition=False,
-            no_parse=self.opts.get('no_parse', []))
+            self.argv[1:], condition=False, no_parse=self.opts.get("no_parse", [])
+        )
         args = parsed[0]
         kws = parsed[1]
         return fun, args, kws
 
     def _escape_arg(self, arg):
-        '''
+        """
         Properly escape argument to protect special characters from shell
         interpretation.  This avoids having to do tricky argument quoting.
 
         Effectively just escape all characters in the argument that are not
         alphanumeric!
-        '''
+        """
         if self.winrm:
             return arg
-        return ''.join(['\\' + char if re.match(r'\W', char) else char for char in arg])
+        return "".join(["\\" + char if re.match(r"\W", char) else char for char in arg])
 
     def deploy(self):
-        '''
+        """
         Deploy salt-thin
-        '''
+        """
         self.shell.send(
-            self.thin,
-            os.path.join(self.thin_dir, 'salt-thin.tgz'),
+            self.thin, os.path.join(self.thin_dir, "salt-thin.tgz"),
         )
         self.deploy_ext()
         return True
 
     def deploy_ext(self):
-        '''
+        """
         Deploy the ext_mods tarball
-        '''
-        if self.mods.get('file'):
+        """
+        if self.mods.get("file"):
             self.shell.send(
-                self.mods['file'],
-                os.path.join(self.thin_dir, 'salt-ext_mods.tgz'),
+                self.mods["file"], os.path.join(self.thin_dir, "salt-ext_mods.tgz"),
             )
         return True
 
     def run(self, deploy_attempted=False):
-        '''
+        """
         Execute the routine, the routine can be either:
         1. Execute a raw shell command
         2. Execute a wrapper func
@@ -987,11 +1005,11 @@ class Single(object):
         attempt
 
         Returns tuple of (stdout, stderr, retcode)
-        '''
+        """
         stdout = stderr = retcode = None
 
-        if self.opts.get('raw_shell', False):
-            cmd_str = ' '.join([self._escape_arg(arg) for arg in self.argv])
+        if self.opts.get("raw_shell", False):
+            cmd_str = " ".join([self._escape_arg(arg) for arg in self.argv])
             stdout, stderr, retcode = self.shell.exec_cmd(cmd_str)
 
         elif self.fun in self.wfuncs or self.mine:
@@ -1003,33 +1021,33 @@ class Single(object):
         return stdout, stderr, retcode
 
     def run_wfunc(self):
-        '''
+        """
         Execute a wrapper function
 
         Returns tuple of (json_data, '')
-        '''
+        """
         # Ensure that opts/grains are up to date
         # Execute routine
         data_cache = False
         data = None
-        cdir = os.path.join(self.opts['cachedir'], 'minions', self.id)
+        cdir = os.path.join(self.opts["cachedir"], "minions", self.id)
         if not os.path.isdir(cdir):
             os.makedirs(cdir)
-        datap = os.path.join(cdir, 'ssh_data.p')
+        datap = os.path.join(cdir, "ssh_data.p")
         refresh = False
         if not os.path.isfile(datap):
             refresh = True
         else:
             passed_time = (time.time() - os.stat(datap).st_mtime) / 60
-            if passed_time > self.opts.get('cache_life', 60):
+            if passed_time > self.opts.get("cache_life", 60):
                 refresh = True
 
-        if self.opts.get('refresh_cache'):
+        if self.opts.get("refresh_cache"):
             refresh = True
         conf_grains = {}
         # Save conf file grains before they get clobbered
-        if 'ssh_grains' in self.opts:
-            conf_grains = self.opts['ssh_grains']
+        if "ssh_grains" in self.opts:
+            conf_grains = self.opts["ssh_grains"]
         if not data_cache:
             refresh = True
         if refresh:
@@ -1040,81 +1058,83 @@ class Single(object):
                 self.id,
                 fsclient=self.fsclient,
                 minion_opts=self.minion_opts,
-                **self.target)
-            opts_pkg = pre_wrapper['test.opts_pkg']()  # pylint: disable=E1102
-            if '_error' in opts_pkg:
-                #Refresh failed
-                retcode = opts_pkg['retcode']
-                ret = salt.utils.json.dumps({'local': opts_pkg})
+                **self.target
+            )
+            opts_pkg = pre_wrapper["test.opts_pkg"]()  # pylint: disable=E1102
+            if "_error" in opts_pkg:
+                # Refresh failed
+                retcode = opts_pkg["retcode"]
+                ret = salt.utils.json.dumps({"local": opts_pkg})
                 return ret, retcode
 
-            opts_pkg['file_roots'] = self.opts['file_roots']
-            opts_pkg['pillar_roots'] = self.opts['pillar_roots']
-            opts_pkg['ext_pillar'] = self.opts['ext_pillar']
-            opts_pkg['extension_modules'] = self.opts['extension_modules']
-            opts_pkg['module_dirs'] = self.opts['module_dirs']
-            opts_pkg['_ssh_version'] = self.opts['_ssh_version']
-            opts_pkg['__master_opts__'] = self.context['master_opts']
-            if 'known_hosts_file' in self.opts:
-                opts_pkg['known_hosts_file'] = self.opts['known_hosts_file']
-            if '_caller_cachedir' in self.opts:
-                opts_pkg['_caller_cachedir'] = self.opts['_caller_cachedir']
+            opts_pkg["file_roots"] = self.opts["file_roots"]
+            opts_pkg["pillar_roots"] = self.opts["pillar_roots"]
+            opts_pkg["ext_pillar"] = self.opts["ext_pillar"]
+            opts_pkg["extension_modules"] = self.opts["extension_modules"]
+            opts_pkg["module_dirs"] = self.opts["module_dirs"]
+            opts_pkg["_ssh_version"] = self.opts["_ssh_version"]
+            opts_pkg["__master_opts__"] = self.context["master_opts"]
+            if "known_hosts_file" in self.opts:
+                opts_pkg["known_hosts_file"] = self.opts["known_hosts_file"]
+            if "_caller_cachedir" in self.opts:
+                opts_pkg["_caller_cachedir"] = self.opts["_caller_cachedir"]
             else:
-                opts_pkg['_caller_cachedir'] = self.opts['cachedir']
+                opts_pkg["_caller_cachedir"] = self.opts["cachedir"]
             # Use the ID defined in the roster file
-            opts_pkg['id'] = self.id
+            opts_pkg["id"] = self.id
 
             retcode = 0
 
             # Restore master grains
             for grain in conf_grains:
-                opts_pkg['grains'][grain] = conf_grains[grain]
+                opts_pkg["grains"][grain] = conf_grains[grain]
             # Enable roster grains support
-            if 'grains' in self.target:
-                for grain in self.target['grains']:
-                    opts_pkg['grains'][grain] = self.target['grains'][grain]
+            if "grains" in self.target:
+                for grain in self.target["grains"]:
+                    opts_pkg["grains"][grain] = self.target["grains"][grain]
 
             popts = {}
-            popts.update(opts_pkg['__master_opts__'])
+            popts.update(opts_pkg["__master_opts__"])
             popts.update(opts_pkg)
             pillar = salt.pillar.Pillar(
-                    popts,
-                    opts_pkg['grains'],
-                    opts_pkg['id'],
-                    opts_pkg.get('saltenv', 'base')
-                    )
+                popts,
+                opts_pkg["grains"],
+                opts_pkg["id"],
+                opts_pkg.get("saltenv", "base"),
+            )
             pillar_data = pillar.compile_pillar()
 
             # TODO: cache minion opts in datap in master.py
-            data = {'opts': opts_pkg,
-                    'grains': opts_pkg['grains'],
-                    'pillar': pillar_data}
+            data = {
+                "opts": opts_pkg,
+                "grains": opts_pkg["grains"],
+                "pillar": pillar_data,
+            }
             if data_cache:
-                with salt.utils.files.fopen(datap, 'w+b') as fp_:
-                    fp_.write(
-                            self.serial.dumps(data)
-                            )
+                with salt.utils.files.fopen(datap, "w+b") as fp_:
+                    fp_.write(self.serial.dumps(data))
         if not data and data_cache:
-            with salt.utils.files.fopen(datap, 'rb') as fp_:
+            with salt.utils.files.fopen(datap, "rb") as fp_:
                 data = self.serial.load(fp_)
-        opts = data.get('opts', {})
-        opts['grains'] = data.get('grains')
+        opts = data.get("opts", {})
+        opts["grains"] = data.get("grains")
 
         # Restore master grains
         for grain in conf_grains:
-            opts['grains'][grain] = conf_grains[grain]
+            opts["grains"][grain] = conf_grains[grain]
         # Enable roster grains support
-        if 'grains' in self.target:
-            for grain in self.target['grains']:
-                opts['grains'][grain] = self.target['grains'][grain]
+        if "grains" in self.target:
+            for grain in self.target["grains"]:
+                opts["grains"][grain] = self.target["grains"][grain]
 
-        opts['pillar'] = data.get('pillar')
+        opts["pillar"] = data.get("pillar")
         wrapper = salt.client.ssh.wrapper.FunctionWrapper(
             opts,
             self.id,
             fsclient=self.fsclient,
             minion_opts=self.minion_opts,
-            **self.target)
+            **self.target
+        )
         self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper, self.context)
         wrapper.wfuncs = self.wfuncs
 
@@ -1127,18 +1147,20 @@ class Single(object):
 
             if self.mine_functions and self.fun in self.mine_functions:
                 mine_fun_data = self.mine_functions[self.fun]
-            elif opts['pillar'] and self.fun in opts['pillar'].get('mine_functions', {}):
-                mine_fun_data = opts['pillar']['mine_functions'][self.fun]
-            elif self.fun in self.context['master_opts'].get('mine_functions', {}):
-                mine_fun_data = self.context['master_opts']['mine_functions'][self.fun]
+            elif opts["pillar"] and self.fun in opts["pillar"].get(
+                "mine_functions", {}
+            ):
+                mine_fun_data = opts["pillar"]["mine_functions"][self.fun]
+            elif self.fun in self.context["master_opts"].get("mine_functions", {}):
+                mine_fun_data = self.context["master_opts"]["mine_functions"][self.fun]
 
             if isinstance(mine_fun_data, dict):
-                mine_fun = mine_fun_data.pop('mine_function', mine_fun)
+                mine_fun = mine_fun_data.pop("mine_function", mine_fun)
                 mine_args = mine_fun_data
             elif isinstance(mine_fun_data, list):
                 for item in mine_fun_data[:]:
-                    if isinstance(item, dict) and 'mine_function' in item:
-                        mine_fun = item['mine_function']
+                    if isinstance(item, dict) and "mine_function" in item:
+                        mine_fun = item["mine_function"]
                         mine_fun_data.pop(mine_fun_data.index(item))
                 mine_args = mine_fun_data
             else:
@@ -1158,37 +1180,42 @@ class Single(object):
             else:
                 result = self.wfuncs[self.fun](*self.args, **self.kwargs)
         except TypeError as exc:
-            result = 'TypeError encountered executing {0}: {1}'.format(self.fun, exc)
+            result = "TypeError encountered executing {0}: {1}".format(self.fun, exc)
             log.error(result, exc_info_on_loglevel=logging.DEBUG)
             retcode = 1
-        except Exception as exc:
-            result = 'An Exception occurred while executing {0}: {1}'.format(self.fun, exc)
+        except Exception as exc:  # pylint: disable=broad-except
+            result = "An Exception occurred while executing {0}: {1}".format(
+                self.fun, exc
+            )
             log.error(result, exc_info_on_loglevel=logging.DEBUG)
             retcode = 1
         # Mimic the json data-structure that "salt-call --local" will
         # emit (as seen in ssh_py_shim.py)
-        if isinstance(result, dict) and 'local' in result:
-            ret = salt.utils.json.dumps({'local': result['local']})
+        if isinstance(result, dict) and "local" in result:
+            ret = salt.utils.json.dumps({"local": result["local"]})
         else:
-            ret = salt.utils.json.dumps({'local': {'return': result}})
+            ret = salt.utils.json.dumps({"local": {"return": result}})
         return ret, retcode
 
     def _cmd_str(self):
-        '''
+        """
         Prepare the command string
-        '''
-        sudo = 'sudo' if self.target['sudo'] else ''
-        sudo_user = self.target['sudo_user']
-        if '_caller_cachedir' in self.opts:
-            cachedir = self.opts['_caller_cachedir']
+        """
+        sudo = "sudo" if self.target["sudo"] else ""
+        sudo_user = self.target["sudo_user"]
+        if "_caller_cachedir" in self.opts:
+            cachedir = self.opts["_caller_cachedir"]
         else:
-            cachedir = self.opts['cachedir']
-        thin_code_digest, thin_sum = salt.utils.thin.thin_sum(cachedir, 'sha1')
-        debug = ''
-        if not self.opts.get('log_level'):
-            self.opts['log_level'] = 'info'
-        if salt.log.LOG_LEVELS['debug'] >= salt.log.LOG_LEVELS[self.opts.get('log_level', 'info')]:
-            debug = '1'
+            cachedir = self.opts["cachedir"]
+        thin_code_digest, thin_sum = salt.utils.thin.thin_sum(cachedir, "sha1")
+        debug = ""
+        if not self.opts.get("log_level"):
+            self.opts["log_level"] = "info"
+        if (
+            salt.log.LOG_LEVELS["debug"]
+            >= salt.log.LOG_LEVELS[self.opts.get("log_level", "info")]
+        ):
+            debug = "1"
         arg_str = '''
 OPTIONS.config = \
 """
@@ -1204,23 +1231,25 @@ OPTIONS.wipe = {wipe}
 OPTIONS.tty = {tty}
 OPTIONS.cmd_umask = {cmd_umask}
 OPTIONS.code_checksum = {code_checksum}
-ARGS = {arguments}\n'''.format(config=self.minion_config,
-                               delimeter=RSTR,
-                               saltdir=self.thin_dir,
-                               checksum=thin_sum,
-                               hashfunc='sha1',
-                               version=salt.version.__version__,
-                               ext_mods=self.mods.get('version', ''),
-                               wipe=self.wipe,
-                               tty=self.tty,
-                               cmd_umask=self.cmd_umask,
-                               code_checksum=thin_code_digest,
-                               arguments=self.argv)
-        py_code = SSH_PY_SHIM.replace('#%%OPTS', arg_str)
+ARGS = {arguments}\n'''.format(
+            config=self.minion_config,
+            delimeter=RSTR,
+            saltdir=self.thin_dir,
+            checksum=thin_sum,
+            hashfunc="sha1",
+            version=salt.version.__version__,
+            ext_mods=self.mods.get("version", ""),
+            wipe=self.wipe,
+            tty=self.tty,
+            cmd_umask=self.cmd_umask,
+            code_checksum=thin_code_digest,
+            arguments=self.argv,
+        )
+        py_code = SSH_PY_SHIM.replace("#%%OPTS", arg_str)
         if six.PY2:
-            py_code_enc = py_code.encode('base64')
+            py_code_enc = py_code.encode("base64")
         else:
-            py_code_enc = base64.encodebytes(py_code.encode('utf-8')).decode('utf-8')
+            py_code_enc = base64.encodebytes(py_code.encode("utf-8")).decode("utf-8")
         if not self.winrm:
             cmd = SSH_SH_SHIM.format(
                 DEBUG=debug,
@@ -1234,26 +1263,25 @@ ARGS = {arguments}\n'''.format(config=self.minion_config,
 
         return cmd
 
-    def shim_cmd(self, cmd_str, extension='py'):
-        '''
+    def shim_cmd(self, cmd_str, extension="py"):
+        """
         Run a shim command.
 
         If tty is enabled, we must scp the shim to the target system and
         execute it there
-        '''
+        """
         if not self.tty and not self.winrm:
             return self.shell.exec_cmd(cmd_str)
 
         # Write the shim to a temporary file in the default temp directory
-        with tempfile.NamedTemporaryFile(mode='w+b',
-                                         prefix='shim_',
-                                         delete=False) as shim_tmp_file:
+        with tempfile.NamedTemporaryFile(
+            mode="w+b", prefix="shim_", delete=False
+        ) as shim_tmp_file:
             shim_tmp_file.write(salt.utils.stringutils.to_bytes(cmd_str))
 
         # Copy shim to target system, under $HOME/.<randomized name>
-        target_shim_file = '.{0}.{1}'.format(
-            binascii.hexlify(os.urandom(6)).decode('ascii'),
-            extension
+        target_shim_file = ".{0}.{1}".format(
+            binascii.hexlify(os.urandom(6)).decode("ascii"), extension
         )
         if self.winrm:
             target_shim_file = saltwinshell.get_target_shim_file(self, target_shim_file)
@@ -1266,24 +1294,26 @@ ARGS = {arguments}\n'''.format(config=self.minion_config,
             pass
 
         # Execute shim
-        if extension == 'ps1':
+        if extension == "ps1":
             ret = self.shell.exec_cmd('"powershell {0}"'.format(target_shim_file))
         else:
             if not self.winrm:
-                ret = self.shell.exec_cmd('/bin/sh \'$HOME/{0}\''.format(target_shim_file))
+                ret = self.shell.exec_cmd(
+                    "/bin/sh '$HOME/{0}'".format(target_shim_file)
+                )
             else:
                 ret = saltwinshell.call_python(self, target_shim_file)
 
         # Remove shim from target system
         if not self.winrm:
-            self.shell.exec_cmd('rm \'$HOME/{0}\''.format(target_shim_file))
+            self.shell.exec_cmd("rm '$HOME/{0}'".format(target_shim_file))
         else:
-            self.shell.exec_cmd('del {0}'.format(target_shim_file))
+            self.shell.exec_cmd("del {0}".format(target_shim_file))
 
         return ret
 
     def cmd_block(self, is_retry=False):
-        '''
+        """
         Prepare the pre-check command to send to the subsystem
 
         1. execute SHIM + command
@@ -1292,41 +1322,47 @@ ARGS = {arguments}\n'''.format(config=self.minion_config,
         4. re-execute SHIM + command
         5. split SHIM results from command results
         6. return command results
-        '''
+        """
         self.argv = _convert_args(self.argv)
         log.debug(
-            'Performing shimmed, blocking command as follows:\n%s',
-            ' '.join([six.text_type(arg) for arg in self.argv])
+            "Performing shimmed, blocking command as follows:\n%s",
+            " ".join([six.text_type(arg) for arg in self.argv]),
         )
         cmd_str = self._cmd_str()
         stdout, stderr, retcode = self.shim_cmd(cmd_str)
 
-        log.trace('STDOUT %s\n%s', self.target['host'], stdout)
-        log.trace('STDERR %s\n%s', self.target['host'], stderr)
-        log.debug('RETCODE %s: %s', self.target['host'], retcode)
+        log.trace("STDOUT %s\n%s", self.target["host"], stdout)
+        log.trace("STDERR %s\n%s", self.target["host"], stderr)
+        log.debug("RETCODE %s: %s", self.target["host"], retcode)
 
         error = self.categorize_shim_errors(stdout, stderr, retcode)
         if error:
-            if error == 'Python environment not found on Windows system':
+            if error == "Python environment not found on Windows system":
                 saltwinshell.deploy_python(self)
                 stdout, stderr, retcode = self.shim_cmd(cmd_str)
                 while re.search(RSTR_RE, stdout):
                     stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
                 while re.search(RSTR_RE, stderr):
                     stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
-            elif error == 'Undefined SHIM state':
+            elif error == "Undefined SHIM state":
                 self.deploy()
                 stdout, stderr, retcode = self.shim_cmd(cmd_str)
                 if not re.search(RSTR_RE, stdout) or not re.search(RSTR_RE, stderr):
                     # If RSTR is not seen in both stdout and stderr then there
                     # was a thin deployment problem.
-                    return 'ERROR: Failure deploying thin, undefined state: {0}'.format(stdout), stderr, retcode
+                    return (
+                        "ERROR: Failure deploying thin, undefined state: {0}".format(
+                            stdout
+                        ),
+                        stderr,
+                        retcode,
+                    )
                 while re.search(RSTR_RE, stdout):
                     stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
                 while re.search(RSTR_RE, stderr):
                     stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
             else:
-                return 'ERROR: {0}'.format(error), stderr, retcode
+                return "ERROR: {0}".format(error), stderr, retcode
 
         # FIXME: this discards output from ssh_shim if the shim succeeds.  It should
         # always save the shim output regardless of shim success or failure.
@@ -1342,9 +1378,12 @@ ARGS = {arguments}\n'''.format(config=self.minion_config,
         else:
             # RSTR was found in stdout but not stderr - which means there
             # is a SHIM command for the master.
-            shim_command = re.split(r'\r?\n', stdout, 1)[0].strip()
-            log.debug('SHIM retcode(%s) and command: %s', retcode, shim_command)
-            if 'deploy' == shim_command and retcode == salt.defaults.exitcodes.EX_THIN_DEPLOY:
+            shim_command = re.split(r"\r?\n", stdout, 1)[0].strip()
+            log.debug("SHIM retcode(%s) and command: %s", retcode, shim_command)
+            if (
+                "deploy" == shim_command
+                and retcode == salt.defaults.exitcodes.EX_THIN_DEPLOY
+            ):
                 self.deploy()
                 stdout, stderr, retcode = self.shim_cmd(cmd_str)
                 if not re.search(RSTR_RE, stdout) or not re.search(RSTR_RE, stderr):
@@ -1352,33 +1391,41 @@ ARGS = {arguments}\n'''.format(config=self.minion_config,
                         # If RSTR is not seen in both stdout and stderr then there
                         # was a thin deployment problem.
                         log.error(
-                            'ERROR: Failure deploying thin, retrying:\n'
-                            'STDOUT:\n%s\nSTDERR:\n%s\nRETCODE: %s',
-                            stdout, stderr, retcode
+                            "ERROR: Failure deploying thin, retrying:\n"
+                            "STDOUT:\n%s\nSTDERR:\n%s\nRETCODE: %s",
+                            stdout,
+                            stderr,
+                            retcode,
                         )
                         return self.cmd_block()
                     elif not re.search(RSTR_RE, stdout):
                         # If RSTR is not seen in stdout with tty, then there
                         # was a thin deployment problem.
                         log.error(
-                            'ERROR: Failure deploying thin, retrying:\n'
-                            'STDOUT:\n%s\nSTDERR:\n%s\nRETCODE: %s',
-                            stdout, stderr, retcode
+                            "ERROR: Failure deploying thin, retrying:\n"
+                            "STDOUT:\n%s\nSTDERR:\n%s\nRETCODE: %s",
+                            stdout,
+                            stderr,
+                            retcode,
                         )
                 while re.search(RSTR_RE, stdout):
                     stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
                 if self.tty:
-                    stderr = ''
+                    stderr = ""
                 else:
                     while re.search(RSTR_RE, stderr):
                         stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
-            elif 'ext_mods' == shim_command:
+            elif "ext_mods" == shim_command:
                 self.deploy_ext()
                 stdout, stderr, retcode = self.shim_cmd(cmd_str)
                 if not re.search(RSTR_RE, stdout) or not re.search(RSTR_RE, stderr):
                     # If RSTR is not seen in both stdout and stderr then there
                     # was a thin deployment problem.
-                    return 'ERROR: Failure deploying ext_mods: {0}'.format(stdout), stderr, retcode
+                    return (
+                        "ERROR: Failure deploying ext_mods: {0}".format(stdout),
+                        stderr,
+                        retcode,
+                    )
                 while re.search(RSTR_RE, stdout):
                     stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
                 while re.search(RSTR_RE, stderr):
@@ -1389,7 +1436,7 @@ ARGS = {arguments}\n'''.format(config=self.minion_config,
     def categorize_shim_errors(self, stdout_bytes, stderr_bytes, retcode):
         stdout = salt.utils.stringutils.to_unicode(stdout_bytes)
         stderr = salt.utils.stringutils.to_unicode(stderr_bytes)
-        if re.search(RSTR_RE, stdout) and stdout != RSTR+'\n':
+        if re.search(RSTR_RE, stdout) and stdout != RSTR + "\n":
             # RSTR was found in stdout which means that the shim
             # functioned without *errors* . . . but there may be shim
             # commands, unless the only thing we found is RSTR
@@ -1397,99 +1444,93 @@ ARGS = {arguments}\n'''.format(config=self.minion_config,
 
         if re.search(RSTR_RE, stderr):
             # Undefined state
-            return 'Undefined SHIM state'
+            return "Undefined SHIM state"
 
-        if stderr.startswith('Permission denied'):
+        if stderr.startswith("Permission denied"):
             # SHIM was not even reached
             return None
 
-        perm_error_fmt = 'Permissions problem, target user may need '\
-                         'to be root or use sudo:\n {0}'
+        perm_error_fmt = (
+            "Permissions problem, target user may need " "to be root or use sudo:\n {0}"
+        )
 
         def _version_mismatch_error():
             messages = {
                 2: {
-                    6: 'Install Python 2.7 / Python 3 Salt dependencies on the Salt SSH master \n'
-                       'to interact with Python 2.7 / Python 3 targets',
-                    7: 'Install Python 2.6 / Python 3 Salt dependencies on the Salt SSH master \n'
-                       'to interact with Python 2.6 / Python 3 targets',
+                    6: "Install Python 2.7 / Python 3 Salt dependencies on the Salt SSH master \n"
+                    "to interact with Python 2.7 / Python 3 targets",
+                    7: "Install Python 2.6 / Python 3 Salt dependencies on the Salt SSH master \n"
+                    "to interact with Python 2.6 / Python 3 targets",
                 },
                 3: {
-                    'default': '- Install Python 2.6/2.7 Salt dependencies on the Salt SSH \n'
-                               '  master to interact with Python 2.6/2.7 targets\n'
-                               '- Install Python 3 on the target machine(s)',
+                    "default": "- Install Python 2.6/2.7 Salt dependencies on the Salt SSH \n"
+                    "  master to interact with Python 2.6/2.7 targets\n"
+                    "- Install Python 3 on the target machine(s)",
                 },
-                'default': 'Matching major/minor Python release (>=2.6) needed both on the Salt SSH \n'
-                           'master and target machine',
+                "default": "Matching major/minor Python release (>=2.6) needed both on the Salt SSH \n"
+                "master and target machine",
             }
             major, minor = sys.version_info[:2]
             help_msg = (
                 messages.get(major, {}).get(minor)
-                or messages.get(major, {}).get('default')
-                or messages['default']
+                or messages.get(major, {}).get("default")
+                or messages["default"]
             )
-            return 'Python version error. Recommendation(s) follow:\n' + help_msg
+            return "Python version error. Recommendation(s) follow:\n" + help_msg
 
         errors = [
             (
                 (),
-                'sudo: no tty present and no askpass program specified',
-                'sudo expected a password, NOPASSWD required'
+                "sudo: no tty present and no askpass program specified",
+                "sudo expected a password, NOPASSWD required",
             ),
             (
                 (salt.defaults.exitcodes.EX_THIN_PYTHON_INVALID,),
-                'Python interpreter is too old',
-                _version_mismatch_error()
+                "Python interpreter is too old",
+                _version_mismatch_error(),
             ),
             (
                 (salt.defaults.exitcodes.EX_THIN_CHECKSUM,),
-                'checksum mismatched',
-                'The salt thin transfer was corrupted'
+                "checksum mismatched",
+                "The salt thin transfer was corrupted",
             ),
             (
                 (salt.defaults.exitcodes.EX_SCP_NOT_FOUND,),
-                'scp not found',
-                'No scp binary. openssh-clients package required'
+                "scp not found",
+                "No scp binary. openssh-clients package required",
             ),
             (
                 (salt.defaults.exitcodes.EX_CANTCREAT,),
-                'salt path .* exists but is not a directory',
-                'A necessary path for salt thin unexpectedly exists:\n ' + stderr,
+                "salt path .* exists but is not a directory",
+                "A necessary path for salt thin unexpectedly exists:\n " + stderr,
             ),
             (
                 (),
-                'sudo: sorry, you must have a tty to run sudo',
-                'sudo is configured with requiretty'
+                "sudo: sorry, you must have a tty to run sudo",
+                "sudo is configured with requiretty",
             ),
+            ((), "Failed to open log file", perm_error_fmt.format(stderr)),
+            ((), "Permission denied:.*/salt", perm_error_fmt.format(stderr)),
             (
                 (),
-                'Failed to open log file',
-                perm_error_fmt.format(stderr)
-            ),
-            (
-                (),
-                'Permission denied:.*/salt',
-                perm_error_fmt.format(stderr)
-            ),
-            (
-                (),
-                'Failed to create directory path.*/salt',
-                perm_error_fmt.format(stderr)
+                "Failed to create directory path.*/salt",
+                perm_error_fmt.format(stderr),
             ),
             (
                 (salt.defaults.exitcodes.EX_SOFTWARE,),
-                'exists but is not',
-                'An internal error occurred with the shim, please investigate:\n ' + stderr,
+                "exists but is not",
+                "An internal error occurred with the shim, please investigate:\n "
+                + stderr,
             ),
             (
                 (),
-                'The system cannot find the path specified',
-                'Python environment not found on Windows system',
+                "The system cannot find the path specified",
+                "Python environment not found on Windows system",
             ),
             (
                 (),
-                'is not recognized',
-                'Python environment not found on Windows system',
+                "is not recognized",
+                "Python environment not found on Windows system",
             ),
         ]
 
@@ -1499,32 +1540,32 @@ ARGS = {arguments}\n'''.format(config=self.minion_config,
         return None
 
     def check_refresh(self, data, ret):
-        '''
+        """
         Stub out check_refresh
-        '''
+        """
         return
 
     def module_refresh(self):
-        '''
+        """
         Module refresh is not needed, stub it out
-        '''
+        """
         return
 
 
 def lowstate_file_refs(chunks):
-    '''
+    """
     Create a list of file ref objects to reconcile
-    '''
+    """
     refs = {}
     for chunk in chunks:
-        saltenv = 'base'
+        saltenv = "base"
         crefs = []
         for state in chunk:
-            if state == '__env__':
+            if state == "__env__":
                 saltenv = chunk[state]
-            elif state == 'saltenv':
+            elif state == "saltenv":
                 saltenv = chunk[state]
-            elif state.startswith('__'):
+            elif state.startswith("__"):
                 continue
             crefs.extend(salt_refs(chunk[state]))
         if crefs:
@@ -1535,10 +1576,10 @@ def lowstate_file_refs(chunks):
 
 
 def salt_refs(data):
-    '''
+    """
     Pull salt file references out of the states
-    '''
-    proto = 'salt://'
+    """
+    proto = "salt://"
     ret = []
     if isinstance(data, six.string_types):
         if data.startswith(proto):
@@ -1552,28 +1593,28 @@ def salt_refs(data):
 
 
 def mod_data(fsclient):
-    '''
+    """
     Generate the module arguments for the shim data
-    '''
+    """
     # TODO, change out for a fileserver backend
     sync_refs = [
-            'modules',
-            'states',
-            'grains',
-            'renderers',
-            'returners',
-            ]
+        "modules",
+        "states",
+        "grains",
+        "renderers",
+        "returners",
+    ]
     ret = {}
     envs = fsclient.envs()
-    ver_base = ''
+    ver_base = ""
     for env in envs:
         files = fsclient.file_list(env)
         for ref in sync_refs:
             mods_data = {}
-            pref = '_{0}'.format(ref)
+            pref = "_{0}".format(ref)
             for fn_ in sorted(files):
                 if fn_.startswith(pref):
-                    if fn_.endswith(('.py', '.so', '.pyx')):
+                    if fn_.endswith((".py", ".so", ".pyx")):
                         full = salt.utils.url.create(fn_)
                         mod_path = fsclient.cache_file(full, env)
                         if not os.path.isfile(mod_path):
@@ -1594,17 +1635,16 @@ def mod_data(fsclient):
 
     ver = hashlib.sha1(ver_base).hexdigest()
     ext_tar_path = os.path.join(
-            fsclient.opts['cachedir'],
-            'ext_mods.{0}.tgz'.format(ver))
-    mods = {'version': ver,
-            'file': ext_tar_path}
+        fsclient.opts["cachedir"], "ext_mods.{0}.tgz".format(ver)
+    )
+    mods = {"version": ver, "file": ext_tar_path}
     if os.path.isfile(ext_tar_path):
         return mods
-    tfp = tarfile.open(ext_tar_path, 'w:gz')
-    verfile = os.path.join(fsclient.opts['cachedir'], 'ext_mods.ver')
-    with salt.utils.files.fopen(verfile, 'w+') as fp_:
+    tfp = tarfile.open(ext_tar_path, "w:gz")
+    verfile = os.path.join(fsclient.opts["cachedir"], "ext_mods.ver")
+    with salt.utils.files.fopen(verfile, "w+") as fp_:
         fp_.write(ver)
-    tfp.add(verfile, 'ext_version')
+    tfp.add(verfile, "ext_version")
     for ref in ret:
         for fn_ in ret[ref]:
             tfp.add(ret[ref][fn_], os.path.join(ref, fn_))
@@ -1613,17 +1653,16 @@ def mod_data(fsclient):
 
 
 def ssh_version():
-    '''
+    """
     Returns the version of the installed ssh command
-    '''
+    """
     # This function needs more granular checks and to be validated against
     # older versions of ssh
     ret = subprocess.Popen(
-            ['ssh', '-V'],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE).communicate()
+        ["ssh", "-V"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    ).communicate()
     try:
-        version_parts = ret[1].split(b',')[0].split(b'_')[1]
+        version_parts = ret[1].split(b",")[0].split(b"_")[1]
         parts = []
         for part in version_parts:
             try:
@@ -1636,17 +1675,17 @@ def ssh_version():
 
 
 def _convert_args(args):
-    '''
+    """
     Take a list of args, and convert any dicts inside the list to keyword
     args in the form of `key=value`, ready to be passed to salt-ssh
-    '''
+    """
     converted = []
     for arg in args:
         if isinstance(arg, dict):
             for key in list(arg.keys()):
-                if key == '__kwarg__':
+                if key == "__kwarg__":
                     continue
-                converted.append('{0}={1}'.format(key, arg[key]))
+                converted.append("{0}={1}".format(key, arg[key]))
         else:
             converted.append(arg)
     return converted

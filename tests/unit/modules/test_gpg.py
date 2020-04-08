@@ -1,37 +1,32 @@
 # -*- coding: utf-8 -*-
-'''
+"""
     :codeauthor: :email:`Gareth J. Greenaway <gareth@saltstack.com>`
     :codeauthor: :email:`David Murphy <dmurphy@saltstack.com>`
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
+import datetime
 import os
 import shutil
-import datetime
 import time
 
-# Import Salt Testing libs
-from tests.support.helpers import destructiveTest
-from tests.support.unit import TestCase, skipIf
-from tests.support.paths import TMP
-from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import (
-    MagicMock,
-    patch,
-    NO_MOCK,
-    NO_MOCK_REASON
-)
+import salt.modules.gpg as gpg
+import salt.utils.files
 
 # Import Salt libs
-import salt.utils.path
 import salt.utils.platform
-import salt.utils.files
-import salt.modules.gpg as gpg
 
+# Import Salt Testing Libs
+from tests.support.helpers import destructiveTest
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.mock import MagicMock, patch
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import TestCase, skipIf
 
-GPG_TEST_KEY_PASSPHRASE = 'testkeypassphrase'
-GPG_TEST_KEY_ID = '7416F045'
+GPG_TEST_KEY_PASSPHRASE = "testkeypassphrase"
+GPG_TEST_KEY_ID = "7416F045"
 GPG_TEST_PUB_KEY = """-----BEGIN PGP PUBLIC KEY BLOCK-----
 
 mQGNBFz1dx4BDACph7J5nuWE+zb9rZqTaL8akAnPAli2j6Qtk7BTDzTM9Kq80U2P
@@ -162,259 +157,334 @@ OZV2Hg+93dg3Wi6g/JW4OuTKWKuHRqpRB1J4i4lO
 
 try:
     import gnupg  # pylint: disable=import-error,unused-import
+
     HAS_GPG = True
 except ImportError:
     HAS_GPG = False
 
 
 @destructiveTest
-@skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(not salt.utils.platform.is_linux(), 'These tests can only be run on linux')
+@skipIf(not salt.utils.platform.is_linux(), "These tests can only be run on linux")
 class GpgTestCase(TestCase, LoaderModuleMockMixin):
-    '''
+    """
     Validate the gpg module
-    '''
-    def setup_loader_modules(self):
-        return {gpg: {'__salt__': {}}}
+    """
 
-    @skipIf(not HAS_GPG, 'GPG Module Unavailable')
+    def setup_loader_modules(self):
+        return {gpg: {"__salt__": {}}}
+
+    @skipIf(not HAS_GPG, "GPG Module Unavailable")
     def setUp(self):
         super(GpgTestCase, self).setUp()
-        self.gpghome = os.path.join(TMP, 'gpghome')
+        self.gpghome = os.path.join(RUNTIME_VARS.TMP, "gpghome")
         if not os.path.isdir(self.gpghome):
             # left behind... Don't fail because of this!
             os.makedirs(self.gpghome)
-        self.gpgfile_pub = os.path.join(TMP, 'gpgfile.pub')
-        with salt.utils.files.fopen(self.gpgfile_pub, 'wb') as fp:
+        self.gpgfile_pub = os.path.join(RUNTIME_VARS.TMP, "gpgfile.pub")
+        with salt.utils.files.fopen(self.gpgfile_pub, "wb") as fp:
             fp.write(salt.utils.stringutils.to_bytes(GPG_TEST_PUB_KEY))
-        self.gpgfile_priv = os.path.join(TMP, 'gpgfile.priv')
-        with salt.utils.files.fopen(self.gpgfile_priv, 'wb') as fp:
+        self.gpgfile_priv = os.path.join(RUNTIME_VARS.TMP, "gpgfile.priv")
+        with salt.utils.files.fopen(self.gpgfile_priv, "wb") as fp:
             fp.write(salt.utils.stringutils.to_bytes(GPG_TEST_PRIV_KEY))
-        self.user = 'salt'
+        self.user = "salt"
 
-    @skipIf(not HAS_GPG, 'GPG Module Unavailable')
+    @skipIf(not HAS_GPG, "GPG Module Unavailable")
     def tearDown(self):
         if os.path.isfile(self.gpgfile_pub):
             os.remove(self.gpgfile_pub)
         shutil.rmtree(self.gpghome, ignore_errors=True)
         super(GpgTestCase, self).tearDown()
 
-    @skipIf(not HAS_GPG, 'GPG Module Unavailable')
+    @skipIf(not HAS_GPG, "GPG Module Unavailable")
     def test_list_keys(self):
-        '''
+        """
         Test gpg.list_keys
-        '''
+        """
 
-        _user_mock = {u'shell': u'/bin/bash',
-                      u'workphone': u'',
-                      u'uid': 0,
-                      u'passwd': u'x',
-                      u'roomnumber': u'',
-                      u'gid': 0,
-                      u'groups': [
-                        u'root'
-                      ],
-                      u'home': u'/root',
-                      u'fullname': u'root',
-                      u'homephone': u'',
-                      u'name': u'root'}
+        _user_mock = {
+            "shell": "/bin/bash",
+            "workphone": "",
+            "uid": 0,
+            "passwd": "x",
+            "roomnumber": "",
+            "gid": 0,
+            "groups": ["root"],
+            "home": "/root",
+            "fullname": "root",
+            "homephone": "",
+            "name": "root",
+        }
 
-        _list_result = [{u'dummy': u'',
-                         u'keyid': u'xxxxxxxxxxxxxxxx',
-                         u'expires': u'2011188692',
-                         u'sigs': [],
-                         u'subkeys': [[u'xxxxxxxxxxxxxxxx', u'e', u'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx']],
-                         u'length': u'4096',
-                         u'ownertrust': u'-',
-                         u'sig': u'',
-                         u'algo': u'1',
-                         u'fingerprint': u'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-                         u'date': u'1506612692',
-                         u'trust': u'-',
-                         u'type': u'pub',
-                         u'uids': [u'GPG Person <person@example.com>']}]
+        _list_result = [
+            {
+                "dummy": "",
+                "keyid": "xxxxxxxxxxxxxxxx",
+                "expires": "2011188692",
+                "sigs": [],
+                "subkeys": [
+                    [
+                        "xxxxxxxxxxxxxxxx",
+                        "e",
+                        "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                    ]
+                ],
+                "length": "4096",
+                "ownertrust": "-",
+                "sig": "",
+                "algo": "1",
+                "fingerprint": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                "date": "1506612692",
+                "trust": "-",
+                "type": "pub",
+                "uids": ["GPG Person <person@example.com>"],
+            }
+        ]
 
-        _expected_result = [{u'keyid': u'xxxxxxxxxxxxxxxx',
-                             u'uids': [u'GPG Person <person@example.com>'],
-                             u'created': '2017-09-28',
-                             u'expires': '2033-09-24',
-                             u'keyLength': u'4096',
-                             u'ownerTrust': u'Unknown',
-                             u'fingerprint': u'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-                             u'trust': u'Unknown'}]
+        _expected_result = [
+            {
+                "keyid": "xxxxxxxxxxxxxxxx",
+                "uids": ["GPG Person <person@example.com>"],
+                "created": "2017-09-28",
+                "expires": "2033-09-24",
+                "keyLength": "4096",
+                "ownerTrust": "Unknown",
+                "fingerprint": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                "trust": "Unknown",
+            }
+        ]
 
-        mock_opt = MagicMock(return_value='root')
-        with patch.dict(gpg.__salt__, {'user.info': MagicMock(return_value=_user_mock)}):
-            with patch.dict(gpg.__salt__, {'config.option': mock_opt}):
-                with patch.object(gpg, '_list_keys', return_value=_list_result):
+        mock_opt = MagicMock(return_value="root")
+        with patch.dict(
+            gpg.__salt__, {"user.info": MagicMock(return_value=_user_mock)}
+        ):
+            with patch.dict(gpg.__salt__, {"config.option": mock_opt}):
+                with patch.object(gpg, "_list_keys", return_value=_list_result):
                     self.assertEqual(gpg.list_keys(), _expected_result)
 
-    @skipIf(not HAS_GPG, 'GPG Module Unavailable')
+    @skipIf(not HAS_GPG, "GPG Module Unavailable")
     def test_get_key(self):
-        '''
+        """
         Test gpg.get_key
-        '''
+        """
 
-        _user_mock = {u'shell': u'/bin/bash',
-                      u'workphone': u'',
-                      u'uid': 0,
-                      u'passwd': u'x',
-                      u'roomnumber': u'',
-                      u'gid': 0,
-                      u'groups': [
-                        u'root'
-                      ],
-                      u'home': u'/root',
-                      u'fullname': u'root',
-                      u'homephone': u'',
-                      u'name': u'root'}
+        _user_mock = {
+            "shell": "/bin/bash",
+            "workphone": "",
+            "uid": 0,
+            "passwd": "x",
+            "roomnumber": "",
+            "gid": 0,
+            "groups": ["root"],
+            "home": "/root",
+            "fullname": "root",
+            "homephone": "",
+            "name": "root",
+        }
 
-        _list_result = [{u'dummy': u'',
-                         u'keyid': u'xxxxxxxxxxxxxxxx',
-                         u'expires': u'2011188692',
-                         u'sigs': [],
-                         u'subkeys': [[u'xxxxxxxxxxxxxxxx', u'e', u'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx']],
-                         u'length': u'4096',
-                         u'ownertrust': u'-',
-                         u'sig': u'',
-                         u'algo': u'1',
-                         u'fingerprint': u'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-                         u'date': u'1506612692',
-                         u'trust': u'-',
-                         u'type': u'pub',
-                         u'uids': [u'GPG Person <person@example.com>']}]
+        _list_result = [
+            {
+                "dummy": "",
+                "keyid": "xxxxxxxxxxxxxxxx",
+                "expires": "2011188692",
+                "sigs": [],
+                "subkeys": [
+                    [
+                        "xxxxxxxxxxxxxxxx",
+                        "e",
+                        "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                    ]
+                ],
+                "length": "4096",
+                "ownertrust": "-",
+                "sig": "",
+                "algo": "1",
+                "fingerprint": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                "date": "1506612692",
+                "trust": "-",
+                "type": "pub",
+                "uids": ["GPG Person <person@example.com>"],
+            }
+        ]
 
-        _expected_result = {u'fingerprint': u'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-                            u'keyid': u'xxxxxxxxxxxxxxxx',
-                            u'uids': [u'GPG Person <person@example.com>'],
-                            u'created': u'2017-09-28',
-                            u'trust': u'Unknown',
-                            u'ownerTrust': u'Unknown',
-                            u'expires': u'2033-09-24',
-                            u'keyLength': u'4096'}
+        _expected_result = {
+            "fingerprint": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "keyid": "xxxxxxxxxxxxxxxx",
+            "uids": ["GPG Person <person@example.com>"],
+            "created": "2017-09-28",
+            "trust": "Unknown",
+            "ownerTrust": "Unknown",
+            "expires": "2033-09-24",
+            "keyLength": "4096",
+        }
 
-        mock_opt = MagicMock(return_value='root')
-        with patch.dict(gpg.__salt__, {'user.info': MagicMock(return_value=_user_mock)}):
-            with patch.dict(gpg.__salt__, {'config.option': mock_opt}):
-                with patch.object(gpg, '_list_keys', return_value=_list_result):
-                    ret = gpg.get_key('xxxxxxxxxxxxxxxx')
+        mock_opt = MagicMock(return_value="root")
+        with patch.dict(
+            gpg.__salt__, {"user.info": MagicMock(return_value=_user_mock)}
+        ):
+            with patch.dict(gpg.__salt__, {"config.option": mock_opt}):
+                with patch.object(gpg, "_list_keys", return_value=_list_result):
+                    ret = gpg.get_key("xxxxxxxxxxxxxxxx")
                     self.assertEqual(ret, _expected_result)
 
-    @skipIf(not HAS_GPG, 'GPG Module Unavailable')
+    @destructiveTest  # Need to run as root!?
+    @skipIf(not HAS_GPG, "GPG Module Unavailable")
     def test_delete_key(self):
-        '''
+        """
         Test gpg.delete_key
-        '''
+        """
 
-        _user_mock = {u'shell': u'/bin/bash',
-                      u'workphone': u'',
-                      u'uid': 0,
-                      u'passwd': u'x',
-                      u'roomnumber': u'',
-                      u'gid': 0,
-                      u'groups': [
-                        u'root'
-                      ],
-                      u'home': self.gpghome,
-                      u'fullname': u'root',
-                      u'homephone': u'',
-                      u'name': u'root'}
+        _user_mock = {
+            "shell": "/bin/bash",
+            "workphone": "",
+            "uid": 0,
+            "passwd": "x",
+            "roomnumber": "",
+            "gid": 0,
+            "groups": ["root"],
+            "home": self.gpghome,
+            "fullname": "root",
+            "homephone": "",
+            "name": "root",
+        }
 
-        _list_result = [{'dummy': u'',
-                         'keyid': u'xxxxxxxxxxxxxxxx',
-                         'expires': u'2011188692',
-                         'sigs': [],
-                         'subkeys': [[u'xxxxxxxxxxxxxxxx', u'e', u'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx']],
-                         'length': u'4096',
-                         'ownertrust': u'-',
-                         'sig': u'',
-                         'algo': u'1',
-                         'fingerprint': u'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-                         'date': u'1506612692',
-                         'trust': u'-',
-                         'type': u'pub',
-                         'uids': [u'GPG Person <person@example.com>']}]
+        _list_result = [
+            {
+                "dummy": "",
+                "keyid": "xxxxxxxxxxxxxxxx",
+                "expires": "2011188692",
+                "sigs": [],
+                "subkeys": [
+                    [
+                        "xxxxxxxxxxxxxxxx",
+                        "e",
+                        "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                    ]
+                ],
+                "length": "4096",
+                "ownertrust": "-",
+                "sig": "",
+                "algo": "1",
+                "fingerprint": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                "date": "1506612692",
+                "trust": "-",
+                "type": "pub",
+                "uids": ["GPG Person <person@example.com>"],
+            }
+        ]
 
-        _expected_result = {u'res': True,
-                            u'message': u'Secret key for xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx deleted\nPublic key for xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx deleted'}
+        _expected_result = {
+            "res": True,
+            "message": "Secret key for xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx deleted\nPublic key for xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx deleted",
+        }
 
-        mock_opt = MagicMock(return_value='root')
-        with patch.dict(gpg.__salt__, {'user.info': MagicMock(return_value=_user_mock)}):
-            with patch.dict(gpg.__salt__, {'config.option': mock_opt}):
-                with patch.object(gpg, '_list_keys', return_value=_list_result):
-                    with patch('salt.modules.gpg.gnupg.GPG.delete_keys', MagicMock(return_value='ok')):
-                        ret = gpg.delete_key('xxxxxxxxxxxxxxxx', delete_secret=True)
+        mock_opt = MagicMock(return_value="root")
+        with patch.dict(
+            gpg.__salt__, {"user.info": MagicMock(return_value=_user_mock)}
+        ):
+            with patch.dict(gpg.__salt__, {"config.option": mock_opt}):
+                with patch.object(gpg, "_list_keys", return_value=_list_result):
+                    with patch(
+                        "salt.modules.gpg.gnupg.GPG.delete_keys",
+                        MagicMock(return_value="ok"),
+                    ):
+                        ret = gpg.delete_key("xxxxxxxxxxxxxxxx", delete_secret=True)
                         self.assertEqual(ret, _expected_result)
 
-    @skipIf(not HAS_GPG, 'GPG Module Unavailable')
+    @skipIf(not HAS_GPG, "GPG Module Unavailable")
     def test_search_keys(self):
-        '''
+        """
         Test gpg.search_keys
-        '''
+        """
 
-        _user_mock = {'shell': '/bin/bash',
-                      'workphone': '',
-                      'uid': 0,
-                      'passwd': 'x',
-                      'roomnumber': '',
-                      'gid': 0,
-                      'groups': [
-                        'root'
-                      ],
-                      'home': self.gpghome,
-                      'fullname': 'root',
-                      'homephone': '',
-                      'name': 'root'}
+        _user_mock = {
+            "shell": "/bin/bash",
+            "workphone": "",
+            "uid": 0,
+            "passwd": "x",
+            "roomnumber": "",
+            "gid": 0,
+            "groups": ["root"],
+            "home": self.gpghome,
+            "fullname": "root",
+            "homephone": "",
+            "name": "root",
+        }
 
-        _search_result = [{u'keyid': u'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-                           u'uids': [u'GPG Person <person@example.com>'],
-                           u'expires': u'',
-                           u'sigs': [],
-                           u'length': u'1024',
-                           u'algo': u'17',
-                           u'date': int(time.mktime(datetime.datetime(2004, 11, 13).timetuple())),
-                           u'type': u'pub'}]
+        _search_result = [
+            {
+                "keyid": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                "uids": ["GPG Person <person@example.com>"],
+                "expires": "",
+                "sigs": [],
+                "length": "1024",
+                "algo": "17",
+                "date": int(time.mktime(datetime.datetime(2004, 11, 13).timetuple())),
+                "type": "pub",
+            }
+        ]
 
-        _expected_result = [{u'uids': [u'GPG Person <person@example.com>'],
-                             'created': '2004-11-13',
-                             u'keyLength': u'1024',
-                             u'keyid': u'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'}]
+        _expected_result = [
+            {
+                "uids": ["GPG Person <person@example.com>"],
+                "created": "2004-11-13",
+                "keyLength": "1024",
+                "keyid": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            }
+        ]
 
-        mock_opt = MagicMock(return_value='root')
-        with patch.dict(gpg.__salt__, {'user.info': MagicMock(return_value=_user_mock)}):
-            with patch.dict(gpg.__salt__, {'config.option': mock_opt}):
-                with patch.object(gpg, '_search_keys', return_value=_search_result):
-                    ret = gpg.search_keys('person@example.com')
+        mock_opt = MagicMock(return_value="root")
+        with patch.dict(
+            gpg.__salt__, {"user.info": MagicMock(return_value=_user_mock)}
+        ):
+            with patch.dict(gpg.__salt__, {"config.option": mock_opt}):
+                with patch.object(gpg, "_search_keys", return_value=_search_result):
+                    ret = gpg.search_keys("person@example.com")
                     self.assertEqual(ret, _expected_result)
 
-    @skipIf(not HAS_GPG, 'GPG Module Unavailable')
+    @skipIf(not HAS_GPG, "GPG Module Unavailable")
     def test_gpg_import_pub_key(self):
-        config_user = MagicMock(return_value='salt')
-        user_info = MagicMock(return_value={'name': 'salt', 'home': self.gpghome, 'uid': 1000})
-        with patch.dict(gpg.__salt__, {'config.option': config_user}):
-            with patch.dict(gpg.__salt__, {'user.info': user_info}):
-                ret = gpg.import_key(None, self.gpgfile_pub, 'salt', self.gpghome)
-                self.assertEqual(ret['res'], True)
+        config_user = MagicMock(return_value="salt")
+        user_info = MagicMock(
+            return_value={"name": "salt", "home": self.gpghome, "uid": 1000}
+        )
+        with patch.dict(gpg.__salt__, {"config.option": config_user}):
+            with patch.dict(gpg.__salt__, {"user.info": user_info}):
+                ret = gpg.import_key(None, self.gpgfile_pub, "salt", self.gpghome)
+                self.assertEqual(ret["res"], True)
 
-    @skipIf(not HAS_GPG, 'GPG Module Unavailable')
+    @skipIf(not HAS_GPG, "GPG Module Unavailable")
     def test_gpg_import_priv_key(self):
-        config_user = MagicMock(return_value='salt')
-        user_info = MagicMock(return_value={'name': 'salt', 'home': self.gpghome, 'uid': 1000})
-        with patch.dict(gpg.__salt__, {'config.option': config_user}):
-            with patch.dict(gpg.__salt__, {'user.info': user_info}):
-                ret = gpg.import_key(None, self.gpgfile_priv, 'salt', self.gpghome)
-                self.assertEqual(ret['res'], True)
+        config_user = MagicMock(return_value="salt")
+        user_info = MagicMock(
+            return_value={"name": "salt", "home": self.gpghome, "uid": 1000}
+        )
+        with patch.dict(gpg.__salt__, {"config.option": config_user}):
+            with patch.dict(gpg.__salt__, {"user.info": user_info}):
+                ret = gpg.import_key(None, self.gpgfile_priv, "salt", self.gpghome)
+                self.assertEqual(ret["res"], True)
 
-    @skipIf(not HAS_GPG, 'GPG Module Unavailable')
+    @skipIf(not HAS_GPG, "GPG Module Unavailable")
     def test_gpg_sign(self):
-        config_user = MagicMock(return_value='salt')
-        user_info = MagicMock(return_value={'name': 'salt', 'home': self.gpghome, 'uid': 1000})
-        pillar_mock = MagicMock(return_value={'gpg_passphrase': GPG_TEST_KEY_PASSPHRASE})
-        with patch.dict(gpg.__salt__, {'config.option': config_user}):
-            with patch.dict(gpg.__salt__, {'user.info': user_info}):
-                with patch.dict(gpg.__salt__, {'pillar.get': pillar_mock}):
-                    ret = gpg.import_key(None, self.gpgfile_priv, 'salt', self.gpghome)
-                    self.assertEqual(ret['res'], True)
-                    gpg_text_input = 'The quick brown fox jumped over the lazy dog'
-                    gpg_sign_output = gpg.sign(config_user, GPG_TEST_KEY_ID, gpg_text_input, None, None, True, self.gpghome)
+        config_user = MagicMock(return_value="salt")
+        user_info = MagicMock(
+            return_value={"name": "salt", "home": self.gpghome, "uid": 1000}
+        )
+        pillar_mock = MagicMock(
+            return_value={"gpg_passphrase": GPG_TEST_KEY_PASSPHRASE}
+        )
+        with patch.dict(gpg.__salt__, {"config.option": config_user}):
+            with patch.dict(gpg.__salt__, {"user.info": user_info}):
+                with patch.dict(gpg.__salt__, {"pillar.get": pillar_mock}):
+                    ret = gpg.import_key(None, self.gpgfile_priv, "salt", self.gpghome)
+                    self.assertEqual(ret["res"], True)
+                    gpg_text_input = "The quick brown fox jumped over the lazy dog"
+                    gpg_sign_output = gpg.sign(
+                        config_user,
+                        GPG_TEST_KEY_ID,
+                        gpg_text_input,
+                        None,
+                        None,
+                        True,
+                        self.gpghome,
+                    )
                     self.assertIsNotNone(gpg_sign_output)

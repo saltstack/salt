@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Jinja loading utils to enable a more powerful backend for jinja templates
-'''
+"""
 
 # Import python libs
 from __future__ import absolute_import, unicode_literals
+
 import atexit
 import collections
 import logging
@@ -19,14 +20,6 @@ from xml.etree.ElementTree import Element, SubElement, tostring
 
 # Import third party libs
 import jinja2
-from salt.ext import six
-from jinja2 import BaseLoader, Markup, TemplateNotFound, nodes
-from jinja2.environment import TemplateModule
-from jinja2.exceptions import TemplateRuntimeError
-from jinja2.ext import Extension
-
-# Import salt libs
-from salt.exceptions import TemplateError
 import salt.fileclient
 import salt.utils.data
 import salt.utils.files
@@ -34,93 +27,106 @@ import salt.utils.json
 import salt.utils.stringutils
 import salt.utils.url
 import salt.utils.yaml
-from salt.utils.decorators.jinja import jinja_filter, jinja_test, jinja_global
+from jinja2 import BaseLoader, Markup, TemplateNotFound, nodes
+from jinja2.environment import TemplateModule
+from jinja2.exceptions import TemplateRuntimeError
+from jinja2.ext import Extension
+
+# Import salt libs
+from salt.exceptions import TemplateError
+from salt.ext import six
+from salt.utils.decorators.jinja import jinja_filter, jinja_global, jinja_test
 from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
 
-__all__ = [
-    'SaltCacheLoader',
-    'SerializerExtension'
-]
+__all__ = ["SaltCacheLoader", "SerializerExtension"]
 
-GLOBAL_UUID = uuid.UUID('91633EBF-1C86-5E33-935A-28061F4B480E')
+GLOBAL_UUID = uuid.UUID("91633EBF-1C86-5E33-935A-28061F4B480E")
 
 
 class SaltCacheLoader(BaseLoader):
-    '''
+    """
     A special jinja Template Loader for salt.
     Requested templates are always fetched from the server
     to guarantee that the file is up to date.
     Templates are cached like regular salt states
     and only loaded once per loader instance.
-    '''
+    """
 
     _cached_pillar_client = None
     _cached_client = None
 
     @classmethod
     def shutdown(cls):
-        for attr in ('_cached_client', '_cached_pillar_client'):
+        for attr in ("_cached_client", "_cached_pillar_client"):
             client = getattr(cls, attr, None)
             if client is not None:
                 # PillarClient and LocalClient objects do not have a destroy method
-                if hasattr(client, 'destroy'):
+                if hasattr(client, "destroy"):
                     client.destroy()
                 setattr(cls, attr, None)
 
-    def __init__(self, opts, saltenv='base', encoding='utf-8',
-                 pillar_rend=False, _file_client=None):
+    def __init__(
+        self,
+        opts,
+        saltenv="base",
+        encoding="utf-8",
+        pillar_rend=False,
+        _file_client=None,
+    ):
         self.opts = opts
         self.saltenv = saltenv
         self.encoding = encoding
         self.pillar_rend = pillar_rend
         if self.pillar_rend:
-            if saltenv not in self.opts['pillar_roots']:
+            if saltenv not in self.opts["pillar_roots"]:
                 self.searchpath = []
             else:
-                self.searchpath = opts['pillar_roots'][saltenv]
+                self.searchpath = opts["pillar_roots"][saltenv]
         else:
-            self.searchpath = [os.path.join(opts['cachedir'], 'files', saltenv)]
-        log.debug('Jinja search path: %s', self.searchpath)
+            self.searchpath = [os.path.join(opts["cachedir"], "files", saltenv)]
+        log.debug("Jinja search path: %s", self.searchpath)
         self.cached = []
         self._file_client = _file_client
         # Instantiate the fileclient
         self.file_client()
 
     def file_client(self):
-        '''
+        """
         Return a file client. Instantiates on first call.
-        '''
+        """
         # If there was no file_client passed to the class, create a cache_client
         # and use that. This avoids opening a new file_client every time this
         # class is instantiated
         if self._file_client is None:
-            attr = '_cached_pillar_client' if self.pillar_rend else '_cached_client'
+            attr = "_cached_pillar_client" if self.pillar_rend else "_cached_client"
             cached_client = getattr(self, attr, None)
             if cached_client is None:
-                cached_client = salt.fileclient.get_file_client(self.opts, self.pillar_rend)
+                cached_client = salt.fileclient.get_file_client(
+                    self.opts, self.pillar_rend
+                )
                 setattr(SaltCacheLoader, attr, cached_client)
             self._file_client = cached_client
         return self._file_client
 
     def cache_file(self, template):
-        '''
+        """
         Cache a file from the salt master
-        '''
+        """
         saltpath = salt.utils.url.create(template)
-        self.file_client().get_file(saltpath, '', True, self.saltenv)
+        self.file_client().get_file(saltpath, "", True, self.saltenv)
 
     def check_cache(self, template):
-        '''
+        """
         Cache a file only once
-        '''
+        """
         if template not in self.cached:
             self.cache_file(template)
             self.cached.append(template)
 
     def get_source(self, environment, template):
-        '''
+        """
         Salt-specific loader to find imported jinja files.
 
         Jinja imports will be interpreted as originating from the top
@@ -129,10 +135,10 @@ class SaltCacheLoader(BaseLoader):
         begins with './' or '../' then the import will be relative to
         the importing file.
 
-        '''
+        """
         # FIXME: somewhere do seprataor replacement: '\\' => '/'
         _template = template
-        if template.split('/', 1)[0] in ('..', '.'):
+        if template.split("/", 1)[0] in ("..", "."):
             is_relative = True
         else:
             is_relative = False
@@ -140,33 +146,34 @@ class SaltCacheLoader(BaseLoader):
         if is_relative:
             # Starts with a relative path indicator
 
-            if not environment or 'tpldir' not in environment.globals:
+            if not environment or "tpldir" not in environment.globals:
                 log.warning(
                     'Relative path "%s" cannot be resolved without an environment',
-                    template
+                    template,
                 )
                 raise TemplateNotFound
-            base_path = environment.globals['tpldir']
-            _template = os.path.normpath('/'.join((base_path, _template)))
-            if _template.split('/', 1)[0] == '..':
+            base_path = environment.globals["tpldir"]
+            _template = os.path.normpath("/".join((base_path, _template)))
+            if _template.split("/", 1)[0] == "..":
                 log.warning(
                     'Discarded template path "%s": attempts to'
-                    ' ascend outside of salt://', template
+                    " ascend outside of salt://",
+                    template,
                 )
                 raise TemplateNotFound(template)
 
         self.check_cache(_template)
 
         if environment and template:
-            tpldir = os.path.dirname(_template).replace('\\', '/')
+            tpldir = os.path.dirname(_template).replace("\\", "/")
             tplfile = _template
             if is_relative:
-                tpldir = environment.globals.get('tpldir', tpldir)
+                tpldir = environment.globals.get("tpldir", tpldir)
                 tplfile = template
             tpldata = {
-                'tplfile': tplfile,
-                'tpldir': '.' if tpldir == '' else tpldir,
-                'tpldot': tpldir.replace('/', '.'),
+                "tplfile": tplfile,
+                "tpldir": "." if tpldir == "" else tpldir,
+                "tpldot": tpldir.replace("/", "."),
             }
             environment.globals.update(tpldata)
 
@@ -174,7 +181,7 @@ class SaltCacheLoader(BaseLoader):
         for spath in self.searchpath:
             filepath = os.path.join(spath, _template)
             try:
-                with salt.utils.files.fopen(filepath, 'rb') as ifile:
+                with salt.utils.files.fopen(filepath, "rb") as ifile:
                     contents = ifile.read().decode(self.encoding)
                     mtime = os.path.getmtime(filepath)
 
@@ -183,6 +190,7 @@ class SaltCacheLoader(BaseLoader):
                             return os.path.getmtime(filepath) == mtime
                         except OSError:
                             return False
+
                     return contents, filepath, uptodate
             except IOError:
                 # there is no file under current path
@@ -197,7 +205,7 @@ atexit.register(SaltCacheLoader.shutdown)
 
 
 class PrintableDict(OrderedDict):
-    '''
+    """
     Ensures that dict str() and repr() are YAML friendly.
 
     .. code-block:: python
@@ -209,37 +217,42 @@ class PrintableDict(OrderedDict):
         decorated = PrintableDict(mapping)
         print decorated
         # {'a': 'b', 'c': None}
-    '''
+    """
+
     def __str__(self):
         output = []
         for key, value in six.iteritems(self):
             if isinstance(value, six.string_types):
                 # keeps quotes around strings
-                output.append('{0!r}: {1!r}'.format(key, value))  # pylint: disable=repr-flag-used-in-string
+                # pylint: disable=repr-flag-used-in-string
+                output.append("{0!r}: {1!r}".format(key, value))
+                # pylint: enable=repr-flag-used-in-string
             else:
                 # let default output
-                output.append('{0!r}: {1!s}'.format(key, value))  # pylint: disable=repr-flag-used-in-string
-        return '{' + ', '.join(output) + '}'
+                output.append("{0!r}: {1!s}".format(key, value))
+        return "{" + ", ".join(output) + "}"
 
     def __repr__(self):  # pylint: disable=W0221
         output = []
         for key, value in six.iteritems(self):
             # Raw string formatter required here because this is a repr
             # function.
-            output.append('{0!r}: {1!r}'.format(key, value))  # pylint: disable=repr-flag-used-in-string
-        return '{' + ', '.join(output) + '}'
+            # pylint: disable=repr-flag-used-in-string
+            output.append("{0!r}: {1!r}".format(key, value))
+            # pylint: enable=repr-flag-used-in-string
+        return "{" + ", ".join(output) + "}"
 
 
 # Additional globals
-@jinja_global('raise')
+@jinja_global("raise")
 def jinja_raise(msg):
     raise TemplateError(msg)
 
 
 # Additional tests
-@jinja_test('match')
+@jinja_test("match")
 def test_match(txt, rgx, ignorecase=False, multiline=False):
-    '''Returns true if a sequence of chars matches a pattern.'''
+    """Returns true if a sequence of chars matches a pattern."""
     flag = 0
     if ignorecase:
         flag |= re.I
@@ -249,16 +262,16 @@ def test_match(txt, rgx, ignorecase=False, multiline=False):
     return True if compiled_rgx.match(txt) else False
 
 
-@jinja_test('equalto')
+@jinja_test("equalto")
 def test_equalto(value, other):
-    '''Returns true if two values are equal.'''
+    """Returns true if two values are equal."""
     return value == other
 
 
 # Additional filters
-@jinja_filter('skip')
+@jinja_filter("skip")
 def skip_filter(data):
-    '''
+    """
     Suppress data output
 
     .. code-block:: yaml
@@ -269,13 +282,13 @@ def skip_filter(data):
 
     will be rendered as empty string,
 
-    '''
-    return ''
+    """
+    return ""
 
 
-@jinja_filter('sequence')
+@jinja_filter("sequence")
 def ensure_sequence_filter(data):
-    '''
+    """
     Ensure sequenced data.
 
     **sequence**
@@ -300,15 +313,15 @@ def ensure_sequence_filter(data):
         foo
         bar
         baz
-    '''
+    """
     if not isinstance(data, (list, tuple, set, dict)):
         return [data]
     return data
 
 
-@jinja_filter('to_bool')
+@jinja_filter("to_bool")
 def to_bool(val):
-    '''
+    """
     Returns the logical value.
 
     .. code-block:: jinja
@@ -320,13 +333,13 @@ def to_bool(val):
     .. code-block:: text
 
         True
-    '''
+    """
     if val is None:
         return False
     if isinstance(val, bool):
         return val
     if isinstance(val, (six.text_type, six.string_types)):
-        return val.lower() in ('yes', '1', 'true')
+        return val.lower() in ("yes", "1", "true")
     if isinstance(val, six.integer_types):
         return val > 0
     if not isinstance(val, collections.Hashable):
@@ -334,29 +347,28 @@ def to_bool(val):
     return False
 
 
-@jinja_filter('tojson')
+@jinja_filter("tojson")
 def tojson(val, indent=None):
-    '''
+    """
     Implementation of tojson filter (only present in Jinja 2.9 and later). If
     Jinja 2.9 or later is installed, then the upstream version of this filter
     will be used.
-    '''
-    options = {'ensure_ascii': True}
+    """
+    options = {"ensure_ascii": True}
     if indent is not None:
-        options['indent'] = indent
+        options["indent"] = indent
     return (
-        salt.utils.json.dumps(
-            val, **options
-        ).replace('<', '\\u003c')
-         .replace('>', '\\u003e')
-         .replace('&', '\\u0026')
-         .replace("'", '\\u0027')
+        salt.utils.json.dumps(val, **options)
+        .replace("<", "\\u003c")
+        .replace(">", "\\u003e")
+        .replace("&", "\\u0026")
+        .replace("'", "\\u0027")
     )
 
 
-@jinja_filter('quote')
+@jinja_filter("quote")
 def quote(txt):
-    '''
+    """
     Wraps a text around quotes.
 
     .. code-block:: jinja
@@ -369,7 +381,7 @@ def quote(txt):
     .. code-block:: text
 
         'my_text'
-    '''
+    """
     return pipes.quote(txt)
 
 
@@ -378,9 +390,9 @@ def regex_escape(value):
     return re.escape(value)
 
 
-@jinja_filter('regex_search')
+@jinja_filter("regex_search")
 def regex_search(txt, rgx, ignorecase=False, multiline=False):
-    '''
+    """
     Searches for a pattern in the text.
 
     .. code-block:: jinja
@@ -393,7 +405,7 @@ def regex_search(txt, rgx, ignorecase=False, multiline=False):
     .. code-block:: text
 
         ('a', 'd')
-    '''
+    """
     flag = 0
     if ignorecase:
         flag |= re.I
@@ -405,9 +417,9 @@ def regex_search(txt, rgx, ignorecase=False, multiline=False):
     return obj.groups()
 
 
-@jinja_filter('regex_match')
+@jinja_filter("regex_match")
 def regex_match(txt, rgx, ignorecase=False, multiline=False):
-    '''
+    """
     Searches for a pattern in the text.
 
     .. code-block:: jinja
@@ -420,7 +432,7 @@ def regex_match(txt, rgx, ignorecase=False, multiline=False):
     .. code-block:: text
 
         ('a', 'd')
-    '''
+    """
     flag = 0
     if ignorecase:
         flag |= re.I
@@ -432,9 +444,9 @@ def regex_match(txt, rgx, ignorecase=False, multiline=False):
     return obj.groups()
 
 
-@jinja_filter('regex_replace')
+@jinja_filter("regex_replace")
 def regex_replace(txt, rgx, val, ignorecase=False, multiline=False):
-    r'''
+    r"""
     Searches for a pattern and replaces with a sequence of characters.
 
     .. code-block:: jinja
@@ -447,7 +459,7 @@ def regex_replace(txt, rgx, val, ignorecase=False, multiline=False):
     .. code-block:: text
 
         lets__replace__spaces
-    '''
+    """
     flag = 0
     if ignorecase:
         flag |= re.I
@@ -457,9 +469,9 @@ def regex_replace(txt, rgx, val, ignorecase=False, multiline=False):
     return compiled_rgx.sub(val, txt)
 
 
-@jinja_filter('uuid')
+@jinja_filter("uuid")
 def uuid_(val):
-    '''
+    """
     Returns a UUID corresponding to the value passed as argument.
 
     .. code-block:: jinja
@@ -471,13 +483,8 @@ def uuid_(val):
     .. code-block:: text
 
         f4efeff8-c219-578a-bad7-3dc280612ec8
-    '''
-    return six.text_type(
-        uuid.uuid5(
-            GLOBAL_UUID,
-            salt.utils.stringutils.to_str(val)
-        )
-    )
+    """
+    return six.text_type(uuid.uuid5(GLOBAL_UUID, salt.utils.stringutils.to_str(val)))
 
 
 ### List-related filters
@@ -485,7 +492,7 @@ def uuid_(val):
 
 @jinja_filter()
 def unique(values):
-    '''
+    """
     Removes duplicates from a list.
 
     .. code-block:: jinja
@@ -498,7 +505,7 @@ def unique(values):
     .. code-block:: text
 
         ['a', 'b', 'c']
-    '''
+    """
     ret = None
     if isinstance(values, collections.Hashable):
         ret = set(values)
@@ -510,9 +517,9 @@ def unique(values):
     return ret
 
 
-@jinja_filter('min')
+@jinja_filter("min")
 def lst_min(obj):
-    '''
+    """
     Returns the min value.
 
     .. code-block:: jinja
@@ -525,13 +532,13 @@ def lst_min(obj):
     .. code-block:: text
 
         1
-    '''
+    """
     return min(obj)
 
 
-@jinja_filter('max')
+@jinja_filter("max")
 def lst_max(obj):
-    '''
+    """
     Returns the max value.
 
     .. code-block:: jinja
@@ -544,13 +551,13 @@ def lst_max(obj):
     .. code-block:: text
 
         4
-    '''
+    """
     return max(obj)
 
 
-@jinja_filter('avg')
+@jinja_filter("avg")
 def lst_avg(lst):
-    '''
+    """
     Returns the average value of a list.
 
     .. code-block:: jinja
@@ -563,23 +570,15 @@ def lst_avg(lst):
     .. code-block:: yaml
 
         2.5
-    '''
-    salt.utils.versions.warn_until(
-        'Neon',
-        'This results of this function are currently being rounded.'
-        'Beginning in the Salt Neon release, results will no longer be '
-        'rounded and this warning will be removed.',
-        stacklevel=3
-    )
-
+    """
     if not isinstance(lst, collections.Hashable):
-        return float(sum(lst)/len(lst))
+        return float(sum(lst) / len(lst))
     return float(lst)
 
 
-@jinja_filter('union')
+@jinja_filter("union")
 def union(lst1, lst2):
-    '''
+    """
     Returns the union of two lists.
 
     .. code-block:: jinja
@@ -592,15 +591,17 @@ def union(lst1, lst2):
     .. code-block:: text
 
         [1, 2, 3, 4, 6]
-    '''
-    if isinstance(lst1, collections.Hashable) and isinstance(lst2, collections.Hashable):
+    """
+    if isinstance(lst1, collections.Hashable) and isinstance(
+        lst2, collections.Hashable
+    ):
         return set(lst1) | set(lst2)
     return unique(lst1 + lst2)
 
 
-@jinja_filter('intersect')
+@jinja_filter("intersect")
 def intersect(lst1, lst2):
-    '''
+    """
     Returns the intersection of two lists.
 
     .. code-block:: jinja
@@ -613,15 +614,17 @@ def intersect(lst1, lst2):
     .. code-block:: text
 
         [2, 4]
-    '''
-    if isinstance(lst1, collections.Hashable) and isinstance(lst2, collections.Hashable):
+    """
+    if isinstance(lst1, collections.Hashable) and isinstance(
+        lst2, collections.Hashable
+    ):
         return set(lst1) & set(lst2)
     return unique([ele for ele in lst1 if ele in lst2])
 
 
-@jinja_filter('difference')
+@jinja_filter("difference")
 def difference(lst1, lst2):
-    '''
+    """
     Returns the difference of two lists.
 
     .. code-block:: jinja
@@ -634,15 +637,17 @@ def difference(lst1, lst2):
     .. code-block:: text
 
         [1, 3, 6]
-    '''
-    if isinstance(lst1, collections.Hashable) and isinstance(lst2, collections.Hashable):
+    """
+    if isinstance(lst1, collections.Hashable) and isinstance(
+        lst2, collections.Hashable
+    ):
         return set(lst1) - set(lst2)
     return unique([ele for ele in lst1 if ele not in lst2])
 
 
-@jinja_filter('symmetric_difference')
+@jinja_filter("symmetric_difference")
 def symmetric_difference(lst1, lst2):
-    '''
+    """
     Returns the symmetric difference of two lists.
 
     .. code-block:: jinja
@@ -655,15 +660,21 @@ def symmetric_difference(lst1, lst2):
     .. code-block:: text
 
         [1, 3]
-    '''
-    if isinstance(lst1, collections.Hashable) and isinstance(lst2, collections.Hashable):
+    """
+    if isinstance(lst1, collections.Hashable) and isinstance(
+        lst2, collections.Hashable
+    ):
         return set(lst1) ^ set(lst2)
-    return unique([ele for ele in union(lst1, lst2) if ele not in intersect(lst1, lst2)])
+    return unique(
+        [ele for ele in union(lst1, lst2) if ele not in intersect(lst1, lst2)]
+    )
 
 
 @jinja2.contextfunction
 def show_full_context(ctx):
-    return salt.utils.data.simple_types_filter({key: value for key, value in ctx.items()})
+    return salt.utils.data.simple_types_filter(
+        {key: value for key, value in ctx.items()}
+    )
 
 
 class SerializerExtension(Extension, object):
@@ -833,19 +844,28 @@ class SerializerExtension(Extension, object):
     .. _`import tag`: http://jinja.pocoo.org/docs/templates/#import
     '''
 
-    tags = {'load_yaml', 'load_json', 'import_yaml', 'import_json', 'load_text', 'import_text'}
+    tags = {
+        "load_yaml",
+        "load_json",
+        "import_yaml",
+        "import_json",
+        "load_text",
+        "import_text",
+    }
 
     def __init__(self, environment):
         super(SerializerExtension, self).__init__(environment)
-        self.environment.filters.update({
-            'yaml': self.format_yaml,
-            'json': self.format_json,
-            'xml': self.format_xml,
-            'python': self.format_python,
-            'load_yaml': self.load_yaml,
-            'load_json': self.load_json,
-            'load_text': self.load_text,
-        })
+        self.environment.filters.update(
+            {
+                "yaml": self.format_yaml,
+                "json": self.format_json,
+                "xml": self.format_xml,
+                "python": self.format_python,
+                "load_yaml": self.load_yaml,
+                "load_json": self.load_json,
+                "load_text": self.load_text,
+            }
+        )
 
         if self.environment.finalize is None:
             self.environment.finalize = self.finalizer
@@ -855,12 +875,14 @@ class SerializerExtension(Extension, object):
             @wraps(finalizer)
             def wrapper(self, data):
                 return finalizer(self.finalizer(data))
+
             self.environment.finalize = wrapper
 
     def finalizer(self, data):
-        '''
+        """
         Ensure that printed mappings are YAML friendly.
-        '''
+        """
+
         def explore(data):
             if isinstance(data, (dict, OrderedDict)):
                 return PrintableDict(
@@ -869,10 +891,13 @@ class SerializerExtension(Extension, object):
             elif isinstance(data, (list, tuple, set)):
                 return data.__class__([explore(value) for value in data])
             return data
+
         return explore(data)
 
     def format_json(self, value, sort_keys=True, indent=None):
-        json_txt = salt.utils.json.dumps(value, sort_keys=sort_keys, indent=indent).strip()
+        json_txt = salt.utils.json.dumps(
+            value, sort_keys=sort_keys, indent=indent
+        ).strip()
         try:
             return Markup(json_txt)
         except UnicodeDecodeError:
@@ -880,9 +905,10 @@ class SerializerExtension(Extension, object):
 
     def format_yaml(self, value, flow_style=True):
         yaml_txt = salt.utils.yaml.safe_dump(
-            value, default_flow_style=flow_style).strip()
-        if yaml_txt.endswith(str('\n...')):  # future lint: disable=blacklisted-function
-            yaml_txt = yaml_txt[:len(yaml_txt)-4]
+            value, default_flow_style=flow_style
+        ).strip()
+        if yaml_txt.endswith(str("\n...")):  # future lint: disable=blacklisted-function
+            yaml_txt = yaml_txt[: len(yaml_txt) - 4]
         try:
             return Markup(yaml_txt)
         except UnicodeDecodeError:
@@ -896,6 +922,7 @@ class SerializerExtension(Extension, object):
         :returns: Formatted XML string rendered with newlines and indentation
         :rtype: str
         """
+
         def normalize_iter(value):
             if isinstance(value, (list, tuple)):
                 if isinstance(value[0], str):
@@ -906,7 +933,8 @@ class SerializerExtension(Extension, object):
                 xmlval = list(value.items())
             else:
                 raise TemplateRuntimeError(
-                    'Value is not a dict or list. Cannot render as XML')
+                    "Value is not a dict or list. Cannot render as XML"
+                )
             return xmlval
 
         def recurse_tree(xmliter, element=None):
@@ -923,16 +951,24 @@ class SerializerExtension(Extension, object):
                     sub.text = six.text_type(attrs)
                     continue
                 if isinstance(attrs, dict):
-                    sub.attrib = {attr: six.text_type(val) for attr, val in attrs.items()
-                                  if not isinstance(val, (dict, list))}
-                for tag, val in [item for item in normalize_iter(attrs) if
-                                 isinstance(item[1], (dict, list))]:
+                    sub.attrib = {
+                        attr: six.text_type(val)
+                        for attr, val in attrs.items()
+                        if not isinstance(val, (dict, list))
+                    }
+                for tag, val in [
+                    item
+                    for item in normalize_iter(attrs)
+                    if isinstance(item[1], (dict, list))
+                ]:
                     recurse_tree(((tag, val),), sub)
             return sub
 
-        return Markup(minidom.parseString(
-            tostring(recurse_tree(normalize_iter(value)))
-        ).toprettyxml(indent=" "))
+        return Markup(
+            minidom.parseString(
+                tostring(recurse_tree(normalize_iter(value)))
+            ).toprettyxml(indent=" ")
+        )
 
     def format_python(self, value):
         return Markup(pprint.pformat(value).strip())
@@ -943,7 +979,7 @@ class SerializerExtension(Extension, object):
         try:
             return salt.utils.data.decode(salt.utils.yaml.safe_load(value))
         except salt.utils.yaml.YAMLError as exc:
-            msg = 'Encountered error loading yaml: '
+            msg = "Encountered error loading yaml: "
             try:
                 # Reported line is off by one, add 1 to correct it
                 line = exc.problem_mark.line + 1
@@ -954,15 +990,13 @@ class SerializerExtension(Extension, object):
                 # to the stringified version of the exception.
                 msg += six.text_type(exc)
             else:
-                msg += '{0}\n'.format(problem)
+                msg += "{0}\n".format(problem)
                 msg += salt.utils.stringutils.get_context(
-                    buf,
-                    line,
-                    marker='    <======================')
+                    buf, line, marker="    <======================"
+                )
             raise TemplateRuntimeError(msg)
         except AttributeError:
-            raise TemplateRuntimeError(
-                'Unable to load yaml from {0}'.format(value))
+            raise TemplateRuntimeError("Unable to load yaml from {0}".format(value))
 
     def load_json(self, value):
         if isinstance(value, TemplateModule):
@@ -970,8 +1004,7 @@ class SerializerExtension(Extension, object):
         try:
             return salt.utils.json.loads(value)
         except (ValueError, TypeError, AttributeError):
-            raise TemplateRuntimeError(
-                'Unable to load json from {0}'.format(value))
+            raise TemplateRuntimeError("Unable to load json from {0}".format(value))
 
     def load_text(self, value):
         if isinstance(value, TemplateModule):
@@ -979,58 +1012,54 @@ class SerializerExtension(Extension, object):
 
         return value
 
-    _load_parsers = {'load_yaml', 'load_json', 'load_text'}
+    _load_parsers = {"load_yaml", "load_json", "load_text"}
 
     def parse(self, parser):
-        if parser.stream.current.value == 'import_yaml':
+        if parser.stream.current.value == "import_yaml":
             return self.parse_yaml(parser)
-        elif parser.stream.current.value == 'import_json':
+        elif parser.stream.current.value == "import_json":
             return self.parse_json(parser)
-        elif parser.stream.current.value == 'import_text':
+        elif parser.stream.current.value == "import_text":
             return self.parse_text(parser)
         elif parser.stream.current.value in self._load_parsers:
             return self.parse_load(parser)
 
-        parser.fail('Unknown format ' + parser.stream.current.value,
-                    parser.stream.current.lineno)
+        parser.fail(
+            "Unknown format " + parser.stream.current.value,
+            parser.stream.current.lineno,
+        )
 
     # pylint: disable=E1120,E1121
     def parse_load(self, parser):
         filter_name = parser.stream.current.value
         lineno = next(parser.stream).lineno
         if filter_name not in self.environment.filters:
-            parser.fail('Unable to parse {0}'.format(filter_name), lineno)
+            parser.fail("Unable to parse {0}".format(filter_name), lineno)
 
-        parser.stream.expect('name:as')
+        parser.stream.expect("name:as")
         target = parser.parse_assign_target()
-        macro_name = '_' + parser.free_identifier().name
-        macro_body = parser.parse_statements(
-            ('name:endload',), drop_needle=True)
+        macro_name = "_" + parser.free_identifier().name
+        macro_body = parser.parse_statements(("name:endload",), drop_needle=True)
 
         return [
-            nodes.Macro(
-                macro_name,
-                [],
-                [],
-                macro_body
-            ).set_lineno(lineno),
+            nodes.Macro(macro_name, [], [], macro_body).set_lineno(lineno),
             nodes.Assign(
                 target,
                 nodes.Filter(
                     nodes.Call(
-                        nodes.Name(macro_name, 'load').set_lineno(lineno),
+                        nodes.Name(macro_name, "load").set_lineno(lineno),
                         [],
                         [],
                         None,
-                        None
+                        None,
                     ).set_lineno(lineno),
                     filter_name,
                     [],
                     [],
                     None,
-                    None
-                ).set_lineno(lineno)
-            ).set_lineno(lineno)
+                    None,
+                ).set_lineno(lineno),
+            ).set_lineno(lineno),
         ]
 
     def parse_yaml(self, parser):
@@ -1041,17 +1070,16 @@ class SerializerExtension(Extension, object):
         return [
             import_node,
             nodes.Assign(
-                nodes.Name(target, 'store').set_lineno(lineno),
+                nodes.Name(target, "store").set_lineno(lineno),
                 nodes.Filter(
-                    nodes.Name(target, 'load').set_lineno(lineno),
-                    'load_yaml',
+                    nodes.Name(target, "load").set_lineno(lineno),
+                    "load_yaml",
                     [],
                     [],
                     None,
-                    None
-                )
-                .set_lineno(lineno)
-            ).set_lineno(lineno)
+                    None,
+                ).set_lineno(lineno),
+            ).set_lineno(lineno),
         ]
 
     def parse_json(self, parser):
@@ -1062,17 +1090,16 @@ class SerializerExtension(Extension, object):
         return [
             import_node,
             nodes.Assign(
-                nodes.Name(target, 'store').set_lineno(lineno),
+                nodes.Name(target, "store").set_lineno(lineno),
                 nodes.Filter(
-                    nodes.Name(target, 'load').set_lineno(lineno),
-                    'load_json',
+                    nodes.Name(target, "load").set_lineno(lineno),
+                    "load_json",
                     [],
                     [],
                     None,
-                    None
-                )
-                .set_lineno(lineno)
-            ).set_lineno(lineno)
+                    None,
+                ).set_lineno(lineno),
+            ).set_lineno(lineno),
         ]
 
     def parse_text(self, parser):
@@ -1083,16 +1110,16 @@ class SerializerExtension(Extension, object):
         return [
             import_node,
             nodes.Assign(
-                nodes.Name(target, 'store').set_lineno(lineno),
+                nodes.Name(target, "store").set_lineno(lineno),
                 nodes.Filter(
-                    nodes.Name(target, 'load').set_lineno(lineno),
-                    'load_text',
+                    nodes.Name(target, "load").set_lineno(lineno),
+                    "load_text",
                     [],
                     [],
                     None,
-                    None
-                )
-                .set_lineno(lineno)
-            ).set_lineno(lineno)
+                    None,
+                ).set_lineno(lineno),
+            ).set_lineno(lineno),
         ]
+
     # pylint: enable=E1120,E1121

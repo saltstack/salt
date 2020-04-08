@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 NAPALM SNMP
 ===========
 
 Manages SNMP on network devices.
 
-:codeauthor: Mircea Ulinic <mircea@cloudflare.com>
+:codeauthor: Mircea Ulinic <ping@mirceaulinic.net>
 :maturity:   new
 :depends:    napalm
 :platform:   unix
@@ -19,25 +19,27 @@ Dependencies
     :mod:`SNMP configuration management state <salt.states.netsnmp>`
 
 .. versionadded:: 2016.11.0
-'''
+"""
 
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-log = logging.getLogger(__file__)
 
 # import NAPALM utils
 import salt.utils.napalm
 from salt.utils.napalm import proxy_napalm_wrap
 
+log = logging.getLogger(__file__)
+
+
 # ----------------------------------------------------------------------------------------------------------------------
 # module properties
 # ----------------------------------------------------------------------------------------------------------------------
 
-__virtualname__ = 'snmp'
-__proxyenabled__ = ['napalm']
+__virtualname__ = "snmp"
+__proxyenabled__ = ["napalm"]
 # uses NAPALM-based proxy to interact with network devices
-__virtual_aliases__ = ('napalm_snmp',)
+__virtual_aliases__ = ("napalm_snmp",)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # property functions
@@ -45,10 +47,11 @@ __virtual_aliases__ = ('napalm_snmp',)
 
 
 def __virtual__():
-    '''
+    """
     NAPALM library must be installed for this module to work and run in a (proxy) minion.
-    '''
+    """
     return salt.utils.napalm.virtual(__opts__, __virtualname__, __file__)
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 # helper functions -- will not be exported
@@ -62,7 +65,7 @@ def __virtual__():
 @proxy_napalm_wrap
 def config(**kwargs):  # pylint: disable=unused-argument
 
-    '''
+    """
     Returns the SNMP configuration
 
     CLI Example:
@@ -70,26 +73,27 @@ def config(**kwargs):  # pylint: disable=unused-argument
     .. code-block:: bash
 
         salt '*' snmp.config
-    '''
+    """
 
     return salt.utils.napalm.call(
         napalm_device,  # pylint: disable=undefined-variable
-        'get_snmp_information',
-        **{
-        }
+        "get_snmp_information",
+        **{}
     )
 
 
 @proxy_napalm_wrap
-def remove_config(chassis_id=None,
-                  community=None,
-                  contact=None,
-                  location=None,
-                  test=False,
-                  commit=True,
-                  **kwargs):  # pylint: disable=unused-argument
+def remove_config(
+    chassis_id=None,
+    community=None,
+    contact=None,
+    location=None,
+    test=False,
+    commit=True,
+    **kwargs
+):  # pylint: disable=unused-argument
 
-    '''
+    """
     Removes a configuration element from the SNMP configuration.
 
     :param chassis_id: (optional) Chassis ID
@@ -128,37 +132,35 @@ def remove_config(chassis_id=None,
     .. code-block:: bash
 
         salt '*' snmp.remove_config community='abcd'
-    '''
+    """
 
-    dic = {
-        'template_name': 'delete_snmp_config',
-        'test': test,
-        'commit': commit
-    }
+    dic = {"template_name": "delete_snmp_config", "test": test, "commit": commit}
 
     if chassis_id:
-        dic['chassis_id'] = chassis_id
+        dic["chassis_id"] = chassis_id
     if community:
-        dic['community'] = community
+        dic["community"] = community
     if contact:
-        dic['contact'] = contact
+        dic["contact"] = contact
     if location:
-        dic['location'] = location
-    dic['inherit_napalm_device'] = napalm_device  # pylint: disable=undefined-variable
+        dic["location"] = location
+    dic["inherit_napalm_device"] = napalm_device  # pylint: disable=undefined-variable
 
-    return __salt__['net.load_template'](**dic)
+    return __salt__["net.load_template"](**dic)
 
 
 @proxy_napalm_wrap
-def update_config(chassis_id=None,
-                  community=None,
-                  contact=None,
-                  location=None,
-                  test=False,
-                  commit=True,
-                  **kwargs):  # pylint: disable=unused-argument
+def update_config(
+    chassis_id=None,
+    community=None,
+    contact=None,
+    location=None,
+    test=False,
+    commit=True,
+    **kwargs
+):  # pylint: disable=unused-argument
 
-    '''
+    """
     Updates the SNMP configuration.
 
     :param chassis_id: (optional) Chassis ID
@@ -208,22 +210,18 @@ def update_config(chassis_id=None,
                 +  location "Greenwich, UK";
             result:
                 True
-    '''
+    """
 
-    dic = {
-        'template_name': 'snmp_config',
-        'test': test,
-        'commit': commit
-    }
+    dic = {"template_name": "snmp_config", "test": test, "commit": commit}
 
     if chassis_id:
-        dic['chassis_id'] = chassis_id
+        dic["chassis_id"] = chassis_id
     if community:
-        dic['community'] = community
+        dic["community"] = community
     if contact:
-        dic['contact'] = contact
+        dic["contact"] = contact
     if location:
-        dic['location'] = location
-    dic['inherit_napalm_device'] = napalm_device  # pylint: disable=undefined-variable
+        dic["location"] = location
+    dic["inherit_napalm_device"] = napalm_device  # pylint: disable=undefined-variable
 
-    return __salt__['net.load_template'](**dic)
+    return __salt__["net.load_template"](**dic)

@@ -1,53 +1,48 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Integration tests for Vultr
-'''
+"""
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import time
 
 # Import Salt Testing Libs
-from tests.integration.cloud.helpers.cloud_test_base import CloudTest, TIMEOUT
+from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
 from tests.support.unit import skipIf
 
 
 class VultrTest(CloudTest):
-    '''
+    """
     Integration tests for the Vultr cloud provider in Salt-Cloud
-    '''
-    PROVIDER = 'vultr'
-    REQUIRED_PROVIDER_CONFIG_ITEMS = ('api_key', 'ssh_key_file', 'ssh_key_name')
+    """
+
+    PROVIDER = "vultr"
+    REQUIRED_PROVIDER_CONFIG_ITEMS = ("api_key", "ssh_key_file", "ssh_key_name")
 
     def test_list_images(self):
-        '''
+        """
         Tests the return of running the --list-images command for Vultr
-        '''
-        image_list = self.run_cloud('--list-images {0}'.format(self.PROVIDER))
+        """
+        image_list = self.run_cloud("--list-images {0}".format(self.PROVIDER))
 
-        self.assertIn(
-            'Debian 8 x64 (jessie)',
-            [i.strip() for i in image_list]
-        )
+        self.assertIn("Debian 10 x64 (buster)", [i.strip() for i in image_list])
 
     def test_list_locations(self):
-        '''
+        """
         Tests the return of running the --list-locations command for Vultr
-        '''
-        location_list = self.run_cloud('--list-locations {0}'.format(self.PROVIDER))
-        self.assertIn(
-            'New Jersey',
-            [i.strip() for i in location_list]
-        )
+        """
+        location_list = self.run_cloud("--list-locations {0}".format(self.PROVIDER))
+        self.assertIn("New Jersey", [i.strip() for i in location_list])
 
     def test_list_sizes(self):
-        '''
+        """
         Tests the return of running the --list-sizes command for Vultr
-        '''
-        size_list = self.run_cloud('--list-sizes {0}'.format(self.PROVIDER))
+        """
+        size_list = self.run_cloud("--list-sizes {0}".format(self.PROVIDER))
         self.assertIn(
-            '32768 MB RAM,4x110 GB SSD,40.00 TB BW',
-            [i.strip() for i in size_list]
+            "2048 MB RAM,64 GB SSD,2.00 TB BW", [i.strip() for i in size_list]
         )
 
     # Commented for now, Vultr driver does not yet support key management
@@ -90,13 +85,15 @@ class VultrTest(CloudTest):
     #        # Delete public key
     #        self.assertTrue(self.run_cloud('-f remove_key {0} id={1}'.format(self.PROVIDER, finger_print)))
 
-    @skipIf(True, 'Skipped temporarily')
+    @skipIf(True, "Skipped temporarily")
     def test_instance(self):
-        '''
+        """
         Test creating an instance on Vultr
-        '''
+        """
         # check if instance with salt installed returned
-        ret_val = self.run_cloud('-p vultr-test {0}'.format(self.instance_name), timeout=TIMEOUT + 300)
+        ret_val = self.run_cloud(
+            "-p vultr-test {0}".format(self.instance_name), timeout=TIMEOUT + 300
+        )
         self.assertInstanceExists(ret_val)
 
         # Vultr won't let us delete an instance less than 5 minutes old.

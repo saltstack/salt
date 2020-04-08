@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Netmiko Execution Module
 ========================
 
@@ -181,25 +181,25 @@ outside a ``netmiko`` Proxy, e.g.:
     Remember that the above applies only when not running in a ``netmiko`` Proxy
     Minion. If you want to use the :mod:`<salt.proxy.netmiko_px>`, please follow
     the documentation notes for a proper setup.
-'''
+"""
 from __future__ import absolute_import
+
+import inspect
 
 # Import python stdlib
 import logging
-import inspect
+
+from salt.exceptions import CommandExecutionError
 
 # Import Salt libs
 from salt.ext import six
-from salt.exceptions import CommandExecutionError
-try:
-    from salt.utils.args import clean_kwargs
-except ImportError:
-    from salt.utils import clean_kwargs
+from salt.utils.args import clean_kwargs
 
 # Import third party libs
 try:
     from netmiko import ConnectHandler
     from netmiko import BaseConnection
+
     HAS_NETMIKO = True
 except ImportError:
     HAS_NETMIKO = False
@@ -208,10 +208,10 @@ except ImportError:
 # execution module properties
 # -----------------------------------------------------------------------------
 
-__proxyenabled__ = ['*']
+__proxyenabled__ = ["*"]
 # Any Proxy Minion should be able to execute these (not only netmiko)
 
-__virtualname__ = 'netmiko'
+__virtualname__ = "netmiko"
 # The Execution Module will be identified as ``netmiko``
 
 # -----------------------------------------------------------------------------
@@ -226,12 +226,16 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     Execution module available only if Netmiko is installed.
-    '''
+    """
     if not HAS_NETMIKO:
-        return False, 'The netmiko execution module requires netmiko library to be installed.'
+        return (
+            False,
+            "The netmiko execution module requires netmiko library to be installed.",
+        )
     return __virtualname__
+
 
 # -----------------------------------------------------------------------------
 # helper functions
@@ -239,15 +243,17 @@ def __virtual__():
 
 
 def _prepare_connection(**kwargs):
-    '''
+    """
     Prepare the connection with the remote network device, and clean up the key
     value pairs, removing the args used for the connection init.
-    '''
+    """
     init_args = {}
     fun_kwargs = {}
-    netmiko_kwargs = __salt__['config.get']('netmiko', {})
+    netmiko_kwargs = __salt__["config.get"]("netmiko", {})
     netmiko_kwargs.update(kwargs)  # merge the CLI args with the opts/pillar
-    netmiko_init_args, _, _, netmiko_defaults = inspect.getargspec(BaseConnection.__init__)
+    netmiko_init_args, _, _, netmiko_defaults = inspect.getargspec(
+        BaseConnection.__init__
+    )
     check_self = netmiko_init_args.pop(0)
     for karg, warg in six.iteritems(netmiko_kwargs):
         if karg not in netmiko_init_args:
@@ -259,13 +265,14 @@ def _prepare_connection(**kwargs):
     conn = ConnectHandler(**init_args)
     return conn, fun_kwargs
 
+
 # -----------------------------------------------------------------------------
 # callable functions
 # -----------------------------------------------------------------------------
 
 
 def get_connection(**kwargs):
-    '''
+    """
     Return the Netmiko connection object.
 
     .. warning::
@@ -286,16 +293,16 @@ def get_connection(**kwargs):
                                                   password='example')
         show_if = conn.send_command('show interfaces')
         conn.disconnect()
-    '''
+    """
     kwargs = clean_kwargs(**kwargs)
-    if 'netmiko.conn' in __proxy__:
-        return __proxy__['netmiko.conn']()
+    if "netmiko.conn" in __proxy__:
+        return __proxy__["netmiko.conn"]()
     conn, kwargs = _prepare_connection(**kwargs)
     return conn
 
 
 def call(method, *args, **kwargs):
-    '''
+    """
     Invoke an arbitrary Netmiko method.
 
     method
@@ -306,10 +313,10 @@ def call(method, *args, **kwargs):
 
     kwargs
         Key-value dictionary to send to the method invoked.
-    '''
+    """
     kwargs = clean_kwargs(**kwargs)
-    if 'netmiko.call' in __proxy__:
-        return __proxy__['netmiko.call'](method, *args, **kwargs)
+    if "netmiko.call" in __proxy__:
+        return __proxy__["netmiko.call"](method, *args, **kwargs)
     conn, kwargs = _prepare_connection(**kwargs)
     ret = getattr(conn, method)(*args, **kwargs)
     conn.disconnect()
@@ -317,7 +324,7 @@ def call(method, *args, **kwargs):
 
 
 def multi_call(*methods, **kwargs):
-    '''
+    """
     Invoke multiple Netmiko methods at once, and return their output, as list.
 
     methods
@@ -330,26 +337,26 @@ def multi_call(*methods, **kwargs):
     kwargs
         Key-value dictionary with the connection details (when not running
         under a Proxy Minion).
-    '''
+    """
     kwargs = clean_kwargs(**kwargs)
-    if 'netmiko.conn' in __proxy__:
-        conn = __proxy__['netmiko.conn']()
+    if "netmiko.conn" in __proxy__:
+        conn = __proxy__["netmiko.conn"]()
     else:
         conn, kwargs = _prepare_connection(**kwargs)
     ret = []
     for method in methods:
         # Explicit unpacking
-        method_name = method['name']
-        method_args = method.get('args', [])
-        method_kwargs = method.get('kwargs', [])
+        method_name = method["name"]
+        method_args = method.get("args", [])
+        method_kwargs = method.get("kwargs", [])
         ret.append(getattr(conn, method_name)(*method_args, **method_kwargs))
-    if 'netmiko.conn' not in __proxy__:
+    if "netmiko.conn" not in __proxy__:
         conn.disconnect()
     return ret
 
 
 def send_command(command_string, **kwargs):
-    '''
+    """
     Execute command_string on the SSH channel using a pattern-based mechanism.
     Generally used for show commands. By default this method will keep waiting
     to receive data until the network device prompt is detected. The current
@@ -390,12 +397,12 @@ def send_command(command_string, **kwargs):
 
         salt '*' netmiko.send_command 'show version'
         salt '*' netmiko.send_command 'show_version' host='router1.example.com' username='example' device_type='cisco_ios'
-    '''
-    return call('send_command', command_string, **kwargs)
+    """
+    return call("send_command", command_string, **kwargs)
 
 
 def send_command_timing(command_string, **kwargs):
-    '''
+    """
     Execute command_string on the SSH channel using a delay-based mechanism.
     Generally used for show commands.
 
@@ -427,12 +434,12 @@ def send_command_timing(command_string, **kwargs):
 
         salt '*' netmiko.send_command_timing 'show version'
         salt '*' netmiko.send_command_timing 'show version' host='router1.example.com' username='example' device_type='arista_eos'
-    '''
-    return call('send_command_timing', command_string, **kwargs)
+    """
+    return call("send_command_timing", command_string, **kwargs)
 
 
 def enter_config_mode(**kwargs):
-    '''
+    """
     Enter into config mode.
 
     config_command
@@ -447,12 +454,12 @@ def enter_config_mode(**kwargs):
 
         salt '*' netmiko.enter_config_mode
         salt '*' netmiko.enter_config_mode device_type='juniper_junos' ip='192.168.0.1' username='example'
-    '''
-    return call('config_mode', **kwargs)
+    """
+    return call("config_mode", **kwargs)
 
 
 def exit_config_mode(**kwargs):
-    '''
+    """
     Exit from configuration mode.
 
     exit_config
@@ -467,19 +474,21 @@ def exit_config_mode(**kwargs):
 
         salt '*' netmiko.exit_config_mode
         salt '*' netmiko.exit_config_mode device_type='juniper' ip='192.168.0.1' username='example'
-    '''
-    return call('exit_config_mode', **kwargs)
+    """
+    return call("exit_config_mode", **kwargs)
 
 
-def send_config(config_file=None,
-                config_commands=None,
-                template_engine='jinja',
-                commit=False,
-                context=None,
-                defaults=None,
-                saltenv='base',
-                **kwargs):
-    '''
+def send_config(
+    config_file=None,
+    config_commands=None,
+    template_engine="jinja",
+    commit=False,
+    context=None,
+    defaults=None,
+    saltenv="base",
+    **kwargs
+):
+    """
     Send configuration commands down the SSH channel.
     Return the configuration lines sent to the device.
 
@@ -551,31 +560,29 @@ def send_config(config_file=None,
         salt '*' netmiko.send_config config_commands="['snmp-server location {{ grains.location }}']"
         salt '*' netmiko.send_config config_file=salt://config.txt
         salt '*' netmiko.send_config config_file=https://bit.ly/2sgljCB device_type='cisco_ios' ip='1.2.3.4' username='example'
-    '''
+    """
     if config_file:
-        file_str = __salt__['cp.get_file_str'](config_file, saltenv=saltenv)
+        file_str = __salt__["cp.get_file_str"](config_file, saltenv=saltenv)
         if file_str is False:
-            raise CommandExecutionError('Source file {} not found'.format(config_file))
+            raise CommandExecutionError("Source file {} not found".format(config_file))
     elif config_commands:
         if isinstance(config_commands, (six.string_types, six.text_type)):
             config_commands = [config_commands]
-        file_str = '\n'.join(config_commands)
+        file_str = "\n".join(config_commands)
         # unify all the commands in a single file, to render them in a go
     if template_engine:
-        file_str = __salt__['file.apply_template_on_contents'](file_str,
-                                                               template_engine,
-                                                               context,
-                                                               defaults,
-                                                               saltenv)
+        file_str = __salt__["file.apply_template_on_contents"](
+            file_str, template_engine, context, defaults, saltenv
+        )
     # whatever the source of the commands would be, split them line by line
     config_commands = [line for line in file_str.splitlines() if line.strip()]
     kwargs = clean_kwargs(**kwargs)
-    if 'netmiko.conn' in __proxy__:
-        conn = __proxy__['netmiko.conn']()
+    if "netmiko.conn" in __proxy__:
+        conn = __proxy__["netmiko.conn"]()
     else:
         conn, kwargs = _prepare_connection(**kwargs)
     if commit:
-        kwargs['exit_config_mode'] = False  # don't exit config mode after
+        kwargs["exit_config_mode"] = False  # don't exit config mode after
         # loading the commands, wait for explicit commit
     ret = conn.send_config_set(config_commands=config_commands, **kwargs)
     if commit:
@@ -584,7 +591,7 @@ def send_config(config_file=None,
 
 
 def commit(**kwargs):
-    '''
+    """
     Commit the configuration changes.
 
     .. warning::
@@ -597,5 +604,5 @@ def commit(**kwargs):
     .. code-block:: bash
 
         salt '*' netmiko.commit
-    '''
-    return call('commit', **kwargs)
+    """
+    return call("commit", **kwargs)
