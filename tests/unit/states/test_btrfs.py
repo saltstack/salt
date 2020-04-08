@@ -7,13 +7,14 @@
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import salt.states.btrfs as btrfs
+import salt.utils.platform
+from salt.exceptions import CommandExecutionError
+
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase
 from tests.support.mock import MagicMock, patch
-
-from salt.exceptions import CommandExecutionError
-import salt.states.btrfs as btrfs
+from tests.support.unit import TestCase, skipIf
 
 
 class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
@@ -167,6 +168,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
                 "/tmp/xxx/@/var", operator="add", attributes="C"
             )
 
+    @skipIf(salt.utils.platform.is_windows(), "Skip on Windows")
     @patch("salt.states.btrfs._umount")
     @patch("salt.states.btrfs._mount")
     def test_subvolume_created_exists(self, mount, umount):
@@ -193,6 +195,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
             mount.assert_called_once()
             umount.assert_called_once()
 
+    @skipIf(salt.utils.platform.is_windows(), "Skip on Windows")
     @patch("salt.states.btrfs._umount")
     @patch("salt.states.btrfs._mount")
     def test_subvolume_created_exists_test(self, mount, umount):
@@ -219,6 +222,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
             mount.assert_called_once()
             umount.assert_called_once()
 
+    @skipIf(salt.utils.platform.is_windows(), "Skip on Windows")
     @patch("salt.states.btrfs._is_default")
     @patch("salt.states.btrfs._umount")
     @patch("salt.states.btrfs._mount")
@@ -249,6 +253,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
             mount.assert_called_once()
             umount.assert_called_once()
 
+    @skipIf(salt.utils.platform.is_windows(), "Skip on Windows")
     @patch("salt.states.btrfs._set_default")
     @patch("salt.states.btrfs._is_default")
     @patch("salt.states.btrfs._umount")
@@ -283,6 +288,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
             mount.assert_called_once()
             umount.assert_called_once()
 
+    @skipIf(salt.utils.platform.is_windows(), "Skip on Windows")
     @patch("salt.states.btrfs._set_default")
     @patch("salt.states.btrfs._is_default")
     @patch("salt.states.btrfs._umount")
@@ -320,6 +326,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
             mount.assert_called_once()
             umount.assert_called_once()
 
+    @skipIf(salt.utils.platform.is_windows(), "Skip on Windows")
     @patch("salt.states.btrfs._is_cow")
     @patch("salt.states.btrfs._umount")
     @patch("salt.states.btrfs._mount")
@@ -350,6 +357,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
             mount.assert_called_once()
             umount.assert_called_once()
 
+    @skipIf(salt.utils.platform.is_windows(), "Skip on Windows")
     @patch("salt.states.btrfs._unset_cow")
     @patch("salt.states.btrfs._is_cow")
     @patch("salt.states.btrfs._umount")
@@ -382,6 +390,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
             mount.assert_called_once()
             umount.assert_called_once()
 
+    @skipIf(salt.utils.platform.is_windows(), "Skip on Windows")
     @patch("salt.states.btrfs._umount")
     @patch("salt.states.btrfs._mount")
     def test_subvolume_created(self, mount, umount):
@@ -413,6 +422,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
             mount.assert_called_once()
             umount.assert_called_once()
 
+    @skipIf(salt.utils.platform.is_windows(), "Skip on Windows")
     @patch("salt.states.btrfs._umount")
     @patch("salt.states.btrfs._mount")
     def test_subvolume_created_fails_directory(self, mount, umount):
@@ -442,6 +452,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
             mount.assert_called_once()
             umount.assert_called_once()
 
+    @skipIf(salt.utils.platform.is_windows(), "Skip on Windows")
     @patch("salt.states.btrfs._umount")
     @patch("salt.states.btrfs._mount")
     def test_subvolume_created_fails(self, mount, umount):
