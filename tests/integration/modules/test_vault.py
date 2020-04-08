@@ -209,12 +209,17 @@ class VaultTestCaseCurrent(ModuleCase):
         expected_write = {"destroyed": False, "deletion_time": ""}
         self.assertDictContainsSubset(expected_write, write_return)
 
-        read_return = self.run_function("vault.read_secret", arg=["secret/my/secret"])
+        read_return = self.run_function(
+            "vault.read_secret", arg=["secret/my/secret"], metadata=True
+        )
         # read_secret output:
         # {'data': {'password': 'bar', 'user': 'foo'},
         # 'metadata': {'created_time': '2020-01-12T23:07:18.829326918Z', 'destroyed': False,
         # 'version': 1, 'deletion_time': ''}}
         expected_read = {"data": {"password": "bar", "user": "foo"}}
+        self.assertDictContainsSubset(expected_read, read_return)
+        expected_read = {"password": "bar", "user": "foo"}
+        read_return = self.run_function("vault.read_secret", arg=["secret/my/secret"])
         self.assertDictContainsSubset(expected_read, read_return)
 
         read_return = self.run_function(
@@ -241,8 +246,14 @@ class VaultTestCaseCurrent(ModuleCase):
         expected_write = {"destroyed": False, "deletion_time": ""}
         self.assertDictContainsSubset(expected_write, write_return)
 
-        read_return = self.run_function("vault.read_secret", arg=["secret/my/secret2"])
+        read_return = self.run_function(
+            "vault.read_secret", arg=["secret/my/secret2"], metadata=True
+        )
         expected_read = {"data": {"password2": "bar2", "user2": "foo2"}}
+        self.assertDictContainsSubset(expected_read, read_return)
+
+        read_return = self.run_function("vault.read_secret", arg=["secret/my/secret2"])
+        expected_read = {"password2": "bar2", "user2": "foo2"}
         self.assertDictContainsSubset(expected_read, read_return)
 
     def test_delete_secret_kv2(self):
