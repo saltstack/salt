@@ -403,11 +403,11 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertListEqual(
             ["Garry", "Spongebob", "Sandy", "Patrick"],
-            spongebob.start_order(with_deps=True, with_parents=True),
+            spongebob.start_order(with_deps=True, with_depends_on=True),
         )
         self.assertListEqual(
             ["Patrick", "Sandy", "Spongebob", "Garry"],
-            spongebob.stop_order(with_deps=True, with_parents=True),
+            spongebob.stop_order(with_deps=True, with_depends_on=True),
         )
 
         sandy = win_service.ServiceDependencies("SANDY", _all, _info)
@@ -419,17 +419,17 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
         self.assertListEqual(sandy.parents(with_indirect=True), ["Patrick"])
         self.assertListEqual(
             ["Garry", "Spongebob", "Sandy", "Patrick"],
-            spongebob.start_order(with_deps=True, with_parents=True),
+            spongebob.start_order(with_deps=True, with_depends_on=True),
         )
         self.assertListEqual(
             ["Patrick", "Sandy", "Spongebob", "Garry"],
-            spongebob.stop_order(with_deps=True, with_parents=True),
+            spongebob.stop_order(with_deps=True, with_depends_on=True),
         )
         self.assertListEqual(
-            ["Spongebob"], spongebob.start_order(with_deps=False, with_parents=False)
+            ["Spongebob"], spongebob.start_order(with_deps=False, with_depends_on=False)
         )
         self.assertListEqual(
-            ["Spongebob"], spongebob.stop_order(with_deps=False, with_parents=False)
+            ["Spongebob"], spongebob.stop_order(with_deps=False, with_depends_on=False)
         )
 
         patrick = win_service.ServiceDependencies("Patrick", _all, _info)
@@ -443,11 +443,11 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
         self.assertListEqual([], patrick.parents(with_indirect=True))
         self.assertListEqual(
             ["Garry", "Spongebob", "Sandy", "Patrick"],
-            spongebob.start_order(with_deps=True, with_parents=True),
+            spongebob.start_order(with_deps=True, with_depends_on=True),
         )
         self.assertListEqual(
             ["Patrick", "Sandy", "Spongebob", "Garry"],
-            spongebob.stop_order(with_deps=True, with_parents=True),
+            spongebob.stop_order(with_deps=True, with_depends_on=True),
         )
 
         garry = win_service.ServiceDependencies("gARRy", _all, _info)
@@ -461,11 +461,11 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertListEqual(
             ["Garry", "Spongebob", "Sandy", "Patrick"],
-            spongebob.start_order(with_deps=True, with_parents=True),
+            spongebob.start_order(with_deps=True, with_depends_on=True),
         )
         self.assertListEqual(
             ["Patrick", "Sandy", "Spongebob", "Garry"],
-            spongebob.stop_order(with_deps=True, with_parents=True),
+            spongebob.stop_order(with_deps=True, with_depends_on=True),
         )
 
         rocko = win_service.ServiceDependencies("Rocko", _all, _info)

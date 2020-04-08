@@ -163,15 +163,19 @@ class ServiceDependencies(object):
     def _dependencies_recursion(self, name):
         # Using a list here to maintain order
         ret = list()
-        dependencies = self._dependencies(name)
-        for dependency in dependencies:
-            indirect_dependencies = self._dependencies_recursion(dependency)
-            for indirect_dependency in indirect_dependencies:
-                if indirect_dependency not in ret:
-                    ret.append(indirect_dependency)
-        for dependency in dependencies:
-            if dependency not in ret:
-                ret.append(dependency)
+        try:
+            dependencies = self._dependencies(name)
+            for dependency in dependencies:
+                indirect_dependencies = self._dependencies_recursion(dependency)
+                for indirect_dependency in indirect_dependencies:
+                    if indirect_dependency not in ret:
+                        ret.append(indirect_dependency)
+            for dependency in dependencies:
+                if dependency not in ret:
+                    ret.append(dependency)
+        except ValueError as error:
+            log.debug(error)
+            ret = list()
         return ret
 
     def _normalize_name(self, references, difference):
@@ -208,27 +212,35 @@ class ServiceDependencies(object):
     def _parents(self, name):
         # Using a list here to maintain order
         ret = list()
-        # Sort for predictable behavior
-        for service, dependencies in sorted(self._service_info.items()):
-            if name in dependencies:
-                if service in ret:
-                    ret.remove(service)
-                ret.append(service)
+        try:
+            # Sort for predictable behavior
+            for service, dependencies in sorted(self._service_info.items()):
+                if name in dependencies:
+                    if service in ret:
+                        ret.remove(service)
+                    ret.append(service)
+        except ValueError as error:
+            log.debug(error)
+            ret = list()
         return ret
 
     def _parents_recursion(self, name):
         # Using a list here to maintain order
         ret = list()
-        parents = self._parents(name)
-        for parent in parents:
-            if parent not in ret:
-                ret.append(parent)
-        for parent in parents:
-            indirect_parents = self._parents_recursion(parent)
-            for indirect_parent in indirect_parents:
-                if indirect_parent in ret:
-                    ret.remove(indirect_parent)
-                ret.append(indirect_parent)
+        try:
+            parents = self._parents(name)
+            for parent in parents:
+                if parent not in ret:
+                    ret.append(parent)
+            for parent in parents:
+                indirect_parents = self._parents_recursion(parent)
+                for indirect_parent in indirect_parents:
+                    if indirect_parent in ret:
+                        ret.remove(indirect_parent)
+                    ret.append(indirect_parent)
+        except ValueError as error:
+            log.debug(error)
+            ret = list()
         return ret
 
     def parents(self, with_indirect=False):
@@ -240,18 +252,18 @@ class ServiceDependencies(object):
         log.trace("Parents of '%s': '%s'", normalized, ret)
         return ret
 
-    def start_order(self, with_deps=False, with_parents=False):
+    def start_order(self, with_deps=False, with_depends_on=False):
         ret = []
         if with_deps:
             ret.extend(self.dependencies(with_indirect=True))
         normalized = self._normalize_name(self._all_services, self._name)
         ret.append(normalized)
-        if with_parents:
+        if with_depends_on:
             ret.extend(self.parents(with_indirect=True))
         return ret
 
-    def stop_order(self, with_deps=False, with_parents=False):
-        order = self.start_order(with_deps=with_deps, with_parents=with_parents)
+    def stop_order(self, with_deps=False, with_depends_on=False):
+        order = self.start_order(with_deps=with_deps, with_depends_on=with_depends_on)
         order.reverse()
         return order
 
@@ -608,7 +620,7 @@ def info(name):
     return ret
 
 
-def start(name, timeout=90, with_deps=False, with_parents=False):
+def start(name, timeout=90, with_deps=False, with_depends_on=False):
     """
     Start the specified service.
 
@@ -629,7 +641,7 @@ def start(name, timeout=90, with_deps=False, with_parents=False):
             If enabled start the given service and the services the current
             service depends on.
 
-        with_parents (bool):
+        with_depends_on (bool):
             If enabled and in case other running services depend on the to be start
             service, this flag indicates that those other services will be started
             as well.
@@ -652,7 +664,7 @@ def start(name, timeout=90, with_deps=False, with_parents=False):
 
     # Using a list here to maintain order
     services = ServiceDependencies(name, get_all, info)
-    start_order = services.start_order(with_deps=with_deps, with_parents=with_parents)
+    start_order = services.start_order(with_deps=with_deps, with_depends_on=with_depends_on)
     log.debug("Starting services %s", start_order)
     for name in start_order:
         try:
@@ -673,7 +685,7 @@ def start(name, timeout=90, with_deps=False, with_parents=False):
     return False not in ret
 
 
-def stop(name, timeout=90, with_deps=False, with_parents=False):
+def stop(name, timeout=90, with_deps=False, with_depends_on=False):
     """
     Stop the specified service
 
@@ -690,7 +702,7 @@ def stop(name, timeout=90, with_deps=False, with_parents=False):
             If enabled stop the given service and the services
             the current service depends on.
 
-        with_parents (bool):
+        with_depends_on (bool):
             If enabled and in case other running services depend on the to be stopped
             service, this flag indicates that those other services will be stopped
             as well.
@@ -710,7 +722,7 @@ def stop(name, timeout=90, with_deps=False, with_parents=False):
     ret = set()
 
     services = ServiceDependencies(name, get_all, info)
-    stop_order = services.stop_order(with_deps=with_deps, with_parents=with_parents)
+    stop_order = services.stop_order(with_deps=with_deps, with_depends_on=with_depends_on)
     log.debug("Stopping services %s", stop_order)
     for name in stop_order:
         try:
@@ -731,7 +743,7 @@ def stop(name, timeout=90, with_deps=False, with_parents=False):
     return False not in ret
 
 
-def restart(name, timeout=90, with_deps=False, with_parents=False):
+def restart(name, timeout=90, with_deps=False, with_depends_on=False):
     """
     Restart the named service. This issues a stop command followed by a start.
 
@@ -757,7 +769,7 @@ def restart(name, timeout=90, with_deps=False, with_parents=False):
             If enabled restart the given service and the services
             the current service depends on.
 
-        with_parents (bool):
+        with_depends_on (bool):
             If enabled and in case other running services depend on the to be
             restarted service, this flag indicates that those other services
             will be restarted as well.
@@ -779,11 +791,11 @@ def restart(name, timeout=90, with_deps=False, with_parents=False):
 
     ret = set()
     ret.add(
-        stop(name=name, timeout=timeout, with_deps=with_deps, with_parents=with_parents)
+        stop(name=name, timeout=timeout, with_deps=with_deps, with_depends_on=with_depends_on)
     )
     ret.add(
         start(
-            name=name, timeout=timeout, with_deps=with_deps, with_parents=with_parents
+            name=name, timeout=timeout, with_deps=with_deps, with_depends_on=with_depends_on
         )
     )
     return False not in ret
