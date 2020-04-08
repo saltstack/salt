@@ -1024,6 +1024,7 @@ def pytest_saltfactories_minion_configuration_defaults(
 
     Stops at the first non None result
     """
+    setup_hosts_aliases_transport = True
     if minion_id == "minion":
         with salt.utils.files.fopen(
             os.path.join(RUNTIME_VARS.CONF_DIR, "minion")
@@ -1044,14 +1045,14 @@ def pytest_saltfactories_minion_configuration_defaults(
             os.path.join(RUNTIME_VARS.CONF_DIR, "mm_sub_minion")
         ) as rfh:
             opts = yaml.deserialize(rfh.read())
-    else:
-        raise RuntimeError("Not prepared to handle minion_id '{}'".format(minion_id))
+        setup_hosts_aliases_transport = False
 
-    opts["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
-    opts["aliases.file"] = os.path.join(RUNTIME_VARS.TMP, "aliases")
-    opts["transport"] = request.config.getoption("--transport")
+    if setup_hosts_aliases_transport:
+        opts["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
+        opts["aliases.file"] = os.path.join(RUNTIME_VARS.TMP, "aliases")
+        opts["transport"] = request.config.getoption("--transport")
 
-    return opts
+        return opts
 
 
 def pytest_saltfactories_minion_configuration_overrides(
