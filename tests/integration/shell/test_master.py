@@ -9,116 +9,66 @@
 
 from __future__ import absolute_import
 
+import logging
+import time
+
 import pytest
-import tests.integration.utils
-from tests.integration.utils import testprogram
-from tests.support.case import ShellCase
-from tests.support.mixins import ShellCaseCommonTestsMixin
-from tests.support.unit import skipIf
+import salt.defaults.exitcodes
+from saltfactories.exceptions import ProcessNotStarted
+from tests.support.helpers import PRE_PYTEST_SKIP
+
+log = logging.getLogger(__name__)
 
 
-@skipIf(True, "This test file should be in an isolated test space.")
+@pytest.fixture(scope="package")
+def shell_tests_salt_master_config(request, salt_factories):
+    return salt_factories.configure_master(
+        request, "shell-tests-master", config_overrides={"user": "unknown-user"}
+    )
+
+
 @pytest.mark.windows_whitelisted
-class MasterTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin):
-
-    _call_binary_ = "salt-master"
-
-    def test_exit_status_unknown_user(self):
+class TestSaltMasterCLI(object):
+    @PRE_PYTEST_SKIP
+    def test_exit_status_unknown_user(
+        self, request, salt_factories, shell_tests_salt_master_config
+    ):
         """
         Ensure correct exit status when the master is configured to run as an unknown user.
         """
-
-        master = testprogram.TestDaemonSaltMaster(
-            name="unknown_user",
-            configs={"master": {"map": {"user": "some_unknown_user_xyz"}}},
-            parent_dir=self._test_dir,
-        )
-        # Call setup here to ensure config and script exist
-        master.setup()
-        stdout, stderr, status = master.run(
-            args=["-d"], catch_stderr=True, with_retcode=True,
-        )
-        try:
-            self.assert_exit_status(
-                status,
-                "EX_NOUSER",
-                message="unknown user not on system",
-                stdout=stdout,
-                stderr=tests.integration.utils.decode_byte_list(stderr),
+        with pytest.raises(ProcessNotStarted) as exc:
+            salt_factories.spawn_master(
+                request, shell_tests_salt_master_config["id"], max_start_attempts=1
             )
-        finally:
-            # Although the start-up should fail, call shutdown() to set the
-            # internal _shutdown flag and avoid the registered atexit calls to
-            # cause timeout exceptions and respective traceback
-            master.shutdown()
 
-    def test_exit_status_unknown_argument(self):
+        assert exc.value.exitcode == salt.defaults.exitcodes.EX_NOUSER, exc.value
+        assert "The user is not available." in exc.value.stderr, exc.value
+
+    def test_exit_status_unknown_argument(
+        self, request, salt_factories, shell_tests_salt_master_config
+    ):
         """
         Ensure correct exit status when an unknown argument is passed to salt-master.
         """
-
-        master = testprogram.TestDaemonSaltMaster(
-            name="unknown_argument", parent_dir=self._test_dir,
-        )
-        # Call setup here to ensure config and script exist
-        master.setup()
-        stdout, stderr, status = master.run(
-            args=["-d", "--unknown-argument"], catch_stderr=True, with_retcode=True,
-        )
-        try:
-            self.assert_exit_status(
-                status,
-                "EX_USAGE",
-                message="unknown argument",
-                stdout=stdout,
-                stderr=tests.integration.utils.decode_byte_list(stderr),
+        with pytest.raises(ProcessNotStarted) as exc:
+            salt_factories.spawn_master(
+                request,
+                shell_tests_salt_master_config["id"],
+                max_start_attempts=1,
+                base_script_args=["--unknown-argument"],
             )
-        finally:
-            # Although the start-up should fail, call shutdown() to set the
-            # internal _shutdown flag and avoid the registered atexit calls to
-            # cause timeout exceptions and respective traceback
-            master.shutdown()
+        assert exc.value.exitcode == salt.defaults.exitcodes.EX_USAGE, exc.value
+        assert "Usage" in exc.value.stderr, exc.value
+        assert "no such option: --unknown-argument" in exc.value.stderr, exc.value
 
-    def test_exit_status_correct_usage(self):
-        """
-        Ensure correct exit status when salt-master starts correctly.
-        """
-
-        master = testprogram.TestDaemonSaltMaster(
-            name="correct_usage", parent_dir=self._test_dir,
+    @PRE_PYTEST_SKIP
+    def test_exit_status_correct_usage(
+        self, request, salt_factories, shell_tests_salt_master_config
+    ):
+        proc = salt_factories.spawn_master(
+            request, shell_tests_salt_master_config["id"] + "-2"
         )
-        # Call setup here to ensure config and script exist
-        master.setup()
-        stdout, stderr, status = master.run(
-            args=["-d"], catch_stderr=True, with_retcode=True,
-        )
-        try:
-            self.assert_exit_status(
-                status,
-                "EX_OK",
-                message="correct usage",
-                stdout=stdout,
-                stderr=tests.integration.utils.decode_byte_list(stderr),
-            )
-        finally:
-            master.shutdown(wait_for_orphans=3)
-
-        # Do the test again to check does master shut down correctly
-        # **Due to some underlying subprocessing issues with Minion._thread_return, this
-        # part of the test has been commented out. Once these underlying issues have
-        # been addressed, this part of the test should be uncommented. Work for this
-        # issue is being tracked in https://github.com/saltstack/salt-jenkins/issues/378
-        # stdout, stderr, status = master.run(
-        #     args=['-d'],
-        #     catch_stderr=True,
-        #     with_retcode=True,
-        # )
-        # try:
-        #     self.assert_exit_status(
-        #         status, 'EX_OK',
-        #         message='correct usage',
-        #         stdout=stdout,
-        #         stderr=tests.integration.utils.decode_byte_list(stderr)
-        #     )
-        # finally:
-        #     master.shutdown(wait_for_orphans=3)
+        assert proc.is_alive()
+        time.sleep(1)
+        ret = proc.terminate()
+        assert ret.exitcode == salt.defaults.exitcodes.EX_OK, ret

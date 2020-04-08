@@ -898,20 +898,6 @@ class TestSaltDaemon(
 
 
 @pytest.mark.windows_whitelisted
-class TestDaemonSaltMaster(TestSaltDaemon):
-    """
-    Manager for salt-master daemon.
-    """
-
-    configs = {"master": {}}
-
-    def __init__(self, *args, **kwargs):
-        cfgb = kwargs.setdefault("config_base", {})
-        _ = cfgb.setdefault("user", getpass.getuser())
-        super(TestDaemonSaltMaster, self).__init__(*args, **kwargs)
-
-
-@pytest.mark.windows_whitelisted
 class TestDaemonSaltMinion(TestSaltDaemon):
     """
     Manager for salt-minion daemon.
