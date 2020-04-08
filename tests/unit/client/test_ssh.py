@@ -186,9 +186,12 @@ class SSHSingleTests(TestCase):
         mock_cmd = MagicMock(return_value=cmd_ret)
         patch_flight = patch("salt.client.ssh.Single.run_ssh_pre_flight", mock_flight)
         patch_cmd = patch("salt.client.ssh.Single.cmd_block", mock_cmd)
+        patch_exec_cmd = patch(
+            "salt.client.ssh.shell.Shell.exec_cmd", return_value=("", "", 1)
+        )
         patch_os = patch("os.path.exists", side_effect=[True])
 
-        with patch_os, patch_flight, patch_cmd:
+        with patch_os, patch_flight, patch_cmd, patch_exec_cmd:
             ret = single.run()
             mock_cmd.assert_called()
             mock_flight.assert_called()
@@ -217,9 +220,12 @@ class SSHSingleTests(TestCase):
         mock_cmd = MagicMock(return_value=cmd_ret)
         patch_flight = patch("salt.client.ssh.Single.run_ssh_pre_flight", mock_flight)
         patch_cmd = patch("salt.client.ssh.Single.cmd_block", mock_cmd)
+        patch_exec_cmd = patch(
+            "salt.client.ssh.shell.Shell.exec_cmd", return_value=("", "", 1)
+        )
         patch_os = patch("os.path.exists", side_effect=[True])
 
-        with patch_os, patch_flight, patch_cmd:
+        with patch_os, patch_flight, patch_cmd, patch_exec_cmd:
             ret = single.run()
             mock_cmd.assert_not_called()
             mock_flight.assert_called()
@@ -248,9 +254,12 @@ class SSHSingleTests(TestCase):
         mock_cmd = MagicMock(return_value=cmd_ret)
         patch_flight = patch("salt.client.ssh.Single.run_ssh_pre_flight", mock_flight)
         patch_cmd = patch("salt.client.ssh.Single.cmd_block", mock_cmd)
+        patch_exec_cmd = patch(
+            "salt.client.ssh.shell.Shell.exec_cmd", return_value=("", "", 1)
+        )
         patch_os = patch("os.path.exists", side_effect=[False])
 
-        with patch_os, patch_flight, patch_cmd:
+        with patch_os, patch_flight, patch_cmd, patch_exec_cmd:
             ret = single.run()
             mock_cmd.assert_called()
             mock_flight.assert_not_called()
@@ -279,9 +288,10 @@ class SSHSingleTests(TestCase):
         mock_cmd = MagicMock(return_value=cmd_ret)
         patch_flight = patch("salt.client.ssh.Single.run_ssh_pre_flight", mock_flight)
         patch_cmd = patch("salt.client.ssh.shell.Shell.exec_cmd", mock_cmd)
+        patch_cmd_block = patch("salt.client.ssh.Single.cmd_block", mock_cmd)
         patch_os = patch("os.path.exists", return_value=True)
 
-        with patch_os, patch_flight, patch_cmd:
+        with patch_os, patch_flight, patch_cmd, patch_cmd_block:
             ret = single.run()
             mock_cmd.assert_called()
             mock_flight.assert_not_called()
@@ -337,13 +347,13 @@ class SSHSingleTests(TestCase):
         exp_ret = ("Success", "", 0)
         mock_cmd = MagicMock(return_value=exp_ret)
         patch_cmd = patch("salt.client.ssh.shell.Shell.exec_cmd", mock_cmd)
+        patch_send = patch("salt.client.ssh.shell.Shell.send", return_value=("", "", 0))
         patch_rand = patch("os.urandom", return_value=b"5\xd9l\xca\xc2\xff")
 
-        with patch_cmd, patch_rand:
+        with patch_cmd, patch_rand, patch_send:
             ret = single.shim_cmd(cmd_str="echo test")
             assert ret == exp_ret
             assert [
-                call("mkdir -p "),
                 call("/bin/sh '$HOME/.35d96ccac2ff.py'"),
                 call("rm '$HOME/.35d96ccac2ff.py'"),
             ] == mock_cmd.call_args_list
