@@ -987,8 +987,8 @@ def pytest_saltfactories_generate_default_master_configuration(
         ) as rfh:
             opts = yaml.deserialize(rfh.read())
 
-            opts["hosts.file"] = root_dir.join("hosts").strpath
-            opts["aliases.file"] = root_dir.join("aliases").strpath
+            opts["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
+            opts["aliases.file"] = os.path.join(RUNTIME_VARS.TMP, "aliases")
             opts["transport"] = request.config.getoption("--transport")
 
             return opts
@@ -1133,8 +1133,8 @@ def pytest_saltfactories_generate_default_minion_configuration(
     else:
         raise RuntimeError("Not prepared to handle minion_id '{}'".format(minion_id))
 
-    opts["hosts.file"] = root_dir.join("hosts").strpath
-    opts["aliases.file"] = root_dir.join("aliases").strpath
+    opts["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
+    opts["aliases.file"] = os.path.join(RUNTIME_VARS.TMP, "aliases")
     opts["transport"] = request.config.getoption("--transport")
 
     return opts
@@ -1212,8 +1212,8 @@ def pytest_saltfactories_generate_default_syndic_configuration(
         ) as rfh:
             opts = yaml.deserialize(rfh.read())
 
-            opts["hosts.file"] = root_dir.join("hosts").strpath
-            opts["aliases.file"] = root_dir.join("aliases").strpath
+            opts["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
+            opts["aliases.file"] = os.path.join(RUNTIME_VARS.TMP, "aliases")
             opts["transport"] = request.config.getoption("--transport")
             factory_opts["syndic"] = opts
     return factory_opts

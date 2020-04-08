@@ -48,8 +48,8 @@ def pytest_saltfactories_generate_default_proxy_minion_configuration(
             "Not prepared to handle proxy_minion_id '{}'".format(proxy_minion_id)
         )
 
-    opts["hosts.file"] = root_dir.join("hosts").strpath
-    opts["aliases.file"] = root_dir.join("aliases").strpath
+    opts["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
+    opts["aliases.file"] = os.path.join(RUNTIME_VARS.TMP, "aliases")
     opts["transport"] = request.config.getoption("--transport")
 
     RUNTIME_VARS.TMP_PROXY_CONF_DIR = root_dir.join("conf").strpath
