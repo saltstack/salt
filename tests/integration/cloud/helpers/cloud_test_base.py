@@ -27,7 +27,6 @@ log = logging.getLogger(__name__)
 class CloudTest(ShellCase):
     PROVIDER = ""
     REQUIRED_PROVIDER_CONFIG_ITEMS = tuple()
-    TMP_PROVIDER_DIR = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "cloud.providers.d")
     __RE_RUN_DELAY = 30
     __RE_TRIES = 12
 
@@ -37,8 +36,10 @@ class CloudTest(ShellCase):
         Clean the cloud.providers.d tmp directory
         """
         # make sure old provider configs are deleted
-        for i in os.listdir(tmp_dir):
-            os.remove(os.path.join(tmp_dir, i))
+        if not os.path.isdir(tmp_dir):
+            return
+        for fname in os.listdir(tmp_dir):
+            os.remove(os.path.join(tmp_dir, fname))
 
     def query_instances(self):
         """
@@ -318,12 +319,15 @@ class CloudTest(ShellCase):
 
     @classmethod
     def tearDownClass(cls):
-        cls.clean_cloud_dir(cls.TMP_PROVIDER_DIR)
+        cls.clean_cloud_dir(cls.tmp_provider_dir)
 
     @classmethod
     def setUpClass(cls):
         # clean up before setup
-        cls.clean_cloud_dir(cls.TMP_PROVIDER_DIR)
+        cls.tmp_provider_dir = os.path.join(
+            RUNTIME_VARS.TMP_CONF_DIR, "cloud.providers.d"
+        )
+        cls.clean_cloud_dir(cls.tmp_provider_dir)
 
         # add the provider config for only the cloud we are testing
         provider_file = cls.PROVIDER + ".conf"
@@ -331,5 +335,5 @@ class CloudTest(ShellCase):
             os.path.join(
                 os.path.join(FILES, "conf", "cloud.providers.d"), provider_file
             ),
-            os.path.join(os.path.join(cls.TMP_PROVIDER_DIR, provider_file)),
+            os.path.join(os.path.join(cls.tmp_provider_dir, provider_file)),
         )
