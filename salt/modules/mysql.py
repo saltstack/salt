@@ -641,6 +641,29 @@ def _execute(cur, qry, args=None):
         return cur.execute(qry, args)
 
 
+def _sanitize_comments(content):
+    # Remove comments which might affect line by line parsing
+    # Regex should remove any text begining with # (or --) not inside of ' or "
+    content = re.sub(
+        r"""(['"](?:[^'"]+|(?<=\\)['"])*['"])|#[^\n]*""",
+        lambda m: m.group(1) or "",
+        content,
+        re.S,
+    )
+    content = re.sub(
+        r"""(['"](?:[^'"]+|(?<=\\)['"])*['"])|--[^\n]*""",
+        lambda m: m.group(1) or "",
+        content,
+        re.S,
+    )
+    cleaned = ""
+    for line in content.splitlines():
+        line = line.strip()
+        if line != "":
+            cleaned += line + "\n"
+    return cleaned
+
+
 def query(database, query, **connection_args):
     """
     Run an arbitrary SQL query and return the results or
@@ -773,7 +796,7 @@ def query(database, query, **connection_args):
         return ret
 
 
-def file_query(database, file_name, no_parse=False, **connection_args):
+def file_query(database, file_name, **connection_args):
     """
     Run an arbitrary SQL query from the specified file and return the
     the number of affected rows.
@@ -832,66 +855,32 @@ def file_query(database, file_name, no_parse=False, **connection_args):
         "query time": {"raw": 0},
     }
 
-    if no_parse:
-        # Submit the entire file to query function
-        query_result = query(database, contents, **connection_args)
+    contents = _sanitize_comments(contents)
+    # Walk the each line of the sql file to get accurate row affected results
+    for line in contents.splitlines():
+        if not re.search(r"[^-;]+;", line):  # keep appending lines that don't end in ;
+            query_string = query_string + line
+        else:
+            query_string = (
+                query_string + line
+            )  # append lines that end with ; and run query
+            query_result = query(database, query_string, **connection_args)
+            query_string = ""
 
-        if query_result is False:
-            # Fail out on error
-            return False
+            if query_result is False:
+                # Fail out on error
+                return False
 
-        if "query time" in query_result:
-            ret["query time"]["raw"] = float(query_result["query time"]["raw"])
-        if "rows returned" in query_result:
-            ret["rows returned"] = query_result["rows returned"]
-        if "columns" in query_result:
-            ret["columns"] = query_result["columns"]
-        if "results" in query_result:
-            ret["results"] = query_result["results"]
-        if "rows affected" in query_result:
-            ret["rows affected"] = query_result["rows affected"]
-    else:
-        # Remove comments which might affect line by line parsing
-        # Regex should remove any text begining with # (or --) not inside of ' or "
-        contents = re.sub(
-            r"""(['"](?:[^'"]+|(?<=\\)['"])*['"])|#[^\n]*""",
-            lambda m: m.group(1) or "",
-            contents,
-            re.S,
-        )
-        contents = re.sub(
-            r"""(['"](?:[^'"]+|(?<=\\)['"])*['"])|--[^\n]*""",
-            lambda m: m.group(1) or "",
-            contents,
-            re.S,
-        )
-        # Walk the each line of the sql file to get accurate row affected results
-        for line in contents.splitlines():
-            if not re.search(
-                r"[^-;]+;", line
-            ):  # keep appending lines that don't end in ;
-                query_string = query_string + line
-            else:
-                query_string = (
-                    query_string + line
-                )  # append lines that end with ; and run query
-                query_result = query(database, query_string, **connection_args)
-                query_string = ""
-
-                if query_result is False:
-                    # Fail out on error
-                    return False
-
-                if "query time" in query_result:
-                    ret["query time"]["raw"] += float(query_result["query time"]["raw"])
-                if "rows returned" in query_result:
-                    ret["rows returned"] += query_result["rows returned"]
-                if "columns" in query_result:
-                    ret["columns"].append(query_result["columns"])
-                if "results" in query_result:
-                    ret["results"].append(query_result["results"])
-                if "rows affected" in query_result:
-                    ret["rows affected"] += query_result["rows affected"]
+            if "query time" in query_result:
+                ret["query time"]["raw"] += float(query_result["query time"]["raw"])
+            if "rows returned" in query_result:
+                ret["rows returned"] += query_result["rows returned"]
+            if "columns" in query_result:
+                ret["columns"].append(query_result["columns"])
+            if "results" in query_result:
+                ret["results"].append(query_result["results"])
+            if "rows affected" in query_result:
+                ret["rows affected"] += query_result["rows affected"]
 
     ret["query time"]["human"] = (
         six.text_type(round(float(ret["query time"]["raw"]), 2)) + "s"

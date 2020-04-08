@@ -620,6 +620,29 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
             "auth_socket",
         )
 
+    def test_sanitize_comment(self):
+        """
+        Test comment sanitization
+        """
+        input_data = """/*
+        multiline
+        comment
+        */
+        CREATE TABLE test_update (a INT); # end of line comment
+        # example comment
+        insert into test_update values (1); -- ending comment
+        -- another comment type
+        """
+        expected_response = """/*
+multiline
+comment
+*/
+CREATE TABLE test_update (a INT);
+insert into test_update values (1);
+"""
+        output = mysql._sanitize_comments(input_data)
+        self.assertEqual(output, expected_response)
+
     def _test_call(self, function, expected_sql, *args, **kwargs):
         connect_mock = MagicMock()
         with patch.object(mysql, "_connect", connect_mock):
