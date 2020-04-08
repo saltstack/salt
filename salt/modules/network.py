@@ -2010,7 +2010,7 @@ def iphexval(ip):
 
 def ip_networks(interface=None, include_loopback=False, verbose=False):
     """
-    .. versionaddeed:: Sodium
+    .. versionadded:: Sodium
 
     Returns a list of IPv4 networks to which the minion belongs.
 
@@ -2035,7 +2035,7 @@ def ip_networks(interface=None, include_loopback=False, verbose=False):
 
 def ip_networks6(interface=None, include_loopback=False, verbose=False):
     """
-    .. versionaddeed:: Sodium
+    .. versionadded:: Sodium
 
     Returns a list of IPv6 networks to which the minion belongs.
 
