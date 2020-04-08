@@ -72,7 +72,6 @@ integration.runners.test_salt
 integration.sdb.test_env
 integration.shell.test_arguments
 integration.shell.test_auth
-integration.shell.test_call
 integration.shell.test_cloud
 integration.shell.test_enabled
 integration.shell.test_key
