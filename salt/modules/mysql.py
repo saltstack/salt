@@ -811,14 +811,6 @@ def file_query(database, file_name, **connection_args):
 
         File name of the script.  This can be on the minion, or a file that is reachable by the fileserver
 
-    no_parse
-
-        Defaults to False. Submit the entire file to MySQL, rather than attempting to run each query
-        separately. This could be useful for complex files, but results in inaccurate row affected
-        results in the salt return.
-
-        .. versionadded neon
-
     CLI Example:
 
     .. code-block:: bash
