@@ -41,7 +41,7 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
         self.assertIn("minion", data)
         self.assertIn("sub_minion", data)
 
-    # compound matcher tests: 11
+    # compound matcher tests: 12
 
     def test_compound_min_with_grain(self):
         """
@@ -106,21 +106,19 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
         data = self.run_salt("-C 'J%@knights%^(Lancelot|Galahad)$' test.ping")
         self.assertTrue(minion_in_returns("minion", data))
         self.assertTrue(minion_in_returns("sub_minion", data))
-        # The multiline nodegroup tests are failing in develop.
-        # This needs to be fixed for Fluorine. @skipIf wasn't used, because
-        # the rest of the assertions above pass just fine, so we don't want
-        # to bypass the whole test.
-        # time.sleep(2)
-        # data = self.run_salt("-C 'N@multiline_nodegroup' test.ping")
-        # self.assertTrue(minion_in_returns('minion', data))
-        # self.assertTrue(minion_in_returns('sub_minion', data))
-        # time.sleep(2)
-        # data = self.run_salt("-C 'N@multiline_nodegroup not sub_minion' test.ping")
-        # self.assertTrue(minion_in_returns('minion', data))
-        # self.assertFalse(minion_in_returns('sub_minion', data))
-        # data = self.run_salt("-C 'N@multiline_nodegroup not @fakenodegroup not sub_minion' test.ping")
-        # self.assertTrue(minion_in_returns('minion', data))
-        # self.assertFalse(minion_in_returns('sub_minion', data))
+
+    def test_compound_nodegroup(self):
+        data = self.run_salt('-C "N@multiline_nodegroup" test.ping')
+        self.assertTrue(minion_in_returns("minion", data))
+        self.assertTrue(minion_in_returns("sub_minion", data))
+        data = self.run_salt('-C "N@multiline_nodegroup not sub_minion" test.ping')
+        self.assertTrue(minion_in_returns("minion", data))
+        self.assertFalse(minion_in_returns("sub_minion", data))
+        data = self.run_salt(
+            '-C "N@multiline_nodegroup not @fakenodegroup not sub_minion" test.ping'
+        )
+        self.assertTrue(minion_in_returns("minion", data))
+        self.assertFalse(minion_in_returns("sub_minion", data))
 
     def test_nodegroup(self):
         """
