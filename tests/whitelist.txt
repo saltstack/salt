@@ -76,7 +76,6 @@ integration.shell.test_cloud
 integration.shell.test_enabled
 integration.shell.test_master_tops
 integration.shell.test_matcher
-integration.shell.test_minion
 integration.shell.test_saltcli
 integration.shell.test_spm
 integration.shell.test_syndic
