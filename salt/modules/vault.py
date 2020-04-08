@@ -143,9 +143,13 @@ import logging
 log = logging.getLogger(__name__)
 
 
-def read_secret(path, key=None):
+def read_secret(path, key=None, metadata=False):
     """
     Return the value of key at path in vault, or entire secret
+
+    :param metadata: Optional - If using KV v2 backend, display full results, including metadata
+
+        .. versionadded:: Sodium
 
     Jinja Example:
 
@@ -153,23 +157,14 @@ def read_secret(path, key=None):
 
         my-secret: {{ salt['vault'].read_secret('secret/my/secret', 'some-key') }}
 
+        {{ salt['vault'].read_secret('/secret/my/secret', 'some-key', metadata=True)['data'] }}
+
     .. code-block:: jinja
 
         {% set supersecret = salt['vault'].read_secret('secret/my/secret') %}
         secrets:
             first: {{ supersecret.first }}
             second: {{ supersecret.second }}
-
-    Support has been added for Vault KV backend version 2, where the Vault server
-    output has changed to include metadata about the secret. When using KV backend
-    version 2, secret data is now within an additional data key, which will need
-    to be handled in state lookups. For example:
-
-    .. code-block:: jinja
-
-        {% set mysecret = salt['vault'].read_secret('secret/my/secret')['data'] %}
-
-    .. versionchanged:: Sodium
     """
     version2 = __utils__["vault.is_v2"](path)
     if version2["v2"]:
@@ -182,11 +177,17 @@ def read_secret(path, key=None):
             response.raise_for_status()
         data = response.json()["data"]
 
+        # Return data of subkey if requested
         if key is not None:
             if version2["v2"]:
                 return data["data"][key]
             else:
                 return data[key]
+        # Just return data from KV V2 if metadata isn't needed
+        if version2["v2"]:
+            if not metadata:
+                return data["data"]
+
         return data
     except Exception as err:  # pylint: disable=broad-except
         log.error("Failed to read secret! %s: %s", type(err).__name__, err)
