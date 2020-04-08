@@ -88,7 +88,7 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
         assert minion_in_returns("minion", data) is True
         assert minion_in_returns("sub_minion", data) is False
 
-    def test_coumpound_pcre_grain_regex(self):
+    def test_compound_pcre_grain_regex(self):
         data = self.run_salt('-C "P%@planets%^(mercury|saturn)$" test.ping')
         assert minion_in_returns("minion", data) is True
         assert minion_in_returns("sub_minion", data) is True
@@ -102,7 +102,7 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
 
     @skipIf(True, "This test is unreliable. Need to investigate why more deeply.")
     @flaky
-    def test_coumpound_pillar_pcre(self):
+    def test_compound_pillar_pcre(self):
         data = self.run_salt("-C 'J%@knights%^(Lancelot|Galahad)$' test.ping")
         self.assertTrue(minion_in_returns("minion", data))
         self.assertTrue(minion_in_returns("sub_minion", data))
