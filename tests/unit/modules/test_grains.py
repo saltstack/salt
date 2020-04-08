@@ -7,9 +7,7 @@ import copy
 import os
 
 import salt.modules.grains as grainsmod
-import salt.modules.saltutil as saltutilmod
 import salt.utils.dictupdate as dictupdate
-import salt.utils.event
 
 # Import Salt libs
 from salt.exceptions import SaltException
@@ -710,13 +708,22 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
             self.assertFalse(res)
 
     def test_grains_setval_refresh_pillar(self):
-        '''
+        """
         Test that refresh_pillar kwarg is being passed correctly from grains.setval to saltutil.refresh_grains
-        '''
-        ret = grainsmod.setval('test_grains_setval_refresh_pillar', 'saltopotamus')
-        grainsmod.__salt__["saltutil.refresh_grains"].assert_called_with(refresh_pillar=True)
-        ret = grainsmod.setval('test_grains_setval_refresh_pillar', 'saltopotamus', refresh_pillar=True)
-        grainsmod.__salt__["saltutil.refresh_grains"].assert_called_with(refresh_pillar=True)
-        ret = grainsmod.setval('test_grains_setval_refresh_pillar', 'saltopotamus', refresh_pillar=False)
-        grainsmod.__salt__["saltutil.refresh_grains"].assert_called_with(refresh_pillar=False)
-
+        """
+        ret = grainsmod.setval("test_grains_setval_refresh_pillar", "saltopotamus")
+        grainsmod.__salt__["saltutil.refresh_grains"].assert_called_with(
+            refresh_pillar=True
+        )
+        ret = grainsmod.setval(
+            "test_grains_setval_refresh_pillar", "saltopotamus", refresh_pillar=True
+        )
+        grainsmod.__salt__["saltutil.refresh_grains"].assert_called_with(
+            refresh_pillar=True
+        )
+        ret = grainsmod.setval(
+            "test_grains_setval_refresh_pillar", "saltopotamus", refresh_pillar=False
+        )
+        grainsmod.__salt__["saltutil.refresh_grains"].assert_called_with(
+            refresh_pillar=False
+        )
