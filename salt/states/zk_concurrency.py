@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Control concurrency of steps within state execution using zookeeper
 ===================================================================
 
@@ -44,19 +44,19 @@ steps are executing with a single path.
 
 This example would allow the file state to change, but would limit the
 concurrency of the trafficserver service restart to 4.
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 # TODO: use depends decorator to make these per function deps, instead of all or nothing
 REQUIRED_FUNCS = (
-    'zk_concurrency.lock',
-    'zk_concurrency.unlock',
-    'zk_concurrency.party_members',
+    "zk_concurrency.lock",
+    "zk_concurrency.unlock",
+    "zk_concurrency.party_members",
 )
 
-__virtualname__ = 'zk_concurrency'
+__virtualname__ = "zk_concurrency"
 
 
 def __virtual__():
@@ -66,133 +66,163 @@ def __virtual__():
     return __virtualname__
 
 
-def lock(name,
-         zk_hosts=None,
-         identifier=None,
-         max_concurrency=1,
-         timeout=None,
-         ephemeral_lease=False,
-         profile=None,
-         scheme=None,
-         username=None,
-         password=None,
-         default_acl=None):
-    '''
+def lock(
+    name,
+    zk_hosts=None,
+    identifier=None,
+    max_concurrency=1,
+    timeout=None,
+    ephemeral_lease=False,
+    profile=None,
+    scheme=None,
+    username=None,
+    password=None,
+    default_acl=None,
+):
+    """
     Block state execution until you are able to get the lock (or hit the timeout)
 
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': False,
-           'comment': ''}
-    conn_kwargs = {'profile': profile, 'scheme': scheme,
-                   'username': username, 'password': password, 'default_acl': default_acl}
+    """
+    ret = {"name": name, "changes": {}, "result": False, "comment": ""}
+    conn_kwargs = {
+        "profile": profile,
+        "scheme": scheme,
+        "username": username,
+        "password": password,
+        "default_acl": default_acl,
+    }
 
-    if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = 'Attempt to acquire lock'
+    if __opts__["test"]:
+        ret["result"] = None
+        ret["comment"] = "Attempt to acquire lock"
         return ret
 
     if identifier is None:
-        identifier = __grains__['id']
+        identifier = __grains__["id"]
 
-    locked = __salt__['zk_concurrency.lock'](name,
-                                             zk_hosts,
-                                             identifier=identifier,
-                                             max_concurrency=max_concurrency,
-                                             timeout=timeout,
-                                             ephemeral_lease=ephemeral_lease,
-                                             **conn_kwargs)
+    locked = __salt__["zk_concurrency.lock"](
+        name,
+        zk_hosts,
+        identifier=identifier,
+        max_concurrency=max_concurrency,
+        timeout=timeout,
+        ephemeral_lease=ephemeral_lease,
+        **conn_kwargs
+    )
     if locked:
-        ret['result'] = True
-        ret['comment'] = 'lock acquired'
+        ret["result"] = True
+        ret["comment"] = "lock acquired"
     else:
-        ret['comment'] = 'Unable to acquire lock'
+        ret["comment"] = "Unable to acquire lock"
 
     return ret
 
 
-def unlock(name,
-           zk_hosts=None,  # in case you need to unlock without having run lock (failed execution for example)
-           identifier=None,
-           max_concurrency=1,
-           ephemeral_lease=False,
-           profile=None,
-           scheme=None,
-           username=None,
-           password=None,
-           default_acl=None):
-    '''
+def unlock(
+    name,
+    zk_hosts=None,  # in case you need to unlock without having run lock (failed execution for example)
+    identifier=None,
+    max_concurrency=1,
+    ephemeral_lease=False,
+    profile=None,
+    scheme=None,
+    username=None,
+    password=None,
+    default_acl=None,
+):
+    """
     Remove lease from semaphore.
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': False,
-           'comment': ''}
-    conn_kwargs = {'profile': profile, 'scheme': scheme,
-                   'username': username, 'password': password, 'default_acl': default_acl}
+    """
+    ret = {"name": name, "changes": {}, "result": False, "comment": ""}
+    conn_kwargs = {
+        "profile": profile,
+        "scheme": scheme,
+        "username": username,
+        "password": password,
+        "default_acl": default_acl,
+    }
 
-    if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = 'Released lock if it is here'
+    if __opts__["test"]:
+        ret["result"] = None
+        ret["comment"] = "Released lock if it is here"
         return ret
 
     if identifier is None:
-        identifier = __grains__['id']
+        identifier = __grains__["id"]
 
-    unlocked = __salt__['zk_concurrency.unlock'](name,
-                                                 zk_hosts=zk_hosts,
-                                                 identifier=identifier,
-                                                 max_concurrency=max_concurrency,
-                                                 ephemeral_lease=ephemeral_lease,
-                                                 **conn_kwargs)
+    unlocked = __salt__["zk_concurrency.unlock"](
+        name,
+        zk_hosts=zk_hosts,
+        identifier=identifier,
+        max_concurrency=max_concurrency,
+        ephemeral_lease=ephemeral_lease,
+        **conn_kwargs
+    )
 
     if unlocked:
-        ret['result'] = True
+        ret["result"] = True
     else:
-        ret['comment'] = 'Unable to find lease for path {0}'.format(name)
+        ret["comment"] = "Unable to find lease for path {0}".format(name)
 
     return ret
 
 
-def min_party(name,
-              zk_hosts,
-              min_nodes,
-              blocking=False,
-              profile=None,
-              scheme=None,
-              username=None,
-              password=None,
-              default_acl=None):
-    '''
+def min_party(
+    name,
+    zk_hosts,
+    min_nodes,
+    blocking=False,
+    profile=None,
+    scheme=None,
+    username=None,
+    password=None,
+    default_acl=None,
+):
+    """
     Ensure that there are `min_nodes` in the party at `name`, optionally blocking if not available.
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': False,
-           'comment': ''}
-    conn_kwargs = {'profile': profile, 'scheme': scheme,
-                   'username': username, 'password': password, 'default_acl': default_acl}
+    """
+    ret = {"name": name, "changes": {}, "result": False, "comment": ""}
+    conn_kwargs = {
+        "profile": profile,
+        "scheme": scheme,
+        "username": username,
+        "password": password,
+        "default_acl": default_acl,
+    }
 
-    if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = 'Attempt to ensure min_party'
+    if __opts__["test"]:
+        ret["result"] = None
+        ret["comment"] = "Attempt to ensure min_party"
         return ret
 
-    nodes = __salt__['zk_concurrency.party_members'](name, zk_hosts, min_nodes, blocking=blocking, **conn_kwargs)
+    nodes = __salt__["zk_concurrency.party_members"](
+        name, zk_hosts, min_nodes, blocking=blocking, **conn_kwargs
+    )
     if not isinstance(nodes, list):
-        raise Exception('Error from zk_concurrency.party_members, return was not a list: {0}'.format(nodes))
+        raise Exception(
+            "Error from zk_concurrency.party_members, return was not a list: {0}".format(
+                nodes
+            )
+        )
 
     num_nodes = len(nodes)
 
     if num_nodes >= min_nodes or blocking:
-        ret['result'] = None if __opts__['test'] else True
+        ret["result"] = None if __opts__["test"] else True
         if not blocking:
-            ret['comment'] = 'Currently {0} nodes, which is >= {1}'.format(num_nodes, min_nodes)
+            ret["comment"] = "Currently {0} nodes, which is >= {1}".format(
+                num_nodes, min_nodes
+            )
         else:
-            ret['comment'] = 'Blocked until {0} nodes were available. Unblocked after {1} nodes became available'.format(min_nodes, num_nodes)
+            ret[
+                "comment"
+            ] = "Blocked until {0} nodes were available. Unblocked after {1} nodes became available".format(
+                min_nodes, num_nodes
+            )
     else:
-        ret['result'] = False
-        ret['comment'] = 'Currently {0} nodes, which is < {1}'.format(num_nodes, min_nodes)
+        ret["result"] = False
+        ret["comment"] = "Currently {0} nodes, which is < {1}".format(
+            num_nodes, min_nodes
+        )
 
     return ret
