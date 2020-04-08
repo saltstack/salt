@@ -11,108 +11,40 @@ from __future__ import absolute_import
 
 import logging
 import os
-import pipes
 
 import pytest
 import salt.utils.files
-import salt.utils.platform
-import salt.utils.yaml
-from salt.ext import six
-from tests.support.case import ShellCase
-from tests.support.mixins import ShellCaseCommonTestsMixin
 from tests.support.runtests import RUNTIME_VARS
 
 log = logging.getLogger(__name__)
 
 
+@pytest.fixture
+def source_testfile():
+    yield os.path.abspath(os.path.join(RUNTIME_VARS.BASE_FILES, "testfile"))
+
+
+@pytest.fixture
+def dest_testfile():
+    _copy_testfile_path = os.path.join(RUNTIME_VARS.TMP, "test_cp_testfile_copy")
+    yield _copy_testfile_path
+    if os.path.exists(_copy_testfile_path):
+        os.unlink(_copy_testfile_path)
+
+
 @pytest.mark.windows_whitelisted
-class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
-
-    _call_binary_ = "salt-cp"
-
-    def test_cp_testfile(self):
-        """
-        test salt-cp
-        """
-        minions = []
-        for line in self.run_salt('--out yaml "*" test.ping'):
-            if not line:
-                continue
-            data = salt.utils.yaml.safe_load(line)
-            minions.extend(data.keys())
-
-        self.assertNotEqual(minions, [])
-
-        testfile = os.path.abspath(
-            os.path.join(
-                os.path.dirname(os.path.dirname(__file__)),
-                "files",
-                "file",
-                "base",
-                "testfile",
-            )
-        )
-        with salt.utils.files.fopen(testfile, "r") as fh_:
-            testfile_contents = fh_.read()
-
-        def quote(arg):
-            if salt.utils.platform.is_windows():
-                return arg
-            return pipes.quote(arg)
-
-        for idx, minion in enumerate(minions):
-            if "localhost" in minion:
-                continue
-            ret = self.run_salt(
-                "--out yaml {0} file.directory_exists {1}".format(
-                    quote(minion), RUNTIME_VARS.TMP
-                )
-            )
-            data = salt.utils.yaml.safe_load("\n".join(ret))
-            if data[minion] is False:
-                ret = self.run_salt(
-                    "--out yaml {0} file.makedirs {1}".format(
-                        quote(minion), RUNTIME_VARS.TMP
-                    )
-                )
-
-                data = salt.utils.yaml.safe_load("\n".join(ret))
-                self.assertTrue(data[minion])
-
-            minion_testfile = os.path.join(
-                RUNTIME_VARS.TMP, "cp_{0}_testfile".format(idx)
-            )
-
-            ret = self.run_cp(
-                "--out pprint {0} {1} {2}".format(
-                    quote(minion), quote(testfile), quote(minion_testfile),
-                )
-            )
-
-            data = eval("\n".join(ret), {}, {})  # pylint: disable=eval-used
-            for part in six.itervalues(data):
-                key = minion_testfile
-                self.assertTrue(part[key])
-
-            ret = self.run_salt(
-                "--out yaml {0} file.file_exists {1}".format(
-                    quote(minion), quote(minion_testfile)
-                )
-            )
-            data = salt.utils.yaml.safe_load("\n".join(ret))
-            self.assertTrue(data[minion])
-
-            ret = self.run_salt(
-                "--out yaml {0} file.contains {1} {2}".format(
-                    quote(minion), quote(minion_testfile), quote(testfile_contents)
-                )
-            )
-            data = salt.utils.yaml.safe_load("\n".join(ret))
-            self.assertTrue(data[minion])
-            ret = self.run_salt(
-                "--out yaml {0} file.remove {1}".format(
-                    quote(minion), quote(minion_testfile)
-                )
-            )
-            data = salt.utils.yaml.safe_load("\n".join(ret))
-            self.assertTrue(data[minion])
+def test_cp_testfile(salt_minion, salt_cp_cli, source_testfile, dest_testfile):
+    """
+    test salt-cp
+    """
+    ret = salt_cp_cli.run(
+        source_testfile, dest_testfile, minion_tgt=salt_minion.config["id"]
+    )
+    assert ret.exitcode == 0
+    assert ret.json[dest_testfile] is True
+    assert os.path.exists(dest_testfile)
+    with salt.utils.files.fopen(source_testfile) as rfh:
+        source_testfile_contents = rfh.read()
+    with salt.utils.files.fopen(dest_testfile) as rfh:
+        dest_test_file = rfh.read()
+    assert source_testfile_contents == dest_test_file
