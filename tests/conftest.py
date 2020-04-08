@@ -42,6 +42,7 @@ from pytestsalt.utils import cli_scripts
 from salt.ext import six
 from salt.serializers import yaml
 from salt.utils.immutabletypes import freeze
+from tests.support.helpers import PRE_PYTEST_SKIP_OR_NOT, PRE_PYTEST_SKIP_REASON
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import create_sminion
 
@@ -480,6 +481,16 @@ def pytest_runtest_setup(item):
     """
     Fixtures injection based on markers or test skips based on CLI arguments
     """
+    integration_utils_tests_path = os.path.join(
+        CODE_DIR, "tests", "integration", "utils"
+    )
+    if (
+        str(item.fspath).startswith(integration_utils_tests_path)
+        and PRE_PYTEST_SKIP_OR_NOT is True
+    ):
+        item._skipped_by_mark = True
+        pytest.skip(PRE_PYTEST_SKIP_REASON)
+
     destructive_tests_marker = item.get_closest_marker("destructive_test")
     if destructive_tests_marker is not None or _has_unittest_attr(
         item, "__destructive_test__"
