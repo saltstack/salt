@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Manage Telemetry alert configurations
 =====================================
 
@@ -24,8 +24,9 @@ Example:
                filter:  SERVER_ROLE_MONGOD_PRIMARY
                escalate_to: "example@pagerduty.com"
             - name: "**MANAGED BY ORCA DO NOT EDIT BY HAND** manages alarm on testMetric"
-'''
-from __future__ import absolute_import, unicode_literals, print_function
+"""
+from __future__ import absolute_import, print_function, unicode_literals
+
 from salt._compat import string_types
 
 # import 3rd party libs
@@ -34,11 +35,13 @@ from salt.ext import six
 
 def __virtual__():
     # Only load if telemetry is available.
-    return 'telemetry_alert' if 'telemetry.get_alert_config' in __salt__ else False
+    return "telemetry_alert" if "telemetry.get_alert_config" in __salt__ else False
 
 
-def present(name, deployment_id, metric_name, alert_config, api_key=None, profile='telemetry'):
-    '''
+def present(
+    name, deployment_id, metric_name, alert_config, api_key=None, profile="telemetry"
+):
+    """
     Ensure the telemetry alert exists.
 
     name
@@ -72,27 +75,30 @@ def present(name, deployment_id, metric_name, alert_config, api_key=None, profil
         A dict of telemetry config information.  If present, will be used instead of
         api_key.
 
-    '''
+    """
 
-    ret = {'name': metric_name, 'result': True, 'comment': '', 'changes': {}}
+    ret = {"name": metric_name, "result": True, "comment": "", "changes": {}}
 
-    saved_alert_config = __salt__['telemetry.get_alert_config'](
-       deployment_id, metric_name, api_key, profile)
+    saved_alert_config = __salt__["telemetry.get_alert_config"](
+        deployment_id, metric_name, api_key, profile
+    )
 
     post_body = {
         "deployment": deployment_id,
-        "filter": alert_config.get('filter'),
-        "notificationChannel":  __salt__['telemetry.get_notification_channel_id'](alert_config.get('escalate_to')).split(),
+        "filter": alert_config.get("filter"),
+        "notificationChannel": __salt__["telemetry.get_notification_channel_id"](
+            alert_config.get("escalate_to")
+        ).split(),
         "condition": {
-        "metric": metric_name,
-        "max": alert_config.get('max'),
-        "min": alert_config.get('min')
-        }
+            "metric": metric_name,
+            "max": alert_config.get("max"),
+            "min": alert_config.get("min"),
+        },
     }
     # Diff the alert config with the passed-in attributes
     difference = []
     if saved_alert_config:
-        #del saved_alert_config["_id"]
+        # del saved_alert_config["_id"]
         for k, v in post_body.items():
             if k not in saved_alert_config:
                 difference.append("{0}={1} (new)".format(k, v))
@@ -118,45 +124,49 @@ def present(name, deployment_id, metric_name, alert_config, api_key=None, profil
         api_key,
         profile,
     )
-    if saved_alert_config:   # alert config is present.  update, or do nothing
+    if saved_alert_config:  # alert config is present.  update, or do nothing
         # check to see if attributes matches is_present. If so, do nothing.
         if len(difference) == 0:
-            ret['comment'] = "alert config {0} present and matching".format(metric_name)
+            ret["comment"] = "alert config {0} present and matching".format(metric_name)
             return ret
-        if __opts__['test']:
-            msg = 'alert config {0} is to be updated.'.format(metric_name)
-            ret['comment'] = msg
-            ret['result'] = "\n".join(difference)
+        if __opts__["test"]:
+            msg = "alert config {0} is to be updated.".format(metric_name)
+            ret["comment"] = msg
+            ret["result"] = "\n".join(difference)
             return ret
 
-        result, msg = __salt__['telemetry.update_alarm'](*create_or_update_args)
+        result, msg = __salt__["telemetry.update_alarm"](*create_or_update_args)
 
         if result:
-            ret['changes']['diff'] = difference
-            ret['comment'] = "Alert updated."
+            ret["changes"]["diff"] = difference
+            ret["comment"] = "Alert updated."
         else:
-            ret['result'] = False
-            ret['comment'] = 'Failed to update {0} alert config: {1}'.format(metric_name, msg)
+            ret["result"] = False
+            ret["comment"] = "Failed to update {0} alert config: {1}".format(
+                metric_name, msg
+            )
     else:  # alert config is absent. create it.
-        if __opts__['test']:
-            msg = 'alert config {0} is to be created.'.format(metric_name)
-            ret['comment'] = msg
-            ret['result'] = None
+        if __opts__["test"]:
+            msg = "alert config {0} is to be created.".format(metric_name)
+            ret["comment"] = msg
+            ret["result"] = None
             return ret
 
-        result, msg = __salt__['telemetry.create_alarm'](*create_or_update_args)
+        result, msg = __salt__["telemetry.create_alarm"](*create_or_update_args)
 
         if result:
-            ret['changes']['new'] = msg
+            ret["changes"]["new"] = msg
         else:
-            ret['result'] = False
-            ret['comment'] = 'Failed to create {0} alert config: {1}'.format(metric_name, msg)
+            ret["result"] = False
+            ret["comment"] = "Failed to create {0} alert config: {1}".format(
+                metric_name, msg
+            )
 
     return ret
 
 
 def absent(name, deployment_id, metric_name, api_key=None, profile="telemetry"):
-    '''
+    """
     Ensure the telemetry alert config is deleted
 
     name
@@ -175,27 +185,41 @@ def absent(name, deployment_id, metric_name, api_key=None, profile="telemetry"):
     profile
         A dict with telemetry config data. If present, will be used instead of
         api_key.
-    '''
-    ret = {'name': metric_name, 'result': True, 'comment': '', 'changes': {}}
+    """
+    ret = {"name": metric_name, "result": True, "comment": "", "changes": {}}
 
-    is_present = __salt__['telemetry.get_alert_config'](
-        deployment_id, metric_name, api_key, profile)
+    is_present = __salt__["telemetry.get_alert_config"](
+        deployment_id, metric_name, api_key, profile
+    )
 
     if is_present:
-        alert_id = is_present.get('_id')
-        if __opts__['test']:
-            ret['comment'] = 'alert {0} is set to be removed from deployment: {1}.'.format(metric_name, deployment_id)
-            ret['result'] = None
+        alert_id = is_present.get("_id")
+        if __opts__["test"]:
+            ret[
+                "comment"
+            ] = "alert {0} is set to be removed from deployment: {1}.".format(
+                metric_name, deployment_id
+            )
+            ret["result"] = None
             return ret
-        deleted, msg = __salt__['telemetry.delete_alarms'](
-            deployment_id, alert_id, is_present.get('condition', {}).get('metric'), api_key, profile)
+        deleted, msg = __salt__["telemetry.delete_alarms"](
+            deployment_id,
+            alert_id,
+            is_present.get("condition", {}).get("metric"),
+            api_key,
+            profile,
+        )
 
         if deleted:
-            ret['changes']['old'] = metric_name
-            ret['changes']['new'] = None
+            ret["changes"]["old"] = metric_name
+            ret["changes"]["new"] = None
         else:
-            ret['result'] = False
-            ret['comment'] = 'Failed to delete alert {0} from deployment: {1}'.format(metric_name, msg)
+            ret["result"] = False
+            ret["comment"] = "Failed to delete alert {0} from deployment: {1}".format(
+                metric_name, msg
+            )
     else:
-        ret['comment'] = 'alarm on {0} does not exist within {1}.'.format(metric_name, deployment_id)
+        ret["comment"] = "alarm on {0} does not exist within {1}.".format(
+            metric_name, deployment_id
+        )
     return ret
