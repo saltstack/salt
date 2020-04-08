@@ -708,6 +708,22 @@ def temp_state_file(name, contents, saltenv="base", strip_first_newline=True):
     )
 
 
+@pytest.helpers.register
+def temp_pillar_file(name, contents, saltenv="base", strip_first_newline=True):
+
+    if saltenv == "base":
+        directory = RUNTIME_VARS.TMP_PILLAR_TREE
+    elif saltenv == "prod":
+        directory = RUNTIME_VARS.TMP_PRODENV_PILLAR_TREE
+    else:
+        raise RuntimeError(
+            '"saltenv" can only be "base" or "prod", not "{}"'.format(saltenv)
+        )
+    return temp_file(
+        name, contents, directory=directory, strip_first_newline=strip_first_newline
+    )
+
+
 # <---- Pytest Helpers -----------------------------------------------------------------------------------------------
 
 
