@@ -6,6 +6,7 @@ Integration tests for the saltutil module.
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
+import shutil
 import textwrap
 import time
 
@@ -23,6 +24,24 @@ class SaltUtilModuleTest(ModuleCase):
     """
     Testcase for the saltutil execution module
     """
+
+    @classmethod
+    def setUpClass(cls):
+        # Whell functions, on a minion, must run with the master running
+        # along side the minion.
+        # We copy the master config to the minion's configuration directory just
+        # for this test since the test suite master and minion(s) do not share the
+        # same configuration directory
+        src = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "master")
+        dst = os.path.join(RUNTIME_VARS.TMP_MINION_CONF_DIR, "master")
+        shutil.copyfile(src, dst)
+        cls.copied_master_config_file = dst
+
+    @classmethod
+    def tearDownClass(cls):
+        if os.path.exists(cls.copied_master_config_file):
+            os.unlink(cls.copied_master_config_file)
+        cls.copied_master_config_file = None
 
     def setUp(self):
         self.run_function("saltutil.refresh_pillar")
