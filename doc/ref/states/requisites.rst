@@ -68,7 +68,7 @@ first line in the stanza) or the ``- name`` parameter.
     - require:
       - pkg: vim
 
-Glog matching in requisites
+Glob matching in requisites
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: 0.9.8
@@ -1071,8 +1071,8 @@ run if **any** of the files do not exist:
               - /path/file
               - /path/file2
 
-runas
-~~~~~
+listen
+~~~~~~
 
 .. versionadded:: 2014.7.0
 
