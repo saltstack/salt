@@ -158,12 +158,6 @@ def pytest_addoption(parser):
     )
     output_options_group = parser.getgroup("Output Options")
     output_options_group.addoption(
-        "--sysinfo",
-        default=False,
-        action="store_true",
-        help="Print some system information.",
-    )
-    output_options_group.addoption(
         "--output-columns",
         default=80,
         type=int,
