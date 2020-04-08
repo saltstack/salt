@@ -895,7 +895,7 @@ class Single(object):
         self.fsclient = fsclient
         self.context = {"master_opts": self.opts, "fileclient": self.fsclient}
 
-        self.ssh_pre_flight = kwargs.get('ssh_pre_flight', None)
+        self.ssh_pre_flight = kwargs.get("ssh_pre_flight", None)
 
         if self.ssh_pre_flight:
             self.ssh_pre_file = os.path.basename(self.ssh_pre_flight)
@@ -980,22 +980,22 @@ class Single(object):
         return "".join(["\\" + char if re.match(r"\W", char) else char for char in arg])
 
     def run_ssh_pre_flight(self):
-        '''
+        """
         Run our pre_flight script before running any ssh commands
-        '''
+        """
         script = os.path.join(tempfile.gettempdir(), self.ssh_pre_file)
 
-        self.shell.send(
-             self.ssh_pre_flight,
-             script)
+        self.shell.send(self.ssh_pre_flight, script)
 
         return self.execute_script(script)
 
     def check_thin_dir(self):
-        '''
+        """
         check if the thindir exists on the remote machine
-        '''
-        stdout, stderr, retcode = self.shell.exec_cmd('test -d {0}'.format(self.thin_dir))
+        """
+        stdout, stderr, retcode = self.shell.exec_cmd(
+            "test -d {0}".format(self.thin_dir)
+        )
         if retcode != 0:
             return False
         return True
@@ -1035,16 +1035,32 @@ class Single(object):
         stdout = stderr = retcode = None
 
         if self.ssh_pre_flight:
-            if self.check_thin_dir() and not self.opts.get('ssh_run_pre_flight', False):
-                log.info('{0} thin dir already exists. Not running ssh_pre_flight script'.format(self.thin_dir))
+            if self.check_thin_dir() and not self.opts.get("ssh_run_pre_flight", False):
+                log.info(
+                    "{0} thin dir already exists. Not running ssh_pre_flight script".format(
+                        self.thin_dir
+                    )
+                )
             elif not os.path.exists(self.ssh_pre_flight):
-                log.error('The ssh_pre_flight script {0} does not exist'.format(self.ssh_pre_flight))
+                log.error(
+                    "The ssh_pre_flight script {0} does not exist".format(
+                        self.ssh_pre_flight
+                    )
+                )
             else:
                 stdout, stderr, retcode = self.run_ssh_pre_flight()
                 if stderr:
-                    log.error('Error running ssh_pre_flight script {0}'.format(self.ssh_pre_file))
+                    log.error(
+                        "Error running ssh_pre_flight script {0}".format(
+                            self.ssh_pre_file
+                        )
+                    )
                     return stdout, stderr, retcode
-                log.info('Successfully ran the ssh_pre_flight script: {0}'.format(self.ssh_pre_file))
+                log.info(
+                    "Successfully ran the ssh_pre_flight script: {0}".format(
+                        self.ssh_pre_file
+                    )
+                )
 
         if self.opts.get("raw_shell", False):
             cmd_str = " ".join([self._escape_arg(arg) for arg in self.argv])
@@ -1301,23 +1317,23 @@ ARGS = {arguments}\n'''.format(
 
         return cmd
 
-    def execute_script(self, script, extension='py', pre_dir=''):
-        '''
+    def execute_script(self, script, extension="py", pre_dir=""):
+        """
         execute a script on the minion then delete
-        '''
-        if extension == 'ps1':
+        """
+        if extension == "ps1":
             ret = self.shell.exec_cmd('"powershell {0}"'.format(script))
         else:
             if not self.winrm:
-                ret = self.shell.exec_cmd('/bin/sh \'{0}{1}\''.format(pre_dir, script))
+                ret = self.shell.exec_cmd("/bin/sh '{0}{1}'".format(pre_dir, script))
             else:
                 ret = saltwinshell.call_python(self, script)
 
         # Remove file from target system
         if not self.winrm:
-            self.shell.exec_cmd('rm \'{0}{1}\''.format(pre_dir, script))
+            self.shell.exec_cmd("rm '{0}{1}'".format(pre_dir, script))
         else:
-            self.shell.exec_cmd('del {0}'.format(script))
+            self.shell.exec_cmd("del {0}".format(script))
 
         return ret
 
@@ -1351,9 +1367,9 @@ ARGS = {arguments}\n'''.format(
         except IOError:
             pass
 
-        ret = self.execute_script(script=target_shim_file,
-                                  extension=extension,
-                                  pre_dir='$HOME/')
+        ret = self.execute_script(
+            script=target_shim_file, extension=extension, pre_dir="$HOME/"
+        )
 
         return ret
 

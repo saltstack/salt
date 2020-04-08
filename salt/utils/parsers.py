@@ -3269,11 +3269,11 @@ class SaltSSHOptionParser(
         )
 
         self.add_option(
-            '--pre-flight',
+            "--pre-flight",
             default=False,
-            action='store_true',
-            dest='ssh_run_pre_flight',
-            help='Run the defined ssh_pre_flight script in the roster'
+            action="store_true",
+            dest="ssh_run_pre_flight",
+            help="Run the defined ssh_pre_flight script in the roster",
         )
 
         ssh_group = optparse.OptionGroup(
