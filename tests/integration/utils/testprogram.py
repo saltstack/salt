@@ -9,7 +9,6 @@ from __future__ import absolute_import
 import atexit
 import copy
 import errno
-import getpass
 import logging
 import os
 import shutil
@@ -902,23 +901,6 @@ class TestDaemonSaltApi(TestSaltDaemon):
     """
     Manager for salt-api daemon.
     """
-
-
-@pytest.mark.windows_whitelisted
-class TestDaemonSaltSyndic(TestSaltDaemon):
-    """
-    Manager for salt-syndic daemon.
-    """
-
-    configs = {
-        "master": {"map": {"syndic_master": "localhost"}},
-        "minion": {"map": {"id": "{name}"}},
-    }
-
-    def __init__(self, *args, **kwargs):
-        cfgb = kwargs.setdefault("config_base", {})
-        _ = cfgb.setdefault("user", getpass.getuser())
-        super(TestDaemonSaltSyndic, self).__init__(*args, **kwargs)
 
 
 @pytest.mark.windows_whitelisted
