@@ -922,28 +922,6 @@ class TestDaemonSaltSyndic(TestSaltDaemon):
 
 
 @pytest.mark.windows_whitelisted
-class TestDaemonSaltProxy(TestSaltDaemon):
-    """
-    Manager for salt-proxy daemon.
-    """
-
-    pid_file = "salt-minion.pid"
-    configs = {"proxy": {}}
-
-    def __init__(self, *args, **kwargs):
-        cfgb = kwargs.setdefault("config_base", {})
-        _ = cfgb.setdefault("user", getpass.getuser())
-        super(TestDaemonSaltProxy, self).__init__(*args, **kwargs)
-
-    def run(self, **kwargs):
-        if not kwargs.get("verbatim_args"):
-            args = kwargs.setdefault("args", [])
-            if "--proxyid" not in args:
-                args.extend(["--proxyid", self.name])
-        return super(TestDaemonSaltProxy, self).run(**kwargs)
-
-
-@pytest.mark.windows_whitelisted
 class TestProgramCase(TestCase):
     """
     Utilities for unit tests that use TestProgram()

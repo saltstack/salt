@@ -43,15 +43,11 @@ def pytest_saltfactories_proxy_minion_configuration_defaults(
             os.path.join(RUNTIME_VARS.CONF_DIR, "proxy")
         ) as rfh:
             opts = yaml.deserialize(rfh.read())
-    else:
-        raise RuntimeError(
-            "Not prepared to handle proxy_minion_id '{}'".format(proxy_minion_id)
-        )
 
-    opts["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
-    opts["aliases.file"] = os.path.join(RUNTIME_VARS.TMP, "aliases")
-    opts["transport"] = request.config.getoption("--transport")
+        opts["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
+        opts["aliases.file"] = os.path.join(RUNTIME_VARS.TMP, "aliases")
+        opts["transport"] = request.config.getoption("--transport")
 
-    RUNTIME_VARS.TMP_PROXY_CONF_DIR = root_dir.join("conf").strpath
+        RUNTIME_VARS.TMP_PROXY_CONF_DIR = root_dir.join("conf").strpath
 
-    return opts
+        return opts

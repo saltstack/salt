@@ -716,6 +716,26 @@ def temp_state_file(name, contents, saltenv="base", strip_first_newline=True):
 
 
 # ----- Fixtures Overrides ------------------------------------------------------------------------------------------>
+@pytest.fixture(scope="session")
+def salt_factories_config():
+    """
+    Return a dictionary with the keyworkd arguments for SaltFactoriesManager
+    """
+    return {
+        "executable": sys.executable,
+        "code_dir": CODE_DIR,
+        "inject_coverage": MAYBE_RUN_COVERAGE,
+        "inject_sitecustomize": MAYBE_RUN_COVERAGE,
+        "start_timeout": 120
+        if (os.environ.get("JENKINS_URL") or os.environ.get("CI"))
+        else 60,
+    }
+
+
+# <---- Pytest Helpers -----------------------------------------------------------------------------------------------
+
+
+# ----- Fixtures Overrides ------------------------------------------------------------------------------------------>
 def _get_virtualenv_binary_path():
     try:
         return _get_virtualenv_binary_path.__virtualenv_binary__

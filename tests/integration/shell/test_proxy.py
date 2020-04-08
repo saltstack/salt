@@ -9,152 +9,109 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
+import time
 
 import pytest
-import salt.utils.platform
-import tests.integration.utils
-from tests.integration.utils import testprogram
-from tests.support.unit import skipIf
+import salt.defaults.exitcodes
+from saltfactories.exceptions import ProcessNotStarted
+from tests.support.helpers import PRE_PYTEST_SKIP_REASON
 
 log = logging.getLogger(__name__)
 
 
-@pytest.mark.windows_whitelisted
-class ProxyTest(testprogram.TestProgramCase):
+@pytest.fixture(scope="module")
+def shell_tests_salt_master(request, salt_factories):
+    return salt_factories.spawn_master(request, "proxy-minion-shell-tests")
+
+
+@pytest.fixture(scope="module")
+def shell_tests_salt_proxy_minion_config(
+    request, salt_factories, shell_tests_salt_master
+):
+    return salt_factories.configure_proxy_minion(
+        request,
+        shell_tests_salt_master.config["id"],
+        master_id=shell_tests_salt_master.config["id"],
+        config_overrides={"user": "unknown-user"},
+    )
+
+
+class TestProxyMinion:
     """
     Various integration tests for the salt-proxy executable.
     """
 
-    def test_exit_status_no_proxyid(self):
+    def test_exit_status_no_proxyid(
+        self, request, salt_factories, shell_tests_salt_proxy_minion_config
+    ):
         """
         Ensure correct exit status when --proxyid argument is missing.
         """
-
-        proxy = testprogram.TestDaemonSaltProxy(
-            name="proxy-no_proxyid", parent_dir=self._test_dir,
-        )
-        # Call setup here to ensure config and script exist
-        proxy.setup()
-        # Needed due to verbatim_args=True
-        args = ["--config-dir", proxy.abs_path(proxy.config_dir)]
-        if not salt.utils.platform.is_windows():
-            args.append("-d")
-        stdout, stderr, status = proxy.run(
-            args=args,
-            # verbatim_args prevents --proxyid from being added automatically
-            verbatim_args=True,
-            catch_stderr=True,
-            with_retcode=True,
-            # The proxy minion had a bug where it would loop forever
-            # without daemonizing - protect that with a timeout.
-            timeout=60,
-        )
-        try:
-            self.assert_exit_status(
-                status,
-                "EX_USAGE",
-                message="no --proxyid specified",
-                stdout=stdout,
-                stderr=tests.integration.utils.decode_byte_list(stderr),
+        with pytest.raises(ProcessNotStarted) as exc:
+            salt_factories.spawn_proxy_minion(
+                request,
+                shell_tests_salt_proxy_minion_config["id"],
+                master_id=shell_tests_salt_proxy_minion_config["id"],
+                max_start_attempts=1,
+                include_proxyid_cli_flag=False,
             )
-        finally:
-            # Although the start-up should fail, call shutdown() to set the
-            # internal _shutdown flag and avoid the registered atexit calls to
-            # cause timeout exceptions and respective traceback
-            proxy.shutdown()
+        assert exc.value.exitcode == salt.defaults.exitcodes.EX_USAGE, exc.value
+        assert "Usage" in exc.value.stderr, exc.value
+        assert "error: salt-proxy requires --proxyid" in exc.value.stderr, exc.value
 
-    # Hangs on Windows. You can add a timeout to the proxy.run command, but then
-    # it just times out.
-    @skipIf(salt.utils.platform.is_windows(), "Test hangs on Windows")
-    def test_exit_status_unknown_user(self):
+    @pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON)
+    def test_exit_status_unknown_user(
+        self, request, salt_factories, shell_tests_salt_proxy_minion_config
+    ):
         """
         Ensure correct exit status when the proxy is configured to run as an
         unknown user.
         """
-
-        proxy = testprogram.TestDaemonSaltProxy(
-            name="proxy-unknown_user",
-            config_base={"user": "some_unknown_user_xyz"},
-            parent_dir=self._test_dir,
-        )
-        # Call setup here to ensure config and script exist
-        proxy.setup()
-        stdout, stderr, status = proxy.run(
-            args=["-d"] if not salt.utils.platform.is_windows() else [],
-            catch_stderr=True,
-            with_retcode=True,
-        )
-        try:
-            self.assert_exit_status(
-                status,
-                "EX_NOUSER",
-                message="unknown user not on system",
-                stdout=stdout,
-                stderr=tests.integration.utils.decode_byte_list(stderr),
+        with pytest.raises(ProcessNotStarted) as exc:
+            salt_factories.spawn_proxy_minion(
+                request,
+                shell_tests_salt_proxy_minion_config["id"],
+                master_id=shell_tests_salt_proxy_minion_config["id"],
+                max_start_attempts=1,
             )
-        finally:
-            # Although the start-up should fail, call shutdown() to set the
-            # internal _shutdown flag and avoid the registered atexit calls to
-            # cause timeout exceptions and respective traceback
-            proxy.shutdown()
 
-    def test_exit_status_unknown_argument(self):
+        assert exc.value.exitcode == salt.defaults.exitcodes.EX_NOUSER, exc.value
+        assert "The user is not available." in exc.value.stderr, exc.value
+
+    def test_exit_status_unknown_argument(
+        self, request, salt_factories, shell_tests_salt_proxy_minion_config
+    ):
         """
         Ensure correct exit status when an unknown argument is passed to
         salt-proxy.
         """
-
-        proxy = testprogram.TestDaemonSaltProxy(
-            name="proxy-unknown_argument", parent_dir=self._test_dir,
-        )
-        # Call setup here to ensure config and script exist
-        proxy.setup()
-        args = ["--unknown-argument"]
-        if not salt.utils.platform.is_windows():
-            args.append("-b")
-        stdout, stderr, status = proxy.run(
-            args=args, catch_stderr=True, with_retcode=True,
-        )
-        try:
-            self.assert_exit_status(
-                status,
-                "EX_USAGE",
-                message="unknown argument",
-                stdout=stdout,
-                stderr=stderr,
+        with pytest.raises(ProcessNotStarted) as exc:
+            salt_factories.spawn_proxy_minion(
+                request,
+                shell_tests_salt_proxy_minion_config["id"],
+                master_id=shell_tests_salt_proxy_minion_config["id"],
+                max_start_attempts=1,
+                base_script_args=["--unknown-argument"],
             )
-        finally:
-            # Although the start-up should fail, call shutdown() to set the
-            # internal _shutdown flag and avoid the registered atexit calls to
-            # cause timeout exceptions and respective traceback
-            proxy.shutdown()
+        assert exc.value.exitcode == salt.defaults.exitcodes.EX_USAGE, exc.value
+        assert "Usage" in exc.value.stderr, exc.value
+        assert "no such option: --unknown-argument" in exc.value.stderr, exc.value
 
-    # Hangs on Windows. You can add a timeout to the proxy.run command, but then
-    # it just times out.
-    @skipIf(salt.utils.platform.is_windows(), "Test hangs on Windows")
-    def test_exit_status_correct_usage(self):
+    @pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON)
+    def test_exit_status_correct_usage(
+        self, request, salt_factories, shell_tests_salt_master
+    ):
         """
         Ensure correct exit status when salt-proxy starts correctly.
 
         Skip on Windows because daemonization not supported
         """
-        proxy = testprogram.TestDaemonSaltProxy(
-            name="proxy-correct_usage", parent_dir=self._test_dir,
+        proc = salt_factories.spawn_proxy_minion(
+            request,
+            shell_tests_salt_master.config["id"] + "-2",
+            master_id=shell_tests_salt_master.config["id"],
         )
-        # Call setup here to ensure config and script exist
-        proxy.setup()
-        stdout, stderr, status = proxy.run(
-            args=["-d"] if not salt.utils.platform.is_windows() else [],
-            catch_stderr=True,
-            with_retcode=True,
-        )
-        try:
-            self.assert_exit_status(
-                status,
-                "EX_OK",
-                message="correct usage",
-                stdout=stdout,
-                stderr=tests.integration.utils.decode_byte_list(stderr),
-            )
-        finally:
-            proxy.shutdown(wait_for_orphans=3)
+        assert proc.is_alive()
+        time.sleep(1)
+        ret = proc.terminate()
+        assert ret.exitcode == salt.defaults.exitcodes.EX_OK, ret
