@@ -697,13 +697,6 @@ class TestProgramSalt(TestSaltProgram):
 
 
 @pytest.mark.windows_whitelisted
-class TestProgramSaltCall(TestSaltProgram):
-    """Class to manage salt-call"""
-
-    configs = {"minion": {"map": {"id": "{name}"}}}
-
-
-@pytest.mark.windows_whitelisted
 class TestDaemon(TestProgram):
     """
     Run one of the standard daemons

@@ -160,7 +160,7 @@ def temp_state_file(name, contents, saltenv="base", strip_first_newline=True):
     """
 
     if saltenv == "base":
-        directory = RUNTIME_VARS.TMP_STATE_TREE
+        directory = RUNTIME_VARS.TMP_BASEENV_STATE_TREE
     elif saltenv == "prod":
         directory = RUNTIME_VARS.TMP_PRODENV_STATE_TREE
     else:
@@ -208,7 +208,7 @@ def temp_pillar_file(name, contents, saltenv="base", strip_first_newline=True):
     """
 
     if saltenv == "base":
-        directory = RUNTIME_VARS.TMP_PILLAR_TREE
+        directory = RUNTIME_VARS.TMP_BASEENV_PILLAR_TREE
     elif saltenv == "prod":
         directory = RUNTIME_VARS.TMP_PRODENV_PILLAR_TREE
     else:
