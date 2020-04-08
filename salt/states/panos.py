@@ -52,7 +52,7 @@ commit to the device.
     panos/removelock:
         panos.remove_config_lock
     panos/commit:
-        panos.commit
+        panos.commit_config
 
 Version Specific Configurations
 ===============================
