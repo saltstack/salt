@@ -1,10 +1,9 @@
 #!/usr/bin/env python
-'''
+"""
 This script is used to kick off a salt syndic daemon
-'''
+"""
 
 from salt.scripts import salt_syndic
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     salt_syndic()
