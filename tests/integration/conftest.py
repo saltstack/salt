@@ -38,12 +38,22 @@ def salt_master(request, salt_factories):
 
 @pytest.fixture(scope="package")
 def salt_minion(request, salt_factories, salt_master):
-    return salt_factories.spawn_minion(request, "minion", master_id="master")
+    proc = salt_factories.spawn_minion(request, "minion", master_id="master")
+    # Sync All
+    salt_call_cli = salt_factories.get_salt_call_cli("minion")
+    ret = salt_call_cli.run("saltutil.sync_all", _timeout=120)
+    assert ret.exitcode == 0, ret
+    return proc
 
 
 @pytest.fixture(scope="package")
 def salt_sub_minion(request, salt_factories, salt_master):
-    return salt_factories.spawn_minion(request, "sub_minion", master_id="master")
+    proc = salt_factories.spawn_minion(request, "sub_minion", master_id="master")
+    # Sync All
+    salt_call_cli = salt_factories.get_salt_call_cli("sub_minion")
+    ret = salt_call_cli.run("saltutil.sync_all", _timeout=120)
+    assert ret.exitcode == 0, ret
+    return proc
 
 
 @pytest.fixture(scope="package", autouse=True)
