@@ -176,7 +176,6 @@ def _generate_payload(author_icon, title, report):
         text += "Total: {}\n".format(report[TOTAL_KEY])
 
     if DURATION_KEY in report:
-        "color": "danger",
         text += "Duration: {:.2f} secs".format(float(report[DURATION_KEY]))
 
     attachments = [{
@@ -348,9 +347,7 @@ def _post_message(webhook, author_icon, title, report):
 
     payload = _generate_payload(author_icon, title, report)
 
-    data = _urlencode({
-        "payload": json.dumps(payload, ensure_ascii=False)
-    })
+    data = _urlencode({"payload": json.dumps(payload, ensure_ascii=False)})
 
     webhook_url = _urljoin("https://hooks.slack.com/services/", webhook)
     query_result = salt.utils.http.query(webhook_url, "POST", data=data)
