@@ -1024,13 +1024,6 @@ def pytest_saltfactories_master_configuration_overrides(
             }
         )
         opts["pillar_opts"] = True
-        opts["reactor"] = [
-            {
-                "salt/minion/*/start": [
-                    os.path.join(RUNTIME_VARS.FILES, "reactor-sync-minion.sls")
-                ],
-            },
-        ]
 
     # We need to copy the extension modules into the new master root_dir or
     # it will be prefixed by it
