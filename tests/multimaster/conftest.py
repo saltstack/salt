@@ -230,7 +230,7 @@ def session_mm_salt_master(
         bin_dir_path=_cli_bin_dir,
         fail_hard=_salt_fail_hard,
         event_listener_config_dir=session_mm_conf_dir,
-        start_timeout=60,
+        start_timeout=120,
     )
 
 
@@ -448,7 +448,7 @@ def session_mm_secondary_salt_master(
         bin_dir_path=_cli_bin_dir,
         fail_hard=_salt_fail_hard,
         event_listener_config_dir=session_mm_secondary_conf_dir,
-        start_timeout=60,
+        start_timeout=120,
     )
 
 
@@ -588,7 +588,7 @@ def session_mm_secondary_salt_minion(
         bin_dir_path=_cli_bin_dir,
         fail_hard=_salt_fail_hard,
         event_listener_config_dir=session_mm_secondary_conf_dir,
-        start_timeout=60,
+        start_timeout=120,
     )
 
 
@@ -726,8 +726,11 @@ def session_mm_salt_minion(
         bin_dir_path=_cli_bin_dir,
         fail_hard=_salt_fail_hard,
         event_listener_config_dir=session_mm_conf_dir,
-        start_timeout=60,
+        start_timeout=120,
     )
+
+
+# <---- Sub Minion Fixtures ------------------------------------------------------------------------------------------
 
 
 # <---- Sub Minion Fixtures ------------------------------------------------------------------------------------------
