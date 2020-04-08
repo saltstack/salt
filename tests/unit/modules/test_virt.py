@@ -1366,6 +1366,13 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             },
             virt.update("my vm", boot=boot),
         )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("os").find("kernel").text, "/root/f8-i386-vmlinuz")
+        self.assertEqual(setxml.find("os").find("initrd").text, "/root/f8-i386-initrd")
+        self.assertEqual(
+            setxml.find("os").find("cmdline").text,
+            "console=ttyS0 ks=http://example.com/f8-i386/os/",
+        )
 
         # Update memory case
         setmem_mock = MagicMock(return_value=0)
@@ -1581,6 +1588,97 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 "interface": {"attached": [], "detached": []},
             },
             virt.update("my vm", cpu=4, mem=2048),
+        )
+
+    def test_update_existing_boot_params(self):
+        """
+        Test virt.update() with existing boot parameters.
+        """
+        root_dir = os.path.join(salt.syspaths.ROOT_DIR, "srv", "salt-images")
+        xml_boot = """
+            <domain type='kvm' id='8'>
+              <name>vm_boot</name>
+              <memory unit='KiB'>1048576</memory>
+              <currentMemory unit='KiB'>1048576</currentMemory>
+              <vcpu placement='auto'>1</vcpu>
+              <os>
+                <type arch='x86_64' machine='pc-i440fx-2.6'>hvm</type>
+                <kernel>/boot/oldkernel</kernel>
+                <initrd>/boot/initrdold.img</initrd>
+                <cmdline>console=ttyS0 ks=http://example.com/new/os/</cmdline>
+              </os>
+              <devices>
+                <disk type='file' device='disk'>
+                  <driver name='qemu' type='qcow2'/>
+                  <source file='{0}{1}my vm_system.qcow2'/>
+                  <backingStore/>
+                  <target dev='vda' bus='virtio'/>
+                  <alias name='virtio-disk0'/>
+                  <address type='pci' domain='0x0000' bus='0x00' slot='0x07' function='0x0'/>
+                </disk>
+                <disk type='file' device='disk'>
+                  <driver name='qemu' type='qcow2'/>
+                  <source file='{0}{1}my vm_data.qcow2'/>
+                  <backingStore/>
+                  <target dev='vdb' bus='virtio'/>
+                  <alias name='virtio-disk1'/>
+                  <address type='pci' domain='0x0000' bus='0x00' slot='0x07' function='0x1'/>
+                </disk>
+                <interface type='network'>
+                  <mac address='52:54:00:39:02:b1'/>
+                  <source network='default' bridge='virbr0'/>
+                  <target dev='vnet0'/>
+                  <model type='virtio'/>
+                  <alias name='net0'/>
+                  <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
+                </interface>
+                <interface type='network'>
+                  <mac address='52:54:00:39:02:b2'/>
+                  <source network='oldnet' bridge='virbr1'/>
+                  <target dev='vnet1'/>
+                  <model type='virtio'/>
+                  <alias name='net1'/>
+                  <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x1'/>
+                </interface>
+                <graphics type='spice' port='5900' autoport='yes' listen='127.0.0.1'>
+                  <listen type='address' address='127.0.0.1'/>
+                </graphics>
+                <video>
+                  <model type='qxl' ram='65536' vram='65536' vgamem='16384' heads='1' primary='yes'/>
+                  <alias name='video0'/>
+                  <address type='pci' domain='0x0000' bus='0x00' slot='0x02' function='0x0'/>
+                </video>
+              </devices>
+            </domain>
+        """.format(
+            root_dir, os.sep
+        )
+        domain_mock_boot = self.set_mock_vm("vm_boot", xml_boot)
+        domain_mock_boot.OSType = MagicMock(return_value="hvm")
+        define_mock_boot = MagicMock(return_value=True)
+        self.mock_conn.defineXML = define_mock_boot
+        boot_new = {
+            "kernel": "/root/new-vmlinuz",
+            "initrd": "/root/new-initrd",
+            "cmdline": "console=ttyS0 ks=http://example.com/new/os/",
+        }
+
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_boot", boot=boot_new),
+        )
+        setxml_boot = ET.fromstring(define_mock_boot.call_args[0][0])
+        self.assertEqual(
+            setxml_boot.find("os").find("kernel").text, "/root/new-vmlinuz"
+        )
+        self.assertEqual(setxml_boot.find("os").find("initrd").text, "/root/new-initrd")
+        self.assertEqual(
+            setxml_boot.find("os").find("cmdline").text,
+            "console=ttyS0 ks=http://example.com/new/os/",
         )
 
     def test_mixed_dict_and_list_as_profile_objects(self):
