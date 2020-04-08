@@ -138,14 +138,18 @@ class ServiceDependencies(object):
         # Sort for predictable behavior
         self._all_services = sorted(all_services())
         self._name = self._normalize_name(self._all_services, name)
-        self._service_info = self._populate_service_info(self._all_services, service_info)
+        self._service_info = self._populate_service_info(
+            self._all_services, service_info
+        )
 
     def _populate_service_info(self, all_services, service_info):
         ret = {}
         for name in all_services:
-            dependencies = service_info(name).get('Dependencies', [])
+            dependencies = service_info(name).get("Dependencies", [])
             # Sort for predictable behavior
-            ret[name] = sorted(self._normalize_multiple_name(all_services, *dependencies))
+            ret[name] = sorted(
+                self._normalize_multiple_name(all_services, *dependencies)
+            )
             log.trace("Added dependencies of %s: %s", name, ret[name])
         return ret
 
@@ -184,7 +188,10 @@ class ServiceDependencies(object):
             difference_str = str(difference)
             for reference in references:
                 reference_str = str(reference)
-                if reference_str.lower() == difference_str.lower() and reference_str not in ret:
+                if (
+                    reference_str.lower() == difference_str.lower()
+                    and reference_str not in ret
+                ):
                     ret.append(reference_str)
                     break
         return ret
@@ -639,7 +646,7 @@ def start(name, timeout=90, with_deps=False, with_parents=False):
     """
     # Set the service to manual if disabled
     if disabled(name):
-        modify(name, start_type='Manual')
+        modify(name, start_type="Manual")
 
     ret = set()
 
@@ -653,13 +660,16 @@ def start(name, timeout=90, with_deps=False, with_parents=False):
         except pywintypes.error as exc:
             if exc.winerror != 1056:
                 raise CommandExecutionError(
-                    'Failed To Start {0}: {1}'.format(name, exc.strerror))
+                    "Failed To Start {0}: {1}".format(name, exc.strerror)
+                )
             log.debug('Service "%s" is running', name)
 
-        srv_status = _status_wait(service_name=name,
-                                  end_time=time.time() + int(timeout),
-                                  service_states=['Start Pending', 'Stopped'])
-        ret.add(srv_status['Status'] == 'Running')
+        srv_status = _status_wait(
+            service_name=name,
+            end_time=time.time() + int(timeout),
+            service_states=["Start Pending", "Stopped"],
+        )
+        ret.add(srv_status["Status"] == "Running")
     return False not in ret
 
 
@@ -708,14 +718,18 @@ def stop(name, timeout=90, with_deps=False, with_parents=False):
         except pywintypes.error as exc:
             if exc.winerror != 1062:
                 raise CommandExecutionError(
-                    'Failed To Stop {0}: {1}'.format(name, exc.strerror))
+                    "Failed To Stop {0}: {1}".format(name, exc.strerror)
+                )
             log.debug('Service "%s" is not running', name)
 
-        srv_status = _status_wait(service_name=name,
-                                  end_time=time.time() + int(timeout),
-                                  service_states=['Running', 'Stop Pending'])
-        ret.add(srv_status['Status'] == 'Stopped')
+        srv_status = _status_wait(
+            service_name=name,
+            end_time=time.time() + int(timeout),
+            service_states=["Running", "Stop Pending"],
+        )
+        ret.add(srv_status["Status"] == "Stopped")
     return False not in ret
+
 
 def restart(name, timeout=90, with_deps=False, with_parents=False):
     """
@@ -764,8 +778,14 @@ def restart(name, timeout=90, with_deps=False, with_parents=False):
         return execute_salt_restart_task()
 
     ret = set()
-    ret.add(stop(name=name, timeout=timeout, with_deps=with_deps, with_parents=with_parents))
-    ret.add(start(name=name, timeout=timeout, with_deps=with_deps, with_parents=with_parents))
+    ret.add(
+        stop(name=name, timeout=timeout, with_deps=with_deps, with_parents=with_parents)
+    )
+    ret.add(
+        start(
+            name=name, timeout=timeout, with_deps=with_deps, with_parents=with_parents
+        )
+    )
     return False not in ret
 
 
