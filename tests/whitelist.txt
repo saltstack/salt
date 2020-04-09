@@ -5,7 +5,6 @@ integration.client.test_kwarg
 integration.client.test_runner
 integration.client.test_standard
 integration.client.test_syndic
-integration.doc.test_man
 integration.grains.test_core
 integration.grains.test_custom
 integration.loader.test_ext_grains
