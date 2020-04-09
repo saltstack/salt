@@ -704,18 +704,6 @@ class TestProgramSaltCall(TestSaltProgram):
 
 
 @pytest.mark.windows_whitelisted
-class TestProgramSaltRun(TestSaltProgram):
-    """Class to manage salt-run"""
-
-    configs = {"master": {}}
-
-    def __init__(self, *args, **kwargs):
-        cfgb = kwargs.setdefault("config_base", {})
-        _ = cfgb.setdefault("user", getpass.getuser())
-        super().__init__(*args, **kwargs)
-
-
-@pytest.mark.windows_whitelisted
 class TestDaemon(TestProgram):
     """
     Run one of the standard daemons
