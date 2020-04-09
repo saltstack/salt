@@ -12,6 +12,7 @@ import threading
 import time
 from concurrent.futures.thread import ThreadPoolExecutor
 
+import pytest
 import salt.config
 import salt.exceptions
 import salt.ext.tornado.gen
@@ -26,11 +27,11 @@ from salt.ext import six
 from salt.ext.six.moves import range
 from salt.ext.tornado.testing import AsyncTestCase
 from salt.transport.zeromq import AsyncReqMessageClientPool
-from tests.support.helpers import flaky, get_unused_localhost_port, not_runs_on
+from tests.support.helpers import flaky, get_unused_localhost_port
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.unit.transport.mixins import (
     PubChannelMixin,
     ReqChannelMixin,
@@ -166,9 +167,8 @@ class ClearReqTestCases(BaseZMQReqCase, ReqChannelMixin):
 
 
 @flaky
-@not_runs_on(
-    kernel="linux",
-    os_familiy="Suse",
+@pytest.mark.skipif(
+    'grains["os_family"] == "Suse"',
     reason="Skipping until https://github.com/saltstack/salt/issues/32902 gets fixed",
 )
 class AESReqTestCases(BaseZMQReqCase, ReqChannelMixin):
@@ -314,7 +314,7 @@ class BaseZMQPubCase(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
             raise Exception("FDs still attached to the IOLoop: {0}".format(failures))
 
 
-@skipIf(True, "Skip until we can devote time to fix this test")
+@pytest.mark.skip("Skip until we can devote time to fix this test")
 class AsyncPubChannelTest(BaseZMQPubCase, PubChannelMixin):
     """
     Tests around the publish system
@@ -512,7 +512,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
                 last_msg = time.time()
                 results.append(payload["jid"])
 
-    @skipIf(salt.utils.platform.is_windows(), "Skip on Windows OS")
+    @pytest.mark.skipif('grains["os_family"] == "Windows"', reason="Skip on Windows")
     def test_publish_to_pubserv_ipc(self):
         """
         Test sending 10K messags to ZeroMQPubServerChannel using IPC transport
@@ -648,7 +648,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
 
         assert res.result()["enc"] == "aes"
 
-    @skipIf(salt.utils.platform.is_windows(), "Skip on Windows OS")
+    @pytest.mark.skipif('grains["os_family"] == "Windows"', reason="Skip on Windows")
     def test_zeromq_filtering(self):
         """
         Test sending messags to publisher using UDP
