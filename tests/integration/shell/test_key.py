@@ -22,6 +22,7 @@ HASHED_USERA_PWD = "$6$SALTsalt$ZZFD90fKFWq8AGmmX0L3uBtS9fXL62SrTk5zcnQ6EkD6zoiM
 
 
 @pytest.mark.windows_whitelisted
+@pytest.mark.usefixtures("salt_sub_minion")
 class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
     """
     Test salt-key script

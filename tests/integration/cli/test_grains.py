@@ -25,6 +25,7 @@ log = logging.getLogger(__name__)
 
 
 @pytest.mark.windows_whitelisted
+@pytest.mark.usefixtures("salt_sub_minion")
 class GrainsTargetingTest(ShellCase):
     """
     Integration tests for targeting with grains.

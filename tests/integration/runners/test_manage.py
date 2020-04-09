@@ -9,6 +9,7 @@ from tests.support.case import ShellCase
 
 
 @pytest.mark.windows_whitelisted
+@pytest.mark.usefixtures("salt_sub_minion")
 class ManageTest(ShellCase):
     """
     Test the manage runner

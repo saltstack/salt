@@ -35,6 +35,7 @@ class _SaltnadoIntegrationTestCase(SaltnadoTestCase):  # pylint: disable=abstrac
     StrictVersion(zmq.__version__) < StrictVersion("14.0.1"),
     "PyZMQ must be >= 14.0.1 to run these tests.",
 )
+@pytest.mark.usefixtures("salt_sub_minion")
 class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
     def setUp(self):
         super(TestSaltAPIHandler, self).setUp()

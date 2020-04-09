@@ -1,13 +1,12 @@
 # encoding: utf-8
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 import time
 
-# Import Salt libs
+import pytest
 import salt.config
 import salt.netapi
 from salt.exceptions import EauthAuthenticationError
@@ -18,8 +17,6 @@ from tests.support.helpers import (
     requires_sshd_server,
 )
 from tests.support.mock import patch
-
-# Import Salt Testing libs
 from tests.support.paths import TMP, TMP_CONF_DIR
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
@@ -27,6 +24,7 @@ from tests.support.unit import TestCase, skipIf
 log = logging.getLogger(__name__)
 
 
+@pytest.mark.usefixtures("salt_sub_minion")
 class NetapiClientTest(TestCase):
     eauth_creds = {
         "username": "saltdev_auto",

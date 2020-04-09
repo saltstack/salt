@@ -2,17 +2,17 @@
 """
 Tests for the salt-run command
 """
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt Testing libs
+import pytest
 from tests.support.case import ShellCase
 
 log = logging.getLogger(__name__)
 
 
+@pytest.mark.usefixtures("salt_sub_minion")
 class ManageTest(ShellCase):
     """
     Test the manage runner

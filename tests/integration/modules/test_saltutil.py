@@ -18,6 +18,7 @@ from tests.support.unit import skipIf
 
 
 @pytest.mark.windows_whitelisted
+@pytest.mark.usefixtures("salt_sub_minion")
 class SaltUtilModuleTest(ModuleCase):
     """
     Testcase for the saltutil execution module

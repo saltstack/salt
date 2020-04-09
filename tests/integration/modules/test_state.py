@@ -1580,6 +1580,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(ret["changes"])
         self.assertEqual(ret["comment"], "unless condition is true")
 
+    @pytest.mark.usefixtures("salt_sub_minion")
     def test_get_file_from_env_in_top_match(self):
         tgt = os.path.join(RUNTIME_VARS.TMP, "prod-cheese-file")
         try:

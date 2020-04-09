@@ -10,6 +10,7 @@ from tests.support.case import ShellCase
 
 
 @pytest.mark.windows_whitelisted
+@pytest.mark.usefixtures("salt_sub_minion")
 class BatchTest(ShellCase):
     """
     Integration tests for the salt.cli.batch module
