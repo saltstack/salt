@@ -186,7 +186,7 @@ def _format_host(host, data, indent_level=1):
     nchanges = 0
     strip_colors = __opts__.get("strip_colors", True)
 
-    if data is None or data is True or data is False:
+    if isinstance(data, int) or data is None:
         nchanges = 1
         hstrs.append(('{0}    {1}{2[ENDC]}'.format(hcolor, data, colors)))
         hcolor = colors["CYAN"]  # Print the minion name in cyan
