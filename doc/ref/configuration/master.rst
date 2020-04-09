@@ -1345,7 +1345,7 @@ salt-ssh.
 
 Default: False
 
-Run the ssh_pre_flight script defined in the salt-ssh roster. Be default
+Run the ssh_pre_flight script defined in the salt-ssh roster. By default
 the script will only run when the thin dir does not exist on the targeted
 minion. This will force the script to run and not check if the thin dir
 exists first.

@@ -1035,7 +1035,7 @@ class Single(object):
         stdout = stderr = retcode = None
 
         if self.ssh_pre_flight:
-            if self.check_thin_dir() and not self.opts.get("ssh_run_pre_flight", False):
+            if not self.opts.get("ssh_run_pre_flight", False) and self.check_thin_dir():
                 log.info(
                     "{0} thin dir already exists. Not running ssh_pre_flight script".format(
                         self.thin_dir
