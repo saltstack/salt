@@ -51,7 +51,10 @@ class SchedulerTestsBase(TestCase, SaltReturnAssertsMixin):
         with patch("salt.utils.schedule.clean_proc_dir", MagicMock(return_value=None)):
             functions = {"test.ping": ping}
             self.schedule = salt.utils.schedule.Schedule(
-                copy.deepcopy(self.default_config), functions, returners={}
+                copy.deepcopy(self.default_config),
+                functions,
+                returners={},
+                new_instance=True,
             )
         self.schedule._subprocess_list = self.subprocess_list
 

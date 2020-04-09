@@ -3,7 +3,6 @@
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
@@ -11,13 +10,10 @@ import datetime
 import logging
 import os
 
-# Import Salt Libs
 import salt.config
 from salt.utils.schedule import Schedule
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
-
-# Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
 
 # pylint: disable=import-error,unused-import
@@ -55,7 +51,7 @@ class ScheduleTestCase(TestCase):
     def setUp(self):
         with patch("salt.utils.schedule.clean_proc_dir", MagicMock(return_value=None)):
             self.schedule = Schedule(
-                copy.deepcopy(self.default_config), {}, returners={}
+                copy.deepcopy(self.default_config), {}, returners={}, new_instance=True
             )
         self.addCleanup(delattr, self, "schedule")
 
