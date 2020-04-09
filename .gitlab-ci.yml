@@ -10,6 +10,9 @@ pre-commit-run-all:
   stage: lint
   variables:
     PRE_COMMIT_HOME: "${CI_PROJECT_DIR}/pre-commit-cache"
+  only:
+    refs:
+      - merge_requests
   cache:
     key: pre-commit-cache
     paths:
