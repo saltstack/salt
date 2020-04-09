@@ -1,11 +1,17 @@
 ---
 stages:
-  - lint
+  - pre-commit
   - test
+
+include:
+  - project: 'saltstack/pop/cicd/ci-templates'
+    file: '/lint/pre-commit-run-all.yml'
 
 lint-salt-full:
   image: registry.gitlab.com/saltstack/pop/cicd/containers/ubuntu1804:latest
-  stage: lint
+  stage: pre-commit
+  tags:
+    - saltstack-internal
   cache:
     key: nox-lint-cache
     paths:
@@ -25,7 +31,9 @@ lint-salt-full:
 
 lint-tests-full:
   image: registry.gitlab.com/saltstack/pop/cicd/containers/ubuntu1804:latest
-  stage: lint
+  stage: pre-commit
+  tags:
+    - saltstack-internal
   cache:
     key: nox-lint-cache
     paths:
@@ -46,6 +54,8 @@ lint-tests-full:
 docs-build-html:
   image: registry.gitlab.com/saltstack/pop/cicd/containers/ubuntu1804:latest
   stage: test
+  tags:
+    - saltstack-internal
   cache:
     key: nox-docs-cache
     paths:
@@ -61,6 +71,8 @@ docs-build-html:
 docs-build-man-pages:
   image: registry.gitlab.com/saltstack/pop/cicd/containers/ubuntu1804:latest
   stage: test
+  tags:
+    - saltstack-internal
   cache:
     key: nox-docs-cache
     paths:
