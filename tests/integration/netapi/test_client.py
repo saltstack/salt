@@ -5,6 +5,7 @@ import logging
 import os
 import time
 
+import pytest
 import salt.config
 import salt.netapi
 from salt.exceptions import EauthAuthenticationError
@@ -23,6 +24,7 @@ from tests.support.unit import TestCase, skipIf
 log = logging.getLogger(__name__)
 
 
+@pytest.mark.usefixtures("salt_sub_minion")
 class NetapiClientTest(TestCase):
     eauth_creds = {
         "username": "saltdev_auto",
