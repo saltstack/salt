@@ -551,9 +551,11 @@ def _change_state(interface, new_state):
         return True
     service = _interface_to_service(interface)
     if not service:
-        raise salt.exceptions.CommandExecutionError('Invalid interface name: {0}'.format(interface))
+        raise salt.exceptions.CommandExecutionError(
+            "Invalid interface name: {0}".format(interface)
+        )
     connected = _connected(service)
-    if (not connected and new_state == 'up') or (connected and new_state == 'down'):
+    if (not connected and new_state == "up") or (connected and new_state == "down"):
         service = pyconnman.ConnService(os.path.join(SERVICE_PATH, service))
         try:
             state = service.connect() if new_state == "up" else service.disconnect()
