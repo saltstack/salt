@@ -188,15 +188,15 @@ def _format_host(host, data, indent_level=1):
 
     if isinstance(data, int):
         nchanges = 1
-        hcolor = colors["CYAN"]  # Print the minion name in cyan
         hstrs.append(('{0}    {1}{2[ENDC]}'.format(hcolor, data, colors)))
+        hcolor = colors["CYAN"]  # Print the minion name in cyan
     elif isinstance(data, six.string_types):
         # Data in this format is from saltmod.function,
         # so it is always a 'change'
         nchanges = 1
-        hcolor = colors["CYAN"]  # Print the minion name in cyan
         for data in data.splitlines():
             hstrs.append(('{0}    {1}{2[ENDC]}'.format(hcolor, data, colors)))
+        hcolor = colors["CYAN"]  # Print the minion name in cyan
     elif isinstance(data, list):
         # Errors have been detected, list them in RED!
         hcolor = colors["LIGHT_RED"]
