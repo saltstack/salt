@@ -186,13 +186,18 @@ def _format_host(host, data, indent_level=1):
     nchanges = 0
     strip_colors = __opts__.get("strip_colors", True)
 
-    if isinstance(data, int) or isinstance(data, six.string_types):
+    if isinstance(data, int):
+        nchanges = 1
+        hstrs.append(('{0}    {1}{2[ENDC]}'.format(hcolor, data, colors)))
+        hcolor = colors["CYAN"]  # Print the minion name in cyan
+    elif isinstance(data, six.string_types):
         # Data in this format is from saltmod.function,
         # so it is always a 'change'
         nchanges = 1
-        hstrs.append(("{0}    {1}{2[ENDC]}".format(hcolor, data, colors)))
+        for data in data.splitlines():
+            hstrs.append(('{0}    {1}{2[ENDC]}'.format(hcolor, data, colors)))
         hcolor = colors["CYAN"]  # Print the minion name in cyan
-    if isinstance(data, list):
+    elif isinstance(data, list):
         # Errors have been detected, list them in RED!
         hcolor = colors["LIGHT_RED"]
         hstrs.append(("    {0}Data failed to compile:{1[ENDC]}".format(hcolor, colors)))
@@ -202,7 +207,7 @@ def _format_host(host, data, indent_level=1):
             hstrs.append(
                 ("{0}----------\n    {1}{2[ENDC]}".format(hcolor, err, colors))
             )
-    if isinstance(data, dict):
+    elif isinstance(data, dict):
         # Verify that the needed data is present
         data_tmp = {}
         for tname, info in six.iteritems(data):
