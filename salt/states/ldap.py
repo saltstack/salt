@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Manage entries in an LDAP database
 ==================================
 
@@ -7,10 +7,11 @@ Manage entries in an LDAP database
 
 The ``states.ldap`` state module allows you to manage LDAP entries and
 their attributes.
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import copy
 import inspect
 import logging
@@ -24,7 +25,7 @@ log = logging.getLogger(__name__)
 
 
 def managed(name, entries, connect_spec=None):
-    '''Ensure the existence (or not) of LDAP entries and their attributes
+    """Ensure the existence (or not) of LDAP entries and their attributes
 
     Example:
 
@@ -241,16 +242,16 @@ def managed(name, entries, connect_spec=None):
             * ``False`` if at least one change was unable to be applied.
             * ``None`` if changes would be applied but it is in test
               mode.
-    '''
+    """
     if connect_spec is None:
         connect_spec = {}
     try:
-        connect_spec.setdefault('url', name)
+        connect_spec.setdefault("url", name)
     except AttributeError:
         # already a connection object
         pass
 
-    connect = __salt__['ldap3.connect']
+    connect = __salt__["ldap3.connect"]
 
     # hack to get at the ldap3 module to access the ldap3.LDAPError
     # exception class.  https://github.com/saltstack/salt/issues/27578
@@ -275,7 +276,7 @@ def managed(name, entries, connect_spec=None):
             for x in o, n:
                 to_delete = set()
                 for attr, vals in six.iteritems(x):
-                    if not len(vals):
+                    if not vals:
                         # clean out empty attribute lists
                         to_delete.add(attr)
                 for attr in to_delete:
@@ -289,19 +290,19 @@ def managed(name, entries, connect_spec=None):
             del dn_set[dn]
 
         ret = {
-            'name': name,
-            'changes': {},
-            'result': None,
-            'comment': '',
+            "name": name,
+            "changes": {},
+            "result": None,
+            "comment": "",
         }
 
         if old == new:
-            ret['comment'] = 'LDAP entries already set'
-            ret['result'] = True
+            ret["comment"] = "LDAP entries already set"
+            ret["result"] = True
             return ret
 
-        if __opts__['test']:
-            ret['comment'] = 'Would change LDAP entries'
+        if __opts__["test"]:
+            ret["comment"] = "Would change LDAP entries"
             changed_old = old
             changed_new = new
             success_dn_set = dn_set
@@ -310,8 +311,8 @@ def managed(name, entries, connect_spec=None):
             changed_old = OrderedDict()
             changed_new = OrderedDict()
             # assume success; these will be changed on error
-            ret['result'] = True
-            ret['comment'] = 'Successfully updated LDAP entries'
+            ret["result"] = True
+            ret["comment"] = "Successfully updated LDAP entries"
             errs = []
             success_dn_set = OrderedDict()
             for dn in dn_set:
@@ -320,18 +321,18 @@ def managed(name, entries, connect_spec=None):
 
                 try:
                     # perform the operation
-                    if len(o):
-                        if len(n):
-                            op = 'modify'
+                    if o:
+                        if n:
+                            op = "modify"
                             assert o != n
-                            __salt__['ldap3.change'](l, dn, o, n)
+                            __salt__["ldap3.change"](l, dn, o, n)
                         else:
-                            op = 'delete'
-                            __salt__['ldap3.delete'](l, dn)
+                            op = "delete"
+                            __salt__["ldap3.delete"](l, dn)
                     else:
-                        op = 'add'
-                        assert len(n)
-                        __salt__['ldap3.add'](l, dn, n)
+                        op = "add"
+                        assert n
+                        __salt__["ldap3.add"](l, dn, n)
 
                     # update these after the op in case an exception
                     # is raised
@@ -339,15 +340,18 @@ def managed(name, entries, connect_spec=None):
                     changed_new[dn] = n
                     success_dn_set[dn] = True
                 except ldap3.LDAPError as err:
-                    log.exception('failed to %s entry %s (%s)', op, dn, err)
+                    log.exception("failed to %s entry %s (%s)", op, dn, err)
                     errs.append((op, dn, err))
                     continue
 
-            if len(errs):
-                ret['result'] = False
-                ret['comment'] = 'failed to ' \
-                                 + ', '.join((op + ' entry ' + dn + '(' + six.text_type(err) + ')'
-                                              for op, dn, err in errs))
+            if errs:
+                ret["result"] = False
+                ret["comment"] = "failed to " + ", ".join(
+                    (
+                        op + " entry " + dn + "(" + six.text_type(err) + ")"
+                        for op, dn, err in errs
+                    )
+                )
 
     # set ret['changes'].  filter out any unchanged attributes, and
     # convert the value sets to lists before returning them to the
@@ -356,20 +360,24 @@ def managed(name, entries, connect_spec=None):
         o = changed_old.get(dn, {})
         n = changed_new.get(dn, {})
         changes = {}
-        ret['changes'][dn] = changes
-        for x, xn in ((o, 'old'), (n, 'new')):
-            if not len(x):
+        ret["changes"][dn] = changes
+        for x, xn in ((o, "old"), (n, "new")):
+            if not x:
                 changes[xn] = None
                 continue
-            changes[xn] = dict(((attr, sorted(vals))
-                                for attr, vals in six.iteritems(x)
-                                if o.get(attr, ()) != n.get(attr, ())))
+            changes[xn] = dict(
+                (
+                    (attr, sorted(vals))
+                    for attr, vals in six.iteritems(x)
+                    if o.get(attr, ()) != n.get(attr, ())
+                )
+            )
 
     return ret
 
 
 def _process_entries(l, entries):
-    '''Helper for managed() to process entries and return before/after views
+    """Helper for managed() to process entries and return before/after views
 
     Collect the current database state and update it according to the
     data in :py:func:`managed`'s ``entries`` parameter.  Return the
@@ -409,7 +417,7 @@ def _process_entries(l, entries):
         entries are processed in the user-specified order (in case
         there are dependencies, such as ACL rules specified in an
         early entry that make it possible to modify a later entry).
-    '''
+    """
 
     old = OrderedDict()
     new = OrderedDict()
@@ -421,12 +429,16 @@ def _process_entries(l, entries):
             olde = new.get(dn, None)
             if olde is None:
                 # next check the database
-                results = __salt__['ldap3.search'](l, dn, 'base')
+                results = __salt__["ldap3.search"](l, dn, "base")
                 if len(results) == 1:
                     attrs = results[dn]
-                    olde = dict(((attr, OrderedSet(attrs[attr]))
-                                 for attr in attrs
-                                 if len(attrs[attr])))
+                    olde = dict(
+                        (
+                            (attr, OrderedSet(attrs[attr]))
+                            for attr in attrs
+                            if len(attrs[attr])
+                        )
+                    )
                 else:
                     # nothing, so it must be a brand new entry
                     assert len(results) == 0
@@ -440,15 +452,15 @@ def _process_entries(l, entries):
 
             # process the directives
             entry_status = {
-                'delete_others': False,
-                'mentioned_attributes': set(),
+                "delete_others": False,
+                "mentioned_attributes": set(),
             }
             for directives in directives_seq:
                 _update_entry(newe, entry_status, directives)
-            if entry_status['delete_others']:
+            if entry_status["delete_others"]:
                 to_delete = set()
                 for attr in newe:
-                    if attr not in entry_status['mentioned_attributes']:
+                    if attr not in entry_status["mentioned_attributes"]:
                         to_delete.add(attr)
                 for attr in to_delete:
                     del newe[attr]
@@ -456,7 +468,7 @@ def _process_entries(l, entries):
 
 
 def _update_entry(entry, status, directives):
-    '''Update an entry's attributes using the provided directives
+    """Update an entry's attributes using the provided directives
 
     :param entry:
         A dict mapping each attribute name to a set of its values
@@ -465,37 +477,37 @@ def _update_entry(entry, status, directives):
         is True or not, and the set of mentioned attributes)
     :param directives:
         A dict mapping directive types to directive-specific state
-    '''
+    """
     for directive, state in six.iteritems(directives):
-        if directive == 'delete_others':
-            status['delete_others'] = state
+        if directive == "delete_others":
+            status["delete_others"] = state
             continue
         for attr, vals in six.iteritems(state):
-            status['mentioned_attributes'].add(attr)
+            status["mentioned_attributes"].add(attr)
             vals = _toset(vals)
-            if directive == 'default':
-                if len(vals) and (attr not in entry or not len(entry[attr])):
+            if directive == "default":
+                if vals and (attr not in entry or not entry[attr]):
                     entry[attr] = vals
-            elif directive == 'add':
+            elif directive == "add":
                 vals.update(entry.get(attr, ()))
-                if len(vals):
+                if vals:
                     entry[attr] = vals
-            elif directive == 'delete':
+            elif directive == "delete":
                 existing_vals = entry.pop(attr, OrderedSet())
-                if len(vals):
+                if vals:
                     existing_vals -= vals
-                    if len(existing_vals):
+                    if existing_vals:
                         entry[attr] = existing_vals
-            elif directive == 'replace':
+            elif directive == "replace":
                 entry.pop(attr, None)
-                if len(vals):
+                if vals:
                     entry[attr] = vals
             else:
-                raise ValueError('unknown directive: ' + directive)
+                raise ValueError("unknown directive: " + directive)
 
 
 def _toset(thing):
-    '''helper to convert various things to a set
+    """helper to convert various things to a set
 
     This enables flexibility in what users provide as the list of LDAP
     entry attribute values.  Note that the LDAP spec prohibits
@@ -515,7 +527,7 @@ def _toset(thing):
     numbers, non-iterable objects, etc.) are added as the only member
     of a new set.
 
-    '''
+    """
     if thing is None:
         return OrderedSet()
     if isinstance(thing, six.string_types):

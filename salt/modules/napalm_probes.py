@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 NAPALM Probes
 =============
 
 Manages RPM/SLA probes on the network device.
 
-:codeauthor: Mircea Ulinic <mircea@cloudflare.com> & Jerome Fleury <jf@cloudflare.com>
+:codeauthor: Mircea Ulinic <ping@mirceaulinic.net> & Jerome Fleury <jf@cloudflare.com>
 :maturity:   new
 :depends:    napalm
 :platform:   unix
@@ -20,24 +20,26 @@ Dependencies
     :mod:`Probes configuration management state <salt.states.probes>`
 
 .. versionadded:: 2016.11.0
-'''
+"""
 
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python lib
 import logging
-log = logging.getLogger(__file__)
 
 # import NAPALM utils
 import salt.utils.napalm
 from salt.utils.napalm import proxy_napalm_wrap
 
+log = logging.getLogger(__file__)
+
+
 # ----------------------------------------------------------------------------------------------------------------------
 # module properties
 # ----------------------------------------------------------------------------------------------------------------------
 
-__virtualname__ = 'probes'
-__proxyenabled__ = ['napalm']
+__virtualname__ = "probes"
+__proxyenabled__ = ["napalm"]
 # uses NAPALM-based proxy to interact with network devices
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -46,10 +48,11 @@ __proxyenabled__ = ['napalm']
 
 
 def __virtual__():
-    '''
+    """
     NAPALM library must be installed for this module to work and run in a (proxy) minion.
-    '''
+    """
     return salt.utils.napalm.virtual(__opts__, __virtualname__, __file__)
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 # helper functions -- will not be exported
@@ -63,7 +66,7 @@ def __virtual__():
 @proxy_napalm_wrap
 def config(**kwargs):  # pylint: disable=unused-argument
 
-    '''
+    """
     Returns the configuration of the RPM probes.
 
     :return: A dictionary containing the configuration of the RPM/SLA probes.
@@ -96,20 +99,17 @@ def config(**kwargs):  # pylint: disable=unused-argument
                 }
             }
         }
-    '''
+    """
 
     return salt.utils.napalm.call(
-        napalm_device,  # pylint: disable=undefined-variable
-        'get_probes_config',
-        **{
-        }
+        napalm_device, "get_probes_config", **{}  # pylint: disable=undefined-variable
     )
 
 
 @proxy_napalm_wrap
 def results(**kwargs):  # pylint: disable=unused-argument
 
-    '''
+    """
     Provides the results of the measurements of the RPM/SLA probes.
 
     :return a dictionary with the results of the probes.
@@ -166,19 +166,18 @@ def results(**kwargs):  # pylint: disable=unused-argument
                 }
             }
         }
-    '''
+    """
 
     return salt.utils.napalm.call(
-        napalm_device,  # pylint: disable=undefined-variable
-        'get_probes_results',
-        **{
-        }
+        napalm_device, "get_probes_results", **{}  # pylint: disable=undefined-variable
     )
 
 
 @proxy_napalm_wrap
-def set_probes(probes, test=False, commit=True, **kwargs):  # pylint: disable=unused-argument
-    '''
+def set_probes(
+    probes, test=False, commit=True, **kwargs
+):  # pylint: disable=unused-argument
+    """
     Configures RPM/SLA probes on the device.
     Calls the configuration template 'set_probes' from the NAPALM library,
     providing as input a rich formatted dictionary with the configuration details of the probes to be configured.
@@ -260,19 +259,25 @@ def set_probes(probes, test=False, commit=True, **kwargs):  # pylint: disable=un
                 +    }
             result:
                 True
-    '''
+    """
 
-    return __salt__['net.load_template']('set_probes',
-                                         probes=probes,
-                                         test=test,
-                                         commit=commit,
-                                         inherit_napalm_device=napalm_device)  # pylint: disable=undefined-variable
+    # pylint: disable=undefined-variable
+    return __salt__["net.load_template"](
+        "set_probes",
+        probes=probes,
+        test=test,
+        commit=commit,
+        inherit_napalm_device=napalm_device,
+    )
+    # pylint: enable=undefined-variable
 
 
 @proxy_napalm_wrap
-def delete_probes(probes, test=False, commit=True, **kwargs):  # pylint: disable=unused-argument
+def delete_probes(
+    probes, test=False, commit=True, **kwargs
+):  # pylint: disable=unused-argument
 
-    '''
+    """
     Removes RPM/SLA probes from the network device.
     Calls the configuration template 'delete_probes' from the NAPALM library,
     providing as input a rich formatted dictionary with the configuration details of the probes to be removed
@@ -311,19 +316,25 @@ def delete_probes(probes, test=False, commit=True, **kwargs):  # pylint: disable
             }
         }
 
-    '''
+    """
 
-    return __salt__['net.load_template']('delete_probes',
-                                         probes=probes,
-                                         test=test,
-                                         commit=commit,
-                                         inherit_napalm_device=napalm_device)  # pylint: disable=undefined-variable
+    # pylint: disable=undefined-variable
+    return __salt__["net.load_template"](
+        "delete_probes",
+        probes=probes,
+        test=test,
+        commit=commit,
+        inherit_napalm_device=napalm_device,
+    )
+    # pylint: enable=undefined-variable
 
 
 @proxy_napalm_wrap
-def schedule_probes(probes, test=False, commit=True, **kwargs):  # pylint: disable=unused-argument
+def schedule_probes(
+    probes, test=False, commit=True, **kwargs
+):  # pylint: disable=unused-argument
 
-    '''
+    """
     Will schedule the probes. On Cisco devices, it is not enough to define the
     probes, it is also necessary to schedule them.
 
@@ -363,10 +374,14 @@ def schedule_probes(probes, test=False, commit=True, **kwargs):  # pylint: disab
                 'new_test2': {}
             }
         }
-    '''
+    """
 
-    return __salt__['net.load_template']('schedule_probes',
-                                         probes=probes,
-                                         test=test,
-                                         commit=commit,
-                                         inherit_napalm_device=napalm_device)  # pylint: disable=undefined-variable
+    # pylint: disable=undefined-variable
+    return __salt__["net.load_template"](
+        "schedule_probes",
+        probes=probes,
+        test=test,
+        commit=commit,
+        inherit_napalm_device=napalm_device,
+    )
+    # pylint: enable=undefined-variable

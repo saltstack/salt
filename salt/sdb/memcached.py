@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Memcached sdb Module
 
 :maintainer:    SaltStack
@@ -18,8 +18,8 @@ requires very little. In the example:
 
     mymemcache:
       driver: memcached
-      host: localhost
-      port: 11211
+      memcached.host: localhost
+      memcached.port: 11211
 
 The ``driver`` refers to the memcached module, ``host`` and ``port`` the
 memcached server to connect to (defaults to ``localhost`` and ``11211``,
@@ -29,7 +29,7 @@ and ``mymemcached`` refers to the name that will appear in the URI:
 
     password: sdb://mymemcached/mykey
 
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 # import python libs
@@ -38,39 +38,36 @@ import logging
 # import Salt libs
 import salt.utils.memcached
 
-
-DEFAULT_HOST = '127.0.0.1'
+DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 11211
 DEFAULT_EXPIRATION = 0
 
 log = logging.getLogger(__name__)
 
-__func_alias__ = {
-    'set_': 'set'
-}
+__func_alias__ = {"set_": "set"}
 
 
 def __virtual__():
-    '''
+    """
     Only load the module if memcached is installed
-    '''
+    """
     if salt.utils.memcached.HAS_LIBS:
         return True
     return False
 
 
 def set_(key, value, profile=None):
-    '''
+    """
     Set a key/value pair in memcached
-    '''
+    """
     conn = salt.utils.memcached.get_conn(profile)
-    time = profile.get('expire', DEFAULT_EXPIRATION)
+    time = profile.get("expire", DEFAULT_EXPIRATION)
     return salt.utils.memcached.set_(conn, key, value, time=time)
 
 
 def get(key, profile=None):
-    '''
+    """
     Get a value from memcached
-    '''
+    """
     conn = salt.utils.memcached.get_conn(profile)
     return salt.utils.memcached.get(conn, key)

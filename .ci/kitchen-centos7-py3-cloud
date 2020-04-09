@@ -1,35 +1,17 @@
-@Library('salt@master-1.3') _
+@Library('salt@master-1.6') _
 
-// Define the maximum time, in hours, that a test run should run for
-def testrun_timeout = 6
-
-def distro_name = 'centos'
-def distro_version = '7'
-def python_version = 'py3'
-def nox_env_name = 'runtests-cloud'
-def golden_images_branch = 'master'
-def nox_passthrough_opts = ''
-def use_spot_instances = true
-def jenkins_slave_label = 'kitchen-slave'
-
-properties([
-    buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '30')),
-    parameters([
-        booleanParam(defaultValue: true, description: 'Run full test suite', name: 'runFull')
-    ])
-])
-
-runTests(
+runTestSuite(
+    concurrent_builds: 0,
+    distro_name: 'centos',
+    distro_version: '7',
     env: env,
-    distro_name: distro_name,
-    distro_version: distro_version,
-    python_version: python_version,
-    golden_images_branch: golden_images_branch,
-    nox_env_name: nox_env_name,
-    nox_passthrough_opts: nox_passthrough_opts,
-    testrun_timeout: testrun_timeout,
-    run_full: params.runFull,
-    use_spot_instances: use_spot_instances,
-    jenkins_slave_label: jenkins_slave_label)
+    golden_images_branch: 'master',
+    jenkins_slave_label: 'kitchen-slave',
+    kitchen_platforms_file: '/var/jenkins/workspace/nox-cloud-platforms.yml',
+    nox_env_name: 'runtests-cloud',
+    nox_passthrough_opts: '',
+    python_version: 'py3',
+    testrun_timeout: 6,
+    use_spot_instances: true)
 
 // vim: ft=groovy

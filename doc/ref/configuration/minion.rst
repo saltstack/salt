@@ -652,6 +652,35 @@ FQDN (for instance, Solaris).
 
     append_domain: foo.org
 
+.. conf_minion:: minion_id_remove_domain
+
+``minion_id_remove_domain``
+---------------------------
+
+.. versionadded:: 3000
+
+Default: ``False``
+
+Remove a domain when the minion id is generated as a fully qualified domain
+name (either by the user provided ``id_function``, or by Salt). This is useful
+when the minions shall be named like hostnames. Can be a single domain (to
+prevent name clashes), or True, to remove all domains.
+
+Examples:
+ - minion_id_remove_domain = foo.org
+   - FQDN = king_bob.foo.org --> minion_id = king_bob
+   - FQDN = king_bob.bar.org --> minion_id = king_bob.bar.org
+ - minion_id_remove_domain = True
+   - FQDN = king_bob.foo.org --> minion_id = king_bob
+   - FQDN = king_bob.bar.org --> minion_id = king_bob
+
+
+For more information, please see :issue:`49212` and  :pull:`49378`.
+
+.. code-block:: yaml
+
+    minion_id_remove_domain: foo.org
+
 .. conf_minion:: minion_id_lowercase
 
 ``minion_id_lowercase``
@@ -784,7 +813,7 @@ matches, and regular expressions are supported.
     Some states and execution modules depend on grains. Filtering may cause
     them to be unavailable or run unreliably.
 
-.. versionadded:: Neon
+.. versionadded:: 3000
 
 .. code-block:: yaml
 
@@ -802,11 +831,27 @@ Default: ``False``
 
 The minion can locally cache grain data instead of refreshing the data
 each time the grain is referenced. By default this feature is disabled,
-to enable set grains_cache to ``True``.
+to enable set ``grains_cache`` to ``True``.
 
 .. code-block:: yaml
 
     grains_cache: False
+
+.. conf_minion:: grains_cache_expiration
+
+``grains_cache_expiration``
+---------------------------
+
+Default: ``300``
+
+Grains cache expiration, in seconds. If the cache file is older than this number
+of seconds then the grains cache will be dumped and fully re-populated with
+fresh data. Defaults to 5 minutes. Will have no effect if
+:conf_minion:`grains_cache` is not enabled.
+
+.. code-block:: yaml
+
+    grains_cache_expiration: 300
 
 .. conf_minion:: grains_deep_merge
 
@@ -1531,6 +1576,21 @@ List of hosts to bypass HTTP proxy
 
     no_proxy: [ '127.0.0.1', 'foo.tld' ]
 
+``use_yamlloader_old``
+------------------------
+
+.. versionadded:: 2019.2.1
+
+Default: ``False``
+
+Use the pre-2019.2 YAML renderer.
+Uses legacy YAML rendering to support some legacy inline data structures.
+See the :ref:`2019.2.1 release notes <release-2019-2-1>` for more details.
+
+.. code-block:: yaml
+
+    use_yamlloader_old: False
+
 Docker Configuration
 ====================
 
@@ -2036,6 +2096,21 @@ List of states to run when the minion starts up if ``startup_states`` is set to 
     sls_list:
       - edit.vim
       - hyper
+
+.. conf_minion:: start_event_grains
+
+``start_event_grains``
+----------------------
+
+Default: ``[]``
+
+List of grains to pass in start event when minion starts up.
+
+.. code-block:: yaml
+
+    start_event_grains:
+      - machine_id
+      - uuid
 
 .. conf_minion:: top_file
 

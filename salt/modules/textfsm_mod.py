@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 TextFSM
 =======
 
@@ -16,67 +16,70 @@ inside the renderer (Jinja, Mako, Genshi, etc.).
 
     For Python 2/3 compatibility, it is more recommended to
     install the ``jtextfsm`` library: ``pip install jtextfsm``.
-'''
+"""
 from __future__ import absolute_import
+
+import logging
 
 # Import python libs
 import os
-import logging
+
+from salt.utils.files import fopen
 
 # Import third party modules
 try:
     import textfsm
+
     HAS_TEXTFSM = True
 except ImportError:
     HAS_TEXTFSM = False
 
 try:
     import clitable
+
     HAS_CLITABLE = True
 except ImportError:
     HAS_CLITABLE = False
 
-try:
-    from salt.utils.files import fopen
-except ImportError:
-    from salt.utils import fopen
-
 log = logging.getLogger(__name__)
 
-__virtualname__ = 'textfsm'
-__proxyenabled__ = ['*']
+__virtualname__ = "textfsm"
+__proxyenabled__ = ["*"]
 
 
 def __virtual__():
-    '''
+    """
     Only load this execution module if TextFSM is installed.
-    '''
+    """
     if HAS_TEXTFSM:
         return __virtualname__
-    return (False, 'The textfsm execution module failed to load: requires the textfsm library.')
+    return (
+        False,
+        "The textfsm execution module failed to load: requires the textfsm library.",
+    )
 
 
 def _clitable_to_dict(objects, fsm_handler):
-    '''
+    """
     Converts TextFSM cli_table object to list of dictionaries.
-    '''
+    """
     objs = []
-    log.debug('Cli Table:')
+    log.debug("Cli Table:")
     log.debug(objects)
-    log.debug('FSM handler:')
+    log.debug("FSM handler:")
     log.debug(fsm_handler)
     for row in objects:
         temp_dict = {}
         for index, element in enumerate(row):
             temp_dict[fsm_handler.header[index].lower()] = element
         objs.append(temp_dict)
-    log.debug('Extraction result:')
+    log.debug("Extraction result:")
     log.debug(objs)
     return objs
 
 
-def extract(template_path, raw_text=None, raw_text_file=None, saltenv='base'):
-    r'''
+def extract(template_path, raw_text=None, raw_text_file=None, saltenv="base"):
+    r"""
     Extracts the data entities from the unstructured
     raw text sent as input and returns the data
     mapping, processing using the TextFSM template.
@@ -178,66 +181,75 @@ def extract(template_path, raw_text=None, raw_text_file=None, saltenv='base'):
                 }
             ]
         }
-    '''
-    ret = {
-        'result': False,
-        'comment': '',
-        'out': None
-    }
-    log.debug('Using the saltenv: {}'.format(saltenv))
-    log.debug('Caching {} using the Salt fileserver'.format(template_path))
-    tpl_cached_path = __salt__['cp.cache_file'](template_path, saltenv=saltenv)
+    """
+    ret = {"result": False, "comment": "", "out": None}
+    log.debug("Using the saltenv: {}".format(saltenv))
+    log.debug("Caching {} using the Salt fileserver".format(template_path))
+    tpl_cached_path = __salt__["cp.cache_file"](template_path, saltenv=saltenv)
     if tpl_cached_path is False:
-        ret['comment'] = 'Unable to read the TextFSM template from {}'.format(template_path)
-        log.error(ret['comment'])
+        ret["comment"] = "Unable to read the TextFSM template from {}".format(
+            template_path
+        )
+        log.error(ret["comment"])
         return ret
     try:
-        log.debug('Reading TextFSM template from cache path: {}'.format(tpl_cached_path))
+        log.debug(
+            "Reading TextFSM template from cache path: {}".format(tpl_cached_path)
+        )
         # Disabling pylint W8470 to nto complain about fopen.
         # Unfortunately textFSM needs the file handle rather than the content...
         # pylint: disable=W8470
-        tpl_file_handle = fopen(tpl_cached_path, 'r')
+        tpl_file_handle = fopen(tpl_cached_path, "r")
         # pylint: disable=W8470
         log.debug(tpl_file_handle.read())
         tpl_file_handle.seek(0)  # move the object position back at the top of the file
         fsm_handler = textfsm.TextFSM(tpl_file_handle)
     except textfsm.TextFSMTemplateError as tfte:
-        log.error('Unable to parse the TextFSM template', exc_info=True)
-        ret['comment'] = 'Unable to parse the TextFSM template from {}: {}. Please check the logs.'.format(
-            template_path, tfte)
+        log.error("Unable to parse the TextFSM template", exc_info=True)
+        ret[
+            "comment"
+        ] = "Unable to parse the TextFSM template from {}: {}. Please check the logs.".format(
+            template_path, tfte
+        )
         return ret
     if not raw_text and raw_text_file:
-        log.debug('Trying to read the raw input from {}'.format(raw_text_file))
-        raw_text = __salt__['cp.get_file_str'](raw_text_file, saltenv=saltenv)
+        log.debug("Trying to read the raw input from {}".format(raw_text_file))
+        raw_text = __salt__["cp.get_file_str"](raw_text_file, saltenv=saltenv)
         if raw_text is False:
-            ret['comment'] = 'Unable to read from {}. Please specify a valid input file or text.'.format(raw_text_file)
-            log.error(ret['comment'])
+            ret[
+                "comment"
+            ] = "Unable to read from {}. Please specify a valid input file or text.".format(
+                raw_text_file
+            )
+            log.error(ret["comment"])
             return ret
     if not raw_text:
-        ret['comment'] = 'Please specify a valid input file or text.'
-        log.error(ret['comment'])
+        ret["comment"] = "Please specify a valid input file or text."
+        log.error(ret["comment"])
         return ret
-    log.debug('Processing the raw text:')
+    log.debug("Processing the raw text:")
     log.debug(raw_text)
     objects = fsm_handler.ParseText(raw_text)
-    ret['out'] = _clitable_to_dict(objects, fsm_handler)
-    ret['result'] = True
+    ret["out"] = _clitable_to_dict(objects, fsm_handler)
+    ret["result"] = True
     return ret
 
 
-def index(command,
-          platform=None,
-          platform_grain_name=None,
-          platform_column_name=None,
-          output=None,
-          output_file=None,
-          textfsm_path=None,
-          index_file=None,
-          saltenv='base',
-          include_empty=False,
-          include_pat=None,
-          exclude_pat=None):
-    '''
+def index(
+    command,
+    platform=None,
+    platform_grain_name=None,
+    platform_column_name=None,
+    output=None,
+    output_file=None,
+    textfsm_path=None,
+    index_file=None,
+    saltenv="base",
+    include_empty=False,
+    include_pat=None,
+    exclude_pat=None,
+):
+    """
     Dynamically identify the template required to extract the
     information from the unstructured raw text.
 
@@ -377,83 +389,109 @@ def index(command,
         {%- set command = 'sh ver' -%}
         {%- set output = salt.net.cli(command) -%}
         {%- set textfsm_extract = salt.textfsm.index(command, output=output) -%}
-    '''
-    ret = {
-        'out': None,
-        'result': False,
-        'comment': ''
-    }
+    """
+    ret = {"out": None, "result": False, "comment": ""}
     if not HAS_CLITABLE:
-        ret['comment'] = 'TextFSM doesnt seem that has clitable embedded.'
-        log.error(ret['comment'])
+        ret["comment"] = "TextFSM doesnt seem that has clitable embedded."
+        log.error(ret["comment"])
         return ret
     if not platform:
-        platform_grain_name = __opts__.get('textfsm_platform_grain') or\
-                              __pillar__.get('textfsm_platform_grain', platform_grain_name)
+        platform_grain_name = __opts__.get("textfsm_platform_grain") or __pillar__.get(
+            "textfsm_platform_grain", platform_grain_name
+        )
         if platform_grain_name:
-            log.debug('Using the {} grain to identify the platform name'.format(platform_grain_name))
+            log.debug(
+                "Using the {} grain to identify the platform name".format(
+                    platform_grain_name
+                )
+            )
             platform = __grains__.get(platform_grain_name)
             if not platform:
-                ret['comment'] = 'Unable to identify the platform name using the {} grain.'.format(platform_grain_name)
+                ret[
+                    "comment"
+                ] = "Unable to identify the platform name using the {} grain.".format(
+                    platform_grain_name
+                )
                 return ret
-            log.info('Using platform: {}'.format(platform))
+            log.info("Using platform: {}".format(platform))
         else:
-            ret['comment'] = 'No platform specified, no platform grain identifier configured.'
-            log.error(ret['comment'])
+            ret[
+                "comment"
+            ] = "No platform specified, no platform grain identifier configured."
+            log.error(ret["comment"])
             return ret
     if not textfsm_path:
-        log.debug('No TextFSM templates path specified, trying to look into the opts and pillar')
-        textfsm_path = __opts__.get('textfsm_path') or __pillar__.get('textfsm_path')
+        log.debug(
+            "No TextFSM templates path specified, trying to look into the opts and pillar"
+        )
+        textfsm_path = __opts__.get("textfsm_path") or __pillar__.get("textfsm_path")
         if not textfsm_path:
-            ret['comment'] = 'No TextFSM templates path specified. Please configure in opts/pillar/function args.'
-            log.error(ret['comment'])
+            ret[
+                "comment"
+            ] = "No TextFSM templates path specified. Please configure in opts/pillar/function args."
+            log.error(ret["comment"])
             return ret
-    log.debug('Using the saltenv: {}'.format(saltenv))
-    log.debug('Caching {} using the Salt fileserver'.format(textfsm_path))
-    textfsm_cachedir_ret = __salt__['cp.cache_dir'](textfsm_path,
-                                                    saltenv=saltenv,
-                                                    include_empty=include_empty,
-                                                    include_pat=include_pat,
-                                                    exclude_pat=exclude_pat)
-    log.debug('Cache fun return:')
+    log.debug("Using the saltenv: {}".format(saltenv))
+    log.debug("Caching {} using the Salt fileserver".format(textfsm_path))
+    textfsm_cachedir_ret = __salt__["cp.cache_dir"](
+        textfsm_path,
+        saltenv=saltenv,
+        include_empty=include_empty,
+        include_pat=include_pat,
+        exclude_pat=exclude_pat,
+    )
+    log.debug("Cache fun return:")
     log.debug(textfsm_cachedir_ret)
     if not textfsm_cachedir_ret:
-        ret['comment'] = 'Unable to fetch from {}. Is the TextFSM path correctly specified?'.format(textfsm_path)
-        log.error(ret['comment'])
+        ret[
+            "comment"
+        ] = "Unable to fetch from {}. Is the TextFSM path correctly specified?".format(
+            textfsm_path
+        )
+        log.error(ret["comment"])
         return ret
     textfsm_cachedir = os.path.dirname(textfsm_cachedir_ret[0])  # first item
-    index_file = __opts__.get('textfsm_index_file') or __pillar__.get('textfsm_index_file', 'index')
+    index_file = __opts__.get("textfsm_index_file") or __pillar__.get(
+        "textfsm_index_file", "index"
+    )
     index_file_path = os.path.join(textfsm_cachedir, index_file)
-    log.debug('Using the cached index file: {}'.format(index_file_path))
-    log.debug('TextFSM templates cached under: {}'.format(textfsm_cachedir))
+    log.debug("Using the cached index file: {}".format(index_file_path))
+    log.debug("TextFSM templates cached under: {}".format(textfsm_cachedir))
     textfsm_obj = clitable.CliTable(index_file_path, textfsm_cachedir)
-    attrs = {
-        'Command': command
-    }
-    platform_column_name = __opts__.get('textfsm_platform_column_name') or\
-                           __pillar__.get('textfsm_platform_column_name', 'Platform')
-    log.info('Using the TextFSM platform idenfiticator: {}'.format(platform_column_name))
+    attrs = {"Command": command}
+    platform_column_name = __opts__.get(
+        "textfsm_platform_column_name"
+    ) or __pillar__.get("textfsm_platform_column_name", "Platform")
+    log.info(
+        "Using the TextFSM platform idenfiticator: {}".format(platform_column_name)
+    )
     attrs[platform_column_name] = platform
-    log.debug('Processing the TextFSM index file using the attributes: {}'.format(attrs))
+    log.debug(
+        "Processing the TextFSM index file using the attributes: {}".format(attrs)
+    )
     if not output and output_file:
-        log.debug('Processing the output from {}'.format(output_file))
-        output = __salt__['cp.get_file_str'](output_file, saltenv=saltenv)
+        log.debug("Processing the output from {}".format(output_file))
+        output = __salt__["cp.get_file_str"](output_file, saltenv=saltenv)
         if output is False:
-            ret['comment'] = 'Unable to read from {}. Please specify a valid file or text.'.format(output_file)
-            log.error(ret['comment'])
+            ret[
+                "comment"
+            ] = "Unable to read from {}. Please specify a valid file or text.".format(
+                output_file
+            )
+            log.error(ret["comment"])
             return ret
     if not output:
-        ret['comment'] = 'Please specify a valid output text or file'
-        log.error(ret['comment'])
+        ret["comment"] = "Please specify a valid output text or file"
+        log.error(ret["comment"])
         return ret
-    log.debug('Processing the raw text:')
+    log.debug("Processing the raw text:")
     log.debug(output)
     try:
         # Parse output through template
         textfsm_obj.ParseCmd(output, attrs)
-        ret['out'] = _clitable_to_dict(textfsm_obj, textfsm_obj)
-        ret['result'] = True
+        ret["out"] = _clitable_to_dict(textfsm_obj, textfsm_obj)
+        ret["result"] = True
     except clitable.CliTableError as cterr:
-        log.error('Unable to proces the CliTable', exc_info=True)
-        ret['comment'] = 'Unable to process the output: {}'.format(cterr)
+        log.error("Unable to proces the CliTable", exc_info=True)
+        ret["comment"] = "Unable to process the output: {}".format(cterr)
     return ret

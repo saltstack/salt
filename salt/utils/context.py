@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
     :codeauthor: Thomas Jackson (jacksontj.89@gmail.com)
 
@@ -8,29 +8,32 @@
     ~~~~~~~~~~~~~~~~~~
 
     Context managers used throughout Salt's source code.
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import copy
 import threading
-try:
-    from collections.abc import MutableMapping
-except ImportError:
-    from collections import MutableMapping
-
 from contextlib import contextmanager
 
 from salt.ext import six
 
+try:
+    from collections.abc import MutableMapping
+except ImportError:
+    # pylint: disable=no-name-in-module
+    from collections import MutableMapping
+
+    # pylint: enable=no-name-in-module
+
 
 @contextmanager
 def func_globals_inject(func, **overrides):
-    '''
+    """
     Override specific variables within a function's global context.
-    '''
+    """
     # recognize methods
-    if hasattr(func, 'im_func'):
+    if hasattr(func, "im_func"):
         func = func.__func__
 
     # Get a reference to the function globals dictionary
@@ -62,13 +65,13 @@ def func_globals_inject(func, **overrides):
 
 
 class ContextDict(MutableMapping):
-    '''
+    """
     A context manager that saves some per-thread state globally.
     Intended for use with Tornado's StackContext.
 
     Provide arbitrary data as kwargs upon creation,
     then allow any children to override the values of the parent.
-    '''
+    """
 
     def __init__(self, threadsafe=False, **data):
         # state should be thread local, so this object can be threadsafe
@@ -82,10 +85,10 @@ class ContextDict(MutableMapping):
 
     @property
     def active(self):
-        '''Determine if this ContextDict is currently overridden
+        """Determine if this ContextDict is currently overridden
         Since the ContextDict can be overridden in each thread, we check whether
         the _state.data is set or not.
-        '''
+        """
         try:
             return self._state.data is not None
         except AttributeError:
@@ -93,10 +96,12 @@ class ContextDict(MutableMapping):
 
     # TODO: rename?
     def clone(self, **kwargs):
-        '''
+        """
         Clone this context, and return the ChildContextDict
-        '''
-        child = ChildContextDict(parent=self, threadsafe=self._threadsafe, overrides=kwargs)
+        """
+        child = ChildContextDict(
+            parent=self, threadsafe=self._threadsafe, overrides=kwargs
+        )
         return child
 
     def __setitem__(self, key, val):
@@ -147,9 +152,10 @@ class ContextDict(MutableMapping):
 
 
 class ChildContextDict(MutableMapping):
-    '''An overrideable child of ContextDict
+    """An overrideable child of ContextDict
 
-    '''
+    """
+
     def __init__(self, parent, overrides=None, threadsafe=False):
         self.parent = parent
         self._data = {} if overrides is None else overrides
@@ -185,7 +191,7 @@ class ChildContextDict(MutableMapping):
         return iter(self._data)
 
     def __enter__(self):
-        if hasattr(self.parent._state, 'data'):
+        if hasattr(self.parent._state, "data"):
             # Save old data to support nested calls
             self._old_data = self.parent._state.data
         self.parent._state.data = self._data
@@ -195,11 +201,11 @@ class ChildContextDict(MutableMapping):
 
 
 class NamespacedDictWrapper(MutableMapping, dict):
-    '''
+    """
     Create a dict which wraps another dict with a specific prefix of key(s)
 
     MUST inherit from dict to serialize through msgpack correctly
-    '''
+    """
 
     def __init__(self, d, pre_keys, override_name=None):  # pylint: disable=W0231
         self.__dict = d
@@ -209,11 +215,12 @@ class NamespacedDictWrapper(MutableMapping, dict):
             self.pre_keys = pre_keys
         if override_name is not None:
             import salt.utils.versions
+
             salt.utils.versions.warn_until(
-                'Neon',
-                'Overriding the class name is no longer supported. Please '
-                'remove the override_name argument before it is removed in '
-                'Salt Sodium.'
+                "Sodium",
+                "Overriding the class name is no longer supported. Please "
+                "remove the override_name argument before it is removed in "
+                "Salt Sodium.",
             )
         super(NamespacedDictWrapper, self).__init__(self._dict())
 
@@ -242,12 +249,12 @@ class NamespacedDictWrapper(MutableMapping, dict):
         return iter(self._dict())
 
     def __copy__(self):
-        return type(self)(copy.copy(self.__dict),
-                          copy.copy(self.pre_keys))
+        return type(self)(copy.copy(self.__dict), copy.copy(self.pre_keys))
 
     def __deepcopy__(self, memo):
-        return type(self)(copy.deepcopy(self.__dict, memo),
-                          copy.deepcopy(self.pre_keys, memo))
+        return type(self)(
+            copy.deepcopy(self.__dict, memo), copy.deepcopy(self.pre_keys, memo)
+        )
 
     def __str__(self):
         return self._dict().__str__()

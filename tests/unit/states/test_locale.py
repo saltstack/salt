@@ -1,48 +1,58 @@
 # -*- coding: utf-8 -*-
-'''
+"""
     :codeauthor: Rahul Handay <rahulha@saltstack.com>
-'''
+"""
 
 # Import Python Libs
-from __future__ import absolute_import, unicode_literals, print_function
-
-# Import Salt Testing Libs
-from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
-from tests.support.mock import (
-    MagicMock,
-    patch,
-    NO_MOCK,
-    NO_MOCK_REASON
-)
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Libs
 import salt.states.locale as locale
 
+# Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.mock import MagicMock, patch
+from tests.support.unit import TestCase
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
+
 class LocaleTestCase(TestCase, LoaderModuleMockMixin):
-    '''
+    """
         Validate the locale state
-    '''
+    """
+
     def setup_loader_modules(self):
         return {locale: {}}
 
     def test_system(self):
-        '''
+        """
             Test to set the locale for the system
-        '''
-        ret = [{'changes': {}, 'comment': 'System locale salt already set',
-                'name': 'salt', 'result': True},
-               {'changes': {},
-                'comment': 'System locale saltstack needs to be set',
-                'name': 'saltstack', 'result': None},
-               {'changes': {'locale': 'saltstack'},
-                'comment': 'Set system locale saltstack', 'name': 'saltstack',
-                'result': True},
-               {'changes': {},
-                'comment': 'Failed to set system locale to saltstack',
-                'name': 'saltstack', 'result': False}]
+        """
+        ret = [
+            {
+                "changes": {},
+                "comment": "System locale salt already set",
+                "name": "salt",
+                "result": True,
+            },
+            {
+                "changes": {},
+                "comment": "System locale saltstack needs to be set",
+                "name": "saltstack",
+                "result": None,
+            },
+            {
+                "changes": {"locale": "saltstack"},
+                "comment": "Set system locale saltstack",
+                "name": "saltstack",
+                "result": True,
+            },
+            {
+                "changes": {},
+                "comment": "Failed to set system locale to saltstack",
+                "name": "saltstack",
+                "result": False,
+            },
+        ]
 
         mock = MagicMock(return_value="salt")
         with patch.dict(locale.__salt__, {"locale.get_locale": mock}):
@@ -59,20 +69,35 @@ class LocaleTestCase(TestCase, LoaderModuleMockMixin):
                     self.assertDictEqual(locale.system("saltstack"), ret[3])
 
     def test_present(self):
-        '''
+        """
             Test to generate a locale if it is not present
-        '''
-        ret = [{'changes': {},
-                'comment': 'Locale salt is already present', 'name': 'salt',
-                'result': True},
-               {'changes': {},
-                'comment': 'Locale salt needs to be generated', 'name': 'salt',
-                'result': None},
-               {'changes': {'locale': 'salt'},
-                'comment': 'Generated locale salt', 'name': 'salt',
-                'result': True},
-               {'changes': {}, 'comment': 'Failed to generate locale salt',
-                'name': 'salt', 'result': False}]
+        """
+        ret = [
+            {
+                "changes": {},
+                "comment": "Locale salt is already present",
+                "name": "salt",
+                "result": True,
+            },
+            {
+                "changes": {},
+                "comment": "Locale salt needs to be generated",
+                "name": "salt",
+                "result": None,
+            },
+            {
+                "changes": {"locale": "salt"},
+                "comment": "Generated locale salt",
+                "name": "salt",
+                "result": True,
+            },
+            {
+                "changes": {},
+                "comment": "Failed to generate locale salt",
+                "name": "salt",
+                "result": False,
+            },
+        ]
 
         mock = MagicMock(side_effect=[True, False, False, False])
         with patch.dict(locale.__salt__, {"locale.avail": mock}):

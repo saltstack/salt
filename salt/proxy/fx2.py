@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-,
-'''
+"""
 Dell FX2 chassis
 ================
 
@@ -170,16 +170,17 @@ Associated states are thoroughly documented in :mod:`salt.states.dellchassis <sa
 Look there to find an example structure for pillar as well as an example
 ``.sls`` file for standing up a Dell Chassis from scratch.
 
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
+
 import salt.utils.http
 import salt.utils.path
 
 # This must be present or the Salt loader won't load this module
-__proxyenabled__ = ['fx2']
+__proxyenabled__ = ["fx2"]
 
 
 # Variables are scoped to this module so we can have persistent data
@@ -192,16 +193,16 @@ log = logging.getLogger(__file__)
 
 
 def __virtual__():
-    '''
+    """
     Only return if all the modules are available
-    '''
-    if not salt.utils.path.which('racadm'):
+    """
+    if not salt.utils.path.which("racadm"):
         return False, 'fx2 proxy minion needs "racadm" to be installed.'
     return True
 
 
 def init(opts):
-    '''
+    """
     This function gets called when the proxy starts up.
     We check opts to see if a fallback user and password are supplied.
     If they are present, and the primary credentials don't work, then
@@ -210,48 +211,48 @@ def init(opts):
     Whichever set of credentials works is placed in the persistent
     DETAILS dictionary and will be used for further communication with the
     chassis.
-    '''
-    if 'host' not in opts['proxy']:
+    """
+    if "host" not in opts["proxy"]:
         log.critical('No "host" key found in pillar for this proxy')
         return False
 
-    DETAILS['host'] = opts['proxy']['host']
+    DETAILS["host"] = opts["proxy"]["host"]
 
     (username, password) = find_credentials()
 
 
 def admin_username():
-    '''
+    """
     Return the admin_username in the DETAILS dictionary, or root if there
     is none present
-    '''
-    return DETAILS.get('admin_username', 'root')
+    """
+    return DETAILS.get("admin_username", "root")
 
 
 def admin_password():
-    '''
+    """
     Return the admin_password in the DETAILS dictionary, or 'calvin'
     (the Dell default) if there is none present
-    '''
-    if 'admin_password' not in DETAILS:
-        log.info('proxy.fx2: No admin_password in DETAILS, returning Dell default')
-        return 'calvin'
+    """
+    if "admin_password" not in DETAILS:
+        log.info("proxy.fx2: No admin_password in DETAILS, returning Dell default")
+        return "calvin"
 
-    return DETAILS.get('admin_password', 'calvin')
+    return DETAILS.get("admin_password", "calvin")
 
 
 def host():
-    return DETAILS['host']
+    return DETAILS["host"]
 
 
 def _grains(host, user, password):
-    '''
+    """
     Get the grains from the proxied device
-    '''
-    r = __salt__['dracr.system_info'](host=host,
-                                      admin_username=user,
-                                      admin_password=password)
-    if r.get('retcode', 0) == 0:
+    """
+    r = __salt__["dracr.system_info"](
+        host=host, admin_username=user, admin_password=password
+    )
+    if r.get("retcode", 0) == 0:
         GRAINS_CACHE = r
     else:
         GRAINS_CACHE = {}
@@ -259,62 +260,66 @@ def _grains(host, user, password):
 
 
 def grains():
-    '''
+    """
     Get the grains from the proxied device
-    '''
+    """
     if not GRAINS_CACHE:
-        return _grains(DETAILS['host'],
-                       DETAILS['admin_username'],
-                       DETAILS['admin_password'])
+        return _grains(
+            DETAILS["host"], DETAILS["admin_username"], DETAILS["admin_password"]
+        )
 
     return GRAINS_CACHE
 
 
 def grains_refresh():
-    '''
+    """
     Refresh the grains from the proxied device
-    '''
+    """
     GRAINS_CACHE = {}
     return grains()
 
 
 def find_credentials():
-    '''
+    """
     Cycle through all the possible credentials and return the first one that
     works
-    '''
-    usernames = [__pillar__['proxy'].get('admin_username', 'root')]
-    if 'fallback_admin_username' in __pillar__.get('proxy'):
-        usernames.append(__pillar__['proxy'].get('fallback_admin_username'))
+    """
+    usernames = [__pillar__["proxy"].get("admin_username", "root")]
+    if "fallback_admin_username" in __pillar__.get("proxy"):
+        usernames.append(__pillar__["proxy"].get("fallback_admin_username"))
 
     for user in usernames:
-        for pwd in __pillar__['proxy']['passwords']:
-            r = __salt__['dracr.get_chassis_name'](host=__pillar__['proxy']['host'],
-                                                   admin_username=user,
-                                                   admin_password=pwd)
+        for pwd in __pillar__["proxy"]["passwords"]:
+            r = __salt__["dracr.get_chassis_name"](
+                host=__pillar__["proxy"]["host"],
+                admin_username=user,
+                admin_password=pwd,
+            )
             # Retcode will be present if the chassis_name call failed
             try:
-                if r.get('retcode', None) is None:
-                    DETAILS['admin_username'] = user
-                    DETAILS['admin_password'] = pwd
-                    __opts__['proxy']['admin_username'] = user
-                    __opts__['proxy']['admin_password'] = pwd
+                if r.get("retcode", None) is None:
+                    DETAILS["admin_username"] = user
+                    DETAILS["admin_password"] = pwd
+                    __opts__["proxy"]["admin_username"] = user
+                    __opts__["proxy"]["admin_password"] = pwd
                     return (user, pwd)
             except AttributeError:
                 # Then the above was a string, and we can return the username
                 # and password
-                DETAILS['admin_username'] = user
-                DETAILS['admin_password'] = pwd
-                __opts__['proxy']['admin_username'] = user
-                __opts__['proxy']['admin_password'] = pwd
+                DETAILS["admin_username"] = user
+                DETAILS["admin_password"] = pwd
+                __opts__["proxy"]["admin_username"] = user
+                __opts__["proxy"]["admin_password"] = pwd
                 return (user, pwd)
 
-    log.debug('proxy fx2.find_credentials found no valid credentials, using Dell default')
-    return ('root', 'calvin')
+    log.debug(
+        "proxy fx2.find_credentials found no valid credentials, using Dell default"
+    )
+    return ("root", "calvin")
 
 
 def chconfig(cmd, *args, **kwargs):
-    '''
+    """
     This function is called by the :mod:`salt.modules.chassis.cmd <salt.modules.chassis.cmd>`
     shim.  It then calls whatever is passed in ``cmd``
     inside the :mod:`salt.modules.dracr <salt.modules.dracr>`
@@ -325,52 +330,54 @@ def chconfig(cmd, *args, **kwargs):
     :param kwargs: Keyword arguments that need to be passed to that command
     :return: Passthrough the return from the dracr module.
 
-    '''
+    """
     # Strip the __pub_ keys...is there a better way to do this?
     for k in list(kwargs):
-        if k.startswith('__pub_'):
+        if k.startswith("__pub_"):
             kwargs.pop(k)
 
     # Catch password reset
-    if 'dracr.'+cmd not in __salt__:
-        ret = {'retcode': -1, 'message': 'dracr.' + cmd + ' is not available'}
+    if "dracr." + cmd not in __salt__:
+        ret = {"retcode": -1, "message": "dracr." + cmd + " is not available"}
     else:
-        ret = __salt__['dracr.'+cmd](*args, **kwargs)
+        ret = __salt__["dracr." + cmd](*args, **kwargs)
 
-    if cmd == 'change_password':
-        if 'username' in kwargs:
-            __opts__['proxy']['admin_username'] = kwargs['username']
-            DETAILS['admin_username'] = kwargs['username']
-        if 'password' in kwargs:
-            __opts__['proxy']['admin_password'] = kwargs['password']
-            DETAILS['admin_password'] = kwargs['password']
+    if cmd == "change_password":
+        if "username" in kwargs:
+            __opts__["proxy"]["admin_username"] = kwargs["username"]
+            DETAILS["admin_username"] = kwargs["username"]
+        if "password" in kwargs:
+            __opts__["proxy"]["admin_password"] = kwargs["password"]
+            DETAILS["admin_password"] = kwargs["password"]
 
     return ret
 
 
 def ping():
-    '''
+    """
     Is the chassis responding?
 
     :return: Returns False if the chassis didn't respond, True otherwise.
 
-    '''
-    r = __salt__['dracr.system_info'](host=DETAILS['host'],
-                                      admin_username=DETAILS['admin_username'],
-                                      admin_password=DETAILS['admin_password'])
-    if r.get('retcode', 0) == 1:
+    """
+    r = __salt__["dracr.system_info"](
+        host=DETAILS["host"],
+        admin_username=DETAILS["admin_username"],
+        admin_password=DETAILS["admin_password"],
+    )
+    if r.get("retcode", 0) == 1:
         return False
     else:
         return True
     try:
-        return r['dict'].get('ret', False)
-    except Exception:
+        return r["dict"].get("ret", False)
+    except Exception:  # pylint: disable=broad-except
         return False
 
 
 def shutdown(opts):
-    '''
+    """
     Shutdown the connection to the proxied device.
     For this proxy shutdown is a no-op.
-    '''
-    log.debug('fx2 proxy shutdown() called...')
+    """
+    log.debug("fx2 proxy shutdown() called...")

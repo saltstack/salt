@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Use the :ref:`Salt Event System <events>` to fire events from the
 master to the minion and vice-versa.
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import collections
 import logging
 import os
@@ -14,25 +15,25 @@ import traceback
 
 # Import salt libs
 import salt.crypt
-import salt.utils.event
-import salt.utils.zeromq
 import salt.payload
 import salt.transport.client
+import salt.utils.event
+import salt.utils.zeromq
 from salt.ext import six
 
-__proxyenabled__ = ['*']
+__proxyenabled__ = ["*"]
 log = logging.getLogger(__name__)
 
 
 def _dict_subset(keys, master_dict):
-    '''
+    """
     Return a dictionary of only the subset of keys/values specified in keys
-    '''
+    """
     return dict([(k, v) for k, v in six.iteritems(master_dict) if k in keys])
 
 
 def fire_master(data, tag, preload=None):
-    '''
+    """
     Fire an event off up to the master server
 
     CLI Example:
@@ -40,56 +41,62 @@ def fire_master(data, tag, preload=None):
     .. code-block:: bash
 
         salt '*' event.fire_master '{"data":"my event data"}' 'tag'
-    '''
-    if (__opts__.get('local', None) or __opts__.get('file_client', None) == 'local') and not __opts__.get('use_master_when_local', False):
+    """
+    if (
+        __opts__.get("local", None) or __opts__.get("file_client", None) == "local"
+    ) and not __opts__.get("use_master_when_local", False):
         #  We can't send an event if we're in masterless mode
-        log.warning('Local mode detected. Event with tag %s will NOT be sent.', tag)
+        log.warning("Local mode detected. Event with tag %s will NOT be sent.", tag)
         return False
 
-    if preload or __opts__.get('__cli') == 'salt-call':
+    if preload or __opts__.get("__cli") == "salt-call":
         # If preload is specified, we must send a raw event (this is
         # slower because it has to independently authenticate)
-        if 'master_uri' not in __opts__:
-            __opts__['master_uri'] = 'tcp://{ip}:{port}'.format(
-                    ip=salt.utils.zeromq.ip_bracket(__opts__['interface']),
-                    port=__opts__.get('ret_port', '4506')  # TODO, no fallback
-                    )
+        if "master_uri" not in __opts__:
+            __opts__["master_uri"] = "tcp://{ip}:{port}".format(
+                ip=salt.utils.zeromq.ip_bracket(__opts__["interface"]),
+                port=__opts__.get("ret_port", "4506"),  # TODO, no fallback
+            )
         masters = list()
         ret = True
-        if 'master_uri_list' in __opts__:
-            for master_uri in __opts__['master_uri_list']:
+        if "master_uri_list" in __opts__:
+            for master_uri in __opts__["master_uri_list"]:
                 masters.append(master_uri)
         else:
-            masters.append(__opts__['master_uri'])
+            masters.append(__opts__["master_uri"])
         auth = salt.crypt.SAuth(__opts__)
-        load = {'id': __opts__['id'],
-                'tag': tag,
-                'data': data,
-                'tok': auth.gen_token(b'salt'),
-                'cmd': '_minion_event'}
+        load = {
+            "id": __opts__["id"],
+            "tag": tag,
+            "data": data,
+            "tok": auth.gen_token(b"salt"),
+            "cmd": "_minion_event",
+        }
 
         if isinstance(preload, dict):
             load.update(preload)
 
         for master in masters:
-            channel = salt.transport.client.ReqChannel.factory(__opts__, master_uri=master)
-            try:
-                channel.send(load)
-                # channel.send was successful.
-                # Ensure ret is True.
-                ret = True
-            except Exception:
-                ret = False
-            finally:
-                channel.close()
+            with salt.transport.client.ReqChannel.factory(
+                __opts__, master_uri=master
+            ) as channel:
+                try:
+                    channel.send(load)
+                    # channel.send was successful.
+                    # Ensure ret is True.
+                    ret = True
+                except Exception:  # pylint: disable=broad-except
+                    ret = False
         return ret
     else:
         # Usually, we can send the event via the minion, which is faster
         # because it is already authenticated
         try:
             return salt.utils.event.MinionEvent(__opts__, listen=False).fire_event(
-                {'data': data, 'tag': tag, 'events': None, 'pretag': None}, 'fire_master')
-        except Exception:
+                {"data": data, "tag": tag, "events": None, "pretag": None},
+                "fire_master",
+            )
+        except Exception:  # pylint: disable=broad-except
             exc_type, exc_value, exc_traceback = sys.exc_info()
             lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
             log.debug(lines)
@@ -97,7 +104,7 @@ def fire_master(data, tag, preload=None):
 
 
 def fire(data, tag):
-    '''
+    """
     Fire an event on the local minion event bus. Data must be formed as a dict.
 
     CLI Example:
@@ -105,31 +112,34 @@ def fire(data, tag):
     .. code-block:: bash
 
         salt '*' event.fire '{"data":"my event data"}' 'tag'
-    '''
+    """
     try:
-        event = salt.utils.event.get_event('minion',  # was __opts__['id']
-                                           sock_dir=__opts__['sock_dir'],
-                                           transport=__opts__['transport'],
-                                           opts=__opts__,
-                                           listen=False)
-
-        return event.fire_event(data, tag)
-    except Exception:
+        with salt.utils.event.get_event(
+            "minion",  # was __opts__['id']
+            sock_dir=__opts__["sock_dir"],
+            transport=__opts__["transport"],
+            opts=__opts__,
+            listen=False,
+        ) as event:
+            return event.fire_event(data, tag)
+    except Exception:  # pylint: disable=broad-except
         exc_type, exc_value, exc_traceback = sys.exc_info()
         lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
         log.debug(lines)
         return False
 
 
-def send(tag,
-        data=None,
-        preload=None,
-        with_env=False,
-        with_grains=False,
-        with_pillar=False,
-        with_env_opts=False,
-        **kwargs):
-    '''
+def send(
+    tag,
+    data=None,
+    preload=None,
+    with_env=False,
+    with_grains=False,
+    with_pillar=False,
+    with_env_opts=False,
+    **kwargs
+):
+    """
     Send an event to the Salt Master
 
     .. versionadded:: 2014.7.0
@@ -198,30 +208,30 @@ def send(tag,
 
         sudo -E salt-call event.send myco/jenkins/build/success with_env=[BUILD_ID, BUILD_URL, GIT_BRANCH, GIT_COMMIT]
 
-    '''
+    """
     data_dict = {}
 
     if with_env:
         if isinstance(with_env, list):
-            data_dict['environ'] = _dict_subset(with_env, dict(os.environ))
+            data_dict["environ"] = _dict_subset(with_env, dict(os.environ))
         else:
-            data_dict['environ'] = dict(os.environ)
+            data_dict["environ"] = dict(os.environ)
 
     if with_grains:
         if isinstance(with_grains, list):
-            data_dict['grains'] = _dict_subset(with_grains, __grains__)
+            data_dict["grains"] = _dict_subset(with_grains, __grains__)
         else:
-            data_dict['grains'] = __grains__
+            data_dict["grains"] = __grains__
 
     if with_pillar:
         if isinstance(with_pillar, list):
-            data_dict['pillar'] = _dict_subset(with_pillar, __pillar__)
+            data_dict["pillar"] = _dict_subset(with_pillar, __pillar__)
         else:
-            data_dict['pillar'] = __pillar__
+            data_dict["pillar"] = __pillar__
 
     if with_env_opts:
-        data_dict['saltenv'] = __opts__.get('saltenv', 'base')
-        data_dict['pillarenv'] = __opts__.get('pillarenv')
+        data_dict["saltenv"] = __opts__.get("saltenv", "base")
+        data_dict["pillarenv"] = __opts__.get("pillarenv")
 
     if kwargs:
         data_dict.update(kwargs)
@@ -230,7 +240,11 @@ def send(tag,
     if isinstance(data, collections.Mapping):
         data_dict.update(data)
 
-    if __opts__.get('local') or __opts__.get('file_client') == 'local' or __opts__.get('master_type') == 'disable':
+    if (
+        __opts__.get("local")
+        or __opts__.get("file_client") == "local"
+        or __opts__.get("master_type") == "disable"
+    ):
         return fire(data_dict, tag)
     else:
         return fire_master(data_dict, tag, preload=preload)

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Use Consul K/V as a Pillar source with values parsed as YAML
 
 :depends:  - python-consul
@@ -134,110 +134,111 @@ This behavior can be disabled by setting ``expand_keys`` to ``false``.
     ext_pillar:
       - consul: my_consul_config expand_keys=false
 
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
 import re
 
-from salt.exceptions import CommandExecutionError
-from salt.utils.dictupdate import update as dict_merge
 import salt.utils.minions
 import salt.utils.yaml
+from salt.exceptions import CommandExecutionError
+from salt.utils.dictupdate import update as dict_merge
 
 # Import third party libs
 try:
     import consul
-    if not hasattr(consul, '__version__'):
-        consul.__version__ = '0.1'  # Some packages has no version, and so this pillar crashes on access to it.
+
+    if not hasattr(consul, "__version__"):
+        consul.__version__ = "0.1"  # Some packages has no version, and so this pillar crashes on access to it.
 except ImportError:
     consul = None
 
-__virtualname__ = 'consul'
+__virtualname__ = "consul"
 
 # Set up logging
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     Only return if python-consul is installed
-    '''
+    """
     return __virtualname__ if consul is not None else False
 
 
-def ext_pillar(minion_id,
-               pillar,  # pylint: disable=W0613
-               conf):
-    '''
+def ext_pillar(minion_id, pillar, conf):  # pylint: disable=W0613
+    """
     Check consul for all data
-    '''
+    """
     opts = {}
     temp = conf
     target_re = re.compile('target="(.*?)"')
     match = target_re.search(temp)
     if match:
-        opts['target'] = match.group(1)
-        temp = temp.replace(match.group(0), '')
+        opts["target"] = match.group(1)
+        temp = temp.replace(match.group(0), "")
         checker = salt.utils.minions.CkMinions(__opts__)
-        _res = checker.check_minions(opts['target'], 'compound')
-        minions = _res['minions']
-        log.debug('Targeted minions: %r', minions)
+        _res = checker.check_minions(opts["target"], "compound")
+        minions = _res["minions"]
+        log.debug("Targeted minions: %r", minions)
         if minion_id not in minions:
             return {}
 
-    root_re = re.compile('root=(\S*)')  # pylint: disable=W1401
+    root_re = re.compile("(?<!_)root=(\S*)")  # pylint: disable=W1401
     match = root_re.search(temp)
     if match:
-        opts['root'] = match.group(1)
-        temp = temp.replace(match.group(0), '')
+        opts["root"] = match.group(1).rstrip("/")
+        temp = temp.replace(match.group(0), "")
     else:
-        opts['root'] = ""
+        opts["root"] = ""
 
-    pillar_root_re = re.compile('pillar_root=(\S*)')  # pylint: disable=W1401
+    pillar_root_re = re.compile("pillar_root=(\S*)")  # pylint: disable=W1401
     match = pillar_root_re.search(temp)
     if match:
-        opts['pillar_root'] = match.group(1)
-        temp = temp.replace(match.group(0), '')
+        opts["pillar_root"] = match.group(1).rstrip("/")
+        temp = temp.replace(match.group(0), "")
     else:
-        opts['pillar_root'] = ""
+        opts["pillar_root"] = ""
 
-    profile_re = re.compile('(?:profile=)?(\S+)')  # pylint: disable=W1401
+    profile_re = re.compile("(?:profile=)?(\S+)")  # pylint: disable=W1401
     match = profile_re.search(temp)
     if match:
-        opts['profile'] = match.group(1)
-        temp = temp.replace(match.group(0), '')
+        opts["profile"] = match.group(1)
+        temp = temp.replace(match.group(0), "")
     else:
-        opts['profile'] = None
+        opts["profile"] = None
 
-    expand_keys_re = re.compile('expand_keys=False', re.IGNORECASE)  # pylint: disable=W1401
+    expand_keys_re = re.compile(
+        "expand_keys=False", re.IGNORECASE
+    )  # pylint: disable=W1401
     match = expand_keys_re.search(temp)
     if match:
-        opts['expand_keys'] = False
-        temp = temp.replace(match.group(0), '')
+        opts["expand_keys"] = False
+        temp = temp.replace(match.group(0), "")
     else:
-        opts['expand_keys'] = True
+        opts["expand_keys"] = True
 
-    client = get_conn(__opts__, opts['profile'])
+    client = get_conn(__opts__, opts["profile"])
 
-    role = __salt__['grains.get']('role', None)
-    environment = __salt__['grains.get']('environment', None)
+    role = __salt__["grains.get"]("role", None)
+    environment = __salt__["grains.get"]("environment", None)
     # put the minion's ID in the path if necessary
-    opts['root'] %= {
-        'minion_id': minion_id,
-        'role': role,
-        'environment': environment
-    }
+    opts["root"] %= {"minion_id": minion_id, "role": role, "environment": environment}
 
     try:
-        pillar_tree = fetch_tree(client, opts['root'], opts['expand_keys'])
-        if opts['pillar_root']:
-            log.debug('Merging consul path %s/ into pillar at %s/', opts['root'], opts['pillar_root'])
+        pillar_tree = fetch_tree(client, opts["root"], opts["expand_keys"])
+        if opts["pillar_root"]:
+            log.debug(
+                "Merging consul path %s/ into pillar at %s/",
+                opts["root"],
+                opts["pillar_root"],
+            )
 
             pillar = {}
             branch = pillar
-            keys = opts['pillar_root'].rstrip('/').split('/')
+            keys = opts["pillar_root"].split("/")
 
             for i, k in enumerate(keys):
                 if i == len(keys) - 1:
@@ -248,50 +249,52 @@ def ext_pillar(minion_id,
         else:
             pillar = pillar_tree
     except KeyError:
-        log.error('No such key in consul profile %s: %s', opts['profile'], opts['root'])
+        log.error("No such key in consul profile %s: %s", opts["profile"], opts["root"])
         pillar = {}
 
     return pillar
 
 
 def consul_fetch(client, path):
-    '''
+    """
     Query consul for all keys/values within base path
-    '''
-    return client.kv.get(path, recurse=True)
+    """
+    # Unless the root path is blank, it needs a trailing slash for
+    # the kv get from Consul to work as expected
+    return client.kv.get("" if not path else path.rstrip("/") + "/", recurse=True)
 
 
 def fetch_tree(client, path, expand_keys):
-    '''
+    """
     Grab data from consul, trim base path and remove any keys which
     are folders. Take the remaining data and send it to be formatted
     in such a way as to be used as pillar data.
-    '''
+    """
     _, items = consul_fetch(client, path)
     ret = {}
-    has_children = re.compile(r'/$')
+    has_children = re.compile(r"/$")
 
-    log.debug('Fetched items: %r', items)
+    log.debug("Fetched items: %r", items)
 
     if items is None:
         return ret
     for item in reversed(items):
-        key = re.sub(r'^' + path + '/?', '', item['Key'])
-        if key != '':
-            log.debug('key/path - %s: %s', path, key)
-            log.debug('has_children? %r', has_children.search(key))
+        key = re.sub(r"^" + re.escape(path) + "/?", "", item["Key"])
+        if key != "":
+            log.debug("path/key - %s: %s", path, key)
+            log.debug("has_children? %r", has_children.search(key))
         if has_children.search(key) is None:
-            ret = pillar_format(ret, key.split('/'), item['Value'], expand_keys)
-            log.debug('Fetching subkeys for key: %r', item)
+            ret = pillar_format(ret, key.split("/"), item["Value"], expand_keys)
+            log.debug("Fetching subkeys for key: %r", item)
 
     return ret
 
 
 def pillar_format(ret, keys, value, expand_keys):
-    '''
+    """
     Perform data formatting to be used as pillar data and
     merge it with the current pillar data
-    '''
+    """
     # if value is empty in Consul then it's None here - skip it
     if value is None:
         return ret
@@ -315,11 +318,11 @@ def pillar_format(ret, keys, value, expand_keys):
 
 def get_conn(opts, profile):
 
-    '''
+    """
     Return a client object for accessing consul
-    '''
-    opts_pillar = opts.get('pillar', {})
-    opts_master = opts_pillar.get('master', {})
+    """
+    opts_pillar = opts.get("pillar", {})
+    opts_master = opts_pillar.get("master", {})
 
     opts_merged = {}
     opts_merged.update(opts_master)
@@ -333,28 +336,28 @@ def get_conn(opts, profile):
 
     params = {}
     for key in conf:
-        if key.startswith('consul.'):
-            params[key.split('.')[1]] = conf[key]
+        if key.startswith("consul."):
+            params[key.split(".")[1]] = conf[key]
 
-    if 'dc' in params:
-        pillarenv = opts_merged.get('pillarenv') or 'base'
-        params['dc'] = _resolve_datacenter(params['dc'], pillarenv)
+    if "dc" in params:
+        pillarenv = opts_merged.get("pillarenv") or "base"
+        params["dc"] = _resolve_datacenter(params["dc"], pillarenv)
 
     if consul:
         # Sanity check. ACL Tokens are supported on python-consul 0.4.7 onwards only.
-        if consul.__version__ < '0.4.7' and params.get('target'):
-            params.pop('target')
+        if consul.__version__ < "0.4.7" and params.get("target"):
+            params.pop("target")
         return consul.Consul(**params)
     else:
         raise CommandExecutionError(
-            '(unable to import consul, '
-            'module most likely not installed. Download python-consul '
-            'module and be sure to import consul)'
+            "(unable to import consul, "
+            "module most likely not installed. Download python-consul "
+            "module and be sure to import consul)"
         )
 
 
 def _resolve_datacenter(dc, pillarenv):
-    '''
+    """
     If ``dc`` is a string - return it as is.
 
     If it's a dict then sort it in descending order by key length and try
@@ -365,17 +368,17 @@ def _resolve_datacenter(dc, pillarenv):
 
     If none patterns matched return ``None`` which meanse us datacenter of
     conencted Consul agent.
-    '''
-    log.debug('Resolving Consul datacenter based on: %s', dc)
+    """
+    log.debug("Resolving Consul datacenter based on: %s", dc)
 
     try:
         mappings = dc.items()  # is it a dict?
     except AttributeError:
-        log.debug('Using pre-defined DC: \'%s\'', dc)
+        log.debug("Using pre-defined DC: '%s'", dc)
         return dc
 
-    log.debug('Selecting DC based on pillarenv using %d pattern(s)', len(mappings))
-    log.debug('Pillarenv set to \'%s\'', pillarenv)
+    log.debug("Selecting DC based on pillarenv using %d pattern(s)", len(mappings))
+    log.debug("Pillarenv set to '%s'", pillarenv)
 
     # sort in reverse based on pattern length
     # but use alphabetic order within groups of patterns of same length
@@ -384,12 +387,13 @@ def _resolve_datacenter(dc, pillarenv):
     for pattern, target in sorted_mappings:
         match = re.match(pattern, pillarenv)
         if match:
-            log.debug('Matched pattern: \'%s\'', pattern)
+            log.debug("Matched pattern: '%s'", pattern)
             result = target.format(**match.groupdict())
-            log.debug('Resolved datacenter: \'%s\'', result)
+            log.debug("Resolved datacenter: '%s'", result)
             return result
 
     log.debug(
-        'None of following patterns matched pillarenv=%s: %s',
-        pillarenv, ', '.join(repr(x) for x in mappings)
+        "None of following patterns matched pillarenv=%s: %s",
+        pillarenv,
+        ", ".join(repr(x) for x in mappings),
     )

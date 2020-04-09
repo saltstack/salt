@@ -170,11 +170,18 @@ While ``__grains__`` is defined for every module, it's only filled in for some.
 __pillar__
 -----------
 
-Filled in for: Execution, Returner, SSH Wrapper, State
+Filled in for: Execution, Renderer, Returner, SSH Wrapper, State
 
 The ``__pillar__`` dictionary contains the pillar for the respective minion.
 
 While ``__pillar__`` is defined for every module, it's only filled in for some.
+
+__ext_pillar__
+--------------
+
+Filled in for: Pillar
+
+The ``__ext_pillar__`` dictionary contains the external pillar modules.
 
 .. _dunder-context:
 
@@ -208,19 +215,26 @@ each file. Here is an example from salt/modules/cp.py:
 
 __utils__
 ---------
-Defined in: Cloud, Engine, Execution, File Server, Pillar, Proxy, Runner, SDB.
+Defined in: Cloud, Engine, Execution, File Server, Grain, Pillar, Proxy, Roster, Runner, SDB, State
 
 __proxy__
 ---------
 Defined in: Beacon, Engine, Execution, Executor, Proxy, Renderer, Returner, State, Util
 
-__runners__
+__runner__
 -----------
 Defined in: Engine, Roster, Thorium
 
+.. note:: When used in engines, it should be called __runners__ (plural)
+
+__executors__
+-------------
+
+Defined in: Executor
+
 __ret__
 -------
-Defined in: Proxy, Search
+Defined in: Proxy
 
 __thorium__
 -----------

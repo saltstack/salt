@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Management of APT/DNF/YUM/Zypper package repos
 ==============================================
 
@@ -21,7 +21,6 @@ package managers are APT, DNF, YUM and Zypper. Here is some example SLS:
 
     base:
       pkgrepo.managed:
-        - humanname: Logstash PPA
         - name: deb http://ppa.launchpad.net/wolfnet/logstash/ubuntu precise main
         - dist: precise
         - file: /etc/apt/sources.list.d/logstash.list
@@ -38,7 +37,6 @@ package managers are APT, DNF, YUM and Zypper. Here is some example SLS:
 
     base:
       pkgrepo.managed:
-        - humanname: deb-multimedia
         - name: deb http://www.deb-multimedia.org stable main
         - file: /etc/apt/sources.list.d/deb-multimedia.list
         - key_url: salt://deb-multimedia/files/marillat.pub
@@ -47,7 +45,6 @@ package managers are APT, DNF, YUM and Zypper. Here is some example SLS:
 
     base:
       pkgrepo.managed:
-        - humanname: Google Chrome
         - name: deb http://dl.google.com/linux/chrome/deb/ stable main
         - dist: stable
         - file: /etc/apt/sources.list.d/chrome-browser.list
@@ -83,34 +80,35 @@ package managers are APT, DNF, YUM and Zypper. Here is some example SLS:
     installed. To check if this package is installed, run ``dpkg -l python-apt``.
     ``python-apt`` will need to be manually installed if it is not present.
 
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import sys
 
-# Import salt libs
-from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 import salt.utils.data
 import salt.utils.files
 import salt.utils.pkg.deb
 import salt.utils.pkg.rpm
-import salt.utils.versions
+
+# Import salt libs
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # Import 3rd-party libs
 from salt.ext import six
+from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
 
 def __virtual__():
-    '''
+    """
     Only load if modifying repos is available for this package type
-    '''
-    return 'pkg.mod_repo' in __salt__
+    """
+    return "pkg.mod_repo" in __salt__
 
 
 def managed(name, ppa=None, **kwargs):
-    '''
+    """
     This state manages software package repositories. Currently, :mod:`yum
     <salt.modules.yumpkg>`, :mod:`apt <salt.modules.aptpkg>`, and :mod:`zypper
     <salt.modules.zypper>` repositories are supported.
@@ -230,7 +228,7 @@ def managed(name, ppa=None, **kwargs):
         Included to reduce confusion due to YUM/DNF/Zypper's use of the
         ``enabled`` argument. If this is passed for an APT-based distro, then
         the reverse will be passed as ``disabled``. For example, passing
-        ``enabled=False`` will assume ``disabled=False``.
+        ``enabled=False`` will assume ``disabled=True``.
 
     architectures
         On apt-based systems, architectures can restrict the available
@@ -299,250 +297,252 @@ def managed(name, ppa=None, **kwargs):
        on debian based systems.
 
     refresh_db : True
-       .. deprecated:: 2018.3.0
-           Use ``refresh`` instead.
+       This argument has been deprecated. Please use ``refresh`` instead.
+       The ``refresh_db`` argument will continue to work to ensure backwards
+       compatibility, but we recommend using the preferred ``refresh``
+       argument instead.
 
     require_in
        Set this to a list of pkg.installed or pkg.latest to trigger the
        running of apt-get update prior to attempting to install these
        packages. Setting a require in the pkg state will not work for this.
-    '''
-    if 'refresh_db' in kwargs:
-        salt.utils.versions.warn_until(
-            'Neon',
-            'The \'refresh_db\' argument to \'pkg.mod_repo\' has been '
-            'renamed to \'refresh\'. Support for using \'refresh_db\' will be '
-            'removed in the Neon release of Salt.'
+    """
+    if "refresh_db" in kwargs:
+        kwargs["refresh"] = kwargs.pop("refresh_db")
+
+    ret = {"name": name, "changes": {}, "result": None, "comment": ""}
+
+    if "pkg.get_repo" not in __salt__:
+        ret["result"] = False
+        ret["comment"] = "Repo management not implemented on this platform"
+        return ret
+
+    if "key_url" in kwargs and ("keyid" in kwargs or "keyserver" in kwargs):
+        ret["result"] = False
+        ret["comment"] = (
+            'You may not use both "keyid"/"keyserver" and ' '"key_url" argument.'
         )
-        kwargs['refresh'] = kwargs.pop('refresh_db')
 
-    ret = {'name': name,
-           'changes': {},
-           'result': None,
-           'comment': ''}
+    if "key_text" in kwargs and ("keyid" in kwargs or "keyserver" in kwargs):
+        ret["result"] = False
+        ret["comment"] = (
+            'You may not use both "keyid"/"keyserver" and ' '"key_text" argument.'
+        )
+    if "key_text" in kwargs and ("key_url" in kwargs):
+        ret["result"] = False
+        ret["comment"] = 'You may not use both "key_url" and ' '"key_text" argument.'
 
-    if 'pkg.get_repo' not in __salt__:
-        ret['result'] = False
-        ret['comment'] = 'Repo management not implemented on this platform'
+    if "repo" in kwargs:
+        ret["result"] = False
+        ret["comment"] = (
+            "'repo' is not a supported argument for this "
+            "state. The 'name' argument is probably what was "
+            "intended."
+        )
         return ret
 
-    if 'key_url' in kwargs and ('keyid' in kwargs or 'keyserver' in kwargs):
-        ret['result'] = False
-        ret['comment'] = 'You may not use both "keyid"/"keyserver" and ' \
-                         '"key_url" argument.'
-
-    if 'key_text' in kwargs and ('keyid' in kwargs or 'keyserver' in kwargs):
-        ret['result'] = False
-        ret['comment'] = 'You may not use both "keyid"/"keyserver" and ' \
-                         '"key_text" argument.'
-    if 'key_text' in kwargs and ('key_url' in kwargs):
-        ret['result'] = False
-        ret['comment'] = 'You may not use both "key_url" and ' \
-                         '"key_text" argument.'
-
-    if 'repo' in kwargs:
-        ret['result'] = False
-        ret['comment'] = ('\'repo\' is not a supported argument for this '
-                          'state. The \'name\' argument is probably what was '
-                          'intended.')
-        return ret
-
-    enabled = kwargs.pop('enabled', None)
-    disabled = kwargs.pop('disabled', None)
+    enabled = kwargs.pop("enabled", None)
+    disabled = kwargs.pop("disabled", None)
 
     if enabled is not None and disabled is not None:
-        ret['result'] = False
-        ret['comment'] = 'Only one of enabled/disabled is allowed'
+        ret["result"] = False
+        ret["comment"] = "Only one of enabled/disabled is allowed"
         return ret
     elif enabled is None and disabled is None:
         # If neither argument was passed we assume the repo will be enabled
         enabled = True
 
     repo = name
-    if __grains__['os'] in ('Ubuntu', 'Mint'):
+    if __grains__["os"] in ("Ubuntu", "Mint"):
         if ppa is not None:
             # overload the name/repo value for PPAs cleanly
             # this allows us to have one code-path for PPAs
             try:
-                repo = ':'.join(('ppa', ppa))
+                repo = ":".join(("ppa", ppa))
             except TypeError:
-                repo = ':'.join(('ppa', six.text_type(ppa)))
+                repo = ":".join(("ppa", six.text_type(ppa)))
 
-        kwargs['disabled'] = not salt.utils.data.is_true(enabled) \
-            if enabled is not None \
+        kwargs["disabled"] = (
+            not salt.utils.data.is_true(enabled)
+            if enabled is not None
             else salt.utils.data.is_true(disabled)
+        )
 
-    elif __grains__['os_family'] in ('RedHat', 'Suse'):
-        if 'humanname' in kwargs:
-            kwargs['name'] = kwargs.pop('humanname')
-        if 'name' not in kwargs:
+    elif __grains__["os_family"] in ("RedHat", "Suse"):
+        if "humanname" in kwargs:
+            kwargs["name"] = kwargs.pop("humanname")
+        if "name" not in kwargs:
             # Fall back to the repo name if humanname not provided
-            kwargs['name'] = repo
+            kwargs["name"] = repo
 
-        kwargs['enabled'] = not salt.utils.data.is_true(disabled) \
-            if disabled is not None \
+        kwargs["enabled"] = (
+            not salt.utils.data.is_true(disabled)
+            if disabled is not None
             else salt.utils.data.is_true(enabled)
+        )
 
-    elif __grains__['os_family'] in ('NILinuxRT', 'Poky'):
+    elif __grains__["os_family"] in ("NILinuxRT", "Poky"):
         # opkg is the pkg virtual
-        kwargs['enabled'] = not salt.utils.data.is_true(disabled) \
-            if disabled is not None \
+        kwargs["enabled"] = (
+            not salt.utils.data.is_true(disabled)
+            if disabled is not None
             else salt.utils.data.is_true(enabled)
+        )
 
     for kwarg in _STATE_INTERNAL_KEYWORDS:
         kwargs.pop(kwarg, None)
 
     try:
-        pre = __salt__['pkg.get_repo'](
-            repo,
-            ppa_auth=kwargs.get('ppa_auth', None)
-        )
+        pre = __salt__["pkg.get_repo"](repo, ppa_auth=kwargs.get("ppa_auth", None))
     except CommandExecutionError as exc:
-        ret['result'] = False
-        ret['comment'] = \
-            'Failed to examine repo \'{0}\': {1}'.format(name, exc)
+        ret["result"] = False
+        ret["comment"] = "Failed to examine repo '{0}': {1}".format(name, exc)
         return ret
 
     # This is because of how apt-sources works. This pushes distro logic
     # out of the state itself and into a module that it makes more sense
     # to use. Most package providers will simply return the data provided
     # it doesn't require any "specialized" data massaging.
-    if 'pkg.expand_repo_def' in __salt__:
-        sanitizedkwargs = __salt__['pkg.expand_repo_def'](repo=repo, **kwargs)
+    if "pkg.expand_repo_def" in __salt__:
+        sanitizedkwargs = __salt__["pkg.expand_repo_def"](repo=repo, **kwargs)
     else:
         sanitizedkwargs = kwargs
 
-    if __grains__['os_family'] == 'Debian':
+    if __grains__["os_family"] == "Debian":
         repo = salt.utils.pkg.deb.strip_uri(repo)
 
     if pre:
-        #22412: Remove file attribute in case same repo is set up multiple times but with different files
-        pre.pop('file', None)
-        sanitizedkwargs.pop('file', None)
+        # 22412: Remove file attribute in case same repo is set up multiple times but with different files
+        pre.pop("file", None)
+        sanitizedkwargs.pop("file", None)
         for kwarg in sanitizedkwargs:
             if kwarg not in pre:
-                if kwarg == 'enabled':
+                if kwarg == "enabled":
                     # On a RedHat-based OS, 'enabled' is assumed to be true if
                     # not explicitly set, so we don't need to update the repo
                     # if it's desired to be enabled and the 'enabled' key is
                     # missing from the repo definition
-                    if __grains__['os_family'] == 'RedHat':
+                    if __grains__["os_family"] == "RedHat":
                         if not salt.utils.data.is_true(sanitizedkwargs[kwarg]):
                             break
                     else:
                         break
                 else:
                     break
-            elif kwarg == 'comps':
+            elif kwarg == "comps":
                 if sorted(sanitizedkwargs[kwarg]) != sorted(pre[kwarg]):
                     break
-            elif kwarg == 'line' and __grains__['os_family'] == 'Debian':
+            elif kwarg == "line" and __grains__["os_family"] == "Debian":
                 # split the line and sort everything after the URL
                 sanitizedsplit = sanitizedkwargs[kwarg].split()
                 sanitizedsplit[3:] = sorted(sanitizedsplit[3:])
-                reposplit, _, pre_comments = \
-                    [x.strip() for x in pre[kwarg].partition('#')]
+                reposplit, _, pre_comments = [
+                    x.strip() for x in pre[kwarg].partition("#")
+                ]
                 reposplit = reposplit.split()
                 reposplit[3:] = sorted(reposplit[3:])
                 if sanitizedsplit != reposplit:
                     break
-                if 'comments' in kwargs:
-                    post_comments = \
-                        salt.utils.pkg.deb.combine_comments(kwargs['comments'])
+                if "comments" in kwargs:
+                    post_comments = salt.utils.pkg.deb.combine_comments(
+                        kwargs["comments"]
+                    )
                     if pre_comments != post_comments:
                         break
-            elif kwarg == 'comments' and __grains__['os_family'] == 'RedHat':
+            elif kwarg == "comments" and __grains__["os_family"] == "RedHat":
                 precomments = salt.utils.pkg.rpm.combine_comments(pre[kwarg])
                 kwargcomments = salt.utils.pkg.rpm.combine_comments(
-                        sanitizedkwargs[kwarg])
+                    sanitizedkwargs[kwarg]
+                )
                 if precomments != kwargcomments:
                     break
-            elif kwarg == 'architectures' and sanitizedkwargs[kwarg]:
+            elif kwarg == "architectures" and sanitizedkwargs[kwarg]:
                 if set(sanitizedkwargs[kwarg]) != set(pre[kwarg]):
                     break
             else:
-                if __grains__['os_family'] in ('RedHat', 'Suse') \
-                        and any(isinstance(x, bool) for x in
-                                (sanitizedkwargs[kwarg], pre[kwarg])):
+                if __grains__["os_family"] in ("RedHat", "Suse") and any(
+                    isinstance(x, bool) for x in (sanitizedkwargs[kwarg], pre[kwarg])
+                ):
                     # This check disambiguates 1/0 from True/False
-                    if salt.utils.data.is_true(sanitizedkwargs[kwarg]) != \
-                            salt.utils.data.is_true(pre[kwarg]):
+                    if salt.utils.data.is_true(
+                        sanitizedkwargs[kwarg]
+                    ) != salt.utils.data.is_true(pre[kwarg]):
                         break
                 else:
-                    if six.text_type(sanitizedkwargs[kwarg]) != six.text_type(pre[kwarg]):
+                    if six.text_type(sanitizedkwargs[kwarg]) != six.text_type(
+                        pre[kwarg]
+                    ):
                         break
         else:
-            ret['result'] = True
-            ret['comment'] = ('Package repo \'{0}\' already configured'
-                              .format(name))
+            ret["result"] = True
+            ret["comment"] = "Package repo '{0}' already configured".format(name)
             return ret
 
-    if __opts__['test']:
-        ret['comment'] = (
-            'Package repo \'{0}\' would be configured. This may cause pkg '
-            'states to behave differently than stated if this action is '
-            'repeated without test=True, due to the differences in the '
-            'configured repositories.'.format(name)
+    if __opts__["test"]:
+        ret["comment"] = (
+            "Package repo '{0}' would be configured. This may cause pkg "
+            "states to behave differently than stated if this action is "
+            "repeated without test=True, due to the differences in the "
+            "configured repositories.".format(name)
         )
         if pre:
             for kwarg in sanitizedkwargs:
                 if sanitizedkwargs.get(kwarg) != pre.get(kwarg):
-                    ret['changes'][kwarg] = {'new': sanitizedkwargs.get(kwarg),
-                                             'old': pre.get(kwarg)}
+                    ret["changes"][kwarg] = {
+                        "new": sanitizedkwargs.get(kwarg),
+                        "old": pre.get(kwarg),
+                    }
         else:
-            ret['changes']['repo'] = name
+            ret["changes"]["repo"] = name
         return ret
 
     # empty file before configure
-    if kwargs.get('clean_file', False):
-        with salt.utils.files.fopen(kwargs['file'], 'w'):
+    if kwargs.get("clean_file", False):
+        with salt.utils.files.fopen(kwargs["file"], "w"):
             pass
 
     try:
-        if __grains__['os_family'] == 'Debian':
-            __salt__['pkg.mod_repo'](repo, saltenv=__env__, **kwargs)
+        if __grains__["os_family"] == "Debian":
+            __salt__["pkg.mod_repo"](repo, saltenv=__env__, **kwargs)
         else:
-            __salt__['pkg.mod_repo'](repo, **kwargs)
-    except Exception as exc:
+            __salt__["pkg.mod_repo"](repo, **kwargs)
+    except Exception as exc:  # pylint: disable=broad-except
         # This is another way to pass information back from the mod_repo
         # function.
-        ret['result'] = False
-        ret['comment'] = \
-            'Failed to configure repo \'{0}\': {1}'.format(name, exc)
+        ret["result"] = False
+        ret["comment"] = "Failed to configure repo '{0}': {1}".format(name, exc)
         return ret
 
     try:
-        post = __salt__['pkg.get_repo'](
-            repo,
-            ppa_auth=kwargs.get('ppa_auth', None)
-        )
+        post = __salt__["pkg.get_repo"](repo, ppa_auth=kwargs.get("ppa_auth", None))
         if pre:
             for kwarg in sanitizedkwargs:
                 if post.get(kwarg) != pre.get(kwarg):
-                    ret['changes'][kwarg] = {'new': post.get(kwarg),
-                                             'old': pre.get(kwarg)}
+                    ret["changes"][kwarg] = {
+                        "new": post.get(kwarg),
+                        "old": pre.get(kwarg),
+                    }
         else:
-            ret['changes'] = {'repo': repo}
+            ret["changes"] = {"repo": repo}
 
-        ret['result'] = True
-        ret['comment'] = 'Configured package repo \'{0}\''.format(name)
-    except Exception as exc:
-        ret['result'] = False
-        ret['comment'] = \
-            'Failed to confirm config of repo \'{0}\': {1}'.format(name, exc)
+        ret["result"] = True
+        ret["comment"] = "Configured package repo '{0}'".format(name)
+    except Exception as exc:  # pylint: disable=broad-except
+        ret["result"] = False
+        ret["comment"] = "Failed to confirm config of repo '{0}': {1}".format(name, exc)
 
     # Clear cache of available packages, if present, since changes to the
     # repositories may change the packages that are available.
-    if ret['changes']:
-        sys.modules[
-            __salt__['test.ping'].__module__
-        ].__context__.pop('pkg._avail', None)
+    if ret["changes"]:
+        sys.modules[__salt__["test.ping"].__module__].__context__.pop(
+            "pkg._avail", None
+        )
 
     return ret
 
 
 def absent(name, **kwargs):
-    '''
+    """
     This function deletes the specified repo on the system, if it exists. It
     is essentially a wrapper around pkg.del_repo.
 
@@ -588,74 +588,67 @@ def absent(name, **kwargs):
         .. note::
             This option will be disregarded unless the ``ppa`` argument is
             present.
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': None,
-           'comment': ''}
+    """
+    ret = {"name": name, "changes": {}, "result": None, "comment": ""}
 
-    if 'ppa' in kwargs and __grains__['os'] in ('Ubuntu', 'Mint'):
-        name = kwargs.pop('ppa')
-        if not name.startswith('ppa:'):
-            name = 'ppa:' + name
+    if "ppa" in kwargs and __grains__["os"] in ("Ubuntu", "Mint"):
+        name = kwargs.pop("ppa")
+        if not name.startswith("ppa:"):
+            name = "ppa:" + name
 
-    remove_key = any(kwargs.get(x) is not None
-                     for x in ('keyid', 'keyid_ppa'))
-    if remove_key and 'pkg.del_repo_key' not in __salt__:
-        ret['result'] = False
-        ret['comment'] = \
-            'Repo key management is not implemented for this platform'
+    remove_key = any(kwargs.get(x) is not None for x in ("keyid", "keyid_ppa"))
+    if remove_key and "pkg.del_repo_key" not in __salt__:
+        ret["result"] = False
+        ret["comment"] = "Repo key management is not implemented for this platform"
         return ret
 
     try:
-        repo = __salt__['pkg.get_repo'](
-            name, ppa_auth=kwargs.get('ppa_auth', None)
-        )
+        repo = __salt__["pkg.get_repo"](name, ppa_auth=kwargs.get("ppa_auth", None))
     except CommandExecutionError as exc:
-        ret['result'] = False
-        ret['comment'] = \
-            'Failed to configure repo \'{0}\': {1}'.format(name, exc)
+        ret["result"] = False
+        ret["comment"] = "Failed to configure repo '{0}': {1}".format(name, exc)
         return ret
 
     if not repo:
-        ret['comment'] = 'Package repo {0} is absent'.format(name)
-        ret['result'] = True
+        ret["comment"] = "Package repo {0} is absent".format(name)
+        ret["result"] = True
         return ret
 
-    if __opts__['test']:
-        ret['comment'] = ('Package repo \'{0}\' will be removed. This may '
-                          'cause pkg states to behave differently than stated '
-                          'if this action is repeated without test=True, due '
-                          'to the differences in the configured repositories.'
-                          .format(name))
+    if __opts__["test"]:
+        ret["comment"] = (
+            "Package repo '{0}' will be removed. This may "
+            "cause pkg states to behave differently than stated "
+            "if this action is repeated without test=True, due "
+            "to the differences in the configured repositories.".format(name)
+        )
         return ret
 
     try:
-        __salt__['pkg.del_repo'](repo=name, **kwargs)
+        __salt__["pkg.del_repo"](repo=name, **kwargs)
     except (CommandExecutionError, SaltInvocationError) as exc:
-        ret['result'] = False
-        ret['comment'] = exc.strerror
+        ret["result"] = False
+        ret["comment"] = exc.strerror
         return ret
 
-    repos = __salt__['pkg.list_repos']()
+    repos = __salt__["pkg.list_repos"]()
     if name not in repos:
-        ret['changes']['repo'] = name
-        ret['comment'] = 'Removed repo {0}'.format(name)
+        ret["changes"]["repo"] = name
+        ret["comment"] = "Removed repo {0}".format(name)
 
         if not remove_key:
-            ret['result'] = True
+            ret["result"] = True
         else:
             try:
-                removed_keyid = __salt__['pkg.del_repo_key'](name, **kwargs)
+                removed_keyid = __salt__["pkg.del_repo_key"](name, **kwargs)
             except (CommandExecutionError, SaltInvocationError) as exc:
-                ret['result'] = False
-                ret['comment'] += ', but failed to remove key: {0}'.format(exc)
+                ret["result"] = False
+                ret["comment"] += ", but failed to remove key: {0}".format(exc)
             else:
-                ret['result'] = True
-                ret['changes']['keyid'] = removed_keyid
-                ret['comment'] += ', and keyid {0}'.format(removed_keyid)
+                ret["result"] = True
+                ret["changes"]["keyid"] = removed_keyid
+                ret["comment"] += ", and keyid {0}".format(removed_keyid)
     else:
-        ret['result'] = False
-        ret['comment'] = 'Failed to remove repo {0}'.format(name)
+        ret["result"] = False
+        ret["comment"] = "Failed to remove repo {0}".format(name)
 
     return ret

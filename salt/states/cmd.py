@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Execution of arbitrary commands
 ===============================
 
@@ -33,7 +33,8 @@ touch /tmp/foo if it does not exist:
       cmd.run:
         - creates: /tmp/foo
 
-``creates`` also accepts a list of files:
+``creates`` also accepts a list of files, in which case this state will
+run if **any** of the files do not exist:
 
 .. code-block:: yaml
 
@@ -196,7 +197,7 @@ executed when the state it is watching changes. Example:
         - require:
           - file: /usr/local/bin/postinstall.sh
 
-``cmd.wait`` itself does not do anything; all functionality is inside its ``mod_watch``
+``cmd.wait`` itself do not do anything; all functionality is inside its ``mod_watch``
 function, which is called by ``watch`` on changes.
 
 The preferred format is using the :ref:`onchanges Requisite <requisites-onchanges>`, which
@@ -228,14 +229,14 @@ To use it, one may pass it like this. Example:
       cmd.run:
         - env: {{ salt['pillar.get']('example:key', {}) }}
 
-'''
+"""
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-import os
 import copy
 import logging
+import os
 
 # Import salt libs
 import salt.utils.args
@@ -248,17 +249,17 @@ log = logging.getLogger(__name__)
 
 
 def _reinterpreted_state(state):
-    '''
+    """
     Re-interpret the state returned by salt.state.run using our protocol.
-    '''
-    ret = state['changes']
-    state['changes'] = {}
-    state['comment'] = ''
+    """
+    ret = state["changes"]
+    state["changes"] = {}
+    state["comment"] = ""
 
-    out = ret.get('stdout')
+    out = ret.get("stdout")
     if not out:
-        if ret.get('stderr'):
-            state['comment'] = ret['stderr']
+        if ret.get("stderr"):
+            state["comment"] = ret["stderr"]
         return state
 
     is_json = False
@@ -266,33 +267,32 @@ def _reinterpreted_state(state):
         data = salt.utils.json.loads(out)
         if not isinstance(data, dict):
             return _failout(
-                state,
-                'script JSON output must be a JSON object (e.g., {})!'
+                state, "script JSON output must be a JSON object (e.g., {})!"
             )
         is_json = True
     except ValueError:
-        idx = out.rstrip().rfind('\n')
+        idx = out.rstrip().rfind("\n")
         if idx != -1:
-            out = out[idx + 1:]
+            out = out[idx + 1 :]
         data = {}
         try:
             for item in salt.utils.args.shlex_split(out):
-                key, val = item.split('=')
+                key, val = item.split("=")
                 data[key] = val
         except ValueError:
             state = _failout(
                 state,
-                'Failed parsing script output! '
-                'Stdout must be JSON or a line of name=value pairs.'
+                "Failed parsing script output! "
+                "Stdout must be JSON or a line of name=value pairs.",
             )
-            state['changes'].update(ret)
+            state["changes"].update(ret)
             return state
 
-    changed = _is_true(data.get('changed', 'no'))
+    changed = _is_true(data.get("changed", "no"))
 
-    if 'comment' in data:
-        state['comment'] = data['comment']
-        del data['comment']
+    if "comment" in data:
+        state["comment"] = data["comment"]
+        del data["comment"]
 
     if changed:
         for key in ret:
@@ -300,119 +300,140 @@ def _reinterpreted_state(state):
 
         # if stdout is the state output in JSON, don't show it.
         # otherwise it contains the one line name=value pairs, strip it.
-        data['stdout'] = '' if is_json else data.get('stdout', '')[:idx]
-        state['changes'] = data
+        data["stdout"] = "" if is_json else data.get("stdout", "")[:idx]
+        state["changes"] = data
 
-    #FIXME: if it's not changed but there's stdout and/or stderr then those
+    # FIXME: if it's not changed but there's stdout and/or stderr then those
     #       won't be shown as the function output. (though, they will be shown
     #       inside INFO logs).
     return state
 
 
 def _failout(state, msg):
-    state['comment'] = msg
-    state['result'] = False
+    state["comment"] = msg
+    state["result"] = False
     return state
 
 
 def _is_true(val):
-    if val and six.text_type(val).lower() in ('true', 'yes', '1'):
+    if val and six.text_type(val).lower() in ("true", "yes", "1"):
         return True
-    elif six.text_type(val).lower() in ('false', 'no', '0'):
+    elif six.text_type(val).lower() in ("false", "no", "0"):
         return False
-    raise ValueError('Failed parsing boolean value: {0}'.format(val))
+    raise ValueError("Failed parsing boolean value: {0}".format(val))
 
 
 def mod_run_check(cmd_kwargs, onlyif, unless, creates):
-    '''
+    """
     Execute the onlyif and unless logic.
     Return a result dict if:
     * onlyif failed (onlyif != 0)
     * unless succeeded (unless == 0)
     else return True
-    '''
+    """
     # never use VT for onlyif/unless executions because this will lead
     # to quote problems
     cmd_kwargs = copy.deepcopy(cmd_kwargs)
-    cmd_kwargs['use_vt'] = False
-    cmd_kwargs['bg'] = False
+    cmd_kwargs["use_vt"] = False
+    cmd_kwargs["bg"] = False
 
     if onlyif is not None:
         if isinstance(onlyif, six.string_types):
-            cmd = __salt__['cmd.retcode'](onlyif, ignore_retcode=True, python_shell=True, **cmd_kwargs)
-            log.debug('Last command return code: {0}'.format(cmd))
+            cmd = __salt__["cmd.retcode"](
+                onlyif, ignore_retcode=True, python_shell=True, **cmd_kwargs
+            )
+            log.debug("Last command return code: {0}".format(cmd))
             if cmd != 0:
-                return {'comment': 'onlyif condition is false',
-                        'skip_watch': True,
-                        'result': True}
+                return {
+                    "comment": "onlyif condition is false",
+                    "skip_watch": True,
+                    "result": True,
+                }
         elif isinstance(onlyif, list):
             for entry in onlyif:
-                cmd = __salt__['cmd.retcode'](entry, ignore_retcode=True, python_shell=True, **cmd_kwargs)
-                log.debug('Last command \'{0}\' return code: {1}'.format(entry, cmd))
+                cmd = __salt__["cmd.retcode"](
+                    entry, ignore_retcode=True, python_shell=True, **cmd_kwargs
+                )
+                log.debug("Last command '{0}' return code: {1}".format(entry, cmd))
                 if cmd != 0:
-                    return {'comment': 'onlyif condition is false: {0}'.format(entry),
-                            'skip_watch': True,
-                            'result': True}
+                    return {
+                        "comment": "onlyif condition is false: {0}".format(entry),
+                        "skip_watch": True,
+                        "result": True,
+                    }
         elif not isinstance(onlyif, six.string_types):
             if not onlyif:
-                log.debug('Command not run: onlyif did not evaluate to string_type')
-                return {'comment': 'onlyif condition is false',
-                        'skip_watch': True,
-                        'result': True}
+                log.debug("Command not run: onlyif did not evaluate to string_type")
+                return {
+                    "comment": "onlyif condition is false",
+                    "skip_watch": True,
+                    "result": True,
+                }
 
     if unless is not None:
         if isinstance(unless, six.string_types):
-            cmd = __salt__['cmd.retcode'](unless, ignore_retcode=True, python_shell=True, **cmd_kwargs)
-            log.debug('Last command return code: {0}'.format(cmd))
+            cmd = __salt__["cmd.retcode"](
+                unless, ignore_retcode=True, python_shell=True, **cmd_kwargs
+            )
+            log.debug("Last command return code: {0}".format(cmd))
             if cmd == 0:
-                return {'comment': 'unless condition is true',
-                        'skip_watch': True,
-                        'result': True}
+                return {
+                    "comment": "unless condition is true",
+                    "skip_watch": True,
+                    "result": True,
+                }
         elif isinstance(unless, list):
             cmd = []
             for entry in unless:
-                cmd.append(__salt__['cmd.retcode'](entry, ignore_retcode=True, python_shell=True, **cmd_kwargs))
-                log.debug('Last command return code: {0}'.format(cmd))
+                cmd.append(
+                    __salt__["cmd.retcode"](
+                        entry, ignore_retcode=True, python_shell=True, **cmd_kwargs
+                    )
+                )
+                log.debug("Last command return code: {0}".format(cmd))
             if all([c == 0 for c in cmd]):
-                return {'comment': 'unless condition is true',
-                        'skip_watch': True,
-                        'result': True}
+                return {
+                    "comment": "unless condition is true",
+                    "skip_watch": True,
+                    "result": True,
+                }
         elif not isinstance(unless, six.string_types):
             if unless:
-                log.debug('Command not run: unless did not evaluate to string_type')
-                return {'comment': 'unless condition is true',
-                        'skip_watch': True,
-                        'result': True}
+                log.debug("Command not run: unless did not evaluate to string_type")
+                return {
+                    "comment": "unless condition is true",
+                    "skip_watch": True,
+                    "result": True,
+                }
 
     if isinstance(creates, six.string_types) and os.path.exists(creates):
-        return {'comment': '{0} exists'.format(creates),
-                'result': True}
-    elif isinstance(creates, list) and all([
-        os.path.exists(path) for path in creates
-    ]):
-        return {'comment': 'All files in creates exist',
-                'result': True}
+        return {"comment": "{0} exists".format(creates), "result": True}
+    elif isinstance(creates, list) and all([os.path.exists(path) for path in creates]):
+        return {"comment": "All files in creates exist", "result": True}
 
     # No reason to stop, return True
     return True
 
 
-def wait(name,
-         onlyif=None,
-         unless=None,
-         creates=None,
-         cwd=None,
-         runas=None,
-         shell=None,
-         env=(),
-         stateful=False,
-         umask=None,
-         output_loglevel='debug',
-         hide_output=False,
-         use_vt=False,
-         success_retcodes=None,
-         **kwargs):
-    '''
+def wait(
+    name,
+    onlyif=None,
+    unless=None,
+    creates=None,
+    cwd=None,
+    root=None,
+    runas=None,
+    shell=None,
+    env=(),
+    stateful=False,
+    umask=None,
+    output_loglevel="debug",
+    hide_output=False,
+    use_vt=False,
+    success_retcodes=None,
+    **kwargs
+):
+    """
     Run the given command only if the watch statement calls it.
 
     .. note::
@@ -435,6 +456,10 @@ def wait(name,
     cwd
         The current working directory to execute the command in, defaults to
         /root
+
+    root
+        Path to the root of the jail to use. If this parameter is set, the command
+        will run inside a chroot
 
     runas
         The user name to run the command as
@@ -490,7 +515,9 @@ def wait(name,
         a state. For more information, see the :ref:`stateful-argument` section.
 
     creates
-        Only run if the file or files specified by ``creates`` do not exist.
+        Only run if the file specified by ``creates`` do not exist. If you
+        specify a list of files then this state will only run if **any** of
+        the files do not exist.
 
         .. versionadded:: 2014.7.0
 
@@ -522,34 +549,33 @@ def wait(name,
         the return code will be overridden with zero.
 
       .. versionadded:: 2019.2.0
-    '''
+    """
     # Ignoring our arguments is intentional.
-    return {'name': name,
-            'changes': {},
-            'result': True,
-            'comment': ''}
+    return {"name": name, "changes": {}, "result": True, "comment": ""}
 
 
 # Alias "cmd.watch" to "cmd.wait", as this is a common misconfiguration
-watch = salt.utils.functools.alias_function(wait, 'watch')
+watch = salt.utils.functools.alias_function(wait, "watch")
 
 
-def wait_script(name,
-                source=None,
-                template=None,
-                onlyif=None,
-                unless=None,
-                cwd=None,
-                runas=None,
-                shell=None,
-                env=None,
-                stateful=False,
-                umask=None,
-                use_vt=False,
-                output_loglevel='debug',
-                hide_output=False,
-                **kwargs):
-    '''
+def wait_script(
+    name,
+    source=None,
+    template=None,
+    onlyif=None,
+    unless=None,
+    cwd=None,
+    runas=None,
+    shell=None,
+    env=None,
+    stateful=False,
+    umask=None,
+    use_vt=False,
+    output_loglevel="debug",
+    hide_output=False,
+    **kwargs
+):
+    """
     Download a script from a remote source and execute it only if a watch
     statement calls it.
 
@@ -661,33 +687,33 @@ def wait_script(name,
         the return code will be overridden with zero.
 
       .. versionadded:: 2019.2.0
-    '''
+    """
     # Ignoring our arguments is intentional.
-    return {'name': name,
-            'changes': {},
-            'result': True,
-            'comment': ''}
+    return {"name": name, "changes": {}, "result": True, "comment": ""}
 
 
-def run(name,
-        onlyif=None,
-        unless=None,
-        creates=None,
-        cwd=None,
-        runas=None,
-        shell=None,
-        env=None,
-        prepend_path=None,
-        stateful=False,
-        umask=None,
-        output_loglevel='debug',
-        hide_output=False,
-        timeout=None,
-        ignore_timeout=False,
-        use_vt=False,
-        success_retcodes=None,
-        **kwargs):
-    '''
+def run(
+    name,
+    onlyif=None,
+    unless=None,
+    creates=None,
+    cwd=None,
+    root=None,
+    runas=None,
+    shell=None,
+    env=None,
+    prepend_path=None,
+    stateful=False,
+    umask=None,
+    output_loglevel="debug",
+    hide_output=False,
+    timeout=None,
+    ignore_timeout=False,
+    use_vt=False,
+    success_retcodes=None,
+    **kwargs
+):
+    """
     Run a command if certain circumstances are met.  Use ``cmd.wait`` if you
     want to use the ``watch`` requisite.
 
@@ -706,6 +732,10 @@ def run(name,
     cwd
         The current working directory to execute the command in, defaults to
         /root
+
+    root
+        Path to the root of the jail to use. If this parameter is set, the command
+        will run inside a chroot
 
     runas
         The user name to run the command as
@@ -783,13 +813,6 @@ def run(name,
 
         .. versionadded:: 2018.3.0
 
-    quiet
-        This option no longer has any functionality and will be removed, please
-        set ``output_loglevel`` to ``quiet`` to suppress logging of the
-        command.
-
-        .. deprecated:: 2014.1.0
-
     timeout
         If the command has not terminated after timeout seconds, send the
         subprocess sigterm, and if sigterm is ignored, follow up with sigkill
@@ -801,7 +824,9 @@ def run(name,
         .. versionadded:: 2015.8.0
 
     creates
-        Only run if the file or files specified by ``creates`` do not exist.
+        Only run if the file specified by ``creates`` do not exist. If you
+        specify a list of files then this state will only run if **any** of
+        the files do not exist.
 
         .. versionadded:: 2014.7.0
 
@@ -842,122 +867,114 @@ def run(name,
                   - file: /usr/local/sbin/get-pip.py
                 - reload_modules: True
 
-    '''
+    """
     ### NOTE: The keyword arguments in **kwargs are passed directly to the
     ###       ``cmd.run_all`` function and cannot be removed from the function
     ###       definition, otherwise the use of unsupported arguments in a
     ###       ``cmd.run`` state will result in a traceback.
 
-    ret = {'name': name,
-           'changes': {},
-           'result': False,
-           'comment': ''}
-
-    if 'quiet' in kwargs:
-        quiet = kwargs.pop('quiet')
-        msg = (
-            'The \'quiet\' argument for cmd.run has been deprecated since '
-            '2014.1.0 and will be removed as of the Neon release. Please set '
-            '\'output_loglevel\' to \'quiet\' instead.'
-        )
-        salt.utils.versions.warn_until('Neon', msg)
-        ret.setdefault('warnings', []).append(msg)
-    else:
-        quiet = False
+    ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
     test_name = None
     if not isinstance(stateful, list):
         stateful = stateful is True
-    elif isinstance(stateful, list) and 'test_name' in stateful[0]:
-        test_name = stateful[0]['test_name']
-    if __opts__['test'] and test_name:
+    elif isinstance(stateful, list) and "test_name" in stateful[0]:
+        test_name = stateful[0]["test_name"]
+    if __opts__["test"] and test_name:
         name = test_name
 
     # Need the check for None here, if env is not provided then it falls back
     # to None and it is assumed that the environment is not being overridden.
     if env is not None and not isinstance(env, (list, dict)):
-        ret['comment'] = ('Invalidly-formatted \'env\' parameter. See '
-                          'documentation.')
+        ret["comment"] = "Invalidly-formatted 'env' parameter. See " "documentation."
         return ret
 
     cmd_kwargs = copy.deepcopy(kwargs)
-    cmd_kwargs.update({'cwd': cwd,
-                       'runas': runas,
-                       'use_vt': use_vt,
-                       'shell': shell or __grains__['shell'],
-                       'env': env,
-                       'prepend_path': prepend_path,
-                       'umask': umask,
-                       'output_loglevel': output_loglevel,
-                       'hide_output': hide_output,
-                       'quiet': quiet,
-                       'success_retcodes': success_retcodes})
+    cmd_kwargs.update(
+        {
+            "cwd": cwd,
+            "root": root,
+            "runas": runas,
+            "use_vt": use_vt,
+            "shell": shell or __grains__["shell"],
+            "env": env,
+            "prepend_path": prepend_path,
+            "umask": umask,
+            "output_loglevel": output_loglevel,
+            "hide_output": hide_output,
+            "success_retcodes": success_retcodes,
+        }
+    )
 
     cret = mod_run_check(cmd_kwargs, onlyif, unless, creates)
     if isinstance(cret, dict):
         ret.update(cret)
         return ret
 
-    if __opts__['test'] and not test_name:
-        ret['result'] = None
-        ret['comment'] = 'Command "{0}" would have been executed'.format(name)
+    if __opts__["test"] and not test_name:
+        ret["result"] = None
+        ret["comment"] = 'Command "{0}" would have been executed'.format(name)
         return _reinterpreted_state(ret) if stateful else ret
 
     if cwd and not os.path.isdir(cwd):
-        ret['comment'] = (
-            'Desired working directory "{0}" '
-            'is not available'
-        ).format(cwd)
+        ret["comment"] = ('Desired working directory "{0}" ' "is not available").format(
+            cwd
+        )
         return ret
 
     # Wow, we passed the test, run this sucker!
     try:
-        cmd_all = __salt__['cmd.run_all'](
-            name, timeout=timeout, python_shell=True, **cmd_kwargs
+        run_cmd = "cmd.run_all" if not root else "cmd.run_chroot"
+        cmd_all = __salt__[run_cmd](
+            cmd=name, timeout=timeout, python_shell=True, **cmd_kwargs
         )
-    except CommandExecutionError as err:
-        ret['comment'] = six.text_type(err)
+    except Exception as err:  # pylint: disable=broad-except
+        ret["comment"] = six.text_type(err)
         return ret
 
-    ret['changes'] = cmd_all
-    ret['result'] = not bool(cmd_all['retcode'])
-    ret['comment'] = 'Command "{0}" run'.format(name)
+    ret["changes"] = cmd_all
+    ret["result"] = not bool(cmd_all["retcode"])
+    ret["comment"] = 'Command "{0}" run'.format(name)
 
     # Ignore timeout errors if asked (for nohups) and treat cmd as a success
     if ignore_timeout:
-        trigger = 'Timed out after'
-        if ret['changes'].get('retcode') == 1 and trigger in ret['changes'].get('stdout'):
-            ret['changes']['retcode'] = 0
-            ret['result'] = True
+        trigger = "Timed out after"
+        if ret["changes"].get("retcode") == 1 and trigger in ret["changes"].get(
+            "stdout"
+        ):
+            ret["changes"]["retcode"] = 0
+            ret["result"] = True
 
     if stateful:
         ret = _reinterpreted_state(ret)
-    if __opts__['test'] and cmd_all['retcode'] == 0 and ret['changes']:
-        ret['result'] = None
+    if __opts__["test"] and cmd_all["retcode"] == 0 and ret["changes"]:
+        ret["result"] = None
     return ret
 
 
-def script(name,
-           source=None,
-           template=None,
-           onlyif=None,
-           unless=None,
-           creates=None,
-           cwd=None,
-           runas=None,
-           shell=None,
-           env=None,
-           stateful=False,
-           umask=None,
-           timeout=None,
-           use_vt=False,
-           output_loglevel='debug',
-           hide_output=False,
-           defaults=None,
-           context=None,
-           success_retcodes=None,
-           **kwargs):
-    '''
+def script(
+    name,
+    source=None,
+    template=None,
+    onlyif=None,
+    unless=None,
+    creates=None,
+    cwd=None,
+    runas=None,
+    shell=None,
+    env=None,
+    stateful=False,
+    umask=None,
+    timeout=None,
+    use_vt=False,
+    output_loglevel="debug",
+    hide_output=False,
+    defaults=None,
+    context=None,
+    success_retcodes=None,
+    **kwargs
+):
+    """
     Download a script and execute it with specified arguments.
 
     source
@@ -1053,7 +1070,9 @@ def script(name,
         'arg two' arg3"
 
     creates
-        Only run if the file or files specified by ``creates`` do not exist.
+        Only run if the file specified by ``creates`` do not exist. If you
+        specify a list of files then this state will only run if **any** of
+        the files do not exist.
 
         .. versionadded:: 2014.7.0
 
@@ -1096,34 +1115,32 @@ def script(name,
 
       .. versionadded:: 2019.2.0
 
-    '''
+    """
     test_name = None
     if not isinstance(stateful, list):
         stateful = stateful is True
-    elif isinstance(stateful, list) and 'test_name' in stateful[0]:
-        test_name = stateful[0]['test_name']
-    if __opts__['test'] and test_name:
+    elif isinstance(stateful, list) and "test_name" in stateful[0]:
+        test_name = stateful[0]["test_name"]
+    if __opts__["test"] and test_name:
         name = test_name
 
-    ret = {'name': name,
-           'changes': {},
-           'result': False,
-           'comment': ''}
+    ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
     # Need the check for None here, if env is not provided then it falls back
     # to None and it is assumed that the environment is not being overridden.
     if env is not None and not isinstance(env, (list, dict)):
-        ret['comment'] = ('Invalidly-formatted \'env\' parameter. See '
-                          'documentation.')
+        ret["comment"] = "Invalidly-formatted 'env' parameter. See " "documentation."
         return ret
 
     if context and not isinstance(context, dict):
-        ret['comment'] = ('Invalidly-formatted \'context\' parameter. Must '
-                          'be formed as a dict.')
+        ret["comment"] = (
+            "Invalidly-formatted 'context' parameter. Must " "be formed as a dict."
+        )
         return ret
     if defaults and not isinstance(defaults, dict):
-        ret['comment'] = ('Invalidly-formatted \'defaults\' parameter. Must '
-                          'be formed as a dict.')
+        ret["comment"] = (
+            "Invalidly-formatted 'defaults' parameter. Must " "be formed as a dict."
+        )
         return ret
 
     tmpctx = defaults if defaults else {}
@@ -1131,26 +1148,30 @@ def script(name,
         tmpctx.update(context)
 
     cmd_kwargs = copy.deepcopy(kwargs)
-    cmd_kwargs.update({'runas': runas,
-                       'shell': shell or __grains__['shell'],
-                       'env': env,
-                       'onlyif': onlyif,
-                       'unless': unless,
-                       'cwd': cwd,
-                       'template': template,
-                       'umask': umask,
-                       'timeout': timeout,
-                       'output_loglevel': output_loglevel,
-                       'hide_output': hide_output,
-                       'use_vt': use_vt,
-                       'context': tmpctx,
-                       'saltenv': __env__,
-                       'success_retcodes': success_retcodes})
+    cmd_kwargs.update(
+        {
+            "runas": runas,
+            "shell": shell or __grains__["shell"],
+            "env": env,
+            "onlyif": onlyif,
+            "unless": unless,
+            "cwd": cwd,
+            "template": template,
+            "umask": umask,
+            "timeout": timeout,
+            "output_loglevel": output_loglevel,
+            "hide_output": hide_output,
+            "use_vt": use_vt,
+            "context": tmpctx,
+            "saltenv": __env__,
+            "success_retcodes": success_retcodes,
+        }
+    )
 
     run_check_cmd_kwargs = {
-        'cwd': cwd,
-        'runas': runas,
-        'shell': shell or __grains__['shell']
+        "cwd": cwd,
+        "runas": runas,
+        "shell": shell or __grains__["shell"],
     }
 
     # Change the source to be the name arg if it is not specified
@@ -1158,65 +1179,64 @@ def script(name,
         source = name
 
     # If script args present split from name and define args
-    if not cmd_kwargs.get('args', None) and len(name.split()) > 1:
-        cmd_kwargs.update({'args': name.split(' ', 1)[1]})
+    if not cmd_kwargs.get("args", None) and len(name.split()) > 1:
+        cmd_kwargs.update({"args": name.split(" ", 1)[1]})
 
-    cret = mod_run_check(
-        run_check_cmd_kwargs, onlyif, unless, creates
-    )
+    cret = mod_run_check(run_check_cmd_kwargs, onlyif, unless, creates)
     if isinstance(cret, dict):
         ret.update(cret)
         return ret
 
-    if __opts__['test'] and not test_name:
-        ret['result'] = None
-        ret['comment'] = 'Command \'{0}\' would have been ' \
-                         'executed'.format(name)
+    if __opts__["test"] and not test_name:
+        ret["result"] = None
+        ret["comment"] = "Command '{0}' would have been " "executed".format(name)
         return _reinterpreted_state(ret) if stateful else ret
 
     if cwd and not os.path.isdir(cwd):
-        ret['comment'] = (
-            'Desired working directory "{0}" '
-            'is not available'
-        ).format(cwd)
+        ret["comment"] = ('Desired working directory "{0}" ' "is not available").format(
+            cwd
+        )
         return ret
 
     # Wow, we passed the test, run this sucker!
     try:
-        cmd_all = __salt__['cmd.script'](source, python_shell=True, **cmd_kwargs)
+        cmd_all = __salt__["cmd.script"](source, python_shell=True, **cmd_kwargs)
     except (CommandExecutionError, SaltRenderError, IOError) as err:
-        ret['comment'] = six.text_type(err)
+        ret["comment"] = six.text_type(err)
         return ret
 
-    ret['changes'] = cmd_all
-    if kwargs.get('retcode', False):
-        ret['result'] = not bool(cmd_all)
+    ret["changes"] = cmd_all
+    if kwargs.get("retcode", False):
+        ret["result"] = not bool(cmd_all)
     else:
-        ret['result'] = not bool(cmd_all['retcode'])
-    if ret.get('changes', {}).get('cache_error'):
-        ret['comment'] = 'Unable to cache script {0} from saltenv ' \
-                         '\'{1}\''.format(source, __env__)
+        ret["result"] = not bool(cmd_all["retcode"])
+    if ret.get("changes", {}).get("cache_error"):
+        ret["comment"] = "Unable to cache script {0} from saltenv " "'{1}'".format(
+            source, __env__
+        )
     else:
-        ret['comment'] = 'Command \'{0}\' run'.format(name)
+        ret["comment"] = "Command '{0}' run".format(name)
     if stateful:
         ret = _reinterpreted_state(ret)
-    if __opts__['test'] and cmd_all['retcode'] == 0 and ret['changes']:
-        ret['result'] = None
+    if __opts__["test"] and cmd_all["retcode"] == 0 and ret["changes"]:
+        ret["result"] = None
     return ret
 
 
-def call(name,
-         func,
-         args=(),
-         kws=None,
-         onlyif=None,
-         unless=None,
-         creates=None,
-         output_loglevel='debug',
-         hide_output=False,
-         use_vt=False,
-         **kwargs):
-    '''
+def call(
+    name,
+    func,
+    args=(),
+    kws=None,
+    onlyif=None,
+    unless=None,
+    creates=None,
+    output_loglevel="debug",
+    hide_output=False,
+    use_vt=False,
+    **kwargs
+):
+    """
     Invoke a pre-defined Python function with arguments specified in the state
     declaration. This function is mainly used by the
     :mod:`salt.renderers.pydsl` renderer.
@@ -1247,20 +1267,19 @@ def call(name,
             'result': True if result is None else bool(result),
             'comment': result if isinstance(result, six.string_types) else ''
         }
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': False,
-           'comment': ''}
+    """
+    ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
-    cmd_kwargs = {'cwd': kwargs.get('cwd'),
-                  'runas': kwargs.get('user'),
-                  'shell': kwargs.get('shell') or __grains__['shell'],
-                  'env': kwargs.get('env'),
-                  'use_vt': use_vt,
-                  'output_loglevel': output_loglevel,
-                  'hide_output': hide_output,
-                  'umask': kwargs.get('umask')}
+    cmd_kwargs = {
+        "cwd": kwargs.get("cwd"),
+        "runas": kwargs.get("user"),
+        "shell": kwargs.get("shell") or __grains__["shell"],
+        "env": kwargs.get("env"),
+        "use_vt": use_vt,
+        "output_loglevel": output_loglevel,
+        "hide_output": hide_output,
+        "umask": kwargs.get("umask"),
+    }
 
     cret = mod_run_check(cmd_kwargs, onlyif, unless, creates)
     if isinstance(cret, dict):
@@ -1275,34 +1294,33 @@ def call(name,
         return ret
     else:
         # result must be JSON serializable else we get an error
-        ret['changes'] = {'retval': result}
-        ret['result'] = True if result is None else bool(result)
+        ret["changes"] = {"retval": result}
+        ret["result"] = True if result is None else bool(result)
         if isinstance(result, six.string_types):
-            ret['comment'] = result
+            ret["comment"] = result
         return ret
 
 
-def wait_call(name,
-              func,
-              args=(),
-              kws=None,
-              onlyif=None,
-              unless=None,
-              creates=None,
-              stateful=False,
-              use_vt=False,
-              output_loglevel='debug',
-              hide_output=False,
-              **kwargs):
+def wait_call(
+    name,
+    func,
+    args=(),
+    kws=None,
+    onlyif=None,
+    unless=None,
+    creates=None,
+    stateful=False,
+    use_vt=False,
+    output_loglevel="debug",
+    hide_output=False,
+    **kwargs
+):
     # Ignoring our arguments is intentional.
-    return {'name': name,
-            'changes': {},
-            'result': True,
-            'comment': ''}
+    return {"name": name, "changes": {}, "result": True, "comment": ""}
 
 
 def mod_watch(name, **kwargs):
-    '''
+    """
     Execute a cmd function based on a watch call
 
     .. note::
@@ -1310,33 +1328,37 @@ def mod_watch(name, **kwargs):
         :ref:`requisite <requisites>`. It should not be called directly.
 
         Parameters for this function should be set by the state being triggered.
-    '''
-    if kwargs['sfun'] in ('wait', 'run', 'watch'):
-        if kwargs.get('stateful'):
-            kwargs.pop('stateful')
+    """
+    if kwargs["sfun"] in ("wait", "run", "watch"):
+        if kwargs.get("stateful"):
+            kwargs.pop("stateful")
             return _reinterpreted_state(run(name, **kwargs))
         return run(name, **kwargs)
 
-    elif kwargs['sfun'] == 'wait_script' or kwargs['sfun'] == 'script':
-        if kwargs.get('stateful'):
-            kwargs.pop('stateful')
+    elif kwargs["sfun"] == "wait_script" or kwargs["sfun"] == "script":
+        if kwargs.get("stateful"):
+            kwargs.pop("stateful")
             return _reinterpreted_state(script(name, **kwargs))
         return script(name, **kwargs)
 
-    elif kwargs['sfun'] == 'wait_call' or kwargs['sfun'] == 'call':
-        if kwargs.get('func'):
-            func = kwargs.pop('func')
+    elif kwargs["sfun"] == "wait_call" or kwargs["sfun"] == "call":
+        if kwargs.get("func"):
+            func = kwargs.pop("func")
             return call(name, func, **kwargs)
         else:
-            return {'name': name,
-                    'changes': {},
-                    'comment': (
-                        'cmd.{0[sfun]} needs a named parameter func'
-                    ).format(kwargs),
-                    'result': False}
+            return {
+                "name": name,
+                "changes": {},
+                "comment": ("cmd.{0[sfun]} needs a named parameter func").format(
+                    kwargs
+                ),
+                "result": False,
+            }
 
-    return {'name': name,
-            'changes': {},
-            'comment': 'cmd.{0[sfun]} does not work with the watch requisite, '
-                       'please use cmd.wait or cmd.wait_script'.format(kwargs),
-            'result': False}
+    return {
+        "name": name,
+        "changes": {},
+        "comment": "cmd.{0[sfun]} does not work with the watch requisite, "
+        "please use cmd.wait or cmd.wait_script".format(kwargs),
+        "result": False,
+    }
