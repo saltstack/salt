@@ -12,7 +12,7 @@ import os
 import shutil
 from collections import OrderedDict
 
-import psutil
+import psutil  # pylint: disable=3rd-party-module-not-gated
 import pytest
 import salt.utils.files
 from pytestsalt.fixtures.config import apply_master_config, apply_minion_config
@@ -24,8 +24,8 @@ from tests.support.runtests import RUNTIME_VARS
 
 log = logging.getLogger(__name__)
 
-SESSION_ROOT_DIR = "session-mm-root"
-SESSION_SECONDARY_ROOT_DIR = "session-secondary-mm-root"
+SESSION_ROOT_DIR = "sess-mm-root"
+SESSION_SECONDARY_ROOT_DIR = "sess-sec-mm-root"
 
 
 @pytest.fixture(scope="session")
