@@ -8,7 +8,7 @@
     Prepare py.test for our test suite
 """
 # pylint: disable=wrong-import-order,wrong-import-position,3rd-party-local-module-not-gated
-# pylint: disable=redefined-outer-name,invalid-name
+# pylint: disable=redefined-outer-name,invalid-name,3rd-party-module-not-gated
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
@@ -248,10 +248,6 @@ def pytest_configure(config):
             continue
         if dirname != "tests":
             config.addinivalue_line("norecursedirs", os.path.join(CODE_DIR, dirname))
-
-    config.addinivalue_line("norecursedirs", os.path.join(CODE_DIR, "templates"))
-    config.addinivalue_line("norecursedirs", os.path.join(CODE_DIR, "tests/kitchen"))
-    config.addinivalue_line("norecursedirs", os.path.join(CODE_DIR, "tests/support"))
 
     # Expose the markers we use to pytest CLI
     config.addinivalue_line(
