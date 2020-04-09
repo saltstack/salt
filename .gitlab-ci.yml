@@ -3,23 +3,23 @@ stages:
   - lint
   - test
 
-pre-commit-run-all:
-  image:
-    name: registry.gitlab.com/saltstack/pop/cicd/containers/ubuntu1804:latest
-    entrypoint: [""]
-  stage: lint
-  variables:
-    PRE_COMMIT_HOME: "${CI_PROJECT_DIR}/pre-commit-cache"
-  only:
-    refs:
-      - merge_requests
-  cache:
-    key: pre-commit-cache
-    paths:
-      - pre-commit-cache/
-  script:
-    - pip3 install pre-commit
-    - pre-commit run -a -v --color always
+# pre-commit-run-all:
+#   image:
+#     name: registry.gitlab.com/saltstack/pop/cicd/containers/ubuntu1804:latest
+#     entrypoint: [""]
+#   stage: lint
+#   variables:
+#     PRE_COMMIT_HOME: "${CI_PROJECT_DIR}/pre-commit-cache"
+#   only:
+#     refs:
+#       - merge_requests
+#   cache:
+#     key: pre-commit-cache
+#     paths:
+#       - pre-commit-cache/
+#   script:
+#     - pip3 install pre-commit
+#     - pre-commit run -a -v --color always
 
 lint-salt-full:
   image: registry.gitlab.com/saltstack/pop/cicd/containers/ubuntu1804:latest
