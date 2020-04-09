@@ -423,11 +423,27 @@ repos:
     rev: '1e78a9acf3110e1f9721feb591f89a451fc9876a'
     hooks:
       - id: isort
+        # This tells pre-commit not to pass files to isort.
+        # This should be kept in sync with pyproject.toml
+        exclude: >
+            (?x)^(
+                templates/.*|
+                salt/ext/.*|
+                tests/kitchen/.*
+            )$
 
   - repo: https://github.com/psf/black
     rev: stable
     hooks:
       - id: black
+        # This tells pre-commit not to pass files to black.
+        # This should be kept in sync with pyproject.toml
+        exclude: >
+            (?x)^(
+                templates/.*|
+                salt/ext/.*|
+                tests/kitchen/.*
+            )$
 
   - repo: https://github.com/saltstack/salt-nox-pre-commit
     rev: master
