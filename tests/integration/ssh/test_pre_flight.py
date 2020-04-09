@@ -21,6 +21,7 @@ class SSHPreFlightTest(SSHCase):
     """
 
     def setUp(self):
+        super(SSHPreFlightTest, self).setUp()
         self.roster = os.path.join(RUNTIME_VARS.TMP, "pre_flight_roster")
         self.data = {
             "ssh_pre_flight": os.path.join(RUNTIME_VARS.TMP, "ssh_pre_flight.sh")
