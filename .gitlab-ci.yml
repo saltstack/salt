@@ -31,8 +31,6 @@ lint-salt-full:
     paths:
       - .nox
   script:
-    - umask 002
-    - GIT_WORK_TREE=${CI_PROJECT_DIR} git checkout -f
     - python --version
     - pip3 install -U nox-py2==2019.6.25
     - nox --version
@@ -53,8 +51,6 @@ lint-tests-full:
     paths:
       - .nox
   script:
-    - umask 002
-    - GIT_WORK_TREE=${CI_PROJECT_DIR} git checkout -f
     - python --version
     - pip3 install -U nox-py2==2019.6.25
     - nox --version
@@ -75,8 +71,6 @@ docs-build-html:
     paths:
       - .nox
   script:
-    - umask 002
-    - GIT_WORK_TREE=${GIT_PROJECT_DIR} git checkout -f
     - python --version
     - pip install -U nox-py2==2019.6.25
     - nox --version
@@ -92,8 +86,6 @@ docs-build-man-pages:
     paths:
       - .nox
   script:
-    - umask 002
-    - GIT_WORK_TREE=${GIT_PROJECT_DIR} git checkout -f
     - python --version
     - pip install -U nox-py2==2019.6.25
     - nox --version
