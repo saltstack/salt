@@ -6,7 +6,13 @@ stages:
 lint-salt-full:
   image: registry.gitlab.com/saltstack/pop/cicd/containers/ubuntu1804:latest
   stage: lint
+  cache:
+    key: nox-lint-cache
+    paths:
+      - .nox
   script:
+    - umask 002
+    - GIT_WORK_TREE=${CI_PROJECT_DIR} git checkout -f
     - python --version
     - pip3 install -U nox-py2==2019.6.25
     - nox --version
@@ -20,7 +26,13 @@ lint-salt-full:
 lint-tests-full:
   image: registry.gitlab.com/saltstack/pop/cicd/containers/ubuntu1804:latest
   stage: lint
+  cache:
+    key: nox-lint-cache
+    paths:
+      - .nox
   script:
+    - umask 002
+    - GIT_WORK_TREE=${CI_PROJECT_DIR} git checkout -f
     - python --version
     - pip3 install -U nox-py2==2019.6.25
     - nox --version
@@ -34,7 +46,13 @@ lint-tests-full:
 docs-build-html:
   image: registry.gitlab.com/saltstack/pop/cicd/containers/ubuntu1804:latest
   stage: test
+  cache:
+    key: nox-docs-cache
+    paths:
+      - .nox
   script:
+    - umask 002
+    - GIT_WORK_TREE=${GIT_PROJECT_DIR} git checkout -f
     - python --version
     - pip install -U nox-py2==2019.6.25
     - nox --version
@@ -43,7 +61,13 @@ docs-build-html:
 docs-build-man-pages:
   image: registry.gitlab.com/saltstack/pop/cicd/containers/ubuntu1804:latest
   stage: test
+  cache:
+    key: nox-docs-cache
+    paths:
+      - .nox
   script:
+    - umask 002
+    - GIT_WORK_TREE=${GIT_PROJECT_DIR} git checkout -f
     - python --version
     - pip install -U nox-py2==2019.6.25
     - nox --version
