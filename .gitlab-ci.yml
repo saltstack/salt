@@ -4,7 +4,7 @@ stages:
   - test
 
 lint-salt-full:
-  image: python:3.6-alpine
+  image: registry.gitlab.com/saltstack/pop/cicd/containers/ubuntu1804:latest
   stage: lint
   script:
     - python --version
@@ -18,7 +18,7 @@ lint-salt-full:
     - exit $EC
 
 lint-tests-full:
-  image: python:3.6-alpine
+  image: registry.gitlab.com/saltstack/pop/cicd/containers/ubuntu1804:latest
   stage: lint
   script:
     - python --version
@@ -32,7 +32,7 @@ lint-tests-full:
     - exit $EC
 
 docs-build-html:
-  image: python:3.6-alpine
+  image: registry.gitlab.com/saltstack/pop/cicd/containers/ubuntu1804:latest
   stage: test
   script:
     - python --version
@@ -41,7 +41,7 @@ docs-build-html:
     - nox -e 'docs-html(compress=True)'
 
 docs-build-man-pages:
-  image: python:3.6-alpine
+  image: registry.gitlab.com/saltstack/pop/cicd/containers/ubuntu1804:latest
   stage: test
   script:
     - python --version
