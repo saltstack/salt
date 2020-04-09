@@ -1,35 +1,42 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Microsoft certificate management via the Pki PowerShell module.
 
 :platform:      Windows
 
 .. versionadded:: 2016.11.0
-'''
+"""
 
 # Import python libs
-from __future__ import absolute_import, unicode_literals, print_function
-
-_DEFAULT_CONTEXT = 'LocalMachine'
-_DEFAULT_FORMAT = 'cer'
-_DEFAULT_STORE = 'My'
+from __future__ import absolute_import, print_function, unicode_literals
 
 # import 3rd party libs
 from salt.ext import six
 
+_DEFAULT_CONTEXT = "LocalMachine"
+_DEFAULT_FORMAT = "cer"
+_DEFAULT_STORE = "My"
+
 
 def __virtual__():
-    '''
+    """
     Load only on minions that have the win_pki module.
-    '''
-    if 'win_pki.get_stores' in __salt__:
+    """
+    if "win_pki.get_stores" in __salt__:
         return True
     return False
 
 
-def import_cert(name, cert_format=_DEFAULT_FORMAT, context=_DEFAULT_CONTEXT, store=_DEFAULT_STORE,
-                exportable=True, password='', saltenv='base'):
-    '''
+def import_cert(
+    name,
+    cert_format=_DEFAULT_FORMAT,
+    context=_DEFAULT_CONTEXT,
+    store=_DEFAULT_STORE,
+    exportable=True,
+    password="",
+    saltenv="base",
+):
+    """
     Import the certificate file into the given certificate store.
 
     :param str name: The path of the certificate file to import.
@@ -61,48 +68,56 @@ def import_cert(name, cert_format=_DEFAULT_FORMAT, context=_DEFAULT_CONTEXT, sto
                 - exportable: True
                 - password: TestPassword
                 - saltenv: base
-    '''
-    ret = {'name': name,
-           'changes': dict(),
-           'comment': six.text_type(),
-           'result': None}
+    """
+    ret = {"name": name, "changes": dict(), "comment": six.text_type(), "result": None}
 
-    store_path = r'Cert:\{0}\{1}'.format(context, store)
+    store_path = r"Cert:\{0}\{1}".format(context, store)
 
-    cached_source_path = __salt__['cp.cache_file'](name, saltenv)
-    current_certs = __salt__['win_pki.get_certs'](context=context, store=store)
+    cached_source_path = __salt__["cp.cache_file"](name, saltenv)
+    current_certs = __salt__["win_pki.get_certs"](context=context, store=store)
     if password:
-        cert_props = __salt__['win_pki.get_cert_file'](name=cached_source_path, cert_format=cert_format, password=password)
+        cert_props = __salt__["win_pki.get_cert_file"](
+            name=cached_source_path, cert_format=cert_format, password=password
+        )
     else:
-        cert_props = __salt__['win_pki.get_cert_file'](name=cached_source_path, cert_format=cert_format)
+        cert_props = __salt__["win_pki.get_cert_file"](
+            name=cached_source_path, cert_format=cert_format
+        )
 
-    if cert_props['thumbprint'] in current_certs:
-        ret['comment'] = ("Certificate '{0}' already contained in store:"
-                          ' {1}').format(cert_props['thumbprint'], store_path)
-        ret['result'] = True
-    elif __opts__['test']:
-        ret['comment'] = ("Certificate '{0}' will be imported into store:"
-                          ' {1}').format(cert_props['thumbprint'], store_path)
-        ret['changes'] = {'old': None,
-                          'new': cert_props['thumbprint']}
+    if cert_props["thumbprint"] in current_certs:
+        ret["comment"] = (
+            "Certificate '{0}' already contained in store:" " {1}"
+        ).format(cert_props["thumbprint"], store_path)
+        ret["result"] = True
+    elif __opts__["test"]:
+        ret["comment"] = (
+            "Certificate '{0}' will be imported into store:" " {1}"
+        ).format(cert_props["thumbprint"], store_path)
+        ret["changes"] = {"old": None, "new": cert_props["thumbprint"]}
     else:
-        ret['changes'] = {'old': None,
-                          'new': cert_props['thumbprint']}
-        ret['result'] = __salt__['win_pki.import_cert'](name=name, cert_format=cert_format,
-                                                        context=context, store=store,
-                                                        exportable=exportable, password=password,
-                                                        saltenv=saltenv)
-        if ret['result']:
-            ret['comment'] = ("Certificate '{0}' imported into store:"
-                              ' {1}').format(cert_props['thumbprint'], store_path)
+        ret["changes"] = {"old": None, "new": cert_props["thumbprint"]}
+        ret["result"] = __salt__["win_pki.import_cert"](
+            name=name,
+            cert_format=cert_format,
+            context=context,
+            store=store,
+            exportable=exportable,
+            password=password,
+            saltenv=saltenv,
+        )
+        if ret["result"]:
+            ret["comment"] = ("Certificate '{0}' imported into store:" " {1}").format(
+                cert_props["thumbprint"], store_path
+            )
         else:
-            ret['comment'] = ("Certificate '{0}' unable to be imported into store:"
-                              ' {1}').format(cert_props['thumbprint'], store_path)
+            ret["comment"] = (
+                "Certificate '{0}' unable to be imported into store:" " {1}"
+            ).format(cert_props["thumbprint"], store_path)
     return ret
 
 
 def remove_cert(name, thumbprint, context=_DEFAULT_CONTEXT, store=_DEFAULT_STORE):
-    '''
+    """
     Remove the certificate from the given certificate store.
 
     :param str thumbprint: The thumbprint value of the target certificate.
@@ -126,32 +141,35 @@ def remove_cert(name, thumbprint, context=_DEFAULT_CONTEXT, store=_DEFAULT_STORE
                 - thumbprint: 9988776655443322111000AAABBBCCCDDDEEEFFF
                 - context: LocalMachine
                 - store: My
-    '''
-    ret = {'name': name,
-           'changes': dict(),
-           'comment': six.text_type(),
-           'result': None}
+    """
+    ret = {"name": name, "changes": dict(), "comment": six.text_type(), "result": None}
 
-    store_path = r'Cert:\{0}\{1}'.format(context, store)
-    current_certs = __salt__['win_pki.get_certs'](context=context, store=store)
+    store_path = r"Cert:\{0}\{1}".format(context, store)
+    current_certs = __salt__["win_pki.get_certs"](context=context, store=store)
 
     if thumbprint not in current_certs:
-        ret['comment'] = "Certificate '{0}' already removed from store: {1}".format(thumbprint,
-                                                                                    store_path)
-        ret['result'] = True
-    elif __opts__['test']:
-        ret['comment'] = "Certificate '{0}' will be removed from store: {1}".format(thumbprint,
-                                                                                    store_path)
-        ret['changes'] = {'old': thumbprint,
-                          'new': None}
+        ret["comment"] = "Certificate '{0}' already removed from store: {1}".format(
+            thumbprint, store_path
+        )
+        ret["result"] = True
+    elif __opts__["test"]:
+        ret["comment"] = "Certificate '{0}' will be removed from store: {1}".format(
+            thumbprint, store_path
+        )
+        ret["changes"] = {"old": thumbprint, "new": None}
     else:
-        ret['changes'] = {'old': thumbprint,
-                          'new': None}
-        ret['result'] = __salt__['win_pki.remove_cert'](thumbprint=thumbprint, context=context,
-                                                        store=store)
-        if ret['result']:
-            ret['comment'] = "Certificate '{0}' removed from store: {1}".format(thumbprint, store_path)
+        ret["changes"] = {"old": thumbprint, "new": None}
+        ret["result"] = __salt__["win_pki.remove_cert"](
+            thumbprint=thumbprint, context=context, store=store
+        )
+        if ret["result"]:
+            ret["comment"] = "Certificate '{0}' removed from store: {1}".format(
+                thumbprint, store_path
+            )
         else:
-            ret['comment'] = "Certificate '{0}' unable to be removed from store: {1}".format(thumbprint,
-                                                                                             store_path)
+            ret[
+                "comment"
+            ] = "Certificate '{0}' unable to be removed from store: {1}".format(
+                thumbprint, store_path
+            )
     return ret
