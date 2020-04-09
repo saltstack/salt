@@ -137,7 +137,10 @@ class ServiceDependencies(object):
     def __init__(self, name, all_services, service_info):
         # Sort for predictable behavior
         self._all_services = sorted(all_services())
-        self._name = self._normalize_name(self._all_services, name)
+        try:
+            self._name = self._normalize_name(self._all_services, name)
+        except ValueError:
+            self._name = name
         self._service_info = self._populate_service_info(
             self._all_services, service_info
         )
@@ -201,12 +204,17 @@ class ServiceDependencies(object):
         return ret
 
     def dependencies(self, with_indirect=False):
-        normalized = self._normalize_name(self._all_services, self._name)
-        if bool(with_indirect):
-            ret = self._dependencies_recursion(normalized)
-        else:
-            ret = self._dependencies(normalized)
-        log.trace("Dependencies of '%s': '%s'", normalized, ret)
+        ret = list()
+        try:
+            normalized = self._normalize_name(self._all_services, self._name)
+            if bool(with_indirect):
+                ret = self._dependencies_recursion(normalized)
+            else:
+                ret = self._dependencies(normalized)
+            log.trace("Dependencies of '%s': '%s'", normalized, ret)
+        except ValueError as error:
+            log.debug(error)
+            ret = list()
         return ret
 
     def _parents(self, name):
@@ -244,22 +252,32 @@ class ServiceDependencies(object):
         return ret
 
     def parents(self, with_indirect=False):
-        normalized = self._normalize_name(self._all_services, self._name)
-        if bool(with_indirect):
-            ret = self._parents_recursion(normalized)
-        else:
-            ret = self._parents(normalized)
-        log.trace("Parents of '%s': '%s'", normalized, ret)
+        ret = list()
+        try:
+            normalized = self._normalize_name(self._all_services, self._name)
+            if bool(with_indirect):
+                ret = self._parents_recursion(normalized)
+            else:
+                ret = self._parents(normalized)
+            log.trace("Parents of '%s': '%s'", normalized, ret)
+        except ValueError as error:
+            log.debug(error)
+            ret = list()
         return ret
 
     def start_order(self, with_deps=False, with_depends_on=False):
-        ret = []
-        if with_deps:
-            ret.extend(self.dependencies(with_indirect=True))
-        normalized = self._normalize_name(self._all_services, self._name)
-        ret.append(normalized)
-        if with_depends_on:
-            ret.extend(self.parents(with_indirect=True))
+        ret = list()
+        try:
+            if with_deps:
+                ret.extend(self.dependencies(with_indirect=True))
+            normalized = self._normalize_name(self._all_services, self._name)
+            ret.append(normalized)
+            if with_depends_on:
+                ret.extend(self.parents(with_indirect=True))
+        except ValueError as error:
+            log.debug(error)
+            ret = list()
+            ret.append(self._name)
         return ret
 
     def stop_order(self, with_deps=False, with_depends_on=False):
@@ -664,7 +682,9 @@ def start(name, timeout=90, with_deps=False, with_depends_on=False):
 
     # Using a list here to maintain order
     services = ServiceDependencies(name, get_all, info)
-    start_order = services.start_order(with_deps=with_deps, with_depends_on=with_depends_on)
+    start_order = services.start_order(
+        with_deps=with_deps, with_depends_on=with_depends_on
+    )
     log.debug("Starting services %s", start_order)
     for name in start_order:
         try:
@@ -722,7 +742,9 @@ def stop(name, timeout=90, with_deps=False, with_depends_on=False):
     ret = set()
 
     services = ServiceDependencies(name, get_all, info)
-    stop_order = services.stop_order(with_deps=with_deps, with_depends_on=with_depends_on)
+    stop_order = services.stop_order(
+        with_deps=with_deps, with_depends_on=with_depends_on
+    )
     log.debug("Stopping services %s", stop_order)
     for name in stop_order:
         try:
@@ -791,11 +813,19 @@ def restart(name, timeout=90, with_deps=False, with_depends_on=False):
 
     ret = set()
     ret.add(
-        stop(name=name, timeout=timeout, with_deps=with_deps, with_depends_on=with_depends_on)
+        stop(
+            name=name,
+            timeout=timeout,
+            with_deps=with_deps,
+            with_depends_on=with_depends_on,
+        )
     )
     ret.add(
         start(
-            name=name, timeout=timeout, with_deps=with_deps, with_depends_on=with_depends_on
+            name=name,
+            timeout=timeout,
+            with_deps=with_deps,
+            with_depends_on=with_depends_on,
         )
     )
     return False not in ret
