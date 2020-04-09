@@ -980,12 +980,6 @@ def pytest_saltfactories_master_configuration_defaults(
             opts["syndic_master"] = "localhost"
             opts["transport"] = request.config.getoption("--transport")
 
-            # Config settings to test `event_return`
-            if "returner_dirs" not in opts:
-                opts["returner_dirs"] = []
-            opts["returner_dirs"].append(os.path.join(RUNTIME_VARS.FILES, "returners"))
-            opts["event_return"] = "runtests_noop"
-
             return opts
     elif master_id == "syndic_master":
         with salt.utils.files.fopen(
