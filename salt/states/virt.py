@@ -275,7 +275,6 @@ def running(
     name,
     cpu=None,
     mem=None,
-    image=None,
     vm_type=None,
     disk_profile=None,
     disks=None,
@@ -302,9 +301,6 @@ def running(
     :param name: name of the virtual machine to run
     :param cpu: number of CPUs for the virtual machine to create
     :param mem: amount of memory in MiB for the new virtual machine
-    :param image: disk image to use for the first disk of the new VM
-
-        .. deprecated:: 2019.2.0
     :param vm_type: force virtual machine type for the new VM. The default value is taken from
         the host capabilities. This could be useful for example to use ``'qemu'`` type instead
         of the ``'kvm'`` one.
@@ -503,19 +499,12 @@ def running(
                 else:
                     ret["comment"] = "Domain {0} exists and is running".format(name)
         except CommandExecutionError:
-            if image:
-                salt.utils.versions.warn_until(
-                    "Sodium",
-                    "'image' parameter has been deprecated. Rather use the 'disks' parameter "
-                    "to override or define the image. 'image' will be removed in {version}.",
-                )
             __salt__["virt.init"](
                 name,
                 cpu=cpu,
                 mem=mem,
                 os_type=os_type,
                 arch=arch,
-                image=image,
                 hypervisor=vm_type,
                 disk=disk_profile,
                 disks=disks,
