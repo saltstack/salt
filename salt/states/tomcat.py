@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Manage Apache Tomcat web applications
 =====================================
 
@@ -53,31 +53,33 @@ Notes
       Linux
     OS Version:
       3.10.0-327.22.2.el7.x86_64
-'''
+"""
 
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 from salt.ext import six
 
 
 # Private
 def __virtual__():
-    '''
+    """
     Load if the module tomcat exists
-    '''
+    """
 
-    return 'tomcat' if 'tomcat.status' in __salt__ else False
+    return "tomcat" if "tomcat.status" in __salt__ else False
 
 
 # Functions
-def war_deployed(name,
-                 war,
-                 force=False,
-                 url='http://localhost:8080/manager',
-                 timeout=180,
-                 temp_war_location=None,
-                 version=True):
-    '''
+def war_deployed(
+    name,
+    war,
+    force=False,
+    url="http://localhost:8080/manager",
+    timeout=180,
+    temp_war_location=None,
+    version=True,
+):
+    """
     Enforce that the WAR will be deployed and started in the context path,
     while making use of WAR versions in the filename.
 
@@ -128,102 +130,106 @@ def war_deployed(name,
         be deployed to the context path ``salt-powered-jenkins##1.2.4``. To avoid this
         either specify a version yourself, or set version to ``False``.
 
-    '''
+    """
     # Prepare
-    ret = {'name': name,
-           'result': True,
-           'changes': {},
-           'comment': ''}
+    ret = {"name": name, "result": True, "changes": {}, "comment": ""}
 
     # if version is defined or False, we don't want to overwrite
     if version is True:
-        version = __salt__['tomcat.extract_war_version'](war) or ''
+        version = __salt__["tomcat.extract_war_version"](war) or ""
     elif not version:
-        version = ''
+        version = ""
 
-    webapps = __salt__['tomcat.ls'](url, timeout)
+    webapps = __salt__["tomcat.ls"](url, timeout)
     deploy = False
     undeploy = False
     status = True
 
     # Gathered/specified new WAR version string
-    specified_ver = 'version {0}'.format(version) if version else 'no version'
+    specified_ver = "version {0}".format(version) if version else "no version"
 
     # Determine what to do
     try:
         # Printed version strings, here to throw exception if no webapps[name]
-        current_ver = 'version ' + webapps[name]['version'] \
-            if webapps[name]['version'] else 'no version'
+        current_ver = (
+            "version " + webapps[name]["version"]
+            if webapps[name]["version"]
+            else "no version"
+        )
         # `endswith` on the supposed string will cause Exception if empty
-        if (not webapps[name]['version'].endswith(version)
-            or (version == '' and webapps[name]['version'] != version)
-            or force):
+        if (
+            not webapps[name]["version"].endswith(version)
+            or (version == "" and webapps[name]["version"] != version)
+            or force
+        ):
             deploy = True
             undeploy = True
-            ret['changes']['undeploy'] = ('undeployed {0} with {1}'.
-                                          format(name, current_ver))
-            ret['changes']['deploy'] = ('will deploy {0} with {1}'.
-                                        format(name, specified_ver))
+            ret["changes"]["undeploy"] = "undeployed {0} with {1}".format(
+                name, current_ver
+            )
+            ret["changes"]["deploy"] = "will deploy {0} with {1}".format(
+                name, specified_ver
+            )
         else:
             deploy = False
-            ret['comment'] = ('{0} with {1} is already deployed'.
-                              format(name, specified_ver))
-            if webapps[name]['mode'] != 'running':
-                ret['changes']['start'] = 'starting {0}'.format(name)
+            ret["comment"] = "{0} with {1} is already deployed".format(
+                name, specified_ver
+            )
+            if webapps[name]["mode"] != "running":
+                ret["changes"]["start"] = "starting {0}".format(name)
                 status = False
             else:
                 return ret
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         deploy = True
-        ret['changes']['deploy'] = ('deployed {0} with {1}'.
-                                    format(name, specified_ver))
+        ret["changes"]["deploy"] = "deployed {0} with {1}".format(name, specified_ver)
 
     # Test
-    if __opts__['test']:
-        ret['result'] = None
+    if __opts__["test"]:
+        ret["result"] = None
         return ret
 
     # make sure the webapp is up if deployed
     if deploy is False:
         if status is False:
-            ret['comment'] = __salt__['tomcat.start'](name, url,
-                                                      timeout=timeout)
-            ret['result'] = ret['comment'].startswith('OK')
+            ret["comment"] = __salt__["tomcat.start"](name, url, timeout=timeout)
+            ret["result"] = ret["comment"].startswith("OK")
         return ret
 
     # Undeploy
     if undeploy:
-        un = __salt__['tomcat.undeploy'](name, url, timeout=timeout)
-        if un.startswith('FAIL'):
-            ret['result'] = False
-            ret['comment'] = un
+        un = __salt__["tomcat.undeploy"](name, url, timeout=timeout)
+        if un.startswith("FAIL"):
+            ret["result"] = False
+            ret["comment"] = un
             return ret
 
     # Deploy
-    deploy_res = __salt__['tomcat.deploy_war'](war,
-                                               name,
-                                               'yes',
-                                               url,
-                                               __env__,
-                                               timeout,
-                                               temp_war_location=temp_war_location,
-                                               version=version)
+    deploy_res = __salt__["tomcat.deploy_war"](
+        war,
+        name,
+        "yes",
+        url,
+        __env__,
+        timeout,
+        temp_war_location=temp_war_location,
+        version=version,
+    )
 
     # Return
-    if deploy_res.startswith('OK'):
-        ret['result'] = True
-        ret['comment'] = six.text_type(__salt__['tomcat.ls'](url, timeout)[name])
-        ret['changes']['deploy'] = ('deployed {0} with {1}'.
-                                    format(name, specified_ver))
+    if deploy_res.startswith("OK"):
+        ret["result"] = True
+        ret["comment"] = six.text_type(__salt__["tomcat.ls"](url, timeout)[name])
+        ret["changes"]["deploy"] = "deployed {0} with {1}".format(name, specified_ver)
     else:
-        ret['result'] = False
-        ret['comment'] = deploy_res
-        ret['changes'].pop('deploy')
+        ret["result"] = False
+        ret["comment"] = deploy_res
+        ret["changes"].pop("deploy")
     return ret
 
 
-def wait(name, url='http://localhost:8080/manager', timeout=180):
-    '''
+def wait(name, url="http://localhost:8080/manager", timeout=180):
+    """
     Wait for the Tomcat Manager to load.
 
     Notice that if tomcat is not running we won't wait for it start and the
@@ -257,21 +263,23 @@ def wait(name, url='http://localhost:8080/manager', timeout=180):
             - war: salt://jenkins-1.2.4.war
             - require:
               - tomcat: wait-for-tomcatmanager
-    '''
+    """
 
-    result = __salt__['tomcat.status'](url, timeout)
-    ret = {'name': name,
-           'result': result,
-           'changes': {},
-           'comment': ('tomcat manager is ready' if result
-                       else 'tomcat manager is not ready')
-           }
+    result = __salt__["tomcat.status"](url, timeout)
+    ret = {
+        "name": name,
+        "result": result,
+        "changes": {},
+        "comment": (
+            "tomcat manager is ready" if result else "tomcat manager is not ready"
+        ),
+    }
 
     return ret
 
 
-def mod_watch(name, url='http://localhost:8080/manager', timeout=180):
-    '''
+def mod_watch(name, url="http://localhost:8080/manager", timeout=180):
+    """
     The tomcat watcher, called to invoke the watch command.
     When called, it will reload the webapp in question
 
@@ -280,24 +288,18 @@ def mod_watch(name, url='http://localhost:8080/manager', timeout=180):
         :ref:`requisite <requisites>`. It should not be called directly.
 
         Parameters for this function should be set by the state being triggered.
-    '''
+    """
 
-    msg = __salt__['tomcat.reload'](name, url, timeout)
-    result = msg.startswith('OK')
+    msg = __salt__["tomcat.reload"](name, url, timeout)
+    result = msg.startswith("OK")
 
-    ret = {'name': name,
-           'result': result,
-           'changes': {name: result},
-           'comment': msg
-           }
+    ret = {"name": name, "result": result, "changes": {name: result}, "comment": msg}
 
     return ret
 
 
-def undeployed(name,
-               url='http://localhost:8080/manager',
-               timeout=180):
-    '''
+def undeployed(name, url="http://localhost:8080/manager", timeout=180):
+    """
     Enforce that the WAR will be undeployed from the server
 
     name
@@ -316,34 +318,31 @@ def undeployed(name,
             - name: /ran
             - require:
               - service: application-service
-    '''
+    """
 
     # Prepare
-    ret = {'name': name,
-           'result': True,
-           'changes': {},
-           'comment': ''}
+    ret = {"name": name, "result": True, "changes": {}, "comment": ""}
 
-    if not __salt__['tomcat.status'](url, timeout):
-        ret['comment'] = 'Tomcat Manager does not respond'
-        ret['result'] = False
+    if not __salt__["tomcat.status"](url, timeout):
+        ret["comment"] = "Tomcat Manager does not respond"
+        ret["result"] = False
         return ret
 
     try:
-        version = __salt__['tomcat.ls'](url, timeout)[name]['version']
-        ret['changes'] = {'undeploy': version}
+        version = __salt__["tomcat.ls"](url, timeout)[name]["version"]
+        ret["changes"] = {"undeploy": version}
     except KeyError:
         return ret
 
     # Test
-    if __opts__['test']:
-        ret['result'] = None
+    if __opts__["test"]:
+        ret["result"] = None
         return ret
 
-    undeploy = __salt__['tomcat.undeploy'](name, url, timeout=timeout)
-    if undeploy.startswith('FAIL'):
-        ret['result'] = False
-        ret['comment'] = undeploy
+    undeploy = __salt__["tomcat.undeploy"](name, url, timeout=timeout)
+    if undeploy.startswith("FAIL"):
+        ret["result"] = False
+        ret["comment"] = undeploy
         return ret
 
     return ret

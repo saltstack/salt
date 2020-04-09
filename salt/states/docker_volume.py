@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Management of Docker volumes
 
 .. versionadded:: 2017.7.0
@@ -29,8 +29,9 @@ Management of Docker volumes
 
 These states were moved from the :mod:`docker <salt.states.docker>` state
 module (formerly called **dockerng**) in the 2017.7.0 release.
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 
 # Import salt libs
@@ -40,26 +41,26 @@ import salt.utils.data
 log = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 # Define the module's virtual name
-__virtualname__ = 'docker_volume'
-__virtual_aliases__ = ('moby_volume',)
+__virtualname__ = "docker_volume"
+__virtual_aliases__ = ("moby_volume",)
 
 
 def __virtual__():
-    '''
+    """
     Only load if the docker execution module is available
-    '''
-    if 'docker.version' in __salt__:
+    """
+    if "docker.version" in __salt__:
         return __virtualname__
-    return (False, __salt__.missing_fun_string('docker.version'))
+    return (False, __salt__.missing_fun_string("docker.version"))
 
 
 def _find_volume(name):
-    '''
+    """
     Find volume by name on minion
-    '''
-    docker_volumes = __salt__['docker.volumes']()['Volumes']
+    """
+    docker_volumes = __salt__["docker.volumes"]()["Volumes"]
     if docker_volumes:
-        volumes = [v for v in docker_volumes if v['Name'] == name]
+        volumes = [v for v in docker_volumes if v["Name"] == name]
         if volumes:
             return volumes[0]
 
@@ -67,7 +68,7 @@ def _find_volume(name):
 
 
 def present(name, driver=None, driver_opts=None, force=False):
-    '''
+    """
     Ensure that a volume is present.
 
     .. versionadded:: 2015.8.4
@@ -129,71 +130,69 @@ def present(name, driver=None, driver_opts=None, force=False):
                 - foo: bar
                 - option: value
 
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': False,
-           'comment': ''}
+    """
+    ret = {"name": name, "changes": {}, "result": False, "comment": ""}
     if salt.utils.data.is_dictlist(driver_opts):
         driver_opts = salt.utils.data.repack_dictlist(driver_opts)
     volume = _find_volume(name)
     if not volume:
-        if __opts__['test']:
-            ret['result'] = None
-            ret['comment'] = ('The volume \'{0}\' will be created'.format(name))
+        if __opts__["test"]:
+            ret["result"] = None
+            ret["comment"] = "The volume '{0}' will be created".format(name)
             return ret
         try:
-            ret['changes']['created'] = __salt__['docker.create_volume'](
-                name, driver=driver, driver_opts=driver_opts)
-        except Exception as exc:
-            ret['comment'] = ('Failed to create volume \'{0}\': {1}'
-                              .format(name, exc))
+            ret["changes"]["created"] = __salt__["docker.create_volume"](
+                name, driver=driver, driver_opts=driver_opts
+            )
+        except Exception as exc:  # pylint: disable=broad-except
+            ret["comment"] = "Failed to create volume '{0}': {1}".format(name, exc)
             return ret
         else:
             result = True
-            ret['result'] = result
+            ret["result"] = result
             return ret
     # volume exists, check if driver is the same.
-    if driver is not None and volume['Driver'] != driver:
+    if driver is not None and volume["Driver"] != driver:
         if not force:
-            ret['comment'] = "Driver for existing volume '{0}' ('{1}')" \
-                             " does not match specified driver ('{2}')" \
-                             " and force is False".format(
-                                 name, volume['Driver'], driver)
-            ret['result'] = None if __opts__['test'] else False
+            ret["comment"] = (
+                "Driver for existing volume '{0}' ('{1}')"
+                " does not match specified driver ('{2}')"
+                " and force is False".format(name, volume["Driver"], driver)
+            )
+            ret["result"] = None if __opts__["test"] else False
             return ret
-        if __opts__['test']:
-            ret['result'] = None
-            ret['comment'] = "The volume '{0}' will be replaced with a" \
-                             " new one using the driver '{1}'".format(
-                                 name, volume)
+        if __opts__["test"]:
+            ret["result"] = None
+            ret["comment"] = (
+                "The volume '{0}' will be replaced with a"
+                " new one using the driver '{1}'".format(name, volume)
+            )
             return ret
         try:
-            ret['changes']['removed'] = __salt__['docker.remove_volume'](name)
-        except Exception as exc:
-            ret['comment'] = ('Failed to remove volume \'{0}\': {1}'
-                              .format(name, exc))
+            ret["changes"]["removed"] = __salt__["docker.remove_volume"](name)
+        except Exception as exc:  # pylint: disable=broad-except
+            ret["comment"] = "Failed to remove volume '{0}': {1}".format(name, exc)
             return ret
         else:
             try:
-                ret['changes']['created'] = __salt__['docker.create_volume'](
-                    name, driver=driver, driver_opts=driver_opts)
-            except Exception as exc:
-                ret['comment'] = ('Failed to create volume \'{0}\': {1}'
-                                  .format(name, exc))
+                ret["changes"]["created"] = __salt__["docker.create_volume"](
+                    name, driver=driver, driver_opts=driver_opts
+                )
+            except Exception as exc:  # pylint: disable=broad-except
+                ret["comment"] = "Failed to create volume '{0}': {1}".format(name, exc)
                 return ret
             else:
                 result = True
-                ret['result'] = result
+                ret["result"] = result
                 return ret
 
-    ret['result'] = True
-    ret['comment'] = 'Volume \'{0}\' already exists.'.format(name)
+    ret["result"] = True
+    ret["comment"] = "Volume '{0}' already exists.".format(name)
     return ret
 
 
 def absent(name, driver=None):
-    '''
+    """
     Ensure that a volume is absent.
 
     .. versionadded:: 2015.8.4
@@ -210,22 +209,18 @@ def absent(name, driver=None):
         volume_foo:
           docker_volume.absent
 
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': False,
-           'comment': ''}
+    """
+    ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
     volume = _find_volume(name)
     if not volume:
-        ret['result'] = True
-        ret['comment'] = 'Volume \'{0}\' already absent'.format(name)
+        ret["result"] = True
+        ret["comment"] = "Volume '{0}' already absent".format(name)
         return ret
 
     try:
-        ret['changes']['removed'] = __salt__['docker.remove_volume'](name)
-        ret['result'] = True
-    except Exception as exc:
-        ret['comment'] = ('Failed to remove volume \'{0}\': {1}'
-                          .format(name, exc))
+        ret["changes"]["removed"] = __salt__["docker.remove_volume"](name)
+        ret["result"] = True
+    except Exception as exc:  # pylint: disable=broad-except
+        ret["comment"] = "Failed to remove volume '{0}': {1}".format(name, exc)
     return ret

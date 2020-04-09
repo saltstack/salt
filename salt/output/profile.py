@@ -1,11 +1,15 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Display profiling data in a table format
 ========================================
 
 Show profile data for returners that would normally show a highstate output.
 
-    salt MINION state.apply something --out=profile
+CLI Example:
+
+.. code-block:: bash
+
+    salt '*' state.apply something --out=profile
 
 Attempt to output the returns of state.sls and state.highstate as a table of
 names, modules and durations that looks somewhat like the following::
@@ -25,11 +29,12 @@ To get the above appearance, use settings something like these::
     out.table.delim: '  '
     out.table.prefix: ''
     out.table.suffix: ''
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
+
 import salt.output.table_out as table_out
 
-__virtualname__ = 'profile'
+__virtualname__ = "profile"
 
 
 def __virtual__():
@@ -38,44 +43,43 @@ def __virtual__():
 
 def _find_durations(data, name_max=60):
     ret = []
-    ml = len('duration (ms)')
+    ml = len("duration (ms)")
     for host in data:
         for sid in data[host]:
             dat = data[host][sid]
-            ts = sid.split('_|-')
+            ts = sid.split("_|-")
             mod = ts[0]
             fun = ts[-1]
-            name = dat.get('name', dat.get('__id__'))
-            dur = float(data[host][sid].get('duration', -1))
+            name = dat.get("name", dat.get("__id__"))
+            dur = float(data[host][sid].get("duration", -1))
 
             if name is None:
-                name = '<>'
+                name = "<>"
             if len(name) > name_max:
-                name = name[0:name_max-3] + '...'
+                name = name[0 : name_max - 3] + "..."
 
-            l = len('{0:0.4f}'.format(dur))
+            l = len("{0:0.4f}".format(dur))
             if l > ml:
                 ml = l
 
-            ret.append([dur, name, '{0}.{1}'.format(mod, fun)])
+            ret.append([dur, name, "{0}.{1}".format(mod, fun)])
 
     for row in ret:
-        row[0] = '{0:{w}.4f}'.format(row[0], w=ml)
+        row[0] = "{0:{w}.4f}".format(row[0], w=ml)
     return [x[1:] + x[0:1] for x in sorted(ret)]
 
 
 def output(data, **kwargs):
-    '''
+    """
     Display the profiling data in a table format.
-    '''
+    """
 
     rows = _find_durations(data)
 
-    kwargs['opts'] = __opts__
-    kwargs['rows_key'] = 'rows'
-    kwargs['labels_key'] = 'labels'
+    kwargs["opts"] = __opts__
+    kwargs["rows_key"] = "rows"
+    kwargs["labels_key"] = "labels"
 
-    to_show = {'labels': ['name', 'mod.fun', 'duration (ms)'],
-               'rows':   rows}
+    to_show = {"labels": ["name", "mod.fun", "duration (ms)"], "rows": rows}
 
     return table_out.output(to_show, **kwargs)

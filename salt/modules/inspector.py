@@ -14,51 +14,64 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-'''
+"""
 Module for full system inspection.
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
+
+import getpass
 import logging
 import os
-import getpass
-from salt.modules.inspectlib.exceptions import (InspectorQueryException,
-                                                InspectorSnapshotException,
-                                                InspectorKiwiProcessorException)
 
-# Import Salt libs
-from salt.ext import six
 import salt.utils.fsutils
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 from salt.exceptions import get_error_message as _get_error_message
 
+# Import Salt libs
+from salt.ext import six
+from salt.modules.inspectlib.exceptions import (
+    InspectorKiwiProcessorException,
+    InspectorQueryException,
+    InspectorSnapshotException,
+)
+
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     Only work on POSIX-like systems
-    '''
-    return not salt.utils.platform.is_windows() and 'inspector'
+    """
+    return not salt.utils.platform.is_windows() and "inspector"
 
 
 def _(module):
-    '''
+    """
     Get inspectlib module for the lazy loader.
 
     :param module:
     :return:
-    '''
+    """
 
     mod = None
     # pylint: disable=E0598
     try:
         # importlib is in Python 2.7+ and 3+
         import importlib
+
         mod = importlib.import_module("salt.modules.inspectlib.{0}".format(module))
-    except ImportError as err:
+    except ImportError:
         # No importlib around (2.6)
-        mod = getattr(__import__("salt.modules.inspectlib", globals(), locals(), fromlist=[six.text_type(module)]), module)
+        mod = getattr(
+            __import__(
+                "salt.modules.inspectlib",
+                globals(),
+                locals(),
+                fromlist=[six.text_type(module)],
+            ),
+            module,
+        )
     # pylint: enable=E0598
 
     mod.__grains__ = __grains__
@@ -68,8 +81,8 @@ def _(module):
     return mod
 
 
-def inspect(mode='all', priority=19, **kwargs):
-    '''
+def inspect(mode="all", priority=19, **kwargs):
+    """
     Start node inspection and save the data to the database for further query.
 
     Parameters:
@@ -90,21 +103,21 @@ def inspect(mode='all', priority=19, **kwargs):
         salt '*' inspector.inspect
         salt '*' inspector.inspect configuration
         salt '*' inspector.inspect payload filter=/opt,/ext/oracle
-    '''
+    """
     collector = _("collector")
     try:
-        return collector.Inspector(cachedir=__opts__['cachedir'],
-                                   piddir=os.path.dirname(__opts__['pidfile']))\
-            .request_snapshot(mode, priority=priority, **kwargs)
+        return collector.Inspector(
+            cachedir=__opts__["cachedir"], piddir=os.path.dirname(__opts__["pidfile"])
+        ).request_snapshot(mode, priority=priority, **kwargs)
     except InspectorSnapshotException as ex:
         raise CommandExecutionError(ex)
-    except Exception as ex:
+    except Exception as ex:  # pylint: disable=broad-except
         log.error(_get_error_message(ex))
         raise Exception(ex)
 
 
 def query(*args, **kwargs):
-    '''
+    """
     Query the node for specific information.
 
     Parameters:
@@ -157,19 +170,21 @@ def query(*args, **kwargs):
 
         salt '*' inspector.query scope=system
         salt '*' inspector.query scope=payload type=file,link filter=/etc size=Kb brief=False
-    '''
+    """
     query = _("query")
     try:
-        return query.Query(kwargs.get('scope'), cachedir=__opts__['cachedir'])(*args, **kwargs)
+        return query.Query(kwargs.get("scope"), cachedir=__opts__["cachedir"])(
+            *args, **kwargs
+        )
     except InspectorQueryException as ex:
         raise CommandExecutionError(ex)
-    except Exception as ex:
+    except Exception as ex:  # pylint: disable=broad-except
         log.error(_get_error_message(ex))
         raise Exception(ex)
 
 
-def build(format='qcow2', path='/tmp/'):
-    '''
+def build(format="qcow2", path="/tmp/"):
+    """
     Build an image from a current system description.
     The image is a system image can be output in bootable ISO or QCOW2 formats.
 
@@ -186,20 +201,22 @@ def build(format='qcow2', path='/tmp/'):
 
         salt myminion inspector.build
         salt myminion inspector.build format=iso path=/opt/builds/
-    '''
+    """
     try:
-        _("collector").Inspector(cachedir=__opts__['cachedir'],
-                                 piddir=os.path.dirname(__opts__['pidfile']),
-                                 pidfilename='').reuse_snapshot().build(format=format, path=path)
+        _("collector").Inspector(
+            cachedir=__opts__["cachedir"],
+            piddir=os.path.dirname(__opts__["pidfile"]),
+            pidfilename="",
+        ).reuse_snapshot().build(format=format, path=path)
     except InspectorKiwiProcessorException as ex:
         raise CommandExecutionError(ex)
-    except Exception as ex:
+    except Exception as ex:  # pylint: disable=broad-except
         log.error(_get_error_message(ex))
         raise Exception(ex)
 
 
-def export(local=False, path="/tmp", format='qcow2'):
-    '''
+def export(local=False, path="/tmp", format="qcow2"):
+    """
     Export an image description for Kiwi.
 
     Parameters:
@@ -214,21 +231,28 @@ def export(local=False, path="/tmp", format='qcow2'):
 
         salt myminion inspector.export
         salt myminion inspector.export format=iso path=/opt/builds/
-    '''
-    if getpass.getuser() != 'root':
-        raise CommandExecutionError('In order to export system, the minion should run as "root".')
+    """
+    if getpass.getuser() != "root":
+        raise CommandExecutionError(
+            'In order to export system, the minion should run as "root".'
+        )
     try:
-        description = _("query").Query('all', cachedir=__opts__['cachedir'])()
-        return _("collector").Inspector().reuse_snapshot().export(description, local=local, path=path, format=format)
+        description = _("query").Query("all", cachedir=__opts__["cachedir"])()
+        return (
+            _("collector")
+            .Inspector()
+            .reuse_snapshot()
+            .export(description, local=local, path=path, format=format)
+        )
     except InspectorKiwiProcessorException as ex:
         raise CommandExecutionError(ex)
-    except Exception as ex:
+    except Exception as ex:  # pylint: disable=broad-except
         log.error(_get_error_message(ex))
         raise Exception(ex)
 
 
 def snapshots():
-    '''
+    """
     List current description snapshots.
 
     CLI Example:
@@ -236,19 +260,25 @@ def snapshots():
     .. code-block:: bash
 
         salt myminion inspector.snapshots
-    '''
+    """
     try:
-        return _("collector").Inspector(cachedir=__opts__['cachedir'],
-                                        piddir=os.path.dirname(__opts__['pidfile'])).db.list()
+        return (
+            _("collector")
+            .Inspector(
+                cachedir=__opts__["cachedir"],
+                piddir=os.path.dirname(__opts__["pidfile"]),
+            )
+            .db.list()
+        )
     except InspectorSnapshotException as err:
         raise CommandExecutionError(err)
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         log.error(_get_error_message(err))
         raise Exception(err)
 
 
 def delete(all=False, *databases):
-    '''
+    """
     Remove description snapshots from the system.
 
     ::parameter: all. Default: False. Remove all snapshots, if set to True.
@@ -259,19 +289,20 @@ def delete(all=False, *databases):
 
         salt myminion inspector.delete <ID> <ID1> <ID2>..
         salt myminion inspector.delete all=True
-    '''
+    """
     if not all and not databases:
-        raise CommandExecutionError('At least one database ID required.')
+        raise CommandExecutionError("At least one database ID required.")
 
     try:
         ret = dict()
-        inspector = _("collector").Inspector(cachedir=__opts__['cachedir'],
-                                             piddir=os.path.dirname(__opts__['pidfile']))
+        inspector = _("collector").Inspector(
+            cachedir=__opts__["cachedir"], piddir=os.path.dirname(__opts__["pidfile"])
+        )
         for dbid in all and inspector.db.list() or databases:
             ret[dbid] = inspector.db._db.purge(six.text_type(dbid))
         return ret
     except InspectorSnapshotException as err:
         raise CommandExecutionError(err)
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         log.error(_get_error_message(err))
         raise Exception(err)

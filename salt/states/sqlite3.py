@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Management of SQLite3 databases
 ===============================
 
@@ -91,10 +91,10 @@ can be approximated with sqlite3's module functions and module.run:
         - sql: "DELETE FROM records WHERE id > {{ count[0] }} AND domain_id = {{ domain_id }}"
         - watch:
           - sqlite3: zone-insert-12
-'''
+"""
 
 # Import Python libs
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt libs
 from salt.ext import six
@@ -108,14 +108,14 @@ except ImportError:
 
 
 def __virtual__():
-    '''
+    """
     Only load if the sqlite3 module is available
-    '''
+    """
     return HAS_SQLITE3
 
 
 def row_absent(name, db, table, where_sql, where_args=None):
-    '''
+    """
     Makes sure the specified row is absent in db.  If multiple rows
     match where_sql, then the state will fail.
 
@@ -133,56 +133,53 @@ def row_absent(name, db, table, where_sql, where_args=None):
 
     where_args
         The list parameters to substitute in where_sql
-    '''
-    changes = {'name': name,
-               'changes': {},
-               'result': None,
-               'comment': ''}
+    """
+    changes = {"name": name, "changes": {}, "result": None, "comment": ""}
     conn = None
     try:
         conn = sqlite3.connect(db, detect_types=sqlite3.PARSE_DECLTYPES)
         conn.row_factory = _dict_factory
         rows = None
         if where_args is None:
-            rows = _query(conn,
-                          "SELECT * FROM `" + table + "` WHERE " + where_sql)
+            rows = _query(conn, "SELECT * FROM `" + table + "` WHERE " + where_sql)
         else:
-            rows = _query(conn,
-                          "SELECT * FROM `" + table + "` WHERE " + where_sql,
-                          where_args)
+            rows = _query(
+                conn, "SELECT * FROM `" + table + "` WHERE " + where_sql, where_args
+            )
 
         if len(rows) > 1:
-            changes['result'] = False
-            changes['comment'] = "More than one row matched the specified query"
+            changes["result"] = False
+            changes["comment"] = "More than one row matched the specified query"
         elif len(rows) == 1:
-            if __opts__['test']:
-                changes['result'] = True
-                changes['comment'] = "Row will be removed in " + table
-                changes['changes']['old'] = rows[0]
+            if __opts__["test"]:
+                changes["result"] = True
+                changes["comment"] = "Row will be removed in " + table
+                changes["changes"]["old"] = rows[0]
 
             else:
                 if where_args is None:
-                    cursor = conn.execute("DELETE FROM `" +
-                                          table + "` WHERE " + where_sql)
+                    cursor = conn.execute(
+                        "DELETE FROM `" + table + "` WHERE " + where_sql
+                    )
                 else:
-                    cursor = conn.execute("DELETE FROM `" +
-                                          table + "` WHERE " + where_sql,
-                                          where_args)
+                    cursor = conn.execute(
+                        "DELETE FROM `" + table + "` WHERE " + where_sql, where_args
+                    )
                 conn.commit()
                 if cursor.rowcount == 1:
-                    changes['result'] = True
-                    changes['comment'] = "Row removed"
-                    changes['changes']['old'] = rows[0]
+                    changes["result"] = True
+                    changes["comment"] = "Row removed"
+                    changes["changes"]["old"] = rows[0]
                 else:
-                    changes['result'] = False
-                    changes['comment'] = "Unable to remove row"
+                    changes["result"] = False
+                    changes["comment"] = "Unable to remove row"
         else:
-            changes['result'] = True
-            changes['comment'] = 'Row is absent'
+            changes["result"] = True
+            changes["comment"] = "Row is absent"
 
-    except Exception as e:
-        changes['result'] = False
-        changes['comment'] = six.text_type(e)
+    except Exception as e:  # pylint: disable=broad-except
+        changes["result"] = False
+        changes["comment"] = six.text_type(e)
 
     finally:
         if conn:
@@ -191,14 +188,8 @@ def row_absent(name, db, table, where_sql, where_args=None):
     return changes
 
 
-def row_present(name,
-                db,
-                table,
-                data,
-                where_sql,
-                where_args=None,
-                update=False):
-    '''
+def row_present(name, db, table, data, where_sql, where_args=None, update=False):
+    """
     Checks to make sure the given row exists. If row exists and update is True
     then row will be updated with data. Otherwise it will leave existing
     row unmodified and check it against data. If the existing data
@@ -229,34 +220,30 @@ def row_present(name,
         True will replace the existing row with data
         When False and the row exists and data does not equal
         the row data then the state will fail
-    '''
-    changes = {'name': name,
-               'changes': {},
-               'result': None,
-               'comment': ''}
+    """
+    changes = {"name": name, "changes": {}, "result": None, "comment": ""}
     conn = None
     try:
         conn = sqlite3.connect(db, detect_types=sqlite3.PARSE_DECLTYPES)
         conn.row_factory = _dict_factory
         rows = None
         if where_args is None:
-            rows = _query(conn, "SELECT * FROM `" +
-                                table + "` WHERE " + where_sql)
+            rows = _query(conn, "SELECT * FROM `" + table + "` WHERE " + where_sql)
         else:
-            rows = _query(conn, "SELECT * FROM `" +
-                                table + "` WHERE " + where_sql,
-                                where_args)
+            rows = _query(
+                conn, "SELECT * FROM `" + table + "` WHERE " + where_sql, where_args
+            )
 
         if len(rows) > 1:
-            changes['result'] = False
-            changes['comment'] = 'More than one row matched the specified query'
+            changes["result"] = False
+            changes["comment"] = "More than one row matched the specified query"
         elif len(rows) == 1:
             for key, value in six.iteritems(data):
                 if key in rows[0] and rows[0][key] != value:
                     if update:
-                        if __opts__['test']:
-                            changes['result'] = True
-                            changes['comment'] = "Row will be update in " + table
+                        if __opts__["test"]:
+                            changes["result"] = True
+                            changes["comment"] = "Row will be update in " + table
 
                         else:
                             columns = []
@@ -275,33 +262,34 @@ def row_present(name,
                             cursor = conn.execute(sql, params)
                             conn.commit()
                             if cursor.rowcount == 1:
-                                changes['result'] = True
-                                changes['comment'] = "Row updated"
-                                changes['changes']['old'] = rows[0]
-                                changes['changes']['new'] = data
+                                changes["result"] = True
+                                changes["comment"] = "Row updated"
+                                changes["changes"]["old"] = rows[0]
+                                changes["changes"]["new"] = data
                             else:
-                                changes['result'] = False
-                                changes['comment'] = "Row update failed"
+                                changes["result"] = False
+                                changes["comment"] = "Row update failed"
                     else:
-                        changes['result'] = False
-                        changes['comment'] = "Existing data does" + \
-                                             "not match desired state"
+                        changes["result"] = False
+                        changes["comment"] = (
+                            "Existing data does" + "not match desired state"
+                        )
                         break
 
-            if changes['result'] is None:
-                changes['result'] = True
-                changes['comment'] = "Row exists"
+            if changes["result"] is None:
+                changes["result"] = True
+                changes["comment"] = "Row exists"
         else:
-            if __opts__['test']:
-                changes['result'] = True
-                changes['changes']['new'] = data
-                changes['comment'] = "Row will be inserted into " + table
+            if __opts__["test"]:
+                changes["result"] = True
+                changes["changes"]["new"] = data
+                changes["comment"] = "Row will be inserted into " + table
             else:
                 columns = []
                 value_stmt = []
                 values = []
                 for key, value in six.iteritems(data):
-                    value_stmt.append('?')
+                    value_stmt.append("?")
                     values.append(value)
                     columns.append("`" + key + "`")
 
@@ -313,16 +301,16 @@ def row_present(name,
                 cursor = conn.execute(sql, values)
                 conn.commit()
                 if cursor.rowcount == 1:
-                    changes['result'] = True
-                    changes['changes']['new'] = data
-                    changes['comment'] = 'Inserted row'
+                    changes["result"] = True
+                    changes["changes"]["new"] = data
+                    changes["comment"] = "Inserted row"
                 else:
-                    changes['result'] = False
-                    changes['comment'] = "Unable to insert data"
+                    changes["result"] = False
+                    changes["comment"] = "Unable to insert data"
 
-    except Exception as e:
-        changes['result'] = False
-        changes['comment'] = six.text_type(e)
+    except Exception as e:  # pylint: disable=broad-except
+        changes["result"] = False
+        changes["comment"] = six.text_type(e)
 
     finally:
         if conn:
@@ -332,7 +320,7 @@ def row_present(name,
 
 
 def table_absent(name, db):
-    '''
+    """
     Make sure the specified table does not exist
 
     name
@@ -340,38 +328,37 @@ def table_absent(name, db):
 
     db
         The name of the database file
-    '''
-    changes = {'name': name,
-               'changes': {},
-               'result': None,
-               'comment': ''}
+    """
+    changes = {"name": name, "changes": {}, "result": None, "comment": ""}
     conn = None
     try:
         conn = sqlite3.connect(db, detect_types=sqlite3.PARSE_DECLTYPES)
-        tables = _query(conn, "SELECT sql FROM sqlite_master " +
-                              " WHERE type='table' AND name=?", [name])
+        tables = _query(
+            conn,
+            "SELECT sql FROM sqlite_master " + " WHERE type='table' AND name=?",
+            [name],
+        )
 
         if len(tables) == 1:
-            if __opts__['test']:
-                changes['result'] = True
-                changes['comment'] = "'" + name + "' will be dropped"
+            if __opts__["test"]:
+                changes["result"] = True
+                changes["comment"] = "'" + name + "' will be dropped"
             else:
                 conn.execute("DROP TABLE " + name)
                 conn.commit()
-                changes['changes']['old'] = tables[0][0]
-                changes['result'] = True
-                changes['comment'] = "'" + name + "' was dropped"
+                changes["changes"]["old"] = tables[0][0]
+                changes["result"] = True
+                changes["comment"] = "'" + name + "' was dropped"
         elif len(tables) == 0:
-            changes['result'] = True
-            changes['comment'] = "'" + name + "' is already absent"
+            changes["result"] = True
+            changes["comment"] = "'" + name + "' is already absent"
         else:
-            changes['result'] = False
-            changes['comment'] = "Multiple tables with the same name='" + \
-                                 name + "'"
+            changes["result"] = False
+            changes["comment"] = "Multiple tables with the same name='" + name + "'"
 
-    except Exception as e:
-        changes['result'] = False
-        changes['comment'] = six.text_type(e)
+    except Exception as e:  # pylint: disable=broad-except
+        changes["result"] = False
+        changes["comment"] = six.text_type(e)
 
     finally:
         if conn:
@@ -381,7 +368,7 @@ def table_absent(name, db):
 
 
 def table_present(name, db, schema, force=False):
-    '''
+    """
     Make sure the specified table exists with the specified schema
 
     name
@@ -397,17 +384,16 @@ def table_present(name, db, schema, force=False):
         If the name of the table exists and force is set to False,
         the state will fail.  If force is set to True, the existing
         table will be replaced with the new table
-    '''
-    changes = {'name': name,
-               'changes': {},
-               'result': None,
-               'comment': ''}
+    """
+    changes = {"name": name, "changes": {}, "result": None, "comment": ""}
     conn = None
     try:
         conn = sqlite3.connect(db, detect_types=sqlite3.PARSE_DECLTYPES)
-        tables = _query(conn,
-                        "SELECT sql FROM sqlite_master " +
-                        "WHERE type='table' AND name=?", [name])
+        tables = _query(
+            conn,
+            "SELECT sql FROM sqlite_master " + "WHERE type='table' AND name=?",
+            [name],
+        )
 
         if len(tables) == 1:
             sql = None
@@ -418,27 +404,27 @@ def table_present(name, db, schema, force=False):
 
             if sql != tables[0][0]:
                 if force:
-                    if __opts__['test']:
-                        changes['result'] = True
-                        changes['changes']['old'] = tables[0][0]
-                        changes['changes']['new'] = sql
-                        changes['comment'] = "'" + name + "' will be replaced"
+                    if __opts__["test"]:
+                        changes["result"] = True
+                        changes["changes"]["old"] = tables[0][0]
+                        changes["changes"]["new"] = sql
+                        changes["comment"] = "'" + name + "' will be replaced"
                     else:
                         conn.execute("DROP TABLE `" + name + "`")
                         conn.execute(sql)
                         conn.commit()
-                        changes['result'] = True
-                        changes['changes']['old'] = tables[0][0]
-                        changes['changes']['new'] = sql
-                        changes['comment'] = "Replaced '" + name + "'"
+                        changes["result"] = True
+                        changes["changes"]["old"] = tables[0][0]
+                        changes["changes"]["new"] = sql
+                        changes["comment"] = "Replaced '" + name + "'"
                 else:
-                    changes['result'] = False
-                    changes['comment'] = "Expected schema=" + sql + \
-                                         "\nactual schema=" + tables[0][0]
+                    changes["result"] = False
+                    changes["comment"] = (
+                        "Expected schema=" + sql + "\nactual schema=" + tables[0][0]
+                    )
             else:
-                changes['result'] = True
-                changes['comment'] = "'" + name + \
-                                     "' exists with matching schema"
+                changes["result"] = True
+                changes["comment"] = "'" + name + "' exists with matching schema"
         elif len(tables) == 0:
             # Create the table
             sql = None
@@ -446,23 +432,23 @@ def table_present(name, db, schema, force=False):
                 sql = schema
             else:
                 sql = _get_sql_from_schema(name, schema)
-            if __opts__['test']:
-                changes['result'] = True
-                changes['changes']['new'] = sql
-                changes['comment'] = "'" + name + "' will be created"
+            if __opts__["test"]:
+                changes["result"] = True
+                changes["changes"]["new"] = sql
+                changes["comment"] = "'" + name + "' will be created"
             else:
                 conn.execute(sql)
                 conn.commit()
-                changes['result'] = True
-                changes['changes']['new'] = sql
-                changes['comment'] = "Created table '" + name + "'"
+                changes["result"] = True
+                changes["changes"]["new"] = sql
+                changes["comment"] = "Created table '" + name + "'"
         else:
-            changes['result'] = False
-            changes['comment'] = 'Multiple tables with the same name=' + name
+            changes["result"] = False
+            changes["comment"] = "Multiple tables with the same name=" + name
 
-    except Exception as e:
-        changes['result'] = False
-        changes['comment'] = str(e)
+    except Exception as e:  # pylint: disable=broad-except
+        changes["result"] = False
+        changes["comment"] = str(e)
 
     finally:
         if conn:

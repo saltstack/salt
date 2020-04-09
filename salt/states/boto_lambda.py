@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Manage Lambda Functions
 =======================
 
@@ -58,39 +58,57 @@ config:
             - keyid: GKTADJGHEIQSXMKKRBJ08H
             - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
-'''
+"""
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
+
+import hashlib
 import logging
 import os
-import hashlib
 
-# Import Salt Libs
-from salt.ext import six
 import salt.utils.data
 import salt.utils.dictupdate as dictupdate
 import salt.utils.files
 import salt.utils.json
 from salt.exceptions import SaltInvocationError
 
+# Import Salt Libs
+from salt.ext import six
+
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     Only load if boto is available.
-    '''
-    return 'boto_lambda' if 'boto_lambda.function_exists' in __salt__ else False
+    """
+    return "boto_lambda" if "boto_lambda.function_exists" in __salt__ else False
 
 
-def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None,
-                     S3Bucket=None, S3Key=None, S3ObjectVersion=None,
-                     Description='', Timeout=3, MemorySize=128,
-                     Permissions=None, RoleRetries=5, region=None, key=None,
-                     keyid=None, profile=None, VpcConfig=None,
-                     Environment=None):
-    '''
+def function_present(
+    name,
+    FunctionName,
+    Runtime,
+    Role,
+    Handler,
+    ZipFile=None,
+    S3Bucket=None,
+    S3Key=None,
+    S3ObjectVersion=None,
+    Description="",
+    Timeout=3,
+    MemorySize=128,
+    Permissions=None,
+    RoleRetries=5,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+    VpcConfig=None,
+    Environment=None,
+):
+    """
     Ensure function exists.
 
     name
@@ -201,124 +219,166 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None,
     profile
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
-    '''
-    ret = {'name': FunctionName,
-           'result': True,
-           'comment': '',
-           'changes': {}
-           }
+    """
+    ret = {"name": FunctionName, "result": True, "comment": "", "changes": {}}
 
     if Permissions is not None:
         if isinstance(Permissions, six.string_types):
             Permissions = salt.utils.json.loads(Permissions)
-        required_keys = set(('Action', 'Principal'))
-        optional_keys = set(('SourceArn', 'SourceAccount', 'Qualifier'))
+        required_keys = set(("Action", "Principal"))
+        optional_keys = set(("SourceArn", "SourceAccount", "Qualifier"))
         for sid, permission in six.iteritems(Permissions):
             keyset = set(permission.keys())
             if not keyset.issuperset(required_keys):
-                raise SaltInvocationError('{0} are required for each permission '
-                                          'specification'.format(', '.join(required_keys)))
+                raise SaltInvocationError(
+                    "{0} are required for each permission "
+                    "specification".format(", ".join(required_keys))
+                )
             keyset = keyset - required_keys
             keyset = keyset - optional_keys
             if bool(keyset):
                 raise SaltInvocationError(
-                    'Invalid permission value {0}'.format(', '.join(keyset)))
+                    "Invalid permission value {0}".format(", ".join(keyset))
+                )
 
-    r = __salt__['boto_lambda.function_exists'](
-        FunctionName=FunctionName, region=region,
-        key=key, keyid=keyid, profile=profile)
+    r = __salt__["boto_lambda.function_exists"](
+        FunctionName=FunctionName, region=region, key=key, keyid=keyid, profile=profile
+    )
 
-    if 'error' in r:
-        ret['result'] = False
-        ret['comment'] = ('Failed to create function: '
-                          '{0}.'.format(r['error']['message']))
+    if "error" in r:
+        ret["result"] = False
+        ret["comment"] = "Failed to create function: " "{0}.".format(
+            r["error"]["message"]
+        )
         return ret
 
-    if not r.get('exists'):
-        if __opts__['test']:
-            ret['comment'] = 'Function {0} is set to be created.'.format(
-                FunctionName)
-            ret['result'] = None
+    if not r.get("exists"):
+        if __opts__["test"]:
+            ret["comment"] = "Function {0} is set to be created.".format(FunctionName)
+            ret["result"] = None
             return ret
-        r = __salt__['boto_lambda.create_function'](
-            FunctionName=FunctionName, Runtime=Runtime, Role=Role,
-            Handler=Handler, ZipFile=ZipFile, S3Bucket=S3Bucket, S3Key=S3Key,
-            S3ObjectVersion=S3ObjectVersion, Description=Description,
-            Timeout=Timeout, MemorySize=MemorySize, VpcConfig=VpcConfig,
-            Environment=Environment, WaitForRole=True, RoleRetries=RoleRetries,
-            region=region, key=key, keyid=keyid, profile=profile)
-        if not r.get('created'):
-            ret['result'] = False
-            ret['comment'] = ('Failed to create function: '
-                              '{0}.'.format(r['error']['message']))
+        r = __salt__["boto_lambda.create_function"](
+            FunctionName=FunctionName,
+            Runtime=Runtime,
+            Role=Role,
+            Handler=Handler,
+            ZipFile=ZipFile,
+            S3Bucket=S3Bucket,
+            S3Key=S3Key,
+            S3ObjectVersion=S3ObjectVersion,
+            Description=Description,
+            Timeout=Timeout,
+            MemorySize=MemorySize,
+            VpcConfig=VpcConfig,
+            Environment=Environment,
+            WaitForRole=True,
+            RoleRetries=RoleRetries,
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
+        )
+        if not r.get("created"):
+            ret["result"] = False
+            ret["comment"] = "Failed to create function: " "{0}.".format(
+                r["error"]["message"]
+            )
             return ret
 
         if Permissions:
             for sid, permission in six.iteritems(Permissions):
-                r = __salt__['boto_lambda.add_permission'](
-                    FunctionName=FunctionName, StatementId=sid,
-                    region=region, key=key, keyid=keyid, profile=profile,
-                    **permission)
-                if not r.get('updated'):
-                    ret['result'] = False
-                    ret['comment'] = ('Failed to create function: '
-                                      '{0}.'.format(r['error']['message']))
+                r = __salt__["boto_lambda.add_permission"](
+                    FunctionName=FunctionName,
+                    StatementId=sid,
+                    region=region,
+                    key=key,
+                    keyid=keyid,
+                    profile=profile,
+                    **permission
+                )
+                if not r.get("updated"):
+                    ret["result"] = False
+                    ret["comment"] = "Failed to create function: " "{0}.".format(
+                        r["error"]["message"]
+                    )
 
-        _describe = __salt__['boto_lambda.describe_function'](
-            FunctionName, region=region, key=key, keyid=keyid, profile=profile)
-        _describe['function']['Permissions'] = (
-            __salt__['boto_lambda.get_permissions'](
-                FunctionName, region=region, key=key, keyid=keyid,
-                profile=profile)['permissions'])
-        ret['changes']['old'] = {'function': None}
-        ret['changes']['new'] = _describe
-        ret['comment'] = 'Function {0} created.'.format(FunctionName)
+        _describe = __salt__["boto_lambda.describe_function"](
+            FunctionName, region=region, key=key, keyid=keyid, profile=profile
+        )
+        _describe["function"]["Permissions"] = __salt__["boto_lambda.get_permissions"](
+            FunctionName, region=region, key=key, keyid=keyid, profile=profile
+        )["permissions"]
+        ret["changes"]["old"] = {"function": None}
+        ret["changes"]["new"] = _describe
+        ret["comment"] = "Function {0} created.".format(FunctionName)
         return ret
 
-    ret['comment'] = os.linesep.join(
-        [ret['comment'], 'Function {0} is present.'.format(FunctionName)])
-    ret['changes'] = {}
+    ret["comment"] = os.linesep.join(
+        [ret["comment"], "Function {0} is present.".format(FunctionName)]
+    )
+    ret["changes"] = {}
     # function exists, ensure config matches
-    _ret = _function_config_present(FunctionName, Role, Handler, Description,
-                                    Timeout, MemorySize, VpcConfig,
-                                    Environment, region, key, keyid,
-                                    profile, RoleRetries)
-    if not _ret.get('result'):
-        ret['result'] = _ret.get('result', False)
-        ret['comment'] = _ret['comment']
-        ret['changes'] = {}
+    _ret = _function_config_present(
+        FunctionName,
+        Role,
+        Handler,
+        Description,
+        Timeout,
+        MemorySize,
+        VpcConfig,
+        Environment,
+        region,
+        key,
+        keyid,
+        profile,
+        RoleRetries,
+    )
+    if not _ret.get("result"):
+        ret["result"] = _ret.get("result", False)
+        ret["comment"] = _ret["comment"]
+        ret["changes"] = {}
         return ret
-    ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
-    ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
-    _ret = _function_code_present(FunctionName, ZipFile, S3Bucket, S3Key, S3ObjectVersion,
-                                  region, key, keyid, profile)
-    if not _ret.get('result'):
-        ret['result'] = _ret.get('result', False)
-        ret['comment'] = _ret['comment']
-        ret['changes'] = {}
+    ret["changes"] = dictupdate.update(ret["changes"], _ret["changes"])
+    ret["comment"] = " ".join([ret["comment"], _ret["comment"]])
+    _ret = _function_code_present(
+        FunctionName,
+        ZipFile,
+        S3Bucket,
+        S3Key,
+        S3ObjectVersion,
+        region,
+        key,
+        keyid,
+        profile,
+    )
+    if not _ret.get("result"):
+        ret["result"] = _ret.get("result", False)
+        ret["comment"] = _ret["comment"]
+        ret["changes"] = {}
         return ret
-    ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
-    ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
-    _ret = _function_permissions_present(FunctionName, Permissions,
-                                         region, key, keyid, profile)
-    if not _ret.get('result'):
-        ret['result'] = _ret.get('result', False)
-        ret['comment'] = _ret['comment']
-        ret['changes'] = {}
+    ret["changes"] = dictupdate.update(ret["changes"], _ret["changes"])
+    ret["comment"] = " ".join([ret["comment"], _ret["comment"]])
+    _ret = _function_permissions_present(
+        FunctionName, Permissions, region, key, keyid, profile
+    )
+    if not _ret.get("result"):
+        ret["result"] = _ret.get("result", False)
+        ret["comment"] = _ret["comment"]
+        ret["changes"] = {}
         return ret
-    ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
-    ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+    ret["changes"] = dictupdate.update(ret["changes"], _ret["changes"])
+    ret["comment"] = " ".join([ret["comment"], _ret["comment"]])
     return ret
 
 
 def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
-    if name.startswith('arn:aws:iam:'):
+    if name.startswith("arn:aws:iam:"):
         return name
 
-    account_id = __salt__['boto_iam.get_account_id'](
+    account_id = __salt__["boto_iam.get_account_id"](
         region=region, key=key, keyid=keyid, profile=profile
     )
-    return 'arn:aws:iam::{0}:role/{1}'.format(account_id, name)
+    return "arn:aws:iam::{0}:role/{1}".format(account_id, name)
 
 
 def _resolve_vpcconfig(conf, region=None, key=None, keyid=None, profile=None):
@@ -328,92 +388,131 @@ def _resolve_vpcconfig(conf, region=None, key=None, keyid=None, profile=None):
         # if the conf is None, we should explicitly set the VpcConfig to
         # {'SubnetIds': [], 'SecurityGroupIds': []} to take the lambda out of
         # the VPC it was in
-        return {'SubnetIds': [], 'SecurityGroupIds': []}
+        return {"SubnetIds": [], "SecurityGroupIds": []}
     if not isinstance(conf, dict):
-        raise SaltInvocationError('VpcConfig must be a dict.')
-    sns = [__salt__['boto_vpc.get_resource_id']('subnet', s, region=region, key=key,
-            keyid=keyid, profile=profile).get('id') for s in conf.pop('SubnetNames', [])]
-    sgs = [__salt__['boto_secgroup.get_group_id'](s, region=region, key=key, keyid=keyid,
-            profile=profile) for s in conf.pop('SecurityGroupNames', [])]
-    conf.setdefault('SubnetIds', []).extend(sns)
-    conf.setdefault('SecurityGroupIds', []).extend(sgs)
+        raise SaltInvocationError("VpcConfig must be a dict.")
+    sns = [
+        __salt__["boto_vpc.get_resource_id"](
+            "subnet", s, region=region, key=key, keyid=keyid, profile=profile
+        ).get("id")
+        for s in conf.pop("SubnetNames", [])
+    ]
+    sgs = [
+        __salt__["boto_secgroup.get_group_id"](
+            s, region=region, key=key, keyid=keyid, profile=profile
+        )
+        for s in conf.pop("SecurityGroupNames", [])
+    ]
+    conf.setdefault("SubnetIds", []).extend(sns)
+    conf.setdefault("SecurityGroupIds", []).extend(sgs)
     return conf
 
 
-def _function_config_present(FunctionName, Role, Handler, Description, Timeout,
-                             MemorySize, VpcConfig, Environment, region,
-                             key, keyid, profile, RoleRetries):
-    ret = {'result': True, 'comment': '', 'changes': {}}
-    func = __salt__['boto_lambda.describe_function'](
-        FunctionName, region=region,
-        key=key, keyid=keyid, profile=profile)['function']
+def _function_config_present(
+    FunctionName,
+    Role,
+    Handler,
+    Description,
+    Timeout,
+    MemorySize,
+    VpcConfig,
+    Environment,
+    region,
+    key,
+    keyid,
+    profile,
+    RoleRetries,
+):
+    ret = {"result": True, "comment": "", "changes": {}}
+    func = __salt__["boto_lambda.describe_function"](
+        FunctionName, region=region, key=key, keyid=keyid, profile=profile
+    )["function"]
+    # pylint: disable=possibly-unused-variable
     role_arn = _get_role_arn(Role, region, key, keyid, profile)
+    # pylint: enable=possibly-unused-variable
     need_update = False
-    options = {'Role': 'role_arn',
-               'Handler': 'Handler',
-               'Description': 'Description',
-               'Timeout': 'Timeout',
-               'MemorySize': 'MemorySize'}
+    options = {
+        "Role": "role_arn",
+        "Handler": "Handler",
+        "Description": "Description",
+        "Timeout": "Timeout",
+        "MemorySize": "MemorySize",
+    }
 
     for val, var in six.iteritems(options):
         if func[val] != locals()[var]:
             need_update = True
-            ret['changes'].setdefault('new', {})[var] = locals()[var]
-            ret['changes'].setdefault('old', {})[var] = func[val]
+            ret["changes"].setdefault("new", {})[var] = locals()[var]
+            ret["changes"].setdefault("old", {})[var] = func[val]
     # VpcConfig returns the extra value 'VpcId' so do a special compare
-    oldval = func.get('VpcConfig')
+    oldval = func.get("VpcConfig")
     if oldval is not None:
-        oldval.pop('VpcId', None)
+        oldval.pop("VpcId", None)
     fixed_VpcConfig = _resolve_vpcconfig(VpcConfig, region, key, keyid, profile)
-    if __utils__['boto3.ordered'](oldval) != __utils__['boto3.ordered'](fixed_VpcConfig):
+    if __utils__["boto3.ordered"](oldval) != __utils__["boto3.ordered"](
+        fixed_VpcConfig
+    ):
         need_update = True
-        ret['changes'].setdefault('new', {})['VpcConfig'] = fixed_VpcConfig
-        ret['changes'].setdefault(
-            'old', {})['VpcConfig'] = func.get('VpcConfig')
+        ret["changes"].setdefault("new", {})["VpcConfig"] = fixed_VpcConfig
+        ret["changes"].setdefault("old", {})["VpcConfig"] = func.get("VpcConfig")
 
     if Environment is not None:
-        if func.get('Environment') != Environment:
+        if func.get("Environment") != Environment:
             need_update = True
-            ret['changes'].setdefault('new', {})['Environment'] = Environment
-            ret['changes'].setdefault('old', {})['Environment'] = func.get(
-                'Environment')
+            ret["changes"].setdefault("new", {})["Environment"] = Environment
+            ret["changes"].setdefault("old", {})["Environment"] = func.get(
+                "Environment"
+            )
 
     if need_update:
-        ret['comment'] = os.linesep.join(
-            [ret['comment'], 'Function config to be modified'])
-        if __opts__['test']:
-            ret['comment'] = 'Function {0} set to be modified.'.format(FunctionName)
-            ret['result'] = None
+        ret["comment"] = os.linesep.join(
+            [ret["comment"], "Function config to be modified"]
+        )
+        if __opts__["test"]:
+            ret["comment"] = "Function {0} set to be modified.".format(FunctionName)
+            ret["result"] = None
             return ret
-        _r = __salt__['boto_lambda.update_function_config'](
-            FunctionName=FunctionName, Role=Role, Handler=Handler,
-            Description=Description, Timeout=Timeout, MemorySize=MemorySize,
-            VpcConfig=fixed_VpcConfig, Environment=Environment, region=region,
-            key=key, keyid=keyid, profile=profile, WaitForRole=True,
-            RoleRetries=RoleRetries)
-        if not _r.get('updated'):
-            ret['result'] = False
-            ret['comment'] = ('Failed to update function: '
-                              '{0}.'.format(_r['error']['message']))
-            ret['changes'] = {}
+        _r = __salt__["boto_lambda.update_function_config"](
+            FunctionName=FunctionName,
+            Role=Role,
+            Handler=Handler,
+            Description=Description,
+            Timeout=Timeout,
+            MemorySize=MemorySize,
+            VpcConfig=fixed_VpcConfig,
+            Environment=Environment,
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
+            WaitForRole=True,
+            RoleRetries=RoleRetries,
+        )
+        if not _r.get("updated"):
+            ret["result"] = False
+            ret["comment"] = "Failed to update function: " "{0}.".format(
+                _r["error"]["message"]
+            )
+            ret["changes"] = {}
     return ret
 
 
-def _function_code_present(FunctionName, ZipFile, S3Bucket, S3Key,
-                           S3ObjectVersion, region, key, keyid, profile):
-    ret = {'result': True, 'comment': '', 'changes': {}}
-    func = __salt__['boto_lambda.describe_function'](
-        FunctionName, region=region,
-        key=key, keyid=keyid, profile=profile)['function']
+def _function_code_present(
+    FunctionName, ZipFile, S3Bucket, S3Key, S3ObjectVersion, region, key, keyid, profile
+):
+    ret = {"result": True, "comment": "", "changes": {}}
+    func = __salt__["boto_lambda.describe_function"](
+        FunctionName, region=region, key=key, keyid=keyid, profile=profile
+    )["function"]
     update = False
     if ZipFile:
         size = os.path.getsize(ZipFile)
-        if size == func['CodeSize']:
+        if size == func["CodeSize"]:
             sha = hashlib.sha256()
-            with salt.utils.files.fopen(ZipFile, 'rb') as f:
+            with salt.utils.files.fopen(ZipFile, "rb") as f:
                 sha.update(f.read())
-            hashed = sha.digest().encode('base64').strip()
-            if hashed != func['CodeSha256']:
+            hashed = sha.digest().encode("base64").strip()
+            if hashed != func["CodeSha256"]:
                 update = True
         else:
             update = True
@@ -423,87 +522,117 @@ def _function_code_present(FunctionName, ZipFile, S3Bucket, S3Key,
         # idempotent
         update = True
     if update:
-        if __opts__['test']:
-            ret['comment'] = 'Function {0} set to be modified.'.format(FunctionName)
-            ret['result'] = None
+        if __opts__["test"]:
+            ret["comment"] = "Function {0} set to be modified.".format(FunctionName)
+            ret["result"] = None
             return ret
-        ret['changes']['old'] = {
-            'CodeSha256': func['CodeSha256'],
-            'CodeSize': func['CodeSize'],
+        ret["changes"]["old"] = {
+            "CodeSha256": func["CodeSha256"],
+            "CodeSize": func["CodeSize"],
         }
-        func = __salt__['boto_lambda.update_function_code'](
-            FunctionName, ZipFile, S3Bucket,
-            S3Key, S3ObjectVersion,
-            region=region, key=key, keyid=keyid, profile=profile)
-        if not func.get('updated'):
-            ret['result'] = False
-            ret['comment'] = ('Failed to update function: '
-                              '{0}.'.format(func['error']['message']))
-            ret['changes'] = {}
+        func = __salt__["boto_lambda.update_function_code"](
+            FunctionName,
+            ZipFile,
+            S3Bucket,
+            S3Key,
+            S3ObjectVersion,
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
+        )
+        if not func.get("updated"):
+            ret["result"] = False
+            ret["comment"] = "Failed to update function: " "{0}.".format(
+                func["error"]["message"]
+            )
+            ret["changes"] = {}
             return ret
-        func = func['function']
-        if func['CodeSha256'] != ret['changes']['old']['CodeSha256'] or \
-                func['CodeSize'] != ret['changes']['old']['CodeSize']:
-            ret['comment'] = os.linesep.join(
-                [ret['comment'], 'Function code to be modified'])
-            ret['changes']['new'] = {
-                'CodeSha256': func['CodeSha256'],
-                'CodeSize': func['CodeSize'],
+        func = func["function"]
+        if (
+            func["CodeSha256"] != ret["changes"]["old"]["CodeSha256"]
+            or func["CodeSize"] != ret["changes"]["old"]["CodeSize"]
+        ):
+            ret["comment"] = os.linesep.join(
+                [ret["comment"], "Function code to be modified"]
+            )
+            ret["changes"]["new"] = {
+                "CodeSha256": func["CodeSha256"],
+                "CodeSize": func["CodeSize"],
             }
         else:
-            del ret['changes']['old']
+            del ret["changes"]["old"]
     return ret
 
 
-def _function_permissions_present(FunctionName, Permissions,
-                                  region, key, keyid, profile):
-    ret = {'result': True, 'comment': '', 'changes': {}}
-    curr_permissions = __salt__['boto_lambda.get_permissions'](
-        FunctionName, region=region,
-        key=key, keyid=keyid, profile=profile).get('permissions')
+def _function_permissions_present(
+    FunctionName, Permissions, region, key, keyid, profile
+):
+    ret = {"result": True, "comment": "", "changes": {}}
+    curr_permissions = __salt__["boto_lambda.get_permissions"](
+        FunctionName, region=region, key=key, keyid=keyid, profile=profile
+    ).get("permissions")
     if curr_permissions is None:
         curr_permissions = {}
     need_update = False
     diffs = salt.utils.data.compare_dicts(curr_permissions, Permissions or {})
     if bool(diffs):
-        ret['comment'] = os.linesep.join(
-            [ret['comment'], 'Function permissions to be modified'])
-        if __opts__['test']:
-            ret['comment'] = 'Function {0} set to be modified.'.format(FunctionName)
-            ret['result'] = None
+        ret["comment"] = os.linesep.join(
+            [ret["comment"], "Function permissions to be modified"]
+        )
+        if __opts__["test"]:
+            ret["comment"] = "Function {0} set to be modified.".format(FunctionName)
+            ret["result"] = None
             return ret
         for sid, diff in six.iteritems(diffs):
-            if diff.get('old', '') != '':
+            if diff.get("old", "") != "":
                 # There's a permssion that needs to be removed
-                _r = __salt__['boto_lambda.remove_permission'](
-                    FunctionName=FunctionName, StatementId=sid,
-                    region=region, key=key, keyid=keyid, profile=profile)
-                ret['changes'].setdefault(
-                    'new', {}).setdefault('Permissions', {})[sid] = {}
-                ret['changes'].setdefault(
-                    'old', {}).setdefault('Permissions', {})[sid] = diff['old']
-            if diff.get('new', '') != '':
+                _r = __salt__["boto_lambda.remove_permission"](
+                    FunctionName=FunctionName,
+                    StatementId=sid,
+                    region=region,
+                    key=key,
+                    keyid=keyid,
+                    profile=profile,
+                )
+                ret["changes"].setdefault("new", {}).setdefault("Permissions", {})[
+                    sid
+                ] = {}
+                ret["changes"].setdefault("old", {}).setdefault("Permissions", {})[
+                    sid
+                ] = diff["old"]
+            if diff.get("new", "") != "":
                 # New permission information needs to be added
-                _r = __salt__['boto_lambda.add_permission'](
-                    FunctionName=FunctionName, StatementId=sid,
-                    region=region, key=key, keyid=keyid, profile=profile,
-                    **diff['new'])
-                ret['changes'].setdefault(
-                    'new', {}).setdefault('Permissions', {})[sid] = diff['new']
-                oldperms = ret['changes'].setdefault(
-                    'old', {}).setdefault('Permissions', {})
+                _r = __salt__["boto_lambda.add_permission"](
+                    FunctionName=FunctionName,
+                    StatementId=sid,
+                    region=region,
+                    key=key,
+                    keyid=keyid,
+                    profile=profile,
+                    **diff["new"]
+                )
+                ret["changes"].setdefault("new", {}).setdefault("Permissions", {})[
+                    sid
+                ] = diff["new"]
+                oldperms = (
+                    ret["changes"].setdefault("old", {}).setdefault("Permissions", {})
+                )
                 if sid not in oldperms:
                     oldperms[sid] = {}
-            if not _r.get('updated'):
-                ret['result'] = False
-                ret['comment'] = ('Failed to update function: '
-                                  '{0}.'.format(_r['error']['message']))
-                ret['changes'] = {}
+            if not _r.get("updated"):
+                ret["result"] = False
+                ret["comment"] = "Failed to update function: " "{0}.".format(
+                    _r["error"]["message"]
+                )
+                ret["changes"] = {}
     return ret
 
 
-def function_absent(name, FunctionName, region=None, key=None, keyid=None, profile=None):
-    '''
+def function_absent(
+    name, FunctionName, region=None, key=None, keyid=None, profile=None
+):
+    """
     Ensure function with passed properties is absent.
 
     name
@@ -524,48 +653,53 @@ def function_absent(name, FunctionName, region=None, key=None, keyid=None, profi
     profile
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
-    '''
+    """
 
-    ret = {'name': FunctionName,
-           'result': True,
-           'comment': '',
-           'changes': {}
-           }
+    ret = {"name": FunctionName, "result": True, "comment": "", "changes": {}}
 
-    r = __salt__['boto_lambda.function_exists'](
-        FunctionName, region=region, key=key, keyid=keyid, profile=profile)
-    if 'error' in r:
-        ret['result'] = False
-        ret['comment'] = 'Failed to delete function: {0}.'.format(r['error'][
-            'message'])
+    r = __salt__["boto_lambda.function_exists"](
+        FunctionName, region=region, key=key, keyid=keyid, profile=profile
+    )
+    if "error" in r:
+        ret["result"] = False
+        ret["comment"] = "Failed to delete function: {0}.".format(r["error"]["message"])
         return ret
 
-    if r and not r['exists']:
-        ret['comment'] = 'Function {0} does not exist.'.format(FunctionName)
+    if r and not r["exists"]:
+        ret["comment"] = "Function {0} does not exist.".format(FunctionName)
         return ret
 
-    if __opts__['test']:
-        ret['comment'] = 'Function {0} is set to be removed.'.format(
-            FunctionName)
-        ret['result'] = None
+    if __opts__["test"]:
+        ret["comment"] = "Function {0} is set to be removed.".format(FunctionName)
+        ret["result"] = None
         return ret
-    r = __salt__['boto_lambda.delete_function'](FunctionName,
-                                                region=region, key=key,
-                                                keyid=keyid, profile=profile)
-    if not r['deleted']:
-        ret['result'] = False
-        ret['comment'] = ('Failed to delete function: '
-                          '{0}.'.format(r['error']['message']))
+    r = __salt__["boto_lambda.delete_function"](
+        FunctionName, region=region, key=key, keyid=keyid, profile=profile
+    )
+    if not r["deleted"]:
+        ret["result"] = False
+        ret["comment"] = "Failed to delete function: " "{0}.".format(
+            r["error"]["message"]
+        )
         return ret
-    ret['changes']['old'] = {'function': FunctionName}
-    ret['changes']['new'] = {'function': None}
-    ret['comment'] = 'Function {0} deleted.'.format(FunctionName)
+    ret["changes"]["old"] = {"function": FunctionName}
+    ret["changes"]["new"] = {"function": None}
+    ret["comment"] = "Function {0} deleted.".format(FunctionName)
     return ret
 
 
-def alias_present(name, FunctionName, Name, FunctionVersion, Description='',
-                  region=None, key=None, keyid=None, profile=None):
-    '''
+def alias_present(
+    name,
+    FunctionName,
+    Name,
+    FunctionVersion,
+    Description="",
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+):
+    """
     Ensure alias exists.
 
     name
@@ -596,81 +730,99 @@ def alias_present(name, FunctionName, Name, FunctionVersion, Description='',
     profile
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
-    '''
-    ret = {'name': Name,
-           'result': True,
-           'comment': '',
-           'changes': {}
-           }
+    """
+    ret = {"name": Name, "result": True, "comment": "", "changes": {}}
 
-    r = __salt__['boto_lambda.alias_exists'](
-        FunctionName=FunctionName, Name=Name, region=region,
-        key=key, keyid=keyid, profile=profile)
+    r = __salt__["boto_lambda.alias_exists"](
+        FunctionName=FunctionName,
+        Name=Name,
+        region=region,
+        key=key,
+        keyid=keyid,
+        profile=profile,
+    )
 
-    if 'error' in r:
-        ret['result'] = False
-        ret['comment'] = ('Failed to create alias: '
-                          '{0}.'.format(r['error']['message']))
+    if "error" in r:
+        ret["result"] = False
+        ret["comment"] = "Failed to create alias: " "{0}.".format(r["error"]["message"])
         return ret
 
-    if not r.get('exists'):
-        if __opts__['test']:
-            ret['comment'] = 'Alias {0} is set to be created.'.format(Name)
-            ret['result'] = None
+    if not r.get("exists"):
+        if __opts__["test"]:
+            ret["comment"] = "Alias {0} is set to be created.".format(Name)
+            ret["result"] = None
             return ret
-        r = __salt__['boto_lambda.create_alias'](FunctionName, Name,
-                                                 FunctionVersion, Description,
-                                                 region, key, keyid, profile)
-        if not r.get('created'):
-            ret['result'] = False
-            ret['comment'] = ('Failed to create alias: '
-                              '{0}.'.format(r['error']['message']))
+        r = __salt__["boto_lambda.create_alias"](
+            FunctionName,
+            Name,
+            FunctionVersion,
+            Description,
+            region,
+            key,
+            keyid,
+            profile,
+        )
+        if not r.get("created"):
+            ret["result"] = False
+            ret["comment"] = "Failed to create alias: " "{0}.".format(
+                r["error"]["message"]
+            )
             return ret
-        _describe = __salt__['boto_lambda.describe_alias'](
-            FunctionName, Name, region=region, key=key,
-            keyid=keyid, profile=profile)
-        ret['changes']['old'] = {'alias': None}
-        ret['changes']['new'] = _describe
-        ret['comment'] = 'Alias {0} created.'.format(Name)
+        _describe = __salt__["boto_lambda.describe_alias"](
+            FunctionName, Name, region=region, key=key, keyid=keyid, profile=profile
+        )
+        ret["changes"]["old"] = {"alias": None}
+        ret["changes"]["new"] = _describe
+        ret["comment"] = "Alias {0} created.".format(Name)
         return ret
 
-    ret['comment'] = os.linesep.join(
-        [ret['comment'], 'Alias {0} is present.'.format(Name)])
-    ret['changes'] = {}
-    _describe = __salt__['boto_lambda.describe_alias'](
-        FunctionName, Name, region=region, key=key, keyid=keyid,
-        profile=profile)['alias']
+    ret["comment"] = os.linesep.join(
+        [ret["comment"], "Alias {0} is present.".format(Name)]
+    )
+    ret["changes"] = {}
+    _describe = __salt__["boto_lambda.describe_alias"](
+        FunctionName, Name, region=region, key=key, keyid=keyid, profile=profile
+    )["alias"]
 
     need_update = False
-    options = {'FunctionVersion': 'FunctionVersion',
-               'Description': 'Description'}
+    options = {"FunctionVersion": "FunctionVersion", "Description": "Description"}
 
     for val, var in six.iteritems(options):
         if _describe[val] != locals()[var]:
             need_update = True
-            ret['changes'].setdefault('new', {})[var] = locals()[var]
-            ret['changes'].setdefault('old', {})[var] = _describe[val]
+            ret["changes"].setdefault("new", {})[var] = locals()[var]
+            ret["changes"].setdefault("old", {})[var] = _describe[val]
     if need_update:
-        ret['comment'] = os.linesep.join(
-            [ret['comment'], 'Alias config to be modified'])
-        if __opts__['test']:
-            ret['comment'] = 'Alias {0} set to be modified.'.format(Name)
-            ret['result'] = None
+        ret["comment"] = os.linesep.join(
+            [ret["comment"], "Alias config to be modified"]
+        )
+        if __opts__["test"]:
+            ret["comment"] = "Alias {0} set to be modified.".format(Name)
+            ret["result"] = None
             return ret
-        _r = __salt__['boto_lambda.update_alias'](
-            FunctionName=FunctionName, Name=Name,
-            FunctionVersion=FunctionVersion, Description=Description,
-            region=region, key=key, keyid=keyid, profile=profile)
-        if not _r.get('updated'):
-            ret['result'] = False
-            ret['comment'] = ('Failed to update alias: '
-                              '{0}.'.format(_r['error']['message']))
-            ret['changes'] = {}
+        _r = __salt__["boto_lambda.update_alias"](
+            FunctionName=FunctionName,
+            Name=Name,
+            FunctionVersion=FunctionVersion,
+            Description=Description,
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
+        )
+        if not _r.get("updated"):
+            ret["result"] = False
+            ret["comment"] = "Failed to update alias: " "{0}.".format(
+                _r["error"]["message"]
+            )
+            ret["changes"] = {}
     return ret
 
 
-def alias_absent(name, FunctionName, Name, region=None, key=None, keyid=None, profile=None):
-    '''
+def alias_absent(
+    name, FunctionName, Name, region=None, key=None, keyid=None, profile=None
+):
+    """
     Ensure alias with passed properties is absent.
 
     name
@@ -694,64 +846,66 @@ def alias_absent(name, FunctionName, Name, region=None, key=None, keyid=None, pr
     profile
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
-    '''
+    """
 
-    ret = {'name': Name,
-           'result': True,
-           'comment': '',
-           'changes': {}
-           }
+    ret = {"name": Name, "result": True, "comment": "", "changes": {}}
 
-    r = __salt__['boto_lambda.alias_exists'](
-        FunctionName, Name, region=region, key=key, keyid=keyid,
-        profile=profile)
-    if 'error' in r:
-        ret['result'] = False
-        ret['comment'] = ('Failed to delete alias: '
-                          '{0}.'.format(r['error']['message']))
+    r = __salt__["boto_lambda.alias_exists"](
+        FunctionName, Name, region=region, key=key, keyid=keyid, profile=profile
+    )
+    if "error" in r:
+        ret["result"] = False
+        ret["comment"] = "Failed to delete alias: " "{0}.".format(r["error"]["message"])
         return ret
 
-    if r and not r['exists']:
-        ret['comment'] = 'Alias {0} does not exist.'.format(Name)
+    if r and not r["exists"]:
+        ret["comment"] = "Alias {0} does not exist.".format(Name)
         return ret
 
-    if __opts__['test']:
-        ret['comment'] = 'Alias {0} is set to be removed.'.format(Name)
-        ret['result'] = None
+    if __opts__["test"]:
+        ret["comment"] = "Alias {0} is set to be removed.".format(Name)
+        ret["result"] = None
         return ret
-    r = __salt__['boto_lambda.delete_alias'](
-        FunctionName, Name, region=region, key=key, keyid=keyid,
-        profile=profile)
-    if not r['deleted']:
-        ret['result'] = False
-        ret['comment'] = ('Failed to delete alias: '
-                          '{0}.'.format(r['error']['message']))
+    r = __salt__["boto_lambda.delete_alias"](
+        FunctionName, Name, region=region, key=key, keyid=keyid, profile=profile
+    )
+    if not r["deleted"]:
+        ret["result"] = False
+        ret["comment"] = "Failed to delete alias: " "{0}.".format(r["error"]["message"])
         return ret
-    ret['changes']['old'] = {'alias': Name}
-    ret['changes']['new'] = {'alias': None}
-    ret['comment'] = 'Alias {0} deleted.'.format(Name)
+    ret["changes"]["old"] = {"alias": Name}
+    ret["changes"]["new"] = {"alias": None}
+    ret["comment"] = "Alias {0} deleted.".format(Name)
     return ret
 
 
 def _get_function_arn(name, region=None, key=None, keyid=None, profile=None):
-    if name.startswith('arn:aws:lambda:'):
+    if name.startswith("arn:aws:lambda:"):
         return name
 
-    account_id = __salt__['boto_iam.get_account_id'](
+    account_id = __salt__["boto_iam.get_account_id"](
         region=region, key=key, keyid=keyid, profile=profile
     )
-    if profile and 'region' in profile:
-        region = profile['region']
+    if profile and "region" in profile:
+        region = profile["region"]
     if region is None:
-        region = 'us-east-1'
-    return 'arn:aws:lambda:{0}:{1}:function:{2}'.format(region, account_id, name)
+        region = "us-east-1"
+    return "arn:aws:lambda:{0}:{1}:function:{2}".format(region, account_id, name)
 
 
-def event_source_mapping_present(name, EventSourceArn, FunctionName,
-                                 StartingPosition, Enabled=True, BatchSize=100,
-                                 region=None, key=None, keyid=None,
-                                 profile=None):
-    '''
+def event_source_mapping_present(
+    name,
+    EventSourceArn,
+    FunctionName,
+    StartingPosition,
+    Enabled=True,
+    BatchSize=100,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+):
+    """
     Ensure event source mapping exists.
 
     name
@@ -799,101 +953,127 @@ def event_source_mapping_present(name, EventSourceArn, FunctionName,
     profile
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
-    '''
-    ret = {'name': None,
-           'result': True,
-           'comment': '',
-           'changes': {}
-           }
+    """
+    ret = {"name": None, "result": True, "comment": "", "changes": {}}
 
-    r = __salt__['boto_lambda.event_source_mapping_exists'](
-        EventSourceArn=EventSourceArn, FunctionName=FunctionName,
-        region=region, key=key, keyid=keyid, profile=profile)
+    r = __salt__["boto_lambda.event_source_mapping_exists"](
+        EventSourceArn=EventSourceArn,
+        FunctionName=FunctionName,
+        region=region,
+        key=key,
+        keyid=keyid,
+        profile=profile,
+    )
 
-    if 'error' in r:
-        ret['result'] = False
-        ret['comment'] = ('Failed to create event source mapping: '
-                          '{0}.'.format(r['error']['message']))
+    if "error" in r:
+        ret["result"] = False
+        ret["comment"] = "Failed to create event source mapping: " "{0}.".format(
+            r["error"]["message"]
+        )
         return ret
 
-    if not r.get('exists'):
-        if __opts__['test']:
-            ret['comment'] = ('Event source mapping {0} is set '
-                              'to be created.'.format(FunctionName))
-            ret['result'] = None
+    if not r.get("exists"):
+        if __opts__["test"]:
+            ret["comment"] = "Event source mapping {0} is set " "to be created.".format(
+                FunctionName
+            )
+            ret["result"] = None
             return ret
-        r = __salt__['boto_lambda.create_event_source_mapping'](
-            EventSourceArn=EventSourceArn, FunctionName=FunctionName,
-            StartingPosition=StartingPosition, Enabled=Enabled,
-            BatchSize=BatchSize, region=region, key=key, keyid=keyid,
-            profile=profile)
-        if not r.get('created'):
-            ret['result'] = False
-            ret['comment'] = ('Failed to create event source mapping: '
-                              '{0}.'.format(r['error']['message']))
+        r = __salt__["boto_lambda.create_event_source_mapping"](
+            EventSourceArn=EventSourceArn,
+            FunctionName=FunctionName,
+            StartingPosition=StartingPosition,
+            Enabled=Enabled,
+            BatchSize=BatchSize,
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
+        )
+        if not r.get("created"):
+            ret["result"] = False
+            ret["comment"] = "Failed to create event source mapping: " "{0}.".format(
+                r["error"]["message"]
+            )
             return ret
-        _describe = __salt__['boto_lambda.describe_event_source_mapping'](
-            EventSourceArn=EventSourceArn, FunctionName=FunctionName,
-            region=region, key=key, keyid=keyid, profile=profile)
-        ret['name'] = _describe['event_source_mapping']['UUID']
-        ret['changes']['old'] = {'event_source_mapping': None}
-        ret['changes']['new'] = _describe
-        ret['comment'] = ('Event source mapping {0} '
-                          'created.'.format(ret['name']))
+        _describe = __salt__["boto_lambda.describe_event_source_mapping"](
+            EventSourceArn=EventSourceArn,
+            FunctionName=FunctionName,
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
+        )
+        ret["name"] = _describe["event_source_mapping"]["UUID"]
+        ret["changes"]["old"] = {"event_source_mapping": None}
+        ret["changes"]["new"] = _describe
+        ret["comment"] = "Event source mapping {0} " "created.".format(ret["name"])
         return ret
 
-    ret['comment'] = os.linesep.join(
-        [ret['comment'], 'Event source mapping is present.'])
-    ret['changes'] = {}
-    _describe = __salt__['boto_lambda.describe_event_source_mapping'](
-        EventSourceArn=EventSourceArn, FunctionName=FunctionName,
-        region=region, key=key, keyid=keyid,
-        profile=profile)['event_source_mapping']
+    ret["comment"] = os.linesep.join(
+        [ret["comment"], "Event source mapping is present."]
+    )
+    ret["changes"] = {}
+    _describe = __salt__["boto_lambda.describe_event_source_mapping"](
+        EventSourceArn=EventSourceArn,
+        FunctionName=FunctionName,
+        region=region,
+        key=key,
+        keyid=keyid,
+        profile=profile,
+    )["event_source_mapping"]
 
     need_update = False
-    options = {'BatchSize': 'BatchSize'}
+    options = {"BatchSize": "BatchSize"}
 
     for val, var in six.iteritems(options):
         if _describe[val] != locals()[var]:
             need_update = True
-            ret['changes'].setdefault('new', {})[var] = locals()[var]
-            ret['changes'].setdefault('old', {})[var] = _describe[val]
+            ret["changes"].setdefault("new", {})[var] = locals()[var]
+            ret["changes"].setdefault("old", {})[var] = _describe[val]
     # verify FunctionName against FunctionArn
-    function_arn = _get_function_arn(FunctionName, region=region,
-                                     key=key, keyid=keyid, profile=profile)
-    if _describe['FunctionArn'] != function_arn:
+    function_arn = _get_function_arn(
+        FunctionName, region=region, key=key, keyid=keyid, profile=profile
+    )
+    if _describe["FunctionArn"] != function_arn:
         need_update = True
-        ret['changes'].setdefault('new', {})['FunctionArn'] = function_arn
-        ret['changes'].setdefault('old', {})['FunctionArn'] = _describe[
-            'FunctionArn']
+        ret["changes"].setdefault("new", {})["FunctionArn"] = function_arn
+        ret["changes"].setdefault("old", {})["FunctionArn"] = _describe["FunctionArn"]
     # TODO check for 'Enabled', since it doesn't directly map to a specific
     # state
     if need_update:
-        ret['comment'] = os.linesep.join(
-            [ret['comment'], 'Event source mapping to be modified'])
-        if __opts__['test']:
-            ret['comment'] = (
-                'Event source mapping {0} set to be modified.'.format(
-                    _describe['UUID']
-                )
+        ret["comment"] = os.linesep.join(
+            [ret["comment"], "Event source mapping to be modified"]
+        )
+        if __opts__["test"]:
+            ret["comment"] = "Event source mapping {0} set to be modified.".format(
+                _describe["UUID"]
             )
-            ret['result'] = None
+            ret["result"] = None
             return ret
-        _r = __salt__['boto_lambda.update_event_source_mapping'](
-            UUID=_describe['UUID'], FunctionName=FunctionName,
-            Enabled=Enabled, BatchSize=BatchSize,
-            region=region, key=key, keyid=keyid, profile=profile)
-        if not _r.get('updated'):
-            ret['result'] = False
-            ret['comment'] = ('Failed to update mapping: '
-                              '{0}.'.format(_r['error']['message']))
-            ret['changes'] = {}
+        _r = __salt__["boto_lambda.update_event_source_mapping"](
+            UUID=_describe["UUID"],
+            FunctionName=FunctionName,
+            Enabled=Enabled,
+            BatchSize=BatchSize,
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
+        )
+        if not _r.get("updated"):
+            ret["result"] = False
+            ret["comment"] = "Failed to update mapping: " "{0}.".format(
+                _r["error"]["message"]
+            )
+            ret["changes"] = {}
     return ret
 
 
-def event_source_mapping_absent(name, EventSourceArn, FunctionName,
-                                region=None, key=None, keyid=None, profile=None):
-    '''
+def event_source_mapping_absent(
+    name, EventSourceArn, FunctionName, region=None, key=None, keyid=None, profile=None
+):
+    """
     Ensure event source mapping with passed properties is absent.
 
     name
@@ -917,41 +1097,49 @@ def event_source_mapping_absent(name, EventSourceArn, FunctionName,
     profile
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
-    '''
+    """
 
-    ret = {'name': None,
-           'result': True,
-           'comment': '',
-           'changes': {}
-           }
+    ret = {"name": None, "result": True, "comment": "", "changes": {}}
 
-    desc = __salt__['boto_lambda.describe_event_source_mapping'](
-        EventSourceArn=EventSourceArn, FunctionName=FunctionName,
-        region=region, key=key, keyid=keyid, profile=profile)
-    if 'error' in desc:
-        ret['result'] = False
-        ret['comment'] = ('Failed to delete event source mapping: '
-                          '{0}.'.format(desc['error']['message']))
+    desc = __salt__["boto_lambda.describe_event_source_mapping"](
+        EventSourceArn=EventSourceArn,
+        FunctionName=FunctionName,
+        region=region,
+        key=key,
+        keyid=keyid,
+        profile=profile,
+    )
+    if "error" in desc:
+        ret["result"] = False
+        ret["comment"] = "Failed to delete event source mapping: " "{0}.".format(
+            desc["error"]["message"]
+        )
         return ret
 
-    if not desc.get('event_source_mapping'):
-        ret['comment'] = 'Event source mapping does not exist.'
+    if not desc.get("event_source_mapping"):
+        ret["comment"] = "Event source mapping does not exist."
         return ret
 
-    ret['name'] = desc['event_source_mapping']['UUID']
-    if __opts__['test']:
-        ret['comment'] = 'Event source mapping is set to be removed.'
-        ret['result'] = None
+    ret["name"] = desc["event_source_mapping"]["UUID"]
+    if __opts__["test"]:
+        ret["comment"] = "Event source mapping is set to be removed."
+        ret["result"] = None
         return ret
-    r = __salt__['boto_lambda.delete_event_source_mapping'](
-        EventSourceArn=EventSourceArn, FunctionName=FunctionName,
-        region=region, key=key, keyid=keyid, profile=profile)
-    if not r['deleted']:
-        ret['result'] = False
-        ret['comment'] = 'Failed to delete event source mapping: {0}.'.format(r['error'][
-            'message'])
+    r = __salt__["boto_lambda.delete_event_source_mapping"](
+        EventSourceArn=EventSourceArn,
+        FunctionName=FunctionName,
+        region=region,
+        key=key,
+        keyid=keyid,
+        profile=profile,
+    )
+    if not r["deleted"]:
+        ret["result"] = False
+        ret["comment"] = "Failed to delete event source mapping: {0}.".format(
+            r["error"]["message"]
+        )
         return ret
-    ret['changes']['old'] = desc
-    ret['changes']['new'] = {'event_source_mapping': None}
-    ret['comment'] = 'Event source mapping deleted.'
+    ret["changes"]["old"] = desc
+    ret["changes"]["new"] = {"event_source_mapping": None}
+    ret["comment"] = "Event source mapping deleted."
     return ret
