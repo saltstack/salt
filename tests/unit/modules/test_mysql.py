@@ -628,17 +628,19 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
         multiline
         comment
         */
-        CREATE TABLE test_update (a INT); # end of line comment
+        CREATE TABLE test_update (a VARCHAR(25)); # end of line comment
         # example comment
-        insert into test_update values (1); -- ending comment
+        insert into test_update values ("some #hash value");            -- ending comment
+        insert into test_update values ("crazy -- not comment"); -- another ending comment
         -- another comment type
         """
         expected_response = """/*
 multiline
 comment
 */
-CREATE TABLE test_update (a INT);
-insert into test_update values (1);
+CREATE TABLE test_update (a VARCHAR(25));
+insert into test_update values ("some #hash value");
+insert into test_update values ("crazy -- not comment");
 """
         output = mysql._sanitize_comments(input_data)
         self.assertEqual(output, expected_response)
