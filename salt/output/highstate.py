@@ -190,7 +190,7 @@ def _format_host(host, data, indent_level=1):
         nchanges = 1
         hstrs.append(('{0}    {1}{2[ENDC]}'.format(hcolor, data, colors)))
         hcolor = colors["CYAN"]  # Print the minion name in cyan
-    elif isinstance(data, int) or isinstance(data, six.string_types):
+    elif isinstance(data, six.string_types):
         # Data in this format is from saltmod.function,
         # so it is always a 'change'
         nchanges = 1
