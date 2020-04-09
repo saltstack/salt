@@ -3,6 +3,10 @@ stages:
   - lint
   - test
 
+include:
+  - local: 'cicd/kitchen_template.yml'
+  - local: 'cicd/kitchen_testruns.yml'
+
 # pre-commit-run-all:
 #   image:
 #     name: registry.gitlab.com/saltstack/pop/cicd/containers/ubuntu1804:latest
