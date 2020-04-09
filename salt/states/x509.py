@@ -158,14 +158,16 @@ This state creates a private key then requests a certificate signed by ca accord
 """
 
 # Import Python Libs
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, print_function, unicode_literals
+
+import copy
 import datetime
 import os
 import re
-import copy
 
 # Import Salt Libs
 import salt.exceptions
+import salt.utils.versions
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -504,7 +506,9 @@ def _certificate_is_valid(name, days_remaining, append_certs, **cert_spec):
         return False, "{0} is not a valid certificate: {1}".format(name, str(e)), {}
 
 
-def certificate_managed(name, days_remaining=90, append_certs=None, **kwargs):
+def certificate_managed(
+    name, days_remaining=90, append_certs=None, managed_private_key=None, **kwargs
+):
     """
     Manage a Certificate
 
@@ -521,6 +525,10 @@ def certificate_managed(name, days_remaining=90, append_certs=None, **kwargs):
     append_certs:
         A list of certificates to be appended to the managed file.
         They must be valid PEM files, otherwise an error will be thrown.
+
+    managed_private_key:
+        Has no effect since v2016.11 and will be removed in Salt Aluminium.
+        Use a separate x509.private_key_managed call instead.
 
     kwargs:
         Any arguments supported by :py:func:`x509.create_certificate
@@ -573,9 +581,10 @@ def certificate_managed(name, days_remaining=90, append_certs=None, **kwargs):
             "public_key or signing_private_key must be specified."
         )
 
-    if "managed_private_key" in kwargs:
-        raise salt.exceptions.SaltInvocationError(
-            "managed_private_key is no longer supported by x509.certificate_managed, use a separate x509.private_key_managed call instead."
+    if managed_private_key:
+        salt.utils.versions.warn_until(
+            "Aluminium",
+            "Passing 'managed_private_key' to x509.certificate_managed has no effect and will be removed Salt Aluminium. Use a separate x509.private_key_managed call instead.",
         )
 
     ret = {"name": name, "result": False, "changes": {}, "comment": ""}
