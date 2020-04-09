@@ -1,12 +1,50 @@
 ---
 stages:
+  - lint
   - test
 
-demo-test:
-  image: ubuntu:18.04
+lint-salt-full:
+  image: python:3.6-alpine
+  stage: lint
+  script:
+    - python --version
+    - pip3 install -U nox-py2==2019.6.25
+    - nox --version
+    - nox --install-only -e lint-salt
+    - EC=254
+    - export PYLINT_REPORT=pylint-report-salt-full.log
+    - nox -e lint-salt
+    - EC=$?
+    - exit $EC
+
+lint-tests-full:
+  image: python:3.6-alpine
+  stage: lint
+  script:
+    - python --version
+    - pip3 install -U nox-py2==2019.6.25
+    - nox --version
+    - nox --install-only -e lint-tests
+    - EC=254
+    - export PYLINT_REPORT=pylint-report-tests-full.log
+    - nox -e lint-tests
+    - EC=$?
+    - exit $EC
+
+docs-build-html:
+  image: python:3.6-alpine
   stage: test
   script:
-    - echo "hello world"
-  only:
-    refs:
-      - schedules
+    - python --version
+    - pip install -U nox-py2==2019.6.25
+    - nox --version
+    - nox -e 'docs-html(compress=True)'
+
+docs-build-man-pages:
+  image: python:3.6-alpine
+  stage: test
+  script:
+    - python --version
+    - pip install -U nox-py2==2019.6.25
+    - nox --version
+    - nox -e 'docs-man(compress=True, update=False)'
