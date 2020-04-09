@@ -65,7 +65,6 @@ def bridge_pytest_and_runtests_integration(
     # salt_syndic,
     salt_master,
     salt_minion,
-    salt_sub_minion,
 ):
 
     yield
