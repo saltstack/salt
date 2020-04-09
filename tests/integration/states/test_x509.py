@@ -1,17 +1,17 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, unicode_literals
-import os
+
 import datetime
+import os
 import textwrap
 
 import salt.utils.files
 from salt.ext import six
-
-from tests.support.helpers import with_tempfile
 from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
+from tests.support.helpers import with_tempfile
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import skipIf
 
 try:
     import M2Crypto  # pylint: disable=W0611
@@ -283,19 +283,21 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
 
     @with_tempfile(suffix=".crt", create=False)
     @with_tempfile(suffix=".key", create=False)
-    def test_managed_private_key_not_supported_by_certificate_managed(
+    def test_certificate_managed_with_managed_private_key_does_not_error(
         self, keyfile, crtfile
     ):
+        """
+        Test using the deprecated managed_private_key arg in certificate_managed does not throw an error.
+
+        TODO: Remove this test in Aluminium when the arg is removed.
+        """
+        self.run_state("x509.private_key_managed", name=keyfile, bits=4096)
         ret = self.run_state(
             "x509.certificate_managed",
             name=crtfile,
-            ca_server="any-minion-not-important",
-            signing_policy="not-important",
-            public_key=keyfile,
-            managed_private_key={"name": keyfile},
+            CN="localhost",
+            signing_private_key=keyfile,
+            managed_private_key={"name": keyfile, "bits": 4096},
         )
         key = "x509_|-{0}_|-{0}_|-certificate_managed".format(crtfile)
-        expected = "managed_private_key is no longer supported by x509.certificate_managed, use a separate x509.private_key_managed call instead."
-        self.assertIn(expected, ret[key]["comment"], ret)
-        self.assertEqual(False, ret[key]["result"])
-        self.assertEqual({}, ret[key]["changes"])
+        self.assertEqual(True, ret[key]["result"])
