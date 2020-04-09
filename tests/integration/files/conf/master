@@ -44,6 +44,10 @@ external_auth:
       - '@wheel'
       - '@runner'
       - test.*
+    saltdev-runner:
+      - '@wheel'
+      - '@runner'
+      - test.*
     saltops%:
       - '@wheel'
       - '@runner'

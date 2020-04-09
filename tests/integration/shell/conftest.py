@@ -24,5 +24,10 @@ def salt_key_cli(request, salt_factories, salt_minion, salt_master):
 
 
 @pytest.fixture
+def salt_run_cli(request, salt_factories, salt_minion, salt_master):
+    return salt_factories.get_salt_run(request, salt_master.config["id"])
+
+
+@pytest.fixture
 def salt_call_cli(request, salt_factories, salt_minion, salt_master):
     return salt_factories.get_salt_call_cli(request, salt_minion.config["id"])

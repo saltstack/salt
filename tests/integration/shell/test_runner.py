@@ -1,177 +1,162 @@
 # -*- coding: utf-8 -*-
-
 """
 Tests for the salt-run command
 """
 
 from __future__ import absolute_import
 
+import re
+
 import pytest
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.yaml
-from tests.integration.utils import testprogram
-from tests.support.case import ShellCase
-from tests.support.mixins import ShellCaseCommonTestsMixin
 
-USERA = "saltdev"
+USERA = "saltdev-runner"
 USERA_PWD = "saltdev"
 HASHED_USERA_PWD = "$6$SALTsalt$ZZFD90fKFWq8AGmmX0L3uBtS9fXL62SrTk5zcnQ6EkD6zoiM3kB88G1Zvs0xm/gZ7WXJRs5nsTBybUvGSqZkT."
 
 
+@pytest.fixture(scope="module")
+def saltdev_account(sminion):
+    try:
+        assert sminion.functions.user.add(USERA, createhome=False)
+        assert sminion.functions.shadow.set_password(
+            USERA, USERA_PWD if salt.utils.platform.is_darwin() else HASHED_USERA_PWD
+        )
+        assert USERA in sminion.functions.user.list_users()
+        # Run tests
+        yield
+    finally:
+        sminion.functions.user.delete(USERA, remove=True)
+
+
+@pytest.fixture
+def salt_run_cli(salt_factories, salt_minion, salt_master):
+    """
+    Override salt_run_cli fixture to provide an increased default_timeout to the calls
+    """
+    return salt_factories.get_salt_run_cli(
+        salt_master.config["id"], default_timeout=120
+    )
+
+
 @pytest.mark.windows_whitelisted
-class RunTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin):
+class TestSaltRun(object):
     """
     Test the salt-run command
     """
 
-    _call_binary_ = "salt-run"
-
-    def _add_user(self):
-        """
-        helper method to add user
-        """
-        try:
-            add_user = self.run_call("user.add {0} createhome=False".format(USERA))
-            add_pwd = self.run_call(
-                "shadow.set_password {0} '{1}'".format(
-                    USERA,
-                    USERA_PWD if salt.utils.platform.is_darwin() else HASHED_USERA_PWD,
-                )
-            )
-            self.assertTrue(add_user)
-            self.assertTrue(add_pwd)
-            user_list = self.run_call("user.list_users")
-            self.assertIn(USERA, str(user_list))
-        except AssertionError:
-            self.run_call("user.delete {0} remove=True".format(USERA))
-            self.skipTest("Could not add user or password, skipping test")
-
-    def _remove_user(self):
-        """
-        helper method to remove user
-        """
-        user_list = self.run_call("user.list_users")
-        for user in user_list:
-            if USERA in user:
-                self.run_call("user.delete {0} remove=True".format(USERA))
-
-    def test_in_docs(self):
+    def test_in_docs(self, salt_run_cli):
         """
         test the salt-run docs system
         """
-        data = self.run_run("-d")
-        data = "\n".join(data)
-        self.assertIn("jobs.active:", data)
-        self.assertIn("jobs.list_jobs:", data)
-        self.assertIn("jobs.lookup_jid:", data)
-        self.assertIn("manage.down:", data)
-        self.assertIn("manage.up:", data)
-        self.assertIn("network.wol:", data)
-        self.assertIn("network.wollist:", data)
+        ret = salt_run_cli.run("-d")
+        assert "jobs.active:" in ret.stdout
+        assert "jobs.list_jobs:" in ret.stdout
+        assert "jobs.lookup_jid:" in ret.stdout
+        assert "manage.down:" in ret.stdout
+        assert "manage.up:" in ret.stdout
+        assert "network.wol:" in ret.stdout
+        assert "network.wollist:" in ret.stdout
 
-    def test_notin_docs(self):
+    def test_not_in_docs(self, salt_run_cli):
         """
-        Verify that hidden methods are not in run docs
+        test the salt-run docs system
         """
-        data = self.run_run("-d")
-        data = "\n".join(data)
-        self.assertNotIn("jobs.SaltException:", data)
+        ret = salt_run_cli.run("-d")
+        assert "jobs.SaltException:" not in ret.stdout
 
-    def test_salt_documentation_too_many_arguments(self):
+    def test_salt_documentation_too_many_arguments(self, salt_run_cli):
         """
         Test to see if passing additional arguments shows an error
         """
-        data = self.run_run("-d virt.list foo", catch_stderr=True)
-        self.assertIn(
-            "You can only get documentation for one method at one time",
-            "\n".join(data[1]),
-        )
+        ret = salt_run_cli.run("-d", "virt.list", "foo")
+        assert ret.exitcode != 0
+        assert "You can only get documentation for one method at one time" in ret.stderr
 
-    def test_exit_status_unknown_argument(self):
+    def test_exit_status_unknown_argument(self, salt_run_cli):
         """
         Ensure correct exit status when an unknown argument is passed to salt-run.
         """
+        ret = salt_run_cli.run("--unknown-argument")
+        assert ret.exitcode == salt.defaults.exitcodes.EX_USAGE, ret
+        assert "Usage" in ret.stderr
+        assert "no such option: --unknown-argument" in ret.stderr
 
-        runner = testprogram.TestProgramSaltRun(
-            name="run-unknown_argument", parent_dir=self._test_dir,
-        )
-        # Call setup here to ensure config and script exist
-        runner.setup()
-        stdout, stderr, status = runner.run(
-            args=["--unknown-argument"], catch_stderr=True, with_retcode=True,
-        )
-        self.assert_exit_status(
-            status, "EX_USAGE", message="unknown argument", stdout=stdout, stderr=stderr
-        )
-        # runner.shutdown() should be unnecessary since the start-up should fail
-
-    def test_exit_status_correct_usage(self):
+    def test_exit_status_correct_usage(self, salt_run_cli):
         """
         Ensure correct exit status when salt-run starts correctly.
         """
-
-        runner = testprogram.TestProgramSaltRun(
-            name="run-correct_usage", parent_dir=self._test_dir,
-        )
-        # Call setup here to ensure config and script exist
-        runner.setup()
-        stdout, stderr, status = runner.run(catch_stderr=True, with_retcode=True,)
-        self.assert_exit_status(
-            status, "EX_OK", message="correct usage", stdout=stdout, stderr=stderr
-        )
+        ret = salt_run_cli.run()
+        assert ret.exitcode == salt.defaults.exitcodes.EX_OK, ret
 
     @pytest.mark.skip_if_not_root
-    def test_salt_run_with_eauth_all_args(self):
+    @pytest.mark.parametrize("flag", ["--auth", "--eauth", "--external-auth", "-a"])
+    @pytest.mark.skip_on_windows(reason="PAM is not supported on Windows")
+    def test_salt_run_with_eauth_all_args(self, salt_run_cli, saltdev_account, flag):
         """
         test salt-run with eauth
         tests all eauth args
         """
-        args = ["--auth", "--eauth", "--external-auth", "-a"]
-        self._add_user()
-        for arg in args:
-            run_cmd = self.run_run(
-                "{0} pam --username {1} --password {2}\
-                                   test.arg arg kwarg=kwarg1".format(
-                    arg, USERA, USERA_PWD
-                )
-            )
-            expect = [
-                "args:",
-                "    - arg",
-                "kwargs:",
-                "    ----------",
-                "    kwarg:",
-                "        kwarg1",
-            ]
-            self.assertEqual(expect, run_cmd)
-        self._remove_user()
+        ret = salt_run_cli.run(
+            flag,
+            "pam",
+            "--username",
+            USERA,
+            "--password",
+            USERA_PWD,
+            "test.arg",
+            "arg",
+            kwarg="kwarg1",
+            _timeout=240,
+        )
+        assert ret.exitcode == 0, ret
+        assert ret.json, ret
+        expected = {"args": ["arg"], "kwargs": {"kwarg": "kwarg1"}}
+        assert ret.json == expected, ret
 
     @pytest.mark.skip_if_not_root
-    def test_salt_run_with_eauth_bad_passwd(self):
+    @pytest.mark.skip_on_windows(reason="PAM is not supported on Windows")
+    def test_salt_run_with_eauth_bad_passwd(self, salt_run_cli, saltdev_account):
         """
         test salt-run with eauth and bad password
         """
-        self._add_user()
-        run_cmd = self.run_run(
-            "-a pam --username {0} --password wrongpassword\
-                               test.arg arg kwarg=kwarg1".format(
+        ret = salt_run_cli.run(
+            "-a",
+            "pam",
+            "--username",
+            USERA,
+            "--password",
+            "wrongpassword",
+            "test.arg",
+            "arg",
+            kwarg="kwarg1",
+        )
+        assert (
+            ret.stdout
+            == 'Authentication failure of type "eauth" occurred for user {}.'.format(
                 USERA
             )
         )
-        expect = ['Authentication failure of type "eauth" occurred for user saltdev.']
-        self.assertEqual(expect, run_cmd)
-        self._remove_user()
 
-    def test_salt_run_with_wrong_eauth(self):
+    def test_salt_run_with_wrong_eauth(self, salt_run_cli):
         """
         test salt-run with wrong eauth parameter
         """
-        run_cmd = self.run_run(
-            "-a wrongeauth --username {0} --password {1}\
-                               test.arg arg kwarg=kwarg1".format(
-                USERA, USERA_PWD
-            )
+        ret = salt_run_cli.run(
+            "-a",
+            "wrongeauth",
+            "--username",
+            USERA,
+            "--password",
+            USERA_PWD,
+            "test.arg",
+            "arg",
+            kwarg="kwarg1",
         )
-        expect = r"^The specified external authentication system \"wrongeauth\" is not available\tAvailable eauth types: auto, .*"
-        self.assertRegex("\t".join(run_cmd), expect)
+        assert ret.exitcode == 0, ret
+        assert re.search(
+            r"^The specified external authentication system \"wrongeauth\" is not available\nAvailable eauth types: auto, .*",
+            ret.stdout.replace("\r\n", "\n"),
+        )
