@@ -9,7 +9,7 @@ runTestSuite(
     jenkins_slave_label: 'kitchen-slave',
     kitchen_platforms_file: '/var/jenkins/workspace/nox-cloud-platforms.yml',
     nox_env_name: 'pytest-cloud',
-    nox_passthrough_opts: '--ignore=tests/utils',
+    nox_passthrough_opts: '',
     python_version: 'py3',
     testrun_timeout: 6,
     use_spot_instances: true)
