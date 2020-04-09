@@ -86,7 +86,6 @@ MOCK_MODULES = [
     # Python stdlib
     "user",
     # salt core
-    "concurrent",
     "Crypto",
     "Crypto.Signature",
     "Crypto.Cipher",
@@ -150,7 +149,6 @@ MOCK_MODULES = [
     "OpenSSL",
     "avahi",
     "boto.regioninfo",
-    "concurrent",
     "dbus",
     "django",
     "dns",
