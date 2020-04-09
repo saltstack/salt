@@ -370,7 +370,7 @@ def proxy_config(commands, no_save_config=None):
 # -----------------------------------------------------------------------------
 # SSH Transport Functions
 # -----------------------------------------------------------------------------
-def _init_ssh(opts):
+def _init_ssh(opts=None):
     '''
     Open a connection to the NX-OS switch over SSH.
     '''
@@ -412,7 +412,10 @@ def _initialized_ssh():
 
 def _ping_ssh():
     if _worker_name() not in DEVICE_DETAILS:
-        _init_ssh(None)
+        try:
+            _init_ssh()
+        except Exception:
+            return False
     try:
         return DEVICE_DETAILS[_worker_name()].conn.isalive()
     except TerminalException as e:
@@ -426,7 +429,7 @@ def _shutdown_ssh(opts):
 
 def _sendline_ssh(command, **kwargs):
     if _ping_ssh() is False:
-        _init_ssh(None)
+        _init_ssh()
     out, err = DEVICE_DETAILS[_worker_name()].sendline(command)
     _, out = out.split('\n', 1)
     out, _, _ = out.rpartition('\n')
