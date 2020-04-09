@@ -18,14 +18,18 @@ import salt.config
 import salt.modules.config as config
 import salt.modules.virt as virt
 import salt.syspaths
+
 # Import salt libs
 import salt.utils.yaml
 from salt._compat import ElementTree as ET
 from salt.exceptions import CommandExecutionError
+
 # Import third party libs
 from salt.ext import six
+
 # pylint: disable=import-error
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
+
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
@@ -4007,7 +4011,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertRaisesRegex(
             CommandExecutionError,
-            "The VM 'vm2' is not present",
+            'The VM "vm2" is not present',
             virt._get_domain,
             self.mock_conn,
             "vm2",
