@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Management of POSIX Quotas
 ==========================
 
@@ -11,20 +11,20 @@ The quota can be managed for the system:
       quota.mode:
         mode: off
         quotatype: user
-'''
+"""
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():
-    '''
+    """
     Only load if the quota module is available in __salt__
-    '''
-    return 'quota' if 'quota.report' in __salt__ else False
+    """
+    return "quota" if "quota.report" in __salt__ else False
 
 
 def mode(name, mode, quotatype):
-    '''
+    """
     Set the quota for the system
 
     name
@@ -35,28 +35,24 @@ def mode(name, mode, quotatype):
 
     quotatype
         Must be ``user`` or ``group``
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': None,
-           'comment': ''}
-    fun = 'off'
+    """
+    ret = {"name": name, "changes": {}, "result": None, "comment": ""}
+    fun = "off"
     if mode is True:
-        fun = 'on'
-    if __salt__['quota.get_mode'](name)[name][quotatype] == fun:
-        ret['result'] = True
-        ret['comment'] = 'Quota for {0} already set to {1}'.format(name, fun)
+        fun = "on"
+    if __salt__["quota.get_mode"](name)[name][quotatype] == fun:
+        ret["result"] = True
+        ret["comment"] = "Quota for {0} already set to {1}".format(name, fun)
         return ret
-    if __opts__['test']:
-        ret['comment'] = 'Quota for {0} needs to be set to {1}'.format(name,
-                                                                       fun)
+    if __opts__["test"]:
+        ret["comment"] = "Quota for {0} needs to be set to {1}".format(name, fun)
         return ret
-    if __salt__['quota.{0}'.format(fun)](name):
-        ret['changes'] = {'quota': name}
-        ret['result'] = True
-        ret['comment'] = 'Set quota for {0} to {1}'.format(name, fun)
+    if __salt__["quota.{0}".format(fun)](name):
+        ret["changes"] = {"quota": name}
+        ret["result"] = True
+        ret["comment"] = "Set quota for {0} to {1}".format(name, fun)
         return ret
     else:
-        ret['result'] = False
-        ret['comment'] = 'Failed to set quota for {0} to {1}'.format(name, fun)
+        ret["result"] = False
+        ret["comment"] = "Failed to set quota for {0} to {1}".format(name, fun)
         return ret
