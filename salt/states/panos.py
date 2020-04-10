@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 A state module to manage Palo Alto network devices.
 
 :codeauthor: ``Spencer Ervin <spencer_ervin@hotmail.com>``
@@ -81,10 +81,11 @@ greater than the passed version. For example, proxy['panos.is_required_version']
 .. seealso::
     :py:mod:`Palo Alto Proxy Module <salt.proxy.panos>`
 
-'''
+"""
 
 # Import Python Libs
 from __future__ import absolute_import
+
 import logging
 
 # Import salt libs
@@ -95,18 +96,18 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    return 'panos.commit' in __salt__
+    return "panos.commit" in __salt__
 
 
 def _build_members(members, anycheck=False):
-    '''
+    """
     Builds a member formatted string for XML operation.
 
-    '''
+    """
     if isinstance(members, list):
 
         # This check will strip down members to a single any statement
-        if anycheck and 'any' in members:
+        if anycheck and "any" in members:
             return "<member>any</member>"
         response = ""
         for m in members:
@@ -117,147 +118,131 @@ def _build_members(members, anycheck=False):
 
 
 def _default_ret(name):
-    '''
+    """
     Set the default response values.
 
-    '''
-    ret = {
-        'name': name,
-        'changes': {},
-        'commit': None,
-        'result': False,
-        'comment': ''
-    }
+    """
+    ret = {"name": name, "changes": {}, "commit": None, "result": False, "comment": ""}
     return ret
 
 
 def _edit_config(xpath, element):
-    '''
+    """
     Sends an edit request to the device.
 
-    '''
-    query = {'type': 'config',
-             'action': 'edit',
-             'xpath': xpath,
-             'element': element}
+    """
+    query = {"type": "config", "action": "edit", "xpath": xpath, "element": element}
 
-    response = __proxy__['panos.call'](query)
+    response = __proxy__["panos.call"](query)
 
     return _validate_response(response)
 
 
 def _get_config(xpath):
-    '''
+    """
     Retrieves an xpath from the device.
 
-    '''
-    query = {'type': 'config',
-             'action': 'get',
-             'xpath': xpath}
+    """
+    query = {"type": "config", "action": "get", "xpath": xpath}
 
-    response = __proxy__['panos.call'](query)
+    response = __proxy__["panos.call"](query)
 
     return response
 
 
 def _move_after(xpath, target):
-    '''
+    """
     Moves an xpath to the after of its section.
 
-    '''
-    query = {'type': 'config',
-             'action': 'move',
-             'xpath': xpath,
-             'where': 'after',
-             'dst': target}
+    """
+    query = {
+        "type": "config",
+        "action": "move",
+        "xpath": xpath,
+        "where": "after",
+        "dst": target,
+    }
 
-    response = __proxy__['panos.call'](query)
+    response = __proxy__["panos.call"](query)
 
     return _validate_response(response)
 
 
 def _move_before(xpath, target):
-    '''
+    """
     Moves an xpath to the bottom of its section.
 
-    '''
-    query = {'type': 'config',
-             'action': 'move',
-             'xpath': xpath,
-             'where': 'before',
-             'dst': target}
+    """
+    query = {
+        "type": "config",
+        "action": "move",
+        "xpath": xpath,
+        "where": "before",
+        "dst": target,
+    }
 
-    response = __proxy__['panos.call'](query)
+    response = __proxy__["panos.call"](query)
 
     return _validate_response(response)
 
 
 def _move_bottom(xpath):
-    '''
+    """
     Moves an xpath to the bottom of its section.
 
-    '''
-    query = {'type': 'config',
-             'action': 'move',
-             'xpath': xpath,
-             'where': 'bottom'}
+    """
+    query = {"type": "config", "action": "move", "xpath": xpath, "where": "bottom"}
 
-    response = __proxy__['panos.call'](query)
+    response = __proxy__["panos.call"](query)
 
     return _validate_response(response)
 
 
 def _move_top(xpath):
-    '''
+    """
     Moves an xpath to the top of its section.
 
-    '''
-    query = {'type': 'config',
-             'action': 'move',
-             'xpath': xpath,
-             'where': 'top'}
+    """
+    query = {"type": "config", "action": "move", "xpath": xpath, "where": "top"}
 
-    response = __proxy__['panos.call'](query)
+    response = __proxy__["panos.call"](query)
 
     return _validate_response(response)
 
 
 def _set_config(xpath, element):
-    '''
+    """
     Sends a set request to the device.
 
-    '''
-    query = {'type': 'config',
-             'action': 'set',
-             'xpath': xpath,
-             'element': element}
+    """
+    query = {"type": "config", "action": "set", "xpath": xpath, "element": element}
 
-    response = __proxy__['panos.call'](query)
+    response = __proxy__["panos.call"](query)
 
     return _validate_response(response)
 
 
 def _validate_response(response):
-    '''
+    """
     Validates a response from a Palo Alto device. Used to verify success of commands.
 
-    '''
+    """
     if not response:
-        return False, 'Unable to validate response from device.'
-    elif 'msg' in response:
-        if 'line' in response['msg']:
-            if response['msg']['line'] == 'already at the top':
+        return False, "Unable to validate response from device."
+    elif "msg" in response:
+        if "line" in response["msg"]:
+            if response["msg"]["line"] == "already at the top":
                 return True, response
-            elif response['msg']['line'] == 'already at the bottom':
+            elif response["msg"]["line"] == "already at the bottom":
                 return True, response
             else:
                 return False, response
-        elif response['msg'] == 'command succeeded':
+        elif response["msg"] == "command succeeded":
             return True, response
         else:
             return False, response
-    elif 'status' in response:
-        if response['status'] == "success":
+    elif "status" in response:
+        if response["status"] == "success":
             return True, response
         else:
             return False, response
@@ -266,7 +251,7 @@ def _validate_response(response):
 
 
 def add_config_lock(name):
-    '''
+    """
     Prevent other users from changing configuration until the lock is released.
 
     name: The name of the module function to execute.
@@ -278,26 +263,25 @@ def add_config_lock(name):
         panos/takelock:
             panos.add_config_lock
 
-    '''
+    """
     ret = _default_ret(name)
 
-    ret.update({
-        'changes': __salt__['panos.add_config_lock'](),
-        'result': True
-    })
+    ret.update({"changes": __salt__["panos.add_config_lock"](), "result": True})
 
     return ret
 
 
-def address_exists(name,
-                   addressname=None,
-                   vsys=1,
-                   ipnetmask=None,
-                   iprange=None,
-                   fqdn=None,
-                   description=None,
-                   commit=False):
-    '''
+def address_exists(
+    name,
+    addressname=None,
+    vsys=1,
+    ipnetmask=None,
+    iprange=None,
+    fqdn=None,
+    description=None,
+    commit=False,
+):
+    """
     Ensures that an address object exists in the configured state. If it does not exist or is not configured with the
     specified attributes, it will be adjusted to match the specified values.
 
@@ -354,18 +338,18 @@ def address_exists(name,
               - description: My fqdn object
               - commit: False
 
-    '''
+    """
     ret = _default_ret(name)
 
     if not addressname:
-        ret.update({'comment': "The service name field must be provided."})
+        ret.update({"comment": "The service name field must be provided."})
         return ret
 
     # Check if address object currently exists
-    address = __salt__['panos.get_address'](addressname, vsys)['result']
+    address = __salt__["panos.get_address"](addressname, vsys)["result"]
 
-    if address and 'entry' in address:
-        address = address['entry']
+    if address and "entry" in address:
+        address = address["entry"]
     else:
         address = {}
 
@@ -379,7 +363,7 @@ def address_exists(name,
     elif fqdn:
         element = "<fqdn>{0}</fqdn>".format(fqdn)
     else:
-        ret.update({'comment': "A valid address type must be specified."})
+        ret.update({"comment": "A valid address type must be specified."})
         return ret
 
     if description:
@@ -390,47 +374,50 @@ def address_exists(name,
     new_address = xml.to_dict(ET.fromstring(full_element), True)
 
     if address == new_address:
-        ret.update({
-            'comment': 'Address object already exists. No changes required.',
-            'result': True
-        })
+        ret.update(
+            {
+                "comment": "Address object already exists. No changes required.",
+                "result": True,
+            }
+        )
         return ret
     else:
-        xpath = "/config/devices/entry[@name=\'localhost.localdomain\']/vsys/entry[@name=\'vsys{0}\']/address/" \
-                "entry[@name=\'{1}\']".format(vsys, addressname)
+        xpath = (
+            "/config/devices/entry[@name='localhost.localdomain']/vsys/entry[@name='vsys{0}']/address/"
+            "entry[@name='{1}']".format(vsys, addressname)
+        )
 
         result, msg = _edit_config(xpath, full_element)
 
         if not result:
-            ret.update({
-                'comment': msg
-            })
+            ret.update({"comment": msg})
             return ret
 
     if commit is True:
-        ret.update({
-            'changes': {'before': address, 'after': new_address},
-            'commit': __salt__['panos.commit'](),
-            'comment': 'Address object successfully configured.',
-            'result': True
-        })
+        ret.update(
+            {
+                "changes": {"before": address, "after": new_address},
+                "commit": __salt__["panos.commit"](),
+                "comment": "Address object successfully configured.",
+                "result": True,
+            }
+        )
     else:
-        ret.update({
-            'changes': {'before': address, 'after': new_address},
-            'comment': 'Service object successfully configured.',
-            'result': True
-        })
+        ret.update(
+            {
+                "changes": {"before": address, "after": new_address},
+                "comment": "Service object successfully configured.",
+                "result": True,
+            }
+        )
 
     return ret
 
 
-def address_group_exists(name,
-                         groupname=None,
-                         vsys=1,
-                         members=None,
-                         description=None,
-                         commit=False):
-    '''
+def address_group_exists(
+    name, groupname=None, vsys=1, members=None, description=None, commit=False
+):
+    """
     Ensures that an address group object exists in the configured state. If it does not exist or is not configured with
     the specified attributes, it will be adjusted to match the specified values.
 
@@ -466,18 +453,18 @@ def address_group_exists(name,
               - description: A group that needs to exist
               - commit: False
 
-    '''
+    """
     ret = _default_ret(name)
 
     if not groupname:
-        ret.update({'comment': "The group name field must be provided."})
+        ret.update({"comment": "The group name field must be provided."})
         return ret
 
     # Check if address group object currently exists
-    group = __salt__['panos.get_address_group'](groupname, vsys)['result']
+    group = __salt__["panos.get_address_group"](groupname, vsys)["result"]
 
-    if group and 'entry' in group:
-        group = group['entry']
+    if group and "entry" in group:
+        group = group["entry"]
     else:
         group = {}
 
@@ -485,7 +472,7 @@ def address_group_exists(name,
     if members:
         element = "<static>{0}</static>".format(_build_members(members, True))
     else:
-        ret.update({'comment': "The group members must be provided."})
+        ret.update({"comment": "The group members must be provided."})
         return ret
 
     if description:
@@ -496,42 +483,48 @@ def address_group_exists(name,
     new_group = xml.to_dict(ET.fromstring(full_element), True)
 
     if group == new_group:
-        ret.update({
-            'comment': 'Address group object already exists. No changes required.',
-            'result': True
-        })
+        ret.update(
+            {
+                "comment": "Address group object already exists. No changes required.",
+                "result": True,
+            }
+        )
         return ret
     else:
-        xpath = "/config/devices/entry[@name=\'localhost.localdomain\']/vsys/entry[@name=\'vsys{0}\']/address-group/" \
-                "entry[@name=\'{1}\']".format(vsys, groupname)
+        xpath = (
+            "/config/devices/entry[@name='localhost.localdomain']/vsys/entry[@name='vsys{0}']/address-group/"
+            "entry[@name='{1}']".format(vsys, groupname)
+        )
 
         result, msg = _edit_config(xpath, full_element)
 
         if not result:
-            ret.update({
-                'comment': msg
-            })
+            ret.update({"comment": msg})
             return ret
 
     if commit is True:
-        ret.update({
-            'changes': {'before': group, 'after': new_group},
-            'commit': __salt__['panos.commit'](),
-            'comment': 'Address group object successfully configured.',
-            'result': True
-        })
+        ret.update(
+            {
+                "changes": {"before": group, "after": new_group},
+                "commit": __salt__["panos.commit"](),
+                "comment": "Address group object successfully configured.",
+                "result": True,
+            }
+        )
     else:
-        ret.update({
-            'changes': {'before': group, 'after': new_group},
-            'comment': 'Address group object successfully configured.',
-            'result': True
-        })
+        ret.update(
+            {
+                "changes": {"before": group, "after": new_group},
+                "comment": "Address group object successfully configured.",
+                "result": True,
+            }
+        )
 
     return ret
 
 
 def clone_config(name, xpath=None, newname=None, commit=False):
-    '''
+    """
     Clone a specific XPATH and set it to a new name.
 
     name: The name of the module function to execute.
@@ -553,7 +546,7 @@ def clone_config(name, xpath=None, newname=None, commit=False):
               - value: rule2
               - commit: True
 
-    '''
+    """
     ret = _default_ret(name)
 
     if not xpath:
@@ -562,32 +555,23 @@ def clone_config(name, xpath=None, newname=None, commit=False):
     if not newname:
         return ret
 
-    query = {'type': 'config',
-             'action': 'clone',
-             'xpath': xpath,
-             'newname': newname}
+    query = {"type": "config", "action": "clone", "xpath": xpath, "newname": newname}
 
-    result, response = _validate_response(__proxy__['panos.call'](query))
+    result, response = _validate_response(__proxy__["panos.call"](query))
 
-    ret.update({
-        'changes': response,
-        'result': result
-    })
+    ret.update({"changes": response, "result": result})
 
     if not result:
         return ret
 
     if commit is True:
-        ret.update({
-            'commit': __salt__['panos.commit'](),
-            'result': True
-        })
+        ret.update({"commit": __salt__["panos.commit"](), "result": True})
 
     return ret
 
 
 def commit_config(name):
-    '''
+    """
     Commits the candidate configuration to the running configuration.
 
     name: The name of the module function to execute.
@@ -599,19 +583,16 @@ def commit_config(name):
         panos/commit:
             panos.commit_config
 
-    '''
+    """
     ret = _default_ret(name)
 
-    ret.update({
-        'commit': __salt__['panos.commit'](),
-        'result': True
-    })
+    ret.update({"commit": __salt__["panos.commit"](), "result": True})
 
     return ret
 
 
 def delete_config(name, xpath=None, commit=False):
-    '''
+    """
     Deletes a Palo Alto XPATH to a specific value.
 
     Use the xpath parameter to specify the location of the object to be deleted.
@@ -631,37 +612,29 @@ def delete_config(name, xpath=None, commit=False):
               - xpath: /config/devices/entry/vsys/entry[@name='vsys1']/address-group/entry[@name='test']
               - commit: True
 
-    '''
+    """
     ret = _default_ret(name)
 
     if not xpath:
         return ret
 
-    query = {'type': 'config',
-             'action': 'delete',
-             'xpath': xpath}
+    query = {"type": "config", "action": "delete", "xpath": xpath}
 
-    result, response = _validate_response(__proxy__['panos.call'](query))
+    result, response = _validate_response(__proxy__["panos.call"](query))
 
-    ret.update({
-        'changes': response,
-        'result': result
-    })
+    ret.update({"changes": response, "result": result})
 
     if not result:
         return ret
 
     if commit is True:
-        ret.update({
-            'commit': __salt__['panos.commit'](),
-            'result': True
-        })
+        ret.update({"commit": __salt__["panos.commit"](), "result": True})
 
     return ret
 
 
 def download_software(name, version=None, synch=False, check=False):
-    '''
+    """
     Ensures that a software version is downloaded.
 
     name: The name of the module function to execute.
@@ -684,57 +657,62 @@ def download_software(name, version=None, synch=False, check=False):
               - synch: False
               - check: True
 
-    '''
+    """
     ret = _default_ret(name)
 
     if check is True:
-        __salt__['panos.check_software']()
+        __salt__["panos.check_software"]()
 
-    versions = __salt__['panos.get_software_info']()['result']
+    versions = __salt__["panos.get_software_info"]()["result"]
 
-    if 'sw-updates' not in versions \
-        or 'versions' not in versions['sw-updates'] \
-        or 'entry' not in versions['sw-updates']['versions']:
-        ret.update({
-            'comment': 'Software version is not found in the local software list.',
-            'result': False
-        })
+    if (
+        "sw-updates" not in versions
+        or "versions" not in versions["sw-updates"]
+        or "entry" not in versions["sw-updates"]["versions"]
+    ):
+        ret.update(
+            {
+                "comment": "Software version is not found in the local software list.",
+                "result": False,
+            }
+        )
         return ret
 
-    for entry in versions['sw-updates']['versions']['entry']:
-        if entry['version'] == version and entry['downloaded'] == "yes":
-            ret.update({
-                'comment': 'Software version is already downloaded.',
-                'result': True
-            })
+    for entry in versions["sw-updates"]["versions"]["entry"]:
+        if entry["version"] == version and entry["downloaded"] == "yes":
+            ret.update(
+                {"comment": "Software version is already downloaded.", "result": True}
+            )
         return ret
 
-    ret.update({
-        'changes': __salt__['panos.download_software_version'](version=version, synch=synch)
-    })
+    ret.update(
+        {
+            "changes": __salt__["panos.download_software_version"](
+                version=version, synch=synch
+            )
+        }
+    )
 
-    versions = __salt__['panos.get_software_info']()['result']
+    versions = __salt__["panos.get_software_info"]()["result"]
 
-    if 'sw-updates' not in versions \
-        or 'versions' not in versions['sw-updates'] \
-        or 'entry' not in versions['sw-updates']['versions']:
-        ret.update({
-            'result': False
-        })
+    if (
+        "sw-updates" not in versions
+        or "versions" not in versions["sw-updates"]
+        or "entry" not in versions["sw-updates"]["versions"]
+    ):
+        ret.update({"result": False})
         return ret
 
-    for entry in versions['sw-updates']['versions']['entry']:
-        if entry['version'] == version and entry['downloaded'] == "yes":
-            ret.update({
-                'result': True
-            })
+    for entry in versions["sw-updates"]["versions"]["entry"]:
+        if entry["version"] == version and entry["downloaded"] == "yes":
+            ret.update({"result": True})
         return ret
 
     return ret
 
 
 def edit_config(name, xpath=None, value=None, commit=False):
-    '''
+    """
     Edits a Palo Alto XPATH to a specific value. This will always overwrite the existing value, even if it is not
     changed.
 
@@ -761,7 +739,7 @@ def edit_config(name, xpath=None, value=None, commit=False):
               - value: <static><entry name='test'><member>abc</member><member>xyz</member></entry></static>
               - commit: True
 
-    '''
+    """
     ret = _default_ret(name)
 
     # Verify if the current XPATH is equal to the specified value.
@@ -774,7 +752,7 @@ def edit_config(name, xpath=None, value=None, commit=False):
         if "[" in head:
             head = head.split("[")[0]
 
-    current_element = __salt__['panos.get_xpath'](xpath)['result']
+    current_element = __salt__["panos.get_xpath"](xpath)["result"]
 
     if head and current_element and head in current_element:
         current_element = current_element[head]
@@ -784,39 +762,42 @@ def edit_config(name, xpath=None, value=None, commit=False):
     new_element = xml.to_dict(ET.fromstring(value), True)
 
     if current_element == new_element:
-        ret.update({
-            'comment': 'XPATH is already equal to the specified value.',
-            'result': True
-        })
+        ret.update(
+            {
+                "comment": "XPATH is already equal to the specified value.",
+                "result": True,
+            }
+        )
         return ret
 
     result, msg = _edit_config(xpath, value)
 
-    ret.update({
-        'comment': msg,
-        'result': result
-    })
+    ret.update({"comment": msg, "result": result})
 
     if not result:
         return ret
 
     if commit is True:
-        ret.update({
-            'changes': {'before': current_element, 'after': new_element},
-            'commit': __salt__['panos.commit'](),
-            'result': True
-        })
+        ret.update(
+            {
+                "changes": {"before": current_element, "after": new_element},
+                "commit": __salt__["panos.commit"](),
+                "result": True,
+            }
+        )
     else:
-        ret.update({
-            'changes': {'before': current_element, 'after': new_element},
-            'result': True
-        })
+        ret.update(
+            {
+                "changes": {"before": current_element, "after": new_element},
+                "result": True,
+            }
+        )
 
     return ret
 
 
 def move_config(name, xpath=None, where=None, dst=None, commit=False):
-    '''
+    """
     Moves a XPATH value to a new location.
 
     Use the xpath parameter to specify the location of the object to be moved, the where parameter to
@@ -853,7 +834,7 @@ def move_config(name, xpath=None, where=None, dst=None, commit=False):
               - dst: rule2
               - commit: True
 
-    '''
+    """
     ret = _default_ret(name)
 
     if not xpath:
@@ -862,34 +843,28 @@ def move_config(name, xpath=None, where=None, dst=None, commit=False):
     if not where:
         return ret
 
-    if where == 'after':
+    if where == "after":
         result, msg = _move_after(xpath, dst)
-    elif where == 'before':
+    elif where == "before":
         result, msg = _move_before(xpath, dst)
-    elif where == 'top':
+    elif where == "top":
         result, msg = _move_top(xpath)
-    elif where == 'bottom':
+    elif where == "bottom":
         result, msg = _move_bottom(xpath)
 
-    ret.update({
-        'result': result,
-        'comment': msg
-    })
+    ret.update({"result": result, "comment": msg})
 
     if not result:
         return ret
 
     if commit is True:
-        ret.update({
-            'commit': __salt__['panos.commit'](),
-            'result': True
-        })
+        ret.update({"commit": __salt__["panos.commit"](), "result": True})
 
     return ret
 
 
 def remove_config_lock(name):
-    '''
+    """
     Release config lock previously held.
 
     name: The name of the module function to execute.
@@ -901,19 +876,16 @@ def remove_config_lock(name):
         panos/takelock:
             panos.remove_config_lock
 
-    '''
+    """
     ret = _default_ret(name)
 
-    ret.update({
-        'changes': __salt__['panos.remove_config_lock'](),
-        'result': True
-    })
+    ret.update({"changes": __salt__["panos.remove_config_lock"](), "result": True})
 
     return ret
 
 
 def rename_config(name, xpath=None, newname=None, commit=False):
-    '''
+    """
     Rename a Palo Alto XPATH to a specific value. This will always rename the value even if a change is not needed.
 
     name: The name of the module function to execute.
@@ -934,7 +906,7 @@ def rename_config(name, xpath=None, newname=None, commit=False):
               - value: new_address
               - commit: True
 
-    '''
+    """
     ret = _default_ret(name)
 
     if not xpath:
@@ -943,59 +915,52 @@ def rename_config(name, xpath=None, newname=None, commit=False):
     if not newname:
         return ret
 
-    query = {'type': 'config',
-             'action': 'rename',
-             'xpath': xpath,
-             'newname': newname}
+    query = {"type": "config", "action": "rename", "xpath": xpath, "newname": newname}
 
-    result, response = _validate_response(__proxy__['panos.call'](query))
+    result, response = _validate_response(__proxy__["panos.call"](query))
 
-    ret.update({
-        'changes': response,
-        'result': result
-    })
+    ret.update({"changes": response, "result": result})
 
     if not result:
         return ret
 
     if commit is True:
-        ret.update({
-            'commit': __salt__['panos.commit'](),
-            'result': True
-        })
+        ret.update({"commit": __salt__["panos.commit"](), "result": True})
 
     return ret
 
 
-def security_rule_exists(name,
-                         rulename=None,
-                         vsys='1',
-                         action=None,
-                         disabled=None,
-                         sourcezone=None,
-                         destinationzone=None,
-                         source=None,
-                         destination=None,
-                         application=None,
-                         service=None,
-                         description=None,
-                         logsetting=None,
-                         logstart=None,
-                         logend=None,
-                         negatesource=None,
-                         negatedestination=None,
-                         profilegroup=None,
-                         datafilter=None,
-                         fileblock=None,
-                         spyware=None,
-                         urlfilter=None,
-                         virus=None,
-                         vulnerability=None,
-                         wildfire=None,
-                         move=None,
-                         movetarget=None,
-                         commit=False):
-    '''
+def security_rule_exists(
+    name,
+    rulename=None,
+    vsys="1",
+    action=None,
+    disabled=None,
+    sourcezone=None,
+    destinationzone=None,
+    source=None,
+    destination=None,
+    application=None,
+    service=None,
+    description=None,
+    logsetting=None,
+    logstart=None,
+    logend=None,
+    negatesource=None,
+    negatedestination=None,
+    profilegroup=None,
+    datafilter=None,
+    fileblock=None,
+    spyware=None,
+    urlfilter=None,
+    virus=None,
+    vulnerability=None,
+    wildfire=None,
+    move=None,
+    movetarget=None,
+    commit=False,
+):
+    """
     Ensures that a security rule exists on the device. Also, ensure that all configurations are set appropriately.
 
     This method will create the rule if it does not exist. If the rule does exist, it will ensure that the
@@ -1138,17 +1103,17 @@ def security_rule_exists(name,
               - move: after
               - movetarget: rule02
               - commit: False
-    '''
+    """
     ret = _default_ret(name)
 
     if not rulename:
         return ret
 
     # Check if rule currently exists
-    rule = __salt__['panos.get_security_rule'](rulename, vsys)['result']
+    rule = __salt__["panos.get_security_rule"](rulename, vsys)["result"]
 
-    if rule and 'entry' in rule:
-        rule = rule['entry']
+    if rule and "entry" in rule:
+        rule = rule["entry"]
     else:
         rule = {}
 
@@ -1157,43 +1122,47 @@ def security_rule_exists(name,
     if sourcezone:
         element += "<from>{0}</from>".format(_build_members(sourcezone, True))
     else:
-        ret.update({'comment': "The sourcezone field must be provided."})
+        ret.update({"comment": "The sourcezone field must be provided."})
         return ret
 
     if destinationzone:
         element += "<to>{0}</to>".format(_build_members(destinationzone, True))
     else:
-        ret.update({'comment': "The destinationzone field must be provided."})
+        ret.update({"comment": "The destinationzone field must be provided."})
         return ret
 
     if source:
         element += "<source>{0}</source>".format(_build_members(source, True))
     else:
-        ret.update({'comment': "The source field must be provided."})
+        ret.update({"comment": "The source field must be provided."})
         return
 
     if destination:
-        element += "<destination>{0}</destination>".format(_build_members(destination, True))
+        element += "<destination>{0}</destination>".format(
+            _build_members(destination, True)
+        )
     else:
-        ret.update({'comment': "The destination field must be provided."})
+        ret.update({"comment": "The destination field must be provided."})
         return ret
 
     if application:
-        element += "<application>{0}</application>".format(_build_members(application, True))
+        element += "<application>{0}</application>".format(
+            _build_members(application, True)
+        )
     else:
-        ret.update({'comment': "The application field must be provided."})
+        ret.update({"comment": "The application field must be provided."})
         return ret
 
     if service:
         element += "<service>{0}</service>".format(_build_members(service, True))
     else:
-        ret.update({'comment': "The service field must be provided."})
+        ret.update({"comment": "The service field must be provided."})
         return ret
 
     if action:
         element += "<action>{0}</action>".format(action)
     else:
-        ret.update({'comment': "The action field must be provided."})
+        ret.update({"comment": "The action field must be provided."})
         return ret
 
     if disabled is not None:
@@ -1239,19 +1208,29 @@ def security_rule_exists(name,
     else:
         member_string = ""
         if datafilter:
-            member_string += "<data-filtering><member>{0}</member></data-filtering>".format(datafilter)
+            member_string += "<data-filtering><member>{0}</member></data-filtering>".format(
+                datafilter
+            )
         if fileblock:
-            member_string += "<file-blocking><member>{0}</member></file-blocking>".format(fileblock)
+            member_string += "<file-blocking><member>{0}</member></file-blocking>".format(
+                fileblock
+            )
         if spyware:
             member_string += "<spyware><member>{0}</member></spyware>".format(spyware)
         if urlfilter:
-            member_string += "<url-filtering><member>{0}</member></url-filtering>".format(urlfilter)
+            member_string += "<url-filtering><member>{0}</member></url-filtering>".format(
+                urlfilter
+            )
         if virus:
             member_string += "<virus><member>{0}</member></virus>".format(virus)
         if vulnerability:
-            member_string += "<vulnerability><member>{0}</member></vulnerability>".format(vulnerability)
+            member_string += "<vulnerability><member>{0}</member></vulnerability>".format(
+                vulnerability
+            )
         if wildfire:
-            member_string += "<wildfire-analysis><member>{0}</member></wildfire-analysis>".format(wildfire)
+            member_string += "<wildfire-analysis><member>{0}</member></wildfire-analysis>".format(
+                wildfire
+            )
         if member_string != "":
             profile_string = "<profiles>{0}</profiles>".format(member_string)
 
@@ -1265,32 +1244,34 @@ def security_rule_exists(name,
     config_change = False
 
     if rule == new_rule:
-        ret.update({
-            'comment': 'Security rule already exists. No changes required.'
-        })
+        ret.update({"comment": "Security rule already exists. No changes required."})
     else:
         config_change = True
-        xpath = "/config/devices/entry[@name=\'localhost.localdomain\']/vsys/entry[@name=\'vsys{0}\']/rulebase/" \
-                "security/rules/entry[@name=\'{1}\']".format(vsys, rulename)
+        xpath = (
+            "/config/devices/entry[@name='localhost.localdomain']/vsys/entry[@name='vsys{0}']/rulebase/"
+            "security/rules/entry[@name='{1}']".format(vsys, rulename)
+        )
 
         result, msg = _edit_config(xpath, full_element)
 
         if not result:
-            ret.update({
-                'comment': msg
-            })
+            ret.update({"comment": msg})
             return ret
 
-        ret.update({
-            'changes': {'before': rule, 'after': new_rule},
-            'comment': 'Security rule verified successfully.'
-        })
+        ret.update(
+            {
+                "changes": {"before": rule, "after": new_rule},
+                "comment": "Security rule verified successfully.",
+            }
+        )
 
     if move:
-        movepath = "/config/devices/entry[@name=\'localhost.localdomain\']/vsys/entry[@name=\'vsys{0}\']/rulebase/" \
-                   "security/rules/entry[@name=\'{1}\']".format(vsys, rulename)
+        movepath = (
+            "/config/devices/entry[@name='localhost.localdomain']/vsys/entry[@name='vsys{0}']/rulebase/"
+            "security/rules/entry[@name='{1}']".format(vsys, rulename)
+        )
         move_result = False
-        move_msg = ''
+        move_msg = ""
         if move == "before" and movetarget:
             move_result, move_msg = _move_before(movepath, movetarget)
         elif move == "after":
@@ -1301,35 +1282,34 @@ def security_rule_exists(name,
             move_result, move_msg = _move_bottom(movepath)
 
         if config_change:
-            ret.update({
-                'changes': {'before': rule, 'after': new_rule, 'move': move_msg}
-            })
+            ret.update(
+                {"changes": {"before": rule, "after": new_rule, "move": move_msg}}
+            )
         else:
-            ret.update({
-                'changes': {'move': move_msg}
-            })
+            ret.update({"changes": {"move": move_msg}})
 
         if not move_result:
-            ret.update({
-                'comment': move_msg
-            })
+            ret.update({"comment": move_msg})
             return ret
 
     if commit is True:
-        ret.update({
-            'commit': __salt__['panos.commit'](),
-            'result': True
-        })
+        ret.update({"commit": __salt__["panos.commit"](), "result": True})
     else:
-        ret.update({
-            'result': True
-        })
+        ret.update({"result": True})
 
     return ret
 
 
-def service_exists(name, servicename=None, vsys=1, protocol=None, port=None, description=None, commit=False):
-    '''
+def service_exists(
+    name,
+    servicename=None,
+    vsys=1,
+    protocol=None,
+    port=None,
+    description=None,
+    commit=False,
+):
+    """
     Ensures that a service object exists in the configured state. If it does not exist or is not configured with the
     specified attributes, it will be adjusted to match the specified values.
 
@@ -1371,27 +1351,27 @@ def service_exists(name, servicename=None, vsys=1, protocol=None, port=None, des
               - port: 500-550
               - commit: False
 
-    '''
+    """
     ret = _default_ret(name)
 
     if not servicename:
-        ret.update({'comment': "The service name field must be provided."})
+        ret.update({"comment": "The service name field must be provided."})
         return ret
 
     # Check if service object currently exists
-    service = __salt__['panos.get_service'](servicename, vsys)['result']
+    service = __salt__["panos.get_service"](servicename, vsys)["result"]
 
-    if service and 'entry' in service:
-        service = service['entry']
+    if service and "entry" in service:
+        service = service["entry"]
     else:
         service = {}
 
     # Verify the arguments
-    if not protocol and protocol not in ['tcp', 'udp']:
-        ret.update({'comment': "The protocol must be provided and must be tcp or udp."})
+    if not protocol and protocol not in ["tcp", "udp"]:
+        ret.update({"comment": "The protocol must be provided and must be tcp or udp."})
         return ret
     if not port:
-        ret.update({'comment': "The port field must be provided."})
+        ret.update({"comment": "The port field must be provided."})
         return ret
 
     element = "<protocol><{0}><port>{1}</port></{0}></protocol>".format(protocol, port)
@@ -1404,47 +1384,50 @@ def service_exists(name, servicename=None, vsys=1, protocol=None, port=None, des
     new_service = xml.to_dict(ET.fromstring(full_element), True)
 
     if service == new_service:
-        ret.update({
-            'comment': 'Service object already exists. No changes required.',
-            'result': True
-        })
+        ret.update(
+            {
+                "comment": "Service object already exists. No changes required.",
+                "result": True,
+            }
+        )
         return ret
     else:
-        xpath = "/config/devices/entry[@name=\'localhost.localdomain\']/vsys/entry[@name=\'vsys{0}\']/service/" \
-                "entry[@name=\'{1}\']".format(vsys, servicename)
+        xpath = (
+            "/config/devices/entry[@name='localhost.localdomain']/vsys/entry[@name='vsys{0}']/service/"
+            "entry[@name='{1}']".format(vsys, servicename)
+        )
 
         result, msg = _edit_config(xpath, full_element)
 
         if not result:
-            ret.update({
-                'comment': msg
-            })
+            ret.update({"comment": msg})
             return ret
 
     if commit is True:
-        ret.update({
-            'changes': {'before': service, 'after': new_service},
-            'commit': __salt__['panos.commit'](),
-            'comment': 'Service object successfully configured.',
-            'result': True
-        })
+        ret.update(
+            {
+                "changes": {"before": service, "after": new_service},
+                "commit": __salt__["panos.commit"](),
+                "comment": "Service object successfully configured.",
+                "result": True,
+            }
+        )
     else:
-        ret.update({
-            'changes': {'before': service, 'after': new_service},
-            'comment': 'Service object successfully configured.',
-            'result': True
-        })
+        ret.update(
+            {
+                "changes": {"before": service, "after": new_service},
+                "comment": "Service object successfully configured.",
+                "result": True,
+            }
+        )
 
     return ret
 
 
-def service_group_exists(name,
-                         groupname=None,
-                         vsys=1,
-                         members=None,
-                         description=None,
-                         commit=False):
-    '''
+def service_group_exists(
+    name, groupname=None, vsys=1, members=None, description=None, commit=False
+):
+    """
     Ensures that a service group object exists in the configured state. If it does not exist or is not configured with
     the specified attributes, it will be adjusted to match the specified values.
 
@@ -1480,18 +1463,18 @@ def service_group_exists(name,
               - description: A group that needs to exist
               - commit: False
 
-    '''
+    """
     ret = _default_ret(name)
 
     if not groupname:
-        ret.update({'comment': "The group name field must be provided."})
+        ret.update({"comment": "The group name field must be provided."})
         return ret
 
     # Check if service group object currently exists
-    group = __salt__['panos.get_service_group'](groupname, vsys)['result']
+    group = __salt__["panos.get_service_group"](groupname, vsys)["result"]
 
-    if group and 'entry' in group:
-        group = group['entry']
+    if group and "entry" in group:
+        group = group["entry"]
     else:
         group = {}
 
@@ -1499,7 +1482,7 @@ def service_group_exists(name,
     if members:
         element = "<members>{0}</members>".format(_build_members(members, True))
     else:
-        ret.update({'comment': "The group members must be provided."})
+        ret.update({"comment": "The group members must be provided."})
         return ret
 
     if description:
@@ -1510,42 +1493,48 @@ def service_group_exists(name,
     new_group = xml.to_dict(ET.fromstring(full_element), True)
 
     if group == new_group:
-        ret.update({
-            'comment': 'Service group object already exists. No changes required.',
-            'result': True
-        })
+        ret.update(
+            {
+                "comment": "Service group object already exists. No changes required.",
+                "result": True,
+            }
+        )
         return ret
     else:
-        xpath = "/config/devices/entry[@name=\'localhost.localdomain\']/vsys/entry[@name=\'vsys{0}\']/service-group/" \
-                "entry[@name=\'{1}\']".format(vsys, groupname)
+        xpath = (
+            "/config/devices/entry[@name='localhost.localdomain']/vsys/entry[@name='vsys{0}']/service-group/"
+            "entry[@name='{1}']".format(vsys, groupname)
+        )
 
         result, msg = _edit_config(xpath, full_element)
 
         if not result:
-            ret.update({
-                'comment': msg
-            })
+            ret.update({"comment": msg})
             return ret
 
     if commit is True:
-        ret.update({
-            'changes': {'before': group, 'after': new_group},
-            'commit': __salt__['panos.commit'](),
-            'comment': 'Service group object successfully configured.',
-            'result': True
-        })
+        ret.update(
+            {
+                "changes": {"before": group, "after": new_group},
+                "commit": __salt__["panos.commit"](),
+                "comment": "Service group object successfully configured.",
+                "result": True,
+            }
+        )
     else:
-        ret.update({
-            'changes': {'before': group, 'after': new_group},
-            'comment': 'Service group object successfully configured.',
-            'result': True
-        })
+        ret.update(
+            {
+                "changes": {"before": group, "after": new_group},
+                "comment": "Service group object successfully configured.",
+                "result": True,
+            }
+        )
 
     return ret
 
 
 def set_config(name, xpath=None, value=None, commit=False):
-    '''
+    """
     Sets a Palo Alto XPATH to a specific value. This will always overwrite the existing value, even if it is not
     changed.
 
@@ -1570,23 +1559,17 @@ def set_config(name, xpath=None, value=None, commit=False):
               - value: <hostname>foobar</hostname>
               - commit: True
 
-    '''
+    """
     ret = _default_ret(name)
 
     result, msg = _set_config(xpath, value)
 
-    ret.update({
-        'comment': msg,
-        'result': result
-    })
+    ret.update({"comment": msg, "result": result})
 
     if not result:
         return ret
 
     if commit is True:
-        ret.update({
-            'commit': __salt__['panos.commit'](),
-            'result': True
-        })
+        ret.update({"commit": __salt__["panos.commit"](), "result": True})
 
     return ret
