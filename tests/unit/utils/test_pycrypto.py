@@ -8,6 +8,7 @@ import re
 # Import Salt Libs
 import salt.utils.pycrypto
 import salt.utils.platform
+from salt.exceptions import SaltInvocationError
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
@@ -57,11 +58,14 @@ class PycryptoTestCase(TestCase):
                 ret = salt.utils.pycrypto.gen_hash(crypt_salt=invalid_salt, password=passwd, algorithm=algorithm, force=force)
                 self.assertNotEqual(ret, expected['hashed'])
 
+        with self.assertRaises(SaltInvocationError):
+            salt.utils.pycrypto.gen_hash(algorithm="garbage")
+
     def test_secure_password(self):
         '''
         test secure_password
         '''
         ret = salt.utils.pycrypto.secure_password()
         check = re.compile(r'[!@#$%^&*()_=+]')
-        assert check.search(ret) is None
-        assert ret
+        self.assertIsNone(check.search(ret))
+        self.assertTrue(ret)

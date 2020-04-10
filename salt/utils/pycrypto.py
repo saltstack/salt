@@ -97,7 +97,7 @@ def _fallback_gen_hash(crypt_salt=None, password=None, algorithm=None):
 
 def gen_hash(crypt_salt=None, password=None, algorithm=None, force=False):
     '''
-    Generate /etc/shadow hash using the most secure available hash
+    Generate /etc/shadow hash
     '''
     if algorithm not in methods:
         if force and HAS_PASSLIB:
