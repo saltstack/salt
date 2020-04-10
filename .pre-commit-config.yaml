@@ -1,3 +1,6 @@
+default_language_version:
+    python: python3
+
 exclude: ^(doc/_static/.*|doc/_themes/.*)$
 repos:
   - repo: https://github.com/saltstack/pip-tools-compile-impersonate
@@ -420,12 +423,28 @@ repos:
     rev: '1e78a9acf3110e1f9721feb591f89a451fc9876a'
     hooks:
       - id: isort
+        additional_dependencies: ['toml']
+        # This tells pre-commit not to pass files to isort.
+        # This should be kept in sync with pyproject.toml
+        exclude: >
+            (?x)^(
+                templates/.*|
+                salt/ext/.*|
+                tests/kitchen/.*
+            )$
 
   - repo: https://github.com/psf/black
     rev: stable
     hooks:
       - id: black
-        language_version: python3.7
+        # This tells pre-commit not to pass files to black.
+        # This should be kept in sync with pyproject.toml
+        exclude: >
+            (?x)^(
+                templates/.*|
+                salt/ext/.*|
+                tests/kitchen/.*
+            )$
 
   - repo: https://github.com/saltstack/salt-nox-pre-commit
     rev: master
