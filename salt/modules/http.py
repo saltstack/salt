@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Module for making various web calls. Primarily designed for webhooks and the
 like, but also useful for basic http testing.
 
 .. versionadded:: 2015.5.0
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import time
 
 # Import Salt libs
@@ -19,7 +20,7 @@ from salt.ext import six
 
 
 def query(url, **kwargs):
-    '''
+    """
     .. versionadded:: 2015.5.0
 
     Query a resource, and decode the return data
@@ -42,11 +43,11 @@ def query(url, **kwargs):
             params='key1=val1&key2=val2'
         salt '*' http.query http://somelink.com/ method=POST \
             data='<xml>somecontent</xml>'
-    '''
+    """
     opts = __opts__.copy()
-    if 'opts' in kwargs:
-        opts.update(kwargs['opts'])
-        del kwargs['opts']
+    if "opts" in kwargs:
+        opts.update(kwargs["opts"])
+        del kwargs["opts"]
 
     try:
         return salt.utils.http.query(url=url, opts=opts, **kwargs)
@@ -55,7 +56,7 @@ def query(url, **kwargs):
 
 
 def wait_for_successful_query(url, wait_for=300, **kwargs):
-    '''
+    """
     Query a resource until a successful response, and decode the return data
 
     CLI Example:
@@ -63,7 +64,7 @@ def wait_for_successful_query(url, wait_for=300, **kwargs):
     .. code-block:: bash
 
         salt '*' http.wait_for_successful_query http://somelink.com/ wait_for=160 request_interval=1
-    '''
+    """
 
     starttime = time.time()
 
@@ -72,7 +73,7 @@ def wait_for_successful_query(url, wait_for=300, **kwargs):
         result = None
         try:
             result = query(url=url, **kwargs)
-            if not result.get('Error') and not result.get('error'):
+            if not result.get("Error") and not result.get("error"):
                 return result
         except Exception as exc:  # pylint: disable=broad-except
             caught_exception = exc
@@ -83,13 +84,13 @@ def wait_for_successful_query(url, wait_for=300, **kwargs):
                 raise caught_exception  # pylint: disable=E0702
 
             return result
-        elif 'request_interval' in kwargs:
+        elif "request_interval" in kwargs:
             # Space requests out by delaying for an interval
-            time.sleep(kwargs['request_interval'])
+            time.sleep(kwargs["request_interval"])
 
 
 def update_ca_bundle(target=None, source=None, merge_files=None):
-    '''
+    """
     Update the local CA bundle file from a URL
 
     .. versionadded:: 2015.5.0
@@ -120,13 +121,11 @@ def update_ca_bundle(target=None, source=None, merge_files=None):
     .. code-block:: bash
 
         salt '*' http.update_ca_bundle merge_files=/path/to/mycert.pem
-    '''
+    """
     if target is None:
-        target = __salt__['config.get']('ca_bundle', None)
+        target = __salt__["config.get"]("ca_bundle", None)
 
     if source is None:
-        source = __salt__['config.get']('ca_bundle_url', None)
+        source = __salt__["config.get"]("ca_bundle_url", None)
 
-    return salt.utils.http.update_ca_bundle(
-        target, source, __opts__, merge_files
-    )
+    return salt.utils.http.update_ca_bundle(target, source, __opts__, merge_files)
