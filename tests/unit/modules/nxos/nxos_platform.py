@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-'''
+"""
     :codeauthor: Thomas Stoner <tmstoner@cisco.com>
-'''
+"""
 
 # Copyright (c) 2018 Cisco and/or its affiliates.
 #
@@ -80,11 +80,13 @@ Module       Image                  Running-Version(pri:alt)           New-Versi
     """
 
     internal_server_error_500_dict = {
-        'code': '500', 'cli_error': internal_server_error_500
+        "code": "500",
+        "cli_error": internal_server_error_500,
     }
 
     bad_request_client_error_400_invalid_command_dict = {
-        'code': '400', 'cli_error': invalid_command
+        "code": "400",
+        "cli_error": invalid_command,
     }
 
     backend_processing_error_500 = internal_server_error_500_dict
@@ -95,7 +97,8 @@ Module       Image                  Running-Version(pri:alt)           New-Versi
     """
 
     bad_request_client_error_400_in_progress_dict = {
-        'code': '400', 'cli_error': show_install_all_impact_in_progress
+        "code": "400",
+        "cli_error": show_install_all_impact_in_progress,
     }
 
     show_install_all_impact = None
@@ -115,10 +118,10 @@ Module       Image                  Running-Version(pri:alt)           New-Versi
          nimage - new system image
         """
 
-        self.ckimage = kwargs.get('ckimage', None)
-        self.cimage = kwargs.get('cimage', None)
-        self.nkimage = kwargs.get('nkimage', None)
-        self.nimage = kwargs.get('nimage', None)
+        self.ckimage = kwargs.get("ckimage", None)
+        self.cimage = kwargs.get("cimage", None)
+        self.nkimage = kwargs.get("nkimage", None)
+        self.nimage = kwargs.get("nimage", None)
         self.ckversion = self.version_from_image(self.ckimage)
         self.cversion = self.version_from_image(self.cimage)
         self.nkversion = self.version_from_image(self.nkimage)
@@ -126,29 +129,41 @@ Module       Image                  Running-Version(pri:alt)           New-Versi
 
         self.upgrade_required = self.cversion != self.nversion
 
-        values = {'KIMAGE': self.nkimage,
-                  'IMAGE': self.nimage,
-                  'CKVER': self.ckversion,
-                  'CVER': self.cversion,
-                  'NKVER': self.nkversion,
-                  'NVER': self.nversion,
-                  'REQ': 'no' if self.cversion == self.nversion else 'yes',
-                  'KREQ': 'no' if self.ckversion == self.nkversion else 'yes'}
+        values = {
+            "KIMAGE": self.nkimage,
+            "IMAGE": self.nimage,
+            "CKVER": self.ckversion,
+            "CVER": self.cversion,
+            "NKVER": self.nkversion,
+            "NVER": self.nversion,
+            "REQ": "no" if self.cversion == self.nversion else "yes",
+            "KREQ": "no" if self.ckversion == self.nkversion else "yes",
+        }
 
         if self.show_install_all_impact_no_module_data:
-            self.show_install_all_impact_no_module_data = self.templatize(self.show_install_all_impact_no_module_data, values)
+            self.show_install_all_impact_no_module_data = self.templatize(
+                self.show_install_all_impact_no_module_data, values
+            )
 
         if self.show_install_all_impact:
-            self.show_install_all_impact = self.templatize(self.show_install_all_impact, values)
+            self.show_install_all_impact = self.templatize(
+                self.show_install_all_impact, values
+            )
 
         if self.show_install_all_impact_non_disruptive:
-            self.show_install_all_impact_non_disruptive = self.templatize(self.show_install_all_impact_non_disruptive, values)
+            self.show_install_all_impact_non_disruptive = self.templatize(
+                self.show_install_all_impact_non_disruptive, values
+            )
 
         if self.install_all_non_disruptive_success:
-            self.install_all_non_disruptive_success = self.templatize(self.install_all_non_disruptive_success, values)
+            self.install_all_non_disruptive_success = self.templatize(
+                self.install_all_non_disruptive_success, values
+            )
 
         if self.install_all_disruptive_success:
-            self.install_all_disruptive_success = self.templatize(self.install_all_disruptive_success, values)
+            self.install_all_disruptive_success = self.templatize(
+                self.install_all_disruptive_success, values
+            )
 
     @staticmethod
     def templatize(template, values):
@@ -164,16 +179,20 @@ Module       Image                  Running-Version(pri:alt)           New-Versi
 
         ver = None
         if image:
-            match_object = re.search(r'^.*\.(\d+)\.(\d+)\.(\d+)\.(\d+|[A-Z][0-9])\.(?:bin)?(\d+)?.*', image)
+            match_object = re.search(
+                r"^.*\.(\d+)\.(\d+)\.(\d+)\.(\d+|[A-Z][0-9])\.(?:bin)?(\d+)?.*", image
+            )
             try:
                 ver = match_object.group(1)
-                ver += '.' + match_object.group(2)
+                ver += "." + match_object.group(2)
                 if match_object.groups()[-1]:
-                    ver += '(' + match_object.group(3) + ')'
+                    ver += "(" + match_object.group(3) + ")"
                     ver += match_object.group(4)
-                    ver += '(' + match_object.group(5) + ')'
+                    ver += "(" + match_object.group(5) + ")"
                 else:
-                    ver += '(' + match_object.group(3) + '.' + match_object.group(4) + ')'
+                    ver += (
+                        "(" + match_object.group(3) + "." + match_object.group(4) + ")"
+                    )
             except IndexError:
                 return None
 

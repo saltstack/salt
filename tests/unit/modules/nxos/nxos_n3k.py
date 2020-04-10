@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-'''
+"""
     :codeauthor: Thomas Stoner <tmstoner@cisco.com>
-'''
+"""
 
 # Copyright (c) 2018 Cisco and/or its affiliates.
 #

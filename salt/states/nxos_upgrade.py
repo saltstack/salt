@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-'''
+"""
 Manage NX-OS System Image Upgrades.
 
 .. versionadded: xxxx.xx.x
@@ -23,13 +23,13 @@ Manage NX-OS System Image Upgrades.
 
 For documentation on setting up the nxos proxy minion look in the documentation
 for :mod:`salt.proxy.nxos<salt.proxy.nxos>`.
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 
-__virtualname__ = 'nxos'
-__virtual_aliases__ = ('nxos_upgrade',)
+__virtualname__ = "nxos"
+__virtual_aliases__ = ("nxos_upgrade",)
 
 log = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ def __virtual__():
 
 
 def image_running(name, system_image, kickstart_image=None, issu=True, **kwargs):
-    '''
+    """
     Ensure the NX-OS system image is running on the device.
 
     name
@@ -80,40 +80,41 @@ def image_running(name, system_image, kickstart_image=None, issu=True, **kwargs)
             - kickstart_image: n7000-s2-kickstart.8.0.1.bin
             - system_image: n7000-s2-dk9.8.0.1.bin
             - issu: False
-    '''
-    ret = {'name': name,
-           'result': False,
-           'changes': {},
-           'comment': ''}
+    """
+    ret = {"name": name, "result": False, "changes": {}, "comment": ""}
 
     if kickstart_image is None:
-        upgrade = __salt__['nxos.upgrade'](system_image=system_image,
-                                           issu=issu, **kwargs)
+        upgrade = __salt__["nxos.upgrade"](
+            system_image=system_image, issu=issu, **kwargs
+        )
     else:
-        upgrade = __salt__['nxos.upgrade'](system_image=system_image,
-                                           kickstart_image=kickstart_image,
-                                           issu=issu, **kwargs)
+        upgrade = __salt__["nxos.upgrade"](
+            system_image=system_image,
+            kickstart_image=kickstart_image,
+            issu=issu,
+            **kwargs
+        )
 
-    if upgrade['upgrade_in_progress']:
-        ret['result'] = upgrade['upgrade_in_progress']
-        ret['changes'] = upgrade['module_data']
-        ret['comment'] = 'NX-OS Device Now Being Upgraded - See Change Details Below'
-    elif upgrade['succeeded']:
-        ret['result'] = upgrade['succeeded']
-        ret['comment'] = 'NX-OS Device Running Image: {}'.format(_version_info())
+    if upgrade["upgrade_in_progress"]:
+        ret["result"] = upgrade["upgrade_in_progress"]
+        ret["changes"] = upgrade["module_data"]
+        ret["comment"] = "NX-OS Device Now Being Upgraded - See Change Details Below"
+    elif upgrade["succeeded"]:
+        ret["result"] = upgrade["succeeded"]
+        ret["comment"] = "NX-OS Device Running Image: {}".format(_version_info())
     else:
-        ret['comment'] = 'Upgrade Failed: {}.'.format(upgrade['error_data'])
+        ret["comment"] = "Upgrade Failed: {}.".format(upgrade["error_data"])
 
     return ret
 
 
 def _version_info():
-    '''
+    """
     Helper method to return running image version
-    '''
-    if 'NXOS' in __grains__['nxos']['software']:
-        return __grains__['nxos']['software']['NXOS']
-    elif 'kickstart' in __grains__['nxos']['software']:
-        return __grains__['nxos']['software']['kickstart']
+    """
+    if "NXOS" in __grains__["nxos"]["software"]:
+        return __grains__["nxos"]["software"]["NXOS"]
+    elif "kickstart" in __grains__["nxos"]["software"]:
+        return __grains__["nxos"]["software"]["kickstart"]
     else:
-        return 'Unable to detect sofware version'
+        return "Unable to detect sofware version"

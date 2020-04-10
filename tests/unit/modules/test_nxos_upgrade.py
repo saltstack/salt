@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-'''
+"""
     :codeauthor: Thomas Stoner <tmstoner@cisco.com>
-'''
+"""
 
 # Copyright (c) 2018 Cisco and/or its affiliates.
 #
@@ -24,11 +24,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
-    MagicMock,
-    patch)
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 from tests.unit.modules.nxos.nxos_n95k import N95KPlatform
 from tests.unit.modules.nxos.nxos_n93k import N93KPlatform
@@ -38,7 +34,7 @@ from tests.unit.modules.nxos.nxos_n5k import N5KPlatform
 from tests.unit.modules.nxos.nxos_n36k import N36KPlatform
 from tests.unit.modules.nxos.nxos_n3k import N3KPlatform
 
-from salt.exceptions import (NxosError, CommandExecutionError)
+from salt.exceptions import NxosError, CommandExecutionError
 
 # Import Salt Libs
 import salt.modules.nxos_upgrade as nxos_upgrade
@@ -61,32 +57,34 @@ class NxosUpgradeTestCase(TestCase, LoaderModuleMockMixin):
 
         """ Assert platform upgrade condition and display appropriate chassis & images upon assertion failure """
 
-        assert bool(condition), "{0}: Upgrade {1} -> {2}".format(platform.chassis, platform.cimage, platform.nimage)
+        assert bool(condition), "{0}: Upgrade {1} -> {2}".format(
+            platform.chassis, platform.cimage, platform.nimage
+        )
 
     def setup_loader_modules(self):
 
         """ Define list of platforms for Unit Test """
 
-        self.platform_list = [N3KPlatform(cimage='nxos.7.0.3.F3.3.bin',
-                                          nimage='nxos.9.2.1.255.bin'),
-                              N36KPlatform(cimage='nxos.9.1.2.50.bin',
-                                           nimage='nxos.9.2.2.50.bin'),
-                              N5KPlatform(ckimage='n6000-uk9-kickstart.7.3.0.N1.1.bin',
-                                          cimage='n6000-uk9.7.3.0.N1.1.bin',
-                                          nkimage='n6000-uk9-kickstart.7.3.3.N2.1.bin',
-                                          nimage='n6000-uk9.7.3.3.N2.1.bin'),
-                              N7KPlatform(ckimage='n7000-s2-kickstart.7.3.0.D1.1.bin',
-                                          cimage='n7000-s2-dk9.7.3.0.D1.1.bin',
-                                          nkimage='n7000-s2-kickstart.8.3.1.112.gbin',
-                                          nimage='n7000-s2-dk9.8.3.1.112.gbin'),
-                              N93KPlatform(cimage='nxos.7.0.3.I7.4.bin',
-                                           nimage='nxos.7.0.3.I7.5.bin'),
-                              N93KPlatform(cimage='nxos.7.0.3.I7.5.bin',
-                                           nimage='nxos.7.0.3.I7.5.bin'),
-                              N93KLXCPlatform(cimage='nxos.7.0.3.I7.4.bin',
-                                              nimage='nxos.7.0.3.I7.5.bin'),
-                              N95KPlatform(cimage='nxos.7.0.3.I7.4.bin',
-                                           nimage='nxos.9.2.2.14.bin')]
+        self.platform_list = [
+            N3KPlatform(cimage="nxos.7.0.3.F3.3.bin", nimage="nxos.9.2.1.255.bin"),
+            N36KPlatform(cimage="nxos.9.1.2.50.bin", nimage="nxos.9.2.2.50.bin"),
+            N5KPlatform(
+                ckimage="n6000-uk9-kickstart.7.3.0.N1.1.bin",
+                cimage="n6000-uk9.7.3.0.N1.1.bin",
+                nkimage="n6000-uk9-kickstart.7.3.3.N2.1.bin",
+                nimage="n6000-uk9.7.3.3.N2.1.bin",
+            ),
+            N7KPlatform(
+                ckimage="n7000-s2-kickstart.7.3.0.D1.1.bin",
+                cimage="n7000-s2-dk9.7.3.0.D1.1.bin",
+                nkimage="n7000-s2-kickstart.8.3.1.112.gbin",
+                nimage="n7000-s2-dk9.8.3.1.112.gbin",
+            ),
+            N93KPlatform(cimage="nxos.7.0.3.I7.4.bin", nimage="nxos.7.0.3.I7.5.bin"),
+            N93KPlatform(cimage="nxos.7.0.3.I7.5.bin", nimage="nxos.7.0.3.I7.5.bin"),
+            N93KLXCPlatform(cimage="nxos.7.0.3.I7.4.bin", nimage="nxos.7.0.3.I7.5.bin"),
+            N95KPlatform(cimage="nxos.7.0.3.I7.4.bin", nimage="nxos.9.2.2.14.bin"),
+        ]
 
         return {nxos_upgrade: {}}
 
@@ -98,16 +96,16 @@ class NxosUpgradeTestCase(TestCase, LoaderModuleMockMixin):
 
         """ UT: nxos_upgrade module:check_upgrade_impact method - input validation """
 
-        result = nxos_upgrade.check_upgrade_impact('dummy-platform-image.bin', issu=1)
-        assert 'Input Error' in result
+        result = nxos_upgrade.check_upgrade_impact("dummy-platform-image.bin", issu=1)
+        assert "Input Error" in result
 
     @staticmethod
     def test_upgrade_input_validation():
 
         """ UT: nxos_upgrade module:upgrade method - input validation """
 
-        result = nxos_upgrade.upgrade('dummy-platform-image.bin', issu=1)
-        assert 'Input Error' in result
+        result = nxos_upgrade.upgrade("dummy-platform-image.bin", issu=1)
+        assert "Input Error" in result
 
     def test_check_upgrade_impact_backend_processing_error_500(self):
 
@@ -115,11 +113,19 @@ class NxosUpgradeTestCase(TestCase, LoaderModuleMockMixin):
 
         for platform in self.platform_list:
             if platform.backend_processing_error_500:
-                with patch.dict(nxos_upgrade.__salt__,
-                                {'nxos.sendline': MagicMock(return_value=platform.backend_processing_error_500)}):
+                with patch.dict(
+                    nxos_upgrade.__salt__,
+                    {
+                        "nxos.sendline": MagicMock(
+                            return_value=platform.backend_processing_error_500
+                        )
+                    },
+                ):
                     result = nxos_upgrade.check_upgrade_impact(platform.nimage)
-                    self.assert_platform_upgrade(result['backend_processing_error'], platform)
-                    self.assert_platform_upgrade(not result['succeeded'], platform)
+                    self.assert_platform_upgrade(
+                        result["backend_processing_error"], platform
+                    )
+                    self.assert_platform_upgrade(not result["succeeded"], platform)
 
     def test_check_upgrade_impact_internal_server_error_400_invalid_command(self):
 
@@ -127,13 +133,17 @@ class NxosUpgradeTestCase(TestCase, LoaderModuleMockMixin):
 
         for platform in self.platform_list:
             if platform.bad_request_client_error_400_invalid_command_dict:
-                with patch.dict(nxos_upgrade.__salt__,
-                                {'nxos.sendline':
-                                 MagicMock(return_value=
-                                           platform.bad_request_client_error_400_invalid_command_dict)}):
+                with patch.dict(
+                    nxos_upgrade.__salt__,
+                    {
+                        "nxos.sendline": MagicMock(
+                            return_value=platform.bad_request_client_error_400_invalid_command_dict
+                        )
+                    },
+                ):
                     result = nxos_upgrade.check_upgrade_impact(platform.nimage)
-                    self.assert_platform_upgrade(result['invalid_command'], platform)
-                    self.assert_platform_upgrade(not result['succeeded'], platform)
+                    self.assert_platform_upgrade(result["invalid_command"], platform)
+                    self.assert_platform_upgrade(not result["succeeded"], platform)
 
     def test_check_upgrade_impact_internal_server_error_400_in_progress(self):
 
@@ -141,12 +151,17 @@ class NxosUpgradeTestCase(TestCase, LoaderModuleMockMixin):
 
         for platform in self.platform_list:
             if platform.bad_request_client_error_400_in_progress_dict:
-                with patch.dict(nxos_upgrade.__salt__,
-                                {'nxos.sendline': MagicMock(return_value=
-                                                            platform.bad_request_client_error_400_in_progress_dict)}):
+                with patch.dict(
+                    nxos_upgrade.__salt__,
+                    {
+                        "nxos.sendline": MagicMock(
+                            return_value=platform.bad_request_client_error_400_in_progress_dict
+                        )
+                    },
+                ):
                     result = nxos_upgrade.check_upgrade_impact(platform.nimage)
-                    self.assert_platform_upgrade(result['installing'], platform)
-                    self.assert_platform_upgrade(not result['succeeded'], platform)
+                    self.assert_platform_upgrade(result["installing"], platform)
+                    self.assert_platform_upgrade(not result["succeeded"], platform)
 
     def test_check_upgrade_impact_internal_server_error_500(self):
 
@@ -154,12 +169,23 @@ class NxosUpgradeTestCase(TestCase, LoaderModuleMockMixin):
 
         for platform in self.platform_list:
             if platform.internal_server_error_500:
-                with patch.dict(nxos_upgrade.__salt__,
-                                {'nxos.sendline': MagicMock(return_value=platform.internal_server_error_500)}):
+                with patch.dict(
+                    nxos_upgrade.__salt__,
+                    {
+                        "nxos.sendline": MagicMock(
+                            return_value=platform.internal_server_error_500
+                        )
+                    },
+                ):
                     result = nxos_upgrade.check_upgrade_impact(platform.nimage)
-                    self.assert_platform_upgrade(platform.internal_server_error_500 in result['error_data'], platform)
-                    self.assert_platform_upgrade(result['backend_processing_error'], platform)
-                    self.assert_platform_upgrade(not result['succeeded'], platform)
+                    self.assert_platform_upgrade(
+                        platform.internal_server_error_500 in result["error_data"],
+                        platform,
+                    )
+                    self.assert_platform_upgrade(
+                        result["backend_processing_error"], platform
+                    )
+                    self.assert_platform_upgrade(not result["succeeded"], platform)
 
     def test_check_upgrade_impact_non_disruptive_success(self):
 
@@ -167,12 +193,20 @@ class NxosUpgradeTestCase(TestCase, LoaderModuleMockMixin):
 
         for platform in self.platform_list:
             if platform.install_all_non_disruptive_success:
-                with patch.dict(nxos_upgrade.__salt__,
-                                {'nxos.sendline': MagicMock(return_value=platform.install_all_non_disruptive_success)}):
+                with patch.dict(
+                    nxos_upgrade.__salt__,
+                    {
+                        "nxos.sendline": MagicMock(
+                            return_value=platform.install_all_non_disruptive_success
+                        )
+                    },
+                ):
                     result = nxos_upgrade.check_upgrade_impact(platform.nimage)
-                    self.assert_platform_upgrade(result['upgrade_non_disruptive'], platform)
-                    self.assert_platform_upgrade(result['succeeded'], platform)
-                    self.assert_platform_upgrade(result['module_data'], platform)
+                    self.assert_platform_upgrade(
+                        result["upgrade_non_disruptive"], platform
+                    )
+                    self.assert_platform_upgrade(result["succeeded"], platform)
+                    self.assert_platform_upgrade(result["module_data"], platform)
 
     def test_check_upgrade_impact_disruptive_success(self):
 
@@ -180,14 +214,27 @@ class NxosUpgradeTestCase(TestCase, LoaderModuleMockMixin):
 
         for platform in self.platform_list:
             if platform.install_all_disruptive_success:
-                with patch.dict(nxos_upgrade.__salt__,
-                                {'nxos.sendline': MagicMock(return_value=platform.install_all_disruptive_success)}):
+                with patch.dict(
+                    nxos_upgrade.__salt__,
+                    {
+                        "nxos.sendline": MagicMock(
+                            return_value=platform.install_all_disruptive_success
+                        )
+                    },
+                ):
                     result = nxos_upgrade.check_upgrade_impact(platform.nimage)
-                    self.assert_platform_upgrade(result['upgrade_required'] == platform.upgrade_required, platform)
-                    self.assert_platform_upgrade(not result['upgrade_non_disruptive'], platform)
-                    self.assert_platform_upgrade(not result['succeeded'], platform)
-                    self.assert_platform_upgrade(result['upgrade_in_progress'], platform)
-                    self.assert_platform_upgrade(result['module_data'], platform)
+                    self.assert_platform_upgrade(
+                        result["upgrade_required"] == platform.upgrade_required,
+                        platform,
+                    )
+                    self.assert_platform_upgrade(
+                        not result["upgrade_non_disruptive"], platform
+                    )
+                    self.assert_platform_upgrade(not result["succeeded"], platform)
+                    self.assert_platform_upgrade(
+                        result["upgrade_in_progress"], platform
+                    )
+                    self.assert_platform_upgrade(result["module_data"], platform)
 
     def test_upgrade_show_install_all_impact_no_module_data(self):
 
@@ -195,11 +242,19 @@ class NxosUpgradeTestCase(TestCase, LoaderModuleMockMixin):
 
         for platform in self.platform_list:
             if platform.show_install_all_impact_no_module_data:
-                with patch.dict(nxos_upgrade.__salt__,
-                                {'nxos.sendline': MagicMock(return_value=platform.show_install_all_impact_no_module_data)}):
+                with patch.dict(
+                    nxos_upgrade.__salt__,
+                    {
+                        "nxos.sendline": MagicMock(
+                            return_value=platform.show_install_all_impact_no_module_data
+                        )
+                    },
+                ):
                     result = nxos_upgrade.upgrade(platform.nimage, issu=False)
-                    self.assert_platform_upgrade(not result['succeeded'], platform)
-                    self.assert_platform_upgrade(result['error_data'] == result['upgrade_data'], platform)
+                    self.assert_platform_upgrade(not result["succeeded"], platform)
+                    self.assert_platform_upgrade(
+                        result["error_data"] == result["upgrade_data"], platform
+                    )
 
     def test_upgrade_invalid_command(self):
 
@@ -207,11 +262,13 @@ class NxosUpgradeTestCase(TestCase, LoaderModuleMockMixin):
 
         for platform in self.platform_list:
             if platform.invalid_command:
-                with patch.dict(nxos_upgrade.__salt__,
-                                {'nxos.sendline': MagicMock(return_value=platform.invalid_command)}):
+                with patch.dict(
+                    nxos_upgrade.__salt__,
+                    {"nxos.sendline": MagicMock(return_value=platform.invalid_command)},
+                ):
                     result = nxos_upgrade.upgrade(platform.nimage, platform.nkimage)
-                    self.assert_platform_upgrade(result['error_data'], platform)
-                    self.assert_platform_upgrade(not result['succeeded'], platform)
+                    self.assert_platform_upgrade(result["error_data"], platform)
+                    self.assert_platform_upgrade(not result["succeeded"], platform)
 
     def test_upgrade_install_in_progress(self):
 
@@ -219,12 +276,17 @@ class NxosUpgradeTestCase(TestCase, LoaderModuleMockMixin):
 
         for platform in self.platform_list:
             if platform.show_install_all_impact_in_progress:
-                with patch.dict(nxos_upgrade.__salt__,
-                                {'nxos.sendline': MagicMock(return_value=
-                                                            platform.show_install_all_impact_in_progress)}):
+                with patch.dict(
+                    nxos_upgrade.__salt__,
+                    {
+                        "nxos.sendline": MagicMock(
+                            return_value=platform.show_install_all_impact_in_progress
+                        )
+                    },
+                ):
                     result = nxos_upgrade.upgrade(platform.nimage, platform.nkimage)
-                    self.assert_platform_upgrade(result['error_data'], platform)
-                    self.assert_platform_upgrade(not result['succeeded'], platform)
+                    self.assert_platform_upgrade(result["error_data"], platform)
+                    self.assert_platform_upgrade(not result["succeeded"], platform)
 
     def test_upgrade_install_in_progress_terminal_dont_ask(self):
 
@@ -232,11 +294,20 @@ class NxosUpgradeTestCase(TestCase, LoaderModuleMockMixin):
 
         for platform in self.platform_list:
             if platform.invalid_command:
-                with patch.dict(nxos_upgrade.__salt__,
-                                {'nxos.sendline': MagicMock(return_value=[{}, platform.show_install_all_impact_in_progress])}):
+                with patch.dict(
+                    nxos_upgrade.__salt__,
+                    {
+                        "nxos.sendline": MagicMock(
+                            return_value=[
+                                {},
+                                platform.show_install_all_impact_in_progress,
+                            ]
+                        )
+                    },
+                ):
                     result = nxos_upgrade.upgrade(platform.nimage, platform.nkimage)
-                    self.assert_platform_upgrade(result['error_data'], platform)
-                    self.assert_platform_upgrade(not result['succeeded'], platform)
+                    self.assert_platform_upgrade(result["error_data"], platform)
+                    self.assert_platform_upgrade(not result["succeeded"], platform)
 
     def test_upgrade_install_in_progress_sans_terminal_dont_ask(self):
 
@@ -244,11 +315,17 @@ class NxosUpgradeTestCase(TestCase, LoaderModuleMockMixin):
 
         for platform in self.platform_list:
             if platform.invalid_command:
-                with patch.dict(nxos_upgrade.__salt__,
-                                {'nxos.sendline': MagicMock(return_value=[platform.show_install_all_impact_in_progress])}):
+                with patch.dict(
+                    nxos_upgrade.__salt__,
+                    {
+                        "nxos.sendline": MagicMock(
+                            return_value=[platform.show_install_all_impact_in_progress]
+                        )
+                    },
+                ):
                     result = nxos_upgrade.upgrade(platform.nimage, platform.nkimage)
-                    self.assert_platform_upgrade(result['error_data'], platform)
-                    self.assert_platform_upgrade(not result['succeeded'], platform)
+                    self.assert_platform_upgrade(result["error_data"], platform)
+                    self.assert_platform_upgrade(not result["succeeded"], platform)
 
     def test_upgrade_internal_server_error_500(self):
 
@@ -256,14 +333,20 @@ class NxosUpgradeTestCase(TestCase, LoaderModuleMockMixin):
 
         for platform in self.platform_list:
             if platform.backend_processing_error_500:
-                with patch.dict(nxos_upgrade.__salt__,
-                                {'nxos.sendline':
-                                 MagicMock(return_value=
-                                           platform.internal_server_error_500)}):
+                with patch.dict(
+                    nxos_upgrade.__salt__,
+                    {
+                        "nxos.sendline": MagicMock(
+                            return_value=platform.internal_server_error_500
+                        )
+                    },
+                ):
                     result = nxos_upgrade.upgrade(platform.nimage)
-                    self.assert_platform_upgrade(result['error_data'], platform)
-                    self.assert_platform_upgrade(result['backend_processing_error'], platform)
-                    self.assert_platform_upgrade(not result['succeeded'], platform)
+                    self.assert_platform_upgrade(result["error_data"], platform)
+                    self.assert_platform_upgrade(
+                        result["backend_processing_error"], platform
+                    )
+                    self.assert_platform_upgrade(not result["succeeded"], platform)
 
     def test_upgrade_install_all_disruptive(self):
 
@@ -271,15 +354,29 @@ class NxosUpgradeTestCase(TestCase, LoaderModuleMockMixin):
 
         for platform in self.platform_list:
             if platform.show_install_all_impact:
-                with patch.dict(nxos_upgrade.__salt__,
-                                {'nxos.sendline': MagicMock(side_effect=[platform.show_install_all_impact,
-                                                            platform.install_all_disruptive_success])}):
-                    result = nxos_upgrade.upgrade(platform.nimage, platform.nkimage, issu=False)
-                    self.assert_platform_upgrade(not result['error_data'], platform)
+                with patch.dict(
+                    nxos_upgrade.__salt__,
+                    {
+                        "nxos.sendline": MagicMock(
+                            side_effect=[
+                                platform.show_install_all_impact,
+                                platform.install_all_disruptive_success,
+                            ]
+                        )
+                    },
+                ):
+                    result = nxos_upgrade.upgrade(
+                        platform.nimage, platform.nkimage, issu=False
+                    )
+                    self.assert_platform_upgrade(not result["error_data"], platform)
                     if platform.upgrade_required:
-                        self.assert_platform_upgrade(result['upgrade_in_progress'], platform)
+                        self.assert_platform_upgrade(
+                            result["upgrade_in_progress"], platform
+                        )
                     else:
-                        self.assert_platform_upgrade(not result['upgrade_in_progress'], platform)
+                        self.assert_platform_upgrade(
+                            not result["upgrade_in_progress"], platform
+                        )
 
     def test_upgrade_install_all_non_disruptive(self):
 
@@ -287,12 +384,22 @@ class NxosUpgradeTestCase(TestCase, LoaderModuleMockMixin):
 
         for platform in self.platform_list:
             if platform.show_install_all_impact_non_disruptive:
-                with patch.dict(nxos_upgrade.__salt__,
-                                {'nxos.sendline': MagicMock(side_effect=[platform.show_install_all_impact_non_disruptive,
-                                                            platform.install_all_non_disruptive_success])}):
-                    result = nxos_upgrade.upgrade(platform.nimage, platform.nkimage, issu=True)
-                    self.assert_platform_upgrade(not result['error_data'], platform)
-                    self.assert_platform_upgrade(result['succeeded'], platform)
+                with patch.dict(
+                    nxos_upgrade.__salt__,
+                    {
+                        "nxos.sendline": MagicMock(
+                            side_effect=[
+                                platform.show_install_all_impact_non_disruptive,
+                                platform.install_all_non_disruptive_success,
+                            ]
+                        )
+                    },
+                ):
+                    result = nxos_upgrade.upgrade(
+                        platform.nimage, platform.nkimage, issu=True
+                    )
+                    self.assert_platform_upgrade(not result["error_data"], platform)
+                    self.assert_platform_upgrade(result["succeeded"], platform)
 
     def test_upgrade_CommandExecutionError_Exception(self):
 
@@ -300,16 +407,27 @@ class NxosUpgradeTestCase(TestCase, LoaderModuleMockMixin):
 
         for platform in self.platform_list:
             if platform.invalid_command:
-                with patch.dict(nxos_upgrade.__salt__,
-                                {'nxos.sendline': MagicMock(side_effect=CommandExecutionError({
-                                 'rejected_input': 'invalid CLI command',
-                                 'message': 'CLI excution error',
-                                 'code': '400',
-                                 'cli_error': platform.invalid_command}))}):
-                    result = nxos_upgrade.upgrade(platform.nimage, platform.nkimage, issu=False)
-                    self.assert_platform_upgrade(result['error_data'], platform)
-                    self.assert_platform_upgrade(result['invalid_command'], platform)
-                    self.assert_platform_upgrade(not result['succeeded'], platform)
+                with patch.dict(
+                    nxos_upgrade.__salt__,
+                    {
+                        "nxos.sendline": MagicMock(
+                            side_effect=CommandExecutionError(
+                                {
+                                    "rejected_input": "invalid CLI command",
+                                    "message": "CLI excution error",
+                                    "code": "400",
+                                    "cli_error": platform.invalid_command,
+                                }
+                            )
+                        )
+                    },
+                ):
+                    result = nxos_upgrade.upgrade(
+                        platform.nimage, platform.nkimage, issu=False
+                    )
+                    self.assert_platform_upgrade(result["error_data"], platform)
+                    self.assert_platform_upgrade(result["invalid_command"], platform)
+                    self.assert_platform_upgrade(not result["succeeded"], platform)
 
     def test_upgrade_CommandExecutionError_Exception2(self):
 
@@ -317,19 +435,35 @@ class NxosUpgradeTestCase(TestCase, LoaderModuleMockMixin):
 
         for platform in self.platform_list:
             if platform.invalid_command:
-                with patch.dict(nxos_upgrade.__salt__,
-                                {'nxos.sendline': MagicMock(side_effect=[platform.show_install_all_impact, CommandExecutionError({
-                                 'rejected_input': 'invalid CLI command',
-                                 'message': 'CLI excution error',
-                                 'code': '400',
-                                 'cli_error': platform.invalid_command})])}):
-                    result = nxos_upgrade.upgrade(platform.nimage, platform.nkimage, issu=False)
+                with patch.dict(
+                    nxos_upgrade.__salt__,
+                    {
+                        "nxos.sendline": MagicMock(
+                            side_effect=[
+                                platform.show_install_all_impact,
+                                CommandExecutionError(
+                                    {
+                                        "rejected_input": "invalid CLI command",
+                                        "message": "CLI excution error",
+                                        "code": "400",
+                                        "cli_error": platform.invalid_command,
+                                    }
+                                ),
+                            ]
+                        )
+                    },
+                ):
+                    result = nxos_upgrade.upgrade(
+                        platform.nimage, platform.nkimage, issu=False
+                    )
                     if platform.upgrade_required:
-                        self.assert_platform_upgrade(result['error_data'], platform)
-                        self.assert_platform_upgrade(result['invalid_command'], platform)
-                        self.assert_platform_upgrade(not result['succeeded'], platform)
+                        self.assert_platform_upgrade(result["error_data"], platform)
+                        self.assert_platform_upgrade(
+                            result["invalid_command"], platform
+                        )
+                        self.assert_platform_upgrade(not result["succeeded"], platform)
                     else:
-                        self.assert_platform_upgrade(result['succeeded'], platform)
+                        self.assert_platform_upgrade(result["succeeded"], platform)
 
     def test_upgrade_NxosError_Exception(self):
 
@@ -337,16 +471,30 @@ class NxosUpgradeTestCase(TestCase, LoaderModuleMockMixin):
 
         for platform in self.platform_list:
             if platform.internal_server_error_500:
-                with patch.dict(nxos_upgrade.__salt__,
-                                {'nxos.sendline': MagicMock(side_effect=[platform.show_install_all_impact,
-                                                            NxosError(platform.internal_server_error_500)])}):
-                    result = nxos_upgrade.upgrade(platform.nimage, platform.nkimage, issu=False)
+                with patch.dict(
+                    nxos_upgrade.__salt__,
+                    {
+                        "nxos.sendline": MagicMock(
+                            side_effect=[
+                                platform.show_install_all_impact,
+                                NxosError(platform.internal_server_error_500),
+                            ]
+                        )
+                    },
+                ):
+                    result = nxos_upgrade.upgrade(
+                        platform.nimage, platform.nkimage, issu=False
+                    )
                     if platform.upgrade_required:
-                        self.assert_platform_upgrade(result['upgrade_in_progress'], platform)
-                        self.assert_platform_upgrade(not result['succeeded'], platform)
+                        self.assert_platform_upgrade(
+                            result["upgrade_in_progress"], platform
+                        )
+                        self.assert_platform_upgrade(not result["succeeded"], platform)
                     else:
-                        self.assert_platform_upgrade(not result['upgrade_in_progress'], platform)
-                        self.assert_platform_upgrade(result['succeeded'], platform)
+                        self.assert_platform_upgrade(
+                            not result["upgrade_in_progress"], platform
+                        )
+                        self.assert_platform_upgrade(result["succeeded"], platform)
 
     def test_upgrade_NxosError_Exception2(self):
 
@@ -354,13 +502,29 @@ class NxosUpgradeTestCase(TestCase, LoaderModuleMockMixin):
 
         for platform in self.platform_list:
             if platform.internal_server_error_500:
-                with patch.dict(nxos_upgrade.__salt__,
-                                {'nxos.sendline': MagicMock(side_effect=[platform.show_install_all_impact,
-                                                            NxosError("{'Error Message': 'Not Found', 'Code': 404}")])}):
-                    result = nxos_upgrade.upgrade(platform.nimage, platform.nkimage, issu=False)
+                with patch.dict(
+                    nxos_upgrade.__salt__,
+                    {
+                        "nxos.sendline": MagicMock(
+                            side_effect=[
+                                platform.show_install_all_impact,
+                                NxosError(
+                                    "{'Error Message': 'Not Found', 'Code': 404}"
+                                ),
+                            ]
+                        )
+                    },
+                ):
+                    result = nxos_upgrade.upgrade(
+                        platform.nimage, platform.nkimage, issu=False
+                    )
                     if platform.upgrade_required:
-                        self.assert_platform_upgrade(result['upgrade_in_progress'], platform)
-                        self.assert_platform_upgrade(not result['succeeded'], platform)
+                        self.assert_platform_upgrade(
+                            result["upgrade_in_progress"], platform
+                        )
+                        self.assert_platform_upgrade(not result["succeeded"], platform)
                     else:
-                        self.assert_platform_upgrade(not result['upgrade_in_progress'], platform)
-                        self.assert_platform_upgrade(result['succeeded'], platform)
+                        self.assert_platform_upgrade(
+                            not result["upgrade_in_progress"], platform
+                        )
+                        self.assert_platform_upgrade(result["succeeded"], platform)

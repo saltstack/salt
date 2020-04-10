@@ -13,9 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-'''
+"""
 Util functions for the NXOS modules.
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python std lib
@@ -26,12 +26,17 @@ import socket
 import re
 import collections
 from salt.ext.six import string_types
-from salt.exceptions import (NxosClientError, NxosError,
-                             NxosRequestNotSupported, CommandExecutionError)
+from salt.exceptions import (
+    NxosClientError,
+    NxosError,
+    NxosRequestNotSupported,
+    CommandExecutionError,
+)
 
 # Import salt libs
 import salt.utils.http
 from salt.ext.six.moves import zip
+
 try:
     from salt.utils.args import clean_kwargs
 except ImportError:
@@ -42,18 +47,19 @@ try:
     import httplib  # pylint: disable=W1699
 except ImportError:
     import http.client
+
     httplib = http.client
 
 log = logging.getLogger(__name__)
 
 
 class UHTTPConnection(httplib.HTTPConnection):  # pylint: disable=W1699
-    '''
+    """
     Subclass of Python library HTTPConnection that uses a unix-domain socket.
-    '''
+    """
 
     def __init__(self, path):
-        httplib.HTTPConnection.__init__(self, 'localhost')
+        httplib.HTTPConnection.__init__(self, "localhost")
         self.path = path
 
     def connect(self):
@@ -63,21 +69,21 @@ class UHTTPConnection(httplib.HTTPConnection):  # pylint: disable=W1699
 
 
 class NxapiClient(object):
-    '''
+    """
     Class representing an NX-API client that connects over http(s) or
     unix domain socket (UDS).
-    '''
+    """
 
     # Location of unix domain socket for NX-API localhost
-    NXAPI_UDS = '/tmp/nginx_local/nginx_1_be_nxapi.sock'
+    NXAPI_UDS = "/tmp/nginx_local/nginx_1_be_nxapi.sock"
     # NXAPI listens for remote connections to "http(s)://<switch IP>/ins"
     # NXAPI listens for local connections to "http(s)://<UDS>/ins_local"
-    NXAPI_REMOTE_URI_PATH = '/ins'
-    NXAPI_UDS_URI_PATH = '/ins_local'
-    NXAPI_VERSION = '1.0'
+    NXAPI_REMOTE_URI_PATH = "/ins"
+    NXAPI_UDS_URI_PATH = "/ins_local"
+    NXAPI_VERSION = "1.0"
 
     def __init__(self, **nxos_kwargs):
-        '''
+        """
         Initialize NxapiClient() connection object.  By default this connects
         to the local unix domain socket (UDS).  If http(s) is required to
         connect to a remote device then
@@ -87,148 +93,152 @@ class NxapiClient(object):
             nxos_kwargs['transport'],
             nxos_kwargs['port'],
         parameters must be provided.
-        '''
+        """
         self.nxargs = self._prepare_conn_args(clean_kwargs(**nxos_kwargs))
         # Default: Connect to unix domain socket on localhost.
-        if self.nxargs['connect_over_uds']:
+        if self.nxargs["connect_over_uds"]:
             if not os.path.exists(self.NXAPI_UDS):
-                raise NxosClientError("No host specified and no UDS found at {0}\n".format(self.NXAPI_UDS))
+                raise NxosClientError(
+                    "No host specified and no UDS found at {0}\n".format(self.NXAPI_UDS)
+                )
 
             # Create UHTTPConnection object for NX-API communication over UDS.
-            log.info('Nxapi connection arguments: {0}'.format(self.nxargs))
-            log.info('Connecting over unix domain socket')
+            log.info("Nxapi connection arguments: {0}".format(self.nxargs))
+            log.info("Connecting over unix domain socket")
             self.connection = UHTTPConnection(self.NXAPI_UDS)
         else:
             # Remote connection - Proxy Minion, connect over http(s)
-            log.info('Nxapi connection arguments: {0}'.format(self.nxargs))
-            log.info('Connecting over {}'.format(self.nxargs['transport']))
+            log.info("Nxapi connection arguments: {0}".format(self.nxargs))
+            log.info("Connecting over {}".format(self.nxargs["transport"]))
             self.connection = salt.utils.http.query
 
     def _use_remote_connection(self, kwargs):
-        '''
+        """
         Determine if connection is local or remote
-        '''
-        kwargs['host'] = kwargs.get('host')
-        kwargs['username'] = kwargs.get('username')
-        kwargs['password'] = kwargs.get('password')
-        if kwargs['host'] is None or \
-           kwargs['username'] is None or \
-           kwargs['password'] is None:
+        """
+        kwargs["host"] = kwargs.get("host")
+        kwargs["username"] = kwargs.get("username")
+        kwargs["password"] = kwargs.get("password")
+        if (
+            kwargs["host"] is None
+            or kwargs["username"] is None
+            or kwargs["password"] is None
+        ):
             return False
         else:
             return True
 
     def _prepare_conn_args(self, kwargs):
-        '''
+        """
         Set connection arguments for remote or local connection.
-        '''
-        kwargs['connect_over_uds'] = True
-        kwargs['timeout'] = kwargs.get('timeout', 60)
-        kwargs['cookie'] = kwargs.get('cookie', 'admin')
+        """
+        kwargs["connect_over_uds"] = True
+        kwargs["timeout"] = kwargs.get("timeout", 60)
+        kwargs["cookie"] = kwargs.get("cookie", "admin")
         if self._use_remote_connection(kwargs):
-            kwargs['transport'] = kwargs.get('transport', 'https')
-            if kwargs['transport'] == 'https':
-                kwargs['port'] = kwargs.get('port', 443)
+            kwargs["transport"] = kwargs.get("transport", "https")
+            if kwargs["transport"] == "https":
+                kwargs["port"] = kwargs.get("port", 443)
             else:
-                kwargs['port'] = kwargs.get('port', 80)
-            kwargs['verify'] = kwargs.get('verify', True)
-            if isinstance(kwargs['verify'], bool):
-                kwargs['verify_ssl'] = kwargs['verify']
+                kwargs["port"] = kwargs.get("port", 80)
+            kwargs["verify"] = kwargs.get("verify", True)
+            if isinstance(kwargs["verify"], bool):
+                kwargs["verify_ssl"] = kwargs["verify"]
             else:
-                kwargs['ca_bundle'] = kwargs['verify']
-            kwargs['connect_over_uds'] = False
+                kwargs["ca_bundle"] = kwargs["verify"]
+            kwargs["connect_over_uds"] = False
         return kwargs
 
     def _build_request(self, type, commands):
-        '''
+        """
         Build NX-API JSON request.
-        '''
+        """
         request = {}
         headers = {
-            'content-type': 'application/json',
+            "content-type": "application/json",
         }
-        if self.nxargs['connect_over_uds']:
-            user = self.nxargs['cookie']
-            headers['cookie'] = 'nxapi_auth=' + user + ':local'
-            request['url'] = self.NXAPI_UDS_URI_PATH
+        if self.nxargs["connect_over_uds"]:
+            user = self.nxargs["cookie"]
+            headers["cookie"] = "nxapi_auth=" + user + ":local"
+            request["url"] = self.NXAPI_UDS_URI_PATH
         else:
-            request['url'] = '{transport}://{host}:{port}{uri}'.format(
-                transport=self.nxargs['transport'],
-                host=self.nxargs['host'],
-                port=self.nxargs['port'],
+            request["url"] = "{transport}://{host}:{port}{uri}".format(
+                transport=self.nxargs["transport"],
+                host=self.nxargs["host"],
+                port=self.nxargs["port"],
                 uri=self.NXAPI_REMOTE_URI_PATH,
             )
 
         if isinstance(commands, (list, set, tuple)):
-            commands = ' ; '.join(commands)
+            commands = " ; ".join(commands)
         payload = {}
         # Some versions of NX-OS fail to process the payload properly if
         # 'input' gets serialized before 'type' and the payload of 'input'
         # contains the string 'type'.  Use an ordered dict to enforce ordering.
-        payload['ins_api'] = collections.OrderedDict()
-        payload['ins_api']['version'] = self.NXAPI_VERSION
-        payload['ins_api']['type'] = type
-        payload['ins_api']['chunk'] = '0'
-        payload['ins_api']['sid'] = '1'
-        payload['ins_api']['input'] = commands
-        payload['ins_api']['output_format'] = 'json'
+        payload["ins_api"] = collections.OrderedDict()
+        payload["ins_api"]["version"] = self.NXAPI_VERSION
+        payload["ins_api"]["type"] = type
+        payload["ins_api"]["chunk"] = "0"
+        payload["ins_api"]["sid"] = "1"
+        payload["ins_api"]["input"] = commands
+        payload["ins_api"]["output_format"] = "json"
 
-        request['headers'] = headers
-        request['payload'] = json.dumps(payload)
-        request['opts'] = {
-            'http_request_timeout': self.nxargs['timeout']
-        }
-        log.info('request: {0}'.format(request))
+        request["headers"] = headers
+        request["payload"] = json.dumps(payload)
+        request["opts"] = {"http_request_timeout": self.nxargs["timeout"]}
+        log.info("request: {0}".format(request))
         return request
 
     def request(self, type, command_list):
-        '''
+        """
         Send NX-API JSON request to the NX-OS device.
-        '''
+        """
         req = self._build_request(type, command_list)
-        if self.nxargs['connect_over_uds']:
-            self.connection.request('POST', req['url'], req['payload'], req['headers'])
+        if self.nxargs["connect_over_uds"]:
+            self.connection.request("POST", req["url"], req["payload"], req["headers"])
             response = self.connection.getresponse()
         else:
-            response = self.connection(req['url'],
-                                       method='POST',
-                                       opts=req['opts'],
-                                       data=req['payload'],
-                                       header_dict=req['headers'],
-                                       decode=True,
-                                       decode_type='json',
-                                       **self.nxargs)
+            response = self.connection(
+                req["url"],
+                method="POST",
+                opts=req["opts"],
+                data=req["payload"],
+                header_dict=req["headers"],
+                decode=True,
+                decode_type="json",
+                **self.nxargs
+            )
 
         return self.parse_response(response, command_list)
 
     def parse_response(self, response, command_list):
-        '''
+        """
         Parse NX-API JSON response from the NX-OS device.
-        '''
+        """
         # Check for 500 level NX-API Server Errors
-        if isinstance(response, collections.Iterable) and 'status' in response:
-            if int(response['status']) >= 500:
-                raise NxosError('{}'.format(response))
+        if isinstance(response, collections.Iterable) and "status" in response:
+            if int(response["status"]) >= 500:
+                raise NxosError("{}".format(response))
             else:
-                raise NxosError('NX-API Request Not Supported: {}'.format(response))
+                raise NxosError("NX-API Request Not Supported: {}".format(response))
 
         if isinstance(response, collections.Iterable):
-            body = response['dict']
+            body = response["dict"]
         else:
             body = response
 
-        if self.nxargs['connect_over_uds']:
-            body = json.loads(response.read().decode('utf-8'))
+        if self.nxargs["connect_over_uds"]:
+            body = json.loads(response.read().decode("utf-8"))
 
         # Proceed with caution.  The JSON may not be complete.
         # Don't just return body['ins_api']['outputs']['output'] directly.
-        output = body.get('ins_api')
+        output = body.get("ins_api")
         if output is None:
-            raise NxosClientError('Unexpected JSON output\n{0}'.format(body))
-        if output.get('outputs'):
-            output = output['outputs']
-        if output.get('output'):
-            output = output['output']
+            raise NxosClientError("Unexpected JSON output\n{0}".format(body))
+        if output.get("outputs"):
+            output = output["outputs"]
+        if output.get("output"):
+            output = output["output"]
 
         # The result list stores results for each command that was sent to
         # nxapi.
@@ -244,37 +254,37 @@ class NxapiClient(object):
             output = [output]
         if not isinstance(command_list, list):
             command_list = [command_list]
-        if len(command_list) == 1 and ';' in command_list[0]:
-            command_list = [cmd.strip() for cmd in command_list[0].split(';')]
+        if len(command_list) == 1 and ";" in command_list[0]:
+            command_list = [cmd.strip() for cmd in command_list[0].split(";")]
 
         for cmd_result, cmd in zip(output, command_list):
-            code = cmd_result.get('code')
-            msg = cmd_result.get('msg')
-            log.info('command {}:'.format(cmd))
-            log.info('PARSE_RESPONSE: {0} {1}'.format(code, msg))
-            if code == '400':
-                raise CommandExecutionError({
-                    'rejected_input': cmd,
-                    'code': code,
-                    'message': msg,
-                    'cli_error': cmd_result.get('clierror'),
-                    'previous_commands': previous_commands,
-                })
-            elif code == '413':
-                raise NxosRequestNotSupported('Error 413: {}'.format(msg))
-            elif code != '200':
-                raise NxosError('Unknown Error: {}, Code: {}'.format(msg, code))
+            code = cmd_result.get("code")
+            msg = cmd_result.get("msg")
+            log.info("command {}:".format(cmd))
+            log.info("PARSE_RESPONSE: {0} {1}".format(code, msg))
+            if code == "400":
+                raise CommandExecutionError(
+                    {
+                        "rejected_input": cmd,
+                        "code": code,
+                        "message": msg,
+                        "cli_error": cmd_result.get("clierror"),
+                        "previous_commands": previous_commands,
+                    }
+                )
+            elif code == "413":
+                raise NxosRequestNotSupported("Error 413: {}".format(msg))
+            elif code != "200":
+                raise NxosError("Unknown Error: {}, Code: {}".format(msg, code))
             else:
                 previous_commands.append(cmd)
-                result.append(cmd_result['body'])
+                result.append(cmd_result["body"])
 
         return result
 
 
-def nxapi_request(commands,
-                  method='cli_show',
-                  **kwargs):
-    '''
+def nxapi_request(commands, method="cli_show", **kwargs):
+    """
     Send exec and config commands to the NX-OS device over NX-API.
 
     commands
@@ -311,77 +321,78 @@ def nxapi_request(commands,
         Either a boolean, in which case it controls whether we verify the NX-API
         TLS certificate, or a string, in which case it must be a path to a CA bundle
         to use. Defaults to ``True``.
-    '''
+    """
     client = NxapiClient(**kwargs)
     return client.request(method, commands)
 
 
 def ping(**kwargs):
-    '''
+    """
     Verify connection to the NX-OS device over UDS.
-    '''
-    return NxapiClient(**kwargs).nxargs['connect_over_uds']
+    """
+    return NxapiClient(**kwargs).nxargs["connect_over_uds"]
+
 
 # Grains Functions
 
 
 def _parser(block):
-    return re.compile('^{block}\n(?:^[ \n].*$\n?)+'.format(block=block), re.MULTILINE)
+    return re.compile("^{block}\n(?:^[ \n].*$\n?)+".format(block=block), re.MULTILINE)
 
 
 def _parse_software(data):
-    '''
+    """
     Internal helper function to parse sotware grain information.
-    '''
-    ret = {'software': {}}
-    software = _parser('Software').search(data).group(0)
-    matcher = re.compile('^  ([^:]+): *([^\n]+)', re.MULTILINE)
+    """
+    ret = {"software": {}}
+    software = _parser("Software").search(data).group(0)
+    matcher = re.compile("^  ([^:]+): *([^\n]+)", re.MULTILINE)
     for line in matcher.finditer(software):
         key, val = line.groups()
-        ret['software'][key] = val
-    return ret['software']
+        ret["software"][key] = val
+    return ret["software"]
 
 
 def _parse_hardware(data):
-    '''
+    """
     Internal helper function to parse hardware grain information.
-    '''
-    ret = {'hardware': {}}
-    hardware = _parser('Hardware').search(data).group(0)
-    matcher = re.compile('^  ([^:\n]+): *([^\n]+)', re.MULTILINE)
+    """
+    ret = {"hardware": {}}
+    hardware = _parser("Hardware").search(data).group(0)
+    matcher = re.compile("^  ([^:\n]+): *([^\n]+)", re.MULTILINE)
     for line in matcher.finditer(hardware):
         key, val = line.groups()
-        ret['hardware'][key] = val
-    return ret['hardware']
+        ret["hardware"][key] = val
+    return ret["hardware"]
 
 
 def _parse_plugins(data):
-    '''
+    """
     Internal helper function to parse plugin grain information.
-    '''
-    ret = {'plugins': []}
-    plugins = _parser('plugin').search(data).group(0)
-    matcher = re.compile('^  (?:([^,]+), )+([^\n]+)', re.MULTILINE)
+    """
+    ret = {"plugins": []}
+    plugins = _parser("plugin").search(data).group(0)
+    matcher = re.compile("^  (?:([^,]+), )+([^\n]+)", re.MULTILINE)
     for line in matcher.finditer(plugins):
-        ret['plugins'].extend(line.groups())
-    return ret['plugins']
+        ret["plugins"].extend(line.groups())
+    return ret["plugins"]
 
 
 def version_info():
     client = NxapiClient()
-    return client.request('cli_show_ascii', 'show version')[0]
+    return client.request("cli_show_ascii", "show version")[0]
 
 
 def system_info(data):
-    '''
+    """
     Helper method to return parsed system_info
     from the 'show version' command.
-    '''
+    """
     if not data:
         return {}
     info = {
-        'software': _parse_software(data),
-        'hardware': _parse_hardware(data),
-        'plugins': _parse_plugins(data),
+        "software": _parse_software(data),
+        "hardware": _parse_hardware(data),
+        "plugins": _parse_plugins(data),
     }
-    return {'nxos': info}
+    return {"nxos": info}
