@@ -81,6 +81,15 @@ __all_privileges__ = [
 ]
 
 
+class MockMySQLConnect(object):
+    def __init__(self, *args, **kwargs):
+        self.args = args
+        self.kwargs = kwargs
+
+    def autocommit(self, *args, **kwards):
+        return True
+
+
 @skipIf(NO_MYSQL, "Install MySQL bindings before running MySQL unit tests.")
 class MySQLTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
@@ -650,7 +659,7 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
     @skipIf(
         NO_PyMYSQL, "Install pymysql bindings before running test__connect_pymysql."
     )
-    def test__connect_pymysql(self):
+    def test__connect_pymysql_exception(self):
         """
         Test the _connect function in the MySQL module
         """
@@ -669,7 +678,7 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
                 )
 
     @skipIf(not NO_PyMYSQL, "With pymysql installed use test__connect_pymysql.")
-    def test__connect_mysql(self):
+    def test__connect_mysqldb_exception(self):
         """
         Test the _connect function in the MySQL module
         """
@@ -686,3 +695,12 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
                     mysql.__context__["mysql.error"],
                     "MySQL Error 1698: Access denied for user 'root'@'localhost'",
                 )
+
+    def test__connect_mysqldb(self):
+        """
+        Test the _connect function in the MySQL module
+        """
+        with patch.dict(mysql.__salt__, {"config.option": MagicMock()}):
+            with patch("MySQLdb.connect", return_value=MockMySQLConnect()):
+                ret = mysql._connect()
+                self.assertNotIn("mysql.error", mysql.__context__)
