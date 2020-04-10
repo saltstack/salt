@@ -70,6 +70,7 @@ import salt.modules.nxos as nxos_module
 import salt.utils.nxos as nxos_utils
 import salt.modules.file as file_module
 import salt.modules.cp as cp_module
+import salt.utils.pycrypto
 
 # pylint: disable-msg=C0103
 # pylint: disable-msg=C0301
@@ -142,6 +143,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
             result = nxos_module.check_password(username, password, encrypted=False)
             self.assertFalse(result)
 
+    @skipIf('sha256' not in salt.utils.pycrypto.methods, 'compatible crypt method for fake data not available')
     def test_check_password_password_encrypted_false(self):
 
         """ UT: nxos module:check_password method - password is not encrypted """
