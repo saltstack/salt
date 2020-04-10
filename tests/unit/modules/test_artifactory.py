@@ -158,9 +158,12 @@ class ArtifactoryTestCase(TestCase, LoaderModuleMockMixin):
                 "http://artifactory.example.com/artifactory/libs-snapshots/com/company/sampleapp/web-module/web/1.0_RC10-SNAPSHOT/web-1.0_RC10-20131127.105838-2.war",
             )
             self.assertEqual(file_name, "web-1.0_RC10-20131127.105838-2.war")
-            
+
     def test_get_snapshot_url_with_classifier(self):
-        with patch('salt.modules.artifactory._get_snapshot_version_metadata_xml', MagicMock(return_value='''<?xml version="1.0" encoding="UTF-8"?>
+        with patch(
+            "salt.modules.artifactory._get_snapshot_version_metadata_xml",
+            MagicMock(
+                return_value="""<?xml version="1.0" encoding="UTF-8"?>
                     <metadata>
                       <groupId>com.company.sampleapp.web-module</groupId>
                       <artifactId>web</artifactId>
@@ -186,14 +189,21 @@ class ArtifactoryTestCase(TestCase, LoaderModuleMockMixin):
                         </snapshotVersions>
                       </versioning>
                     </metadata>
-                ''')):
-            artifact_url, file_name = artifactory._get_snapshot_url(artifactory_url='http://artifactory.example.com/artifactory',
-                                                                    repository='libs-snapshots',
-                                                                    group_id='com.company.sampleapp.web-module',
-                                                                    artifact_id='web',
-                                                                    version='1.0_RC10-SNAPSHOT',
-                                                                    packaging='war',
-                                                                    classifer='test',
-                                                                    headers={})
+                """
+            ),
+        ):
+            artifact_url, file_name = artifactory._get_snapshot_url(
+                artifactory_url="http://artifactory.example.com/artifactory",
+                repository="libs-snapshots",
+                group_id="com.company.sampleapp.web-module",
+                artifact_id="web",
+                version="1.0_RC10-SNAPSHOT",
+                packaging="war",
+                classifier="test",
+                headers={},
+            )
 
-            self.assertEqual(artifact_url, "http://artifactory.example.com/artifactory/libs-snapshots/com/company/sampleapp/web-module/web/1.0_RC10-SNAPSHOT/web-1.0_RC10-20131127.105838-2-test.war")        
+            self.assertEqual(
+                artifact_url,
+                "http://artifactory.example.com/artifactory/libs-snapshots/com/company/sampleapp/web-module/web/1.0_RC10-SNAPSHOT/web-1.0_RC10-20131127.105838-2-test.war",
+            )
