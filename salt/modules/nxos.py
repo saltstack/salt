@@ -98,7 +98,7 @@ from salt.utils.pycrypto import gen_hash, secure_password
 import salt.utils.platform
 import salt.utils.nxos
 from salt.ext import six
-from salt.exceptions import CommandExecutionError, NxosError
+from salt.exceptions import CommandExecutionError, NxosError, SaltInvocationError
 from socket import error as socket_error
 
 __virtualname__ = 'nxos'
@@ -724,13 +724,11 @@ def set_password(username,
             password='$5$2fWwO2vK$s7.Hr3YltMNHuhywQQ3nfOd.gAPHgs3SOBYYdGT3E.A' \\
             encrypted=True
     '''
-    password_line = get_user(username, **kwargs)
+    if algorithm not in ['sha512', 'sha256', 'md5', 'crypt']:
+        raise SaltInvocationError("Unsupported hash algorithm requested")
+    get_user(username, **kwargs)  # verify user exists
     if encrypted is False:
-        if crypt_salt is None:
-            # NXOS does not like non alphanumeric characters.  Using the random module from pycrypto
-            # can lead to having non alphanumeric characters in the salt for the hashed password.
-            crypt_salt = secure_password(8, use_random=False)
-        hashed_pass = gen_hash(crypt_salt=crypt_salt, password=password, algorithm=algorithm)
+        hashed_pass = gen_hash(crypt_salt=crypt_salt, password=password, algorithm=algorithm, force=True)
     else:
         hashed_pass = password
     password_line = 'username {0} password 5 {1}'.format(username, hashed_pass)

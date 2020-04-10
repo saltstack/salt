@@ -62,7 +62,7 @@ from tests.unit.modules.nxos.nxos_config import (
     template_engine_file_str_file,
     unset_role)
 
-from salt.exceptions import CommandExecutionError, NxosError
+from salt.exceptions import CommandExecutionError, NxosError, SaltInvocationError
 from socket import error as socket_error
 
 # Import Salt Libs
@@ -687,74 +687,74 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
         """ UT: nxos module:set_password method - encrypted False, crypt_salt None """
 
-        password_line = 'username devops password 5 $5$CFENPG$1VUC15BB4rq8fM0TSDaBGlGvVAJBelGFLp9VZEiVPOC  role network-admin'
         username = 'devops'
         password = 'test123TMM^&'
-        crypt_salt = 'ZcZqm15X'
         hashed_pass = '$5$ZcZqm15X$exHN2m6yrPKpYhGArK3Vml3ZjNbJaJYdzWyf0fp1Up2'
-        # password_line = 'username devops password 5 $5$ZcZqm15X$exHN2m6yrPKpYhGArK3Vml3ZjNbJaJYdzWyf0fp1Up2'
+        config_line = 'username devops password 5 $5$ZcZqm15X$exHN2m6yrPKpYhGArK3Vml3ZjNbJaJYdzWyf0fp1Up2'
 
-        with patch('salt.modules.nxos.get_user', autospec=True, return_value=password_line):
-            with patch('salt.modules.nxos.secure_password', autospec=True, return_value=crypt_salt):
-                with patch('salt.modules.nxos.gen_hash', autospec=True, return_value=hashed_pass):
-                    with patch('salt.modules.nxos.config', autospec=True, return_value='password_set'):
-                        result = nxos_module.set_password(username, password)
-                        self.assertEqual('password_set', result)
+        with patch('salt.modules.nxos.get_user', autospec=True):
+            with patch('salt.modules.nxos.gen_hash', autospec=True, return_value=hashed_pass):
+                with patch('salt.modules.nxos.config', autospec=True, return_value='password_set') as config:
+                    result = nxos_module.set_password(username, password)
+                    config.assert_called_with(config_line)
+                    self.assertEqual('password_set', result)
 
     def test_set_password_enc_false_cs_set(self):
 
         """ UT: nxos module:set_password method - encrypted False, crypt_salt set """
 
-        password_line = 'username devops password 5 $5$CFENPG$1VUC15BB4rq8fM0TSDaBGlGvVAJBelGFLp9VZEiVPOC  role network-admin'
         username = 'devops'
         password = 'test123TMM^&'
         crypt_salt = 'ZcZqm15X'
         hashed_pass = '$5$ZcZqm15X$exHN2m6yrPKpYhGArK3Vml3ZjNbJaJYdzWyf0fp1Up2'
-        # password_line = 'username devops password 5 $5$ZcZqm15X$exHN2m6yrPKpYhGArK3Vml3ZjNbJaJYdzWyf0fp1Up2'
+        config_line = 'username devops password 5 $5$ZcZqm15X$exHN2m6yrPKpYhGArK3Vml3ZjNbJaJYdzWyf0fp1Up2'
 
-        with patch('salt.modules.nxos.get_user', autospec=True, return_value=password_line):
-            with patch('salt.modules.nxos.secure_password', autospec=True, return_value=crypt_salt):
-                with patch('salt.modules.nxos.gen_hash', autospec=True, return_value=hashed_pass):
-                    with patch('salt.modules.nxos.config', autospec=True, return_value='password_set'):
-                        result = nxos_module.set_password(username, password, crypt_salt=crypt_salt)
-                        self.assertEqual('password_set', result)
+        with patch('salt.modules.nxos.get_user', autospec=True):
+            with patch('salt.modules.nxos.gen_hash', autospec=True, return_value=hashed_pass):
+                with patch('salt.modules.nxos.config', autospec=True, return_value='password_set') as config:
+                    result = nxos_module.set_password(username, password, crypt_salt=crypt_salt)
+                    config.assert_called_with(config_line)
+                    self.assertEqual('password_set', result)
 
     def test_set_password_enc_true(self):
 
         """ UT: nxos module:set_password method - encrypted True """
 
-        password_line = 'username devops password 5 $5$CFENPG$1VUC15BB4rq8fM0TSDaBGlGvVAJBelGFLp9VZEiVPOC  role network-admin'
         username = 'devops'
         password = 'test123TMM^&'
-        crypt_salt = 'ZcZqm15X'
         hashed_pass = '$5$ZcZqm15X$exHN2m6yrPKpYhGArK3Vml3ZjNbJaJYdzWyf0fp1Up2'
-        # password_line = 'username devops password 5 $5$ZcZqm15X$exHN2m6yrPKpYhGArK3Vml3ZjNbJaJYdzWyf0fp1Up2'
+        config_line = 'username devops password 5 test123TMM^&'
 
-        with patch('salt.modules.nxos.get_user', autospec=True, return_value=password_line):
-            with patch('salt.modules.nxos.secure_password', autospec=True, return_value=crypt_salt):
-                with patch('salt.modules.nxos.gen_hash', autospec=True, return_value=hashed_pass):
-                    with patch('salt.modules.nxos.config', autospec=True, return_value='password_set'):
-                        result = nxos_module.set_password(username, password, encrypted=True)
-                        self.assertEqual('password_set', result)
+        with patch('salt.modules.nxos.get_user', autospec=True):
+            with patch('salt.modules.nxos.gen_hash', autospec=True, return_value=hashed_pass):
+                with patch('salt.modules.nxos.config', autospec=True, return_value='password_set') as config:
+                    result = nxos_module.set_password(username, password, encrypted=True)
+                    config.assert_called_with(config_line)
+                    self.assertEqual('password_set', result)
 
     def test_set_password_role_none(self):
 
         """ UT: nxos module:set_password method - role none """
 
-        password_line = 'username devops password 5 $5$CFENPG$1VUC15BB4rq8fM0TSDaBGlGvVAJBelGFLp9VZEiVPOC  role network-admin'
         username = 'devops'
         password = 'test123TMM^&'
-        crypt_salt = 'ZcZqm15X'
         hashed_pass = '$5$ZcZqm15X$exHN2m6yrPKpYhGArK3Vml3ZjNbJaJYdzWyf0fp1Up2'
-        # password_line = 'username devops password 5 $5$ZcZqm15X$exHN2m6yrPKpYhGArK3Vml3ZjNbJaJYdzWyf0fp1Up2'
+        config_line = 'username devops password 5 test123TMM^& role devops'
 
-        with patch('salt.modules.nxos.get_user', autospec=True, return_value=password_line):
-            with patch('salt.modules.nxos.secure_password', autospec=True, return_value=crypt_salt):
-                with patch('salt.modules.nxos.gen_hash', autospec=True, return_value=hashed_pass):
-                    with patch('salt.modules.nxos.config', autospec=True, return_value='password_set'):
-                        # Execute the function under test
-                        result = nxos_module.set_password(username, password, encrypted=True, role='devops')
-                        self.assertEqual('password_set', result)
+        with patch('salt.modules.nxos.get_user', autospec=True):
+            with patch('salt.modules.nxos.gen_hash', autospec=True, return_value=hashed_pass):
+                with patch('salt.modules.nxos.config', autospec=True, return_value='password_set') as config:
+                    # Execute the function under test
+                    result = nxos_module.set_password(username, password, encrypted=True, role='devops')
+                    config.assert_called_with(config_line)
+                    self.assertEqual('password_set', result)
+
+    def test_set_password_blowfish_crypt(self):
+
+        """ UT: nxos module:set_password method - role none """
+
+        with self.assertRaises(SaltInvocationError):
+            nxos_module.set_password('username', 'password', encrypted=True, algorithm='blowfish')
 
     def test_set_role(self):
 
