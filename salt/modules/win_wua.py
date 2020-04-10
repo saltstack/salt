@@ -347,6 +347,7 @@ def list(
     severities=None,
     download=False,
     install=False,
+    online=True,
 ):
     """
     .. versionadded:: 2017.7.0
@@ -468,7 +469,7 @@ def list(
         salt '*' win_wua.list categories=['Feature Packs','Windows 8.1'] summary=True
     """
     # Create a Windows Update Agent instance
-    wua = salt.utils.win_update.WindowsUpdateAgent()
+    wua = salt.utils.win_update.WindowsUpdateAgent(online=online)
 
     # Search for Update
     updates = wua.available(
@@ -493,6 +494,64 @@ def list(
         return updates.summary() if summary else updates.list()
 
     return ret
+
+
+def installed(summary=False, kbs_only=False):
+    """
+    Get a list of all updates that are currently installed on the system.
+
+    .. note::
+        This list may not necessarily match the Update History on the machine.
+        This will only show the updates that apply to the current build of
+        Windows. So, for example, the system may have shipped with Windows 10
+        Build 1607. That machine received updates to the 1607 build. Later the
+        machine was upgraded to a newer feature release, 1803 for example. Then
+        more updates were applied. This will only return the updates applied to
+        the 1803 build and not those applied when the system was at the 1607
+        build.
+
+    .. versionadded:: Sodium
+
+    Args:
+        summary (bool): Return a summary instead of a detailed list of updates.
+            ``True`` will return a Summary, ``False`` will return a detailed
+            list of installed updates. Default is ``False``
+
+        kbs_only (bool): Only return a list of KBs installed on the system. If
+            this parameter is passed, the ``summary`` parameter will be ignored.
+            Default is ``False``
+
+    Returns:
+        dict: (``kbs_only=False``) Returns a dictionary of either a Summary or a
+            detailed list of updates installed on the system.
+        list: (``kbs_only=True``) Returns a list of KBs installed on the system.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        # Get a detailed list of all applicable updates installed on the system
+        salt '*' win_wua.installed
+
+        # Get a summary of all applicable updates installed on the system
+        salt '*' win_wua.installed summary=True online=False
+
+        # Get a simple list of KBs installed on the system
+        salt '*' win_wua.installed kbs_only=True
+    """
+    # Create a Windows Update Agent instance. Since we're only listing installed
+    # updates, there's no need to go online to update the Windows Update db
+    wua = salt.utils.win_update.WindowsUpdateAgent(online=False)
+    updates = wua.installed()  # Get installed Updates objects
+    results = updates.list()  # Convert to list
+
+    if kbs_only:
+        list_kbs = set()
+        for item in results:
+            list_kbs.update(results[item]['KBs'])
+        return sorted(list_kbs)
+
+    return updates.summary() if summary else results
 
 
 def download(names):

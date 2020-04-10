@@ -32,7 +32,7 @@ __virtualname__ = "win_update"
 
 def __virtual__():
     if not salt.utils.platform.is_windows():
-        return False, "win_update: Not available on Windows"
+        return False, "win_update: Only available on Windows"
     if not HAS_PYWIN32:
         return False, "win_update: Missing pywin32"
     return __virtualname__
@@ -285,7 +285,7 @@ class WindowsUpdateAgent(object):
         -4292607995: "Reboot required: 0x00240005",
     }
 
-    def __init__(self):
+    def __init__(self, online=True):
         """
         Initialize the session and load all updates into the ``_updates``
         collection. This collection is used by the other class functions instead
@@ -302,7 +302,7 @@ class WindowsUpdateAgent(object):
             # Create Collection for Updates
             self._updates = win32com.client.Dispatch("Microsoft.Update.UpdateColl")
 
-        self.refresh()
+        self.refresh(online=online)
 
     def updates(self):
         """
@@ -333,7 +333,7 @@ class WindowsUpdateAgent(object):
 
         return updates
 
-    def refresh(self):
+    def refresh(self, online=True):
         """
         Refresh the contents of the ``_updates`` collection. This gets all
         updates in the Windows Update system and loads them into the collection.
@@ -352,6 +352,7 @@ class WindowsUpdateAgent(object):
 
         # Create searcher object
         searcher = self._session.CreateUpdateSearcher()
+        searcher.Online = online
         self._session.ClientApplicationID = "Salt: Load Updates"
 
         # Load all updates into the updates collection
@@ -372,6 +373,32 @@ class WindowsUpdateAgent(object):
             raise CommandExecutionError(failure_code)
 
         self._updates = results.Updates
+
+    def installed(self):
+        """
+        Gets a list of all updates available on the system that have the
+        ``IsInstalled`` attribute set to ``True``.
+
+        Returns:
+
+            Updates: An instance of Updates with the results.
+
+        Code Example:
+
+        .. code-block:: python
+
+            import salt.utils.win_update
+            wua = salt.utils.win_update.WindowsUpdateAgent(online=False)
+            installed_updates = wua.installed()
+        """
+        # https://msdn.microsoft.com/en-us/library/windows/desktop/aa386099(v=vs.85).aspx
+        updates = Updates()
+
+        for update in self._updates:
+            if salt.utils.data.is_true(update.IsInstalled):
+                updates.updates.Add(update)
+
+        return updates
 
     def available(
         self,
@@ -445,7 +472,7 @@ class WindowsUpdateAgent(object):
             wua = salt.utils.win_update.WindowsUpdateAgent()
 
             # Gets all updates and shows a summary
-            updates = wua.available
+            updates = wua.available()
             updates.summary()
 
             # Get a list of Critical updates
@@ -920,7 +947,7 @@ class WindowsUpdateAgent(object):
                 log.debug("NeedsReboot: %s", ret["NeedsReboot"])
 
                 # Refresh the Updates Table
-                self.refresh()
+                self.refresh(online=False)
 
                 reboot = {0: "Never Reboot", 1: "Always Reboot", 2: "Poss Reboot"}
 
@@ -941,7 +968,7 @@ class WindowsUpdateAgent(object):
 
                 return ret
 
-            # Found a differenct exception, Raise error
+            # Found a different exception, Raise error
             log.error("Uninstall Failed: %s", failure_code)
             raise CommandExecutionError(failure_code)
 
