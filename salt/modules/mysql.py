@@ -431,7 +431,7 @@ def _connect(**kwargs):
         __context__["mysql.error"] = err
         log.error(err)
         return None
-    except pymysql.err.InternalError as exc:
+    except MySQLdb.err.InternalError as exc:
         err = "MySQL Error {0}: {1}".format(*exc.args)
         __context__["mysql.error"] = err
         log.error(err)
