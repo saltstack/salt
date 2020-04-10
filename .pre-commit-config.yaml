@@ -423,7 +423,6 @@ repos:
     rev: '1e78a9acf3110e1f9721feb591f89a451fc9876a'
     hooks:
       - id: isort
-        additional_dependencies: ['isort[pyproject]']
         # This tells pre-commit not to pass files to isort.
         # This should be kept in sync with pyproject.toml
         exclude: >
