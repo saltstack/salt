@@ -769,7 +769,7 @@ def traverse_dict_and_list(data, key, default=None, delimiter=DEFAULT_TARGET_DEL
                     return default
         else:
             try:
-                if isinstance(ptr, datetime.datetime):
+                if type(ptr) in (datetime, datetime.date, datetime.datetime, datetime.time):
                     ptr = salt.utils.json.loads(salt.utils.json.dumps(ptr, indent=4, sort_keys=True, default=str))
                 else:
                     ptr = salt.utils.json.loads(salt.utils.json.dumps(ptr))
