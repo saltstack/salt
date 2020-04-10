@@ -6,7 +6,7 @@ from __future__ import absolute_import
 import logging
 
 # Salt libs
-import salt.beacons.log as log_beacon
+import salt.beacons.log_beacon as log_beacon
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import mock_open, patch
 

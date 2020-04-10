@@ -22,7 +22,7 @@ beacon modules
     inotify
     journald
     load
-    log
+    log_beacon
     memusage
     napalm_beacon
     network_info

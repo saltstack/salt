@@ -61,7 +61,7 @@ class Beacon(object):
 
             if "enabled" in current_beacon_config:
                 if not current_beacon_config["enabled"]:
-                    log.debug("Beacon %s disabled", mod)
+                    log.trace("Beacon %s disabled", mod)
                     continue
                 else:
                     # remove 'enabled' item before processing the beacon
@@ -70,7 +70,7 @@ class Beacon(object):
                     else:
                         self._remove_list_item(config[mod], "enabled")
 
-            log.debug("Beacon processing: %s", mod)
+            log.trace("Beacon processing: %s", mod)
             beacon_name = None
             if self._determine_beacon_config(current_beacon_config, "beacon_module"):
                 beacon_name = current_beacon_config["beacon_module"]
@@ -88,12 +88,12 @@ class Beacon(object):
                 if interval:
                     b_config = self._trim_config(b_config, mod, "interval")
                     if not self._process_interval(mod, interval):
-                        log.debug("Skipping beacon %s. Interval not reached.", mod)
+                        log.trace("Skipping beacon %s. Interval not reached.", mod)
                         continue
                 if self._determine_beacon_config(
                     current_beacon_config, "disable_during_state_run"
                 ):
-                    log.debug(
+                    log.trace(
                         "Evaluting if beacon %s should be skipped due to a state run.",
                         mod,
                     )
@@ -170,19 +170,19 @@ class Beacon(object):
         Process beacons with intervals
         Return True if a beacon should be run on this loop
         """
-        log.debug("Processing interval %s for beacon mod %s", interval, mod)
+        log.trace("Processing interval %s for beacon mod %s", interval, mod)
         loop_interval = self.opts["loop_interval"]
         if mod in self.interval_map:
-            log.debug("Processing interval in map")
+            log.trace("Processing interval in map")
             counter = self.interval_map[mod]
-            log.debug("Interval counter: %s", counter)
+            log.trace("Interval counter: %s", counter)
             if counter * loop_interval >= interval:
                 self.interval_map[mod] = 1
                 return True
             else:
                 self.interval_map[mod] += 1
         else:
-            log.debug("Interval process inserting mod: %s", mod)
+            log.trace("Interval process inserting mod: %s", mod)
             self.interval_map[mod] = 1
         return False
 
