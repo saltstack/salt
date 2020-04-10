@@ -10,6 +10,8 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import logging
+
 # Import salt libs
 import salt.modules.mysql as mysql
 
@@ -18,11 +20,19 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, call, patch
 from tests.support.unit import TestCase, skipIf
 
+log = logging.getLogger(__name__)
 NO_MYSQL = False
+NO_PyMYSQL = False
 try:
     import MySQLdb  # pylint: disable=W0611
-except Exception:  # pylint: disable=broad-except
+except ImportError:  # pylint: disable=broad-except
     NO_MYSQL = True
+
+try:
+    # MySQLdb import failed, try to import PyMySQL
+    import pymysql
+except ImportError:  # pylint: disable=broad-except
+    NO_PyMYSQL = True
 
 __all_privileges__ = [
     "ALTER",
@@ -636,3 +646,43 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
                 else:
                     calls = call().cursor().execute("{0}".format(expected_sql))
                 connect_mock.assert_has_calls((calls,), True)
+
+    @skipIf(
+        NO_PyMYSQL, "Install pymysql bindings before running test__connect_pymysql."
+    )
+    def test__connect_pymysql(self):
+        """
+        Test the _connect function in the MySQL module
+        """
+        with patch.dict(mysql.__salt__, {"config.option": MagicMock()}):
+            with patch(
+                "MySQLdb.connect",
+                side_effect=pymysql.err.InternalError(
+                    1698, "Access denied for user 'root'@'localhost'"
+                ),
+            ):
+                ret = mysql._connect()
+                self.assertIn("mysql.error", mysql.__context__)
+                self.assertEqual(
+                    mysql.__context__["mysql.error"],
+                    "MySQL Error 1698: Access denied for user 'root'@'localhost'",
+                )
+
+    @skipIf(not NO_PyMYSQL, "With pymysql installed use test__connect_pymysql.")
+    def test__connect_mysql(self):
+        """
+        Test the _connect function in the MySQL module
+        """
+        with patch.dict(mysql.__salt__, {"config.option": MagicMock()}):
+            with patch(
+                "MySQLdb.connect",
+                side_effect=mysql.OperationalError(
+                    1698, "Access denied for user 'root'@'localhost'"
+                ),
+            ):
+                ret = mysql._connect()
+                self.assertIn("mysql.error", mysql.__context__)
+                self.assertEqual(
+                    mysql.__context__["mysql.error"],
+                    "MySQL Error 1698: Access denied for user 'root'@'localhost'",
+                )
