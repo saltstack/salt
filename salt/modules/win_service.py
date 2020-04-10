@@ -137,10 +137,7 @@ class ServiceDependencies(object):
     def __init__(self, name, all_services, service_info):
         # Sort for predictable behavior
         self._all_services = sorted(all_services())
-        try:
-            self._name = self._normalize_name(self._all_services, name)
-        except ValueError:
-            self._name = name
+        self._name = self._normalize_name(self._all_services, name)
         self._service_info = self._populate_service_info(
             self._all_services, service_info
         )
