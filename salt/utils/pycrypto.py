@@ -90,8 +90,7 @@ def _fallback_gen_hash(crypt_salt=None, password=None, algorithm=None):
     if algorithm is None:
         algorithm = 0
 
-    # these 2 lists are in order from most to least secure, like crypt.methods
-    # these are the passlib equivalents
+    # these are the passlib equivalents to the 'known_methods' defined in crypt
     schemes = ["sha512_crypt", "sha256_crypt", "bcrypt", "md5_crypt", "des_crypt"]
 
     ctx = passlib.context.CryptContext(schemes=schemes)
@@ -104,6 +103,9 @@ def gen_hash(crypt_salt=None, password=None, algorithm=None, force=False):
     """
     Generate /etc/shadow hash
     """
+    if password is None:
+        password = secure_password()
+
     if algorithm not in methods:
         if force and HAS_PASSLIB:
             return _fallback_gen_hash(crypt_salt, password, algorithm)
@@ -117,9 +119,6 @@ def gen_hash(crypt_salt=None, password=None, algorithm=None, force=False):
     if algorithm is None:
         # use the most secure natively supported method
         algorithm = crypt.methods[0].name.lower()
-
-    if password is None:
-        password = secure_password()
 
     if crypt_salt is None:
         crypt_salt = methods[algorithm]
