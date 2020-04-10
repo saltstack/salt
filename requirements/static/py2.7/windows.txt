@@ -56,7 +56,7 @@ jsonpickle==1.1           # via aws-xray-sdk
 jsonschema==2.6.0
 keyring==5.7.1
 kubernetes==3.0.0
-libnacl==1.6.1
+libnacl==1.7.1
 lxml==4.3.0
 mako==1.0.7
 markupsafe==1.1.1
@@ -72,7 +72,7 @@ pathlib2==2.3.3           # via importlib-metadata, pytest
 pathtools==0.1.2          # via watchdog
 pluggy==0.13.0            # via pytest
 portend==2.4              # via cherrypy
-psutil==5.6.1
+psutil==5.6.6
 py==1.8.0                 # via pytest
 pyaml==19.4.1             # via moto
 pyasn1-modules==0.2.4     # via google-auth
