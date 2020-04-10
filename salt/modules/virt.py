@@ -6233,6 +6233,18 @@ def volume_infos(pool=None, volume=None, **kwargs):
             types = ["file", "block", "dir", "network", "netdir", "ploop"]
             infos = vol.info()
 
+            vol_xml = ElementTree.fromstring(vol.XMLDesc())
+            backing_store_path = vol_xml.find("./backingStore/path")
+            backing_store_format = vol_xml.find("./backingStore/format")
+            backing_store = None
+            if backing_store_path is not None:
+                backing_store = {
+                    "path": backing_store_path.text,
+                    "format": backing_store_format.get("type")
+                    if backing_store_format is not None
+                    else None,
+                }
+
             # If we have a path, check its use.
             used_by = []
             if vol.path():
@@ -6254,6 +6266,7 @@ def volume_infos(pool=None, volume=None, **kwargs):
                 "capacity": infos[1],
                 "allocation": infos[2],
                 "used_by": used_by,
+                "backing_store": backing_store,
             }
 
         pools = [
