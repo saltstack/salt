@@ -175,7 +175,6 @@ def check_password(username, password, encrypted=False, **kwargs):
         hash_type, cur_salt, hashed_pass = re.search(
             r"^\$([0-6])\$([^$]+)\$(.*)$", cur_hash
         ).groups()
-        raise Exception(hash_type, cur_salt, hashed_pass)
         new_hash = gen_hash(
             crypt_salt=cur_salt,
             password=password,
@@ -744,8 +743,8 @@ def set_password(
             password='$5$2fWwO2vK$s7.Hr3YltMNHuhywQQ3nfOd.gAPHgs3SOBYYdGT3E.A' \\
             encrypted=True
     """
-    if algorithm not in ["sha512", "sha256", "md5", "crypt"]:
-        raise SaltInvocationError("Unsupported hash algorithm requested")
+    if algorithm == 'blowfish':
+        raise SaltInvocationError("Hash algorithm requested isn't available on nxos")
     get_user(username, **kwargs)  # verify user exists
     if encrypted is False:
         hashed_pass = gen_hash(
