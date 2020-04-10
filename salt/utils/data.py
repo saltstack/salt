@@ -600,7 +600,7 @@ def traverse_dict_and_list(data, key, default=None, delimiter=DEFAULT_TARGET_DEL
                     return default
         else:
             try:
-                ptr = salt.utils.json.loads(salt.utils.json.dumps(ptr))
+                ptr = salt.utils.json.loads(salt.utils.json.dumps(ptr, indent=4, sort_keys=True, default=str))
                 ptr = ptr[each]
             except KeyError:
                 return default
