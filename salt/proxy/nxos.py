@@ -40,7 +40,7 @@ To configure the proxy minon for nxapi:
       transport: http
       port: 80
       verify: False
-      no_save_config: True
+      save_config: False
 
 proxytype:
     (REQUIRED) Use this proxy minion `nxos`
@@ -59,11 +59,11 @@ username:
 password:
     (REQUIRED) login password.
 
-no_save_config:
-    If False, 'copy running-config starting-config' is issues for every
+save_config:
+    If True, 'copy running-config starting-config' is issues for every
         configuration command.
-    If True, Running config is not saved to startup config
-    Default: False
+    If False, Running config is not saved to startup config
+    Default: True
 
     The recommended approach is to use the `save_running_config` function
     instead of this option to improve performance.  The default behavior
@@ -315,28 +315,27 @@ def sendline(command, method='cli_show_ascii', **kwargs):
         raise
     return result
 
-#TODO: make no_save_config save_config
-def proxy_config(commands, no_save_config=None):
+def proxy_config(commands, save_config=None):
     '''
     Send configuration commands over SSH or NX-API
 
     commands
         List of configuration commands
 
-    no_save_config
-        If True, don't save configuration commands to startup configuration.
-        If False, save configuration to startup configuration.
-        Default: False
+    save_config
+        If False, don't save configuration commands to startup configuration.
+        If True, save configuration to startup configuration.
+        Default: True
 
     .. code-block: bash
 
-        salt '*' nxos.cmd proxy_config 'feature bgp' no_save_config=True
+        salt '*' nxos.cmd proxy_config 'feature bgp' save_config=False
         salt '*' nxos.cmd proxy_config 'feature bgp'
     '''
     COPY_RS = 'copy running-config startup-config'
 
-    if no_save_config is None:
-        no_save_config = DEVICE_DETAILS.get('no_save_config', False)
+    if save_config is None:
+        save_config = DEVICE_DETAILS.get('save_config', True)
     if not isinstance(commands, list):
         commands = [commands]
     try:
@@ -346,7 +345,7 @@ def proxy_config(commands, no_save_config=None):
             for cmd in commands:
                 prev_cmds.append(cmd)
                 ret = _sendline_ssh(cmd)
-            if no_save_config:
+            if not save_config:
                 pass
             else:
                 _sendline_ssh(COPY_RS)
@@ -354,7 +353,7 @@ def proxy_config(commands, no_save_config=None):
                 log.error(prev_cmds)
         elif CONNECTION == 'nxapi':
             ret = _nxapi_request(commands)
-            if no_save_config:
+            if not save_config:
                 pass
             else:
                 _nxapi_request(COPY_RS)
@@ -403,7 +402,7 @@ def _init_ssh(opts=None):
         log.error(ex)
         raise
     DEVICE_DETAILS['initialized'] = True
-    DEVICE_DETAILS['no_save_config'] = opts['proxy'].get('no_save_config', False)
+    DEVICE_DETAILS['save_config'] = opts['proxy'].get('save_config', True)
 
 
 def _initialized_ssh():
@@ -487,7 +486,7 @@ def _init_nxapi(opts):
         DEVICE_DETAILS['conn_args'] = conn_args
         DEVICE_DETAILS['initialized'] = True
         DEVICE_DETAILS['up'] = True
-        DEVICE_DETAILS['no_save_config'] = opts['proxy'].get('no_save_config', False)
+        DEVICE_DETAILS['save_config'] = opts['proxy'].get('save_config', True)
     except Exception as ex:
         log.error('Unable to connect to %s', conn_args['host'])
         log.error('Please check the following:\n')

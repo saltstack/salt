@@ -500,7 +500,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
                 mock_cmd = create_autospec(file_module.apply_template_on_contents, return_value=template_engine_file_str)
                 with patch.dict(nxos_module.__salt__, {'file.apply_template_on_contents': mock_cmd}):
                     with patch('salt.modules.nxos._configure_device', autospec=True, return_value=config_result):
-                        result = nxos_module.config(cmd_set, no_save_config=True)
+                        result = nxos_module.config(cmd_set, save_config=False)
                         raise Exception(result)
                         self.assertEqual(result, expected_output)
 
@@ -796,7 +796,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
         """ UT: nxos module:_nxapi_config method """
 
-        mock_cmd = MagicMock(return_value={'nxos': {'no_save_config': True}})
+        mock_cmd = MagicMock(return_value={'nxos': {'save_config': False}})
         with patch.dict(nxos_module.__salt__, {'config.get': mock_cmd}):
             with patch('salt.modules.nxos._nxapi_request', return_value='router_data', autospec=True):
                 result = nxos_module._nxapi_config('show version')
@@ -808,7 +808,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
         side_effect = ['Failure', 'saved_data']
 
-        mock_cmd = MagicMock(return_value={'nxos': {'no_save_config': False}})
+        mock_cmd = MagicMock(return_value={'nxos': {'save_config': True}})
         with patch.dict(nxos_module.__salt__, {'config.get': mock_cmd}):
             with patch('salt.modules.nxos._nxapi_request', side_effect=side_effect, autospec=True):
                 result = nxos_module._nxapi_config('show bad_command')
@@ -829,7 +829,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
         """ UT: nxos module:_nxapi_request method - no proxy"""
 
         with patch('salt.utils.platform.is_proxy', autospec=True, return_value=False):
-            mock_cmd = MagicMock(return_value={'nxos': {'no_save_config': True}})
+            mock_cmd = MagicMock(return_value={'nxos': {'save_config': False}})
             with patch.dict(nxos_module.__salt__, {'config.get': mock_cmd}):
                 mock_request = create_autospec(nxos_utils.nxapi_request)
                 with patch.dict(nxos_module.__utils__,

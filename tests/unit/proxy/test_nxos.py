@@ -140,20 +140,20 @@ class NxosNxapiProxyTestCase(TestCase, LoaderModuleMockMixin):
 
         commands = ['feature bgp', 'router bgp 65535']
 
-        with patch('salt.proxy.nxos.DEVICE_DETAILS', {'no_save_config': True}):
+        with patch('salt.proxy.nxos.DEVICE_DETAILS', {'save_config': False}):
             with patch('salt.proxy.nxos._nxapi_request', autospec=True) as nxapi_request:
                 result = nxos_proxy.proxy_config(commands)
                 self.assertEqual(result, [commands, nxapi_request.return_value])
 
-    def test_proxy_config_no_save_config(self):
+    def test_proxy_config_save_config(self):
 
         """ UT: nxos module:proxy_config method - nxapi success path"""
 
         commands = ['feature bgp', 'router bgp 65535']
 
-        with patch('salt.proxy.nxos.DEVICE_DETAILS', {'no_save_config': None}):
+        with patch('salt.proxy.nxos.DEVICE_DETAILS', {'save_config': None}):
             with patch('salt.proxy.nxos._nxapi_request', autospec=True) as nxapi_request:
-                result = nxos_proxy.proxy_config(commands, no_save_config=False)
+                result = nxos_proxy.proxy_config(commands, save_config=True)
                 self.assertEqual(result, [commands, nxapi_request.return_value])
 
     def test__init_nxapi(self):
@@ -169,7 +169,7 @@ class NxosNxapiProxyTestCase(TestCase, LoaderModuleMockMixin):
 
                 self.assertTrue(device_details['initialized'])
                 self.assertTrue(device_details['up'])
-                self.assertFalse(device_details['no_save_config'])
+                self.assertTrue(device_details['save_config'])
                 self.assertTrue(result)
 
                 nxapi_request.assert_called_with('show clock', **opts['proxy'])
@@ -316,20 +316,20 @@ class NxosSSHProxyTestCase(TestCase, LoaderModuleMockMixin):
 
         commands = ['feature bgp', 'router bgp 65535']
 
-        with patch('salt.proxy.nxos.DEVICE_DETAILS', {'no_save_config': True}):
+        with patch('salt.proxy.nxos.DEVICE_DETAILS', {'save_config': False}):
             with patch('salt.proxy.nxos._sendline_ssh', autospec=True) as sendline_ssh:
                 result = nxos_proxy.proxy_config(commands)
                 self.assertEqual(result, [commands, sendline_ssh.return_value])
 
-    def test_proxy_config_no_save_config(self):
+    def test_proxy_config_save_config(self):
 
         """ UT: nxos module:proxy_config method - ssh success path """
 
         commands = ['feature bgp', 'router bgp 65535']
 
-        with patch('salt.proxy.nxos.DEVICE_DETAILS', {'no_save_config': None}):
+        with patch('salt.proxy.nxos.DEVICE_DETAILS', {'save_config': None}):
             with patch('salt.proxy.nxos._sendline_ssh', autospec=True) as sendline_ssh:
-                result = nxos_proxy.proxy_config(commands, no_save_config=False)
+                result = nxos_proxy.proxy_config(commands, save_config=True)
                 self.assertEqual(result, [commands, sendline_ssh.return_value])
 
     def test_proxy_config_error(self):
@@ -338,7 +338,7 @@ class NxosSSHProxyTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch('salt.proxy.nxos._sendline_ssh', autospec=True, side_effect=CommandExecutionError):
             with self.assertRaises(CommandExecutionError):
-                nxos_proxy.proxy_config('show version', no_save_config=False)
+                nxos_proxy.proxy_config('show version', save_config=True)
 
     def test__init_ssh_device_details(self):
         with patch('salt.proxy.nxos.SSHConnection', autospec=True) as SSHConnection:
@@ -348,14 +348,14 @@ class NxosSSHProxyTestCase(TestCase, LoaderModuleMockMixin):
                 nxos_proxy._init_ssh(None)
                 self.assertIn(nxos_proxy._worker_name(), device_details)
                 self.assertTrue(device_details['initialized'])
-                self.assertFalse(device_details['no_save_config'])
+                self.assertTrue(device_details['save_config'])
 
-            with patch.dict(nxos_proxy.__opts__['proxy'], {'no_save_config': True}):
+            with patch.dict(nxos_proxy.__opts__['proxy'], {'save_config': False}):
                 with patch('salt.proxy.nxos.DEVICE_DETAILS', {}) as device_details:
                     nxos_proxy._init_ssh(None)
                     self.assertIn(nxos_proxy._worker_name(), device_details)
                     self.assertTrue(device_details['initialized'])
-                    self.assertTrue(device_details['no_save_config'])
+                    self.assertFalse(device_details['save_config'])
 
     def test__init_ssh_opts(self):
 

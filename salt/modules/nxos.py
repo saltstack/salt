@@ -43,7 +43,7 @@ Native minon configuration options:
 
     nxos:
       cookie: 'username'
-      no_save_config: True
+      save_config: False
 
 cookie
     Use the option to override the default cookie 'admin:local' when
@@ -52,11 +52,11 @@ cookie
 
     This option is ignored for SSH and NX-API Proxy minions.
 
-no_save_config:
-    If False, 'copy running-config starting-config' is issues for every
+save_config:
+    If True, 'copy running-config starting-config' is issues for every
         configuration command.
-    If True, Running config is not saved to startup config
-    Default: False
+    If False, Running config is not saved to startup config
+    Default: True
 
     The recommended approach is to use the `save_running_config` function
     instead of this option to improve performance.  The default behavior
@@ -171,7 +171,8 @@ def check_password(username, password, encrypted=False, **kwargs):
     cur_hash = re.search(r'(\$[0-6](?:\$[^$ ]+)+)', password_line).group(0)
     if encrypted is False:
         hash_type, cur_salt, hashed_pass = re.search(r'^\$([0-6])\$([^$]+)\$(.*)$', cur_hash).groups()
-        new_hash = gen_hash(crypt_salt=cur_salt, password=password, algorithm=hash_algorithms[hash_type])
+        raise Exception(hash_type, cur_salt, hashed_pass)
+        new_hash = gen_hash(crypt_salt=cur_salt, password=password, algorithm=hash_algorithms[hash_type], force=True)
     else:
         new_hash = password
     if new_hash == cur_hash:
@@ -445,10 +446,10 @@ def add_config(lines, **kwargs):
     lines
         Configuration lines to add
 
-    no_save_config
-        If True, don't save configuration commands to startup configuration.
-        If False, save configuration to startup configuration.
-        Default: False
+    save_config
+        If False, don't save configuration commands to startup configuration.
+        If True, save configuration to startup configuration.
+        Default: True
 
     .. code-block:: bash
 
@@ -515,10 +516,10 @@ def config(commands=None,
     defaults
         Default values of the context_dict.
 
-    no_save_config
-        If True, don't save configuration commands to startup configuration.
-        If False, save configuration to startup configuration.
-        Default: False
+    save_config
+        If False, don't save configuration commands to startup configuration.
+        If True, save configuration to startup configuration.
+        Default: True
 
     CLI Example:
 
@@ -590,10 +591,10 @@ def delete_config(lines, **kwargs):
     lines
         Configuration lines to remove.
 
-    no_save_config
-        If True, don't save configuration commands to startup configuration.
-        If False, save configuration to startup configuration.
-        Default: False
+    save_config
+        If False, don't save configuration commands to startup configuration.
+        If True, save configuration to startup configuration.
+        Default: True
 
     .. code-block:: bash
 
@@ -624,10 +625,10 @@ def remove_user(username, **kwargs):
     username
         Username to remove
 
-    no_save_config
-        If True, don't save configuration commands to startup configuration.
-        If False, save configuration to startup configuration.
-        Default: False
+    save_config
+        If False, don't save configuration commands to startup configuration.
+        If True, save configuration to startup configuration.
+        Default: True
 
     .. code-block:: bash
 
@@ -711,10 +712,10 @@ def set_password(username,
         Encryption algorithm
         Default: sha256
 
-    no_save_config
-        If True, don't save configuration commands to startup configuration.
-        If False, save configuration to startup configuration.
-        Default: False
+    save_config
+        If False, don't save configuration commands to startup configuration.
+        If True, save configuration to startup configuration.
+        Default: True
 
     .. code-block:: bash
 
@@ -748,10 +749,10 @@ def set_role(username, role, **kwargs):
     role
         Configure role for username
 
-    no_save_config
-        If True, don't save configuration commands to startup configuration.
-        If False, save configuration to startup configuration.
-        Default: False
+    save_config
+        If False, don't save configuration commands to startup configuration.
+        If True, save configuration to startup configuration.
+        Default: True
 
     .. code-block:: bash
 
@@ -771,10 +772,10 @@ def unset_role(username, role, **kwargs):
     role
         Role to remove
 
-    no_save_config
-        If True, don't save configuration commands to startup configuration.
-        If False, save configuration to startup configuration.
-        Default: False
+    save_config
+        If False, don't save configuration commands to startup configuration.
+        If True, save configuration to startup configuration.
+        Default: True
 
     .. code-block:: bash
 
@@ -808,7 +809,7 @@ def _nxapi_config(commands, methods='cli_conf', bsb_arg=None, **kwargs):
         commands = [commands]
     try:
         ret = _nxapi_request(commands, **kwargs)
-        if api_kwargs.get('no_save_config'):
+        if not api_kwargs.get('save_config'):
             pass
         else:
             _nxapi_request(COPY_RS, **kwargs)
