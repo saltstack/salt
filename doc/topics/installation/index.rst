@@ -50,6 +50,7 @@ These guides go into detail how to install Salt on a given platform.
     fedora
     freebsd
     gentoo
+    nxos
     openbsd
     osx
     rhel

@@ -38,6 +38,12 @@ try:
 except ImportError:
     HAS_CRYPT = False
 
+try:
+    import passlib.context
+
+    HAS_PASSLIB = True
+except ImportError:
+    HAS_PASSLIB = False
 
 log = logging.getLogger(__name__)
 
@@ -70,23 +76,59 @@ def secure_password(length=20, use_random=True):
         raise CommandExecutionError(six.text_type(exc))
 
 
-def gen_hash(crypt_salt=None, password=None, algorithm="sha512"):
+if HAS_CRYPT:
+    methods = {m.name.lower(): m for m in crypt.methods}
+else:
+    methods = {}
+known_methods = ["sha512", "sha256", "blowfish", "md5", "crypt"]
+
+
+def _fallback_gen_hash(crypt_salt=None, password=None, algorithm=None):
+    """
+    Generate a /etc/shadow-compatible hash for a non-local system
+    """
+    if algorithm is None:
+        algorithm = 0
+
+    # these 2 lists are in order from most to least secure, like crypt.methods
+    # these are the passlib equivalents
+    schemes = ["sha512_crypt", "sha256_crypt", "bcrypt", "md5_crypt", "des_crypt"]
+
+    ctx = passlib.context.CryptContext(schemes=schemes)
+    return ctx.hash(
+        password, salt=crypt_salt, scheme=schemes[known_methods.index(algorithm)]
+    )
+
+
+def gen_hash(crypt_salt=None, password=None, algorithm=None, force=False):
     """
     Generate /etc/shadow hash
     """
-    if not HAS_CRYPT:
-        raise SaltInvocationError("No crypt module for windows")
+    if algorithm not in methods:
+        if force and HAS_PASSLIB:
+            return _fallback_gen_hash(crypt_salt, password, algorithm)
+        else:
+            raise SaltInvocationError(
+                "Algorithm '{}' is not natively supported by this platform, use force=True with passlib installed to override.".format(
+                    algorithm
+                )
+            )
 
-    hash_algorithms = dict(md5="$1$", blowfish="$2a$", sha256="$5$", sha512="$6$")
-    if algorithm not in hash_algorithms:
-        raise SaltInvocationError("Algorithm '{0}' is not supported".format(algorithm))
+    if algorithm is None:
+        # use the most secure natively supported method
+        algorithm = crypt.methods[0].name.lower()
 
     if password is None:
         password = secure_password()
 
     if crypt_salt is None:
-        crypt_salt = secure_password(8)
-
-    crypt_salt = hash_algorithms[algorithm] + crypt_salt
+        crypt_salt = methods[algorithm]
+    elif methods[algorithm].ident:
+        crypt_salt = "${}${}".format(methods[algorithm].ident, crypt_salt)
+    else:  # method is crypt (DES)
+        if len(crypt_salt) != 2:
+            raise ValueError(
+                "Invalid salt for hash, 'crypt' salt must be 2 characters."
+            )
 
     return crypt.crypt(password, crypt_salt)
