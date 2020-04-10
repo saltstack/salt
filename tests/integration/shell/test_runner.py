@@ -1,19 +1,15 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=invalid-name
 
 """
 Tests for the salt-run command
 """
 
-# Import Python libs
 from __future__ import absolute_import
 
-# Import Salt libs
+import pytest
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.yaml
-
-# Import Salt Testing libs
 from tests.integration.utils import testprogram
 from tests.support.case import ShellCase
 from tests.support.helpers import skip_if_not_root
@@ -24,6 +20,7 @@ USERA_PWD = "saltdev"
 HASHED_USERA_PWD = "$6$SALTsalt$ZZFD90fKFWq8AGmmX0L3uBtS9fXL62SrTk5zcnQ6EkD6zoiM3kB88G1Zvs0xm/gZ7WXJRs5nsTBybUvGSqZkT."
 
 
+@pytest.mark.windows_whitelisted
 class RunTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin):
     """
     Test the salt-run command

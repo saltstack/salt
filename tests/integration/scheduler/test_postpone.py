@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# Import Python libs
 from __future__ import absolute_import
 
 import copy
@@ -9,12 +8,9 @@ import logging
 import os
 
 import dateutil.parser as dateutil_parser
-
-# Import Salt libs
+import pytest
 import salt.utils.schedule
 from salt.modules.test import ping
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.mock import MagicMock, patch
@@ -32,6 +28,7 @@ DEFAULT_CONFIG["pki_dir"] = os.path.join(ROOT_DIR, "pki")
 DEFAULT_CONFIG["cachedir"] = os.path.join(ROOT_DIR, "cache")
 
 
+@pytest.mark.windows_whitelisted
 class SchedulerPostponeTest(ModuleCase, SaltReturnAssertsMixin):
     """
     Validate the pkg module

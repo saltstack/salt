@@ -7,7 +7,6 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
-# Import python libs
 from __future__ import absolute_import
 
 import getpass
@@ -16,15 +15,11 @@ import os
 import platform
 import sys
 
-# Import salt libs
+import pytest
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.yaml
-
-# Import Salt Testing libs
 import tests.integration.utils
-
-# Import 3rd-party libs
 from salt.ext import six
 from tests.integration.utils import testprogram
 from tests.support.case import ShellCase
@@ -37,6 +32,7 @@ log = logging.getLogger(__name__)
 DEBUG = True
 
 
+@pytest.mark.windows_whitelisted
 class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin):
     """
     Various integration tests for the salt-minion executable.

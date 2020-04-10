@@ -1,16 +1,12 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=invalid-name
 
-# Import python libs
 from __future__ import absolute_import
 
 import time
 
-# Import salt libs
+import pytest
 import salt.utils.files
 import salt.utils.yaml
-
-# Import Salt Testing libs
 from tests.support.case import ShellCase
 from tests.support.helpers import dedent, flaky
 from tests.support.mixins import ShellCaseCommonTestsMixin
@@ -21,6 +17,7 @@ def minion_in_returns(minion, lines):
     return bool([True for line in lines if line == "{0}:".format(minion)])
 
 
+@pytest.mark.windows_whitelisted
 class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
     """
     Test salt matchers
