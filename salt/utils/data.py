@@ -12,13 +12,11 @@ import fnmatch
 import functools
 import logging
 import re
-import datetime
 
 # Import Salt libs
 import salt.utils.dictupdate
 import salt.utils.stringutils
 import salt.utils.yaml
-import salt.utils.json
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
 from salt.ext import six
@@ -767,14 +765,18 @@ def traverse_dict_and_list(data, key, default=None, delimiter=DEFAULT_TARGET_DEL
                     ptr = ptr[idx]
                 except IndexError:
                     return default
-        else:
+        elif isinstance(ptr, dict):
             try:
-                if type(ptr) in (datetime, datetime.date, datetime.datetime, datetime.time):
-                    ptr = salt.utils.json.loads(salt.utils.json.dumps(ptr, indent=4, sort_keys=True, default=str))
-                else:
-                    ptr = salt.utils.json.loads(salt.utils.json.dumps(ptr))
+                for key, value in ptr.items():
+                    if not isinstance(key,str):
+                        ptr[str(key)] = ptr.pop(key)
                 ptr = ptr[each]
             except KeyError:
+                return default
+        else:
+            try:
+                ptr = ptr[each]
+            except (KeyError, TypeError):
                 return default
     return ptr
 
