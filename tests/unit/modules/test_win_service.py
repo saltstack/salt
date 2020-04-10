@@ -183,7 +183,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(win32serviceutil, "StartService", mock_error), \
             patch.object(win_service, "disabled", mock_false), \
             patch.object(win_service, "info", mock_info), \
-            patch.object(win_service, "get_all", mock_get_all):
+            patch.object(win_service, "get_all", mock_get_all), \
             patch.object(win_service, "_status_wait", mock_info):
             self.assertTrue(win_service.start("spongebob"))
 
