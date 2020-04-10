@@ -656,7 +656,7 @@ def gen_thin(
     ]:
         tfp.add(fname)
 
-    if start_dir:
+    if start_dir and os.access(start_dir, os.R_OK) and os.access(start_dir, os.X_OK):
         os.chdir(start_dir)
     tfp.close()
 
