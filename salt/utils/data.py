@@ -12,6 +12,7 @@ import fnmatch
 import functools
 import logging
 import re
+import datetime
 
 # Import Salt libs
 import salt.utils.dictupdate
