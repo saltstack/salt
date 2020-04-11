@@ -288,7 +288,7 @@ def _get_domain(conn, *vms, **kwargs):
         for id_ in conn.listDefinedDomains():
             all_vms.append(id_)
 
-    if not all_vms:
+    if vms and not all_vms:
         raise CommandExecutionError("No virtual machines found.")
 
     if vms:
