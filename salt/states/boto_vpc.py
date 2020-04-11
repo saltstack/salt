@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Manage VPCs
 =================
 
@@ -140,39 +140,52 @@ Delete also accepts a VPC peering connection id.
       boto_vpc.delete_vpc_peering_connection:
         - conn_id: pcx-1873c371
 
-'''
+"""
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
+
+import salt.utils.dictupdate as dictupdate
 
 # Import Salt Libs
 from salt.ext import six
-import salt.utils.dictupdate as dictupdate
 
-__virtualname__ = 'boto_vpc'
+__virtualname__ = "boto_vpc"
 
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     Only load if boto is available.
-    '''
-    boto_version = '2.8.0'
-    boto3_version = '1.2.6'
-    if 'boto_vpc.exists' in __salt__:
+    """
+    boto_version = "2.8.0"
+    boto3_version = "1.2.6"
+    if "boto_vpc.exists" in __salt__:
         return __virtualname__
     else:
-        return False, 'The following libraries are required to run the boto_vpc state module: ' \
-                      'boto >= {0} and boto3 >= {1}.'.format(boto_version,
-                                                             boto3_version)
+        return (
+            False,
+            "The following libraries are required to run the boto_vpc state module: "
+            "boto >= {0} and boto3 >= {1}.".format(boto_version, boto3_version),
+        )
 
 
-def present(name, cidr_block, instance_tenancy=None, dns_support=None,
-            dns_hostnames=None, tags=None, region=None, key=None, keyid=None,
-            profile=None):
-    '''
+def present(
+    name,
+    cidr_block,
+    instance_tenancy=None,
+    dns_support=None,
+    dns_hostnames=None,
+    tags=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+):
+    """
     Ensure VPC exists.
 
     name
@@ -207,46 +220,52 @@ def present(name, cidr_block, instance_tenancy=None, dns_support=None,
     profile
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
-    '''
-    ret = {'name': name,
-           'result': True,
-           'comment': '',
-           'changes': {}
-           }
+    """
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
-    r = __salt__['boto_vpc.exists'](name=name, tags=tags, region=region,
-                                    key=key, keyid=keyid, profile=profile)
+    r = __salt__["boto_vpc.exists"](
+        name=name, tags=tags, region=region, key=key, keyid=keyid, profile=profile
+    )
 
-    if 'error' in r:
-        ret['result'] = False
-        ret['comment'] = 'Failed to create VPC: {0}.'.format(r['error']['message'])
+    if "error" in r:
+        ret["result"] = False
+        ret["comment"] = "Failed to create VPC: {0}.".format(r["error"]["message"])
         return ret
 
-    if not r.get('exists'):
-        if __opts__['test']:
-            ret['comment'] = 'VPC {0} is set to be created.'.format(name)
-            ret['result'] = None
+    if not r.get("exists"):
+        if __opts__["test"]:
+            ret["comment"] = "VPC {0} is set to be created.".format(name)
+            ret["result"] = None
             return ret
-        r = __salt__['boto_vpc.create'](cidr_block, instance_tenancy=instance_tenancy, vpc_name=name,
-                                        enable_dns_support=dns_support, enable_dns_hostnames=dns_hostnames,
-                                        tags=tags, region=region, key=key, keyid=keyid,
-                                        profile=profile)
-        if not r.get('created'):
-            ret['result'] = False
-            ret['comment'] = 'Error in creating VPC: {0}.'.format(r['error']['message'])
+        r = __salt__["boto_vpc.create"](
+            cidr_block,
+            instance_tenancy=instance_tenancy,
+            vpc_name=name,
+            enable_dns_support=dns_support,
+            enable_dns_hostnames=dns_hostnames,
+            tags=tags,
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
+        )
+        if not r.get("created"):
+            ret["result"] = False
+            ret["comment"] = "Error in creating VPC: {0}.".format(r["error"]["message"])
             return ret
-        _describe = __salt__['boto_vpc.describe'](vpc_id=r['id'], region=region, key=key,
-                                                  keyid=keyid, profile=profile)
-        ret['changes']['old'] = {'vpc': None}
-        ret['changes']['new'] = _describe
-        ret['comment'] = 'VPC {0} created.'.format(name)
+        _describe = __salt__["boto_vpc.describe"](
+            vpc_id=r["id"], region=region, key=key, keyid=keyid, profile=profile
+        )
+        ret["changes"]["old"] = {"vpc": None}
+        ret["changes"]["new"] = _describe
+        ret["comment"] = "VPC {0} created.".format(name)
         return ret
-    ret['comment'] = 'VPC present.'
+    ret["comment"] = "VPC present."
     return ret
 
 
 def absent(name, tags=None, region=None, key=None, keyid=None, profile=None):
-    '''
+    """
     Ensure VPC with passed properties is absent.
 
     name
@@ -267,48 +286,57 @@ def absent(name, tags=None, region=None, key=None, keyid=None, profile=None):
     profile
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
-    '''
+    """
 
-    ret = {'name': name,
-           'result': True,
-           'comment': '',
-           'changes': {}
-           }
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
-    r = __salt__['boto_vpc.get_id'](name=name, tags=tags, region=region,
-                                    key=key, keyid=keyid, profile=profile)
-    if 'error' in r:
-        ret['result'] = False
-        ret['comment'] = 'Failed to delete VPC: {0}.'.format(r['error']['message'])
+    r = __salt__["boto_vpc.get_id"](
+        name=name, tags=tags, region=region, key=key, keyid=keyid, profile=profile
+    )
+    if "error" in r:
+        ret["result"] = False
+        ret["comment"] = "Failed to delete VPC: {0}.".format(r["error"]["message"])
         return ret
 
-    _id = r.get('id')
+    _id = r.get("id")
     if not _id:
-        ret['comment'] = '{0} VPC does not exist.'.format(name)
+        ret["comment"] = "{0} VPC does not exist.".format(name)
         return ret
 
-    if __opts__['test']:
-        ret['comment'] = 'VPC {0} is set to be removed.'.format(name)
-        ret['result'] = None
+    if __opts__["test"]:
+        ret["comment"] = "VPC {0} is set to be removed.".format(name)
+        ret["result"] = None
         return ret
-    r = __salt__['boto_vpc.delete'](vpc_name=name, tags=tags,
-                                    region=region, key=key,
-                                    keyid=keyid, profile=profile)
-    if not r['deleted']:
-        ret['result'] = False
-        ret['comment'] = 'Failed to delete VPC: {0}.'.format(r['error']['message'])
+    r = __salt__["boto_vpc.delete"](
+        vpc_name=name, tags=tags, region=region, key=key, keyid=keyid, profile=profile
+    )
+    if not r["deleted"]:
+        ret["result"] = False
+        ret["comment"] = "Failed to delete VPC: {0}.".format(r["error"]["message"])
         return ret
-    ret['changes']['old'] = {'vpc': _id}
-    ret['changes']['new'] = {'vpc': None}
-    ret['comment'] = 'VPC {0} deleted.'.format(name)
+    ret["changes"]["old"] = {"vpc": _id}
+    ret["changes"]["new"] = {"vpc": None}
+    ret["comment"] = "VPC {0} deleted.".format(name)
     return ret
 
 
-def dhcp_options_present(name, dhcp_options_id=None, vpc_name=None, vpc_id=None,
-                         domain_name=None, domain_name_servers=None, ntp_servers=None,
-                         netbios_name_servers=None, netbios_node_type=None,
-                         tags=None, region=None, key=None, keyid=None, profile=None):
-    '''
+def dhcp_options_present(
+    name,
+    dhcp_options_id=None,
+    vpc_name=None,
+    vpc_id=None,
+    domain_name=None,
+    domain_name_servers=None,
+    ntp_servers=None,
+    netbios_name_servers=None,
+    netbios_node_type=None,
+    tags=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+):
+    """
     Ensure a set of DHCP options with the given settings exist.
     Note that the current implementation only SETS values during option set
     creation.  It is unable to update option sets in place, and thus merely
@@ -372,64 +400,77 @@ def dhcp_options_present(name, dhcp_options_id=None, vpc_name=None, vpc_id=None,
         contains a dict with region, key and keyid.
 
     .. versionadded:: 2016.3.0
-    '''
-    ret = {'name': name,
-           'result': True,
-           'comment': '',
-           'changes': {}
-           }
-    _new = {'domain_name': domain_name,
-            'domain_name_servers': domain_name_servers,
-            'ntp_servers': ntp_servers,
-            'netbios_name_servers': netbios_name_servers,
-            'netbios_node_type': netbios_node_type
-           }
+    """
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
+    _new = {
+        "domain_name": domain_name,
+        "domain_name_servers": domain_name_servers,
+        "ntp_servers": ntp_servers,
+        "netbios_name_servers": netbios_name_servers,
+        "netbios_node_type": netbios_node_type,
+    }
 
     # boto provides no "update_dhcp_options()" functionality, and you can't delete it if
     # it's attached, and you can't detach it if it's the only one, so just check if it's
     # there or not, and make no effort to validate it's actual settings... :(
     ### TODO - add support for multiple sets of DHCP options, and then for "swapping out"
     ###        sets by creating new, mapping, then deleting the old.
-    r = __salt__['boto_vpc.dhcp_options_exists'](dhcp_options_id=dhcp_options_id,
-                                                 dhcp_options_name=name,
-                                                 region=region, key=key, keyid=keyid,
-                                                 profile=profile)
-    if 'error' in r:
-        ret['result'] = False
-        ret['comment'] = 'Failed to validate DHCP options: {0}.'.format(r['error']['message'])
+    r = __salt__["boto_vpc.dhcp_options_exists"](
+        dhcp_options_id=dhcp_options_id,
+        dhcp_options_name=name,
+        region=region,
+        key=key,
+        keyid=keyid,
+        profile=profile,
+    )
+    if "error" in r:
+        ret["result"] = False
+        ret["comment"] = "Failed to validate DHCP options: {0}.".format(
+            r["error"]["message"]
+        )
         return ret
 
-    if r.get('exists'):
-        ret['comment'] = 'DHCP options already present.'
+    if r.get("exists"):
+        ret["comment"] = "DHCP options already present."
         return ret
     else:
-        if __opts__['test']:
-            ret['comment'] = 'DHCP options {0} are set to be created.'.format(name)
-            ret['result'] = None
+        if __opts__["test"]:
+            ret["comment"] = "DHCP options {0} are set to be created.".format(name)
+            ret["result"] = None
             return ret
 
-        r = __salt__['boto_vpc.create_dhcp_options'](domain_name=domain_name,
-                                                     domain_name_servers=domain_name_servers,
-                                                     ntp_servers=ntp_servers,
-                                                     netbios_name_servers=netbios_name_servers,
-                                                     netbios_node_type=netbios_node_type,
-                                                     dhcp_options_name=name, tags=tags,
-                                                     vpc_id=vpc_id, vpc_name=vpc_name,
-                                                     region=region, key=key, keyid=keyid,
-                                                     profile=profile)
-        if not r.get('created'):
-            ret['result'] = False
-            ret['comment'] = 'Failed to create DHCP options: {0}'.format(r['error']['message'])
+        r = __salt__["boto_vpc.create_dhcp_options"](
+            domain_name=domain_name,
+            domain_name_servers=domain_name_servers,
+            ntp_servers=ntp_servers,
+            netbios_name_servers=netbios_name_servers,
+            netbios_node_type=netbios_node_type,
+            dhcp_options_name=name,
+            tags=tags,
+            vpc_id=vpc_id,
+            vpc_name=vpc_name,
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
+        )
+        if not r.get("created"):
+            ret["result"] = False
+            ret["comment"] = "Failed to create DHCP options: {0}".format(
+                r["error"]["message"]
+            )
             return ret
 
-        ret['changes']['old'] = {'dhcp_options': None}
-        ret['changes']['new'] = {'dhcp_options': _new}
-        ret['comment'] = 'DHCP options {0} created.'.format(name)
+        ret["changes"]["old"] = {"dhcp_options": None}
+        ret["changes"]["new"] = {"dhcp_options": _new}
+        ret["comment"] = "DHCP options {0} created.".format(name)
         return ret
 
 
-def dhcp_options_absent(name=None, dhcp_options_id=None, region=None, key=None, keyid=None, profile=None):
-    '''
+def dhcp_options_absent(
+    name=None, dhcp_options_id=None, region=None, key=None, keyid=None, profile=None
+):
+    """
     Ensure a set of DHCP options with the given settings exist.
 
     name
@@ -458,52 +499,63 @@ def dhcp_options_absent(name=None, dhcp_options_id=None, region=None, key=None, 
         contains a dict with region, key and keyid.
 
     .. versionadded:: 2016.3.0
-    '''
-    ret = {'name': name,
-           'result': True,
-           'comment': '',
-           'changes': {}
-           }
+    """
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
-    r = __salt__['boto_vpc.get_resource_id']('dhcp_options', name=name,
-                                             region=region, key=key,
-                                             keyid=keyid, profile=profile)
-    if 'error' in r:
-        ret['result'] = False
-        ret['comment'] = 'Failed to delete DHCP options: {0}.'.format(r['error']['message'])
+    r = __salt__["boto_vpc.get_resource_id"](
+        "dhcp_options", name=name, region=region, key=key, keyid=keyid, profile=profile
+    )
+    if "error" in r:
+        ret["result"] = False
+        ret["comment"] = "Failed to delete DHCP options: {0}.".format(
+            r["error"]["message"]
+        )
         return ret
 
-    _id = r.get('id')
+    _id = r.get("id")
 
     if not _id:
-        ret['comment'] = 'DHCP options {0} do not exist.'.format(name)
+        ret["comment"] = "DHCP options {0} do not exist.".format(name)
         return ret
 
-    if __opts__['test']:
-        ret['comment'] = 'DHCP options {0} are set to be deleted.'.format(name)
-        ret['result'] = None
+    if __opts__["test"]:
+        ret["comment"] = "DHCP options {0} are set to be deleted.".format(name)
+        ret["result"] = None
         return ret
 
-    r = __salt__['boto_vpc.delete_dhcp_options'](dhcp_options_id=r['id'], region=region,
-                                                 key=key, keyid=keyid, profile=profile)
-    if not r.get('deleted'):
-        ret['result'] = False
-        ret['comment'] = 'Failed to delete DHCP options: {0}'.format(r['error']['message'])
+    r = __salt__["boto_vpc.delete_dhcp_options"](
+        dhcp_options_id=r["id"], region=region, key=key, keyid=keyid, profile=profile
+    )
+    if not r.get("deleted"):
+        ret["result"] = False
+        ret["comment"] = "Failed to delete DHCP options: {0}".format(
+            r["error"]["message"]
+        )
         return ret
 
-    ret['changes']['old'] = {'dhcp_options': _id}
-    ret['changes']['new'] = {'dhcp_options': None}
-    ret['comment'] = 'DHCP options {0} deleted.'.format(name)
+    ret["changes"]["old"] = {"dhcp_options": _id}
+    ret["changes"]["new"] = {"dhcp_options": None}
+    ret["comment"] = "DHCP options {0} deleted.".format(name)
     return ret
 
 
-def subnet_present(name, cidr_block, vpc_name=None, vpc_id=None,
-                   availability_zone=None, tags=None,
-                   region=None, key=None,
-                   keyid=None, profile=None,
-                   route_table_id=None, route_table_name=None, auto_assign_public_ipv4=False):
+def subnet_present(
+    name,
+    cidr_block,
+    vpc_name=None,
+    vpc_id=None,
+    availability_zone=None,
+    tags=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+    route_table_id=None,
+    route_table_name=None,
+    auto_assign_public_ipv4=False,
+):
 
-    '''
+    """
     Ensure a subnet exists.
 
     name
@@ -551,21 +603,22 @@ def subnet_present(name, cidr_block, vpc_name=None, vpc_id=None,
     profile
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
-    '''
+    """
 
-    ret = {'name': name,
-           'result': True,
-           'comment': '',
-           'changes': {}
-           }
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
-    r = __salt__['boto_vpc.subnet_exists'](subnet_name=name, tags=tags,
-                                           region=region, key=key,
-                                           keyid=keyid, profile=profile)
+    r = __salt__["boto_vpc.subnet_exists"](
+        subnet_name=name,
+        tags=tags,
+        region=region,
+        key=key,
+        keyid=keyid,
+        profile=profile,
+    )
 
-    if 'error' in r:
-        ret['result'] = False
-        ret['comment'] = 'Failed to create subnet: {0}.'.format(r['error']['message'])
+    if "error" in r:
+        ret["result"] = False
+        ret["comment"] = "Failed to create subnet: {0}.".format(r["error"]["message"])
         return ret
 
     route_table_desc = None
@@ -576,103 +629,156 @@ def subnet_present(name, cidr_block, vpc_name=None, vpc_id=None,
         route_table_found = False
         if route_table_id:
             rtid = route_table_id
-            rt = __salt__['boto_vpc.route_table_exists'](route_table_id=route_table_id,
-                                                         region=region, key=key, keyid=keyid,
-                                                         profile=profile)
+            rt = __salt__["boto_vpc.route_table_exists"](
+                route_table_id=route_table_id,
+                region=region,
+                key=key,
+                keyid=keyid,
+                profile=profile,
+            )
         elif route_table_name:
             rtid = route_table_name
-            rt = __salt__['boto_vpc.route_table_exists'](route_table_name=route_table_name,
-                                                         region=region, key=key, keyid=keyid,
-                                                         profile=profile)
+            rt = __salt__["boto_vpc.route_table_exists"](
+                route_table_name=route_table_name,
+                region=region,
+                key=key,
+                keyid=keyid,
+                profile=profile,
+            )
         if rt:
-            if 'exists' in rt:
-                if rt['exists']:
+            if "exists" in rt:
+                if rt["exists"]:
                     if route_table_id:
                         route_table_found = True
-                        route_table_desc = __salt__['boto_vpc.describe_route_table'](route_table_id=route_table_id,
-                                                                                     region=region, key=key, keyid=keyid,
-                                                                                     profile=profile)
+                        route_table_desc = __salt__["boto_vpc.describe_route_table"](
+                            route_table_id=route_table_id,
+                            region=region,
+                            key=key,
+                            keyid=keyid,
+                            profile=profile,
+                        )
                     elif route_table_name:
                         route_table_found = True
-                        route_table_desc = __salt__['boto_vpc.describe_route_table'](route_table_name=route_table_name,
-                                                                                     region=region, key=key, keyid=keyid,
-                                                                                     profile=profile)
+                        route_table_desc = __salt__["boto_vpc.describe_route_table"](
+                            route_table_name=route_table_name,
+                            region=region,
+                            key=key,
+                            keyid=keyid,
+                            profile=profile,
+                        )
         if not route_table_found:
-            ret['result'] = False
-            ret['comment'] = 'The specified route table {0} could not be found.'.format(rtid)
+            ret["result"] = False
+            ret["comment"] = "The specified route table {0} could not be found.".format(
+                rtid
+            )
             return ret
 
-    if not r.get('exists'):
-        if __opts__['test']:
-            ret['comment'] = 'Subnet {0} is set to be created.'.format(name)
-            ret['result'] = None
+    if not r.get("exists"):
+        if __opts__["test"]:
+            ret["comment"] = "Subnet {0} is set to be created.".format(name)
+            ret["result"] = None
             return ret
-        r = __salt__['boto_vpc.create_subnet'](subnet_name=name,
-                                               cidr_block=cidr_block,
-                                               availability_zone=availability_zone,
-                                               auto_assign_public_ipv4=auto_assign_public_ipv4,
-                                               vpc_name=vpc_name, vpc_id=vpc_id,
-                                               tags=tags, region=region,
-                                               key=key, keyid=keyid,
-                                               profile=profile)
-        if not r.get('created'):
-            ret['result'] = False
-            ret['comment'] = 'Failed to create subnet: {0}'.format(r['error']['message'])
+        r = __salt__["boto_vpc.create_subnet"](
+            subnet_name=name,
+            cidr_block=cidr_block,
+            availability_zone=availability_zone,
+            auto_assign_public_ipv4=auto_assign_public_ipv4,
+            vpc_name=vpc_name,
+            vpc_id=vpc_id,
+            tags=tags,
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
+        )
+        if not r.get("created"):
+            ret["result"] = False
+            ret["comment"] = "Failed to create subnet: {0}".format(
+                r["error"]["message"]
+            )
             return ret
-        _describe = __salt__['boto_vpc.describe_subnet'](subnet_id=r['id'], region=region, key=key,
-                                                         keyid=keyid, profile=profile)
-        ret['changes']['old'] = {'subnet': None}
-        ret['changes']['new'] = _describe
-        ret['comment'] = 'Subnet {0} created.'.format(name)
+        _describe = __salt__["boto_vpc.describe_subnet"](
+            subnet_id=r["id"], region=region, key=key, keyid=keyid, profile=profile
+        )
+        ret["changes"]["old"] = {"subnet": None}
+        ret["changes"]["new"] = _describe
+        ret["comment"] = "Subnet {0} created.".format(name)
     else:
-        ret['comment'] = 'Subnet present.'
+        ret["comment"] = "Subnet present."
 
     if route_table_desc:
         if not _describe:
-            _describe = __salt__['boto_vpc.describe_subnet'](subnet_name=name, region=region,
-                                                             key=key, keyid=keyid, profile=profile)
-        if not _verify_subnet_association(route_table_desc, _describe['subnet']['id']):
-            if __opts__['test']:
-                msg = 'Subnet is set to be associated with route table {0}'.format(rtid)
-                ret['comment'] = ' '.join([ret['comment'], msg])
-                ret['result'] = None
+            _describe = __salt__["boto_vpc.describe_subnet"](
+                subnet_name=name, region=region, key=key, keyid=keyid, profile=profile
+            )
+        if not _verify_subnet_association(route_table_desc, _describe["subnet"]["id"]):
+            if __opts__["test"]:
+                msg = "Subnet is set to be associated with route table {0}".format(rtid)
+                ret["comment"] = " ".join([ret["comment"], msg])
+                ret["result"] = None
                 return ret
-            if 'explicit_route_table_association_id' in _describe['subnet']:
-                log.debug('Need to disassociate from existing route table')
-                drt_ret = __salt__['boto_vpc.disassociate_route_table'](_describe['subnet']['explicit_route_table_association_id'],
-                                                                        region=region, key=key, keyid=keyid, profile=profile)
-                if not drt_ret['disassociated']:
-                    msg = 'Unable to disassociate subnet {0} with its current route table.'.format(name)
-                    ret['comment'] = ' '.join([ret['comment'], msg])
-                    ret['result'] = False
+            if "explicit_route_table_association_id" in _describe["subnet"]:
+                log.debug("Need to disassociate from existing route table")
+                drt_ret = __salt__["boto_vpc.disassociate_route_table"](
+                    _describe["subnet"]["explicit_route_table_association_id"],
+                    region=region,
+                    key=key,
+                    keyid=keyid,
+                    profile=profile,
+                )
+                if not drt_ret["disassociated"]:
+                    msg = "Unable to disassociate subnet {0} with its current route table.".format(
+                        name
+                    )
+                    ret["comment"] = " ".join([ret["comment"], msg])
+                    ret["result"] = False
                     return ret
-            if 'old' not in ret['changes']:
-                ret['changes']['old'] = _describe
-            art_ret = __salt__['boto_vpc.associate_route_table'](route_table_id=route_table_desc['id'],
-                                                                 subnet_name=name, region=region,
-                                                                 key=key, keyid=keyid, profile=profile)
-            if 'error' in art_ret:
-                msg = 'Failed to associate subnet {0} with route table {1}: {2}.'.format(name, rtid,
-                                                                                         art_ret['error']['message'])
-                ret['comment'] = ' '.join([ret['comment'], msg])
-                ret['result'] = False
+            if "old" not in ret["changes"]:
+                ret["changes"]["old"] = _describe
+            art_ret = __salt__["boto_vpc.associate_route_table"](
+                route_table_id=route_table_desc["id"],
+                subnet_name=name,
+                region=region,
+                key=key,
+                keyid=keyid,
+                profile=profile,
+            )
+            if "error" in art_ret:
+                msg = "Failed to associate subnet {0} with route table {1}: {2}.".format(
+                    name, rtid, art_ret["error"]["message"]
+                )
+                ret["comment"] = " ".join([ret["comment"], msg])
+                ret["result"] = False
                 return ret
             else:
-                msg = 'Subnet successfully associated with route table {0}.'.format(rtid)
-                ret['comment'] = ' '.join([ret['comment'], msg])
-                if 'new' not in ret['changes']:
-                    ret['changes']['new'] = __salt__['boto_vpc.describe_subnet'](subnet_name=name, region=region,
-                                                                                 key=key, keyid=keyid, profile=profile)
+                msg = "Subnet successfully associated with route table {0}.".format(
+                    rtid
+                )
+                ret["comment"] = " ".join([ret["comment"], msg])
+                if "new" not in ret["changes"]:
+                    ret["changes"]["new"] = __salt__["boto_vpc.describe_subnet"](
+                        subnet_name=name,
+                        region=region,
+                        key=key,
+                        keyid=keyid,
+                        profile=profile,
+                    )
                 else:
-                    ret['changes']['new']['subnet']['explicit_route_table_association_id'] = art_ret['association_id']
+                    ret["changes"]["new"]["subnet"][
+                        "explicit_route_table_association_id"
+                    ] = art_ret["association_id"]
         else:
-            ret['comment'] = ' '.join([ret['comment'],
-                                      'Subnet is already associated with route table {0}'.format(rtid)])
+            ret["comment"] = " ".join(
+                [
+                    ret["comment"],
+                    "Subnet is already associated with route table {0}".format(rtid),
+                ]
+            )
     return ret
 
 
 def _verify_subnet_association(route_table_desc, subnet_id):
-    '''
+    """
     Helper function verify a subnet's route table association
 
     route_table_desc
@@ -682,17 +788,19 @@ def _verify_subnet_association(route_table_desc, subnet_id):
         the subnet id to verify
 
     .. versionadded:: 2016.11.0
-    '''
+    """
     if route_table_desc:
-        if 'associations' in route_table_desc:
-            for association in route_table_desc['associations']:
-                if association['subnet_id'] == subnet_id:
+        if "associations" in route_table_desc:
+            for association in route_table_desc["associations"]:
+                if association["subnet_id"] == subnet_id:
                     return True
     return False
 
 
-def subnet_absent(name=None, subnet_id=None, region=None, key=None, keyid=None, profile=None):
-    '''
+def subnet_absent(
+    name=None, subnet_id=None, region=None, key=None, keyid=None, profile=None
+):
+    """
     Ensure subnet with passed properties is absent.
 
     name
@@ -710,51 +818,54 @@ def subnet_absent(name=None, subnet_id=None, region=None, key=None, keyid=None, 
     profile
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
-    '''
+    """
 
-    ret = {'name': name,
-           'result': True,
-           'comment': '',
-           'changes': {}
-           }
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
-    r = __salt__['boto_vpc.get_resource_id']('subnet', name=name,
-                                             region=region, key=key,
-                                             keyid=keyid, profile=profile)
-    if 'error' in r:
-        ret['result'] = False
-        ret['comment'] = 'Failed to delete subnet: {0}.'.format(r['error']['message'])
+    r = __salt__["boto_vpc.get_resource_id"](
+        "subnet", name=name, region=region, key=key, keyid=keyid, profile=profile
+    )
+    if "error" in r:
+        ret["result"] = False
+        ret["comment"] = "Failed to delete subnet: {0}.".format(r["error"]["message"])
         return ret
 
-    _id = r.get('id')
+    _id = r.get("id")
 
     if not _id:
-        ret['comment'] = '{0} subnet does not exist.'.format(name)
+        ret["comment"] = "{0} subnet does not exist.".format(name)
         return ret
 
-    if __opts__['test']:
-        ret['comment'] = 'Subnet {0} ({1}) is set to be removed.'.format(name, r['id'])
-        ret['result'] = None
+    if __opts__["test"]:
+        ret["comment"] = "Subnet {0} ({1}) is set to be removed.".format(name, r["id"])
+        ret["result"] = None
         return ret
 
-    r = __salt__['boto_vpc.delete_subnet'](subnet_name=name,
-                                           region=region, key=key,
-                                           keyid=keyid, profile=profile)
-    if not r.get('deleted'):
-        ret['result'] = False
-        ret['comment'] = 'Failed to delete subnet: {0}'.format(r['error']['message'])
+    r = __salt__["boto_vpc.delete_subnet"](
+        subnet_name=name, region=region, key=key, keyid=keyid, profile=profile
+    )
+    if not r.get("deleted"):
+        ret["result"] = False
+        ret["comment"] = "Failed to delete subnet: {0}".format(r["error"]["message"])
         return ret
 
-    ret['changes']['old'] = {'subnet': _id}
-    ret['changes']['new'] = {'subnet': None}
-    ret['comment'] = 'Subnet {0} deleted.'.format(name)
+    ret["changes"]["old"] = {"subnet": _id}
+    ret["changes"]["new"] = {"subnet": None}
+    ret["comment"] = "Subnet {0} deleted.".format(name)
     return ret
 
 
-def internet_gateway_present(name, vpc_name=None, vpc_id=None,
-                             tags=None, region=None, key=None,
-                             keyid=None, profile=None):
-    '''
+def internet_gateway_present(
+    name,
+    vpc_name=None,
+    vpc_id=None,
+    tags=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+):
+    """
     Ensure an internet gateway exists.
 
     name
@@ -782,48 +893,59 @@ def internet_gateway_present(name, vpc_name=None, vpc_id=None,
     profile
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
-    '''
+    """
 
-    ret = {'name': name,
-           'result': True,
-           'comment': '',
-           'changes': {}
-           }
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
-    r = __salt__['boto_vpc.resource_exists']('internet_gateway', name=name,
-                                             region=region, key=key,
-                                             keyid=keyid, profile=profile)
-    if 'error' in r:
-        ret['result'] = False
-        ret['comment'] = 'Failed to create internet gateway: {0}.'.format(r['error']['message'])
+    r = __salt__["boto_vpc.resource_exists"](
+        "internet_gateway",
+        name=name,
+        region=region,
+        key=key,
+        keyid=keyid,
+        profile=profile,
+    )
+    if "error" in r:
+        ret["result"] = False
+        ret["comment"] = "Failed to create internet gateway: {0}.".format(
+            r["error"]["message"]
+        )
         return ret
 
-    if not r.get('exists'):
-        if __opts__['test']:
-            ret['comment'] = 'Internet gateway {0} is set to be created.'.format(name)
-            ret['result'] = None
+    if not r.get("exists"):
+        if __opts__["test"]:
+            ret["comment"] = "Internet gateway {0} is set to be created.".format(name)
+            ret["result"] = None
             return ret
-        r = __salt__['boto_vpc.create_internet_gateway'](internet_gateway_name=name,
-                                                         vpc_name=vpc_name, vpc_id=vpc_id,
-                                                         tags=tags, region=region,
-                                                         key=key, keyid=keyid,
-                                                         profile=profile)
-        if not r.get('created'):
-            ret['result'] = False
-            ret['comment'] = 'Failed to create internet gateway: {0}'.format(r['error']['message'])
+        r = __salt__["boto_vpc.create_internet_gateway"](
+            internet_gateway_name=name,
+            vpc_name=vpc_name,
+            vpc_id=vpc_id,
+            tags=tags,
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
+        )
+        if not r.get("created"):
+            ret["result"] = False
+            ret["comment"] = "Failed to create internet gateway: {0}".format(
+                r["error"]["message"]
+            )
             return ret
 
-        ret['changes']['old'] = {'internet_gateway': None}
-        ret['changes']['new'] = {'internet_gateway': r['id']}
-        ret['comment'] = 'Internet gateway {0} created.'.format(name)
+        ret["changes"]["old"] = {"internet_gateway": None}
+        ret["changes"]["new"] = {"internet_gateway": r["id"]}
+        ret["comment"] = "Internet gateway {0} created.".format(name)
         return ret
-    ret['comment'] = 'Internet gateway {0} present.'.format(name)
+    ret["comment"] = "Internet gateway {0} present.".format(name)
     return ret
 
 
-def internet_gateway_absent(name, detach=False, region=None,
-                            key=None, keyid=None, profile=None):
-    '''
+def internet_gateway_absent(
+    name, detach=False, region=None, key=None, keyid=None, profile=None
+):
+    """
     Ensure the named internet gateway is absent.
 
     name
@@ -844,49 +966,68 @@ def internet_gateway_absent(name, detach=False, region=None,
     profile
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
-    '''
+    """
 
-    ret = {'name': name,
-           'result': True,
-           'comment': '',
-           'changes': {}
-           }
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
-    r = __salt__['boto_vpc.get_resource_id']('internet_gateway', name=name,
-                                             region=region, key=key,
-                                             keyid=keyid, profile=profile)
-    if 'error' in r:
-        ret['result'] = False
-        ret['comment'] = 'Failed to delete internet gateway: {0}.'.format(r['error']['message'])
+    r = __salt__["boto_vpc.get_resource_id"](
+        "internet_gateway",
+        name=name,
+        region=region,
+        key=key,
+        keyid=keyid,
+        profile=profile,
+    )
+    if "error" in r:
+        ret["result"] = False
+        ret["comment"] = "Failed to delete internet gateway: {0}.".format(
+            r["error"]["message"]
+        )
         return ret
 
-    igw_id = r['id']
+    igw_id = r["id"]
     if not igw_id:
-        ret['comment'] = 'Internet gateway {0} does not exist.'.format(name)
+        ret["comment"] = "Internet gateway {0} does not exist.".format(name)
         return ret
 
-    if __opts__['test']:
-        ret['comment'] = 'Internet gateway {0} is set to be removed.'.format(name)
-        ret['result'] = None
+    if __opts__["test"]:
+        ret["comment"] = "Internet gateway {0} is set to be removed.".format(name)
+        ret["result"] = None
         return ret
-    r = __salt__['boto_vpc.delete_internet_gateway'](internet_gateway_name=name,
-                                                     detach=detach, region=region,
-                                                     key=key, keyid=keyid,
-                                                     profile=profile)
-    if not r.get('deleted'):
-        ret['result'] = False
-        ret['comment'] = 'Failed to delete internet gateway: {0}.'.format(r['error']['message'])
+    r = __salt__["boto_vpc.delete_internet_gateway"](
+        internet_gateway_name=name,
+        detach=detach,
+        region=region,
+        key=key,
+        keyid=keyid,
+        profile=profile,
+    )
+    if not r.get("deleted"):
+        ret["result"] = False
+        ret["comment"] = "Failed to delete internet gateway: {0}.".format(
+            r["error"]["message"]
+        )
         return ret
-    ret['changes']['old'] = {'internet_gateway': igw_id}
-    ret['changes']['new'] = {'internet_gateway': None}
-    ret['comment'] = 'Internet gateway {0} deleted.'.format(name)
+    ret["changes"]["old"] = {"internet_gateway": igw_id}
+    ret["changes"]["new"] = {"internet_gateway": None}
+    ret["comment"] = "Internet gateway {0} deleted.".format(name)
     return ret
 
 
-def route_table_present(name, vpc_name=None, vpc_id=None, routes=None,
-                        subnet_ids=None, subnet_names=None, tags=None,
-                        region=None, key=None, keyid=None, profile=None):
-    '''
+def route_table_present(
+    name,
+    vpc_name=None,
+    vpc_id=None,
+    routes=None,
+    subnet_ids=None,
+    subnet_names=None,
+    tags=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+):
+    """
     Ensure route table with routes exists and is associated to a VPC.
 
     This function requires boto3 to be installed if nat gatewyas are specified.
@@ -945,217 +1086,329 @@ def route_table_present(name, vpc_name=None, vpc_id=None, routes=None,
     profile
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
-    '''
-    ret = {'name': name,
-           'result': True,
-           'comment': '',
-           'changes': {}
-           }
+    """
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
-    _ret = _route_table_present(name=name, vpc_name=vpc_name, vpc_id=vpc_id,
-                                tags=tags, region=region, key=key,
-                                keyid=keyid, profile=profile)
-    ret['changes'] = _ret['changes']
-    ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
-    if not _ret['result']:
-        ret['result'] = _ret['result']
-        if ret['result'] is False:
+    _ret = _route_table_present(
+        name=name,
+        vpc_name=vpc_name,
+        vpc_id=vpc_id,
+        tags=tags,
+        region=region,
+        key=key,
+        keyid=keyid,
+        profile=profile,
+    )
+    ret["changes"] = _ret["changes"]
+    ret["comment"] = " ".join([ret["comment"], _ret["comment"]])
+    if not _ret["result"]:
+        ret["result"] = _ret["result"]
+        if ret["result"] is False:
             return ret
-        if ret['result'] is None and __opts__['test']:
+        if ret["result"] is None and __opts__["test"]:
             return ret
-    _ret = _routes_present(route_table_name=name, routes=routes, tags=tags,
-                           region=region, key=key, keyid=keyid, profile=profile)
-    ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
-    ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
-    if not _ret['result']:
-        ret['result'] = _ret['result']
-        if ret['result'] is False:
+    _ret = _routes_present(
+        route_table_name=name,
+        routes=routes,
+        tags=tags,
+        region=region,
+        key=key,
+        keyid=keyid,
+        profile=profile,
+    )
+    ret["changes"] = dictupdate.update(ret["changes"], _ret["changes"])
+    ret["comment"] = " ".join([ret["comment"], _ret["comment"]])
+    if not _ret["result"]:
+        ret["result"] = _ret["result"]
+        if ret["result"] is False:
             return ret
-    _ret = _subnets_present(route_table_name=name, subnet_ids=subnet_ids,
-                            subnet_names=subnet_names, tags=tags, region=region,
-                            key=key, keyid=keyid, profile=profile)
-    ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
-    ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
-    if not _ret['result']:
-        ret['result'] = _ret['result']
-        if ret['result'] is False:
+    _ret = _subnets_present(
+        route_table_name=name,
+        subnet_ids=subnet_ids,
+        subnet_names=subnet_names,
+        tags=tags,
+        region=region,
+        key=key,
+        keyid=keyid,
+        profile=profile,
+    )
+    ret["changes"] = dictupdate.update(ret["changes"], _ret["changes"])
+    ret["comment"] = " ".join([ret["comment"], _ret["comment"]])
+    if not _ret["result"]:
+        ret["result"] = _ret["result"]
+        if ret["result"] is False:
             return ret
     return ret
 
 
-def _route_table_present(name, vpc_name=None, vpc_id=None, tags=None, region=None,
-                         key=None, keyid=None, profile=None):
-    ret = {'name': name,
-           'result': True,
-           'comment': '',
-           'changes': {}
-           }
+def _route_table_present(
+    name,
+    vpc_name=None,
+    vpc_id=None,
+    tags=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+):
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
-    r = __salt__['boto_vpc.get_resource_id'](resource='route_table', name=name,
-                                             region=region, key=key, keyid=keyid,
-                                             profile=profile)
-    if 'error' in r:
-        ret['result'] = False
-        ret['comment'] = 'Failed to create route table: {0}.'.format(r['error']['message'])
+    r = __salt__["boto_vpc.get_resource_id"](
+        resource="route_table",
+        name=name,
+        region=region,
+        key=key,
+        keyid=keyid,
+        profile=profile,
+    )
+    if "error" in r:
+        ret["result"] = False
+        ret["comment"] = "Failed to create route table: {0}.".format(
+            r["error"]["message"]
+        )
         return ret
 
-    _id = r.get('id')
+    _id = r.get("id")
 
     if not _id:
-        if __opts__['test']:
-            msg = 'Route table {0} is set to be created.'.format(name)
-            ret['comment'] = msg
-            ret['result'] = None
+        if __opts__["test"]:
+            msg = "Route table {0} is set to be created.".format(name)
+            ret["comment"] = msg
+            ret["result"] = None
             return ret
 
-        r = __salt__['boto_vpc.create_route_table'](route_table_name=name,
-                                                    vpc_name=vpc_name,
-                                                    vpc_id=vpc_id, tags=tags,
-                                                    region=region, key=key,
-                                                    keyid=keyid, profile=profile)
-        if not r.get('created'):
-            ret['result'] = False
-            ret['comment'] = 'Failed to create route table: {0}.'.format(r['error']['message'])
+        r = __salt__["boto_vpc.create_route_table"](
+            route_table_name=name,
+            vpc_name=vpc_name,
+            vpc_id=vpc_id,
+            tags=tags,
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
+        )
+        if not r.get("created"):
+            ret["result"] = False
+            ret["comment"] = "Failed to create route table: {0}.".format(
+                r["error"]["message"]
+            )
             return ret
 
-        ret['changes']['old'] = {'route_table': None}
-        ret['changes']['new'] = {'route_table': r['id']}
-        ret['comment'] = 'Route table {0} created.'.format(name)
+        ret["changes"]["old"] = {"route_table": None}
+        ret["changes"]["new"] = {"route_table": r["id"]}
+        ret["comment"] = "Route table {0} created.".format(name)
         return ret
-    ret['comment'] = 'Route table {0} ({1}) present.'.format(name, _id)
+    ret["comment"] = "Route table {0} ({1}) present.".format(name, _id)
     return ret
 
 
-def _routes_present(route_table_name, routes, tags=None, region=None, key=None, keyid=None, profile=None):
-    ret = {'name': route_table_name,
-           'result': True,
-           'comment': '',
-           'changes': {}
-           }
+def _routes_present(
+    route_table_name, routes, tags=None, region=None, key=None, keyid=None, profile=None
+):
+    ret = {"name": route_table_name, "result": True, "comment": "", "changes": {}}
 
-    route_table = __salt__['boto_vpc.describe_route_tables'](route_table_name=route_table_name, tags=tags,
-                                                            region=region, key=key, keyid=keyid, profile=profile)
-    if 'error' in route_table:
-        msg = 'Could not retrieve configuration for route table {0}: {1}`.'.format(route_table_name,
-                                                                                   route_table['error']['message'])
-        ret['comment'] = msg
-        ret['result'] = False
+    route_table = __salt__["boto_vpc.describe_route_tables"](
+        route_table_name=route_table_name,
+        tags=tags,
+        region=region,
+        key=key,
+        keyid=keyid,
+        profile=profile,
+    )
+    if "error" in route_table:
+        msg = "Could not retrieve configuration for route table {0}: {1}`.".format(
+            route_table_name, route_table["error"]["message"]
+        )
+        ret["comment"] = msg
+        ret["result"] = False
         return ret
 
     route_table = route_table[0]
     _routes = []
     if routes:
-        route_keys = set(('gateway_id', 'instance_id', 'destination_cidr_block', 'interface_id', 'vpc_peering_connection_id', 'nat_gateway_id'))
+        route_keys = set(
+            (
+                "gateway_id",
+                "instance_id",
+                "destination_cidr_block",
+                "interface_id",
+                "vpc_peering_connection_id",
+                "nat_gateway_id",
+            )
+        )
         for i in routes:
-            #_r = {k:i[k] for k in i if k in route_keys}
+            # _r = {k:i[k] for k in i if k in route_keys}
             _r = {}
             for k, v in six.iteritems(i):
                 if k in route_keys:
                     _r[k] = i[k]
-            if i.get('internet_gateway_name'):
-                r = __salt__['boto_vpc.get_resource_id']('internet_gateway', name=i['internet_gateway_name'],
-                                                         region=region, key=key, keyid=keyid, profile=profile)
-                if 'error' in r:
-                    msg = 'Error looking up id for internet gateway {0}: {1}'.format(i.get('internet_gateway_name'),
-                                                                                     r['error']['message'])
-                    ret['comment'] = msg
-                    ret['result'] = False
+            if i.get("internet_gateway_name"):
+                r = __salt__["boto_vpc.get_resource_id"](
+                    "internet_gateway",
+                    name=i["internet_gateway_name"],
+                    region=region,
+                    key=key,
+                    keyid=keyid,
+                    profile=profile,
+                )
+                if "error" in r:
+                    msg = "Error looking up id for internet gateway {0}: {1}".format(
+                        i.get("internet_gateway_name"), r["error"]["message"]
+                    )
+                    ret["comment"] = msg
+                    ret["result"] = False
                     return ret
-                if r['id'] is None:
-                    msg = 'Internet gateway {0} does not exist.'.format(i)
-                    ret['comment'] = msg
-                    ret['result'] = False
+                if r["id"] is None:
+                    msg = "Internet gateway {0} does not exist.".format(i)
+                    ret["comment"] = msg
+                    ret["result"] = False
                     return ret
-                _r['gateway_id'] = r['id']
-            if i.get('vpc_peering_connection_name'):
-                r = __salt__['boto_vpc.get_resource_id']('vpc_peering_connection', name=i['vpc_peering_connection_name'],
-                                                         region=region, key=key, keyid=keyid, profile=profile)
-                if 'error' in r:
-                    msg = 'Error looking up id for VPC peering connection {0}: {1}'.format(i.get('vpc_peering_connection_name'),
-                                                                                     r['error']['message'])
-                    ret['comment'] = msg
-                    ret['result'] = False
+                _r["gateway_id"] = r["id"]
+            if i.get("vpc_peering_connection_name"):
+                r = __salt__["boto_vpc.get_resource_id"](
+                    "vpc_peering_connection",
+                    name=i["vpc_peering_connection_name"],
+                    region=region,
+                    key=key,
+                    keyid=keyid,
+                    profile=profile,
+                )
+                if "error" in r:
+                    msg = "Error looking up id for VPC peering connection {0}: {1}".format(
+                        i.get("vpc_peering_connection_name"), r["error"]["message"]
+                    )
+                    ret["comment"] = msg
+                    ret["result"] = False
                     return ret
-                if r['id'] is None:
-                    msg = 'VPC peering connection {0} does not exist.'.format(i)
-                    ret['comment'] = msg
-                    ret['result'] = False
+                if r["id"] is None:
+                    msg = "VPC peering connection {0} does not exist.".format(i)
+                    ret["comment"] = msg
+                    ret["result"] = False
                     return ret
-                _r['vpc_peering_connection_id'] = r['id']
-            if i.get('instance_name'):
-                running_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
-                r = __salt__['boto_ec2.get_id'](name=i['instance_name'], region=region,
-                                                key=key, keyid=keyid, profile=profile,
-                                                in_states=running_states)
+                _r["vpc_peering_connection_id"] = r["id"]
+            if i.get("instance_name"):
+                running_states = (
+                    "pending",
+                    "rebooting",
+                    "running",
+                    "stopping",
+                    "stopped",
+                )
+                r = __salt__["boto_ec2.get_id"](
+                    name=i["instance_name"],
+                    region=region,
+                    key=key,
+                    keyid=keyid,
+                    profile=profile,
+                    in_states=running_states,
+                )
                 if r is None:
-                    msg = 'Instance {0} does not exist.'.format(i['instance_name'])
-                    ret['comment'] = msg
-                    ret['result'] = False
+                    msg = "Instance {0} does not exist.".format(i["instance_name"])
+                    ret["comment"] = msg
+                    ret["result"] = False
                     return ret
-                _r['instance_id'] = r
-            if i.get('nat_gateway_subnet_name'):
-                r = __salt__['boto_vpc.describe_nat_gateways'](subnet_name=i['nat_gateway_subnet_name'],
-                                                         region=region, key=key, keyid=keyid, profile=profile)
+                _r["instance_id"] = r
+            if i.get("nat_gateway_subnet_name"):
+                r = __salt__["boto_vpc.describe_nat_gateways"](
+                    subnet_name=i["nat_gateway_subnet_name"],
+                    region=region,
+                    key=key,
+                    keyid=keyid,
+                    profile=profile,
+                )
                 if not r:
-                    msg = 'Nat gateway does not exist.'
-                    ret['comment'] = msg
-                    ret['result'] = False
+                    msg = "Nat gateway does not exist."
+                    ret["comment"] = msg
+                    ret["result"] = False
                     return ret
-                _r['nat_gateway_id'] = r[0]['NatGatewayId']
+                _r["nat_gateway_id"] = r[0]["NatGatewayId"]
             _routes.append(_r)
 
     to_delete = []
     to_create = []
     for route in _routes:
-        if route not in route_table['routes']:
+        if route not in route_table["routes"]:
             to_create.append(dict(route))
-    for route in route_table['routes']:
+    for route in route_table["routes"]:
         if route not in _routes:
-            if route.get('gateway_id') != 'local':
+            if route.get("gateway_id") != "local":
                 to_delete.append(route)
     if to_create or to_delete:
-        if __opts__['test']:
-            msg = 'Route table {0} set to have routes modified.'.format(route_table_name)
-            ret['comment'] = msg
-            ret['result'] = None
+        if __opts__["test"]:
+            msg = "Route table {0} set to have routes modified.".format(
+                route_table_name
+            )
+            ret["comment"] = msg
+            ret["result"] = None
             return ret
         if to_delete:
             for r in to_delete:
-                res = __salt__['boto_vpc.delete_route'](route_table_id=route_table['id'],
-                                                        destination_cidr_block=r['destination_cidr_block'],
-                                                        region=region, key=key, keyid=keyid,
-                                                        profile=profile)
-                if not res['deleted']:
-                    msg = 'Failed to delete route {0} from route table {1}: {2}.'.format(r['destination_cidr_block'],
-                                                                                         route_table_name, res['error']['message'])
-                    ret['comment'] = msg
-                    ret['result'] = False
+                res = __salt__["boto_vpc.delete_route"](
+                    route_table_id=route_table["id"],
+                    destination_cidr_block=r["destination_cidr_block"],
+                    region=region,
+                    key=key,
+                    keyid=keyid,
+                    profile=profile,
+                )
+                if not res["deleted"]:
+                    msg = "Failed to delete route {0} from route table {1}: {2}.".format(
+                        r["destination_cidr_block"],
+                        route_table_name,
+                        res["error"]["message"],
+                    )
+                    ret["comment"] = msg
+                    ret["result"] = False
                     return ret
-                ret['comment'] = 'Deleted route {0} from route table {1}.'.format(r['destination_cidr_block'], route_table_name)
+                ret["comment"] = "Deleted route {0} from route table {1}.".format(
+                    r["destination_cidr_block"], route_table_name
+                )
         if to_create:
             for r in to_create:
-                res = __salt__['boto_vpc.create_route'](route_table_id=route_table['id'], region=region, key=key,
-                                                        keyid=keyid, profile=profile, **r)
-                if not res['created']:
-                    msg = 'Failed to create route {0} in route table {1}: {2}.'.format(r['destination_cidr_block'], route_table_name,
-                                                                                       res['error']['message'])
-                    ret['comment'] = msg
-                    ret['result'] = False
+                res = __salt__["boto_vpc.create_route"](
+                    route_table_id=route_table["id"],
+                    region=region,
+                    key=key,
+                    keyid=keyid,
+                    profile=profile,
+                    **r
+                )
+                if not res["created"]:
+                    msg = "Failed to create route {0} in route table {1}: {2}.".format(
+                        r["destination_cidr_block"],
+                        route_table_name,
+                        res["error"]["message"],
+                    )
+                    ret["comment"] = msg
+                    ret["result"] = False
                     return ret
-                ret['comment'] = 'Created route {0} in route table {1}.'.format(r['destination_cidr_block'], route_table_name)
-        ret['changes']['old'] = {'routes': route_table['routes']}
-        route = __salt__['boto_vpc.describe_route_tables'](route_table_name=route_table_name, tags=tags, region=region, key=key,
-                                                          keyid=keyid, profile=profile)
-        ret['changes']['new'] = {'routes': route[0]['routes']}
+                ret["comment"] = "Created route {0} in route table {1}.".format(
+                    r["destination_cidr_block"], route_table_name
+                )
+        ret["changes"]["old"] = {"routes": route_table["routes"]}
+        route = __salt__["boto_vpc.describe_route_tables"](
+            route_table_name=route_table_name,
+            tags=tags,
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
+        )
+        ret["changes"]["new"] = {"routes": route[0]["routes"]}
     return ret
 
 
-def _subnets_present(route_table_name, subnet_ids=None, subnet_names=None, tags=None, region=None, key=None, keyid=None, profile=None):
-    ret = {'name': route_table_name,
-           'result': True,
-           'comment': '',
-           'changes': {}
-           }
+def _subnets_present(
+    route_table_name,
+    subnet_ids=None,
+    subnet_names=None,
+    tags=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+):
+    ret = {"name": route_table_name, "result": True, "comment": "", "changes": {}}
 
     if not subnet_ids:
         subnet_ids = []
@@ -1163,78 +1416,106 @@ def _subnets_present(route_table_name, subnet_ids=None, subnet_names=None, tags=
     # Look up subnet ids
     if subnet_names:
         for i in subnet_names:
-            r = __salt__['boto_vpc.get_resource_id']('subnet', name=i, region=region,
-                                                     key=key, keyid=keyid, profile=profile)
+            r = __salt__["boto_vpc.get_resource_id"](
+                "subnet", name=i, region=region, key=key, keyid=keyid, profile=profile
+            )
 
-            if 'error' in r:
-                msg = 'Error looking up subnet ids: {0}'.format(r['error']['message'])
-                ret['comment'] = msg
-                ret['result'] = False
+            if "error" in r:
+                msg = "Error looking up subnet ids: {0}".format(r["error"]["message"])
+                ret["comment"] = msg
+                ret["result"] = False
                 return ret
-            if r['id'] is None:
-                msg = 'Subnet {0} does not exist.'.format(i)
-                ret['comment'] = msg
-                ret['result'] = False
+            if r["id"] is None:
+                msg = "Subnet {0} does not exist.".format(i)
+                ret["comment"] = msg
+                ret["result"] = False
                 return ret
-            subnet_ids.append(r['id'])
+            subnet_ids.append(r["id"])
 
     # Describe routing table
-    route_table = __salt__['boto_vpc.describe_route_table'](route_table_name=route_table_name, tags=tags, region=region,
-                                                            key=key, keyid=keyid, profile=profile)
+    route_table = __salt__["boto_vpc.describe_route_table"](
+        route_table_name=route_table_name,
+        tags=tags,
+        region=region,
+        key=key,
+        keyid=keyid,
+        profile=profile,
+    )
     if not route_table:
-        msg = 'Could not retrieve configuration for route table {0}.'.format(route_table_name)
-        ret['comment'] = msg
-        ret['result'] = False
+        msg = "Could not retrieve configuration for route table {0}.".format(
+            route_table_name
+        )
+        ret["comment"] = msg
+        ret["result"] = False
         return ret
 
-    assoc_ids = [x['subnet_id'] for x in route_table['associations']]
+    assoc_ids = [x["subnet_id"] for x in route_table["associations"]]
 
     to_create = [x for x in subnet_ids if x not in assoc_ids]
     to_delete = []
-    for x in route_table['associations']:
+    for x in route_table["associations"]:
         # Don't remove the main route table association
-        if x['subnet_id'] not in subnet_ids and x['subnet_id'] is not None:
-            to_delete.append(x['id'])
+        if x["subnet_id"] not in subnet_ids and x["subnet_id"] is not None:
+            to_delete.append(x["id"])
 
     if to_create or to_delete:
-        if __opts__['test']:
-            msg = 'Subnet associations for route table {0} set to be modified.'.format(route_table_name)
-            ret['comment'] = msg
-            ret['result'] = None
+        if __opts__["test"]:
+            msg = "Subnet associations for route table {0} set to be modified.".format(
+                route_table_name
+            )
+            ret["comment"] = msg
+            ret["result"] = None
             return ret
         if to_delete:
             for r_asc in to_delete:
-                r = __salt__['boto_vpc.disassociate_route_table'](r_asc, region, key, keyid, profile)
-                if 'error' in r:
-                    msg = 'Failed to dissociate {0} from route table {1}: {2}.'.format(r_asc, route_table_name,
-                                                                                       r['error']['message'])
-                    ret['comment'] = msg
-                    ret['result'] = False
+                r = __salt__["boto_vpc.disassociate_route_table"](
+                    r_asc, region, key, keyid, profile
+                )
+                if "error" in r:
+                    msg = "Failed to dissociate {0} from route table {1}: {2}.".format(
+                        r_asc, route_table_name, r["error"]["message"]
+                    )
+                    ret["comment"] = msg
+                    ret["result"] = False
                     return ret
-                ret['comment'] = 'Dissociated subnet {0} from route table {1}.'.format(r_asc, route_table_name)
+                ret["comment"] = "Dissociated subnet {0} from route table {1}.".format(
+                    r_asc, route_table_name
+                )
         if to_create:
             for sn in to_create:
-                r = __salt__['boto_vpc.associate_route_table'](route_table_id=route_table['id'],
-                                                               subnet_id=sn,
-                                                               region=region, key=key,
-                                                               keyid=keyid, profile=profile)
-                if 'error' in r:
-                    msg = 'Failed to associate subnet {0} with route table {1}: {2}.'.format(sn, route_table_name,
-                                                                                             r['error']['message'])
-                    ret['comment'] = msg
-                    ret['result'] = False
+                r = __salt__["boto_vpc.associate_route_table"](
+                    route_table_id=route_table["id"],
+                    subnet_id=sn,
+                    region=region,
+                    key=key,
+                    keyid=keyid,
+                    profile=profile,
+                )
+                if "error" in r:
+                    msg = "Failed to associate subnet {0} with route table {1}: {2}.".format(
+                        sn, route_table_name, r["error"]["message"]
+                    )
+                    ret["comment"] = msg
+                    ret["result"] = False
                     return ret
-                ret['comment'] = 'Associated subnet {0} with route table {1}.'.format(sn, route_table_name)
-        ret['changes']['old'] = {'subnets_associations': route_table['associations']}
-        new_sub = __salt__['boto_vpc.describe_route_table'](route_table_name=route_table_name, tags=tags, region=region, key=key,
-                                                            keyid=keyid, profile=profile)
-        ret['changes']['new'] = {'subnets_associations': new_sub['associations']}
+                ret["comment"] = "Associated subnet {0} with route table {1}.".format(
+                    sn, route_table_name
+                )
+        ret["changes"]["old"] = {"subnets_associations": route_table["associations"]}
+        new_sub = __salt__["boto_vpc.describe_route_table"](
+            route_table_name=route_table_name,
+            tags=tags,
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
+        )
+        ret["changes"]["new"] = {"subnets_associations": new_sub["associations"]}
     return ret
 
 
-def route_table_absent(name, region=None,
-                       key=None, keyid=None, profile=None):
-    '''
+def route_table_absent(name, region=None, key=None, keyid=None, profile=None):
+    """
     Ensure the named route table is absent.
 
     name
@@ -1252,50 +1533,55 @@ def route_table_absent(name, region=None,
     profile
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
-    '''
+    """
 
-    ret = {'name': name,
-           'result': True,
-           'comment': '',
-           'changes': {}
-           }
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
-    r = __salt__['boto_vpc.get_resource_id']('route_table', name=name,
-                                             region=region, key=key,
-                                             keyid=keyid, profile=profile)
-    if 'error' in r:
-        ret['result'] = False
-        ret['comment'] = r['error']['message']
+    r = __salt__["boto_vpc.get_resource_id"](
+        "route_table", name=name, region=region, key=key, keyid=keyid, profile=profile
+    )
+    if "error" in r:
+        ret["result"] = False
+        ret["comment"] = r["error"]["message"]
         return ret
 
-    rtbl_id = r['id']
+    rtbl_id = r["id"]
 
     if not rtbl_id:
-        ret['comment'] = 'Route table {0} does not exist.'.format(name)
+        ret["comment"] = "Route table {0} does not exist.".format(name)
         return ret
 
-    if __opts__['test']:
-        ret['comment'] = 'Route table {0} is set to be removed.'.format(name)
-        ret['result'] = None
+    if __opts__["test"]:
+        ret["comment"] = "Route table {0} is set to be removed.".format(name)
+        ret["result"] = None
         return ret
 
-    r = __salt__['boto_vpc.delete_route_table'](route_table_name=name,
-                                                region=region,
-                                                key=key, keyid=keyid,
-                                                profile=profile)
-    if 'error' in r:
-        ret['result'] = False
-        ret['comment'] = 'Failed to delete route table: {0}'.format(r['error']['message'])
+    r = __salt__["boto_vpc.delete_route_table"](
+        route_table_name=name, region=region, key=key, keyid=keyid, profile=profile
+    )
+    if "error" in r:
+        ret["result"] = False
+        ret["comment"] = "Failed to delete route table: {0}".format(
+            r["error"]["message"]
+        )
         return ret
-    ret['changes']['old'] = {'route_table': rtbl_id}
-    ret['changes']['new'] = {'route_table': None}
-    ret['comment'] = 'Route table {0} deleted.'.format(name)
+    ret["changes"]["old"] = {"route_table": rtbl_id}
+    ret["changes"]["new"] = {"route_table": None}
+    ret["comment"] = "Route table {0} deleted.".format(name)
     return ret
 
 
-def nat_gateway_present(name, subnet_name=None, subnet_id=None,
-                        region=None, key=None, keyid=None, profile=None, allocation_id=None):
-    '''
+def nat_gateway_present(
+    name,
+    subnet_name=None,
+    subnet_id=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+    allocation_id=None,
+):
+    """
     Ensure a nat gateway exists within the specified subnet
 
     This function requires boto3.
@@ -1335,49 +1621,62 @@ def nat_gateway_present(name, subnet_name=None, subnet_id=None,
     profile
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
-    '''
-    ret = {'name': name,
-           'result': True,
-           'comment': '',
-           'changes': {}
-           }
+    """
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
-    r = __salt__['boto_vpc.describe_nat_gateways'](subnet_name=subnet_name,
-                                             subnet_id=subnet_id,
-                                             region=region, key=key, keyid=keyid,
-                                             profile=profile)
+    r = __salt__["boto_vpc.describe_nat_gateways"](
+        subnet_name=subnet_name,
+        subnet_id=subnet_id,
+        region=region,
+        key=key,
+        keyid=keyid,
+        profile=profile,
+    )
     if not r:
-        if __opts__['test']:
-            msg = 'Nat gateway is set to be created.'
-            ret['comment'] = msg
-            ret['result'] = None
+        if __opts__["test"]:
+            msg = "Nat gateway is set to be created."
+            ret["comment"] = msg
+            ret["result"] = None
             return ret
 
-        r = __salt__['boto_vpc.create_nat_gateway'](subnet_name=subnet_name,
-                                                    subnet_id=subnet_id,
-                                                    region=region, key=key,
-                                                    keyid=keyid, profile=profile,
-                                                    allocation_id=allocation_id)
-        if not r.get('created'):
-            ret['result'] = False
-            ret['comment'] = 'Failed to create nat gateway: {0}.'.format(r['error']['message'])
+        r = __salt__["boto_vpc.create_nat_gateway"](
+            subnet_name=subnet_name,
+            subnet_id=subnet_id,
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
+            allocation_id=allocation_id,
+        )
+        if not r.get("created"):
+            ret["result"] = False
+            ret["comment"] = "Failed to create nat gateway: {0}.".format(
+                r["error"]["message"]
+            )
             return ret
 
-        ret['changes']['old'] = {'nat_gateway': None}
-        ret['changes']['new'] = {'nat_gateway': r['id']}
-        ret['comment'] = 'Nat gateway created.'
+        ret["changes"]["old"] = {"nat_gateway": None}
+        ret["changes"]["new"] = {"nat_gateway": r["id"]}
+        ret["comment"] = "Nat gateway created."
         return ret
 
     inst = r[0]
-    _id = inst.get('NatGatewayId')
-    ret['comment'] = 'Nat gateway {0} present.'.format(_id)
+    _id = inst.get("NatGatewayId")
+    ret["comment"] = "Nat gateway {0} present.".format(_id)
     return ret
 
 
-def nat_gateway_absent(name=None, subnet_name=None, subnet_id=None,
-                       region=None, key=None, keyid=None, profile=None,
-                       wait_for_delete_retries=0):
-    '''
+def nat_gateway_absent(
+    name=None,
+    subnet_name=None,
+    subnet_id=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+    wait_for_delete_retries=0,
+):
+    """
     Ensure the nat gateway in the named subnet is absent.
 
     This function requires boto3.
@@ -1414,50 +1713,64 @@ def nat_gateway_absent(name=None, subnet_name=None, subnet_id=None,
         the NAT gateway is in deleted or failed state before proceeding.
         Default is set to 0 for backward compatibility.
 
-    '''
+    """
 
-    ret = {'name': name,
-           'result': True,
-           'comment': '',
-           'changes': {}
-           }
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
-    r = __salt__['boto_vpc.describe_nat_gateways'](subnet_name=subnet_name,
-                                             subnet_id=subnet_id,
-                                             region=region, key=key, keyid=keyid,
-                                             profile=profile)
+    r = __salt__["boto_vpc.describe_nat_gateways"](
+        subnet_name=subnet_name,
+        subnet_id=subnet_id,
+        region=region,
+        key=key,
+        keyid=keyid,
+        profile=profile,
+    )
     if not r:
-        ret['comment'] = 'Nat gateway does not exist.'
+        ret["comment"] = "Nat gateway does not exist."
         return ret
 
-    if __opts__['test']:
-        ret['comment'] = 'Nat gateway is set to be removed.'
-        ret['result'] = None
+    if __opts__["test"]:
+        ret["comment"] = "Nat gateway is set to be removed."
+        ret["result"] = None
         return ret
 
     for gw in r:
-        rtbl_id = gw.get('NatGatewayId')
-        r = __salt__['boto_vpc.delete_nat_gateway'](nat_gateway_id=rtbl_id,
-                                                release_eips=True,
-                                                region=region,
-                                                key=key, keyid=keyid,
-                                                profile=profile,
-                                                wait_for_delete=True,
-                                                wait_for_delete_retries=wait_for_delete_retries)
-        if 'error' in r:
-            ret['result'] = False
-            ret['comment'] = 'Failed to delete nat gateway: {0}'.format(r['error']['message'])
+        rtbl_id = gw.get("NatGatewayId")
+        r = __salt__["boto_vpc.delete_nat_gateway"](
+            nat_gateway_id=rtbl_id,
+            release_eips=True,
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
+            wait_for_delete=True,
+            wait_for_delete_retries=wait_for_delete_retries,
+        )
+        if "error" in r:
+            ret["result"] = False
+            ret["comment"] = "Failed to delete nat gateway: {0}".format(
+                r["error"]["message"]
+            )
             return ret
-        ret['comment'] = ', '.join((ret['comment'], 'Nat gateway {0} deleted.'.format(rtbl_id)))
-    ret['changes']['old'] = {'nat_gateway': rtbl_id}
-    ret['changes']['new'] = {'nat_gateway': None}
+        ret["comment"] = ", ".join(
+            (ret["comment"], "Nat gateway {0} deleted.".format(rtbl_id))
+        )
+    ret["changes"]["old"] = {"nat_gateway": rtbl_id}
+    ret["changes"]["new"] = {"nat_gateway": None}
     return ret
 
 
 # pylint: disable=too-many-arguments
-def accept_vpc_peering_connection(name=None, conn_id=None, conn_name=None,
-                                  region=None, key=None, keyid=None, profile=None):
-    '''
+def accept_vpc_peering_connection(
+    name=None,
+    conn_id=None,
+    conn_name=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+):
+    """
     Accept a VPC pending requested peering connection between two VPCs.
 
     name
@@ -1496,50 +1809,72 @@ def accept_vpc_peering_connection(name=None, conn_id=None, conn_name=None,
           - conn_id: pbx-1873d472
           - region: us-west-2
 
-    '''
-    log.debug('Called state to accept VPC peering connection')
-    pending = __salt__['boto_vpc.is_peering_connection_pending'](
-        conn_id=conn_id, conn_name=conn_name, region=region, key=key,
-        keyid=keyid, profile=profile)
+    """
+    log.debug("Called state to accept VPC peering connection")
+    pending = __salt__["boto_vpc.is_peering_connection_pending"](
+        conn_id=conn_id,
+        conn_name=conn_name,
+        region=region,
+        key=key,
+        keyid=keyid,
+        profile=profile,
+    )
 
     ret = {
-        'name': name,
-        'result': True,
-        'changes': {},
-        'comment': 'Boto VPC peering state'
+        "name": name,
+        "result": True,
+        "changes": {},
+        "comment": "Boto VPC peering state",
     }
 
     if not pending:
-        ret['result'] = True
-        ret['changes'].update({'old':
-              'No pending VPC peering connection found. Nothing to be done.'})
+        ret["result"] = True
+        ret["changes"].update(
+            {"old": "No pending VPC peering connection found. Nothing to be done."}
+        )
         return ret
 
-    if __opts__['test']:
-        ret['changes'].update({'old':
-              'Pending VPC peering connection found and can be accepted'})
+    if __opts__["test"]:
+        ret["changes"].update(
+            {"old": "Pending VPC peering connection found and can be accepted"}
+        )
         return ret
-    fun = 'boto_vpc.accept_vpc_peering_connection'
-    log.debug('Calling `%s()` to accept this VPC peering connection', fun)
-    result = __salt__[fun](conn_id=conn_id, name=conn_name, region=region, key=key,
-            keyid=keyid, profile=profile)
+    fun = "boto_vpc.accept_vpc_peering_connection"
+    log.debug("Calling `%s()` to accept this VPC peering connection", fun)
+    result = __salt__[fun](
+        conn_id=conn_id,
+        name=conn_name,
+        region=region,
+        key=key,
+        keyid=keyid,
+        profile=profile,
+    )
 
-    if 'error' in result:
-        ret['comment'] = "Failed to accept VPC peering: {0}".format(result['error'])
-        ret['result'] = False
+    if "error" in result:
+        ret["comment"] = "Failed to accept VPC peering: {0}".format(result["error"])
+        ret["result"] = False
         return ret
 
-    ret['changes'].update({'old': '', 'new': result['msg']})
+    ret["changes"].update({"old": "", "new": result["msg"]})
 
     return ret
 
 
 # pylint: disable=too-many-arguments
-def request_vpc_peering_connection(name, requester_vpc_id=None, requester_vpc_name=None,
-                                   peer_vpc_id=None, peer_vpc_name=None, conn_name=None,
-                                   peer_owner_id=None, region=None, key=None, keyid=None,
-                                   profile=None):
-    '''
+def request_vpc_peering_connection(
+    name,
+    requester_vpc_id=None,
+    requester_vpc_name=None,
+    peer_vpc_id=None,
+    peer_vpc_name=None,
+    conn_name=None,
+    peer_owner_id=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+):
+    """
     name
         Name of the state
 
@@ -1586,38 +1921,33 @@ def request_vpc_peering_connection(name, requester_vpc_id=None, requester_vpc_na
             - peer_vpc_id: vpc-ae83f9ca
             - conn_name: salt_peering_connection
 
-    '''
-    log.debug('Called state to request VPC peering connection')
+    """
+    log.debug("Called state to request VPC peering connection")
     ret = {
-        'name': name,
-        'result': True,
-        'changes': {},
-        'comment': 'Boto VPC peering state'
+        "name": name,
+        "result": True,
+        "changes": {},
+        "comment": "Boto VPC peering state",
     }
     if conn_name:
-        vpc_ids = __salt__['boto_vpc.describe_vpc_peering_connection'](
-            conn_name,
-            region=region,
-            key=key,
-            keyid=keyid,
-            profile=profile
-        ).get('VPC-Peerings', [])
+        vpc_ids = __salt__["boto_vpc.describe_vpc_peering_connection"](
+            conn_name, region=region, key=key, keyid=keyid, profile=profile
+        ).get("VPC-Peerings", [])
     else:
         vpc_ids = []
 
     if vpc_ids:
-        ret['comment'] = ('VPC peering connection already exists, '
-                          'nothing to be done.')
+        ret["comment"] = "VPC peering connection already exists, " "nothing to be done."
         return ret
 
-    if __opts__['test']:
+    if __opts__["test"]:
         if not vpc_ids:
-            ret['comment'] = 'VPC peering connection will be created'
+            ret["comment"] = "VPC peering connection will be created"
         return ret
 
-    log.debug('Called module to create VPC peering connection')
+    log.debug("Called module to create VPC peering connection")
 
-    result = __salt__['boto_vpc.request_vpc_peering_connection'](
+    result = __salt__["boto_vpc.request_vpc_peering_connection"](
         requester_vpc_id,
         requester_vpc_name,
         peer_vpc_id,
@@ -1627,26 +1957,32 @@ def request_vpc_peering_connection(name, requester_vpc_id=None, requester_vpc_na
         region=region,
         key=key,
         keyid=keyid,
-        profile=profile
+        profile=profile,
     )
 
-    if 'error' in result:
-        ret['comment'] = "Failed to request VPC peering: {0}".format(result['error'])
-        ret['result'] = False
+    if "error" in result:
+        ret["comment"] = "Failed to request VPC peering: {0}".format(result["error"])
+        ret["result"] = False
         return ret
 
-    ret['changes'].update({
-        'old': '',
-        'new': result['msg']
-    })
+    ret["changes"].update({"old": "", "new": result["msg"]})
     return ret
 
 
-def vpc_peering_connection_present(name, requester_vpc_id=None, requester_vpc_name=None,
-                                   peer_vpc_id=None, peer_vpc_name=None, conn_name=None,
-                                   peer_owner_id=None, region=None, key=None, keyid=None,
-                                   profile=None):
-    '''
+def vpc_peering_connection_present(
+    name,
+    requester_vpc_id=None,
+    requester_vpc_name=None,
+    peer_vpc_id=None,
+    peer_vpc_name=None,
+    conn_name=None,
+    peer_owner_id=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+):
+    """
     name
         Name of the state
 
@@ -1699,43 +2035,64 @@ def vpc_peering_connection_present(name, requester_vpc_id=None, requester_vpc_na
             - peer_owner_id: 012345654321
 
 
-    '''
-    ret = {'name': name,
-           'result': True,
-           'comment': '',
-           'changes': {}
-           }
-    if __salt__['boto_vpc.is_peering_connection_pending'](conn_name=conn_name, region=region,
-                                                          key=key, keyid=keyid, profile=profile):
-        if __salt__['boto_vpc.peering_connection_pending_from_vpc'](conn_name=conn_name,
-                                                                    vpc_id=requester_vpc_id,
-                                                                    vpc_name=requester_vpc_name,
-                                                                    region=region, key=key,
-                                                                    keyid=keyid, profile=profile):
-            ret['comment'] = ('VPC peering {0} already requested - pending '
-                              'acceptance by {1}'.format(conn_name, peer_owner_id
-                                                         or peer_vpc_name or peer_vpc_id))
-            log.info(ret['comment'])
+    """
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
+    if __salt__["boto_vpc.is_peering_connection_pending"](
+        conn_name=conn_name, region=region, key=key, keyid=keyid, profile=profile
+    ):
+        if __salt__["boto_vpc.peering_connection_pending_from_vpc"](
+            conn_name=conn_name,
+            vpc_id=requester_vpc_id,
+            vpc_name=requester_vpc_name,
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
+        ):
+            ret["comment"] = (
+                "VPC peering {0} already requested - pending "
+                "acceptance by {1}".format(
+                    conn_name, peer_owner_id or peer_vpc_name or peer_vpc_id
+                )
+            )
+            log.info(ret["comment"])
             return ret
-        return accept_vpc_peering_connection(name=name, conn_name=conn_name,
-                                             region=region, key=key, keyid=keyid,
-                                             profile=profile)
-    return request_vpc_peering_connection(name=name, requester_vpc_id=requester_vpc_id,
-                                          requester_vpc_name=requester_vpc_name,
-                                          peer_vpc_id=peer_vpc_id, peer_vpc_name=peer_vpc_name,
-                                          conn_name=conn_name, peer_owner_id=peer_owner_id,
-                                          region=region, key=key, keyid=keyid, profile=profile)
+        return accept_vpc_peering_connection(
+            name=name,
+            conn_name=conn_name,
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
+        )
+    return request_vpc_peering_connection(
+        name=name,
+        requester_vpc_id=requester_vpc_id,
+        requester_vpc_name=requester_vpc_name,
+        peer_vpc_id=peer_vpc_id,
+        peer_vpc_name=peer_vpc_name,
+        conn_name=conn_name,
+        peer_owner_id=peer_owner_id,
+        region=region,
+        key=key,
+        keyid=keyid,
+        profile=profile,
+    )
 
 
-def vpc_peering_connection_absent(name, conn_id=None, conn_name=None,
-                                  region=None, key=None, keyid=None, profile=None):
-    return delete_vpc_peering_connection(name, conn_id, conn_name, region, key, keyid, profile)
+def vpc_peering_connection_absent(
+    name, conn_id=None, conn_name=None, region=None, key=None, keyid=None, profile=None
+):
+    return delete_vpc_peering_connection(
+        name, conn_id, conn_name, region, key, keyid, profile
+    )
 
 
 # pylint: disable=too-many-arguments
-def delete_vpc_peering_connection(name, conn_id=None, conn_name=None,
-                                  region=None, key=None, keyid=None, profile=None):
-    '''
+def delete_vpc_peering_connection(
+    name, conn_id=None, conn_name=None, region=None, key=None, keyid=None, profile=None
+):
+    """
     name
         Name of the state
 
@@ -1779,42 +2136,45 @@ def delete_vpc_peering_connection(name, conn_id=None, conn_name=None,
           boto_vpc.delete_vpc_peering_connection:
             - conn_name: salt_vpc_peering
 
-    '''
-    log.debug('Called state to delete VPC peering connection')
+    """
+    log.debug("Called state to delete VPC peering connection")
     ret = {
-        'name': name,
-        'result': True,
-        'changes': {},
-        'comment': 'Boto VPC peering state'
+        "name": name,
+        "result": True,
+        "changes": {},
+        "comment": "Boto VPC peering state",
     }
     if conn_name:
-        vpc_ids = __salt__['boto_vpc.describe_vpc_peering_connection'](
-            conn_name, region=region, key=key, keyid=keyid, profile=profile).get('VPC-Peerings', [])
+        vpc_ids = __salt__["boto_vpc.describe_vpc_peering_connection"](
+            conn_name, region=region, key=key, keyid=keyid, profile=profile
+        ).get("VPC-Peerings", [])
     else:
         vpc_ids = [conn_id]
 
     if not vpc_ids:
-        ret['comment'] = 'No VPC connection found, nothing to be done.'
+        ret["comment"] = "No VPC connection found, nothing to be done."
         return ret
 
-    if __opts__['test']:
+    if __opts__["test"]:
         if vpc_ids:
-            ret['comment'] = 'VPC peering connection would be deleted'
+            ret["comment"] = "VPC peering connection would be deleted"
         return ret
 
-    log.debug('Called module to delete VPC peering connection')
+    log.debug("Called module to delete VPC peering connection")
 
-    result = __salt__['boto_vpc.delete_vpc_peering_connection'](
-        conn_id=conn_id, conn_name=conn_name, region=region, key=key,
-        keyid=keyid, profile=profile)
+    result = __salt__["boto_vpc.delete_vpc_peering_connection"](
+        conn_id=conn_id,
+        conn_name=conn_name,
+        region=region,
+        key=key,
+        keyid=keyid,
+        profile=profile,
+    )
 
-    if 'error' in result:
-        ret['comment'] = "Failed to delete VPC peering: {0}".format(result['error'])
-        ret['result'] = False
+    if "error" in result:
+        ret["comment"] = "Failed to delete VPC peering: {0}".format(result["error"])
+        ret["result"] = False
         return ret
 
-    ret['changes'].update({
-        'old': '',
-        'new': result['msg']
-    })
+    ret["changes"].update({"old": "", "new": result["msg"]})
     return ret

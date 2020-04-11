@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Management of Windows system information
 ========================================
 
@@ -15,8 +15,8 @@ description.
 
     This is Erik's computer, don't touch!:
       system.computer_desc: []
-'''
-from __future__ import absolute_import, unicode_literals, print_function
+"""
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
@@ -28,152 +28,159 @@ import salt.utils.platform
 # Import 3rd party libs
 from salt.ext import six
 
-
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
-__virtualname__ = 'system'
+__virtualname__ = "system"
 
 
 def __virtual__():
-    '''
+    """
     This only supports Windows
-    '''
-    if salt.utils.platform.is_windows() and 'system.get_computer_desc' in __salt__:
+    """
+    if salt.utils.platform.is_windows() and "system.get_computer_desc" in __salt__:
         return __virtualname__
     return False
 
 
 def computer_desc(name):
-    '''
+    """
     Manage the computer's description field
 
     name
         The desired computer description
-    '''
+    """
     # Just in case someone decides to enter a numeric description
     name = six.text_type(name)
 
-    ret = {'name': name,
-           'changes': {},
-           'result': True,
-           'comment': 'Computer description already set to \'{0}\''.format(name)}
+    ret = {
+        "name": name,
+        "changes": {},
+        "result": True,
+        "comment": "Computer description already set to '{0}'".format(name),
+    }
 
-    before_desc = __salt__['system.get_computer_desc']()
+    before_desc = __salt__["system.get_computer_desc"]()
 
     if before_desc == name:
         return ret
 
-    if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = ('Computer description will be changed to \'{0}\''
-                          .format(name))
+    if __opts__["test"]:
+        ret["result"] = None
+        ret["comment"] = "Computer description will be changed to '{0}'".format(name)
         return ret
 
-    result = __salt__['system.set_computer_desc'](name)
-    if result['Computer Description'] == name:
-        ret['comment'] = ('Computer description successfully changed to \'{0}\''
-                          .format(name))
-        ret['changes'] = {'old': before_desc, 'new': name}
+    result = __salt__["system.set_computer_desc"](name)
+    if result["Computer Description"] == name:
+        ret["comment"] = "Computer description successfully changed to '{0}'".format(
+            name
+        )
+        ret["changes"] = {"old": before_desc, "new": name}
     else:
-        ret['result'] = False
-        ret['comment'] = ('Unable to set computer description to '
-                          '\'{0}\''.format(name))
+        ret["result"] = False
+        ret["comment"] = "Unable to set computer description to " "'{0}'".format(name)
     return ret
 
 
-computer_description = salt.utils.functools.alias_function(computer_desc, 'computer_description')
+computer_description = salt.utils.functools.alias_function(
+    computer_desc, "computer_description"
+)
 
 
 def computer_name(name):
-    '''
+    """
     Manage the computer's name
 
     name
         The desired computer name
-    '''
+    """
     # Just in case someone decides to enter a numeric description
     name = six.text_type(name)
 
-    ret = {'name': name,
-           'changes': {},
-           'result': True,
-           'comment': 'Computer name already set to \'{0}\''.format(name)}
+    ret = {
+        "name": name,
+        "changes": {},
+        "result": True,
+        "comment": "Computer name already set to '{0}'".format(name),
+    }
 
-    before_name = __salt__['system.get_computer_name']()
-    pending_name = __salt__['system.get_pending_computer_name']()
+    before_name = __salt__["system.get_computer_name"]()
+    pending_name = __salt__["system.get_pending_computer_name"]()
 
     if before_name == name and pending_name is None:
         return ret
     elif pending_name == name.upper():
-        ret['comment'] = ('The current computer name is \'{0}\', but will be '
-                          'changed to \'{1}\' on the next reboot'
-                          .format(before_name, name))
+        ret["comment"] = (
+            "The current computer name is '{0}', but will be "
+            "changed to '{1}' on the next reboot".format(before_name, name)
+        )
         return ret
 
-    if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = 'Computer name will be changed to \'{0}\''.format(name)
+    if __opts__["test"]:
+        ret["result"] = None
+        ret["comment"] = "Computer name will be changed to '{0}'".format(name)
         return ret
 
-    result = __salt__['system.set_computer_name'](name)
+    result = __salt__["system.set_computer_name"](name)
     if result is not False:
-        after_name = result['Computer Name']['Current']
-        after_pending = result['Computer Name'].get('Pending')
-        if ((after_pending is not None and after_pending == name) or
-                (after_pending is None and after_name == name)):
-            ret['comment'] = 'Computer name successfully set to \'{0}\''.format(name)
+        after_name = result["Computer Name"]["Current"]
+        after_pending = result["Computer Name"].get("Pending")
+        if (after_pending is not None and after_pending == name) or (
+            after_pending is None and after_name == name
+        ):
+            ret["comment"] = "Computer name successfully set to '{0}'".format(name)
             if after_pending is not None:
-                ret['comment'] += ' (reboot required for change to take effect)'
-        ret['changes'] = {'old': before_name, 'new': name}
+                ret["comment"] += " (reboot required for change to take effect)"
+        ret["changes"] = {"old": before_name, "new": name}
     else:
-        ret['result'] = False
-        ret['comment'] = 'Unable to set computer name to \'{0}\''.format(name)
+        ret["result"] = False
+        ret["comment"] = "Unable to set computer name to '{0}'".format(name)
     return ret
 
 
 def hostname(name):
-    '''
+    """
     .. versionadded:: 2016.3.0
 
     Manage the hostname of the computer
 
     name
         The hostname to set
-    '''
-    ret = {
-        'name': name,
-        'changes': {},
-        'result': True,
-        'comment': ''
-    }
+    """
+    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
-    current_hostname = __salt__['system.get_hostname']()
+    current_hostname = __salt__["system.get_hostname"]()
 
     if current_hostname.upper() == name.upper():
-        ret['comment'] = "Hostname is already set to '{0}'".format(name)
+        ret["comment"] = "Hostname is already set to '{0}'".format(name)
         return ret
 
-    out = __salt__['system.set_hostname'](name)
+    out = __salt__["system.set_hostname"](name)
 
     if out:
-        ret['comment'] = "The current hostname is '{0}', " \
-                         "but will be changed to '{1}' on the next reboot".format(current_hostname, name)
-        ret['changes'] = {'hostname': name}
+        ret["comment"] = (
+            "The current hostname is '{0}', "
+            "but will be changed to '{1}' on the next reboot".format(
+                current_hostname, name
+            )
+        )
+        ret["changes"] = {"hostname": name}
     else:
-        ret['result'] = False
-        ret['comment'] = 'Unable to set hostname'
+        ret["result"] = False
+        ret["comment"] = "Unable to set hostname"
 
     return ret
 
 
-def join_domain(name,
-                username=None,
-                password=None,
-                account_ou=None,
-                account_exists=False,
-                restart=False):
-    '''
+def join_domain(
+    name,
+    username=None,
+    password=None,
+    account_ou=None,
+    account_exists=False,
+    restart=False,
+):
+    """
     Checks if a computer is joined to the Domain. If the computer is not in the
     Domain, it will be joined.
 
@@ -213,53 +220,62 @@ def join_domain(name,
             - username: myaccount@mydomain.local.com
             - password: mysecretpassword
             - restart: True
-    '''
+    """
 
-    ret = {'name': name,
-           'changes': {},
-           'result': True,
-           'comment': 'Computer already added to \'{0}\''.format(name)}
+    ret = {
+        "name": name,
+        "changes": {},
+        "result": True,
+        "comment": "Computer already added to '{0}'".format(name),
+    }
 
-    current_domain_dic = __salt__['system.get_domain_workgroup']()
-    if 'Domain' in current_domain_dic:
-        current_domain = current_domain_dic['Domain']
-    elif 'Workgroup' in current_domain_dic:
-        current_domain = 'Workgroup'
+    current_domain_dic = __salt__["system.get_domain_workgroup"]()
+    if "Domain" in current_domain_dic:
+        current_domain = current_domain_dic["Domain"]
+    elif "Workgroup" in current_domain_dic:
+        current_domain = "Workgroup"
     else:
         current_domain = None
 
     if name.lower() == current_domain.lower():
-        ret['comment'] = 'Computer already added to \'{0}\''.format(name)
+        ret["comment"] = "Computer already added to '{0}'".format(name)
         return ret
 
-    if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = 'Computer will be added to \'{0}\''.format(name)
+    if __opts__["test"]:
+        ret["result"] = None
+        ret["comment"] = "Computer will be added to '{0}'".format(name)
         return ret
 
-    result = __salt__['system.join_domain'](domain=name,
-                                            username=username,
-                                            password=password,
-                                            account_ou=account_ou,
-                                            account_exists=account_exists,
-                                            restart=restart)
+    result = __salt__["system.join_domain"](
+        domain=name,
+        username=username,
+        password=password,
+        account_ou=account_ou,
+        account_exists=account_exists,
+        restart=restart,
+    )
     if result is not False:
-        ret['comment'] = 'Computer added to \'{0}\''.format(name)
+        ret["comment"] = "Computer added to '{0}'".format(name)
         if restart:
-            ret['comment'] += '\nSystem will restart'
+            ret["comment"] += "\nSystem will restart"
         else:
-            ret['comment'] += '\nSystem needs to be restarted'
-        ret['changes'] = {'old': current_domain,
-                          'new': name}
+            ret["comment"] += "\nSystem needs to be restarted"
+        ret["changes"] = {"old": current_domain, "new": name}
     else:
-        ret['comment'] = 'Computer failed to join \'{0}\''.format(name)
-        ret['result'] = False
+        ret["comment"] = "Computer failed to join '{0}'".format(name)
+        ret["result"] = False
     return ret
 
 
-def reboot(name, message=None, timeout=5, force_close=True, in_seconds=False,
-           only_on_pending_reboot=True):
-    '''
+def reboot(
+    name,
+    message=None,
+    timeout=5,
+    force_close=True,
+    in_seconds=False,
+    only_on_pending_reboot=True,
+):
+    """
     Reboot the computer
 
     :param str message:
@@ -295,17 +311,29 @@ def reboot(name, message=None, timeout=5, force_close=True, in_seconds=False,
         pending reboot. If this is False, the reboot will always occur.
 
         The default value is True.
-    '''
+    """
 
-    return shutdown(name, message=message, timeout=timeout,
-                    force_close=force_close, reboot=True,
-                    in_seconds=in_seconds,
-                    only_on_pending_reboot=only_on_pending_reboot)
+    return shutdown(
+        name,
+        message=message,
+        timeout=timeout,
+        force_close=force_close,
+        reboot=True,
+        in_seconds=in_seconds,
+        only_on_pending_reboot=only_on_pending_reboot,
+    )
 
 
-def shutdown(name, message=None, timeout=5, force_close=True, reboot=False,
-             in_seconds=False, only_on_pending_reboot=False):
-    '''
+def shutdown(
+    name,
+    message=None,
+    timeout=5,
+    force_close=True,
+    reboot=False,
+    in_seconds=False,
+    only_on_pending_reboot=False,
+):
+    """
     Shutdown the computer
 
     :param str message:
@@ -349,43 +377,46 @@ def shutdown(name, message=None, timeout=5, force_close=True, reboot=False,
         pending reboot. If this is False, the shutdown will always occur.
 
         The default value is False.
-    '''
+    """
 
-    ret = {'name': name,
-           'changes': {},
-           'result': True,
-           'comment': ''}
+    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
     if reboot:
-        action = 'reboot'
+        action = "reboot"
     else:
-        action = 'shutdown'
+        action = "shutdown"
 
-    if only_on_pending_reboot and not __salt__['system.get_pending_reboot']():
-        if __opts__['test']:
-            ret['comment'] = ('System {0} will be skipped because '
-                              'no reboot is pending').format(action)
+    if only_on_pending_reboot and not __salt__["system.get_pending_reboot"]():
+        if __opts__["test"]:
+            ret["comment"] = (
+                "System {0} will be skipped because " "no reboot is pending"
+            ).format(action)
         else:
-            ret['comment'] = ('System {0} has been skipped because '
-                              'no reboot was pending').format(action)
+            ret["comment"] = (
+                "System {0} has been skipped because " "no reboot was pending"
+            ).format(action)
         return ret
 
-    if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = 'Will attempt to schedule a {0}'.format(action)
+    if __opts__["test"]:
+        ret["result"] = None
+        ret["comment"] = "Will attempt to schedule a {0}".format(action)
         return ret
 
-    ret['result'] = __salt__['system.shutdown'](message=message,
-                                                timeout=timeout,
-                                                force_close=force_close,
-                                                reboot=reboot,
-                                                in_seconds=in_seconds,
-                                                only_on_pending_reboot=False)
+    ret["result"] = __salt__["system.shutdown"](
+        message=message,
+        timeout=timeout,
+        force_close=force_close,
+        reboot=reboot,
+        in_seconds=in_seconds,
+        only_on_pending_reboot=False,
+    )
 
-    if ret['result']:
-        ret['changes'] = {'old': 'No reboot or shutdown was scheduled',
-                          'new': 'A {0} has been scheduled'.format(action)}
-        ret['comment'] = 'Request to {0} was successful'.format(action)
+    if ret["result"]:
+        ret["changes"] = {
+            "old": "No reboot or shutdown was scheduled",
+            "new": "A {0} has been scheduled".format(action),
+        }
+        ret["comment"] = "Request to {0} was successful".format(action)
     else:
-        ret['comment'] = 'Request to {0} failed'.format(action)
+        ret["comment"] = "Request to {0} failed".format(action)
     return ret
