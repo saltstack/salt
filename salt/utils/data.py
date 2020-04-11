@@ -765,18 +765,13 @@ def traverse_dict_and_list(data, key, default=None, delimiter=DEFAULT_TARGET_DEL
                     ptr = ptr[idx]
                 except IndexError:
                     return default
-        elif isinstance(ptr, dict):
+        else:
             try:
                 for key, value in ptr.items():
                     if not isinstance(key, str):
                         ptr[str(key)] = ptr.pop(key)
                 ptr = ptr[each]
             except KeyError:
-                return default
-        else:
-            try:
-                ptr = ptr[each]
-            except (KeyError, TypeError):
                 return default
     return ptr
 
