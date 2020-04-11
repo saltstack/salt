@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Module for Manipulating Data via the Salt DB API
 ================================================
-'''
-from __future__ import absolute_import, unicode_literals, print_function
+"""
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import salt libs
 import salt.utils.sdb
 
-
 __func_alias__ = {
-    'set_': 'set',
+    "set_": "set",
 }
 
 
 def get(uri):
-    '''
+    """
     Get a value from a db, using a uri in the form of sdb://<profile>/<key>. If
     the uri provided does not start with sdb://, then it will be returned as-is.
 
@@ -24,12 +23,12 @@ def get(uri):
     .. code-block:: bash
 
         salt '*' sdb.get sdb://mymemcached/foo
-    '''
+    """
     return salt.utils.sdb.sdb_get(uri, __opts__, __utils__)
 
 
 def set_(uri, value):
-    '''
+    """
     Set a value in a db, using a uri in the form of ``sdb://<profile>/<key>``.
     If the uri provided does not start with ``sdb://`` or the value is not
     successfully set, return ``False``.
@@ -39,12 +38,12 @@ def set_(uri, value):
     .. code-block:: bash
 
         salt '*' sdb.set sdb://mymemcached/foo bar
-    '''
+    """
     return salt.utils.sdb.sdb_set(uri, value, __opts__, __utils__)
 
 
 def delete(uri):
-    '''
+    """
     Delete a value from a db, using a uri in the form of ``sdb://<profile>/<key>``.
     If the uri provided does not start with ``sdb://`` or the value is not
     successfully deleted, return ``False``.
@@ -54,14 +53,14 @@ def delete(uri):
     .. code-block:: bash
 
         salt '*' sdb.delete sdb://mymemcached/foo
-    '''
+    """
     return salt.utils.sdb.sdb_delete(uri, __opts__, __utils__)
 
 
-def get_or_set_hash(uri,
-        length=8,
-        chars='abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)'):
-    '''
+def get_or_set_hash(
+    uri, length=8, chars="abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)"
+):
+    """
     Perform a one-time generation of a hash and write it to sdb.
     If that value has already been set return the value instead.
 
@@ -90,5 +89,5 @@ def get_or_set_hash(uri,
         as directives by the YAML parser, such as strings beginning with ``%``. To avoid
         issues when using the output of this function in an SLS file containing YAML+Jinja,
         surround the call with single quotes.
-    '''
+    """
     return salt.utils.sdb.sdb_get_or_set_hash(uri, __opts__, length, chars, __utils__)
