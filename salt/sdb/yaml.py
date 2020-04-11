@@ -35,8 +35,11 @@ Optional configuration:
         merge_list: false
       gpg: true
 
-Setting the ``gpg`` option to ``true`` (default is ``false``) will decrypt embedded
-GPG-encrypted data using the :py:mod:`GPG renderer <salt.renderers.gpg>`.
+.. versionadded:: 2018.3.0
+
+Setting the ``gpg`` option to ``true`` (default is ``false``) will decrypt
+embedded GPG-encrypted data using the :py:mod:`GPG renderer
+<salt.renderers.gpg>`.
 """
 
 # import python libs
