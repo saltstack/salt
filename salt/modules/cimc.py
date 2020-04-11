@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Module to provide Cisco UCS compatibility to Salt
 
 :codeauthor: ``Spencer Ervin <spencer_ervin@hotmail.com>``
@@ -23,37 +23,38 @@ This execution module was designed to handle connections to a Cisco UCS server.
 This module adds support to send connections directly to the device through the
 rest API.
 
-'''
+"""
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
+
+import salt.proxy.cimc
 
 # Import Salt Libs
 import salt.utils.platform
-import salt.proxy.cimc
 
 log = logging.getLogger(__name__)
 
-__virtualname__ = 'cimc'
+__virtualname__ = "cimc"
 
 
 def __virtual__():
-    '''
+    """
     Will load for the cimc proxy minions.
-    '''
+    """
     try:
-        if salt.utils.platform.is_proxy() and \
-           __opts__['proxy']['proxytype'] == 'cimc':
+        if salt.utils.platform.is_proxy() and __opts__["proxy"]["proxytype"] == "cimc":
             return __virtualname__
     except KeyError:
         pass
 
-    return False, 'The cimc execution module can only be loaded for cimc proxy minions.'
+    return False, "The cimc execution module can only be loaded for cimc proxy minions."
 
 
 def activate_backup_image(reset=False):
-    '''
+    """
     Activates the firmware backup image.
 
     CLI Example:
@@ -66,7 +67,7 @@ def activate_backup_image(reset=False):
         salt '*' cimc.activate_backup_image
         salt '*' cimc.activate_backup_image reset=True
 
-    '''
+    """
 
     dn = "sys/rack-unit-1/mgmt/fw-boot-def/bootunit-combined"
 
@@ -76,15 +77,17 @@ def activate_backup_image(reset=False):
         r = "yes"
 
     inconfig = """<firmwareBootUnit dn='sys/rack-unit-1/mgmt/fw-boot-def/bootunit-combined'
-    adminState='trigger' image='backup' resetOnActivate='{0}' />""".format(r)
+    adminState='trigger' image='backup' resetOnActivate='{0}' />""".format(
+        r
+    )
 
-    ret = __proxy__['cimc.set_config_modify'](dn, inconfig, False)
+    ret = __proxy__["cimc.set_config_modify"](dn, inconfig, False)
 
     return ret
 
 
 def create_user(uid=None, username=None, password=None, priv=None):
-    '''
+    """
     Create a CIMC user with username and password.
 
     Args:
@@ -102,7 +105,7 @@ def create_user(uid=None, username=None, password=None, priv=None):
 
         salt '*' cimc.create_user 11 username=admin password=foobar priv=admin
 
-    '''
+    """
 
     if not uid:
         raise salt.exceptions.CommandExecutionError("The user ID must be specified.")
@@ -114,23 +117,24 @@ def create_user(uid=None, username=None, password=None, priv=None):
         raise salt.exceptions.CommandExecutionError("The password must be specified.")
 
     if not priv:
-        raise salt.exceptions.CommandExecutionError("The privilege level must be specified.")
+        raise salt.exceptions.CommandExecutionError(
+            "The privilege level must be specified."
+        )
 
     dn = "sys/user-ext/user-{0}".format(uid)
 
     inconfig = """<aaaUser id="{0}" accountStatus="active" name="{1}" priv="{2}"
-    pwd="{3}"  dn="sys/user-ext/user-{0}"/>""".format(uid,
-                                                      username,
-                                                      priv,
-                                                      password)
+    pwd="{3}"  dn="sys/user-ext/user-{0}"/>""".format(
+        uid, username, priv, password
+    )
 
-    ret = __proxy__['cimc.set_config_modify'](dn, inconfig, False)
+    ret = __proxy__["cimc.set_config_modify"](dn, inconfig, False)
 
     return ret
 
 
 def get_bios_defaults():
-    '''
+    """
     Get the default values of BIOS tokens.
 
     CLI Example:
@@ -139,14 +143,14 @@ def get_bios_defaults():
 
         salt '*' cimc.get_bios_defaults
 
-    '''
-    ret = __proxy__['cimc.get_config_resolver_class']('biosPlatformDefaults', True)
+    """
+    ret = __proxy__["cimc.get_config_resolver_class"]("biosPlatformDefaults", True)
 
     return ret
 
 
 def get_bios_settings():
-    '''
+    """
     Get the C240 server BIOS token values.
 
     CLI Example:
@@ -155,14 +159,14 @@ def get_bios_settings():
 
         salt '*' cimc.get_bios_settings
 
-    '''
-    ret = __proxy__['cimc.get_config_resolver_class']('biosSettings', True)
+    """
+    ret = __proxy__["cimc.get_config_resolver_class"]("biosSettings", True)
 
     return ret
 
 
 def get_boot_order():
-    '''
+    """
     Retrieves the configured boot order table.
 
     CLI Example:
@@ -171,14 +175,14 @@ def get_boot_order():
 
         salt '*' cimc.get_boot_order
 
-    '''
-    ret = __proxy__['cimc.get_config_resolver_class']('lsbootDef', True)
+    """
+    ret = __proxy__["cimc.get_config_resolver_class"]("lsbootDef", True)
 
     return ret
 
 
 def get_cpu_details():
-    '''
+    """
     Get the CPU product ID details.
 
     CLI Example:
@@ -187,14 +191,14 @@ def get_cpu_details():
 
         salt '*' cimc.get_cpu_details
 
-    '''
-    ret = __proxy__['cimc.get_config_resolver_class']('pidCatalogCpu', True)
+    """
+    ret = __proxy__["cimc.get_config_resolver_class"]("pidCatalogCpu", True)
 
     return ret
 
 
 def get_disks():
-    '''
+    """
     Get the HDD product ID details.
 
     CLI Example:
@@ -203,14 +207,14 @@ def get_disks():
 
         salt '*' cimc.get_disks
 
-    '''
-    ret = __proxy__['cimc.get_config_resolver_class']('pidCatalogHdd', True)
+    """
+    ret = __proxy__["cimc.get_config_resolver_class"]("pidCatalogHdd", True)
 
     return ret
 
 
 def get_ethernet_interfaces():
-    '''
+    """
     Get the adapter Ethernet interface details.
 
     CLI Example:
@@ -219,14 +223,14 @@ def get_ethernet_interfaces():
 
         salt '*' cimc.get_ethernet_interfaces
 
-    '''
-    ret = __proxy__['cimc.get_config_resolver_class']('adaptorHostEthIf', True)
+    """
+    ret = __proxy__["cimc.get_config_resolver_class"]("adaptorHostEthIf", True)
 
     return ret
 
 
 def get_fibre_channel_interfaces():
-    '''
+    """
     Get the adapter fibre channel interface details.
 
     CLI Example:
@@ -235,14 +239,14 @@ def get_fibre_channel_interfaces():
 
         salt '*' cimc.get_fibre_channel_interfaces
 
-    '''
-    ret = __proxy__['cimc.get_config_resolver_class']('adaptorHostFcIf', True)
+    """
+    ret = __proxy__["cimc.get_config_resolver_class"]("adaptorHostFcIf", True)
 
     return ret
 
 
 def get_firmware():
-    '''
+    """
     Retrieves the current running firmware versions of server components.
 
     CLI Example:
@@ -251,14 +255,14 @@ def get_firmware():
 
         salt '*' cimc.get_firmware
 
-    '''
-    ret = __proxy__['cimc.get_config_resolver_class']('firmwareRunning', False)
+    """
+    ret = __proxy__["cimc.get_config_resolver_class"]("firmwareRunning", False)
 
     return ret
 
 
 def get_hostname():
-    '''
+    """
     Retrieves the hostname from the device.
 
     .. versionadded:: 2019.2.0
@@ -269,17 +273,17 @@ def get_hostname():
 
         salt '*' cimc.get_hostname
 
-    '''
-    ret = __proxy__['cimc.get_config_resolver_class']('mgmtIf', True)
+    """
+    ret = __proxy__["cimc.get_config_resolver_class"]("mgmtIf", True)
 
     try:
-        return ret['outConfigs']['mgmtIf'][0]['hostname']
-    except Exception as err:
+        return ret["outConfigs"]["mgmtIf"][0]["hostname"]
+    except Exception as err:  # pylint: disable=broad-except
         return "Unable to retrieve hostname"
 
 
 def get_ldap():
-    '''
+    """
     Retrieves LDAP server details.
 
     CLI Example:
@@ -288,14 +292,14 @@ def get_ldap():
 
         salt '*' cimc.get_ldap
 
-    '''
-    ret = __proxy__['cimc.get_config_resolver_class']('aaaLdap', True)
+    """
+    ret = __proxy__["cimc.get_config_resolver_class"]("aaaLdap", True)
 
     return ret
 
 
 def get_management_interface():
-    '''
+    """
     Retrieve the management interface details.
 
     CLI Example:
@@ -304,14 +308,14 @@ def get_management_interface():
 
         salt '*' cimc.get_management_interface
 
-    '''
-    ret = __proxy__['cimc.get_config_resolver_class']('mgmtIf', False)
+    """
+    ret = __proxy__["cimc.get_config_resolver_class"]("mgmtIf", False)
 
     return ret
 
 
 def get_memory_token():
-    '''
+    """
     Get the memory RAS BIOS token.
 
     CLI Example:
@@ -320,14 +324,16 @@ def get_memory_token():
 
         salt '*' cimc.get_memory_token
 
-    '''
-    ret = __proxy__['cimc.get_config_resolver_class']('biosVfSelectMemoryRASConfiguration', False)
+    """
+    ret = __proxy__["cimc.get_config_resolver_class"](
+        "biosVfSelectMemoryRASConfiguration", False
+    )
 
     return ret
 
 
 def get_memory_unit():
-    '''
+    """
     Get the IMM/Memory unit product ID details.
 
     CLI Example:
@@ -336,14 +342,14 @@ def get_memory_unit():
 
         salt '*' cimc.get_memory_unit
 
-    '''
-    ret = __proxy__['cimc.get_config_resolver_class']('pidCatalogDimm', True)
+    """
+    ret = __proxy__["cimc.get_config_resolver_class"]("pidCatalogDimm", True)
 
     return ret
 
 
 def get_network_adapters():
-    '''
+    """
     Get the list of network adapaters and configuration details.
 
     CLI Example:
@@ -352,14 +358,14 @@ def get_network_adapters():
 
         salt '*' cimc.get_network_adapters
 
-    '''
-    ret = __proxy__['cimc.get_config_resolver_class']('networkAdapterEthIf', True)
+    """
+    ret = __proxy__["cimc.get_config_resolver_class"]("networkAdapterEthIf", True)
 
     return ret
 
 
 def get_ntp():
-    '''
+    """
     Retrieves the current running NTP configuration.
 
     CLI Example:
@@ -368,14 +374,14 @@ def get_ntp():
 
         salt '*' cimc.get_ntp
 
-    '''
-    ret = __proxy__['cimc.get_config_resolver_class']('commNtpProvider', False)
+    """
+    ret = __proxy__["cimc.get_config_resolver_class"]("commNtpProvider", False)
 
     return ret
 
 
 def get_pci_adapters():
-    '''
+    """
     Get the PCI adapter product ID details.
 
     CLI Example:
@@ -384,14 +390,14 @@ def get_pci_adapters():
 
         salt '*' cimc.get_disks
 
-    '''
-    ret = __proxy__['cimc.get_config_resolver_class']('pidCatalogPCIAdapter', True)
+    """
+    ret = __proxy__["cimc.get_config_resolver_class"]("pidCatalogPCIAdapter", True)
 
     return ret
 
 
 def get_power_configuration():
-    '''
+    """
     Get the configuration of the power settings from the device. This is only available
     on some C-Series servers.
 
@@ -403,14 +409,14 @@ def get_power_configuration():
 
         salt '*' cimc.get_power_configuration
 
-    '''
-    ret = __proxy__['cimc.get_config_resolver_class']('biosVfResumeOnACPowerLoss', True)
+    """
+    ret = __proxy__["cimc.get_config_resolver_class"]("biosVfResumeOnACPowerLoss", True)
 
     return ret
 
 
 def get_power_supplies():
-    '''
+    """
     Retrieves the power supply unit details.
 
     CLI Example:
@@ -419,14 +425,14 @@ def get_power_supplies():
 
         salt '*' cimc.get_power_supplies
 
-    '''
-    ret = __proxy__['cimc.get_config_resolver_class']('equipmentPsu', False)
+    """
+    ret = __proxy__["cimc.get_config_resolver_class"]("equipmentPsu", False)
 
     return ret
 
 
 def get_snmp_config():
-    '''
+    """
     Get the snmp configuration details.
 
     CLI Example:
@@ -435,14 +441,14 @@ def get_snmp_config():
 
         salt '*' cimc.get_snmp_config
 
-    '''
-    ret = __proxy__['cimc.get_config_resolver_class']('commSnmp', False)
+    """
+    ret = __proxy__["cimc.get_config_resolver_class"]("commSnmp", False)
 
     return ret
 
 
 def get_syslog():
-    '''
+    """
     Get the Syslog client-server details.
 
     CLI Example:
@@ -451,14 +457,14 @@ def get_syslog():
 
         salt '*' cimc.get_syslog
 
-    '''
-    ret = __proxy__['cimc.get_config_resolver_class']('commSyslogClient', False)
+    """
+    ret = __proxy__["cimc.get_config_resolver_class"]("commSyslogClient", False)
 
     return ret
 
 
 def get_syslog_settings():
-    '''
+    """
     Get the Syslog configuration settings from the system.
 
     .. versionadded:: 2019.2.0
@@ -469,14 +475,14 @@ def get_syslog_settings():
 
         salt '*' cimc.get_syslog_settings
 
-    '''
-    ret = __proxy__['cimc.get_config_resolver_class']('commSyslog', False)
+    """
+    ret = __proxy__["cimc.get_config_resolver_class"]("commSyslog", False)
 
     return ret
 
 
 def get_system_info():
-    '''
+    """
     Get the system information.
 
     CLI Example:
@@ -485,14 +491,14 @@ def get_system_info():
 
         salt '*' cimc.get_system_info
 
-    '''
-    ret = __proxy__['cimc.get_config_resolver_class']('computeRackUnit', False)
+    """
+    ret = __proxy__["cimc.get_config_resolver_class"]("computeRackUnit", False)
 
     return ret
 
 
 def get_users():
-    '''
+    """
     Get the CIMC users.
 
     CLI Example:
@@ -501,14 +507,14 @@ def get_users():
 
         salt '*' cimc.get_users
 
-    '''
-    ret = __proxy__['cimc.get_config_resolver_class']('aaaUser', False)
+    """
+    ret = __proxy__["cimc.get_config_resolver_class"]("aaaUser", False)
 
     return ret
 
 
 def get_vic_adapters():
-    '''
+    """
     Get the VIC adapter general profile details.
 
     CLI Example:
@@ -517,14 +523,14 @@ def get_vic_adapters():
 
         salt '*' cimc.get_vic_adapters
 
-    '''
-    ret = __proxy__['cimc.get_config_resolver_class']('adaptorGenProfile', True)
+    """
+    ret = __proxy__["cimc.get_config_resolver_class"]("adaptorGenProfile", True)
 
     return ret
 
 
 def get_vic_uplinks():
-    '''
+    """
     Get the VIC adapter uplink port details.
 
     CLI Example:
@@ -533,19 +539,21 @@ def get_vic_uplinks():
 
         salt '*' cimc.get_vic_uplinks
 
-    '''
-    ret = __proxy__['cimc.get_config_resolver_class']('adaptorExtEthIf', True)
+    """
+    ret = __proxy__["cimc.get_config_resolver_class"]("adaptorExtEthIf", True)
 
     return ret
 
 
-def mount_share(name=None,
-                remote_share=None,
-                remote_file=None,
-                mount_type="nfs",
-                username=None,
-                password=None):
-    '''
+def mount_share(
+    name=None,
+    remote_share=None,
+    remote_file=None,
+    mount_type="nfs",
+    username=None,
+    password=None,
+):
+    """
     Mounts a remote file through a remote share. Currently, this feature is supported in version 1.5 or greater.
     The remote share can be either NFS, CIFS, or WWW.
 
@@ -582,34 +590,42 @@ def mount_share(name=None,
 
         salt '*' cimc.mount_share name=WIN7 remote_share=10.xxx.27.xxx:/nfs remote_file=sl1huu.iso username=bob password=badpassword
 
-    '''
+    """
 
     if not name:
         raise salt.exceptions.CommandExecutionError("The share name must be specified.")
 
     if not remote_share:
-        raise salt.exceptions.CommandExecutionError("The remote share path must be specified.")
+        raise salt.exceptions.CommandExecutionError(
+            "The remote share path must be specified."
+        )
 
     if not remote_file:
-        raise salt.exceptions.CommandExecutionError("The remote file name must be specified.")
+        raise salt.exceptions.CommandExecutionError(
+            "The remote file name must be specified."
+        )
 
     if username and password:
-        mount_options = " mountOptions='username={0},password={1}'".format(username, password)
+        mount_options = " mountOptions='username={0},password={1}'".format(
+            username, password
+        )
     else:
         mount_options = ""
 
-    dn = 'sys/svc-ext/vmedia-svc/vmmap-{0}'.format(name)
+    dn = "sys/svc-ext/vmedia-svc/vmmap-{0}".format(name)
     inconfig = """<commVMediaMap dn='sys/svc-ext/vmedia-svc/vmmap-{0}' map='{1}'{2}
     remoteFile='{3}' remoteShare='{4}' status='created'
-    volumeName='Win12' />""".format(name, mount_type, mount_options, remote_file, remote_share)
+    volumeName='Win12' />""".format(
+        name, mount_type, mount_options, remote_file, remote_share
+    )
 
-    ret = __proxy__['cimc.set_config_modify'](dn, inconfig, False)
+    ret = __proxy__["cimc.set_config_modify"](dn, inconfig, False)
 
     return ret
 
 
 def reboot():
-    '''
+    """
     Power cycling the server.
 
     CLI Example:
@@ -618,19 +634,19 @@ def reboot():
 
         salt '*' cimc.reboot
 
-    '''
+    """
 
     dn = "sys/rack-unit-1"
 
     inconfig = """<computeRackUnit adminPower="cycle-immediate" dn="sys/rack-unit-1"></computeRackUnit>"""
 
-    ret = __proxy__['cimc.set_config_modify'](dn, inconfig, False)
+    ret = __proxy__["cimc.set_config_modify"](dn, inconfig, False)
 
     return ret
 
 
 def set_hostname(hostname=None):
-    '''
+    """
     Sets the hostname on the server.
 
     .. versionadded:: 2019.2.0
@@ -644,26 +660,28 @@ def set_hostname(hostname=None):
 
         salt '*' cimc.set_hostname foobar
 
-    '''
+    """
     if not hostname:
         raise salt.exceptions.CommandExecutionError("Hostname option must be provided.")
 
     dn = "sys/rack-unit-1/mgmt/if-1"
-    inconfig = """<mgmtIf dn="sys/rack-unit-1/mgmt/if-1" hostname="{0}" ></mgmtIf>""".format(hostname)
+    inconfig = """<mgmtIf dn="sys/rack-unit-1/mgmt/if-1" hostname="{0}" ></mgmtIf>""".format(
+        hostname
+    )
 
-    ret = __proxy__['cimc.set_config_modify'](dn, inconfig, False)
+    ret = __proxy__["cimc.set_config_modify"](dn, inconfig, False)
 
     try:
-        if ret['outConfig']['mgmtIf'][0]['status'] == 'modified':
+        if ret["outConfig"]["mgmtIf"][0]["status"] == "modified":
             return True
         else:
             return False
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         return False
 
 
 def set_logging_levels(remote=None, local=None):
-    '''
+    """
     Sets the logging levels of the CIMC devices. The logging levels must match
     the following options: emergency, alert, critical, error, warning, notice,
     informational, debug.
@@ -681,16 +699,18 @@ def set_logging_levels(remote=None, local=None):
 
         salt '*' cimc.set_logging_levels remote=error local=notice
 
-    '''
+    """
 
-    logging_options = ['emergency',
-                       'alert',
-                       'critical',
-                       'error',
-                       'warning',
-                       'notice',
-                       'informational',
-                       'debug']
+    logging_options = [
+        "emergency",
+        "alert",
+        "critical",
+        "error",
+        "warning",
+        "notice",
+        "informational",
+        "debug",
+    ]
 
     query = ""
 
@@ -698,24 +718,28 @@ def set_logging_levels(remote=None, local=None):
         if remote in logging_options:
             query += ' remoteSeverity="{0}"'.format(remote)
         else:
-            raise salt.exceptions.CommandExecutionError("Remote Severity option is not valid.")
+            raise salt.exceptions.CommandExecutionError(
+                "Remote Severity option is not valid."
+            )
 
     if local:
         if local in logging_options:
             query += ' localSeverity="{0}"'.format(local)
         else:
-            raise salt.exceptions.CommandExecutionError("Local Severity option is not valid.")
+            raise salt.exceptions.CommandExecutionError(
+                "Local Severity option is not valid."
+            )
 
     dn = "sys/svc-ext/syslog"
     inconfig = """<commSyslog dn="sys/svc-ext/syslog"{0} ></commSyslog>""".format(query)
 
-    ret = __proxy__['cimc.set_config_modify'](dn, inconfig, False)
+    ret = __proxy__["cimc.set_config_modify"](dn, inconfig, False)
 
     return ret
 
 
-def set_ntp_server(server1='', server2='', server3='', server4=''):
-    '''
+def set_ntp_server(server1="", server2="", server3="", server4=""):
+    """
     Sets the NTP servers configuration. This will also enable the client NTP service.
 
     Args:
@@ -735,19 +759,21 @@ def set_ntp_server(server1='', server2='', server3='', server4=''):
 
         salt '*' cimc.set_ntp_server 10.10.10.1 foo.bar.com
 
-    '''
+    """
 
     dn = "sys/svc-ext/ntp-svc"
     inconfig = """<commNtpProvider dn="sys/svc-ext/ntp-svc" ntpEnable="yes" ntpServer1="{0}" ntpServer2="{1}"
-    ntpServer3="{2}" ntpServer4="{3}"/>""".format(server1, server2, server3, server4)
+    ntpServer3="{2}" ntpServer4="{3}"/>""".format(
+        server1, server2, server3, server4
+    )
 
-    ret = __proxy__['cimc.set_config_modify'](dn, inconfig, False)
+    ret = __proxy__["cimc.set_config_modify"](dn, inconfig, False)
 
     return ret
 
 
 def set_power_configuration(policy=None, delayType=None, delayValue=None):
-    '''
+    """
     Sets the power configuration on the device. This is only available for some
     C-Series servers.
 
@@ -786,7 +812,7 @@ def set_power_configuration(policy=None, delayType=None, delayValue=None):
 
         salt '*' cimc.set_power_configuration reset fixed 0
 
-    '''
+    """
 
     query = ""
     if policy == "reset":
@@ -799,26 +825,32 @@ def set_power_configuration(policy=None, delayType=None, delayValue=None):
             elif delayType == "random":
                 query += ' delayType="random"'
             else:
-                raise salt.exceptions.CommandExecutionError("Invalid delay type entered.")
+                raise salt.exceptions.CommandExecutionError(
+                    "Invalid delay type entered."
+                )
     elif policy == "stay-off":
         query = ' vpResumeOnACPowerLoss="reset"'
     elif policy == "last-state":
         query = ' vpResumeOnACPowerLoss="last-state"'
     else:
-        raise salt.exceptions.CommandExecutionError("The power state must be specified.")
+        raise salt.exceptions.CommandExecutionError(
+            "The power state must be specified."
+        )
 
     dn = "sys/rack-unit-1/board/Resume-on-AC-power-loss"
     inconfig = """<biosVfResumeOnACPowerLoss
     dn="sys/rack-unit-1/board/Resume-on-AC-power-loss"{0}>
-    </biosVfResumeOnACPowerLoss>""".format(query)
+    </biosVfResumeOnACPowerLoss>""".format(
+        query
+    )
 
-    ret = __proxy__['cimc.set_config_modify'](dn, inconfig, False)
+    ret = __proxy__["cimc.set_config_modify"](dn, inconfig, False)
 
     return ret
 
 
 def set_syslog_server(server=None, type="primary"):
-    '''
+    """
     Set the SYSLOG server on the host.
 
     Args:
@@ -836,29 +868,37 @@ def set_syslog_server(server=None, type="primary"):
 
         salt '*' cimc.set_syslog_server foo.bar.com secondary
 
-    '''
+    """
 
     if not server:
-        raise salt.exceptions.CommandExecutionError("The SYSLOG server must be specified.")
+        raise salt.exceptions.CommandExecutionError(
+            "The SYSLOG server must be specified."
+        )
 
     if type == "primary":
         dn = "sys/svc-ext/syslog/client-primary"
         inconfig = """<commSyslogClient name='primary' adminState='enabled'  hostname='{0}'
-        dn='sys/svc-ext/syslog/client-primary'> </commSyslogClient>""".format(server)
+        dn='sys/svc-ext/syslog/client-primary'> </commSyslogClient>""".format(
+            server
+        )
     elif type == "secondary":
         dn = "sys/svc-ext/syslog/client-secondary"
         inconfig = """<commSyslogClient name='secondary' adminState='enabled'  hostname='{0}'
-        dn='sys/svc-ext/syslog/client-secondary'> </commSyslogClient>""".format(server)
+        dn='sys/svc-ext/syslog/client-secondary'> </commSyslogClient>""".format(
+            server
+        )
     else:
-        raise salt.exceptions.CommandExecutionError("The SYSLOG type must be either primary or secondary.")
+        raise salt.exceptions.CommandExecutionError(
+            "The SYSLOG type must be either primary or secondary."
+        )
 
-    ret = __proxy__['cimc.set_config_modify'](dn, inconfig, False)
+    ret = __proxy__["cimc.set_config_modify"](dn, inconfig, False)
 
     return ret
 
 
 def set_user(uid=None, username=None, password=None, priv=None, status=None):
-    '''
+    """
     Sets a CIMC user with specified configurations.
 
     .. versionadded:: 2019.2.0
@@ -880,7 +920,7 @@ def set_user(uid=None, username=None, password=None, priv=None, status=None):
 
         salt '*' cimc.set_user 11 username=admin password=foobar priv=admin active
 
-    '''
+    """
 
     conf = ""
     if not uid:
@@ -900,16 +940,15 @@ def set_user(uid=None, username=None, password=None, priv=None, status=None):
 
     dn = "sys/user-ext/user-{0}".format(uid)
 
-    inconfig = """<aaaUser id="{0}"{1} dn="sys/user-ext/user-{0}"/>""".format(uid,
-                                                                               conf)
+    inconfig = """<aaaUser id="{0}"{1} dn="sys/user-ext/user-{0}"/>""".format(uid, conf)
 
-    ret = __proxy__['cimc.set_config_modify'](dn, inconfig, False)
+    ret = __proxy__["cimc.set_config_modify"](dn, inconfig, False)
 
     return ret
 
 
 def tftp_update_bios(server=None, path=None):
-    '''
+    """
     Update the BIOS firmware through TFTP.
 
     Args:
@@ -923,10 +962,12 @@ def tftp_update_bios(server=None, path=None):
 
         salt '*' cimc.tftp_update_bios foo.bar.com HP-SL2.cap
 
-    '''
+    """
 
     if not server:
-        raise salt.exceptions.CommandExecutionError("The server name must be specified.")
+        raise salt.exceptions.CommandExecutionError(
+            "The server name must be specified."
+        )
 
     if not path:
         raise salt.exceptions.CommandExecutionError("The TFTP path must be specified.")
@@ -935,15 +976,17 @@ def tftp_update_bios(server=None, path=None):
 
     inconfig = """<firmwareUpdatable adminState='trigger' dn='sys/rack-unit-1/bios/fw-updatable'
     protocol='tftp' remoteServer='{0}' remotePath='{1}'
-    type='blade-bios' />""".format(server, path)
+    type='blade-bios' />""".format(
+        server, path
+    )
 
-    ret = __proxy__['cimc.set_config_modify'](dn, inconfig, False)
+    ret = __proxy__["cimc.set_config_modify"](dn, inconfig, False)
 
     return ret
 
 
 def tftp_update_cimc(server=None, path=None):
-    '''
+    """
     Update the CIMC firmware through TFTP.
 
     Args:
@@ -957,10 +1000,12 @@ def tftp_update_cimc(server=None, path=None):
 
         salt '*' cimc.tftp_update_cimc foo.bar.com HP-SL2.bin
 
-    '''
+    """
 
     if not server:
-        raise salt.exceptions.CommandExecutionError("The server name must be specified.")
+        raise salt.exceptions.CommandExecutionError(
+            "The server name must be specified."
+        )
 
     if not path:
         raise salt.exceptions.CommandExecutionError("The TFTP path must be specified.")
@@ -969,8 +1014,10 @@ def tftp_update_cimc(server=None, path=None):
 
     inconfig = """<firmwareUpdatable adminState='trigger' dn='sys/rack-unit-1/mgmt/fw-updatable'
     protocol='tftp' remoteServer='{0}' remotePath='{1}'
-    type='blade-controller' />""".format(server, path)
+    type='blade-controller' />""".format(
+        server, path
+    )
 
-    ret = __proxy__['cimc.set_config_modify'](dn, inconfig, False)
+    ret = __proxy__["cimc.set_config_modify"](dn, inconfig, False)
 
     return ret

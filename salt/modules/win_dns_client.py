@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Module for configuring DNS Client on Windows systems
-'''
-from __future__ import absolute_import, unicode_literals, print_function
+"""
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
@@ -12,40 +12,54 @@ import salt.utils.platform
 
 try:
     import wmi
+    import salt.utils.winapi
+
+    HAS_LIBS = True
 except ImportError:
-    pass
+    HAS_LIBS = False
 
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     Only works on Windows systems
-    '''
-    if salt.utils.platform.is_windows():
-        return 'win_dns_client'
-    return (False, "Module win_dns_client: module only works on Windows systems")
+    """
+    if not salt.utils.platform.is_windows():
+        return False, "Module win_dns_client: module only works on Windows systems"
+    if not HAS_LIBS:
+        return False, "Module win_dns_client: missing required libraries"
+    return "win_dns_client"
 
 
-def get_dns_servers(interface='Local Area Connection'):
-    '''
+def get_dns_servers(interface="Local Area Connection"):
+    """
     Return a list of the configured DNS servers of the specified interface
+
+    Args:
+        interface (str): The name of the network interface. This is the name as
+        it appears in the Control Panel under Network Connections
+
+    Returns:
+        list: A list of dns servers
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' win_dns_client.get_dns_servers 'Local Area Connection'
-    '''
+    """
     # remove any escape characters
-    interface = interface.split('\\')
-    interface = ''.join(interface)
+    interface = interface.split("\\")
+    interface = "".join(interface)
 
     with salt.utils.winapi.Com():
         c = wmi.WMI()
         for iface in c.Win32_NetworkAdapter(NetEnabled=True):
             if interface == iface.NetConnectionID:
-                iface_config = c.Win32_NetworkAdapterConfiguration(Index=iface.Index).pop()
+                iface_config = c.Win32_NetworkAdapterConfiguration(
+                    Index=iface.Index
+                ).pop()
                 try:
                     return list(iface_config.DNSServerSearchOrder)
                 except TypeError:
@@ -54,8 +68,8 @@ def get_dns_servers(interface='Local Area Connection'):
     return False
 
 
-def rm_dns(ip, interface='Local Area Connection'):
-    '''
+def rm_dns(ip, interface="Local Area Connection"):
+    """
     Remove the DNS server from the network interface
 
     CLI Example:
@@ -63,13 +77,13 @@ def rm_dns(ip, interface='Local Area Connection'):
     .. code-block:: bash
 
         salt '*' win_dns_client.rm_dns <ip> <interface>
-    '''
-    cmd = ['netsh', 'interface', 'ip', 'delete', 'dns', interface, ip, 'validate=no']
-    return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
+    """
+    cmd = ["netsh", "interface", "ip", "delete", "dns", interface, ip, "validate=no"]
+    return __salt__["cmd.retcode"](cmd, python_shell=False) == 0
 
 
-def add_dns(ip, interface='Local Area Connection', index=1):
-    '''
+def add_dns(ip, interface="Local Area Connection", index=1):
+    """
     Add the DNS server to the network interface
     (index starts from 1)
 
@@ -81,7 +95,7 @@ def add_dns(ip, interface='Local Area Connection', index=1):
     .. code-block:: bash
 
         salt '*' win_dns_client.add_dns <ip> <interface> <index>
-    '''
+    """
     servers = get_dns_servers(interface)
 
     # Return False if could not find the interface
@@ -99,14 +113,23 @@ def add_dns(ip, interface='Local Area Connection', index=1):
     if ip in servers:
         rm_dns(ip, interface)
 
-    cmd = ['netsh', 'interface', 'ip', 'add', 'dns',
-           interface, ip, 'index={0}'.format(index), 'validate=no']
+    cmd = [
+        "netsh",
+        "interface",
+        "ip",
+        "add",
+        "dns",
+        interface,
+        ip,
+        "index={0}".format(index),
+        "validate=no",
+    ]
 
-    return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
+    return __salt__["cmd.retcode"](cmd, python_shell=False) == 0
 
 
-def dns_dhcp(interface='Local Area Connection'):
-    '''
+def dns_dhcp(interface="Local Area Connection"):
+    """
     Configure the interface to get its DNS servers from the DHCP server
 
     CLI Example:
@@ -114,24 +137,31 @@ def dns_dhcp(interface='Local Area Connection'):
     .. code-block:: bash
 
         salt '*' win_dns_client.dns_dhcp <interface>
-    '''
-    cmd = ['netsh', 'interface', 'ip', 'set', 'dns', interface, 'source=dhcp']
-    return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
+    """
+    cmd = ["netsh", "interface", "ip", "set", "dns", interface, "source=dhcp"]
+    return __salt__["cmd.retcode"](cmd, python_shell=False) == 0
 
 
-def get_dns_config(interface='Local Area Connection'):
-    '''
-    Get the type of DNS configuration (dhcp / static)
+def get_dns_config(interface="Local Area Connection"):
+    """
+    Get the type of DNS configuration (dhcp / static).
+
+    Args:
+        interface (str): The name of the network interface. This is the
+        Description in the Network Connection Details for the device
+
+    Returns:
+        bool: ``True`` if DNS is configured, otherwise ``False``
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' win_dns_client.get_dns_config 'Local Area Connection'
-    '''
+    """
     # remove any escape characters
-    interface = interface.split('\\')
-    interface = ''.join(interface)
+    interface = interface.split("\\")
+    interface = "".join(interface)
 
     with salt.utils.winapi.Com():
         c = wmi.WMI()

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 A convenience system to manage reactors
 
 Beginning in the 2017.7 release, the reactor runner requires that the reactor
@@ -12,27 +12,29 @@ engine configuration for the Salt master.
     engines:
         - reactor
 
-'''
+"""
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 
-# Import salt libs
-import salt.utils.reactor
 import salt.syspaths
 import salt.utils.event
 import salt.utils.process
+
+# Import salt libs
+import salt.utils.reactor
 from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
 
 __func_alias__ = {
-    'list_': 'list',
+    "list_": "list",
 }
 
 
-def list_(saltenv='base', test=None):
-    '''
+def list_(saltenv="base", test=None):
+    """
     List currently configured reactors
 
     CLI Example:
@@ -40,23 +42,24 @@ def list_(saltenv='base', test=None):
     .. code-block:: bash
 
         salt-run reactor.list
-    '''
+    """
     sevent = salt.utils.event.get_event(
-            'master',
-            __opts__['sock_dir'],
-            __opts__['transport'],
-            opts=__opts__,
-            listen=True)
+        "master",
+        __opts__["sock_dir"],
+        __opts__["transport"],
+        opts=__opts__,
+        listen=True,
+    )
 
-    __jid_event__.fire_event({}, 'salt/reactors/manage/list')
+    __jid_event__.fire_event({}, "salt/reactors/manage/list")
 
-    results = sevent.get_event(wait=30, tag='salt/reactors/manage/list-results')
-    reactors = results['reactors']
+    results = sevent.get_event(wait=30, tag="salt/reactors/manage/list-results")
+    reactors = results["reactors"]
     return reactors
 
 
-def add(event, reactors, saltenv='base', test=None):
-    '''
+def add(event, reactors, saltenv="base", test=None):
+    """
     Add a new reactor
 
     CLI Example:
@@ -64,27 +67,28 @@ def add(event, reactors, saltenv='base', test=None):
     .. code-block:: bash
 
         salt-run reactor.add 'salt/cloud/*/destroyed' reactors='/srv/reactor/destroy/*.sls'
-    '''
+    """
     if isinstance(reactors, string_types):
         reactors = [reactors]
 
     sevent = salt.utils.event.get_event(
-            'master',
-            __opts__['sock_dir'],
-            __opts__['transport'],
-            opts=__opts__,
-            listen=True)
+        "master",
+        __opts__["sock_dir"],
+        __opts__["transport"],
+        opts=__opts__,
+        listen=True,
+    )
 
-    __jid_event__.fire_event({'event': event,
-                              'reactors': reactors},
-                             'salt/reactors/manage/add')
+    __jid_event__.fire_event(
+        {"event": event, "reactors": reactors}, "salt/reactors/manage/add"
+    )
 
-    res = sevent.get_event(wait=30, tag='salt/reactors/manage/add-complete')
-    return res['result']
+    res = sevent.get_event(wait=30, tag="salt/reactors/manage/add-complete")
+    return res["result"]
 
 
-def delete(event, saltenv='base', test=None):
-    '''
+def delete(event, saltenv="base", test=None):
+    """
     Delete a reactor
 
     CLI Example:
@@ -92,15 +96,16 @@ def delete(event, saltenv='base', test=None):
     .. code-block:: bash
 
         salt-run reactor.delete 'salt/cloud/*/destroyed'
-    '''
+    """
     sevent = salt.utils.event.get_event(
-            'master',
-            __opts__['sock_dir'],
-            __opts__['transport'],
-            opts=__opts__,
-            listen=True)
+        "master",
+        __opts__["sock_dir"],
+        __opts__["transport"],
+        opts=__opts__,
+        listen=True,
+    )
 
-    __jid_event__.fire_event({'event': event}, 'salt/reactors/manage/delete')
+    __jid_event__.fire_event({"event": event}, "salt/reactors/manage/delete")
 
-    res = sevent.get_event(wait=30, tag='salt/reactors/manage/delete-complete')
-    return res['result']
+    res = sevent.get_event(wait=30, tag="salt/reactors/manage/delete-complete")
+    return res["result"]

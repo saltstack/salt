@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Minion data cache plugin for Etcd key/value data store.
 
 .. versionadded:: develop
@@ -13,7 +13,7 @@ The related documentation can be found in the `Etcd documentation`_.
 To enable this cache plugin, the master will need the python client for
 Etcd installed. This can be easily installed with pip:
 
-.. code-block: bash
+.. code-block:: bash
 
     pip install python-etcd
 
@@ -47,17 +47,21 @@ value to ``etcd``:
 .. _`Etcd documentation`: https://github.com/coreos/etcd
 .. _`python-etcd documentation`: http://python-etcd.readthedocs.io/en/latest/
 
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
-import logging
+
 import base64
+import logging
+
+from salt.exceptions import SaltCacheError
+
 try:
     import etcd
+
     HAS_ETCD = True
 except ImportError:
     HAS_ETCD = False
 
-from salt.exceptions import SaltCacheError
 
 _DEFAULT_PATH_PREFIX = "/salt_cache"
 
@@ -72,44 +76,46 @@ path_prefix = None
 
 # Module properties
 
-__virtualname__ = 'etcd'
-__func_alias__ = {'ls': 'list'}
+__virtualname__ = "etcd"
+__func_alias__ = {"ls": "list"}
 
 
 def __virtual__():
-    '''
+    """
     Confirm that python-etcd package is installed.
-    '''
+    """
     if not HAS_ETCD:
-        return (False, "Please install python-etcd package to use etcd data "
-                "cache driver")
+        return (
+            False,
+            "Please install python-etcd package to use etcd data cache driver",
+        )
 
     return __virtualname__
 
 
 def _init_client():
-    '''Setup client and init datastore.
-    '''
+    """Setup client and init datastore.
+    """
     global client, path_prefix
     if client is not None:
         return
 
     etcd_kwargs = {
-            'host': __opts__.get('etcd.host', '127.0.0.1'),
-            'port': __opts__.get('etcd.port', 2379),
-            'protocol': __opts__.get('etcd.protocol', 'http'),
-            'allow_reconnect': __opts__.get('etcd.allow_reconnect', True),
-            'allow_redirect': __opts__.get('etcd.allow_redirect', False),
-            'srv_domain': __opts__.get('etcd.srv_domain', None),
-            'read_timeout': __opts__.get('etcd.read_timeout', 60),
-            'username': __opts__.get('etcd.username', None),
-            'password': __opts__.get('etcd.password', None),
-            'cert': __opts__.get('etcd.cert', None),
-            'ca_cert': __opts__.get('etcd.ca_cert', None),
+        "host": __opts__.get("etcd.host", "127.0.0.1"),
+        "port": __opts__.get("etcd.port", 2379),
+        "protocol": __opts__.get("etcd.protocol", "http"),
+        "allow_reconnect": __opts__.get("etcd.allow_reconnect", True),
+        "allow_redirect": __opts__.get("etcd.allow_redirect", False),
+        "srv_domain": __opts__.get("etcd.srv_domain", None),
+        "read_timeout": __opts__.get("etcd.read_timeout", 60),
+        "username": __opts__.get("etcd.username", None),
+        "password": __opts__.get("etcd.password", None),
+        "cert": __opts__.get("etcd.cert", None),
+        "ca_cert": __opts__.get("etcd.ca_cert", None),
     }
-    path_prefix = __opts__.get('etcd.path_prefix', _DEFAULT_PATH_PREFIX)
+    path_prefix = __opts__.get("etcd.path_prefix", _DEFAULT_PATH_PREFIX)
     if path_prefix != "":
-        path_prefix = '/{0}'.format(path_prefix.strip('/'))
+        path_prefix = "/{0}".format(path_prefix.strip("/"))
     log.info("etcd: Setting up client with params: %r", etcd_kwargs)
     client = etcd.Client(**etcd_kwargs)
     try:
@@ -120,69 +126,65 @@ def _init_client():
 
 
 def store(bank, key, data):
-    '''
+    """
     Store a key value.
-    '''
+    """
     _init_client()
-    etcd_key = '{0}/{1}/{2}'.format(path_prefix, bank, key)
+    etcd_key = "{0}/{1}/{2}".format(path_prefix, bank, key)
     try:
-        value = __context__['serial'].dumps(data)
+        value = __context__["serial"].dumps(data)
         client.write(etcd_key, base64.b64encode(value))
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         raise SaltCacheError(
-            'There was an error writing the key, {0}: {1}'.format(etcd_key, exc)
+            "There was an error writing the key, {0}: {1}".format(etcd_key, exc)
         )
 
 
 def fetch(bank, key):
-    '''
+    """
     Fetch a key value.
-    '''
+    """
     _init_client()
-    etcd_key = '{0}/{1}/{2}'.format(path_prefix, bank, key)
+    etcd_key = "{0}/{1}/{2}".format(path_prefix, bank, key)
     try:
         value = client.read(etcd_key).value
-        return __context__['serial'].loads(base64.b64decode(value))
+        return __context__["serial"].loads(base64.b64decode(value))
     except etcd.EtcdKeyNotFound:
         return {}
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         raise SaltCacheError(
-            'There was an error reading the key, {0}: {1}'.format(
-                etcd_key, exc
-            )
+            "There was an error reading the key, {0}: {1}".format(etcd_key, exc)
         )
 
 
 def flush(bank, key=None):
-    '''
+    """
     Remove the key from the cache bank with all the key content.
-    '''
+    """
     _init_client()
     if key is None:
-        etcd_key = '{0}/{1}'.format(path_prefix, bank)
+        etcd_key = "{0}/{1}".format(path_prefix, bank)
     else:
-        etcd_key = '{0}/{1}/{2}'.format(path_prefix, bank, key)
+        etcd_key = "{0}/{1}/{2}".format(path_prefix, bank, key)
     try:
         client.read(etcd_key)
     except etcd.EtcdKeyNotFound:
         return  # nothing to flush
     try:
         client.delete(etcd_key, recursive=True)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         raise SaltCacheError(
-            'There was an error removing the key, {0}: {1}'.format(
-                etcd_key, exc
-            )
+            "There was an error removing the key, {0}: {1}".format(etcd_key, exc)
         )
 
 
 def _walk(r):
-    '''
+    """
     Recursively walk dirs. Return flattened list of keys.
     r: etcd.EtcdResult
-    '''
+    """
     if not r.dir:
-        return [r.key.split('/', 3)[3]]
+        return [r.key.split("/", 3)[3]]
 
     keys = []
     for c in client.read(r.key).children:
@@ -191,37 +193,33 @@ def _walk(r):
 
 
 def ls(bank):
-    '''
+    """
     Return an iterable object containing all entries stored in the specified
     bank.
-    '''
+    """
     _init_client()
-    path = '{0}/{1}'.format(path_prefix, bank)
+    path = "{0}/{1}".format(path_prefix, bank)
     try:
         return _walk(client.read(path))
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         raise SaltCacheError(
-            'There was an error getting the key "{0}": {1}'.format(
-                bank, exc
-            )
+            'There was an error getting the key "{0}": {1}'.format(bank, exc)
         )
 
 
 def contains(bank, key):
-    '''
+    """
     Checks if the specified bank contains the specified key.
-    '''
+    """
     _init_client()
-    etcd_key = '{0}/{1}/{2}'.format(path_prefix, bank, key)
+    etcd_key = "{0}/{1}/{2}".format(path_prefix, bank, key)
     try:
         r = client.read(etcd_key)
         # return True for keys, not dirs
         return r.dir is False
     except etcd.EtcdKeyNotFound:
         return False
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         raise SaltCacheError(
-            'There was an error getting the key, {0}: {1}'.format(
-                etcd_key, exc
-            )
+            "There was an error getting the key, {0}: {1}".format(etcd_key, exc)
         )

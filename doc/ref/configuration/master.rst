@@ -14,7 +14,9 @@ of the Salt system each have a respective configuration file. The
     :ref:`Example master configuration file <configuration-examples-master>`.
 
 The configuration file for the salt-master is located at ``/etc/salt/master``
-by default. A notable exception is FreeBSD, where the configuration file is
+by default. Atomic included configuration files can be placed in 
+``/etc/salt/master.d/*.conf``. Warning: files with other suffixes than .conf will 
+not be included. A notable exception is FreeBSD, where the configuration file is
 located at ``/usr/local/etc/salt``. The available options are as follows:
 
 
@@ -1338,6 +1340,15 @@ salt-ssh.
     ssh_list_nodegroups:
       groupA: minion1,minion2
       groupB: minion1,minion3
+
+.. conf_master:: ssh_run_pre_flight
+
+Default: False
+
+Run the ssh_pre_flight script defined in the salt-ssh roster. By default
+the script will only run when the thin dir does not exist on the targeted
+minion. This will force the script to run and not check if the thin dir
+exists first.
 
 .. conf_master:: thin_extra_mods
 
@@ -3793,6 +3804,10 @@ Default:
 Set the environments and directories used to hold pillar sls data. This
 configuration is the same as :conf_master:`file_roots`:
 
+As of 2017.7.5 and 2018.3.1, it is possible to have `__env__` as a catch-all environment.
+
+Example:
+
 .. code-block:: yaml
 
     pillar_roots:
@@ -3802,6 +3817,8 @@ configuration is the same as :conf_master:`file_roots`:
         - /srv/pillar/dev
       prod:
         - /srv/pillar/prod
+      __env__:
+        - /srv/pillar/others
 
 .. conf_master:: on_demand_ext_pillar
 
@@ -4258,7 +4275,7 @@ explanation <git-pillar-multiple-remotes>` from the git_pillar documentation.
 ``git_pillar_update_interval``
 ******************************
 
-.. versionadded:: neon
+.. versionadded:: 3000
 
 Default: ``60``
 
