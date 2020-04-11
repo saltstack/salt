@@ -68,7 +68,7 @@ first line in the stanza) or the ``- name`` parameter.
     - require:
       - pkg: vim
 
-Glog matching in requisites
+Glob matching in requisites
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: 0.9.8
@@ -1039,8 +1039,8 @@ if the gluster commands return a 0 ret value.
                 - /etc/crontab
                 - 'entry1'
 
-runas
-~~~~~
+listen
+~~~~~~
 
 .. versionadded:: 2014.7.0
 
