@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Manage Grafana Dashboards
 
 This module uses ``elasticsearch``, which can be installed via package, or pip.
@@ -165,68 +165,70 @@ The behavior of this module is to create dashboards if they do not exist, to
 add rows if they do not exist in existing dashboards, and to update rows if
 they exist in dashboards. The module will not manage rows that are not defined,
 allowing users to manage their own custom rows.
-'''
+"""
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import copy
 
 # Import Salt libs
 import salt.utils.json
 from salt.exceptions import SaltInvocationError
-from salt.utils.dictdiffer import DictDiffer
 
 # Import 3rd-party
 from salt.ext.six import string_types
+from salt.utils.dictdiffer import DictDiffer
 
 
 def __virtual__():
-    '''
+    """
     Only load if grafana is available.
-    '''
-    return 'grafana' if 'elasticsearch.exists' in __salt__ else False
+    """
+    return "grafana" if "elasticsearch.exists" in __salt__ else False
 
 
 def _parse_profile(profile):
-    '''
+    """
     From a pillar key, or a dictionary, return index and host keys.
-    '''
+    """
     if isinstance(profile, string_types):
-        _profile = __salt__['config.option'](profile)
+        _profile = __salt__["config.option"](profile)
         if not _profile:
-            msg = 'Pillar key for profile {0} not found.'.format(profile)
+            msg = "Pillar key for profile {0} not found.".format(profile)
             raise SaltInvocationError(msg)
     else:
         _profile = profile
-    hosts = _profile.get('hosts')
-    index = _profile.get('index')
+    hosts = _profile.get("hosts")
+    index = _profile.get("index")
     return (hosts, index)
 
 
 def _rows_differ(row, _row):
-    '''
+    """
     Check if grafana dashboard row and _row differ
-    '''
+    """
     row_copy = copy.deepcopy(row)
     _row_copy = copy.deepcopy(_row)
     # Strip id from all panels in both rows, since they are always generated.
-    for panel in row_copy['panels']:
-        if 'id' in panel:
-            del panel['id']
-    for _panel in _row_copy['panels']:
-        if 'id' in _panel:
-            del _panel['id']
+    for panel in row_copy["panels"]:
+        if "id" in panel:
+            del panel["id"]
+    for _panel in _row_copy["panels"]:
+        if "id" in _panel:
+            del _panel["id"]
     diff = DictDiffer(row_copy, _row_copy)
     return diff.changed() or diff.added() or diff.removed()
 
 
 def dashboard_present(
-        name,
-        dashboard=None,
-        dashboard_from_pillar=None,
-        rows=None,
-        rows_from_pillar=None,
-        profile='grafana'):
-    '''
+    name,
+    dashboard=None,
+    dashboard_from_pillar=None,
+    rows=None,
+    rows_from_pillar=None,
+    profile="grafana",
+):
+    """
     Ensure the grafana dashboard exists and is managed.
 
     name
@@ -250,25 +252,26 @@ def dashboard_present(
     profile
         A pillar key or dict that contains a list of hosts and an
         elasticsearch index to use.
-    '''
-    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    """
+    ret = {"name": name, "result": None, "comment": "", "changes": {}}
 
     if not profile:
-        raise SaltInvocationError('profile is a required argument.')
+        raise SaltInvocationError("profile is a required argument.")
     if dashboard and dashboard_from_pillar:
-        raise SaltInvocationError('dashboard and dashboard_from_pillar are'
-                                  ' mutually exclusive arguments.')
+        raise SaltInvocationError(
+            "dashboard and dashboard_from_pillar are" " mutually exclusive arguments."
+        )
     hosts, index = _parse_profile(profile)
     if not index:
-        raise SaltInvocationError('index is a required key in the profile.')
+        raise SaltInvocationError("index is a required key in the profile.")
 
     if not dashboard:
-        dashboard = __salt__['pillar.get'](dashboard_from_pillar)
+        dashboard = __salt__["pillar.get"](dashboard_from_pillar)
     if not rows:
         rows = []
     if rows_from_pillar:
         for key in rows_from_pillar:
-            pillar_rows = __salt__['pillar.get'](key)
+            pillar_rows = __salt__["pillar.get"](key)
             # Pillar contains a list of rows
             if isinstance(pillar_rows, list):
                 for row in pillar_rows:
@@ -277,103 +280,97 @@ def dashboard_present(
             else:
                 rows.append(pillar_rows)
 
-    exists = __salt__['elasticsearch.exists'](
-        index=index, id=name, doc_type='dashboard', hosts=hosts
+    exists = __salt__["elasticsearch.exists"](
+        index=index, id=name, doc_type="dashboard", hosts=hosts
     )
 
     if exists:
-        _dashboard = __salt__['elasticsearch.get'](
-            index=index, id=name, doc_type='dashboard', hosts=hosts
+        _dashboard = __salt__["elasticsearch.get"](
+            index=index, id=name, doc_type="dashboard", hosts=hosts
         )
-        _dashboard = _dashboard.get('_source', {}).get('dashboard')
+        _dashboard = _dashboard.get("_source", {}).get("dashboard")
         _dashboard = salt.utils.json.loads(_dashboard)
     else:
         if not dashboard:
-            raise SaltInvocationError('Grafana dashboard does not exist and no'
-                                      ' dashboard template was provided.')
-        if __opts__['test']:
-            ret['comment'] = 'Dashboard {0} is set to be created.'.format(
-                name
+            raise SaltInvocationError(
+                "Grafana dashboard does not exist and no"
+                " dashboard template was provided."
             )
-            ret['result'] = None
+        if __opts__["test"]:
+            ret["comment"] = "Dashboard {0} is set to be created.".format(name)
+            ret["result"] = None
             return ret
         _dashboard = dashboard
     update_rows = []
     _ids = []
     _data = {}
-    for _n, _row in enumerate(_dashboard['rows']):
+    for _n, _row in enumerate(_dashboard["rows"]):
         # Collect the unique ids
-        for _panel in _row['panels']:
-            if 'id' in _panel:
-                _ids.append(_panel['id'])
+        for _panel in _row["panels"]:
+            if "id" in _panel:
+                _ids.append(_panel["id"])
         # Collect all of the titles in the existing dashboard
-        if 'title' in _row:
-            _data[_row['title']] = _n
+        if "title" in _row:
+            _data[_row["title"]] = _n
     _ids.sort()
     if not _ids:
         _ids = [1]
     for row in rows:
-        if 'title' not in row:
-            raise SaltInvocationError('title is a required key for rows.')
+        if "title" not in row:
+            raise SaltInvocationError("title is a required key for rows.")
         # Each panel needs to have a unique ID
-        for panel in row['panels']:
+        for panel in row["panels"]:
             _ids.append(_ids[-1] + 1)
-            panel['id'] = _ids[-1]
-        title = row['title']
+            panel["id"] = _ids[-1]
+        title = row["title"]
         # If the title doesn't exist, we need to add this row
         if title not in _data:
             update_rows.append(title)
-            _dashboard['rows'].append(row)
+            _dashboard["rows"].append(row)
             continue
         # For existing titles, replace the row if it differs
         _n = _data[title]
-        if _rows_differ(row, _dashboard['rows'][_n]):
-            _dashboard['rows'][_n] = row
+        if _rows_differ(row, _dashboard["rows"][_n]):
+            _dashboard["rows"][_n] = row
             update_rows.append(title)
     if not update_rows:
-        ret['result'] = True
-        ret['comment'] = 'Dashboard {0} is up to date'.format(name)
+        ret["result"] = True
+        ret["comment"] = "Dashboard {0} is up to date".format(name)
         return ret
-    if __opts__['test']:
-        msg = 'Dashboard {0} is set to be updated.'.format(name)
+    if __opts__["test"]:
+        msg = "Dashboard {0} is set to be updated.".format(name)
         if update_rows:
-            msg = '{0} The following rows set to be updated: {1}'.format(
+            msg = "{0} The following rows set to be updated: {1}".format(
                 msg, update_rows
             )
-        ret['comment'] = msg
+        ret["comment"] = msg
         return ret
     body = {
-        'user':  'guest',
-        'group': 'guest',
-        'title': name,
-        'dashboard': salt.utils.json.dumps(_dashboard)
+        "user": "guest",
+        "group": "guest",
+        "title": name,
+        "dashboard": salt.utils.json.dumps(_dashboard),
     }
-    updated = __salt__['elasticsearch.index'](
-        index=index, doc_type='dashboard', body=body, id=name,
-        hosts=hosts
+    updated = __salt__["elasticsearch.index"](
+        index=index, doc_type="dashboard", body=body, id=name, hosts=hosts
     )
     if updated:
-        ret['result'] = True
-        ret['changes']['changed'] = name
-        msg = 'Updated dashboard {0}.'.format(name)
+        ret["result"] = True
+        ret["changes"]["changed"] = name
+        msg = "Updated dashboard {0}.".format(name)
         if update_rows:
-            msg = '{0} The following rows were updated: {1}'.format(
-                msg, update_rows
-            )
-        ret['comment'] = msg
+            msg = "{0} The following rows were updated: {1}".format(msg, update_rows)
+        ret["comment"] = msg
     else:
-        ret['result'] = False
-        msg = 'Failed to update dashboard {0}.'.format(name)
-        ret['comment'] = msg
+        ret["result"] = False
+        msg = "Failed to update dashboard {0}.".format(name)
+        ret["comment"] = msg
 
     return ret
 
 
-def dashboard_absent(
-        name,
-        hosts=None,
-        profile='grafana'):
-    '''
+def dashboard_absent(name, hosts=None, profile="grafana"):
+    """
     Ensure the named grafana dashboard is deleted.
 
     name
@@ -382,35 +379,33 @@ def dashboard_absent(
     profile
         A pillar key or dict that contains a list of hosts and an
         elasticsearch index to use.
-    '''
-    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    """
+    ret = {"name": name, "result": None, "comment": "", "changes": {}}
 
     hosts, index = _parse_profile(profile)
     if not index:
-        raise SaltInvocationError('index is a required key in the profile.')
+        raise SaltInvocationError("index is a required key in the profile.")
 
-    exists = __salt__['elasticsearch.exists'](
-        index=index, id=name, doc_type='dashboard', hosts=hosts
+    exists = __salt__["elasticsearch.exists"](
+        index=index, id=name, doc_type="dashboard", hosts=hosts
     )
 
     if exists:
-        if __opts__['test']:
-            ret['comment'] = 'Dashboard {0} is set to be removed.'.format(
-                name
-            )
+        if __opts__["test"]:
+            ret["comment"] = "Dashboard {0} is set to be removed.".format(name)
             return ret
-        deleted = __salt__['elasticsearch.delete'](
-            index=index, doc_type='dashboard', id=name, hosts=hosts
+        deleted = __salt__["elasticsearch.delete"](
+            index=index, doc_type="dashboard", id=name, hosts=hosts
         )
         if deleted:
-            ret['result'] = True
-            ret['changes']['old'] = name
-            ret['changes']['new'] = None
+            ret["result"] = True
+            ret["changes"]["old"] = name
+            ret["changes"]["new"] = None
         else:
-            ret['result'] = False
-            ret['comment'] = 'Failed to delete {0} dashboard.'.format(name)
+            ret["result"] = False
+            ret["comment"] = "Failed to delete {0} dashboard.".format(name)
     else:
-        ret['result'] = True
-        ret['comment'] = 'Dashboard {0} does not exist.'.format(name)
+        ret["result"] = True
+        ret["comment"] = "Dashboard {0} does not exist.".format(name)
 
     return ret

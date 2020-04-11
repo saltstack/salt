@@ -128,3 +128,5 @@ peer_run:
   - vault.generate_token
 sdbvault:
   driver: vault
+venafi:
+  fake: "true"

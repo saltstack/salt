@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Management of debconf selections
 ================================
 
@@ -36,30 +36,54 @@ set_file
 .. note::
     Due to how PyYAML imports nested dicts (see :ref:`here <yaml-idiosyncrasies>`),
     the values in the ``data`` dict must be indented four spaces instead of two.
-'''
+
+If you're setting debconf values that requires `dpkg-reconfigure`, you can use
+the ``onchanges`` requisite to reconfigure your package:
+
+.. code-block:: yaml
+
+    set-default-shell:
+      debconf.set:
+        - name: dash
+        - data:
+              'dash/sh': {'type': 'boolean', 'value': false}
+
+    reconfigure-dash:
+      cmd.run:
+        - name: dpkg-reconfigure -f noninteractive dash
+        - onchanges:
+          - debconf: set-default-shell
+
+Every time the ``set-default-shell`` state changes, the ``reconfigure-dash``
+state will also run.
+
+.. note::
+    For boolean types, the value should be ``true`` or ``false``, not
+    ``'true'`` or ``'false'``.
+"""
 from __future__ import absolute_import, print_function, unicode_literals
+
 from salt.ext import six
 
-
 # Define the module's virtual name
-__virtualname__ = 'debconf'
+__virtualname__ = "debconf"
 
 
 def __virtual__():
-    '''
+    """
     Confirm this module is on a Debian based system
-    '''
-    if __grains__['os_family'] != 'Debian':
+    """
+    if __grains__["os_family"] != "Debian":
         return False
     # Check that debconf was loaded
-    if 'debconf.show' not in __salt__:
+    if "debconf.show" not in __salt__:
         return False
 
     return __virtualname__
 
 
 def set_file(name, source, template=None, context=None, defaults=None, **kwargs):
-    '''
+    """
     Set debconf selections from a file or a template
 
     .. code-block:: yaml
@@ -92,47 +116,46 @@ def set_file(name, source, template=None, context=None, defaults=None, **kwargs)
 
     defaults
         Default context passed to the template.
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': True,
-           'comment': ''}
+    """
+    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
     if context is None:
         context = {}
     elif not isinstance(context, dict):
-        ret['result'] = False
-        ret['comment'] = 'Context must be formed as a dict'
+        ret["result"] = False
+        ret["comment"] = "Context must be formed as a dict"
         return ret
 
     if defaults is None:
         defaults = {}
     elif not isinstance(defaults, dict):
-        ret['result'] = False
-        ret['comment'] = 'Defaults must be formed as a dict'
+        ret["result"] = False
+        ret["comment"] = "Defaults must be formed as a dict"
         return ret
 
-    if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = 'Debconf selections would have been set.'
+    if __opts__["test"]:
+        ret["result"] = None
+        ret["comment"] = "Debconf selections would have been set."
         return ret
 
     if template:
-        result = __salt__['debconf.set_template'](source, template, context, defaults, **kwargs)
+        result = __salt__["debconf.set_template"](
+            source, template, context, defaults, **kwargs
+        )
     else:
-        result = __salt__['debconf.set_file'](source, **kwargs)
+        result = __salt__["debconf.set_file"](source, **kwargs)
 
     if result:
-        ret['comment'] = 'Debconf selections were set.'
+        ret["comment"] = "Debconf selections were set."
     else:
-        ret['result'] = False
-        ret['comment'] = 'Unable to set debconf selections from file.'
+        ret["result"] = False
+        ret["comment"] = "Unable to set debconf selections from file."
 
     return ret
 
 
 def set(name, data, **kwargs):
-    '''
+    """
     Set debconf selections
 
     .. code-block:: yaml
@@ -166,13 +189,10 @@ def set(name, data, **kwargs):
 
     value:
         The answer to the question
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': True,
-           'comment': ''}
+    """
+    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
-    current = __salt__['debconf.show'](name)
+    current = __salt__["debconf.show"](name)
 
     for (key, args) in six.iteritems(data):
         # For debconf data, valid booleans are 'true' and 'false';
@@ -182,29 +202,32 @@ def set(name, data, **kwargs):
         # So we should manually set these values to lowercase ones,
         # before any str() call is performed.
 
-        if args['type'] == 'boolean':
-            args['value'] = 'true' if args['value'] else 'false'
+        if args["type"] == "boolean":
+            args["value"] = "true" if args["value"] else "false"
 
-        if current is not None and [key, args['type'], six.text_type(args['value'])] in current:
-            if ret['comment'] is '':
-                ret['comment'] = 'Unchanged answers: '
-            ret['comment'] += ('{0} ').format(key)
+        if (
+            current is not None
+            and [key, args["type"], six.text_type(args["value"])] in current
+        ):
+            if ret["comment"] is "":
+                ret["comment"] = "Unchanged answers: "
+            ret["comment"] += ("{0} ").format(key)
         else:
-            if __opts__['test']:
-                ret['result'] = None
-                ret['changes'][key] = ('New value: {0}').format(args['value'])
+            if __opts__["test"]:
+                ret["result"] = None
+                ret["changes"][key] = ("New value: {0}").format(args["value"])
             else:
-                if __salt__['debconf.set'](name, key, args['type'], args['value']):
-                    if args['type'] == 'password':
-                        ret['changes'][key] = '(password hidden)'
+                if __salt__["debconf.set"](name, key, args["type"], args["value"]):
+                    if args["type"] == "password":
+                        ret["changes"][key] = "(password hidden)"
                     else:
-                        ret['changes'][key] = ('{0}').format(args['value'])
+                        ret["changes"][key] = ("{0}").format(args["value"])
                 else:
-                    ret['result'] = False
-                    ret['comment'] = 'Some settings failed to be applied.'
-                    ret['changes'][key] = 'Failed to set!'
+                    ret["result"] = False
+                    ret["comment"] = "Some settings failed to be applied."
+                    ret["changes"][key] = "Failed to set!"
 
-    if not ret['changes']:
-        ret['comment'] = 'All specified answers are already set'
+    if not ret["changes"]:
+        ret["comment"] = "All specified answers are already set"
 
     return ret

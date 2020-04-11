@@ -14,16 +14,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-'''
+"""
 Module for managing BTRFS file systems.
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
+import itertools
 import os
 import re
 import uuid
-
 
 # Import Salt libs
 import salt.utils.fsutils
@@ -35,14 +36,14 @@ from salt.ext import six
 
 
 def __virtual__():
-    '''
+    """
     Only work on POSIX-like systems
-    '''
-    return not salt.utils.platform.is_windows() and __grains__.get('kernel') == 'Linux'
+    """
+    return not salt.utils.platform.is_windows() and __grains__.get("kernel") == "Linux"
 
 
 def version():
-    '''
+    """
     Return BTRFS version.
 
     CLI Example:
@@ -50,40 +51,40 @@ def version():
     .. code-block:: bash
 
         salt '*' btrfs.version
-    '''
-    out = __salt__['cmd.run_all']("btrfs --version")
-    if out.get('stderr'):
-        raise CommandExecutionError(out['stderr'])
-    return {'version': out['stdout'].split(" ", 1)[-1]}
+    """
+    out = __salt__["cmd.run_all"]("btrfs --version")
+    if out.get("stderr"):
+        raise CommandExecutionError(out["stderr"])
+    return {"version": out["stdout"].split(" ", 1)[-1]}
 
 
 def _parse_btrfs_info(data):
-    '''
+    """
     Parse BTRFS device info data.
-    '''
+    """
     ret = {}
     for line in [line for line in data.split("\n") if line][:-1]:
         if line.startswith("Label:"):
             line = re.sub(r"Label:\s+", "", line)
             label, uuid_ = [tkn.strip() for tkn in line.split("uuid:")]
-            ret['label'] = label != 'none' and label or None
-            ret['uuid'] = uuid_
+            ret["label"] = label != "none" and label or None
+            ret["uuid"] = uuid_
             continue
 
         if line.startswith("\tdevid"):
             dev_data = re.split(r"\s+", line.strip())
             dev_id = dev_data[-1]
             ret[dev_id] = {
-                'device_id': dev_data[1],
-                'size': dev_data[3],
-                'used': dev_data[5],
-                }
+                "device_id": dev_data[1],
+                "size": dev_data[3],
+                "used": dev_data[5],
+            }
 
     return ret
 
 
 def info(device):
-    '''
+    """
     Get BTRFS filesystem information.
 
     CLI Example:
@@ -91,15 +92,15 @@ def info(device):
     .. code-block:: bash
 
         salt '*' btrfs.info /dev/sda1
-    '''
-    out = __salt__['cmd.run_all']("btrfs filesystem show {0}".format(device))
+    """
+    out = __salt__["cmd.run_all"]("btrfs filesystem show {0}".format(device))
     salt.utils.fsutils._verify_run(out)
 
-    return _parse_btrfs_info(out['stdout'])
+    return _parse_btrfs_info(out["stdout"])
 
 
 def devices():
-    '''
+    """
     Get known BTRFS formatted devices on the system.
 
     CLI Example:
@@ -107,28 +108,30 @@ def devices():
     .. code-block:: bash
 
         salt '*' btrfs.devices
-    '''
-    out = __salt__['cmd.run_all']("blkid -o export")
+    """
+    out = __salt__["cmd.run_all"]("blkid -o export")
     salt.utils.fsutils._verify_run(out)
 
-    return salt.utils.fsutils._blkid_output(out['stdout'], fs_type='btrfs')
+    return salt.utils.fsutils._blkid_output(out["stdout"], fs_type="btrfs")
 
 
 def _defragment_mountpoint(mountpoint):
-    '''
+    """
     Defragment only one BTRFS mountpoint.
-    '''
-    out = __salt__['cmd.run_all']("btrfs filesystem defragment -f {0}".format(mountpoint))
+    """
+    out = __salt__["cmd.run_all"](
+        "btrfs filesystem defragment -f {0}".format(mountpoint)
+    )
     return {
-        'mount_point': mountpoint,
-        'passed': not out['stderr'],
-        'log': out['stderr'] or False,
-        'range': False,
+        "mount_point": mountpoint,
+        "passed": not out["stderr"],
+        "log": out["stderr"] or False,
+        "range": False,
     }
 
 
 def defragment(path):
-    '''
+    """
     Defragment mounted BTRFS filesystem.
     In order to defragment a filesystem, device should be properly mounted and writable.
 
@@ -141,30 +144,36 @@ def defragment(path):
 
         salt '*' btrfs.defragment /dev/sda1
         salt '*' btrfs.defragment /path/on/filesystem
-    '''
+    """
     is_device = salt.utils.fsutils._is_device(path)
     mounts = salt.utils.fsutils._get_mounts("btrfs")
     if is_device and not mounts.get(path):
-        raise CommandExecutionError("Device \"{0}\" is not mounted".format(path))
+        raise CommandExecutionError('Device "{0}" is not mounted'.format(path))
 
     result = []
     if is_device:
         for mount_point in mounts[path]:
-            result.append(_defragment_mountpoint(mount_point['mount_point']))
+            result.append(_defragment_mountpoint(mount_point["mount_point"]))
     else:
         is_mountpoint = False
         for mountpoints in six.itervalues(mounts):
             for mpnt in mountpoints:
-                if path == mpnt['mount_point']:
+                if path == mpnt["mount_point"]:
                     is_mountpoint = True
                     break
         d_res = _defragment_mountpoint(path)
-        if not is_mountpoint and not d_res['passed'] and "range ioctl not supported" in d_res['log']:
-            d_res['log'] = "Range ioctl defragmentation is not supported in this kernel."
+        if (
+            not is_mountpoint
+            and not d_res["passed"]
+            and "range ioctl not supported" in d_res["log"]
+        ):
+            d_res[
+                "log"
+            ] = "Range ioctl defragmentation is not supported in this kernel."
 
         if not is_mountpoint:
-            d_res['mount_point'] = False
-            d_res['range'] = os.path.exists(path) and path or False
+            d_res["mount_point"] = False
+            d_res["range"] = os.path.exists(path) and path or False
 
         result.append(d_res)
 
@@ -172,7 +181,7 @@ def defragment(path):
 
 
 def features():
-    '''
+    """
     List currently available BTRFS features.
 
     CLI Example:
@@ -180,12 +189,14 @@ def features():
     .. code-block:: bash
 
         salt '*' btrfs.mkfs_features
-    '''
-    out = __salt__['cmd.run_all']("mkfs.btrfs -O list-all")
+    """
+    out = __salt__["cmd.run_all"]("mkfs.btrfs -O list-all")
     salt.utils.fsutils._verify_run(out)
 
     ret = {}
-    for line in [re.sub(r"\s+", " ", line) for line in out['stderr'].split("\n") if " - " in line]:
+    for line in [
+        re.sub(r"\s+", " ", line) for line in out["stderr"].split("\n") if " - " in line
+    ]:
         option, description = line.split(" - ", 1)
         ret[option] = description
 
@@ -193,15 +204,19 @@ def features():
 
 
 def _usage_overall(raw):
-    '''
+    """
     Parse usage/overall.
-    '''
+    """
     data = {}
     for line in raw.split("\n")[1:]:
-        keyset = [item.strip() for item in re.sub(r"\s+", " ", line).split(":", 1) if item.strip()]
+        keyset = [
+            item.strip()
+            for item in re.sub(r"\s+", " ", line).split(":", 1)
+            if item.strip()
+        ]
         if len(keyset) == 2:
             key = re.sub(r"[()]", "", keyset[0]).replace(" ", "_").lower()
-            if key in ['free_estimated', 'global_reserve']:  # An extra field
+            if key in ["free_estimated", "global_reserve"]:  # An extra field
                 subk = keyset[1].split("(")
                 data[key] = subk[0].strip()
                 subk = subk[1].replace(")", "").split(": ")
@@ -213,10 +228,10 @@ def _usage_overall(raw):
 
 
 def _usage_specific(raw):
-    '''
+    """
     Parse usage/specific.
-    '''
-    get_key = lambda val: dict([tuple(val.split(":")), ])
+    """
+    get_key = lambda val: dict([tuple(val.split(":"))])
     raw = raw.split("\n")
     section, size, used = raw[0].split(" ")
     section = section.replace(",", "_").replace(":", "").lower()
@@ -234,9 +249,9 @@ def _usage_specific(raw):
 
 
 def _usage_unallocated(raw):
-    '''
+    """
     Parse usage/unallocated.
-    '''
+    """
     ret = {}
     for line in raw.split("\n")[1:]:
         keyset = re.sub(r"\s+", " ", line.strip()).split(" ")
@@ -247,7 +262,7 @@ def _usage_unallocated(raw):
 
 
 def usage(path):
-    '''
+    """
     Show in which disk the chunks are allocated.
 
     CLI Example:
@@ -255,16 +270,16 @@ def usage(path):
     .. code-block:: bash
 
         salt '*' btrfs.usage /your/mountpoint
-    '''
-    out = __salt__['cmd.run_all']("btrfs filesystem usage {0}".format(path))
+    """
+    out = __salt__["cmd.run_all"]("btrfs filesystem usage {0}".format(path))
     salt.utils.fsutils._verify_run(out)
 
     ret = {}
-    for section in out['stdout'].split("\n\n"):
+    for section in out["stdout"].split("\n\n"):
         if section.startswith("Overall:\n"):
-            ret['overall'] = _usage_overall(section)
+            ret["overall"] = _usage_overall(section)
         elif section.startswith("Unallocated:\n"):
-            ret['unallocated'] = _usage_unallocated(section)
+            ret["unallocated"] = _usage_unallocated(section)
         else:
             ret.update(_usage_specific(section))
 
@@ -272,7 +287,7 @@ def usage(path):
 
 
 def mkfs(*devices, **kwargs):
-    '''
+    """
     Create a file system on the specified device. By default wipes out with force.
 
     General options:
@@ -303,14 +318,16 @@ def mkfs(*devices, **kwargs):
 
         salt '*' btrfs.mkfs /dev/sda1
         salt '*' btrfs.mkfs /dev/sda1 noforce=True
-    '''
+    """
     if not devices:
         raise CommandExecutionError("No devices specified")
 
     mounts = salt.utils.fsutils._get_mounts("btrfs")
     for device in devices:
         if mounts.get(device):
-            raise CommandExecutionError("Device \"{0}\" should not be mounted".format(device))
+            raise CommandExecutionError(
+                'Device "{0}" should not be mounted'.format(device)
+            )
 
     cmd = ["mkfs.btrfs"]
 
@@ -327,16 +344,26 @@ def mkfs(*devices, **kwargs):
         if mto:
             cmd.append("-m {0}".format(mto))
 
-    for key, option in [("-l", "leafsize"), ("-L", "label"), ("-O", "fts"),
-                        ("-A", "allocsize"), ("-b", "bytecount"), ("-n", "nodesize"),
-                        ("-s", "sectorsize")]:
-        if option == 'label' and option in kwargs:
-            kwargs['label'] = "'{0}'".format(kwargs["label"])
+    for key, option in [
+        ("-l", "leafsize"),
+        ("-L", "label"),
+        ("-O", "fts"),
+        ("-A", "allocsize"),
+        ("-b", "bytecount"),
+        ("-n", "nodesize"),
+        ("-s", "sectorsize"),
+    ]:
+        if option == "label" and option in kwargs:
+            kwargs["label"] = "'{0}'".format(kwargs["label"])
         if kwargs.get(option):
             cmd.append("{0} {1}".format(key, kwargs.get(option)))
 
     if kwargs.get("uuid"):
-        cmd.append("-U {0}".format(kwargs.get("uuid") is True and uuid.uuid1() or kwargs.get("uuid")))
+        cmd.append(
+            "-U {0}".format(
+                kwargs.get("uuid") is True and uuid.uuid1() or kwargs.get("uuid")
+            )
+        )
 
     if kwargs.get("nodiscard"):
         cmd.append("-K")
@@ -345,17 +372,17 @@ def mkfs(*devices, **kwargs):
 
     cmd.extend(devices)
 
-    out = __salt__['cmd.run_all'](' '.join(cmd))
+    out = __salt__["cmd.run_all"](" ".join(cmd))
     salt.utils.fsutils._verify_run(out)
 
-    ret = {'log': out['stdout']}
-    ret.update(__salt__['btrfs.info'](devices[0]))
+    ret = {"log": out["stdout"]}
+    ret.update(__salt__["btrfs.info"](devices[0]))
 
     return ret
 
 
 def resize(mountpoint, size):
-    '''
+    """
     Resize filesystem.
 
     General options:
@@ -369,49 +396,66 @@ def resize(mountpoint, size):
 
         salt '*' btrfs.resize /mountpoint size=+1g
         salt '*' btrfs.resize /dev/sda1 size=max
-    '''
+    """
 
-    if size == 'max':
+    if size == "max":
         if not salt.utils.fsutils._is_device(mountpoint):
-            raise CommandExecutionError("Mountpoint \"{0}\" should be a valid device".format(mountpoint))
+            raise CommandExecutionError(
+                'Mountpoint "{0}" should be a valid device'.format(mountpoint)
+            )
         if not salt.utils.fsutils._get_mounts("btrfs").get(mountpoint):
-            raise CommandExecutionError("Device \"{0}\" should be mounted".format(mountpoint))
-    elif len(size) < 3 or size[0] not in '-+' \
-         or size[-1] not in 'kKmMgGtTpPeE' or re.sub(r"\d", "", size[1:][:-1]):
-        raise CommandExecutionError("Unknown size: \"{0}\". Expected: [+/-]<newsize>[kKmMgGtTpPeE]|max".format(size))
+            raise CommandExecutionError(
+                'Device "{0}" should be mounted'.format(mountpoint)
+            )
+    elif (
+        len(size) < 3
+        or size[0] not in "-+"
+        or size[-1] not in "kKmMgGtTpPeE"
+        or re.sub(r"\d", "", size[1:][:-1])
+    ):
+        raise CommandExecutionError(
+            'Unknown size: "{0}". Expected: [+/-]<newsize>[kKmMgGtTpPeE]|max'.format(
+                size
+            )
+        )
 
-    out = __salt__['cmd.run_all']('btrfs filesystem resize {0} {1}'.format(size, mountpoint))
+    out = __salt__["cmd.run_all"](
+        "btrfs filesystem resize {0} {1}".format(size, mountpoint)
+    )
     salt.utils.fsutils._verify_run(out)
 
-    ret = {'log': out['stdout']}
-    ret.update(__salt__['btrfs.info'](mountpoint))
+    ret = {"log": out["stdout"]}
+    ret.update(__salt__["btrfs.info"](mountpoint))
 
     return ret
 
 
 def _fsck_ext(device):
-    '''
+    """
     Check an ext2/ext3/ext4 file system.
 
     This is forced check to determine a filesystem is clean or not.
     NOTE: Maybe this function needs to be moved as a standard method in extfs module in a future.
-    '''
+    """
     msgs = {
-        0: 'No errors',
-        1: 'Filesystem errors corrected',
-        2: 'System should be rebooted',
-        4: 'Filesystem errors left uncorrected',
-        8: 'Operational error',
-        16: 'Usage or syntax error',
-        32: 'Fsck canceled by user request',
-        128: 'Shared-library error',
+        0: "No errors",
+        1: "Filesystem errors corrected",
+        2: "System should be rebooted",
+        4: "Filesystem errors left uncorrected",
+        8: "Operational error",
+        16: "Usage or syntax error",
+        32: "Fsck canceled by user request",
+        128: "Shared-library error",
     }
 
-    return msgs.get(__salt__['cmd.run_all']("fsck -f -n {0}".format(device))['retcode'], 'Unknown error')
+    return msgs.get(
+        __salt__["cmd.run_all"]("fsck -f -n {0}".format(device))["retcode"],
+        "Unknown error",
+    )
 
 
 def convert(device, permanent=False, keeplf=False):
-    '''
+    """
     Convert ext2/3/4 to BTRFS. Device should be mounted.
 
     Filesystem can be converted temporarily so the further processing and rollback is possible,
@@ -430,22 +474,29 @@ def convert(device, permanent=False, keeplf=False):
 
         salt '*' btrfs.convert /dev/sda1
         salt '*' btrfs.convert /dev/sda1 permanent=True
-    '''
+    """
 
-    out = __salt__['cmd.run_all']("blkid -o export")
+    out = __salt__["cmd.run_all"]("blkid -o export")
     salt.utils.fsutils._verify_run(out)
-    devices = salt.utils.fsutils._blkid_output(out['stdout'])
+    devices = salt.utils.fsutils._blkid_output(out["stdout"])
     if not devices.get(device):
-        raise CommandExecutionError("The device \"{0}\" was is not found.".format(device))
+        raise CommandExecutionError('The device "{0}" was is not found.'.format(device))
 
-    if not devices[device]["type"] in ['ext2', 'ext3', 'ext4']:
-        raise CommandExecutionError("The device \"{0}\" is a \"{1}\" file system.".format(
-            device, devices[device]["type"]))
+    if not devices[device]["type"] in ["ext2", "ext3", "ext4"]:
+        raise CommandExecutionError(
+            'The device "{0}" is a "{1}" file system.'.format(
+                device, devices[device]["type"]
+            )
+        )
 
-    mountpoint = salt.utils.fsutils._get_mounts(devices[device]["type"]).get(
-        device, [{'mount_point': None}])[0].get('mount_point')
-    if mountpoint == '/':
-        raise CommandExecutionError("""One does not simply converts a root filesystem!
+    mountpoint = (
+        salt.utils.fsutils._get_mounts(devices[device]["type"])
+        .get(device, [{"mount_point": None}])[0]
+        .get("mount_point")
+    )
+    if mountpoint == "/":
+        raise CommandExecutionError(
+            """One does not simply converts a root filesystem!
 
 Converting an extended root filesystem to BTRFS is a careful
 and lengthy process, among other steps including the following
@@ -457,94 +508,107 @@ requirements:
 
 For further details, please refer to your OS vendor
 documentation regarding this topic.
-""")
+"""
+        )
 
-    salt.utils.fsutils._verify_run(__salt__['cmd.run_all']("umount {0}".format(device)))
+    salt.utils.fsutils._verify_run(__salt__["cmd.run_all"]("umount {0}".format(device)))
 
     ret = {
-        'before': {
-            'fsck_status': _fsck_ext(device),
-            'mount_point': mountpoint,
-            'type': devices[device]["type"],
+        "before": {
+            "fsck_status": _fsck_ext(device),
+            "mount_point": mountpoint,
+            "type": devices[device]["type"],
         }
     }
 
-    salt.utils.fsutils._verify_run(__salt__['cmd.run_all']("btrfs-convert {0}".format(device)))
-    salt.utils.fsutils._verify_run(__salt__['cmd.run_all']("mount {0} {1}".format(device, mountpoint)))
+    salt.utils.fsutils._verify_run(
+        __salt__["cmd.run_all"]("btrfs-convert {0}".format(device))
+    )
+    salt.utils.fsutils._verify_run(
+        __salt__["cmd.run_all"]("mount {0} {1}".format(device, mountpoint))
+    )
 
     # Refresh devices
-    out = __salt__['cmd.run_all']("blkid -o export")
+    out = __salt__["cmd.run_all"]("blkid -o export")
     salt.utils.fsutils._verify_run(out)
-    devices = salt.utils.fsutils._blkid_output(out['stdout'])
+    devices = salt.utils.fsutils._blkid_output(out["stdout"])
 
-    ret['after'] = {
-        'fsck_status': "N/A",  # ToDO
-        'mount_point': mountpoint,
-        'type': devices[device]["type"],
+    ret["after"] = {
+        "fsck_status": "N/A",  # ToDO
+        "mount_point": mountpoint,
+        "type": devices[device]["type"],
     }
 
     # Post-migration procedures
     image_path = "{0}/ext2_saved".format(mountpoint)
-    orig_fstype = ret['before']['type']
+    orig_fstype = ret["before"]["type"]
 
     if not os.path.exists(image_path):
         raise CommandExecutionError(
-            "BTRFS migration went wrong: the image \"{0}\" not found!".format(image_path))
+            'BTRFS migration went wrong: the image "{0}" not found!'.format(image_path)
+        )
 
     if not permanent:
-        ret['after']['{0}_image'.format(orig_fstype)] = image_path
-        ret['after']['{0}_image_info'.format(orig_fstype)] = os.popen(
-            "file {0}/image".format(image_path)).read().strip()
+        ret["after"]["{0}_image".format(orig_fstype)] = image_path
+        ret["after"]["{0}_image_info".format(orig_fstype)] = (
+            os.popen("file {0}/image".format(image_path)).read().strip()
+        )
     else:
-        ret['after']['{0}_image'.format(orig_fstype)] = 'removed'
-        ret['after']['{0}_image_info'.format(orig_fstype)] = 'N/A'
+        ret["after"]["{0}_image".format(orig_fstype)] = "removed"
+        ret["after"]["{0}_image_info".format(orig_fstype)] = "N/A"
 
-        salt.utils.fsutils._verify_run(__salt__['cmd.run_all']("btrfs subvolume delete {0}".format(image_path)))
-        out = __salt__['cmd.run_all']("btrfs filesystem balance {0}".format(mountpoint))
+        salt.utils.fsutils._verify_run(
+            __salt__["cmd.run_all"]("btrfs subvolume delete {0}".format(image_path))
+        )
+        out = __salt__["cmd.run_all"]("btrfs filesystem balance {0}".format(mountpoint))
         salt.utils.fsutils._verify_run(out)
-        ret['after']['balance_log'] = out['stdout']
+        ret["after"]["balance_log"] = out["stdout"]
 
     lost_found = "{0}/lost+found".format(mountpoint)
     if os.path.exists(lost_found) and not keeplf:
-        salt.utils.fsutils._verify_run(__salt__['cmd.run_all']("rm -rf {0}".format(lost_found)))
+        salt.utils.fsutils._verify_run(
+            __salt__["cmd.run_all"]("rm -rf {0}".format(lost_found))
+        )
 
     return ret
 
 
 def _restripe(mountpoint, direction, *devices, **kwargs):
-    '''
+    """
     Restripe BTRFS: add or remove devices from the particular mounted filesystem.
-    '''
+    """
     fs_log = []
 
     if salt.utils.fsutils._is_device(mountpoint):
         raise CommandExecutionError(
-            "Mountpount expected, while device \"{0}\" specified".format(mountpoint))
+            'Mountpount expected, while device "{0}" specified'.format(mountpoint)
+        )
 
     mounted = False
     for device, mntpoints in six.iteritems(salt.utils.fsutils._get_mounts("btrfs")):
         for mntdata in mntpoints:
-            if mntdata['mount_point'] == mountpoint:
+            if mntdata["mount_point"] == mountpoint:
                 mounted = True
                 break
 
     if not mounted:
         raise CommandExecutionError(
-            "No BTRFS device mounted on \"{0}\" mountpoint".format(mountpoint))
+            'No BTRFS device mounted on "{0}" mountpoint'.format(mountpoint)
+        )
 
     if not devices:
         raise CommandExecutionError("No devices specified.")
 
-    available_devices = __salt__['btrfs.devices']()
+    available_devices = __salt__["btrfs.devices"]()
     for device in devices:
         if device not in six.iterkeys(available_devices):
-            raise CommandExecutionError("Device \"{0}\" is not recognized".format(device))
+            raise CommandExecutionError('Device "{0}" is not recognized'.format(device))
 
-    cmd = ['btrfs device {0}'.format(direction)]
+    cmd = ["btrfs device {0}".format(direction)]
     for device in devices:
         cmd.append(device)
 
-    if direction == 'add':
+    if direction == "add":
         if kwargs.get("nodiscard"):
             cmd.append("-K")
         if kwargs.get("force"):
@@ -552,36 +616,40 @@ def _restripe(mountpoint, direction, *devices, **kwargs):
 
     cmd.append(mountpoint)
 
-    out = __salt__['cmd.run_all'](' '.join(cmd))
+    out = __salt__["cmd.run_all"](" ".join(cmd))
     salt.utils.fsutils._verify_run(out)
-    if out['stdout']:
-        fs_log.append(out['stdout'])
+    if out["stdout"]:
+        fs_log.append(out["stdout"])
 
-    if direction == 'add':
+    if direction == "add":
         out = None
         data_conversion = kwargs.get("dc")
         meta_conversion = kwargs.get("mc")
         if data_conversion and meta_conversion:
-            out = __salt__['cmd.run_all'](
+            out = __salt__["cmd.run_all"](
                 "btrfs balance start -dconvert={0} -mconvert={1} {2}".format(
-                    data_conversion, meta_conversion, mountpoint))
+                    data_conversion, meta_conversion, mountpoint
+                )
+            )
         else:
-            out = __salt__['cmd.run_all']("btrfs filesystem balance {0}".format(mountpoint))
+            out = __salt__["cmd.run_all"](
+                "btrfs filesystem balance {0}".format(mountpoint)
+            )
         salt.utils.fsutils._verify_run(out)
-        if out['stdout']:
-            fs_log.append(out['stdout'])
+        if out["stdout"]:
+            fs_log.append(out["stdout"])
 
     # Summarize the result
     ret = {}
     if fs_log:
-        ret.update({'log': '\n'.join(fs_log)})
-    ret.update(__salt__['btrfs.info'](mountpoint))
+        ret.update({"log": "\n".join(fs_log)})
+    ret.update(__salt__["btrfs.info"](mountpoint))
 
     return ret
 
 
 def add(mountpoint, *devices, **kwargs):
-    '''
+    """
     Add a devices to a BTRFS filesystem.
 
     General options:
@@ -594,12 +662,12 @@ def add(mountpoint, *devices, **kwargs):
     .. code-block:: bash
 
         salt '*' btrfs.add /mountpoint /dev/sda1 /dev/sda2
-    '''
-    return _restripe(mountpoint, 'add', *devices, **kwargs)
+    """
+    return _restripe(mountpoint, "add", *devices, **kwargs)
 
 
 def delete(mountpoint, *devices, **kwargs):
-    '''
+    """
     Remove devices from a BTRFS filesystem.
 
     CLI Example:
@@ -607,14 +675,14 @@ def delete(mountpoint, *devices, **kwargs):
     .. code-block:: bash
 
         salt '*' btrfs.delete /mountpoint /dev/sda1 /dev/sda2
-    '''
-    return _restripe(mountpoint, 'delete', *devices, **kwargs)
+    """
+    return _restripe(mountpoint, "delete", *devices, **kwargs)
 
 
 def _parse_proplist(data):
-    '''
+    """
     Parse properties list.
-    '''
+    """
     out = {}
     for line in data.split("\n"):
         line = re.split(r"\s+", line, 1)
@@ -625,7 +693,7 @@ def _parse_proplist(data):
 
 
 def properties(obj, type=None, set=None):
-    '''
+    """
     List properties for given btrfs object. The object can be path of BTRFS device,
     mount point, or any directories/files inside the BTRFS filesystem.
 
@@ -641,35 +709,569 @@ def properties(obj, type=None, set=None):
 
         salt '*' btrfs.properties /mountpoint
         salt '*' btrfs.properties /dev/sda1 type=subvol set='ro=false,label="My Storage"'
-    '''
-    if type and type not in ['s', 'subvol', 'f', 'filesystem', 'i', 'inode', 'd', 'device']:
-        raise CommandExecutionError("Unknown property type: \"{0}\" specified".format(type))
+    """
+    if type and type not in [
+        "s",
+        "subvol",
+        "f",
+        "filesystem",
+        "i",
+        "inode",
+        "d",
+        "device",
+    ]:
+        raise CommandExecutionError(
+            'Unknown property type: "{0}" specified'.format(type)
+        )
 
-    cmd = ['btrfs']
-    cmd.append('property')
-    cmd.append(set and 'set' or 'list')
+    cmd = ["btrfs"]
+    cmd.append("property")
+    cmd.append(set and "set" or "list")
     if type:
-        cmd.append('-t{0}'.format(type))
+        cmd.append("-t{0}".format(type))
     cmd.append(obj)
 
     if set:
         try:
-            for key, value in [[item.strip() for item in keyset.split("=")]
-                               for keyset in set.split(",")]:
+            for key, value in [
+                [item.strip() for item in keyset.split("=")]
+                for keyset in set.split(",")
+            ]:
                 cmd.append(key)
                 cmd.append(value)
-        except Exception as ex:
+        except Exception as ex:  # pylint: disable=broad-except
             raise CommandExecutionError(ex)
 
-    out = __salt__['cmd.run_all'](' '.join(cmd))
+    out = __salt__["cmd.run_all"](" ".join(cmd))
     salt.utils.fsutils._verify_run(out)
 
     if not set:
         ret = {}
-        for prop, descr in six.iteritems(_parse_proplist(out['stdout'])):
-            ret[prop] = {'description': descr}
-            value = __salt__['cmd.run_all'](
-                "btrfs property get {0} {1}".format(obj, prop))['stdout']
-            ret[prop]['value'] = value and value.split("=")[-1] or "N/A"
+        for prop, descr in six.iteritems(_parse_proplist(out["stdout"])):
+            ret[prop] = {"description": descr}
+            value = __salt__["cmd.run_all"](
+                "btrfs property get {0} {1}".format(obj, prop)
+            )["stdout"]
+            ret[prop]["value"] = value and value.split("=")[-1] or "N/A"
 
         return ret
+
+
+def subvolume_exists(path):
+    """
+    Check if a subvolume is present in the filesystem.
+
+    path
+        Mount point for the subvolume (full path)
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' btrfs.subvolume_exists /mnt/var
+
+    """
+    cmd = ["btrfs", "subvolume", "show", path]
+    return __salt__["cmd.retcode"](cmd, ignore_retcode=True) == 0
+
+
+def subvolume_create(name, dest=None, qgroupids=None):
+    """
+    Create subvolume `name` in `dest`.
+
+    Return True if the subvolume is created, False is the subvolume is
+    already there.
+
+    name
+         Name of the new subvolume
+
+    dest
+         If not given, the subvolume will be created in the current
+         directory, if given will be in /dest/name
+
+    qgroupids
+         Add the newly created subcolume to a qgroup. This parameter
+         is a list
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' btrfs.subvolume_create var
+        salt '*' btrfs.subvolume_create var dest=/mnt
+        salt '*' btrfs.subvolume_create var qgroupids='[200]'
+
+    """
+    if qgroupids and type(qgroupids) is not list:
+        raise CommandExecutionError("Qgroupids parameter must be a list")
+
+    if dest:
+        name = os.path.join(dest, name)
+
+    # If the subvolume is there, we are done
+    if subvolume_exists(name):
+        return False
+
+    cmd = ["btrfs", "subvolume", "create"]
+    if type(qgroupids) is list:
+        cmd.append("-i")
+        cmd.extend(qgroupids)
+    cmd.append(name)
+
+    res = __salt__["cmd.run_all"](cmd)
+    salt.utils.fsutils._verify_run(res)
+    return True
+
+
+def subvolume_delete(name=None, names=None, commit=None):
+    """
+    Delete the subvolume(s) from the filesystem
+
+    The user can remove one single subvolume (name) or multiple of
+    then at the same time (names). One of the two parameters needs to
+    specified.
+
+    Please, refer to the documentation to understand the implication
+    on the transactions, and when the subvolume is really deleted.
+
+    Return True if the subvolume is deleted, False is the subvolume
+    was already missing.
+
+    name
+        Name of the subvolume to remove
+
+    names
+        List of names of subvolumes to remove
+
+    commit
+        * 'after': Wait for transaction commit at the end
+        * 'each': Wait for transaction commit after each delete
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' btrfs.subvolume_delete /var/volumes/tmp
+        salt '*' btrfs.subvolume_delete /var/volumes/tmp commit=after
+
+    """
+    if not name and not (names and type(names) is list):
+        raise CommandExecutionError("Provide a value for the name parameter")
+
+    if commit and commit not in ("after", "each"):
+        raise CommandExecutionError("Value for commit not recognized")
+
+    # Filter the names and take the ones that are still there
+    names = [
+        n for n in itertools.chain([name], names or []) if n and subvolume_exists(n)
+    ]
+
+    # If the subvolumes are gone, we are done
+    if not names:
+        return False
+
+    cmd = ["btrfs", "subvolume", "delete"]
+    if commit == "after":
+        cmd.append("--commit-after")
+    elif commit == "each":
+        cmd.append("--commit-each")
+    cmd.extend(names)
+
+    res = __salt__["cmd.run_all"](cmd)
+    salt.utils.fsutils._verify_run(res)
+    return True
+
+
+def subvolume_find_new(name, last_gen):
+    """
+    List the recently modified files in a subvolume
+
+    name
+        Name of the subvolume
+
+    last_gen
+        Last transid marker from where to compare
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' btrfs.subvolume_find_new /var/volumes/tmp 1024
+
+    """
+    cmd = ["btrfs", "subvolume", "find-new", name, last_gen]
+
+    res = __salt__["cmd.run_all"](cmd)
+    salt.utils.fsutils._verify_run(res)
+
+    lines = res["stdout"].splitlines()
+    # Filenames are at the end of each inode line
+    files = [l.split()[-1] for l in lines if l.startswith("inode")]
+    # The last transid is in the last line
+    transid = lines[-1].split()[-1]
+    return {
+        "files": files,
+        "transid": transid,
+    }
+
+
+def subvolume_get_default(path):
+    """
+    Get the default subvolume of the filesystem path
+
+    path
+        Mount point for the subvolume
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' btrfs.subvolume_get_default /var/volumes/tmp
+
+    """
+    cmd = ["btrfs", "subvolume", "get-default", path]
+
+    res = __salt__["cmd.run_all"](cmd)
+    salt.utils.fsutils._verify_run(res)
+
+    line = res["stdout"].strip()
+    # The ID is the second parameter, and the name the last one, or
+    # '(FS_TREE)'
+    #
+    # When the default one is set:
+    # ID 5 (FS_TREE)
+    #
+    # When we manually set a different one (var):
+    # ID 257 gen 8 top level 5 path var
+    #
+    id_ = line.split()[1]
+    name = line.split()[-1]
+    return {
+        "id": id_,
+        "name": name,
+    }
+
+
+def _pop(line, key, use_rest):
+    """
+    Helper for the line parser.
+
+    If key is a prefix of line, will remove ir from the line and will
+    extract the value (space separation), and the rest of the line.
+
+    If use_rest is True, the value will be the rest of the line.
+
+    Return a tuple with the value and the rest of the line.
+    """
+    value = None
+    if line.startswith(key):
+        line = line[len(key) :].strip()
+        if use_rest:
+            value = line
+            line = ""
+        else:
+            value, line = line.split(" ", 1)
+    return value, line.strip()
+
+
+def subvolume_list(
+    path,
+    parent_id=False,
+    absolute=False,
+    ogeneration=False,
+    generation=False,
+    subvolumes=False,
+    uuid=False,
+    parent_uuid=False,
+    sent_subvolume_uuid=False,
+    snapshots=False,
+    readonly=False,
+    deleted=False,
+    generation_cmp=None,
+    ogeneration_cmp=None,
+    sort=None,
+):
+    """
+    List the subvolumes present in the filesystem.
+
+    path
+        Mount point for the subvolume
+
+    parent_id
+        Print parent ID
+
+    absolute
+        Print all the subvolumes in the filesystem and distinguish
+        between absolute and relative path with respect to the given
+        <path>
+
+    ogeneration
+        Print the ogeneration of the subvolume
+
+    generation
+        Print the generation of the subvolume
+
+    subvolumes
+        Print only subvolumes below specified <path>
+
+    uuid
+        Print the UUID of the subvolume
+
+    parent_uuid
+        Print the parent uuid of subvolumes (and snapshots)
+
+    sent_subvolume_uuid
+        Print the UUID of the sent subvolume, where the subvolume is
+        the result of a receive operation
+
+    snapshots
+        Only snapshot subvolumes in the filesystem will be listed
+
+    readonly
+        Only readonly subvolumes in the filesystem will be listed
+
+    deleted
+        Only deleted subvolumens that are ye not cleaned
+
+    generation_cmp
+        List subvolumes in the filesystem that its generation is >=,
+        <= or = value. '+' means >= value, '-' means <= value, If
+        there is neither '+' nor '-', it means = value
+
+    ogeneration_cmp
+        List subvolumes in the filesystem that its ogeneration is >=,
+        <= or = value
+
+    sort
+        List subvolumes in order by specified items. Possible values:
+        * rootid
+        * gen
+        * ogen
+        * path
+        You can add '+' or '-' in front of each items, '+' means
+        ascending, '-' means descending. The default is ascending. You
+        can combite it in a list.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' btrfs.subvolume_list /var/volumes/tmp
+        salt '*' btrfs.subvolume_list /var/volumes/tmp path=True
+        salt '*' btrfs.subvolume_list /var/volumes/tmp sort='[-rootid]'
+
+    """
+    if sort and type(sort) is not list:
+        raise CommandExecutionError("Sort parameter must be a list")
+
+    valid_sorts = [
+        "".join((order, attrib))
+        for order, attrib in itertools.product(
+            ("-", "", "+"), ("rootid", "gen", "ogen", "path")
+        )
+    ]
+    if sort and not all(s in valid_sorts for s in sort):
+        raise CommandExecutionError("Value for sort not recognized")
+
+    cmd = ["btrfs", "subvolume", "list"]
+
+    params = (
+        (parent_id, "-p"),
+        (absolute, "-a"),
+        (ogeneration, "-c"),
+        (generation, "-g"),
+        (subvolumes, "-o"),
+        (uuid, "-u"),
+        (parent_uuid, "-q"),
+        (sent_subvolume_uuid, "-R"),
+        (snapshots, "-s"),
+        (readonly, "-r"),
+        (deleted, "-d"),
+    )
+    cmd.extend(p[1] for p in params if p[0])
+
+    if generation_cmp:
+        cmd.extend(["-G", generation_cmp])
+
+    if ogeneration_cmp:
+        cmd.extend(["-C", ogeneration_cmp])
+
+    # We already validated the content of the list
+    if sort:
+        cmd.append("--sort={}".format(",".join(sort)))
+
+    cmd.append(path)
+
+    res = __salt__["cmd.run_all"](cmd)
+    salt.utils.fsutils._verify_run(res)
+
+    # Parse the output. ID and gen are always at the begining, and
+    # path is always at the end. There is only one column that
+    # contains space (top level), and the path value can also have
+    # spaces. The issue is that we do not know how many spaces do we
+    # have in the path name, so any classic solution based on split
+    # will fail.
+    #
+    # This list is in order.
+    columns = (
+        "ID",
+        "gen",
+        "cgen",
+        "parent",
+        "top level",
+        "otime",
+        "parent_uuid",
+        "received_uuid",
+        "uuid",
+        "path",
+    )
+    result = []
+    for line in res["stdout"].splitlines():
+        table = {}
+        for key in columns:
+            value, line = _pop(line, key, key == "path")
+            if value:
+                table[key.lower()] = value
+        # If line is not empty here, we are not able to parse it
+        if not line:
+            result.append(table)
+
+    return result
+
+
+def subvolume_set_default(subvolid, path):
+    """
+    Set the subvolume as default
+
+    subvolid
+        ID of the new default subvolume
+
+    path
+        Mount point for the filesystem
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' btrfs.subvolume_set_default 257 /var/volumes/tmp
+
+    """
+    cmd = ["btrfs", "subvolume", "set-default", subvolid, path]
+
+    res = __salt__["cmd.run_all"](cmd)
+    salt.utils.fsutils._verify_run(res)
+    return True
+
+
+def subvolume_show(path):
+    """
+    Show information of a given subvolume
+
+    path
+        Mount point for the filesystem
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' btrfs.subvolume_show /var/volumes/tmp
+
+    """
+    cmd = ["btrfs", "subvolume", "show", path]
+
+    res = __salt__["cmd.run_all"](cmd)
+    salt.utils.fsutils._verify_run(res)
+
+    result = {}
+    table = {}
+    # The real name is the first line, later there is a table of
+    # values separated with colon.
+    stdout = res["stdout"].splitlines()
+    key = stdout.pop(0)
+    result[key.strip()] = table
+
+    for line in stdout:
+        key, value = line.split(":", 1)
+        table[key.lower().strip()] = value.strip()
+    return result
+
+
+def subvolume_snapshot(source, dest=None, name=None, read_only=False):
+    """
+    Create a snapshot of a source subvolume
+
+    source
+        Source subvolume from where to create the snapshot
+
+    dest
+        If only dest is given, the subvolume will be named as the
+        basename of the source
+
+    name
+       Name of the snapshot
+
+    read_only
+        Create a read only snapshot
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' btrfs.subvolume_snapshot /var/volumes/tmp dest=/.snapshots
+        salt '*' btrfs.subvolume_snapshot /var/volumes/tmp name=backup
+
+    """
+    if not dest and not name:
+        raise CommandExecutionError("Provide parameter dest, name, or both")
+
+    cmd = ["btrfs", "subvolume", "snapshot"]
+    if read_only:
+        cmd.append("-r")
+    if dest and not name:
+        cmd.append(dest)
+    if dest and name:
+        name = os.path.join(dest, name)
+    if name:
+        cmd.append(name)
+
+    res = __salt__["cmd.run_all"](cmd)
+    salt.utils.fsutils._verify_run(res)
+    return True
+
+
+def subvolume_sync(path, subvolids=None, sleep=None):
+    """
+    Wait until given subvolume are completely removed from the
+    filesystem after deletion.
+
+    path
+        Mount point for the filesystem
+
+    subvolids
+        List of IDs of subvolumes to wait for
+
+    sleep
+        Sleep N seconds betwenn checks (default: 1)
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' btrfs.subvolume_sync /var/volumes/tmp
+        salt '*' btrfs.subvolume_sync /var/volumes/tmp subvolids='[257]'
+
+    """
+    if subvolids and type(subvolids) is not list:
+        raise CommandExecutionError("Subvolids parameter must be a list")
+
+    cmd = ["btrfs", "subvolume", "sync"]
+    if sleep:
+        cmd.extend(["-s", sleep])
+
+    cmd.append(path)
+    if subvolids:
+        cmd.extend(subvolids)
+
+    res = __salt__["cmd.run_all"](cmd)
+    salt.utils.fsutils._verify_run(res)
+    return True

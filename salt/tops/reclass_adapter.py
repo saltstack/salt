@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Read tops data from a reclass database
 
 .. |reclass| replace:: **reclass**
@@ -45,58 +45,61 @@ note of the differing data types for ``ext_pillar`` and ``master_tops``):
 If you want to run reclass from source, rather than installing it, you can
 either let the master know via the ``PYTHONPATH`` environment variable, or by
 setting the configuration option, like in the example above.
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
+
+import sys
+
+from salt.exceptions import SaltInvocationError
+from salt.ext import six
+from salt.utils.reclass import (
+    filter_out_source_path_option,
+    prepend_reclass_source_path,
+    set_inventory_base_uri_default,
+)
 
 # This file cannot be called reclass.py, because then the module import would
 # not work. Thanks to the __virtual__ function, however, the plugin still
 # responds to the name 'reclass'.
 
-import sys
-from salt.utils.reclass import (
-    prepend_reclass_source_path,
-    filter_out_source_path_option,
-    set_inventory_base_uri_default
-)
-
-from salt.exceptions import SaltInvocationError
-from salt.ext import six
 
 # Define the module's virtual name
-__virtualname__ = 'reclass'
+__virtualname__ = "reclass"
 
 
 def __virtual__(retry=False):
     try:
-        import reclass
+        import reclass  # pylint: disable=unused-import
+
         return __virtualname__
     except ImportError:
         if retry:
             return False
 
-        opts = __opts__.get('master_tops', {}).get('reclass', {})
+        opts = __opts__.get("master_tops", {}).get("reclass", {})
         prepend_reclass_source_path(opts)
         return __virtual__(retry=True)
 
 
 def top(**kwargs):
-    '''
+    """
     Query |reclass| for the top data (states of the minions).
-    '''
+    """
 
     # If reclass is installed, __virtual__ put it onto the search path, so we
     # don't need to protect against ImportError:
-    # pylint: disable=3rd-party-module-not-gated
+    # pylint: disable=3rd-party-module-not-gated,no-name-in-module
     from reclass.adapters.salt import top as reclass_top
     from reclass.errors import ReclassException
-    # pylint: enable=3rd-party-module-not-gated
+
+    # pylint: enable=3rd-party-module-not-gated,no-name-in-module
 
     try:
         # Salt's top interface is inconsistent with ext_pillar (see #5786) and
         # one is expected to extract the arguments to the master_tops plugin
         # by parsing the configuration file data. I therefore use this adapter
         # to hide this internality.
-        reclass_opts = __opts__['master_tops']['reclass']
+        reclass_opts = __opts__["master_tops"]["reclass"]
 
         # the source path we used above isn't something reclass needs to care
         # about, so filter it:
@@ -109,7 +112,7 @@ def top(**kwargs):
         # Salt expects the top data to be filtered by minion_id, so we better
         # let it know which minion it is dealing with. Unfortunately, we must
         # extract these data (see #6930):
-        minion_id = kwargs['opts']['id']
+        minion_id = kwargs["opts"]["id"]
 
         # I purposely do not pass any of __opts__ or __salt__ or __grains__
         # to reclass, as I consider those to be Salt-internal and reclass
@@ -118,29 +121,30 @@ def top(**kwargs):
         return reclass_top(minion_id, **reclass_opts)
 
     except ImportError as e:
-        if 'reclass' in six.text_type(e):
+        if "reclass" in six.text_type(e):
             raise SaltInvocationError(
-                'master_tops.reclass: cannot find reclass module '
-                'in {0}'.format(sys.path)
+                "master_tops.reclass: cannot find reclass module "
+                "in {0}".format(sys.path)
             )
         else:
             raise
 
     except TypeError as e:
-        if 'unexpected keyword argument' in six.text_type(e):
+        if "unexpected keyword argument" in six.text_type(e):
             arg = six.text_type(e).split()[-1]
             raise SaltInvocationError(
-                'master_tops.reclass: unexpected option: {0}'.format(arg)
+                "master_tops.reclass: unexpected option: {0}".format(arg)
             )
         else:
             raise
 
     except KeyError as e:
-        if 'reclass' in six.text_type(e):
-            raise SaltInvocationError('master_tops.reclass: no configuration '
-                                      'found in master config')
+        if "reclass" in six.text_type(e):
+            raise SaltInvocationError(
+                "master_tops.reclass: no configuration " "found in master config"
+            )
         else:
             raise
 
     except ReclassException as e:
-        raise SaltInvocationError('master_tops.reclass: {0}'.format(six.text_type(e)))
+        raise SaltInvocationError("master_tops.reclass: {0}".format(six.text_type(e)))

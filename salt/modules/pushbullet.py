@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Module for sending messages to Pushbullet (https://www.pushbullet.com)
 
 .. versionadded:: 2015.8.0
 
 Requires an ``api_key`` in ``/etc/salt/minion``:
 
-.. code-block: yaml
+.. code-block:: yaml
 
     pushbullet:
       api_key: 'ABC123abc123ABC123abc123ABC123ab'
@@ -20,14 +20,16 @@ For example:
       title: "Example push message"
       body: "Message body."
 
-'''
+"""
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 
 try:
     import pushbullet
+
     HAS_PUSHBULLET = True
 except ImportError:
     HAS_PUSHBULLET = False
@@ -37,18 +39,19 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     if not HAS_PUSHBULLET:
-        return (False, 'Missing pushbullet library.')
-    if not __salt__['config.get']('pushbullet.api_key') and \
-       not __salt__['config.get']('pushbullet:api_key'):
-        return (False, 'Pushbullet API Key Unavailable, not loading.')
+        return (False, "Missing pushbullet library.")
+    if not __salt__["config.get"]("pushbullet.api_key") and not __salt__["config.get"](
+        "pushbullet:api_key"
+    ):
+        return (False, "Pushbullet API Key Unavailable, not loading.")
     return True
 
 
 class _SaltPushbullet(object):
-
     def __init__(self, device_name):
-        api_key = __salt__['config.get']('pushbullet.api_key') or \
-            __salt__['config.get']('pushbullet:api_key')
+        api_key = __salt__["config.get"]("pushbullet.api_key") or __salt__[
+            "config.get"
+        ]("pushbullet:api_key")
         self.pb = pushbullet.Pushbullet(api_key)
         self.target = self._find_device_by_name(device_name)
 
@@ -63,7 +66,7 @@ class _SaltPushbullet(object):
 
 
 def push_note(device=None, title=None, body=None):
-    '''
+    """
     Pushing a text note.
 
     :param device:   Pushbullet target device
@@ -77,7 +80,7 @@ def push_note(device=None, title=None, body=None):
     .. code-block:: bash
 
         salt "*" pushbullet.push_note device="Chrome" title="Example title" body="Example body."
-    '''
+    """
     spb = _SaltPushbullet(device)
     res = spb.push_note(title, body)
 

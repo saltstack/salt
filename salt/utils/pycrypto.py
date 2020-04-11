@@ -1,14 +1,20 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Use pycrypto to generate random passwords on the fly.
-'''
+"""
 
 # Import python libraries
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
+import random
 import re
 import string
-import random
+
+# Import salt libs
+import salt.utils.stringutils
+from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.ext import six
 
 # Import 3rd-party libs
 try:
@@ -27,25 +33,22 @@ try:
     # Windows does not have the crypt module
     # consider using passlib.hash instead
     import crypt
+
     HAS_CRYPT = True
 except ImportError:
     HAS_CRYPT = False
 
-# Import salt libs
-import salt.utils.stringutils
-from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
 
 def secure_password(length=20, use_random=True):
-    '''
+    """
     Generate a secure password.
-    '''
+    """
     try:
         length = int(length)
-        pw = ''
+        pw = ""
         while len(pw) < length:
             if HAS_RANDOM and use_random:
                 while True:
@@ -55,32 +58,28 @@ def secure_password(length=20, use_random=True):
                     except UnicodeDecodeError:
                         continue
                 pw += re.sub(
-                    salt.utils.stringutils.to_str(r'[\W_]'),
+                    salt.utils.stringutils.to_str(r"[\W_]"),
                     str(),  # future lint: disable=blacklisted-function
-                    char
+                    char,
                 )
             else:
                 pw += random.SystemRandom().choice(string.ascii_letters + string.digits)
         return pw
-    except Exception as exc:
-        log.exception('Failed to generate secure passsword')
+    except Exception as exc:  # pylint: disable=broad-except
+        log.exception("Failed to generate secure passsword")
         raise CommandExecutionError(six.text_type(exc))
 
 
-def gen_hash(crypt_salt=None, password=None, algorithm='sha512'):
-    '''
+def gen_hash(crypt_salt=None, password=None, algorithm="sha512"):
+    """
     Generate /etc/shadow hash
-    '''
+    """
     if not HAS_CRYPT:
-        raise SaltInvocationError('No crypt module for windows')
+        raise SaltInvocationError("No crypt module for windows")
 
-    hash_algorithms = dict(
-        md5='$1$', blowfish='$2a$', sha256='$5$', sha512='$6$'
-    )
+    hash_algorithms = dict(md5="$1$", blowfish="$2a$", sha256="$5$", sha512="$6$")
     if algorithm not in hash_algorithms:
-        raise SaltInvocationError(
-            'Algorithm \'{0}\' is not supported'.format(algorithm)
-        )
+        raise SaltInvocationError("Algorithm '{0}' is not supported".format(algorithm))
 
     if password is None:
         password = secure_password()

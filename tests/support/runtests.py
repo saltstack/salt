@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
     .. _runtime_vars:
@@ -44,20 +44,18 @@
 
     .. _`pytest`: http://pytest.org
     .. _`nose`: https://nose.readthedocs.org
-    '''
+    """
 
 # Import Python modules
 from __future__ import absolute_import, print_function
+
+import logging
 import os
 import shutil
-import logging
 
+# Import Salt libs
+import salt.utils.path
 import salt.utils.platform
-
-try:
-    import pwd
-except ImportError:
-    import salt.utils.win_functions
 
 # Import tests support libs
 import tests.support.paths as paths
@@ -65,13 +63,19 @@ import tests.support.paths as paths
 # Import 3rd-party libs
 from salt.ext import six
 
+try:
+    import pwd
+except ImportError:
+    import salt.utils.win_functions
+
+
 log = logging.getLogger(__name__)
 
 
 def this_user():
-    '''
+    """
     Get the user associated with the current process.
-    '''
+    """
     if salt.utils.platform.is_windows():
         return salt.utils.win_functions.get_current_user(with_domain=False)
     return pwd.getpwuid(os.getuid())[0]
@@ -96,28 +100,32 @@ def recursive_copytree(source, destination, overwrite=False):
     for root, dirs, files in os.walk(source):
         for item in dirs:
             src_path = os.path.join(root, item)
-            dst_path = os.path.join(destination, src_path.replace(source, '').lstrip(os.sep))
+            dst_path = os.path.join(
+                destination, src_path.replace(source, "").lstrip(os.sep)
+            )
             if not os.path.exists(dst_path):
-                log.debug('Creating directory: %s', dst_path)
+                log.debug("Creating directory: %s", dst_path)
                 os.makedirs(dst_path)
         for item in files:
             src_path = os.path.join(root, item)
-            dst_path = os.path.join(destination, src_path.replace(source, '').lstrip(os.sep))
+            dst_path = os.path.join(
+                destination, src_path.replace(source, "").lstrip(os.sep)
+            )
             if os.path.exists(dst_path) and not overwrite:
                 if os.stat(src_path).st_mtime > os.stat(dst_path).st_mtime:
-                    log.debug('Copying %s to %s', src_path, dst_path)
+                    log.debug("Copying %s to %s", src_path, dst_path)
                     shutil.copy2(src_path, dst_path)
             else:
                 if not os.path.isdir(os.path.dirname(dst_path)):
-                    log.debug('Creating directory: %s', os.path.dirname(dst_path))
+                    log.debug("Creating directory: %s", os.path.dirname(dst_path))
                     os.makedirs(os.path.dirname(dst_path))
-                log.debug('Copying %s to %s', src_path, dst_path)
+                log.debug("Copying %s to %s", src_path, dst_path)
                 shutil.copy2(src_path, dst_path)
 
 
 class RuntimeVars(object):
 
-    __self_attributes__ = ('_vars', '_locked', 'lock')
+    __self_attributes__ = ("_vars", "_locked", "lock")
 
     def __init__(self, **kwargs):
         self._vars = kwargs
@@ -126,6 +134,7 @@ class RuntimeVars(object):
     def lock(self):
         # Late import
         from salt.utils.immutabletypes import freeze
+
         frozen_vars = freeze(self._vars.copy())
         self._vars = frozen_vars
         self._locked = True
@@ -135,18 +144,18 @@ class RuntimeVars(object):
             yield name, value
 
     def __getattribute__(self, name):
-        if name in object.__getattribute__(self, '_vars'):
-            return object.__getattribute__(self, '_vars')[name]
+        if name in object.__getattribute__(self, "_vars"):
+            return object.__getattribute__(self, "_vars")[name]
         return object.__getattribute__(self, name)
 
     def __setattr__(self, name, value):
-        if getattr(self, '_locked', False) is True:
+        if getattr(self, "_locked", False) is True:
             raise RuntimeError(
-                'After {0} is locked, no additional data can be added to it'.format(
+                "After {0} is locked, no additional data can be added to it".format(
                     self.__class__.__name__
                 )
             )
-        if name in object.__getattribute__(self, '__self_attributes__'):
+        if name in object.__getattribute__(self, "__self_attributes__"):
             object.__setattr__(self, name, value)
             return
         self._vars[name] = value
@@ -156,7 +165,9 @@ class RuntimeVars(object):
 
 
 # ----- Global Variables -------------------------------------------------------------------------------------------->
-XML_OUTPUT_DIR = os.environ.get('SALT_XML_TEST_REPORTS_DIR', os.path.join(paths.TMP, 'xml-test-reports'))
+XML_OUTPUT_DIR = os.environ.get(
+    "SALT_XML_TEST_REPORTS_DIR", os.path.join(paths.TMP, "xml-test-reports")
+)
 # <---- Global Variables ---------------------------------------------------------------------------------------------
 
 
@@ -172,12 +183,16 @@ RUNTIME_VARS = RuntimeVars(
     LOG_HANDLERS_DIR=paths.LOG_HANDLERS_DIR,
     TMP_ROOT_DIR=paths.TMP_ROOT_DIR,
     TMP_CONF_DIR=paths.TMP_CONF_DIR,
-    TMP_CONF_MASTER_INCLUDES=os.path.join(paths.TMP_CONF_DIR, 'master.d'),
-    TMP_CONF_MINION_INCLUDES=os.path.join(paths.TMP_CONF_DIR, 'minion.d'),
-    TMP_CONF_PROXY_INCLUDES=os.path.join(paths.TMP_CONF_DIR, 'proxy.d'),
-    TMP_CONF_CLOUD_INCLUDES=os.path.join(paths.TMP_CONF_DIR, 'cloud.conf.d'),
-    TMP_CONF_CLOUD_PROFILE_INCLUDES=os.path.join(paths.TMP_CONF_DIR, 'cloud.profiles.d'),
-    TMP_CONF_CLOUD_PROVIDER_INCLUDES=os.path.join(paths.TMP_CONF_DIR, 'cloud.providers.d'),
+    TMP_CONF_MASTER_INCLUDES=os.path.join(paths.TMP_CONF_DIR, "master.d"),
+    TMP_CONF_MINION_INCLUDES=os.path.join(paths.TMP_CONF_DIR, "minion.d"),
+    TMP_CONF_PROXY_INCLUDES=os.path.join(paths.TMP_CONF_DIR, "proxy.d"),
+    TMP_CONF_CLOUD_INCLUDES=os.path.join(paths.TMP_CONF_DIR, "cloud.conf.d"),
+    TMP_CONF_CLOUD_PROFILE_INCLUDES=os.path.join(
+        paths.TMP_CONF_DIR, "cloud.profiles.d"
+    ),
+    TMP_CONF_CLOUD_PROVIDER_INCLUDES=os.path.join(
+        paths.TMP_CONF_DIR, "cloud.providers.d"
+    ),
     TMP_SUB_MINION_CONF_DIR=paths.TMP_SUB_MINION_CONF_DIR,
     TMP_SYNDIC_MASTER_CONF_DIR=paths.TMP_SYNDIC_MASTER_CONF_DIR,
     TMP_SYNDIC_MINION_CONF_DIR=paths.TMP_SYNDIC_MINION_CONF_DIR,
@@ -187,12 +202,18 @@ RUNTIME_VARS = RuntimeVars(
     TMP_STATE_TREE=paths.TMP_STATE_TREE,
     TMP_PILLAR_TREE=paths.TMP_PILLAR_TREE,
     TMP_PRODENV_STATE_TREE=paths.TMP_PRODENV_STATE_TREE,
+    SHELL_TRUE_PATH=salt.utils.path.which("true")
+    if not salt.utils.platform.is_windows()
+    else "cmd /c exit 0 > nul",
+    SHELL_FALSE_PATH=salt.utils.path.which("false")
+    if not salt.utils.platform.is_windows()
+    else "cmd /c exit 1 > nul",
     RUNNING_TESTS_USER=this_user(),
     RUNTIME_CONFIGS={},
     CODE_DIR=paths.CODE_DIR,
     BASE_FILES=paths.BASE_FILES,
     PROD_FILES=paths.PROD_FILES,
     TESTS_DIR=paths.TESTS_DIR,
-    PYTEST_SESSION=False
+    PYTEST_SESSION=False,
 )
 # <---- Tests Runtime Variables --------------------------------------------------------------------------------------

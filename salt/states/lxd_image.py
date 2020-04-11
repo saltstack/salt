@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Manage LXD images.
 
 .. versionadded:: 2019.2.0
@@ -26,39 +26,41 @@ Manage LXD images.
 :maturity: new
 :depends: python-pylxd
 :platform: Linux
-'''
+"""
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt libs
-from salt.exceptions import CommandExecutionError
-from salt.exceptions import SaltInvocationError
 import salt.ext.six as six
+
+# Import salt libs
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext.six.moves import map
 
-__docformat__ = 'restructuredtext en'
+__docformat__ = "restructuredtext en"
 
-__virtualname__ = 'lxd_image'
+__virtualname__ = "lxd_image"
 
 
 def __virtual__():
-    '''
+    """
     Only load if the lxd module is available in __salt__
-    '''
-    return __virtualname__ if 'lxd.version' in __salt__ else False
+    """
+    return __virtualname__ if "lxd.version" in __salt__ else False
 
 
-def present(name,
-            source,
-            aliases=None,
-            public=None,
-            auto_update=None,
-            remote_addr=None,
-            cert=None,
-            key=None,
-            verify_cert=True):
-    '''
+def present(
+    name,
+    source,
+    aliases=None,
+    public=None,
+    auto_update=None,
+    remote_addr=None,
+    cert=None,
+    key=None,
+    verify_cert=True,
+):
+    """
     Ensure an image exists, copy it else from source
 
     name :
@@ -70,7 +72,7 @@ def present(name,
 
         For an LXD to LXD copy:
 
-        .. code-block: yaml
+        .. code-block:: yaml
 
             source:
                 type: lxd
@@ -89,7 +91,7 @@ def present(name,
 
         From file:
 
-        .. code-block: yaml
+        .. code-block:: yaml
 
             source:
                 type: file
@@ -98,7 +100,7 @@ def present(name,
 
         From simplestreams:
 
-        .. code-block: yaml
+        .. code-block:: yaml
 
             source:
                 type: simplestreams
@@ -107,7 +109,7 @@ def present(name,
 
         From an URL:
 
-        .. code-block: yaml
+        .. code-block:: yaml
 
             source:
                 type: url
@@ -150,30 +152,28 @@ def present(name,
         Wherever to verify the cert, this is by default True
         but in the most cases you want to set it off as LXD
         normaly uses self-signed certificates.
-    '''
+    """
     if aliases is None:
         aliases = []
 
     # Create a copy of aliases, since we're modifying it here
     aliases = aliases[:]
     ret = {
-        'name': name,
-        'source': source,
-        'aliases': aliases,
-        'public': public,
-        'auto_update': auto_update,
-
-        'remote_addr': remote_addr,
-        'cert': cert,
-        'key': key,
-        'verify_cert': verify_cert,
-
-        'changes': {}
+        "name": name,
+        "source": source,
+        "aliases": aliases,
+        "public": public,
+        "auto_update": auto_update,
+        "remote_addr": remote_addr,
+        "cert": cert,
+        "key": key,
+        "verify_cert": verify_cert,
+        "changes": {},
     }
 
     image = None
     try:
-        image = __salt__['lxd.image_get_by_alias'](
+        image = __salt__["lxd.image_get_by_alias"](
             name, remote_addr, cert, key, verify_cert, _raw=True
         )
     except CommandExecutionError as e:
@@ -183,20 +183,20 @@ def present(name,
         pass
 
     if image is None:
-        if __opts__['test']:
+        if __opts__["test"]:
             # Test is on, just return that we would create the image
             msg = 'Would create the image "{0}"'.format(name)
-            ret['changes'] = {'created': msg}
+            ret["changes"] = {"created": msg}
             return _unchanged(ret, msg)
 
         try:
-            if source['type'] == 'lxd':
-                image = __salt__['lxd.image_copy_lxd'](
-                    source['name'],
-                    src_remote_addr=source['remote_addr'],
-                    src_cert=source['cert'],
-                    src_key=source['key'],
-                    src_verify_cert=source.get('verify_cert', True),
+            if source["type"] == "lxd":
+                image = __salt__["lxd.image_copy_lxd"](
+                    source["name"],
+                    src_remote_addr=source["remote_addr"],
+                    src_cert=source["cert"],
+                    src_key=source["key"],
+                    src_verify_cert=source.get("verify_cert", True),
                     remote_addr=remote_addr,
                     cert=cert,
                     key=key,
@@ -204,41 +204,28 @@ def present(name,
                     aliases=aliases,
                     public=public,
                     auto_update=auto_update,
-                    _raw=True
+                    _raw=True,
                 )
 
-            if source['type'] == 'file':
-                if 'saltenv' not in source:
-                    source['saltenv'] = __env__
-                image = __salt__['lxd.image_from_file'](
-                    source['filename'],
+            if source["type"] == "file":
+                if "saltenv" not in source:
+                    source["saltenv"] = __env__
+                image = __salt__["lxd.image_from_file"](
+                    source["filename"],
                     remote_addr=remote_addr,
                     cert=cert,
                     key=key,
                     verify_cert=verify_cert,
                     aliases=aliases,
                     public=False if public is None else public,
-                    saltenv=source['saltenv'],
-                    _raw=True
+                    saltenv=source["saltenv"],
+                    _raw=True,
                 )
 
-            if source['type'] == 'simplestreams':
-                image = __salt__['lxd.image_from_simplestreams'](
-                    source['server'],
-                    source['name'],
-                    remote_addr=remote_addr,
-                    cert=cert,
-                    key=key,
-                    verify_cert=verify_cert,
-                    aliases=aliases,
-                    public=False if public is None else public,
-                    auto_update=False if auto_update is None else auto_update,
-                    _raw=True
-                )
-
-            if source['type'] == 'url':
-                image = __salt__['lxd.image_from_url'](
-                    source['url'],
+            if source["type"] == "simplestreams":
+                image = __salt__["lxd.image_from_simplestreams"](
+                    source["server"],
+                    source["name"],
                     remote_addr=remote_addr,
                     cert=cert,
                     key=key,
@@ -246,7 +233,20 @@ def present(name,
                     aliases=aliases,
                     public=False if public is None else public,
                     auto_update=False if auto_update is None else auto_update,
-                    _raw=True
+                    _raw=True,
+                )
+
+            if source["type"] == "url":
+                image = __salt__["lxd.image_from_url"](
+                    source["url"],
+                    remote_addr=remote_addr,
+                    cert=cert,
+                    key=key,
+                    verify_cert=verify_cert,
+                    aliases=aliases,
+                    public=False if public is None else public,
+                    auto_update=False if auto_update is None else auto_update,
+                    _raw=True,
                 )
         except CommandExecutionError as e:
             return _error(ret, six.text_type(e))
@@ -255,55 +255,50 @@ def present(name,
     if name not in aliases:
         aliases.append(name)
 
-    old_aliases = set([six.text_type(a['name']) for a in image.aliases])
+    old_aliases = set([six.text_type(a["name"]) for a in image.aliases])
     new_aliases = set(map(six.text_type, aliases))
 
     alias_changes = []
     # Removed aliases
     for k in old_aliases.difference(new_aliases):
-        if not __opts__['test']:
-            __salt__['lxd.image_alias_delete'](image, k)
+        if not __opts__["test"]:
+            __salt__["lxd.image_alias_delete"](image, k)
             alias_changes.append('Removed alias "{0}"'.format(k))
         else:
             alias_changes.append('Would remove alias "{0}"'.format(k))
 
     # New aliases
     for k in new_aliases.difference(old_aliases):
-        if not __opts__['test']:
-            __salt__['lxd.image_alias_add'](image, k, '')
+        if not __opts__["test"]:
+            __salt__["lxd.image_alias_add"](image, k, "")
             alias_changes.append('Added alias "{0}"'.format(k))
         else:
             alias_changes.append('Would add alias "{0}"'.format(k))
 
     if alias_changes:
-        ret['changes']['aliases'] = alias_changes
+        ret["changes"]["aliases"] = alias_changes
 
     # Set public
     if public is not None and image.public != public:
-        if not __opts__['test']:
-            ret['changes']['public'] = \
-                'Setting the image public to {0!s}'.format(public)
+        if not __opts__["test"]:
+            ret["changes"]["public"] = "Setting the image public to {0!s}".format(
+                public
+            )
             image.public = public
-            __salt__['lxd.pylxd_save_object'](image)
+            __salt__["lxd.pylxd_save_object"](image)
         else:
-            ret['changes']['public'] = \
-                'Would set public to {0!s}'.format(public)
+            ret["changes"]["public"] = "Would set public to {0!s}".format(public)
 
-    if __opts__['test'] and ret['changes']:
+    if __opts__["test"] and ret["changes"]:
         return _unchanged(
-            ret,
-            'Would do {0} changes'.format(len(ret['changes'].keys()))
+            ret, "Would do {0} changes".format(len(ret["changes"].keys()))
         )
 
-    return _success(ret, '{0} changes'.format(len(ret['changes'].keys())))
+    return _success(ret, "{0} changes".format(len(ret["changes"].keys())))
 
 
-def absent(name,
-           remote_addr=None,
-           cert=None,
-           key=None,
-           verify_cert=True):
-    '''
+def absent(name, remote_addr=None, cert=None, key=None, verify_cert=True):
+    """
     name :
         An alias or fingerprint of the image to check and delete.
 
@@ -331,27 +326,25 @@ def absent(name,
         Wherever to verify the cert, this is by default True
         but in the most cases you want to set it off as LXD
         normaly uses self-signed certificates.
-    '''
+    """
     ret = {
-        'name': name,
-
-        'remote_addr': remote_addr,
-        'cert': cert,
-        'key': key,
-        'verify_cert': verify_cert,
-
-        'changes': {}
+        "name": name,
+        "remote_addr": remote_addr,
+        "cert": cert,
+        "key": key,
+        "verify_cert": verify_cert,
+        "changes": {},
     }
     image = None
     try:
-        image = __salt__['lxd.image_get_by_alias'](
+        image = __salt__["lxd.image_get_by_alias"](
             name, remote_addr, cert, key, verify_cert, _raw=True
         )
     except CommandExecutionError as e:
         return _error(ret, six.text_type(e))
     except SaltInvocationError as e:
         try:
-            image = __salt__['lxd.image_get'](
+            image = __salt__["lxd.image_get"](
                 name, remote_addr, cert, key, verify_cert, _raw=True
             )
         except CommandExecutionError as e:
@@ -359,43 +352,35 @@ def absent(name,
         except SaltInvocationError as e:
             return _success(ret, 'Image "{0}" not found.'.format(name))
 
-    if __opts__['test']:
-        ret['changes'] = {
-            'removed':
-            'Image "{0}" would get deleted.'.format(name)
-        }
-        return _success(ret, ret['changes']['removed'])
+    if __opts__["test"]:
+        ret["changes"] = {"removed": 'Image "{0}" would get deleted.'.format(name)}
+        return _success(ret, ret["changes"]["removed"])
 
-    __salt__['lxd.image_delete'](
-        image
-    )
+    __salt__["lxd.image_delete"](image)
 
-    ret['changes'] = {
-        'removed':
-        'Image "{0}" has been deleted.'.format(name)
-    }
-    return _success(ret, ret['changes']['removed'])
+    ret["changes"] = {"removed": 'Image "{0}" has been deleted.'.format(name)}
+    return _success(ret, ret["changes"]["removed"])
 
 
 def _success(ret, success_msg):
-    ret['result'] = True
-    ret['comment'] = success_msg
-    if 'changes' not in ret:
-        ret['changes'] = {}
+    ret["result"] = True
+    ret["comment"] = success_msg
+    if "changes" not in ret:
+        ret["changes"] = {}
     return ret
 
 
 def _unchanged(ret, msg):
-    ret['result'] = None
-    ret['comment'] = msg
-    if 'changes' not in ret:
-        ret['changes'] = {}
+    ret["result"] = None
+    ret["comment"] = msg
+    if "changes" not in ret:
+        ret["changes"] = {}
     return ret
 
 
 def _error(ret, err_msg):
-    ret['result'] = False
-    ret['comment'] = err_msg
-    if 'changes' not in ret:
-        ret['changes'] = {}
+    ret["result"] = False
+    ret["comment"] = err_msg
+    if "changes" not in ret:
+        ret["changes"] = {}
     return ret

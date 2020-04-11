@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Support for the Amazon Simple Queue Service.
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 
 # Import salt libs
@@ -14,25 +15,25 @@ from salt.ext import six
 
 log = logging.getLogger(__name__)
 
-_OUTPUT = '--output json'
+_OUTPUT = "--output json"
 
 
 def __virtual__():
-    if salt.utils.path.which('aws'):
+    if salt.utils.path.which("aws"):
         # awscli is installed, load the module
         return True
-    return (False, 'The module aws_sqs could not be loaded: aws command not found')
+    return (False, "The module aws_sqs could not be loaded: aws command not found")
 
 
 def _region(region):
-    '''
+    """
     Return the region argument.
-    '''
-    return ' --region {r}'.format(r=region)
+    """
+    return " --region {r}".format(r=region)
 
 
 def _run_aws(cmd, region, opts, user, **kwargs):
-    '''
+    """
     Runs the given command against AWS.
     cmd
         Command to run
@@ -44,32 +45,29 @@ def _run_aws(cmd, region, opts, user, **kwargs):
         Pass in from salt
     kwargs
         Key-value arguments to pass to the command
-    '''
+    """
     # These args need a specific key value that aren't
     # valid python parameter keys
-    receipthandle = kwargs.pop('receipthandle', None)
+    receipthandle = kwargs.pop("receipthandle", None)
     if receipthandle:
-        kwargs['receipt-handle'] = receipthandle
-    num = kwargs.pop('num', None)
+        kwargs["receipt-handle"] = receipthandle
+    num = kwargs.pop("num", None)
     if num:
-        kwargs['max-number-of-messages'] = num
+        kwargs["max-number-of-messages"] = num
 
-    _formatted_args = [
-        '--{0} "{1}"'.format(k, v) for k, v in six.iteritems(kwargs)]
+    _formatted_args = ['--{0} "{1}"'.format(k, v) for k, v in six.iteritems(kwargs)]
 
-    cmd = 'aws sqs {cmd} {args} {region} {out}'.format(
-        cmd=cmd,
-        args=' '.join(_formatted_args),
-        region=_region(region),
-        out=_OUTPUT)
+    cmd = "aws sqs {cmd} {args} {region} {out}".format(
+        cmd=cmd, args=" ".join(_formatted_args), region=_region(region), out=_OUTPUT
+    )
 
-    rtn = __salt__['cmd.run'](cmd, runas=user, python_shell=False)
+    rtn = __salt__["cmd.run"](cmd, runas=user, python_shell=False)
 
-    return salt.utils.json.loads(rtn) if rtn else ''
+    return salt.utils.json.loads(rtn) if rtn else ""
 
 
 def receive_message(queue, region, num=1, opts=None, user=None):
-    '''
+    """
     Receive one or more messages from a queue in a region
 
     queue
@@ -96,24 +94,23 @@ def receive_message(queue, region, num=1, opts=None, user=None):
 
     .. versionadded:: 2014.7.0
 
-    '''
+    """
     ret = {
-            'Messages': None,
-          }
+        "Messages": None,
+    }
     queues = list_queues(region, opts, user)
     url_map = _parse_queue_list(queues)
     if queue not in url_map:
         log.info('"%s" queue does not exist.', queue)
         return ret
 
-    out = _run_aws('receive-message', region, opts, user, queue=url_map[queue],
-                   num=num)
-    ret['Messages'] = out['Messages']
+    out = _run_aws("receive-message", region, opts, user, queue=url_map[queue], num=num)
+    ret["Messages"] = out["Messages"]
     return ret
 
 
 def delete_message(queue, region, receipthandle, opts=None, user=None):
-    '''
+    """
     Delete one or more messages from a queue in a region
 
     queue
@@ -140,20 +137,26 @@ def delete_message(queue, region, receipthandle, opts=None, user=None):
 
     .. versionadded:: 2014.7.0
 
-    '''
+    """
     queues = list_queues(region, opts, user)
     url_map = _parse_queue_list(queues)
     if queue not in url_map:
         log.info('"%s" queue does not exist.', queue)
         return False
 
-    out = _run_aws('delete-message', region, opts, user,
-                   receipthandle=receipthandle, queue=url_map[queue],)
+    out = _run_aws(
+        "delete-message",
+        region,
+        opts,
+        user,
+        receipthandle=receipthandle,
+        queue=url_map[queue],
+    )
     return True
 
 
 def list_queues(region, opts=None, user=None):
-    '''
+    """
     List the queues in the selected region.
 
     region
@@ -169,18 +172,18 @@ def list_queues(region, opts=None, user=None):
 
         salt '*' aws_sqs.list_queues <region>
 
-    '''
-    out = _run_aws('list-queues', region, opts, user)
+    """
+    out = _run_aws("list-queues", region, opts, user)
 
     ret = {
-        'retcode': 0,
-        'stdout': out['QueueUrls'],
+        "retcode": 0,
+        "stdout": out["QueueUrls"],
     }
     return ret
 
 
 def create_queue(name, region, opts=None, user=None):
-    '''
+    """
     Creates a queue with the correct name.
 
     name
@@ -199,23 +202,21 @@ def create_queue(name, region, opts=None, user=None):
 
         salt '*' aws_sqs.create_queue <sqs queue> <region>
 
-    '''
+    """
 
-    create = {'queue-name': name}
-    out = _run_aws(
-        'create-queue', region=region, opts=opts,
-        user=user, **create)
+    create = {"queue-name": name}
+    out = _run_aws("create-queue", region=region, opts=opts, user=user, **create)
 
     ret = {
-        'retcode': 0,
-        'stdout': out['QueueUrl'],
-        'stderr': '',
+        "retcode": 0,
+        "stdout": out["QueueUrl"],
+        "stderr": "",
     }
     return ret
 
 
 def delete_queue(name, region, opts=None, user=None):
-    '''
+    """
     Deletes a queue in the region.
 
     name
@@ -233,40 +234,35 @@ def delete_queue(name, region, opts=None, user=None):
 
         salt '*' aws_sqs.delete_queue <sqs queue> <region>
 
-    '''
+    """
     queues = list_queues(region, opts, user)
     url_map = _parse_queue_list(queues)
 
     logger = logging.getLogger(__name__)
-    logger.debug('map ' + six.text_type(url_map))
+    logger.debug("map %s", six.text_type(url_map))
     if name in url_map:
-        delete = {'queue-url': url_map[name]}
+        delete = {"queue-url": url_map[name]}
 
-        rtn = _run_aws(
-            'delete-queue',
-            region=region,
-            opts=opts,
-            user=user,
-            **delete)
+        rtn = _run_aws("delete-queue", region=region, opts=opts, user=user, **delete)
         success = True
-        err = ''
-        out = '{0} deleted'.format(name)
+        err = ""
+        out = "{0} deleted".format(name)
 
     else:
-        out = ''
+        out = ""
         err = "Delete failed"
         success = False
 
     ret = {
-        'retcode': 0 if success else 1,
-        'stdout': out,
-        'stderr': err,
+        "retcode": 0 if success else 1,
+        "stdout": out,
+        "stderr": err,
     }
     return ret
 
 
 def queue_exists(name, region, opts=None, user=None):
-    '''
+    """
     Returns True or False on whether the queue exists in the region
 
     name
@@ -285,15 +281,15 @@ def queue_exists(name, region, opts=None, user=None):
 
         salt '*' aws_sqs.queue_exists <sqs queue> <region>
 
-    '''
+    """
     output = list_queues(region, opts, user)
 
     return name in _parse_queue_list(output)
 
 
 def _parse_queue_list(list_output):
-    '''
+    """
     Parse the queue to get a dict of name -> URL
-    '''
-    queues = dict((q.split('/')[-1], q) for q in list_output['stdout'])
+    """
+    queues = dict((q.split("/")[-1], q) for q in list_output["stdout"])
     return queues

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Cassandra NoSQL Database Module
 
 :depends:   - pycassa Cassandra Python adapter
@@ -10,58 +10,67 @@ Cassandra NoSQL Database Module
         cassandra.nodetool: /usr/local/bin/nodetool
         cassandra.host: localhost
         cassandra.thrift_port: 9160
-'''
-from __future__ import absolute_import, unicode_literals, print_function
+"""
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
-log = logging.getLogger(__name__)
 
 # Import salt libs
 import salt.utils.path
 from salt.ext import six
 
+log = logging.getLogger(__name__)
+
+
 HAS_PYCASSA = False
 try:
     from pycassa.system_manager import SystemManager
+
     HAS_PYCASSA = True
 except ImportError:
     pass
 
 
 def __virtual__():
-    '''
+    """
     Only load if pycassa is available and the system is configured
-    '''
+    """
     if not HAS_PYCASSA:
-        return (False, 'The cassandra execution module cannot be loaded: pycassa not installed.')
+        return (
+            False,
+            "The cassandra execution module cannot be loaded: pycassa not installed.",
+        )
 
-    if HAS_PYCASSA and salt.utils.path.which('nodetool'):
-        return 'cassandra'
-    return (False, 'The cassandra execution module cannot be loaded: nodetool not found.')
+    if HAS_PYCASSA and salt.utils.path.which("nodetool"):
+        return "cassandra"
+    return (
+        False,
+        "The cassandra execution module cannot be loaded: nodetool not found.",
+    )
 
 
 def _nodetool(cmd):
-    '''
+    """
     Internal cassandra nodetool wrapper. Some functions are not
     available via pycassa so we must rely on nodetool.
-    '''
-    nodetool = __salt__['config.option']('cassandra.nodetool')
-    host = __salt__['config.option']('cassandra.host')
-    return __salt__['cmd.run_stdout']('{0} -h {1} {2}'.format(nodetool, host, cmd))
+    """
+    nodetool = __salt__["config.option"]("cassandra.nodetool")
+    host = __salt__["config.option"]("cassandra.host")
+    return __salt__["cmd.run_stdout"]("{0} -h {1} {2}".format(nodetool, host, cmd))
 
 
 def _sys_mgr():
-    '''
+    """
     Return a pycassa system manager connection object
-    '''
-    thrift_port = six.text_type(__salt__['config.option']('cassandra.THRIFT_PORT'))
-    host = __salt__['config.option']('cassandra.host')
-    return SystemManager('{0}:{1}'.format(host, thrift_port))
+    """
+    thrift_port = six.text_type(__salt__["config.option"]("cassandra.THRIFT_PORT"))
+    host = __salt__["config.option"]("cassandra.host")
+    return SystemManager("{0}:{1}".format(host, thrift_port))
 
 
 def compactionstats():
-    '''
+    """
     Return compactionstats info
 
     CLI Example:
@@ -69,12 +78,12 @@ def compactionstats():
     .. code-block:: bash
 
         salt '*' cassandra.compactionstats
-    '''
-    return _nodetool('compactionstats')
+    """
+    return _nodetool("compactionstats")
 
 
 def version():
-    '''
+    """
     Return the cassandra version
 
     CLI Example:
@@ -82,12 +91,12 @@ def version():
     .. code-block:: bash
 
         salt '*' cassandra.version
-    '''
-    return _nodetool('version')
+    """
+    return _nodetool("version")
 
 
 def netstats():
-    '''
+    """
     Return netstats info
 
     CLI Example:
@@ -95,12 +104,12 @@ def netstats():
     .. code-block:: bash
 
         salt '*' cassandra.netstats
-    '''
-    return _nodetool('netstats')
+    """
+    return _nodetool("netstats")
 
 
 def tpstats():
-    '''
+    """
     Return tpstats info
 
     CLI Example:
@@ -108,12 +117,12 @@ def tpstats():
     .. code-block:: bash
 
         salt '*' cassandra.tpstats
-    '''
-    return _nodetool('tpstats')
+    """
+    return _nodetool("tpstats")
 
 
 def info():
-    '''
+    """
     Return cassandra node info
 
     CLI Example:
@@ -121,12 +130,12 @@ def info():
     .. code-block:: bash
 
         salt '*' cassandra.info
-    '''
-    return _nodetool('info')
+    """
+    return _nodetool("info")
 
 
 def ring():
-    '''
+    """
     Return cassandra ring info
 
     CLI Example:
@@ -134,12 +143,12 @@ def ring():
     .. code-block:: bash
 
         salt '*' cassandra.ring
-    '''
-    return _nodetool('ring')
+    """
+    return _nodetool("ring")
 
 
 def keyspaces():
-    '''
+    """
     Return existing keyspaces
 
     CLI Example:
@@ -147,13 +156,13 @@ def keyspaces():
     .. code-block:: bash
 
         salt '*' cassandra.keyspaces
-    '''
+    """
     sys = _sys_mgr()
     return sys.list_keyspaces()
 
 
 def column_families(keyspace=None):
-    '''
+    """
     Return existing column families for all keyspaces
     or just the provided one.
 
@@ -163,7 +172,7 @@ def column_families(keyspace=None):
 
         salt '*' cassandra.column_families
         salt '*' cassandra.column_families <keyspace>
-    '''
+    """
     sys = _sys_mgr()
     ksps = sys.list_keyspaces()
 
@@ -181,7 +190,7 @@ def column_families(keyspace=None):
 
 
 def column_family_definition(keyspace, column_family):
-    '''
+    """
     Return a dictionary of column family definitions for the given
     keyspace/column_family
 
@@ -191,11 +200,11 @@ def column_family_definition(keyspace, column_family):
 
         salt '*' cassandra.column_family_definition <keyspace> <column_family>
 
-    '''
+    """
     sys = _sys_mgr()
 
     try:
         return vars(sys.get_keyspace_column_families(keyspace)[column_family])
-    except Exception:
-        log.debug('Invalid Keyspace/CF combination')
+    except Exception:  # pylint: disable=broad-except
+        log.debug("Invalid Keyspace/CF combination")
         return None

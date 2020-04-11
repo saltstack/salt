@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Manages configuration files via augeas
 
 This module requires the ``augeas`` Python module.
@@ -22,110 +22,113 @@ This module requires the ``augeas`` Python module.
 
     For affected Debian/Ubuntu hosts, installing ``libpython2.7`` has been
     known to resolve the issue.
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
+
+import logging
 
 # Import python libs
 import os
 import re
-import logging
-from salt.ext.six.moves import zip
-from salt.ext import six
-
-# Make sure augeas python interface is installed
-HAS_AUGEAS = False
-try:
-    from augeas import Augeas as _Augeas
-    HAS_AUGEAS = True
-except ImportError:
-    pass
 
 # Import salt libs
 import salt.utils.args
 import salt.utils.data
 import salt.utils.stringutils
 from salt.exceptions import SaltInvocationError
+from salt.ext import six
+from salt.ext.six.moves import zip
+
+# Make sure augeas python interface is installed
+HAS_AUGEAS = False
+try:
+    from augeas import Augeas as _Augeas  # pylint: disable=no-name-in-module
+
+    HAS_AUGEAS = True
+except ImportError:
+    pass
+
 
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
-__virtualname__ = 'augeas'
+__virtualname__ = "augeas"
 
 METHOD_MAP = {
-    'set':    'set',
-    'setm':    'setm',
-    'mv':     'move',
-    'move':   'move',
-    'ins':    'insert',
-    'insert': 'insert',
-    'rm':     'remove',
-    'remove': 'remove',
+    "set": "set",
+    "setm": "setm",
+    "mv": "move",
+    "move": "move",
+    "ins": "insert",
+    "insert": "insert",
+    "rm": "remove",
+    "remove": "remove",
 }
 
 
 def __virtual__():
-    '''
+    """
     Only run this module if the augeas python module is installed
-    '''
+    """
     if HAS_AUGEAS:
         return __virtualname__
-    return (False, 'Cannot load augeas_cfg module: augeas python module not installed')
+    return (False, "Cannot load augeas_cfg module: augeas python module not installed")
 
 
 def _recurmatch(path, aug):
-    '''
+    """
     Recursive generator providing the infrastructure for
     augtools print behavior.
 
     This function is based on test_augeas.py from
     Harald Hoyer <harald@redhat.com>  in the python-augeas
     repository
-    '''
+    """
     if path:
-        clean_path = path.rstrip('/*')
+        clean_path = path.rstrip("/*")
         yield (clean_path, aug.get(path))
 
-        for i in aug.match(clean_path + '/*'):
-            i = i.replace('!', '\\!')  # escape some dirs
+        for i in aug.match(clean_path + "/*"):
+            i = i.replace("!", "\\!")  # escape some dirs
             for _match in _recurmatch(i, aug):
                 yield _match
 
 
 def _lstrip_word(word, prefix):
-    '''
+    """
     Return a copy of the string after the specified prefix was removed
     from the beginning of the string
-    '''
+    """
 
     if six.text_type(word).startswith(prefix):
-        return six.text_type(word)[len(prefix):]
+        return six.text_type(word)[len(prefix) :]
     return word
 
 
 def _check_load_paths(load_path):
-    '''
+    """
     Checks the validity of the load_path, returns a sanitized version
     with invalid paths removed.
-    '''
+    """
     if load_path is None or not isinstance(load_path, six.string_types):
         return None
 
     _paths = []
 
-    for _path in load_path.split(':'):
+    for _path in load_path.split(":"):
         if os.path.isabs(_path) and os.path.isdir(_path):
             _paths.append(_path)
         else:
-            log.info('Invalid augeas_cfg load_path entry: %s removed', _path)
+            log.info("Invalid augeas_cfg load_path entry: %s removed", _path)
 
     if len(_paths) == 0:
         return None
 
-    return ':'.join(_paths)
+    return ":".join(_paths)
 
 
 def execute(context=None, lens=None, commands=(), load_path=None):
-    '''
+    """
     Execute Augeas commands
 
     .. versionadded:: 2014.7.0
@@ -152,29 +155,29 @@ def execute(context=None, lens=None, commands=(), load_path=None):
         A colon-spearated list of directories that modules should be searched
         in. This is in addition to the standard load path and the directories
         in AUGEAS_LENS_LIB.
-    '''
-    ret = {'retval': False}
+    """
+    ret = {"retval": False}
 
     arg_map = {
-        'set':    (1, 2),
-        'setm':   (2, 3),
-        'move':   (2,),
-        'insert': (3,),
-        'remove': (1,),
+        "set": (1, 2),
+        "setm": (2, 3),
+        "move": (2,),
+        "insert": (3,),
+        "remove": (1,),
     }
 
     def make_path(path):
-        '''
+        """
         Return correct path
-        '''
+        """
         if not context:
             return path
 
-        if path.lstrip('/'):
+        if path.lstrip("/"):
             if path.startswith(context):
                 return path
 
-            path = path.lstrip('/')
+            path = path.lstrip("/")
             return os.path.join(context, path)
         else:
             return context
@@ -185,17 +188,17 @@ def execute(context=None, lens=None, commands=(), load_path=None):
     aug = _Augeas(flags=flags, loadpath=load_path)
 
     if lens and context:
-        aug.add_transform(lens, re.sub('^/files', '', context))
+        aug.add_transform(lens, re.sub("^/files", "", context))
         aug.load()
 
     for command in commands:
         try:
             # first part up to space is always the
             # command name (i.e.: set, move)
-            cmd, arg = command.split(' ', 1)
+            cmd, arg = command.split(" ", 1)
 
             if cmd not in METHOD_MAP:
-                ret['error'] = 'Command {0} is not supported (yet)'.format(cmd)
+                ret["error"] = "Command {0} is not supported (yet)".format(cmd)
                 return ret
 
             method = METHOD_MAP[cmd]
@@ -204,65 +207,67 @@ def execute(context=None, lens=None, commands=(), load_path=None):
             parts = salt.utils.args.shlex_split(arg)
 
             if len(parts) not in nargs:
-                err = '{0} takes {1} args: {2}'.format(method, nargs, parts)
+                err = "{0} takes {1} args: {2}".format(method, nargs, parts)
                 raise ValueError(err)
-            if method == 'set':
+            if method == "set":
                 path = make_path(parts[0])
                 value = parts[1] if len(parts) == 2 else None
-                args = {'path': path, 'value': value}
-            elif method == 'setm':
+                args = {"path": path, "value": value}
+            elif method == "setm":
                 base = make_path(parts[0])
                 sub = parts[1]
                 value = parts[2] if len(parts) == 3 else None
-                args = {'base': base, 'sub': sub, 'value': value}
-            elif method == 'move':
+                args = {"base": base, "sub": sub, "value": value}
+            elif method == "move":
                 path = make_path(parts[0])
                 dst = parts[1]
-                args = {'src': path, 'dst': dst}
-            elif method == 'insert':
+                args = {"src": path, "dst": dst}
+            elif method == "insert":
                 label, where, path = parts
-                if where not in ('before', 'after'):
+                if where not in ("before", "after"):
                     raise ValueError(
-                        'Expected "before" or "after", not {0}'.format(where))
+                        'Expected "before" or "after", not {0}'.format(where)
+                    )
                 path = make_path(path)
-                args = {
-                    'path': path,
-                    'label': label,
-                    'before': where == 'before'}
-            elif method == 'remove':
+                args = {"path": path, "label": label, "before": where == "before"}
+            elif method == "remove":
                 path = make_path(parts[0])
-                args = {'path': path}
+                args = {"path": path}
         except ValueError as err:
             log.error(err)
             # if command.split fails arg will not be set
-            if 'arg' not in locals():
+            if "arg" not in locals():
                 arg = command
-            ret['error'] = 'Invalid formatted command, ' \
-                           'see debug log for details: {0}'.format(arg)
+            ret["error"] = (
+                "Invalid formatted command, "
+                "see debug log for details: {0}".format(arg)
+            )
             return ret
 
         args = salt.utils.data.decode(args, to_str=True)
-        log.debug('%s: %s', method, args)
+        log.debug("%s: %s", method, args)
 
         func = getattr(aug, method)
         func(**args)
 
     try:
         aug.save()
-        ret['retval'] = True
+        ret["retval"] = True
     except IOError as err:
-        ret['error'] = six.text_type(err)
+        ret["error"] = six.text_type(err)
 
-        if lens and not lens.endswith('.lns'):
-            ret['error'] += '\nLenses are normally configured as "name.lns". ' \
-                            'Did you mean "{0}.lns"?'.format(lens)
+        if lens and not lens.endswith(".lns"):
+            ret["error"] += (
+                '\nLenses are normally configured as "name.lns". '
+                'Did you mean "{0}.lns"?'.format(lens)
+            )
 
     aug.close()
     return ret
 
 
-def get(path, value='', load_path=None):
-    '''
+def get(path, value="", load_path=None):
+    """
     Get a value for a specific augeas path
 
     CLI Example:
@@ -283,31 +288,31 @@ def get(path, value='', load_path=None):
         A colon-spearated list of directories that modules should be searched
         in. This is in addition to the standard load path and the directories
         in AUGEAS_LENS_LIB.
-    '''
+    """
     load_path = _check_load_paths(load_path)
 
     aug = _Augeas(loadpath=load_path)
     ret = {}
 
-    path = path.rstrip('/')
+    path = path.rstrip("/")
     if value:
-        path += '/{0}'.format(value.strip('/'))
+        path += "/{0}".format(value.strip("/"))
 
     try:
         _match = aug.match(path)
     except RuntimeError as err:
-        return {'error': six.text_type(err)}
+        return {"error": six.text_type(err)}
 
     if _match:
         ret[path] = aug.get(path)
     else:
-        ret[path] = ''  # node does not exist
+        ret[path] = ""  # node does not exist
 
     return ret
 
 
 def setvalue(*args):
-    '''
+    """
     Set a value for a specific augeas path
 
     CLI Example:
@@ -342,57 +347,55 @@ def setvalue(*args):
     Ensures that the following line is present in /etc/sudoers::
 
         %wheel ALL = PASSWD : ALL , NOPASSWD : /usr/bin/apt-get , /usr/bin/aptitude
-    '''
+    """
     load_path = None
-    load_paths = [x for x in args if six.text_type(x).startswith('load_path=')]
+    load_paths = [x for x in args if six.text_type(x).startswith("load_path=")]
     if load_paths:
         if len(load_paths) > 1:
-            raise SaltInvocationError(
-                'Only one \'load_path=\' value is permitted'
-            )
+            raise SaltInvocationError("Only one 'load_path=' value is permitted")
         else:
-            load_path = load_paths[0].split('=', 1)[1]
+            load_path = load_paths[0].split("=", 1)[1]
     load_path = _check_load_paths(load_path)
 
     aug = _Augeas(loadpath=load_path)
-    ret = {'retval': False}
+    ret = {"retval": False}
 
     tuples = [
-        x for x in args
-        if not six.text_type(x).startswith('prefix=') and
-        not six.text_type(x).startswith('load_path=')]
-    prefix = [x for x in args if six.text_type(x).startswith('prefix=')]
+        x
+        for x in args
+        if not six.text_type(x).startswith("prefix=")
+        and not six.text_type(x).startswith("load_path=")
+    ]
+    prefix = [x for x in args if six.text_type(x).startswith("prefix=")]
     if prefix:
         if len(prefix) > 1:
-            raise SaltInvocationError(
-                'Only one \'prefix=\' value is permitted'
-            )
+            raise SaltInvocationError("Only one 'prefix=' value is permitted")
         else:
-            prefix = prefix[0].split('=', 1)[1]
+            prefix = prefix[0].split("=", 1)[1]
 
     if len(tuples) % 2 != 0:
-        raise SaltInvocationError('Uneven number of path/value arguments')
+        raise SaltInvocationError("Uneven number of path/value arguments")
 
     tuple_iter = iter(tuples)
     for path, value in zip(tuple_iter, tuple_iter):
         target_path = path
         if prefix:
-            target_path = os.path.join(prefix.rstrip('/'), path.lstrip('/'))
+            target_path = os.path.join(prefix.rstrip("/"), path.lstrip("/"))
         try:
             aug.set(target_path, six.text_type(value))
         except ValueError as err:
-            ret['error'] = 'Multiple values: {0}'.format(err)
+            ret["error"] = "Multiple values: {0}".format(err)
 
     try:
         aug.save()
-        ret['retval'] = True
+        ret["retval"] = True
     except IOError as err:
-        ret['error'] = six.text_type(err)
+        ret["error"] = six.text_type(err)
     return ret
 
 
-def match(path, value='', load_path=None):
-    '''
+def match(path, value="", load_path=None):
+    """
     Get matches for path expression
 
     CLI Example:
@@ -413,7 +416,7 @@ def match(path, value='', load_path=None):
         A colon-spearated list of directories that modules should be searched
         in. This is in addition to the standard load path and the directories
         in AUGEAS_LENS_LIB.
-    '''
+    """
     load_path = _check_load_paths(load_path)
 
     aug = _Augeas(loadpath=load_path)
@@ -433,7 +436,7 @@ def match(path, value='', load_path=None):
 
 
 def remove(path, load_path=None):
-    '''
+    """
     Get matches for path expression
 
     CLI Example:
@@ -452,28 +455,28 @@ def remove(path, load_path=None):
         A colon-spearated list of directories that modules should be searched
         in. This is in addition to the standard load path and the directories
         in AUGEAS_LENS_LIB.
-    '''
+    """
     load_path = _check_load_paths(load_path)
 
     aug = _Augeas(loadpath=load_path)
-    ret = {'retval': False}
+    ret = {"retval": False}
     try:
         count = aug.remove(path)
         aug.save()
         if count == -1:
-            ret['error'] = 'Invalid node'
+            ret["error"] = "Invalid node"
         else:
-            ret['retval'] = True
+            ret["retval"] = True
     except (RuntimeError, IOError) as err:
-        ret['error'] = six.text_type(err)
+        ret["error"] = six.text_type(err)
 
-    ret['count'] = count
+    ret["count"] = count
 
     return ret
 
 
 def ls(path, load_path=None):  # pylint: disable=C0103
-    '''
+    """
     List the direct children of a node
 
     CLI Example:
@@ -491,9 +494,10 @@ def ls(path, load_path=None):  # pylint: disable=C0103
         A colon-spearated list of directories that modules should be searched
         in. This is in addition to the standard load path and the directories
         in AUGEAS_LENS_LIB.
-    '''
+    """
+
     def _match(path):
-        ''' Internal match function '''
+        """ Internal match function """
         try:
             matches = aug.match(salt.utils.stringutils.to_str(path))
         except RuntimeError:
@@ -508,23 +512,23 @@ def ls(path, load_path=None):  # pylint: disable=C0103
 
     aug = _Augeas(loadpath=load_path)
 
-    path = path.rstrip('/') + '/'
-    match_path = path + '*'
+    path = path.rstrip("/") + "/"
+    match_path = path + "*"
 
     matches = _match(match_path)
     ret = {}
 
     for key, value in six.iteritems(matches):
         name = _lstrip_word(key, path)
-        if _match(key + '/*'):
-            ret[name + '/'] = value  # has sub nodes, e.g. directory
+        if _match(key + "/*"):
+            ret[name + "/"] = value  # has sub nodes, e.g. directory
         else:
             ret[name] = value
     return ret
 
 
 def tree(path, load_path=None):
-    '''
+    """
     Returns recursively the complete tree of a node
 
     CLI Example:
@@ -542,11 +546,11 @@ def tree(path, load_path=None):
         A colon-spearated list of directories that modules should be searched
         in. This is in addition to the standard load path and the directories
         in AUGEAS_LENS_LIB.
-    '''
+    """
     load_path = _check_load_paths(load_path)
 
     aug = _Augeas(loadpath=load_path)
 
-    path = path.rstrip('/') + '/'
+    path = path.rstrip("/") + "/"
     match_path = path
     return dict([i for i in _recurmatch(match_path, aug)])

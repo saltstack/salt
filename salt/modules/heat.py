@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Module for handling OpenStack Heat calls
 
 .. versionadded:: 2017.7.0
@@ -38,26 +38,29 @@ Module for handling OpenStack Heat calls
     For example::
 
         salt '*' heat.flavor_list profile=openstack1
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import time
-import logging
 
-# Import Salt libs
-from salt.exceptions import SaltInvocationError
-from salt.ext import six
+import logging
+import time
+
 import salt.utils.files
 import salt.utils.json
 import salt.utils.stringutils
 import salt.utils.versions
 import salt.utils.yaml
 
+# Import Salt libs
+from salt.exceptions import SaltInvocationError
+from salt.ext import six
+
 # pylint: disable=import-error
 HAS_HEAT = False
 try:
     import heatclient
+
     HAS_HEAT = True
 except ImportError:
     pass
@@ -65,119 +68,126 @@ except ImportError:
 HAS_OSLO = False
 try:
     from oslo_serialization import jsonutils
+
     HAS_OSLO = True
 except ImportError:
     pass
 
-SECTIONS = (
-    PARAMETER_DEFAULTS,
-    PARAMETERS,
-    RESOURCE_REGISTRY,
-    EVENT_SINKS) = (
-    'parameter_defaults',
-    'parameters',
-    'resource_registry',
-    'event_sinks')
+SECTIONS = (PARAMETER_DEFAULTS, PARAMETERS, RESOURCE_REGISTRY, EVENT_SINKS) = (
+    "parameter_defaults",
+    "parameters",
+    "resource_registry",
+    "event_sinks",
+)
 
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     Only load this module if heat
     is installed on this minion.
-    '''
+    """
     if HAS_HEAT and HAS_OSLO:
-        return 'heat'
-    return (False, 'The heat execution module cannot be loaded: '
-                   'the heatclient and oslo_serialization'
-                   # 'the heatclient and keystoneclient and oslo_serialization'
-                   ' python library is not available.')
+        return "heat"
+    return (
+        False,
+        "The heat execution module cannot be loaded: "
+        "the heatclient and oslo_serialization"
+        # 'the heatclient and keystoneclient and oslo_serialization'
+        " python library is not available.",
+    )
 
 
 __opts__ = {}
 
 
 def _auth(profile=None, api_version=1, **connection_args):
-    '''
+    """
     Set up heat credentials, returns
     `heatclient.client.Client`. Optional parameter
     "api_version" defaults to 1.
 
     Only intended to be used within heat-enabled modules
-    '''
+    """
 
     if profile:
-        prefix = profile + ':keystone.'
+        prefix = profile + ":keystone."
     else:
-        prefix = 'keystone.'
+        prefix = "keystone."
 
     def get(key, default=None):
-        '''
+        """
         Checks connection_args, then salt-minion config,
         falls back to specified default value.
-        '''
-        return connection_args.get('connection_' + key,
-                                   __salt__['config.get'](prefix + key, default))
+        """
+        return connection_args.get(
+            "connection_" + key, __salt__["config.get"](prefix + key, default)
+        )
 
-    user = get('user', 'admin')
-    password = get('password', None)
-    tenant = get('tenant', 'admin')
-    tenant_id = get('tenant_id')
-    auth_url = get('auth_url', 'http://127.0.0.1:35357/v2.0')
-    insecure = get('insecure', False)
-    admin_token = get('token')
-    region_name = get('region_name', None)
+    user = get("user", "admin")
+    password = get("password", None)
+    tenant = get("tenant", "admin")
+    tenant_id = get("tenant_id")
+    auth_url = get("auth_url", "http://127.0.0.1:35357/v2.0")
+    insecure = get("insecure", False)
+    admin_token = get("token")
+    region_name = get("region_name", None)
 
     if admin_token and api_version != 1 and not password:
         # If we had a password we could just
         # ignore the admin-token and move on...
-        raise SaltInvocationError('Only can use keystone admin token ' +
-                                  'with Heat API v1')
+        raise SaltInvocationError(
+            "Only can use keystone admin token " + "with Heat API v1"
+        )
     elif password:
         # Can't use the admin-token anyway
-        kwargs = {'username': user,
-                  'password': password,
-                  'tenant_id': tenant_id,
-                  'auth_url': auth_url,
-                  'region_name': region_name,
-                  'tenant_name': tenant}
+        kwargs = {
+            "username": user,
+            "password": password,
+            "tenant_id": tenant_id,
+            "auth_url": auth_url,
+            "region_name": region_name,
+            "tenant_name": tenant,
+        }
         # 'insecure' keyword not supported by all v2.0 keystone clients
         #   this ensures it's only passed in when defined
         if insecure:
-            kwargs['insecure'] = True
+            kwargs["insecure"] = True
     elif api_version == 1 and admin_token:
-        kwargs = {'token': admin_token,
-                  'auth_url': auth_url}
+        kwargs = {"token": admin_token, "auth_url": auth_url}
     else:
-        raise SaltInvocationError('No credentials to authenticate with.')
+        raise SaltInvocationError("No credentials to authenticate with.")
 
-    token = __salt__['keystone.token_get'](profile)
-    kwargs['token'] = token['id']
+    token = __salt__["keystone.token_get"](profile)
+    kwargs["token"] = token["id"]
     # This doesn't realy prevent the password to show up
     # in the minion log as keystoneclient.session is
     # logging it anyway when in debug-mode
-    kwargs.pop('password')
+    kwargs.pop("password")
     try:
-        heat_endpoint = __salt__['keystone.endpoint_get']('heat', profile)['url']
+        heat_endpoint = __salt__["keystone.endpoint_get"]("heat", profile)["url"]
     except KeyError:
-        heat_endpoint = __salt__['keystone.endpoint_get']('heat', profile)['publicurl']
+        heat_endpoint = __salt__["keystone.endpoint_get"]("heat", profile)["publicurl"]
     heat_endpoint = heat_endpoint % token
-    log.debug('Calling heatclient.client.Client(' +
-              '{0}, {1}, **{2})'.format(api_version, heat_endpoint,
-                                        kwargs))
+    log.debug(
+        "Calling heatclient.client.Client(%s, %s, **%s)",
+        api_version,
+        heat_endpoint,
+        kwargs,
+    )
     # may raise exc.HTTPUnauthorized, exc.HTTPNotFound
     # but we deal with those elsewhere
     return heatclient.client.Client(api_version, endpoint=heat_endpoint, **kwargs)
 
 
 def _parse_template(tmpl_str):
-    '''
+    """
     Parsing template
-    '''
+    """
     tmpl_str = tmpl_str.strip()
-    if tmpl_str.startswith('{'):
+    if tmpl_str.startswith("{"):
         tpl = salt.utils.json.loads(tmpl_str)
     else:
         try:
@@ -187,17 +197,19 @@ def _parse_template(tmpl_str):
         else:
             if tpl is None:
                 tpl = {}
-    if not ('HeatTemplateFormatVersion' in tpl
-            or 'heat_template_version' in tpl
-            or 'AWSTemplateFormatVersion' in tpl):
-        raise ValueError(('Template format version not found.'))
+    if not (
+        "HeatTemplateFormatVersion" in tpl
+        or "heat_template_version" in tpl
+        or "AWSTemplateFormatVersion" in tpl
+    ):
+        raise ValueError(("Template format version not found."))
     return tpl
 
 
 def _parse_environment(env_str):
-    '''
+    """
     Parsing template
-    '''
+    """
     try:
         env = salt.utils.yaml.safe_load(env_str)
     except salt.utils.yaml.YAMLError as exc:
@@ -206,9 +218,7 @@ def _parse_environment(env_str):
         if env is None:
             env = {}
         elif not isinstance(env, dict):
-            raise ValueError(
-                'The environment is not a valid YAML mapping data type.'
-            )
+            raise ValueError("The environment is not a valid YAML mapping data type.")
 
     for param in env:
         if param not in SECTIONS:
@@ -218,50 +228,53 @@ def _parse_environment(env_str):
 
 
 def _get_stack_events(h_client, stack_id, event_args):
-    '''
+    """
     Get event for stack
-    '''
-    event_args['stack_id'] = stack_id
-    event_args['resource_name'] = None
+    """
+    event_args["stack_id"] = stack_id
+    event_args["resource_name"] = None
     try:
         events = h_client.events.list(**event_args)
     except heatclient.exc.HTTPNotFound as exc:
         raise heatclient.exc.CommandError(six.text_type(exc))
     else:
         for event in events:
-            event.stack_name = stack_id.split('/')[0]
+            event.stack_name = stack_id.split("/")[0]
         return events
 
 
-def _poll_for_events(h_client, stack_name, action=None, poll_period=5,
-                     timeout=60, marker=None):
-    '''
+def _poll_for_events(
+    h_client, stack_name, action=None, poll_period=5, timeout=60, marker=None
+):
+    """
     Polling stack events
-    '''
+    """
     if action:
-        stop_status = ('{0}_FAILED'.format(action), '{0}_COMPLETE'.format(action))
+        stop_status = ("{0}_FAILED".format(action), "{0}_COMPLETE".format(action))
         stop_check = lambda a: a in stop_status
     else:
-        stop_check = lambda a: a.endswith('_COMPLETE') or a.endswith('_FAILED')
+        stop_check = lambda a: a.endswith("_COMPLETE") or a.endswith("_FAILED")
     timeout_sec = timeout * 60
     no_event_polls = 0
-    msg_template = ('\n Stack %(name)s %(status)s \n')
+    msg_template = "\n Stack %(name)s %(status)s \n"
     while True:
-        events = _get_stack_events(h_client, stack_id=stack_name,
-                                   event_args={'sort_dir': 'asc', 'marker': marker})
+        events = _get_stack_events(
+            h_client,
+            stack_id=stack_name,
+            event_args={"sort_dir": "asc", "marker": marker},
+        )
 
         if len(events) == 0:
             no_event_polls += 1
         else:
             no_event_polls = 0
             # set marker to last event that was received.
-            marker = getattr(events[-1], 'id', None)
+            marker = getattr(events[-1], "id", None)
             for event in events:
                 # check if stack event was also received
-                if getattr(event, 'resource_name', '') == stack_name:
-                    stack_status = getattr(event, 'resource_status', '')
-                    msg = msg_template % dict(
-                        name=stack_name, status=stack_status)
+                if getattr(event, "resource_name", "") == stack_name:
+                    stack_status = getattr(event, "resource_status", "")
+                    msg = msg_template % dict(name=stack_name, status=stack_status)
                     if stop_check(stack_status):
                         return stack_status, msg
 
@@ -269,8 +282,7 @@ def _poll_for_events(h_client, stack_name, action=None, poll_period=5,
             # after 2 polls with no events, fall back to a stack get
             stack = h_client.stacks.get(stack_name)
             stack_status = stack.stack_status
-            msg = msg_template % dict(
-                name=stack_name, status=stack_status)
+            msg = msg_template % dict(name=stack_name, status=stack_status)
             if stop_check(stack_status):
                 return stack_status, msg
             # go back to event polling again
@@ -279,13 +291,13 @@ def _poll_for_events(h_client, stack_name, action=None, poll_period=5,
         time.sleep(poll_period)
         timeout_sec -= poll_period
         if timeout_sec <= 0:
-            stack_status = '{0}_FAILED'.format(action)
-            msg = 'Timeout expired'
+            stack_status = "{0}_FAILED".format(action)
+            msg = "Timeout expired"
             return stack_status, msg
 
 
 def list_stack(profile=None):
-    '''
+    """
     Return a list of available stack (heat stack-list)
 
     profile
@@ -296,27 +308,27 @@ def list_stack(profile=None):
     .. code-block:: bash
 
         salt '*' heat.list_stack profile=openstack1
-    '''
+    """
     ret = {}
     h_client = _auth(profile)
     for stack in h_client.stacks.list():
         links = {}
         for link in stack.links:
-            links[link['rel']] = link['href']
+            links[link["rel"]] = link["href"]
         ret[stack.stack_name] = {
-            'status': stack.stack_status,
-            'id': stack.id,
-            'name': stack.stack_name,
-            'creation': stack.creation_time,
-            'owner': stack.stack_owner,
-            'reason': stack.stack_status_reason,
-            'links': links,
+            "status": stack.stack_status,
+            "id": stack.id,
+            "name": stack.stack_name,
+            "creation": stack.creation_time,
+            "owner": stack.stack_owner,
+            "reason": stack.stack_status_reason,
+            "links": links,
         }
     return ret
 
 
 def show_stack(name=None, profile=None):
-    '''
+    """
     Return details about a specific stack (heat stack-show)
 
     name
@@ -330,41 +342,34 @@ def show_stack(name=None, profile=None):
     .. code-block:: bash
 
         salt '*' heat.show_stack name=mystack profile=openstack1
-    '''
+    """
     h_client = _auth(profile)
     if not name:
-        return {
-            'result': False,
-            'comment':
-                'Parameter name missing or None'
-            }
+        return {"result": False, "comment": "Parameter name missing or None"}
     try:
         ret = {}
         stack = h_client.stacks.get(name)
         links = {}
         for link in stack.links:
-            links[link['rel']] = link['href']
+            links[link["rel"]] = link["href"]
         ret[stack.stack_name] = {
-            'status': stack.stack_status,
-            'id': stack.id,
-            'name': stack.stack_name,
-            'creation': stack.creation_time,
-            'owner': stack.stack_owner,
-            'reason': stack.stack_status_reason,
-            'parameters': stack.parameters,
-            'links': links,
+            "status": stack.stack_status,
+            "id": stack.id,
+            "name": stack.stack_name,
+            "creation": stack.creation_time,
+            "owner": stack.stack_owner,
+            "reason": stack.stack_status_reason,
+            "parameters": stack.parameters,
+            "links": links,
         }
-        ret['result'] = True
+        ret["result"] = True
     except heatclient.exc.HTTPNotFound:
-        return {
-            'result': False,
-            'comment': 'No stack {0}'.format(name)
-            }
+        return {"result": False, "comment": "No stack {0}".format(name)}
     return ret
 
 
 def delete_stack(name=None, poll=0, timeout=60, profile=None):
-    '''
+    """
     Delete a stack (heat stack-delete)
 
     name
@@ -386,53 +391,58 @@ def delete_stack(name=None, poll=0, timeout=60, profile=None):
 
         salt '*' heat.delete_stack name=mystack poll=5 \\
                  profile=openstack1
-    '''
+    """
     h_client = _auth(profile)
-    ret = {
-        'result': True,
-        'comment': ''
-    }
+    ret = {"result": True, "comment": ""}
     if not name:
-        ret['result'] = False
-        ret['comment'] = 'Parameter name missing or None'
+        ret["result"] = False
+        ret["comment"] = "Parameter name missing or None"
         return ret
     try:
         h_client.stacks.delete(name)
     except heatclient.exc.HTTPNotFound:
-        ret['result'] = False
-        ret['comment'] = 'No stack {0}'.format(name)
+        ret["result"] = False
+        ret["comment"] = "No stack {0}".format(name)
     except heatclient.exc.HTTPForbidden as forbidden:
         log.exception(forbidden)
-        ret['result'] = False
-        ret['comment'] = six.text_type(forbidden)
-    if ret['result'] is False:
+        ret["result"] = False
+        ret["comment"] = six.text_type(forbidden)
+    if ret["result"] is False:
         return ret
 
     if poll > 0:
         try:
-            stack_status, msg = _poll_for_events(h_client, name, action='DELETE',
-                                                 poll_period=poll, timeout=timeout)
+            stack_status, msg = _poll_for_events(
+                h_client, name, action="DELETE", poll_period=poll, timeout=timeout
+            )
         except heatclient.exc.CommandError:
-            ret['comment'] = 'Deleted stack {0}.'.format(name)
+            ret["comment"] = "Deleted stack {0}.".format(name)
             return ret
         except Exception as ex:  # pylint: disable=W0703
-            log.exception('Delete failed {0}'.format(ex))
-            ret['result'] = False
-            ret['comment'] = '{0}'.format(ex)
+            log.exception("Delete failed {0}".format(ex))
+            ret["result"] = False
+            ret["comment"] = "{0}".format(ex)
             return ret
 
-        if stack_status == 'DELETE_FAILED':
-            ret['result'] = False
-            ret['comment'] = 'Deleted stack FAILED\'{0}\'{1}.'.format(name, msg)
+        if stack_status == "DELETE_FAILED":
+            ret["result"] = False
+            ret["comment"] = "Deleted stack FAILED'{0}'{1}.".format(name, msg)
         else:
-            ret['comment'] = 'Deleted stack {0}.'.format(name)
+            ret["comment"] = "Deleted stack {0}.".format(name)
     return ret
 
 
-def create_stack(name=None, template_file=None, environment=None,
-                 parameters=None, poll=0, rollback=False, timeout=60,
-                 profile=None, enviroment=None):
-    '''
+def create_stack(
+    name=None,
+    template_file=None,
+    environment=None,
+    parameters=None,
+    poll=0,
+    rollback=False,
+    timeout=60,
+    profile=None,
+):
+    """
     Create a stack (heat stack-create)
 
     name
@@ -472,40 +482,33 @@ def create_stack(name=None, template_file=None, environment=None,
     .. versionadded:: 2017.7.5,2018.3.1
 
         The spelling mistake in parameter `enviroment` was corrected to `environment`.
-        The misspelled version is still supported for backward compatibility, but will
-        be removed in Salt Neon.
+        The `enviroment` spelling mistake has been removed in Salt 3000.
 
-    '''
-    if environment is None and enviroment is not None:
-        salt.utils.versions.warn_until('Neon', (
-            "Please use the 'environment' parameter instead of the misspelled 'enviroment' "
-            "parameter which will be removed in Salt Neon."
-        ))
-        environment = enviroment
+    """
     h_client = _auth(profile)
-    ret = {
-        'result': True,
-        'comment': ''
-    }
+    ret = {"result": True, "comment": ""}
     if not parameters:
         parameters = {}
     if template_file:
         template_tmp_file = salt.utils.files.mkstemp()
-        tsfn, source_sum, comment_ = __salt__['file.get_managed'](
+        tsfn, source_sum, comment_ = __salt__["file.get_managed"](
             name=template_tmp_file,
             template=None,
             source=template_file,
             source_hash=None,
+            source_hash_name=None,
             user=None,
             group=None,
             mode=None,
-            saltenv='base',
+            attrs=None,
+            saltenv="base",
             context=None,
             defaults=None,
             skip_verify=False,
-            kwargs=None)
+            kwargs=None,
+        )
 
-        template_manage_result = __salt__['file.manage_file'](
+        template_manage_result = __salt__["file.manage_file"](
             name=template_tmp_file,
             sfn=tsfn,
             ret=None,
@@ -514,58 +517,65 @@ def create_stack(name=None, template_file=None, environment=None,
             user=None,
             group=None,
             mode=None,
-            saltenv='base',
+            attrs=None,
+            saltenv="base",
             backup=None,
             makedirs=True,
             template=None,
             show_changes=False,
             contents=None,
-            dir_mode=None)
-        if template_manage_result['result']:
-            with salt.utils.files.fopen(template_tmp_file, 'r') as tfp_:
+            dir_mode=None,
+        )
+        if template_manage_result["result"]:
+            with salt.utils.files.fopen(template_tmp_file, "r") as tfp_:
                 tpl = salt.utils.stringutils.to_unicode(tfp_.read())
                 salt.utils.files.safe_rm(template_tmp_file)
                 try:
                     template = _parse_template(tpl)
                 except ValueError as ex:
-                    ret['result'] = False
-                    ret['comment'] = 'Error parsing template {0}'.format(ex)
+                    ret["result"] = False
+                    ret["comment"] = "Error parsing template {0}".format(ex)
         else:
-            ret['result'] = False
-            ret['comment'] = 'Can not open template: {0} {1}'.format(template_file, comment_)
+            ret["result"] = False
+            ret["comment"] = "Can not open template: {0} {1}".format(
+                template_file, comment_
+            )
     else:
-        ret['result'] = False
-        ret['comment'] = 'Can not open template'
-    if ret['result'] is False:
+        ret["result"] = False
+        ret["comment"] = "Can not open template"
+    if ret["result"] is False:
         return ret
 
     kwargs = {}
-    kwargs['template'] = template
+    kwargs["template"] = template
     try:
         h_client.stacks.validate(**kwargs)
     except Exception as ex:  # pylint: disable=W0703
-        log.exception('Template not valid {0}'.format(ex))
-        ret['result'] = False
-        ret['comment'] = 'Template not valid {0}'.format(ex)
+        log.exception("Template not valid {0}".format(ex))
+        ret["result"] = False
+        ret["comment"] = "Template not valid {0}".format(ex)
         return ret
     env = {}
     if environment:
         environment_tmp_file = salt.utils.files.mkstemp()
-        esfn, source_sum, comment_ = __salt__['file.get_managed'](
+        esfn, source_sum, comment_ = __salt__["file.get_managed"](
             name=environment_tmp_file,
             template=None,
             source=environment,
             source_hash=None,
+            source_hash_name=None,
             user=None,
             group=None,
             mode=None,
-            saltenv='base',
+            attrs=None,
+            saltenv="base",
             context=None,
             defaults=None,
             skip_verify=False,
-            kwargs=None)
+            kwargs=None,
+        )
 
-        environment_manage_result = __salt__['file.manage_file'](
+        environment_manage_result = __salt__["file.manage_file"](
             name=environment_tmp_file,
             sfn=esfn,
             ret=None,
@@ -574,60 +584,72 @@ def create_stack(name=None, template_file=None, environment=None,
             user=None,
             group=None,
             mode=None,
-            saltenv='base',
+            attrs=None,
+            saltenv="base",
             backup=None,
             makedirs=True,
             template=None,
             show_changes=False,
             contents=None,
-            dir_mode=None)
-        if environment_manage_result['result']:
-            with salt.utils.files.fopen(environment_tmp_file, 'r') as efp_:
+            dir_mode=None,
+        )
+        if environment_manage_result["result"]:
+            with salt.utils.files.fopen(environment_tmp_file, "r") as efp_:
                 env_str = salt.utils.stringutils.to_unicode(efp_.read())
                 salt.utils.files.safe_rm(environment_tmp_file)
                 try:
                     env = _parse_environment(env_str)
                 except ValueError as ex:
-                    ret['result'] = False
-                    ret['comment'] = 'Error parsing template {0}'.format(ex)
+                    ret["result"] = False
+                    ret["comment"] = "Error parsing template {0}".format(ex)
         else:
-            ret['result'] = False
-            ret['comment'] = 'Can not open environment: {0}, {1}'.format(environment, comment_)
-    if ret['result'] is False:
+            ret["result"] = False
+            ret["comment"] = "Can not open environment: {0}, {1}".format(
+                environment, comment_
+            )
+    if ret["result"] is False:
         return ret
 
     fields = {
-        'stack_name': name,
-        'disable_rollback': not rollback,
-        'parameters': parameters,
-        'template': template,
-        'environment': env,
-        'timeout_mins': timeout
+        "stack_name": name,
+        "disable_rollback": not rollback,
+        "parameters": parameters,
+        "template": template,
+        "environment": env,
+        "timeout_mins": timeout,
     }
 
     # If one or more environments is found, pass the listing to the server
     try:
         h_client.stacks.create(**fields)
     except Exception as ex:  # pylint: disable=W0703
-        log.exception('Create failed {0}'.format(ex))
-        ret['result'] = False
-        ret['comment'] = '{0}'.format(ex)
+        log.exception("Create failed {0}".format(ex))
+        ret["result"] = False
+        ret["comment"] = "{0}".format(ex)
         return ret
     if poll > 0:
-        stack_status, msg = _poll_for_events(h_client, name, action='CREATE',
-                                             poll_period=poll, timeout=timeout)
-        if stack_status == 'CREATE_FAILED':
-            ret['result'] = False
-            ret['comment'] = 'Created stack FAILED\'{0}\'{1}.'.format(name, msg)
-    if ret['result'] is True:
-        ret['comment'] = 'Created stack \'{0}\'.'.format(name)
+        stack_status, msg = _poll_for_events(
+            h_client, name, action="CREATE", poll_period=poll, timeout=timeout
+        )
+        if stack_status == "CREATE_FAILED":
+            ret["result"] = False
+            ret["comment"] = "Created stack FAILED'{0}'{1}.".format(name, msg)
+    if ret["result"] is True:
+        ret["comment"] = "Created stack '{0}'.".format(name)
     return ret
 
 
-def update_stack(name=None, template_file=None, environment=None,
-                 parameters=None, poll=0, rollback=False, timeout=60,
-                 profile=None, enviroment=None):
-    '''
+def update_stack(
+    name=None,
+    template_file=None,
+    environment=None,
+    parameters=None,
+    poll=0,
+    rollback=False,
+    timeout=60,
+    profile=None,
+):
+    """
     Update a stack (heat stack-template)
 
     name
@@ -667,44 +689,37 @@ def update_stack(name=None, template_file=None, environment=None,
     .. versionadded:: 2017.7.5,2018.3.1
 
         The spelling mistake in parameter `enviroment` was corrected to `environment`.
-        The misspelled version is still supported for backward compatibility, but will
-        be removed in Salt Neon.
+        The `enviroment` spelling mistake has been removed in Salt 3000.
 
-    '''
-    if environment is None and enviroment is not None:
-        salt.utils.versions.warn_until('Neon', (
-            "Please use the 'environment' parameter instead of the misspelled 'enviroment' "
-            "parameter which will be removed in Salt Neon."
-        ))
-        environment = enviroment
+    """
     h_client = _auth(profile)
-    ret = {
-        'result': True,
-        'comment': ''
-    }
+    ret = {"result": True, "comment": ""}
     if not name:
-        ret['result'] = False
-        ret['comment'] = 'Parameter name missing or None'
+        ret["result"] = False
+        ret["comment"] = "Parameter name missing or None"
         return ret
     if not parameters:
         parameters = {}
     if template_file:
         template_tmp_file = salt.utils.files.mkstemp()
-        tsfn, source_sum, comment_ = __salt__['file.get_managed'](
+        tsfn, source_sum, comment_ = __salt__["file.get_managed"](
             name=template_tmp_file,
             template=None,
             source=template_file,
             source_hash=None,
+            source_hash_name=None,
             user=None,
             group=None,
             mode=None,
-            saltenv='base',
+            attrs=None,
+            saltenv="base",
             context=None,
             defaults=None,
             skip_verify=False,
-            kwargs=None)
+            kwargs=None,
+        )
 
-        template_manage_result = __salt__['file.manage_file'](
+        template_manage_result = __salt__["file.manage_file"](
             name=template_tmp_file,
             sfn=tsfn,
             ret=None,
@@ -713,58 +728,65 @@ def update_stack(name=None, template_file=None, environment=None,
             user=None,
             group=None,
             mode=None,
-            saltenv='base',
+            attrs=None,
+            saltenv="base",
             backup=None,
             makedirs=True,
             template=None,
             show_changes=False,
             contents=None,
-            dir_mode=None)
-        if template_manage_result['result']:
-            with salt.utils.files.fopen(template_tmp_file, 'r') as tfp_:
+            dir_mode=None,
+        )
+        if template_manage_result["result"]:
+            with salt.utils.files.fopen(template_tmp_file, "r") as tfp_:
                 tpl = salt.utils.stringutils.to_unicode(tfp_.read())
                 salt.utils.files.safe_rm(template_tmp_file)
                 try:
                     template = _parse_template(tpl)
                 except ValueError as ex:
-                    ret['result'] = False
-                    ret['comment'] = 'Error parsing template {0}'.format(ex)
+                    ret["result"] = False
+                    ret["comment"] = "Error parsing template {0}".format(ex)
         else:
-            ret['result'] = False
-            ret['comment'] = 'Can not open template: {0} {1}'.format(template_file, comment_)
+            ret["result"] = False
+            ret["comment"] = "Can not open template: {0} {1}".format(
+                template_file, comment_
+            )
     else:
-        ret['result'] = False
-        ret['comment'] = 'Can not open template'
-    if ret['result'] is False:
+        ret["result"] = False
+        ret["comment"] = "Can not open template"
+    if ret["result"] is False:
         return ret
 
     kwargs = {}
-    kwargs['template'] = template
+    kwargs["template"] = template
     try:
         h_client.stacks.validate(**kwargs)
     except Exception as ex:  # pylint: disable=W0703
-        log.exception('Template not valid {0}'.format(ex))
-        ret['result'] = False
-        ret['comment'] = 'Template not valid {0}'.format(ex)
+        log.exception("Template not valid {0}".format(ex))
+        ret["result"] = False
+        ret["comment"] = "Template not valid {0}".format(ex)
         return ret
     env = {}
     if environment:
         environment_tmp_file = salt.utils.files.mkstemp()
-        esfn, source_sum, comment_ = __salt__['file.get_managed'](
+        esfn, source_sum, comment_ = __salt__["file.get_managed"](
             name=environment_tmp_file,
             template=None,
             source=environment,
             source_hash=None,
+            source_hash_name=None,
             user=None,
             group=None,
             mode=None,
-            saltenv='base',
+            attrs=None,
+            saltenv="base",
             context=None,
             defaults=None,
             skip_verify=False,
-            kwargs=None)
+            kwargs=None,
+        )
 
-        environment_manage_result = __salt__['file.manage_file'](
+        environment_manage_result = __salt__["file.manage_file"](
             name=environment_tmp_file,
             sfn=esfn,
             ret=None,
@@ -773,57 +795,62 @@ def update_stack(name=None, template_file=None, environment=None,
             user=None,
             group=None,
             mode=None,
-            saltenv='base',
+            attrs=None,
+            saltenv="base",
             backup=None,
             makedirs=True,
             template=None,
             show_changes=False,
             contents=None,
-            dir_mode=None)
-        if environment_manage_result['result']:
-            with salt.utils.files.fopen(environment_tmp_file, 'r') as efp_:
+            dir_mode=None,
+        )
+        if environment_manage_result["result"]:
+            with salt.utils.files.fopen(environment_tmp_file, "r") as efp_:
                 env_str = salt.utils.stringutils.to_unicode(efp_.read())
                 salt.utils.files.safe_rm(environment_tmp_file)
                 try:
                     env = _parse_environment(env_str)
                 except ValueError as ex:
-                    ret['result'] = False
-                    ret['comment'] = 'Error parsing template {0}'.format(ex)
+                    ret["result"] = False
+                    ret["comment"] = "Error parsing template {0}".format(ex)
         else:
-            ret['result'] = False
-            ret['comment'] = 'Can not open environment: {0}, {1}'.format(environment, comment_)
-    if ret['result'] is False:
+            ret["result"] = False
+            ret["comment"] = "Can not open environment: {0}, {1}".format(
+                environment, comment_
+            )
+    if ret["result"] is False:
         return ret
 
     fields = {
-        'disable_rollback': not rollback,
-        'parameters': parameters,
-        'template': template,
-        'environment': env,
-        'timeout_mins': timeout
+        "disable_rollback": not rollback,
+        "parameters": parameters,
+        "template": template,
+        "environment": env,
+        "timeout_mins": timeout,
     }
 
     try:
         h_client.stacks.update(name, **fields)
     except Exception as ex:  # pylint: disable=W0703
-        log.exception('Update failed {0}'.format(ex))
-        ret['result'] = False
-        ret['comment'] = 'Update failed {0}'.format(ex)
+        log.exception("Update failed {0}".format(ex))
+        ret["result"] = False
+        ret["comment"] = "Update failed {0}".format(ex)
         return ret
 
     if poll > 0:
-        stack_status, msg = _poll_for_events(h_client, name, action='UPDATE',
-                                             poll_period=poll, timeout=timeout)
-        if stack_status == 'UPDATE_FAILED':
-            ret['result'] = False
-            ret['comment'] = 'Updated stack FAILED\'{0}\'{1}.'.format(name, msg)
-    if ret['result'] is True:
-        ret['comment'] = 'Updated stack \'{0}\'.'.format(name),
+        stack_status, msg = _poll_for_events(
+            h_client, name, action="UPDATE", poll_period=poll, timeout=timeout
+        )
+        if stack_status == "UPDATE_FAILED":
+            ret["result"] = False
+            ret["comment"] = "Updated stack FAILED'{0}'{1}.".format(name, msg)
+    if ret["result"] is True:
+        ret["comment"] = ("Updated stack '{0}'.".format(name),)
     return ret
 
 
 def template_stack(name=None, profile=None):
-    '''
+    """
     Return template a specific stack (heat stack-template)
 
     name
@@ -837,36 +864,22 @@ def template_stack(name=None, profile=None):
     .. code-block:: bash
 
         salt '*' heat.template_stack name=mystack profile=openstack1
-    '''
+    """
     h_client = _auth(profile)
 
     if not name:
-        return {
-            'result': False,
-            'comment':
-                'Parameter name missing or None'
-            }
+        return {"result": False, "comment": "Parameter name missing or None"}
     try:
         get_template = h_client.stacks.template(name)
     except heatclient.exc.HTTPNotFound:
-        return {
-            'result': False,
-            'comment': 'No stack with {0}'.format(name)
-            }
+        return {"result": False, "comment": "No stack with {0}".format(name)}
     except heatclient.exc.BadRequest:
-        return {
-            'result': False,
-            'comment': 'Bad request fot stack {0}'.format(name)
-            }
-    if 'heat_template_version' in get_template:
+        return {"result": False, "comment": "Bad request fot stack {0}".format(name)}
+    if "heat_template_version" in get_template:
         template = salt.utils.yaml.safe_dump(get_template)
     else:
         template = jsonutils.dumps(get_template, indent=2, ensure_ascii=False)
 
-    checksum = __salt__['hashutil.digest'](template)
-    ret = {
-        'template': template,
-        'result': True,
-        'checksum': checksum
-    }
+    checksum = __salt__["hashutil.digest"](template)
+    ret = {"template": template, "result": True, "checksum": checksum}
     return ret

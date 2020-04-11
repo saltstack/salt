@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Support for scheduling celery tasks. The worker is independent of salt and thus can run in a different
 virtualenv or on a different python version, as long as broker, backend and serializer configurations match.
 Also note that celery and packages required by the celery broker, e.g. redis must be installed to load
@@ -7,14 +7,16 @@ the salt celery execution module.
 
 .. note::
     A new app (and thus new connections) is created for each task execution
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
+import sys
 
 # Import salt libs
 from salt.exceptions import SaltInvocationError
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -22,24 +24,37 @@ log = logging.getLogger(__name__)
 # Import third party libs
 try:
     from celery import Celery
-    from celery.exceptions import TimeoutError
+    from celery.exceptions import TimeoutError  # pylint: disable=no-name-in-module
+
     HAS_CELERY = True
 except ImportError:
     HAS_CELERY = False
 
 
 def __virtual__():
-    '''
+    """
     Only load if celery libraries exist.
-    '''
+    """
     if not HAS_CELERY:
-        return False, 'The celery module could not be loaded: celery library not found'
+        return False, "The celery module could not be loaded: celery library not found"
     return True
 
 
-def run_task(task_name, args=None, kwargs=None, broker=None, backend=None, wait_for_result=False, timeout=None,
-             propagate=True, interval=0.5, no_ack=True, raise_timeout=True, config=None):
-    '''
+def run_task(
+    task_name,
+    args=None,
+    kwargs=None,
+    broker=None,
+    backend=None,
+    wait_for_result=False,
+    timeout=None,
+    propagate=True,
+    interval=0.5,
+    no_ack=True,
+    raise_timeout=True,
+    config=None,
+):
+    """
     Execute celery tasks. For celery specific parameters see celery documentation.
 
 
@@ -86,9 +101,9 @@ def run_task(task_name, args=None, kwargs=None, broker=None, backend=None, wait_
     config
         Config dict for celery app, See celery documentation
 
-    '''
+    """
     if not broker:
-        raise SaltInvocationError('broker parameter is required')
+        raise SaltInvocationError("broker parameter is required")
 
     with Celery(broker=broker, backend=backend, set_as_current=False) as app:
         if config:
@@ -101,10 +116,16 @@ def run_task(task_name, args=None, kwargs=None, broker=None, backend=None, wait_
 
             if wait_for_result:
                 try:
-                    return async_result.get(timeout=timeout, propagate=propagate,
-                                            interval=interval, no_ack=no_ack)
+                    return async_result.get(
+                        timeout=timeout,
+                        propagate=propagate,
+                        interval=interval,
+                        no_ack=no_ack,
+                    )
                 except TimeoutError as ex:
-                    log.error('Waiting for the result of a celery task execution timed out.')
+                    log.error(
+                        "Waiting for the result of a celery task execution timed out."
+                    )
                     if raise_timeout:
-                        raise ex
+                        six.reraise(*sys.exc_info())
                     return False

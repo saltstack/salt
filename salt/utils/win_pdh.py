@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-r'''
+r"""
 Salt Util for getting system information with the Performance Data Helper (pdh).
 Counter information is gathered from current activity or log files.
 
@@ -31,50 +31,55 @@ Usage:
 
     # Get all counters for the Processor object
     salt.utils.win_pdh.get_all_counters('Processor')
-'''
-# https://www.cac.cornell.edu/wiki/index.php?title=Performance_Data_Helper_in_Python_with_win32pdh
+"""
+
 # https://docs.microsoft.com/en-us/windows/desktop/perfctrs/using-the-pdh-functions-to-consume-counter-data
 # Import python libs
 from __future__ import absolute_import, unicode_literals
+
+# https://www.cac.cornell.edu/wiki/index.php?title=Performance_Data_Helper_in_Python_with_win32pdh
 import logging
 import time
-
-# Import 3rd party libs
-try:
-    import pywintypes
-    import win32pdh
-    HAS_WINDOWS_MODULES = True
-except ImportError:
-    HAS_WINDOWS_MODULES = False
 
 # Import salt libs
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 
+# Import 3rd party libs
+try:
+    import pywintypes
+    import win32pdh
+
+    HAS_WINDOWS_MODULES = True
+except ImportError:
+    HAS_WINDOWS_MODULES = False
+
+
 log = logging.getLogger(__file__)
 
 # Define the virtual name
-__virtualname__ = 'pdh'
+__virtualname__ = "pdh"
 
 
 def __virtual__():
-    '''
+    """
     Only works on Windows systems with the PyWin32
-    '''
+    """
     if not salt.utils.platform.is_windows():
-        return False, 'salt.utils.win_pdh: Requires Windows'
+        return False, "salt.utils.win_pdh: Requires Windows"
 
     if not HAS_WINDOWS_MODULES:
-        return False, 'salt.utils.win_pdh: Missing required modules'
+        return False, "salt.utils.win_pdh: Missing required modules"
 
     return __virtualname__
 
 
 class Counter(object):
-    '''
+    """
     Counter object
     Has enumerations and functions for working with counters
-    '''
+    """
+
     # The dwType field from GetCounterInfo returns the following, or'ed.
     # These come from WinPerf.h
     PERF_SIZE_DWORD = 0x00000000
@@ -130,7 +135,7 @@ class Counter(object):
     PERF_DISPLAY_NO_SHOW = 0x40000000  # value is not displayed
 
     def build_counter(obj, instance, instance_index, counter):
-        r'''
+        r"""
         Makes a fully resolved counter path. Counter names are formatted like
         this:
 
@@ -161,12 +166,13 @@ class Counter(object):
 
         Raises:
             CommandExecutionError: If the path is invalid
-        '''
+        """
         path = win32pdh.MakeCounterPath(
-            (None, obj, instance, None, instance_index, counter), 0)
+            (None, obj, instance, None, instance_index, counter), 0
+        )
         if win32pdh.ValidatePath(path) is 0:
             return Counter(path, obj, instance, instance_index, counter)
-        raise CommandExecutionError('Invalid counter specified: {0}'.format(path))
+        raise CommandExecutionError("Invalid counter specified: {0}".format(path))
 
     build_counter = staticmethod(build_counter)
 
@@ -181,62 +187,63 @@ class Counter(object):
         self.type = None
 
     def add_to_query(self, query):
-        '''
+        """
         Add the current path to the query
 
         Args:
             query (obj):
                 The handle to the query to add the counter
-        '''
+        """
         self.handle = win32pdh.AddCounter(query, self.path)
 
     def get_info(self):
-        '''
+        """
         Get information about the counter
 
         .. note::
             GetCounterInfo sometimes crashes in the wrapper code. Fewer crashes
             if this is called after sampling data.
-        '''
+        """
         if not self.info:
             ci = win32pdh.GetCounterInfo(self.handle, 0)
             self.info = {
-                'type': ci[0],
-                'version': ci[1],
-                'scale': ci[2],
-                'default_scale': ci[3],
-                'user_data': ci[4],
-                'query_user_data': ci[5],
-                'full_path': ci[6],
-                'machine_name': ci[7][0],
-                'object_name': ci[7][1],
-                'instance_name': ci[7][2],
-                'parent_instance': ci[7][3],
-                'instance_index': ci[7][4],
-                'counter_name': ci[7][5],
-                'explain_text': ci[8]
+                "type": ci[0],
+                "version": ci[1],
+                "scale": ci[2],
+                "default_scale": ci[3],
+                "user_data": ci[4],
+                "query_user_data": ci[5],
+                "full_path": ci[6],
+                "machine_name": ci[7][0],
+                "object_name": ci[7][1],
+                "instance_name": ci[7][2],
+                "parent_instance": ci[7][3],
+                "instance_index": ci[7][4],
+                "counter_name": ci[7][5],
+                "explain_text": ci[8],
             }
         return self.info
 
     def value(self):
-        '''
+        """
         Return the counter value
 
         Returns:
             long: The counter value
-        '''
+        """
         (counter_type, value) = win32pdh.GetFormattedCounterValue(
-            self.handle, win32pdh.PDH_FMT_DOUBLE)
+            self.handle, win32pdh.PDH_FMT_DOUBLE
+        )
         self.type = counter_type
         return value
 
     def type_string(self):
-        '''
+        """
         Returns the names of the flags that are set in the Type field
 
         It can be used to format the counter.
-        '''
-        type = self.get_info()['type']
+        """
+        type = self.get_info()["type"]
         type_list = []
         for member in dir(self):
             if member.startswith("PERF_"):
@@ -250,17 +257,17 @@ class Counter(object):
 
 
 def list_objects():
-    '''
+    """
     Get a list of available counter objects on the system
 
     Returns:
         list: A list of counter objects
-    '''
+    """
     return sorted(win32pdh.EnumObjects(None, None, -1, 0))
 
 
 def list_counters(obj):
-    '''
+    """
     Get a list of counters available for the object
 
     Args:
@@ -270,12 +277,12 @@ def list_counters(obj):
 
     Returns:
         list: A list of counters available to the passed object
-    '''
+    """
     return win32pdh.EnumObjectItems(None, None, obj, -1, 0)[0]
 
 
 def list_instances(obj):
-    '''
+    """
     Get a list of instances available for the object
 
     Args:
@@ -285,12 +292,12 @@ def list_instances(obj):
 
     Returns:
         list: A list of instances available to the passed object
-    '''
+    """
     return win32pdh.EnumObjectItems(None, None, obj, -1, 0)[1]
 
 
 def build_counter_list(counter_list):
-    r'''
+    r"""
     Create a list of Counter objects to be used in the pdh query
 
     Args:
@@ -319,7 +326,7 @@ def build_counter_list(counter_list):
 
     Returns:
         list: A list of Counter objects
-    '''
+    """
     counters = []
     index = 0
     for obj, instance, counter_name in counter_list:
@@ -335,7 +342,7 @@ def build_counter_list(counter_list):
 
 
 def get_all_counters(obj, instance_list=None):
-    '''
+    """
     Get the values for all counters available to a Counter object
 
     Args:
@@ -350,7 +357,7 @@ def get_all_counters(obj, instance_list=None):
 
             .. note::
                 ``_Total`` is returned as ``*``
-    '''
+    """
     counters, instances_avail = win32pdh.EnumObjectItems(None, None, obj, -1, 0)
 
     if instance_list is None:
@@ -362,7 +369,7 @@ def get_all_counters(obj, instance_list=None):
     counter_list = []
     for counter in counters:
         for instance in instance_list:
-            instance = '*' if instance.lower() == '_total' else instance
+            instance = "*" if instance.lower() == "_total" else instance
             counter_list.append((obj, instance, counter))
         else:  # pylint: disable=useless-else-on-loop
             counter_list.append((obj, None, counter))
@@ -371,7 +378,7 @@ def get_all_counters(obj, instance_list=None):
 
 
 def get_counters(counter_list):
-    '''
+    """
     Get the values for the passes list of counters
 
     Args:
@@ -380,9 +387,9 @@ def get_counters(counter_list):
 
     Returns:
         dict: A dictionary of counters and their values
-    '''
+    """
     if not isinstance(counter_list, list):
-        raise CommandExecutionError('counter_list must be a list of tuples')
+        raise CommandExecutionError("counter_list must be a list of tuples")
 
     try:
         # Start a Query instances
@@ -407,7 +414,7 @@ def get_counters(counter_list):
             try:
                 ret.update({counter.path: counter.value()})
             except pywintypes.error as exc:
-                if exc.strerror == 'No data to return.':
+                if exc.strerror == "No data to return.":
                     # Some counters are not active and will throw an error if
                     # there is no data to return
                     continue
@@ -421,7 +428,7 @@ def get_counters(counter_list):
 
 
 def get_counter(obj, instance, counter):
-    '''
+    """
     Get the value of a single counter
 
     Args:
@@ -440,5 +447,5 @@ def get_counter(obj, instance, counter):
         counter (str):
             The name of the counter. Get a list of counters using the
             ``list_counters`` function
-    '''
+    """
     return get_counters([(obj, instance, counter)])
