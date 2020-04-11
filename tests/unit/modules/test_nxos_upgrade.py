@@ -21,23 +21,21 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Testing Libs
-from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase
-from tests.support.mock import MagicMock, patch
-
-from tests.unit.modules.nxos.nxos_n95k import N95KPlatform
-from tests.unit.modules.nxos.nxos_n93k import N93KPlatform
-from tests.unit.modules.nxos.nxos_n93klxc import N93KLXCPlatform
-from tests.unit.modules.nxos.nxos_n7k import N7KPlatform
-from tests.unit.modules.nxos.nxos_n5k import N5KPlatform
-from tests.unit.modules.nxos.nxos_n36k import N36KPlatform
-from tests.unit.modules.nxos.nxos_n3k import N3KPlatform
-
-from salt.exceptions import NxosError, CommandExecutionError
-
 # Import Salt Libs
 import salt.modules.nxos_upgrade as nxos_upgrade
+from salt.exceptions import CommandExecutionError, NxosError
+
+# Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.mock import MagicMock, patch
+from tests.support.unit import TestCase
+from tests.unit.modules.nxos.nxos_n3k import N3KPlatform
+from tests.unit.modules.nxos.nxos_n5k import N5KPlatform
+from tests.unit.modules.nxos.nxos_n7k import N7KPlatform
+from tests.unit.modules.nxos.nxos_n36k import N36KPlatform
+from tests.unit.modules.nxos.nxos_n93k import N93KPlatform
+from tests.unit.modules.nxos.nxos_n93klxc import N93KLXCPlatform
+from tests.unit.modules.nxos.nxos_n95k import N95KPlatform
 
 # pylint: disable-msg=C0103
 # pylint: disable-msg=C0301

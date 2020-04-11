@@ -164,16 +164,17 @@ the :mod:`salt.modules.nxos<salt.modules.nxos>` execution module.
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
+import copy
 import logging
 import multiprocessing
-import copy
 import re
 
 # Import Salt libs
 import salt.utils.nxos
-from salt.utils.vt_helper import SSHConnection
+from salt.exceptions import CommandExecutionError, NxosCliError
 from salt.utils.vt import TerminalException
-from salt.exceptions import NxosCliError, CommandExecutionError
+from salt.utils.vt_helper import SSHConnection
 
 log = logging.getLogger(__file__)
 
@@ -396,7 +397,7 @@ def _init_ssh(opts=None):
         )
         out, err = DEVICE_DETAILS[_worker_name()].sendline("terminal length 0")
         log.info("SSH session establised for process {}".format(_worker_name()))
-    except Exception as ex:
+    except Exception as ex:  # pylint: disable=broad-except
         log.error("Unable to connect to %s", opts["proxy"]["host"])
         log.error("Please check the following:\n")
         log.error(
@@ -418,7 +419,7 @@ def _ping_ssh():
     if _worker_name() not in DEVICE_DETAILS:
         try:
             _init_ssh()
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             return False
     try:
         return DEVICE_DETAILS[_worker_name()].conn.isalive()

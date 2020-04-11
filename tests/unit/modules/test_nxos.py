@@ -21,31 +21,18 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+# Import Salt Libs
+import salt.modules.cp as cp_module
+import salt.modules.file as file_module
+import salt.modules.nxos as nxos_module
+import salt.utils.nxos as nxos_utils
+import salt.utils.pycrypto
+from salt.exceptions import CommandExecutionError, SaltInvocationError
+
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import (
-    MagicMock,
-    patch,
-    create_autospec,
-)
-
-from tests.unit.modules.nxos.nxos_show_run import (
-    n9k_running_config,
-    n9k_show_running_config_list,
-    n9k_show_running_inc_username_list,
-)
-from tests.unit.modules.nxos.nxos_grains import n9k_grains
-from tests.unit.modules.nxos.nxos_show_cmd_output import (
-    n9k_get_user_output,
-    n9k_show_ver,
-    n9k_show_ver_list,
-    n9k_show_ver_int_list,
-    n9k_show_ver_int_list_structured,
-    n9k_show_user_account,
-    n9k_show_user_account_list,
-)
-
+from tests.support.mock import MagicMock, create_autospec, patch
+from tests.support.unit import TestCase, skipIf
 from tests.unit.modules.nxos.nxos_config import (
     config_input_file,
     config_result,
@@ -60,15 +47,21 @@ from tests.unit.modules.nxos.nxos_config import (
     template_engine_file_str_file,
     unset_role,
 )
-
-from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-# Import Salt Libs
-import salt.modules.nxos as nxos_module
-import salt.utils.nxos as nxos_utils
-import salt.modules.file as file_module
-import salt.modules.cp as cp_module
-import salt.utils.pycrypto
+from tests.unit.modules.nxos.nxos_grains import n9k_grains
+from tests.unit.modules.nxos.nxos_show_cmd_output import (
+    n9k_get_user_output,
+    n9k_show_user_account,
+    n9k_show_user_account_list,
+    n9k_show_ver,
+    n9k_show_ver_int_list,
+    n9k_show_ver_int_list_structured,
+    n9k_show_ver_list,
+)
+from tests.unit.modules.nxos.nxos_show_run import (
+    n9k_running_config,
+    n9k_show_running_config_list,
+    n9k_show_running_inc_username_list,
+)
 
 # pylint: disable-msg=C0103
 # pylint: disable-msg=C0301
@@ -597,7 +590,6 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
                         return_value=config_result,
                     ):
                         result = nxos_module.config(cmd_set, save_config=False)
-                        raise Exception(result)
                         self.assertEqual(result, expected_output)
 
     def test_config_commands_template_none(self):

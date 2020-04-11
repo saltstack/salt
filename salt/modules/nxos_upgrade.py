@@ -54,14 +54,14 @@ This module supports execution using a Proxy Minion or Native Minion:
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python stdlib
+import ast
 import logging
 import re
-import ast
 import time
-from salt.ext.six import string_types
 
 # Import Salt libs
-from salt.exceptions import NxosError, CommandExecutionError
+from salt.exceptions import CommandExecutionError, NxosError
+from salt.ext.six import string_types
 from salt.ext.six.moves import range
 
 __virtualname__ = "nxos"

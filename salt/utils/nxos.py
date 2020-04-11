@@ -19,28 +19,23 @@ Util functions for the NXOS modules.
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python std lib
+import collections
 import json
 import logging
 import os
-import socket
 import re
-import collections
-from salt.ext.six import string_types
-from salt.exceptions import (
-    NxosClientError,
-    NxosError,
-    NxosRequestNotSupported,
-    CommandExecutionError,
-)
+import socket
 
 # Import salt libs
 import salt.utils.http
+from salt.exceptions import (
+    CommandExecutionError,
+    NxosClientError,
+    NxosError,
+    NxosRequestNotSupported,
+)
 from salt.ext.six.moves import zip
-
-try:
-    from salt.utils.args import clean_kwargs
-except ImportError:
-    from salt.utils import clean_kwargs
+from salt.utils.args import clean_kwargs
 
 # Disable pylint check since httplib is not available in python3
 try:

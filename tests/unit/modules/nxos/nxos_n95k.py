@@ -19,6 +19,7 @@
 
 
 from __future__ import absolute_import
+
 from tests.unit.modules.nxos.nxos_platform import NXOSPlatform
 
 # pylint: disable-msg=C0103

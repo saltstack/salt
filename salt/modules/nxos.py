@@ -88,18 +88,18 @@ salt-call from the GuestShell environment as follows.
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python stdlib
-import logging
-import difflib
-import re
 import ast
+import difflib
+import logging
+import re
+from socket import error as socket_error
 
 # Import Salt libs
-from salt.utils.pycrypto import gen_hash
-import salt.utils.platform
 import salt.utils.nxos
-from salt.ext import six
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError, NxosError, SaltInvocationError
-from socket import error as socket_error
+from salt.ext import six
+from salt.utils.pycrypto import gen_hash
 
 __virtualname__ = "nxos"
 
@@ -299,8 +299,6 @@ def grains(**kwargs):
 
         salt '*' nxos.cmd grains
     """
-    import __main__ as main
-
     if not DEVICE_DETAILS["grains_cache"]:
         ret = salt.utils.nxos.system_info(show_ver(**kwargs))
         log.debug(ret)
@@ -743,7 +741,7 @@ def set_password(
             password='$5$2fWwO2vK$s7.Hr3YltMNHuhywQQ3nfOd.gAPHgs3SOBYYdGT3E.A' \\
             encrypted=True
     """
-    if algorithm == 'blowfish':
+    if algorithm == "blowfish":
         raise SaltInvocationError("Hash algorithm requested isn't available on nxos")
     get_user(username, **kwargs)  # verify user exists
     if encrypted is False:

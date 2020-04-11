@@ -10,12 +10,12 @@ for :mod:`salt.proxy.nxos<salt.proxy.nxos>`.
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
-import salt.utils.platform
-import salt.utils.nxos
-from salt.exceptions import NxosClientError
-
 import logging
+
+# Import Salt Libs
+import salt.utils.nxos
+import salt.utils.platform
+from salt.exceptions import NxosClientError
 
 log = logging.getLogger(__name__)
 

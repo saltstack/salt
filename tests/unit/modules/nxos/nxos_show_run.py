@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 n9k_running_config = """
 !Command: show running-config
 !Running configuration last done at: Wed Nov 27 18:54:15 2019

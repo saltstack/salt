@@ -6,11 +6,9 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import re
 
-import salt.utils.platform
-
 # Import Salt Libs
-import salt.utils.pycrypto
 import salt.utils.platform
+import salt.utils.pycrypto
 from salt.exceptions import SaltInvocationError
 
 # Import Salt Testing Libs

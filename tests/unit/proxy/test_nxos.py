@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 """
     :codeauthor: Mike Wiebe <@mikewiebe>
 """
@@ -19,18 +21,16 @@
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Testing Libs
-from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase
-from tests.support.mock import MagicMock, patch, create_autospec
-
-from tests.unit.modules.nxos.nxos_show_cmd_output import n9k_show_ver_list
-from tests.unit.modules.nxos.nxos_grains import n9k_grains
-
-from salt.exceptions import CommandExecutionError
-
 import salt.proxy.nxos as nxos_proxy
 import salt.utils.nxos as nxos_utils
+from salt.exceptions import CommandExecutionError
+
+# Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.mock import MagicMock, create_autospec, patch
+from tests.support.unit import TestCase
+from tests.unit.modules.nxos.nxos_grains import n9k_grains
+from tests.unit.modules.nxos.nxos_show_cmd_output import n9k_show_ver_list
 
 
 class NxosNxapiProxyTestCase(TestCase, LoaderModuleMockMixin):

@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 n9k_grains = {
     "nxos": {
         "software": {
