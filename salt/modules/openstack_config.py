@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Modify, retrieve, or delete values from OpenStack configuration files.
 
 :maintainer: Jeffrey C. Ollie <jeff@ocjtech.us>
@@ -7,33 +7,35 @@ Modify, retrieve, or delete values from OpenStack configuration files.
 :depends:
 :platform: linux
 
-'''
+"""
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import shlex
+
+import salt.exceptions
+import salt.utils.decorators.path
+
+# Import Salt libs
+from salt.ext import six
 
 try:
     import pipes
+
     HAS_DEPS = True
 except ImportError:
     HAS_DEPS = False
 
-if hasattr(shlex, 'quote'):
+if hasattr(shlex, "quote"):
     _quote = shlex.quote
-elif HAS_DEPS and hasattr(pipes, 'quote'):
+elif HAS_DEPS and hasattr(pipes, "quote"):
     _quote = pipes.quote
 else:
     _quote = None
 
-# Import Salt libs
-from salt.ext import six
-import salt.utils.decorators.path
-import salt.exceptions
 
 # Don't shadow built-in's.
-__func_alias__ = {
-    'set_': 'set'
-}
+__func_alias__ = {"set_": "set"}
 
 
 def __virtual__():
@@ -46,9 +48,9 @@ def _fallback(*args, **kw):
     return 'The "openstack-config" command needs to be installed for this function to work.  Typically this is included in the "openstack-utils" package.'
 
 
-@salt.utils.decorators.path.which('openstack-config')
+@salt.utils.decorators.path.which("openstack-config")
 def set_(filename, section, parameter, value):
-    '''
+    """
     Set a value in an OpenStack configuration file.
 
     filename
@@ -68,29 +70,29 @@ def set_(filename, section, parameter, value):
     .. code-block:: bash
 
         salt-call openstack_config.set /etc/keystone/keystone.conf sql connection foo
-    '''
+    """
 
     filename = _quote(filename)
     section = _quote(section)
     parameter = _quote(parameter)
     value = _quote(six.text_type(value))
 
-    result = __salt__['cmd.run_all'](
-            'openstack-config --set {0} {1} {2} {3}'.format(
-                filename, section, parameter, value
-                ),
-            python_shell=False,
-            )
+    result = __salt__["cmd.run_all"](
+        "openstack-config --set {0} {1} {2} {3}".format(
+            filename, section, parameter, value
+        ),
+        python_shell=False,
+    )
 
-    if result['retcode'] == 0:
-        return result['stdout']
+    if result["retcode"] == 0:
+        return result["stdout"]
     else:
-        raise salt.exceptions.CommandExecutionError(result['stderr'])
+        raise salt.exceptions.CommandExecutionError(result["stderr"])
 
 
-@salt.utils.decorators.path.which('openstack-config')
+@salt.utils.decorators.path.which("openstack-config")
 def get(filename, section, parameter):
-    '''
+    """
     Get a value from an OpenStack configuration file.
 
     filename
@@ -108,28 +110,26 @@ def get(filename, section, parameter):
 
         salt-call openstack_config.get /etc/keystone/keystone.conf sql connection
 
-    '''
+    """
 
     filename = _quote(filename)
     section = _quote(section)
     parameter = _quote(parameter)
 
-    result = __salt__['cmd.run_all'](
-            'openstack-config --get {0} {1} {2}'.format(
-                filename, section, parameter
-                ),
-            python_shell=False,
-            )
+    result = __salt__["cmd.run_all"](
+        "openstack-config --get {0} {1} {2}".format(filename, section, parameter),
+        python_shell=False,
+    )
 
-    if result['retcode'] == 0:
-        return result['stdout']
+    if result["retcode"] == 0:
+        return result["stdout"]
     else:
-        raise salt.exceptions.CommandExecutionError(result['stderr'])
+        raise salt.exceptions.CommandExecutionError(result["stderr"])
 
 
-@salt.utils.decorators.path.which('openstack-config')
+@salt.utils.decorators.path.which("openstack-config")
 def delete(filename, section, parameter):
-    '''
+    """
     Delete a value from an OpenStack configuration file.
 
     filename
@@ -146,20 +146,18 @@ def delete(filename, section, parameter):
     .. code-block:: bash
 
         salt-call openstack_config.delete /etc/keystone/keystone.conf sql connection
-    '''
+    """
 
     filename = _quote(filename)
     section = _quote(section)
     parameter = _quote(parameter)
 
-    result = __salt__['cmd.run_all'](
-            'openstack-config --del {0} {1} {2}'.format(
-                filename, section, parameter
-                ),
-            python_shell=False,
-            )
+    result = __salt__["cmd.run_all"](
+        "openstack-config --del {0} {1} {2}".format(filename, section, parameter),
+        python_shell=False,
+    )
 
-    if result['retcode'] == 0:
-        return result['stdout']
+    if result["retcode"] == 0:
+        return result["stdout"]
     else:
-        raise salt.exceptions.CommandExecutionError(result['stderr'])
+        raise salt.exceptions.CommandExecutionError(result["stderr"])
