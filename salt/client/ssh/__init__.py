@@ -895,6 +895,11 @@ class Single(object):
         self.fsclient = fsclient
         self.context = {"master_opts": self.opts, "fileclient": self.fsclient}
 
+        self.ssh_pre_flight = kwargs.get("ssh_pre_flight", None)
+
+        if self.ssh_pre_flight:
+            self.ssh_pre_file = os.path.basename(self.ssh_pre_flight)
+
         if isinstance(argv, six.string_types):
             self.argv = [argv]
         else:
@@ -974,6 +979,27 @@ class Single(object):
             return arg
         return "".join(["\\" + char if re.match(r"\W", char) else char for char in arg])
 
+    def run_ssh_pre_flight(self):
+        """
+        Run our pre_flight script before running any ssh commands
+        """
+        script = os.path.join(tempfile.gettempdir(), self.ssh_pre_file)
+
+        self.shell.send(self.ssh_pre_flight, script)
+
+        return self.execute_script(script)
+
+    def check_thin_dir(self):
+        """
+        check if the thindir exists on the remote machine
+        """
+        stdout, stderr, retcode = self.shell.exec_cmd(
+            "test -d {0}".format(self.thin_dir)
+        )
+        if retcode != 0:
+            return False
+        return True
+
     def deploy(self):
         """
         Deploy salt-thin
@@ -1007,6 +1033,34 @@ class Single(object):
         Returns tuple of (stdout, stderr, retcode)
         """
         stdout = stderr = retcode = None
+
+        if self.ssh_pre_flight:
+            if not self.opts.get("ssh_run_pre_flight", False) and self.check_thin_dir():
+                log.info(
+                    "{0} thin dir already exists. Not running ssh_pre_flight script".format(
+                        self.thin_dir
+                    )
+                )
+            elif not os.path.exists(self.ssh_pre_flight):
+                log.error(
+                    "The ssh_pre_flight script {0} does not exist".format(
+                        self.ssh_pre_flight
+                    )
+                )
+            else:
+                stdout, stderr, retcode = self.run_ssh_pre_flight()
+                if stderr:
+                    log.error(
+                        "Error running ssh_pre_flight script {0}".format(
+                            self.ssh_pre_file
+                        )
+                    )
+                    return stdout, stderr, retcode
+                log.info(
+                    "Successfully ran the ssh_pre_flight script: {0}".format(
+                        self.ssh_pre_file
+                    )
+                )
 
         if self.opts.get("raw_shell", False):
             cmd_str = " ".join([self._escape_arg(arg) for arg in self.argv])
@@ -1263,6 +1317,26 @@ ARGS = {arguments}\n'''.format(
 
         return cmd
 
+    def execute_script(self, script, extension="py", pre_dir=""):
+        """
+        execute a script on the minion then delete
+        """
+        if extension == "ps1":
+            ret = self.shell.exec_cmd('"powershell {0}"'.format(script))
+        else:
+            if not self.winrm:
+                ret = self.shell.exec_cmd("/bin/sh '{0}{1}'".format(pre_dir, script))
+            else:
+                ret = saltwinshell.call_python(self, script)
+
+        # Remove file from target system
+        if not self.winrm:
+            self.shell.exec_cmd("rm '{0}{1}'".format(pre_dir, script))
+        else:
+            self.shell.exec_cmd("del {0}".format(script))
+
+        return ret
+
     def shim_cmd(self, cmd_str, extension="py"):
         """
         Run a shim command.
@@ -1293,22 +1367,9 @@ ARGS = {arguments}\n'''.format(
         except IOError:
             pass
 
-        # Execute shim
-        if extension == "ps1":
-            ret = self.shell.exec_cmd('"powershell {0}"'.format(target_shim_file))
-        else:
-            if not self.winrm:
-                ret = self.shell.exec_cmd(
-                    "/bin/sh '$HOME/{0}'".format(target_shim_file)
-                )
-            else:
-                ret = saltwinshell.call_python(self, target_shim_file)
-
-        # Remove shim from target system
-        if not self.winrm:
-            self.shell.exec_cmd("rm '$HOME/{0}'".format(target_shim_file))
-        else:
-            self.shell.exec_cmd("del {0}".format(target_shim_file))
+        ret = self.execute_script(
+            script=target_shim_file, extension=extension, pre_dir="$HOME/"
+        )
 
         return ret
 
