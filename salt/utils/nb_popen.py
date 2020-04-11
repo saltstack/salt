@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
 
@@ -12,20 +12,21 @@
     found on:
 
         http://code.activestate.com/recipes/440554/
-'''
-from __future__ import absolute_import, unicode_literals, print_function
+"""
+from __future__ import absolute_import, print_function, unicode_literals
+
+import errno
+import logging
 
 # Import python libs
 import os
-import sys
-import time
-import errno
 import select
-import logging
-import tempfile
 import subprocess
+import sys
+import tempfile
+import time
 
-mswindows = (sys.platform == "win32")
+mswindows = sys.platform == "win32"
 
 try:
     from win32file import ReadFile, WriteFile
@@ -39,36 +40,36 @@ log = logging.getLogger(__name__)
 
 class NonBlockingPopen(subprocess.Popen):
 
-    #_stdin_logger_name_ = 'salt.utils.nb_popen.STDIN.PID-{pid}'
-    _stdout_logger_name_ = 'salt.utils.nb_popen.STDOUT.PID-{pid}'
-    _stderr_logger_name_ = 'salt.utils.nb_popen.STDERR.PID-{pid}'
+    # _stdin_logger_name_ = 'salt.utils.nb_popen.STDIN.PID-{pid}'
+    _stdout_logger_name_ = "salt.utils.nb_popen.STDOUT.PID-{pid}"
+    _stderr_logger_name_ = "salt.utils.nb_popen.STDERR.PID-{pid}"
 
     def __init__(self, *args, **kwargs):
-        self.stream_stds = kwargs.pop('stream_stds', False)
+        self.stream_stds = kwargs.pop("stream_stds", False)
 
         # Half a megabyte in memory is more than enough to start writing to
         # a temporary file.
-        self.max_size_in_mem = kwargs.pop('max_size_in_mem', 512000)
+        self.max_size_in_mem = kwargs.pop("max_size_in_mem", 512000)
 
         # Let's configure the std{in, out,err} logging handler names
-        #self._stdin_logger_name_ = kwargs.pop(
+        # self._stdin_logger_name_ = kwargs.pop(
         #    'stdin_logger_name', self._stdin_logger_name_
-        #)
+        # )
         self._stdout_logger_name_ = kwargs.pop(
-            'stdout_logger_name', self._stdout_logger_name_
+            "stdout_logger_name", self._stdout_logger_name_
         )
         self._stderr_logger_name_ = kwargs.pop(
-            'stderr_logger_name', self._stderr_logger_name_
+            "stderr_logger_name", self._stderr_logger_name_
         )
 
-        logging_command = kwargs.pop('logging_command', None)
-        stderr = kwargs.get('stderr', None)
+        logging_command = kwargs.pop("logging_command", None)
+        stderr = kwargs.get("stderr", None)
 
         super(NonBlockingPopen, self).__init__(*args, **kwargs)
 
-        #self._stdin_logger = logging.getLogger(
+        # self._stdin_logger = logging.getLogger(
         #    self._stdin_logger_name_.format(pid=self.pid)
-        #)
+        # )
 
         self.stdout_buff = tempfile.SpooledTemporaryFile(self.max_size_in_mem)
         self._stdout_logger = logging.getLogger(
@@ -79,26 +80,24 @@ class NonBlockingPopen(subprocess.Popen):
             self.stderr_buff = self.stdout_buff
             self._stderr_logger = self._stdout_logger
         else:
-            self.stderr_buff = tempfile.SpooledTemporaryFile(
-                self.max_size_in_mem
-            )
+            self.stderr_buff = tempfile.SpooledTemporaryFile(self.max_size_in_mem)
             self._stderr_logger = logging.getLogger(
                 self._stderr_logger_name_.format(pid=self.pid)
             )
 
         log.info(
-            'Running command under pid %s: \'%s\'',
+            "Running command under pid %s: '%s'",
             self.pid,
-            args if logging_command is None else logging_command
+            args if logging_command is None else logging_command,
         )
 
     def recv(self, maxsize=None):
-        return self._recv('stdout', maxsize)
+        return self._recv("stdout", maxsize)
 
     def recv_err(self, maxsize=None):
-        return self._recv('stderr', maxsize)
+        return self._recv("stderr", maxsize)
 
-    def send_recv(self, input='', maxsize=None):
+    def send_recv(self, input="", maxsize=None):
         return self.send(input), self.recv(maxsize), self.recv_err(maxsize)
 
     def get_conn_maxsize(self, which, maxsize):
@@ -113,6 +112,7 @@ class NonBlockingPopen(subprocess.Popen):
         setattr(self, which, None)
 
     if mswindows:
+
         def send(self, input):
             if not self.stdin:
                 return None
@@ -120,12 +120,12 @@ class NonBlockingPopen(subprocess.Popen):
             try:
                 x = msvcrt.get_osfhandle(self.stdin.fileno())
                 (errCode, written) = WriteFile(x, input)
-                #self._stdin_logger.debug(input.rstrip())
+                # self._stdin_logger.debug(input.rstrip())
             except ValueError:
-                return self._close('stdin')
+                return self._close("stdin")
             except (subprocess.pywintypes.error, Exception) as why:
                 if why.args[0] in (109, errno.ESHUTDOWN):
-                    return self._close('stdin')
+                    return self._close("stdin")
                 raise
 
             return written
@@ -149,8 +149,8 @@ class NonBlockingPopen(subprocess.Popen):
                     return self._close(which)
                 raise
 
-            getattr(self, '{0}_buff'.format(which)).write(read)
-            getattr(self, '_{0}_logger'.format(which)).debug(read.rstrip())
+            getattr(self, "{0}_buff".format(which)).write(read)
+            getattr(self, "_{0}_logger".format(which)).debug(read.rstrip())
             if self.stream_stds:
                 getattr(sys, which).write(read)
 
@@ -169,10 +169,10 @@ class NonBlockingPopen(subprocess.Popen):
 
             try:
                 written = os.write(self.stdin.fileno(), input)
-                #self._stdin_logger.debug(input.rstrip())
+                # self._stdin_logger.debug(input.rstrip())
             except OSError as why:
                 if why.args[0] == errno.EPIPE:  # broken pipe
-                    return self._close('stdin')
+                    return self._close("stdin")
                 raise
 
             return written
@@ -188,7 +188,7 @@ class NonBlockingPopen(subprocess.Popen):
 
             try:
                 if not select.select([conn], [], [], 0)[0]:
-                    return ''
+                    return ""
 
                 buff = conn.read(maxsize)
                 if not buff:
@@ -197,8 +197,8 @@ class NonBlockingPopen(subprocess.Popen):
                 if self.universal_newlines:
                     buff = self._translate_newlines(buff)
 
-                getattr(self, '{0}_buff'.format(which)).write(buff)
-                getattr(self, '_{0}_logger'.format(which)).debug(buff.rstrip())
+                getattr(self, "{0}_buff".format(which)).write(buff)
+                getattr(self, "_{0}_logger".format(which)).debug(buff.rstrip())
                 if self.stream_stds:
                     getattr(sys, which).write(buff)
 
@@ -229,7 +229,7 @@ class NonBlockingPopen(subprocess.Popen):
                     log.error(stderrdata)
             time.sleep(interval)
 
-    def communicate(self, input=None):
+    def communicate(self, input=None):  # pylint: disable=arguments-differ
         super(NonBlockingPopen, self).communicate(input)
         self.stdout_buff.flush()
         self.stdout_buff.seek(0)

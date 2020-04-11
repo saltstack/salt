@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Return data to a postgresql server
 
 .. note::
@@ -125,82 +125,96 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
 
     salt '*' test.ping --return postgres --return_kwargs '{"db": "another-salt"}'
 
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
+
+import logging
 
 # Import python libs
 import sys
-import logging
 from contextlib import contextmanager
+
+import salt.exceptions
+import salt.returners
 
 # Import Salt libs
 import salt.utils.jid
 import salt.utils.json
-import salt.returners
-import salt.exceptions
 
 # Import third party libs
 from salt.ext import six
+
 try:
     import psycopg2
+
     HAS_POSTGRES = True
 except ImportError:
     HAS_POSTGRES = False
 
-__virtualname__ = 'postgres'
+__virtualname__ = "postgres"
 
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
     if not HAS_POSTGRES:
-        return False, 'Could not import postgres returner; psycopg2 is not installed.'
+        return False, "Could not import postgres returner; psycopg2 is not installed."
     return __virtualname__
 
 
 def _get_options(ret=None):
-    '''
+    """
     Get the postgres options from salt.
-    '''
-    defaults = {'host': 'localhost',
-                'user': 'salt',
-                'passwd': 'salt',
-                'db': 'salt',
-                'port': 5432}
+    """
+    defaults = {
+        "host": "localhost",
+        "user": "salt",
+        "passwd": "salt",
+        "db": "salt",
+        "port": 5432,
+    }
 
-    attrs = {'host': 'host',
-             'user': 'user',
-             'passwd': 'passwd',
-             'db': 'db',
-             'port': 'port'}
+    attrs = {
+        "host": "host",
+        "user": "user",
+        "passwd": "passwd",
+        "db": "db",
+        "port": "port",
+    }
 
-    _options = salt.returners.get_returner_options('returner.{0}'.format(__virtualname__),
-                                                   ret,
-                                                   attrs,
-                                                   __salt__=__salt__,
-                                                   __opts__=__opts__,
-                                                   defaults=defaults)
+    _options = salt.returners.get_returner_options(
+        "returner.{0}".format(__virtualname__),
+        ret,
+        attrs,
+        __salt__=__salt__,
+        __opts__=__opts__,
+        defaults=defaults,
+    )
     # Ensure port is an int
-    if 'port' in _options:
-        _options['port'] = int(_options['port'])
+    if "port" in _options:
+        _options["port"] = int(_options["port"])
     return _options
 
 
 @contextmanager
 def _get_serv(ret=None, commit=False):
-    '''
+    """
     Return a Pg cursor
-    '''
+    """
     _options = _get_options(ret)
     try:
-        conn = psycopg2.connect(host=_options.get('host'),
-                                user=_options.get('user'),
-                                password=_options.get('passwd'),
-                                database=_options.get('db'),
-                                port=_options.get('port'))
+        conn = psycopg2.connect(
+            host=_options.get("host"),
+            user=_options.get("user"),
+            password=_options.get("passwd"),
+            database=_options.get("db"),
+            port=_options.get("port"),
+        )
 
     except psycopg2.OperationalError as exc:
-        raise salt.exceptions.SaltMasterError('postgres returner could not connect to database: {exc}'.format(exc=exc))
+        raise salt.exceptions.SaltMasterError(
+            "postgres returner could not connect to database: {exc}".format(exc=exc)
+        )
 
     cursor = conn.cursor()
 
@@ -210,7 +224,7 @@ def _get_serv(ret=None, commit=False):
         error = err.args
         sys.stderr.write(six.text_type(error))
         cursor.execute("ROLLBACK")
-        raise err
+        six.reraise(*sys.exc_info())
     else:
         if commit:
             cursor.execute("COMMIT")
@@ -221,57 +235,59 @@ def _get_serv(ret=None, commit=False):
 
 
 def returner(ret):
-    '''
+    """
     Return data to a postgres server
-    '''
+    """
     try:
         with _get_serv(ret, commit=True) as cur:
-            sql = '''INSERT INTO salt_returns
+            sql = """INSERT INTO salt_returns
                     (fun, jid, return, id, success, full_ret)
-                    VALUES (%s, %s, %s, %s, %s, %s)'''
+                    VALUES (%s, %s, %s, %s, %s, %s)"""
             cur.execute(
-                sql, (
-                    ret['fun'],
-                    ret['jid'],
-                    salt.utils.json.dumps(ret['return']),
-                    ret['id'],
-                    ret.get('success', False),
-                    salt.utils.json.dumps(ret)))
+                sql,
+                (
+                    ret["fun"],
+                    ret["jid"],
+                    salt.utils.json.dumps(ret["return"]),
+                    ret["id"],
+                    ret.get("success", False),
+                    salt.utils.json.dumps(ret),
+                ),
+            )
     except salt.exceptions.SaltMasterError:
-        log.critical('Could not store return with postgres returner. PostgreSQL server unavailable.')
+        log.critical(
+            "Could not store return with postgres returner. PostgreSQL server unavailable."
+        )
 
 
 def event_return(events):
-    '''
+    """
     Return event to Pg server
 
     Requires that configuration be enabled via 'event_return'
     option in master config.
-    '''
+    """
     with _get_serv(events, commit=True) as cur:
         for event in events:
-            tag = event.get('tag', '')
-            data = event.get('data', '')
-            sql = '''INSERT INTO salt_events (tag, data, master_id)
-                     VALUES (%s, %s, %s)'''
-            cur.execute(sql, (tag,
-                              salt.utils.json.dumps(data),
-                              __opts__['id']))
+            tag = event.get("tag", "")
+            data = event.get("data", "")
+            sql = """INSERT INTO salt_events (tag, data, master_id)
+                     VALUES (%s, %s, %s)"""
+            cur.execute(sql, (tag, salt.utils.json.dumps(data), __opts__["id"]))
 
 
 def save_load(jid, load, minions=None):  # pylint: disable=unused-argument
-    '''
+    """
     Save the load to the specified jid id
-    '''
+    """
     with _get_serv(commit=True) as cur:
 
-        sql = '''INSERT INTO jids
+        sql = """INSERT INTO jids
                (jid, load)
-                VALUES (%s, %s)'''
+                VALUES (%s, %s)"""
 
         try:
-            cur.execute(sql, (jid,
-                              salt.utils.json.dumps(load)))
+            cur.execute(sql, (jid, salt.utils.json.dumps(load)))
         except psycopg2.IntegrityError:
             # https://github.com/saltstack/salt/issues/22171
             # Without this try/except we get tons of duplicate entry errors
@@ -280,18 +296,17 @@ def save_load(jid, load, minions=None):  # pylint: disable=unused-argument
 
 
 def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument
-    '''
+    """
     Included for API consistency
-    '''
-    pass
+    """
 
 
 def get_load(jid):
-    '''
+    """
     Return the load data that marks a specified jid
-    '''
+    """
     with _get_serv(ret=None, commit=True) as cur:
-        sql = '''SELECT load FROM jids WHERE jid = %s;'''
+        sql = """SELECT load FROM jids WHERE jid = %s;"""
         cur.execute(sql, (jid,))
         data = cur.fetchone()
         if data:
@@ -300,13 +315,13 @@ def get_load(jid):
 
 
 def get_jid(jid):
-    '''
+    """
     Return the information returned when the specified job id was executed
-    '''
+    """
     with _get_serv(ret=None, commit=True) as cur:
 
-        sql = '''SELECT id, full_ret FROM salt_returns
-                WHERE jid = %s'''
+        sql = """SELECT id, full_ret FROM salt_returns
+                WHERE jid = %s"""
 
         cur.execute(sql, (jid,))
         data = cur.fetchall()
@@ -318,18 +333,18 @@ def get_jid(jid):
 
 
 def get_fun(fun):
-    '''
+    """
     Return a dict of the last function called for all minions
-    '''
+    """
     with _get_serv(ret=None, commit=True) as cur:
 
-        sql = '''SELECT s.id,s.jid, s.full_ret
+        sql = """SELECT s.id,s.jid, s.full_ret
                 FROM salt_returns s
                 JOIN ( SELECT MAX(`jid`) as jid
                     from salt_returns GROUP BY fun, id) max
                 ON s.jid = max.jid
                 WHERE s.fun = %s
-                '''
+                """
 
         cur.execute(sql, (fun,))
         data = cur.fetchall()
@@ -342,31 +357,32 @@ def get_fun(fun):
 
 
 def get_jids():
-    '''
+    """
     Return a list of all job ids
-    '''
+    """
     with _get_serv(ret=None, commit=True) as cur:
 
-        sql = '''SELECT jid, load
-                FROM jids'''
+        sql = """SELECT jid, load
+                FROM jids"""
 
         cur.execute(sql)
         data = cur.fetchall()
         ret = {}
         for jid, load in data:
-            ret[jid] = salt.utils.jid.format_jid_instance(jid,
-                                                          salt.utils.json.loads(load))
+            ret[jid] = salt.utils.jid.format_jid_instance(
+                jid, salt.utils.json.loads(load)
+            )
         return ret
 
 
 def get_minions():
-    '''
+    """
     Return a list of minions
-    '''
+    """
     with _get_serv(ret=None, commit=True) as cur:
 
-        sql = '''SELECT DISTINCT id
-                FROM salt_returns'''
+        sql = """SELECT DISTINCT id
+                FROM salt_returns"""
 
         cur.execute(sql)
         data = cur.fetchall()
@@ -377,7 +393,7 @@ def get_minions():
 
 
 def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
-    '''
+    """
     Do any work necessary to prepare a JID, including sending a custom id
-    '''
+    """
     return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid(__opts__)

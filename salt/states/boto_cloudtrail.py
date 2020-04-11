@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Manage CloudTrail Objects
 =========================
 
@@ -50,41 +50,50 @@ config:
             - keyid: GKTADJGHEIQSXMKKRBJ08H
             - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
-'''
+"""
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 import os
 import os.path
 
+import salt.utils.data
+
 # Import Salt Libs
 from salt.ext import six
-import salt.utils.data
 
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     Only load if boto is available.
-    '''
-    return 'boto_cloudtrail' if 'boto_cloudtrail.exists' in __salt__ else False
+    """
+    return "boto_cloudtrail" if "boto_cloudtrail.exists" in __salt__ else False
 
 
-def present(name, Name,
-           S3BucketName, S3KeyPrefix=None,
-           SnsTopicName=None,
-           IncludeGlobalServiceEvents=True,
-           IsMultiRegionTrail=None,
-           EnableLogFileValidation=False,
-           CloudWatchLogsLogGroupArn=None,
-           CloudWatchLogsRoleArn=None,
-           KmsKeyId=None,
-           LoggingEnabled=True,
-           Tags=None,
-           region=None, key=None, keyid=None, profile=None):
-    '''
+def present(
+    name,
+    Name,
+    S3BucketName,
+    S3KeyPrefix=None,
+    SnsTopicName=None,
+    IncludeGlobalServiceEvents=True,
+    IsMultiRegionTrail=None,
+    EnableLogFileValidation=False,
+    CloudWatchLogsLogGroupArn=None,
+    CloudWatchLogsRoleArn=None,
+    KmsKeyId=None,
+    LoggingEnabled=True,
+    Tags=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+):
+    """
     Ensure trail exists.
 
     name
@@ -146,178 +155,221 @@ def present(name, Name,
     profile
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
-    '''
-    ret = {'name': Name,
-           'result': True,
-           'comment': '',
-           'changes': {}
-           }
+    """
+    ret = {"name": Name, "result": True, "comment": "", "changes": {}}
 
-    r = __salt__['boto_cloudtrail.exists'](Name=Name,
-           region=region, key=key, keyid=keyid, profile=profile)
+    r = __salt__["boto_cloudtrail.exists"](
+        Name=Name, region=region, key=key, keyid=keyid, profile=profile
+    )
 
-    if 'error' in r:
-        ret['result'] = False
-        ret['comment'] = 'Failed to create trail: {0}.'.format(r['error']['message'])
+    if "error" in r:
+        ret["result"] = False
+        ret["comment"] = "Failed to create trail: {0}.".format(r["error"]["message"])
         return ret
 
-    if not r.get('exists'):
-        if __opts__['test']:
-            ret['comment'] = 'CloudTrail {0} is set to be created.'.format(Name)
-            ret['result'] = None
+    if not r.get("exists"):
+        if __opts__["test"]:
+            ret["comment"] = "CloudTrail {0} is set to be created.".format(Name)
+            ret["result"] = None
             return ret
-        r = __salt__['boto_cloudtrail.create'](Name=Name,
-                   S3BucketName=S3BucketName,
-                   S3KeyPrefix=S3KeyPrefix,
-                   SnsTopicName=SnsTopicName,
-                   IncludeGlobalServiceEvents=IncludeGlobalServiceEvents,
-                   IsMultiRegionTrail=IsMultiRegionTrail,
-                   EnableLogFileValidation=EnableLogFileValidation,
-                   CloudWatchLogsLogGroupArn=CloudWatchLogsLogGroupArn,
-                   CloudWatchLogsRoleArn=CloudWatchLogsRoleArn,
-                   KmsKeyId=KmsKeyId,
-                   region=region, key=key, keyid=keyid, profile=profile)
-        if not r.get('created'):
-            ret['result'] = False
-            ret['comment'] = 'Failed to create trail: {0}.'.format(r['error']['message'])
+        r = __salt__["boto_cloudtrail.create"](
+            Name=Name,
+            S3BucketName=S3BucketName,
+            S3KeyPrefix=S3KeyPrefix,
+            SnsTopicName=SnsTopicName,
+            IncludeGlobalServiceEvents=IncludeGlobalServiceEvents,
+            IsMultiRegionTrail=IsMultiRegionTrail,
+            EnableLogFileValidation=EnableLogFileValidation,
+            CloudWatchLogsLogGroupArn=CloudWatchLogsLogGroupArn,
+            CloudWatchLogsRoleArn=CloudWatchLogsRoleArn,
+            KmsKeyId=KmsKeyId,
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
+        )
+        if not r.get("created"):
+            ret["result"] = False
+            ret["comment"] = "Failed to create trail: {0}.".format(
+                r["error"]["message"]
+            )
             return ret
-        _describe = __salt__['boto_cloudtrail.describe'](Name,
-                                   region=region, key=key, keyid=keyid, profile=profile)
-        ret['changes']['old'] = {'trail': None}
-        ret['changes']['new'] = _describe
-        ret['comment'] = 'CloudTrail {0} created.'.format(Name)
+        _describe = __salt__["boto_cloudtrail.describe"](
+            Name, region=region, key=key, keyid=keyid, profile=profile
+        )
+        ret["changes"]["old"] = {"trail": None}
+        ret["changes"]["new"] = _describe
+        ret["comment"] = "CloudTrail {0} created.".format(Name)
 
         if LoggingEnabled:
-            r = __salt__['boto_cloudtrail.start_logging'](Name=Name,
-                   region=region, key=key, keyid=keyid, profile=profile)
-            if 'error' in r:
-                ret['result'] = False
-                ret['comment'] = 'Failed to create trail: {0}.'.format(r['error']['message'])
-                ret['changes'] = {}
+            r = __salt__["boto_cloudtrail.start_logging"](
+                Name=Name, region=region, key=key, keyid=keyid, profile=profile
+            )
+            if "error" in r:
+                ret["result"] = False
+                ret["comment"] = "Failed to create trail: {0}.".format(
+                    r["error"]["message"]
+                )
+                ret["changes"] = {}
                 return ret
-            ret['changes']['new']['trail']['LoggingEnabled'] = True
+            ret["changes"]["new"]["trail"]["LoggingEnabled"] = True
         else:
-            ret['changes']['new']['trail']['LoggingEnabled'] = False
+            ret["changes"]["new"]["trail"]["LoggingEnabled"] = False
 
         if bool(Tags):
-            r = __salt__['boto_cloudtrail.add_tags'](Name=Name,
-                   region=region, key=key, keyid=keyid, profile=profile, **Tags)
-            if not r.get('tagged'):
-                ret['result'] = False
-                ret['comment'] = 'Failed to create trail: {0}.'.format(r['error']['message'])
-                ret['changes'] = {}
+            r = __salt__["boto_cloudtrail.add_tags"](
+                Name=Name, region=region, key=key, keyid=keyid, profile=profile, **Tags
+            )
+            if not r.get("tagged"):
+                ret["result"] = False
+                ret["comment"] = "Failed to create trail: {0}.".format(
+                    r["error"]["message"]
+                )
+                ret["changes"] = {}
                 return ret
-            ret['changes']['new']['trail']['Tags'] = Tags
+            ret["changes"]["new"]["trail"]["Tags"] = Tags
         return ret
 
-    ret['comment'] = os.linesep.join([ret['comment'], 'CloudTrail {0} is present.'.format(Name)])
-    ret['changes'] = {}
+    ret["comment"] = os.linesep.join(
+        [ret["comment"], "CloudTrail {0} is present.".format(Name)]
+    )
+    ret["changes"] = {}
     # trail exists, ensure config matches
-    _describe = __salt__['boto_cloudtrail.describe'](Name=Name,
-                                  region=region, key=key, keyid=keyid, profile=profile)
-    if 'error' in _describe:
-        ret['result'] = False
-        ret['comment'] = 'Failed to update trail: {0}.'.format(_describe['error']['message'])
-        ret['changes'] = {}
+    _describe = __salt__["boto_cloudtrail.describe"](
+        Name=Name, region=region, key=key, keyid=keyid, profile=profile
+    )
+    if "error" in _describe:
+        ret["result"] = False
+        ret["comment"] = "Failed to update trail: {0}.".format(
+            _describe["error"]["message"]
+        )
+        ret["changes"] = {}
         return ret
-    _describe = _describe.get('trail')
+    _describe = _describe.get("trail")
 
-    r = __salt__['boto_cloudtrail.status'](Name=Name,
-                   region=region, key=key, keyid=keyid, profile=profile)
-    _describe['LoggingEnabled'] = r.get('trail', {}).get('IsLogging', False)
+    r = __salt__["boto_cloudtrail.status"](
+        Name=Name, region=region, key=key, keyid=keyid, profile=profile
+    )
+    _describe["LoggingEnabled"] = r.get("trail", {}).get("IsLogging", False)
 
     need_update = False
-    bucket_vars = {'S3BucketName': 'S3BucketName',
-                   'S3KeyPrefix': 'S3KeyPrefix',
-                   'SnsTopicName': 'SnsTopicName',
-                   'IncludeGlobalServiceEvents': 'IncludeGlobalServiceEvents',
-                   'IsMultiRegionTrail': 'IsMultiRegionTrail',
-                   'EnableLogFileValidation': 'LogFileValidationEnabled',
-                   'CloudWatchLogsLogGroupArn': 'CloudWatchLogsLogGroupArn',
-                   'CloudWatchLogsRoleArn': 'CloudWatchLogsRoleArn',
-                   'KmsKeyId': 'KmsKeyId',
-                   'LoggingEnabled': 'LoggingEnabled'}
+    bucket_vars = {
+        "S3BucketName": "S3BucketName",
+        "S3KeyPrefix": "S3KeyPrefix",
+        "SnsTopicName": "SnsTopicName",
+        "IncludeGlobalServiceEvents": "IncludeGlobalServiceEvents",
+        "IsMultiRegionTrail": "IsMultiRegionTrail",
+        "EnableLogFileValidation": "LogFileValidationEnabled",
+        "CloudWatchLogsLogGroupArn": "CloudWatchLogsLogGroupArn",
+        "CloudWatchLogsRoleArn": "CloudWatchLogsRoleArn",
+        "KmsKeyId": "KmsKeyId",
+        "LoggingEnabled": "LoggingEnabled",
+    }
 
     for invar, outvar in six.iteritems(bucket_vars):
         if _describe[outvar] != locals()[invar]:
             need_update = True
-            ret['changes'].setdefault('new', {})[invar] = locals()[invar]
-            ret['changes'].setdefault('old', {})[invar] = _describe[outvar]
+            ret["changes"].setdefault("new", {})[invar] = locals()[invar]
+            ret["changes"].setdefault("old", {})[invar] = _describe[outvar]
 
-    r = __salt__['boto_cloudtrail.list_tags'](Name=Name,
-                   region=region, key=key, keyid=keyid, profile=profile)
-    _describe['Tags'] = r.get('tags', {})
-    tagchange = salt.utils.data.compare_dicts(_describe['Tags'], Tags)
+    r = __salt__["boto_cloudtrail.list_tags"](
+        Name=Name, region=region, key=key, keyid=keyid, profile=profile
+    )
+    _describe["Tags"] = r.get("tags", {})
+    tagchange = salt.utils.data.compare_dicts(_describe["Tags"], Tags)
     if bool(tagchange):
         need_update = True
-        ret['changes'].setdefault('new', {})['Tags'] = Tags
-        ret['changes'].setdefault('old', {})['Tags'] = _describe['Tags']
+        ret["changes"].setdefault("new", {})["Tags"] = Tags
+        ret["changes"].setdefault("old", {})["Tags"] = _describe["Tags"]
 
     if need_update:
-        if __opts__['test']:
-            msg = 'CloudTrail {0} set to be modified.'.format(Name)
-            ret['comment'] = msg
-            ret['result'] = None
+        if __opts__["test"]:
+            msg = "CloudTrail {0} set to be modified.".format(Name)
+            ret["comment"] = msg
+            ret["result"] = None
             return ret
 
-        ret['comment'] = os.linesep.join([ret['comment'], 'CloudTrail to be modified'])
-        r = __salt__['boto_cloudtrail.update'](Name=Name,
-                   S3BucketName=S3BucketName,
-                   S3KeyPrefix=S3KeyPrefix,
-                   SnsTopicName=SnsTopicName,
-                   IncludeGlobalServiceEvents=IncludeGlobalServiceEvents,
-                   IsMultiRegionTrail=IsMultiRegionTrail,
-                   EnableLogFileValidation=EnableLogFileValidation,
-                   CloudWatchLogsLogGroupArn=CloudWatchLogsLogGroupArn,
-                   CloudWatchLogsRoleArn=CloudWatchLogsRoleArn,
-                   KmsKeyId=KmsKeyId,
-                   region=region, key=key, keyid=keyid, profile=profile)
-        if not r.get('updated'):
-            ret['result'] = False
-            ret['comment'] = 'Failed to update trail: {0}.'.format(r['error']['message'])
-            ret['changes'] = {}
+        ret["comment"] = os.linesep.join([ret["comment"], "CloudTrail to be modified"])
+        r = __salt__["boto_cloudtrail.update"](
+            Name=Name,
+            S3BucketName=S3BucketName,
+            S3KeyPrefix=S3KeyPrefix,
+            SnsTopicName=SnsTopicName,
+            IncludeGlobalServiceEvents=IncludeGlobalServiceEvents,
+            IsMultiRegionTrail=IsMultiRegionTrail,
+            EnableLogFileValidation=EnableLogFileValidation,
+            CloudWatchLogsLogGroupArn=CloudWatchLogsLogGroupArn,
+            CloudWatchLogsRoleArn=CloudWatchLogsRoleArn,
+            KmsKeyId=KmsKeyId,
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
+        )
+        if not r.get("updated"):
+            ret["result"] = False
+            ret["comment"] = "Failed to update trail: {0}.".format(
+                r["error"]["message"]
+            )
+            ret["changes"] = {}
             return ret
 
         if LoggingEnabled:
-            r = __salt__['boto_cloudtrail.start_logging'](Name=Name,
-                   region=region, key=key, keyid=keyid, profile=profile)
-            if not r.get('started'):
-                ret['result'] = False
-                ret['comment'] = 'Failed to update trail: {0}.'.format(r['error']['message'])
-                ret['changes'] = {}
+            r = __salt__["boto_cloudtrail.start_logging"](
+                Name=Name, region=region, key=key, keyid=keyid, profile=profile
+            )
+            if not r.get("started"):
+                ret["result"] = False
+                ret["comment"] = "Failed to update trail: {0}.".format(
+                    r["error"]["message"]
+                )
+                ret["changes"] = {}
                 return ret
         else:
-            r = __salt__['boto_cloudtrail.stop_logging'](Name=Name,
-                   region=region, key=key, keyid=keyid, profile=profile)
-            if not r.get('stopped'):
-                ret['result'] = False
-                ret['comment'] = 'Failed to update trail: {0}.'.format(r['error']['message'])
-                ret['changes'] = {}
+            r = __salt__["boto_cloudtrail.stop_logging"](
+                Name=Name, region=region, key=key, keyid=keyid, profile=profile
+            )
+            if not r.get("stopped"):
+                ret["result"] = False
+                ret["comment"] = "Failed to update trail: {0}.".format(
+                    r["error"]["message"]
+                )
+                ret["changes"] = {}
                 return ret
 
         if bool(tagchange):
             adds = {}
             removes = {}
             for k, diff in six.iteritems(tagchange):
-                if diff.get('new', '') != '':
+                if diff.get("new", "") != "":
                     # there's an update for this key
                     adds[k] = Tags[k]
-                elif diff.get('old', '') != '':
-                    removes[k] = _describe['Tags'][k]
+                elif diff.get("old", "") != "":
+                    removes[k] = _describe["Tags"][k]
             if bool(adds):
-                r = __salt__['boto_cloudtrail.add_tags'](Name=Name,
-                   region=region, key=key, keyid=keyid, profile=profile, **adds)
+                r = __salt__["boto_cloudtrail.add_tags"](
+                    Name=Name,
+                    region=region,
+                    key=key,
+                    keyid=keyid,
+                    profile=profile,
+                    **adds
+                )
             if bool(removes):
-                r = __salt__['boto_cloudtrail.remove_tags'](Name=Name,
-                   region=region, key=key, keyid=keyid, profile=profile,
-                   **removes)
+                r = __salt__["boto_cloudtrail.remove_tags"](
+                    Name=Name,
+                    region=region,
+                    key=key,
+                    keyid=keyid,
+                    profile=profile,
+                    **removes
+                )
 
     return ret
 
 
-def absent(name, Name,
-                  region=None, key=None, keyid=None, profile=None):
-    '''
+def absent(name, Name, region=None, key=None, keyid=None, profile=None):
+    """
     Ensure trail with passed properties is absent.
 
     name
@@ -338,37 +390,34 @@ def absent(name, Name,
     profile
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
-    '''
+    """
 
-    ret = {'name': Name,
-           'result': True,
-           'comment': '',
-           'changes': {}
-           }
+    ret = {"name": Name, "result": True, "comment": "", "changes": {}}
 
-    r = __salt__['boto_cloudtrail.exists'](Name,
-                       region=region, key=key, keyid=keyid, profile=profile)
-    if 'error' in r:
-        ret['result'] = False
-        ret['comment'] = 'Failed to delete trail: {0}.'.format(r['error']['message'])
+    r = __salt__["boto_cloudtrail.exists"](
+        Name, region=region, key=key, keyid=keyid, profile=profile
+    )
+    if "error" in r:
+        ret["result"] = False
+        ret["comment"] = "Failed to delete trail: {0}.".format(r["error"]["message"])
         return ret
 
-    if r and not r['exists']:
-        ret['comment'] = 'CloudTrail {0} does not exist.'.format(Name)
+    if r and not r["exists"]:
+        ret["comment"] = "CloudTrail {0} does not exist.".format(Name)
         return ret
 
-    if __opts__['test']:
-        ret['comment'] = 'CloudTrail {0} is set to be removed.'.format(Name)
-        ret['result'] = None
+    if __opts__["test"]:
+        ret["comment"] = "CloudTrail {0} is set to be removed.".format(Name)
+        ret["result"] = None
         return ret
-    r = __salt__['boto_cloudtrail.delete'](Name,
-                                    region=region, key=key,
-                                    keyid=keyid, profile=profile)
-    if not r['deleted']:
-        ret['result'] = False
-        ret['comment'] = 'Failed to delete trail: {0}.'.format(r['error']['message'])
+    r = __salt__["boto_cloudtrail.delete"](
+        Name, region=region, key=key, keyid=keyid, profile=profile
+    )
+    if not r["deleted"]:
+        ret["result"] = False
+        ret["comment"] = "Failed to delete trail: {0}.".format(r["error"]["message"])
         return ret
-    ret['changes']['old'] = {'trail': Name}
-    ret['changes']['new'] = {'trail': None}
-    ret['comment'] = 'CloudTrail {0} deleted.'.format(Name)
+    ret["changes"]["old"] = {"trail": Name}
+    ret["changes"]["new"] = {"trail": None}
+    ret["comment"] = "CloudTrail {0} deleted.".format(Name)
     return ret

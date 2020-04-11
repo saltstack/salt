@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Common logic used by the docker state and execution module
 
 This module contains logic to accommodate docker/salt CLI usage, as well as
 input as formatted by states.
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import copy
 import logging
 
@@ -15,15 +16,16 @@ import logging
 import salt.utils.args
 import salt.utils.data
 import salt.utils.docker.translate
-from salt.utils.docker.translate.helpers import split as _split
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.utils.args import get_function_argspec as _argspec
 
 # Import 3rd-party libs
 from salt.ext import six
+from salt.utils.args import get_function_argspec as _argspec
+from salt.utils.docker.translate.helpers import split as _split
 
 try:
     import docker
+
     HAS_DOCKER_PY = True
 except ImportError:
     HAS_DOCKER_PY = False
@@ -52,56 +54,54 @@ log = logging.getLogger(__name__)
 
 def get_client_args(limit=None):
     if not HAS_DOCKER_PY:
-        raise CommandExecutionError('docker Python module not imported')
+        raise CommandExecutionError("docker Python module not imported")
 
     limit = salt.utils.args.split_input(limit or [])
     ret = {}
 
-    if not limit or any(x in limit for x in
-            ('create_container', 'host_config', 'connect_container_to_network')):
+    if not limit or any(
+        x in limit
+        for x in ("create_container", "host_config", "connect_container_to_network")
+    ):
         try:
-            ret['create_container'] = \
-                _argspec(docker.APIClient.create_container).args
+            ret["create_container"] = _argspec(docker.APIClient.create_container).args
         except AttributeError:
             try:
-                ret['create_container'] = \
-                    _argspec(docker.Client.create_container).args
+                ret["create_container"] = _argspec(docker.Client.create_container).args
             except AttributeError:
-                raise CommandExecutionError(
-                    'Coult not get create_container argspec'
-                )
+                raise CommandExecutionError("Coult not get create_container argspec")
 
         try:
-            ret['host_config'] = \
-                _argspec(docker.types.HostConfig.__init__).args
+            ret["host_config"] = _argspec(docker.types.HostConfig.__init__).args
         except AttributeError:
             try:
-                ret['host_config'] = \
-                    _argspec(docker.utils.create_host_config).args
+                ret["host_config"] = _argspec(docker.utils.create_host_config).args
             except AttributeError:
-                raise CommandExecutionError(
-                    'Could not get create_host_config argspec'
-                )
+                raise CommandExecutionError("Could not get create_host_config argspec")
 
         try:
-            ret['connect_container_to_network'] = \
-                _argspec(docker.types.EndpointConfig.__init__).args
+            ret["connect_container_to_network"] = _argspec(
+                docker.types.EndpointConfig.__init__
+            ).args
         except AttributeError:
             try:
-                ret['connect_container_to_network'] = \
-                    _argspec(docker.utils.utils.create_endpoint_config).args
+                ret["connect_container_to_network"] = _argspec(
+                    docker.utils.utils.create_endpoint_config
+                ).args
             except AttributeError:
                 try:
-                    ret['connect_container_to_network'] = \
-                        _argspec(docker.utils.create_endpoint_config).args
+                    ret["connect_container_to_network"] = _argspec(
+                        docker.utils.create_endpoint_config
+                    ).args
                 except AttributeError:
                     raise CommandExecutionError(
-                        'Could not get connect_container_to_network argspec'
+                        "Could not get connect_container_to_network argspec"
                     )
 
     for key, wrapped_func in (
-            ('logs', docker.api.container.ContainerApiMixin.logs),
-            ('create_network', docker.api.network.NetworkApiMixin.create_network)):
+        ("logs", docker.api.container.ContainerApiMixin.logs),
+        ("create_network", docker.api.network.NetworkApiMixin.create_network),
+    ):
         if not limit or key in limit:
             try:
                 func_ref = wrapped_func
@@ -109,8 +109,9 @@ def get_client_args(limit=None):
                     try:
                         # create_network is decorated, so we have to dig into the
                         # closure created by functools.wraps
-                        ret[key] = \
-                            _argspec(func_ref.__func__.__closure__[0].cell_contents).args
+                        ret[key] = _argspec(
+                            func_ref.__func__.__closure__[0].cell_contents
+                        ).args
                     except (AttributeError, IndexError):
                         # functools.wraps changed (unlikely), bail out
                         ret[key] = []
@@ -125,21 +126,21 @@ def get_client_args(limit=None):
                 # Function moved, bail out
                 ret[key] = []
 
-    if not limit or 'ipam_config' in limit:
+    if not limit or "ipam_config" in limit:
         try:
-            ret['ipam_config'] = _argspec(docker.types.IPAMPool.__init__).args
+            ret["ipam_config"] = _argspec(docker.types.IPAMPool.__init__).args
         except AttributeError:
             try:
-                ret['ipam_config'] = _argspec(docker.utils.create_ipam_pool).args
+                ret["ipam_config"] = _argspec(docker.utils.create_ipam_pool).args
             except AttributeError:
-                raise CommandExecutionError('Could not get ipam args')
+                raise CommandExecutionError("Could not get ipam args")
 
     for item in ret:
         # The API version is passed automagically by the API code that imports
         # these classes/functions and is not an arg that we will be passing, so
         # remove it if present. Similarly, don't include "self" if it shows up
         # in the arglist.
-        for argname in ('version', 'self'):
+        for argname in ("version", "self"):
             try:
                 ret[item].remove(argname)
             except ValueError:
@@ -149,32 +150,34 @@ def get_client_args(limit=None):
     # arglist. This keeps us from accidentally allowing args that docker-py has
     # moved from the create_container function to the either the host or
     # endpoint config.
-    for item in ('host_config', 'connect_container_to_network'):
+    for item in ("host_config", "connect_container_to_network"):
         for val in ret.get(item, []):
             try:
-                ret['create_container'].remove(val)
+                ret["create_container"].remove(val)
             except ValueError:
                 # Arg is not in create_container arglist
                 pass
 
-    for item in ('create_container', 'host_config', 'connect_container_to_network'):
+    for item in ("create_container", "host_config", "connect_container_to_network"):
         if limit and item not in limit:
             ret.pop(item, None)
 
     try:
-        ret['logs'].remove('container')
+        ret["logs"].remove("container")
     except (KeyError, ValueError, TypeError):
         pass
 
     return ret
 
 
-def translate_input(translator,
-                    skip_translate=None,
-                    ignore_collisions=False,
-                    validate_ip_addrs=True,
-                    **kwargs):
-    '''
+def translate_input(
+    translator,
+    skip_translate=None,
+    ignore_collisions=False,
+    validate_ip_addrs=True,
+    **kwargs
+):
+    """
     Translate CLI/SLS input into the format the API expects. The ``translator``
     argument must be a module containing translation functions, within
     salt.utils.docker.translate. A ``skip_translate`` kwarg can be passed to
@@ -182,7 +185,7 @@ def translate_input(translator,
     list or an iterable containing strings (e.g. a list or tuple), and members
     of that tuple will have their translation skipped. Optionally,
     skip_translate can be set to True to skip *all* translation.
-    '''
+    """
     kwargs = copy.deepcopy(salt.utils.args.clean_kwargs(**kwargs))
     invalid = {}
     collisions = []
@@ -198,8 +201,8 @@ def translate_input(translator,
                 skip_translate = _split(skip_translate)
             except AttributeError:
                 pass
-            if not hasattr(skip_translate, '__iter__'):
-                log.error('skip_translate is not an iterable, ignoring')
+            if not hasattr(skip_translate, "__iter__"):
+                log.error("skip_translate is not an iterable, ignoring")
                 skip_translate = ()
 
     try:
@@ -213,16 +216,17 @@ def translate_input(translator,
             # ipam_pools is designed to be passed as a list of actual
             # dictionaries, but if each of the dictionaries passed has a single
             # element, it will be incorrectly repacked.
-            if key != 'ipam_pools' and salt.utils.data.is_dictlist(kwargs[key]):
+            if key != "ipam_pools" and salt.utils.data.is_dictlist(kwargs[key]):
                 kwargs[key] = salt.utils.data.repack_dictlist(kwargs[key])
 
             try:
                 kwargs[key] = getattr(translator, real_key)(
                     kwargs[key],
                     validate_ip_addrs=validate_ip_addrs,
-                    skip_translate=skip_translate)
+                    skip_translate=skip_translate,
+                )
             except AttributeError:
-                log.debug('No translation function for argument \'%s\'', key)
+                log.debug("No translation function for argument '%s'", key)
                 continue
             except SaltInvocationError as exc:
                 kwargs.pop(key)
@@ -248,66 +252,68 @@ def translate_input(translator,
         except AttributeError:
             pass
 
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         error_message = exc.__str__()
-        log.error(
-            'Error translating input: \'%s\'', error_message, exc_info=True)
+        log.error("Error translating input: '%s'", error_message, exc_info=True)
     else:
         error_message = None
 
     error_data = {}
     if error_message is not None:
-        error_data['error_message'] = error_message
+        error_data["error_message"] = error_message
     if invalid:
-        error_data['invalid'] = invalid
+        error_data["invalid"] = invalid
     if collisions and not ignore_collisions:
         for item in collisions:
-            error_data.setdefault('collisions', []).append(
-                '\'{0}\' is an alias for \'{1}\', they cannot both be used'
-                .format(translator.ALIASES_REVMAP[item], item)
+            error_data.setdefault("collisions", []).append(
+                "'{0}' is an alias for '{1}', they cannot both be used".format(
+                    translator.ALIASES_REVMAP[item], item
+                )
             )
     if error_data:
-        raise CommandExecutionError(
-            'Failed to translate input', info=error_data)
+        raise CommandExecutionError("Failed to translate input", info=error_data)
 
     return kwargs
 
 
 def create_ipam_config(*pools, **kwargs):
-    '''
+    """
     Builds an IP address management (IPAM) config dictionary
-    '''
+    """
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
 
     try:
         # docker-py 2.0 and newer
         pool_args = salt.utils.args.get_function_argspec(
-            docker.types.IPAMPool.__init__).args
+            docker.types.IPAMPool.__init__
+        ).args
         create_pool = docker.types.IPAMPool
         create_config = docker.types.IPAMConfig
     except AttributeError:
         # docker-py < 2.0
         pool_args = salt.utils.args.get_function_argspec(
-            docker.utils.create_ipam_pool).args
+            docker.utils.create_ipam_pool
+        ).args
         create_pool = docker.utils.create_ipam_pool
         create_config = docker.utils.create_ipam_config
 
-    for primary_key, alias_key in (('driver', 'ipam_driver'),
-                                   ('options', 'ipam_opts')):
+    for primary_key, alias_key in (("driver", "ipam_driver"), ("options", "ipam_opts")):
 
         if alias_key in kwargs:
             alias_val = kwargs.pop(alias_key)
             if primary_key in kwargs:
                 log.warning(
-                    'docker.create_ipam_config: Both \'%s\' and \'%s\' '
-                    'passed. Ignoring \'%s\'',
-                    alias_key, primary_key, alias_key
+                    "docker.create_ipam_config: Both '%s' and '%s' "
+                    "passed. Ignoring '%s'",
+                    alias_key,
+                    primary_key,
+                    alias_key,
                 )
             else:
                 kwargs[primary_key] = alias_val
 
-    if salt.utils.data.is_dictlist(kwargs.get('options')):
-        kwargs['options'] = salt.utils.data.repack_dictlist(kwargs['options'])
+    if salt.utils.data.is_dictlist(kwargs.get("options")):
+        kwargs["options"] = salt.utils.data.repack_dictlist(kwargs["options"])
 
     # Get all of the IPAM pool args that were passed as individual kwargs
     # instead of in the *pools tuple
@@ -327,13 +333,13 @@ def create_ipam_config(*pools, **kwargs):
         # range, or map of aux addresses, even when no subnet is passed.
         # However, attempting to use this IPAM pool when creating the network
         # will cause the Docker Engine to throw an error.
-        if any('Subnet' not in pool for pool in pool_configs):
-            raise SaltInvocationError('A subnet is required in each IPAM pool')
+        if any("Subnet" not in pool for pool in pool_configs):
+            raise SaltInvocationError("A subnet is required in each IPAM pool")
         else:
-            kwargs['pool_configs'] = pool_configs
+            kwargs["pool_configs"] = pool_configs
 
     ret = create_config(**kwargs)
-    pool_dicts = ret.get('Config')
+    pool_dicts = ret.get("Config")
     if pool_dicts:
         # When you inspect a network with custom IPAM configuration, only
         # arguments which were explictly passed are reflected. By contrast,

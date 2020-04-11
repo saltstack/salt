@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Module for interfacing with SysFS
 
 .. seealso:: https://www.kernel.org/doc/Documentation/filesystems/sysfs.txt
 .. versionadded:: 2016.3.0
-'''
+"""
 # Import Python libs
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 import os
 import stat
@@ -23,14 +24,14 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     Only work on Linux
-    '''
+    """
     return salt.utils.platform.is_linux()
 
 
 def attr(key, value=None):
-    '''
+    """
     Access/write a SysFS attribute.
     If the attribute is a symlink, it's destination is returned
 
@@ -40,7 +41,7 @@ def attr(key, value=None):
      .. code-block:: bash
 
         salt '*' sysfs.attr block/sda/queue/logical_block_size
-    '''
+    """
     key = target(key)
 
     if key is False:
@@ -54,28 +55,26 @@ def attr(key, value=None):
 
 
 def write(key, value):
-    '''
+    """
     Write a SysFS attribute/action
 
     CLI example:
      .. code-block:: bash
 
         salt '*' sysfs.write devices/system/cpu/cpu0/cpufreq/scaling_governor 'performance'
-    '''
+    """
     try:
         key = target(key)
-        log.trace('Writing %s to %s', value, key)
-        with salt.utils.files.fopen(key, 'w') as twriter:
-            twriter.write(
-                salt.utils.stringutils.to_str('{0}\n'.format(value))
-            )
+        log.trace("Writing %s to %s", value, key)
+        with salt.utils.files.fopen(key, "w") as twriter:
+            twriter.write(salt.utils.stringutils.to_str("{0}\n".format(value)))
             return True
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return False
 
 
-def read(key, root=''):
-    '''
+def read(key, root=""):
+    """
     Read from SysFS
 
     :param key: file or path in SysFS; if key is a list then root will be prefixed on each key
@@ -86,7 +85,7 @@ def read(key, root=''):
      .. code-block:: bash
 
         salt '*' sysfs.read class/net/em1/statistics
-    '''
+    """
 
     if not isinstance(key, six.string_types):
         res = {}
@@ -102,13 +101,13 @@ def read(key, root=''):
     elif os.path.isdir(key):
         keys = interfaces(key)
         result = {}
-        for subkey in keys['r'] + keys['rw']:
+        for subkey in keys["r"] + keys["rw"]:
             subval = read(os.path.join(key, subkey))
             if subval is not False:
-                subkeys = subkey.split('/')
+                subkeys = subkey.split("/")
                 subkey = subkeys.pop()
                 subresult = result
-                if len(subkeys):
+                if subkeys:
                     for skey in subkeys:
                         if skey not in subresult:
                             subresult[skey] = {}
@@ -117,7 +116,7 @@ def read(key, root=''):
         return result
     else:
         try:
-            log.trace('Reading %s...', key)
+            log.trace("Reading %s...", key)
 
             # Certain things in SysFS are pipes 'n such.
             # This opens it non-blocking, which prevents indefinite blocking
@@ -129,18 +128,18 @@ def read(key, root=''):
                     return False
                 try:
                     val = int(val)
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     try:
                         val = float(val)
-                    except Exception:
+                    except Exception:  # pylint: disable=broad-except
                         pass
                 return val
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             return False
 
 
 def target(key, full=True):
-    '''
+    """
     Return the basename of a SysFS key path
 
     :param key: the location to resolve within SysFS
@@ -153,13 +152,13 @@ def target(key, full=True):
 
         salt '*' sysfs.read class/ttyS0
 
-    '''
-    if not key.startswith('/sys'):
-        key = os.path.join('/sys', key)
+    """
+    if not key.startswith("/sys"):
+        key = os.path.join("/sys", key)
     key = os.path.realpath(key)
 
     if not os.path.exists(key):
-        log.debug('Unkown SysFS key %s', key)
+        log.debug("Unknown SysFS key %s", key)
         return False
     elif full:
         return key
@@ -168,7 +167,7 @@ def target(key, full=True):
 
 
 def interfaces(root):
-    '''
+    """
     Generate a dictionary with all available interfaces relative to root.
     Symlinks are not followed.
 
@@ -223,11 +222,11 @@ def interfaces(root):
       * 'r' interfaces are read-only
       * 'w' interfaces are write-only (e.g. actions)
       * 'rw' are interfaces that can both be read or written
-    '''
+    """
 
     root = target(root)
     if root is False or not os.path.isdir(root):
-        log.error('SysFS %s not a dir', root)
+        log.error("SysFS %s not a dir", root)
         return False
 
     readwrites = []
@@ -254,10 +253,6 @@ def interfaces(root):
             elif is_r:
                 reads.append(relpath)
             else:
-                log.warning('Unable to find any interfaces in %s', canpath)
+                log.warning("Unable to find any interfaces in %s", canpath)
 
-    return {
-        'r': reads,
-        'w': writes,
-        'rw': readwrites
-    }
+    return {"r": reads, "w": writes, "rw": readwrites}

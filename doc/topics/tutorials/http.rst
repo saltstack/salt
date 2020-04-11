@@ -543,7 +543,7 @@ checked. This is done using the ``status`` argument:
 
     http://example.com/:
       http.query:
-        - status: '200'
+        - status: 200
 
 If both are specified, both will be checked, but if only one is ``True`` and the
 other is ``False``, then ``False`` will be returned. In this case, the comments

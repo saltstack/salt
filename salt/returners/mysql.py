@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Return data to a mysql server
 
 :maintainer:    Dave Boucha <dave@saltstack.com>, Seth House <shouse@saltstack.com>
@@ -46,7 +46,8 @@ optional. The following ssl options are simply for illustration purposes:
 
 Should you wish the returner data to be cleaned out every so often, set
 `keep_jobs` to the number of hours for the jobs to live in the tables.
-Setting it to `0` or leaving it unset will cause the data to stay in the tables.
+Setting it to `0` will cause the data to stay in the tables. The default
+setting for `keep_jobs` is set to `24`.
 
 Should you wish to archive jobs in a different table for later processing,
 set `archive_jobs` to True.  Salt will create 3 archive tables
@@ -78,7 +79,6 @@ Use the following mysql database schema:
       `load` mediumtext NOT NULL,
       UNIQUE KEY `jid` (`jid`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-    CREATE INDEX jid ON jids(jid) USING BTREE;
 
     --
     -- Table structure for table `salt_returns`
@@ -137,24 +137,28 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
 
     salt '*' test.ping --return mysql --return_kwargs '{"db": "another-salt"}'
 
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
-# Let's not allow PyLint complain about string substitution
-# pylint: disable=W1321,E1321
+
+import logging
+import sys
 
 # Import python libs
 from contextlib import contextmanager
-import sys
-import logging
+
+import salt.exceptions
 
 # Import salt libs
 import salt.returners
 import salt.utils.jid
 import salt.utils.json
-import salt.exceptions
 
 # Import 3rd-party libs
 from salt.ext import six
+
+# Let's not allow PyLint complain about string substitution
+# pylint: disable=W1321,E1321
+
 
 try:
     # Trying to import MySQLdb
@@ -166,6 +170,7 @@ except ImportError:
     try:
         # MySQLdb import failed, try to import PyMySQL
         import pymysql
+
         pymysql.install_as_MySQLdb()
         import MySQLdb
         import MySQLdb.cursors
@@ -177,50 +182,56 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
-__virtualname__ = 'mysql'
+__virtualname__ = "mysql"
 
 
 def __virtual__():
-    '''
+    """
     Confirm that a python mysql client is installed.
-    '''
-    return bool(MySQLdb), 'No python mysql client installed.' if MySQLdb is None else ''
+    """
+    return bool(MySQLdb), "No python mysql client installed." if MySQLdb is None else ""
 
 
 def _get_options(ret=None):
-    '''
+    """
     Returns options used for the MySQL connection.
-    '''
-    defaults = {'host': 'salt',
-                'user': 'salt',
-                'pass': 'salt',
-                'db': 'salt',
-                'port': 3306,
-                'ssl_ca': None,
-                'ssl_cert': None,
-                'ssl_key': None}
+    """
+    defaults = {
+        "host": "salt",
+        "user": "salt",
+        "pass": "salt",
+        "db": "salt",
+        "port": 3306,
+        "ssl_ca": None,
+        "ssl_cert": None,
+        "ssl_key": None,
+    }
 
-    attrs = {'host': 'host',
-             'user': 'user',
-             'pass': 'pass',
-             'db': 'db',
-             'port': 'port',
-             'ssl_ca': 'ssl_ca',
-             'ssl_cert': 'ssl_cert',
-             'ssl_key': 'ssl_key'}
+    attrs = {
+        "host": "host",
+        "user": "user",
+        "pass": "pass",
+        "db": "db",
+        "port": "port",
+        "ssl_ca": "ssl_ca",
+        "ssl_cert": "ssl_cert",
+        "ssl_key": "ssl_key",
+    }
 
-    _options = salt.returners.get_returner_options(__virtualname__,
-                                                   ret,
-                                                   attrs,
-                                                   __salt__=__salt__,
-                                                   __opts__=__opts__,
-                                                   defaults=defaults)
+    _options = salt.returners.get_returner_options(
+        __virtualname__,
+        ret,
+        attrs,
+        __salt__=__salt__,
+        __opts__=__opts__,
+        defaults=defaults,
+    )
     # post processing
     for k, v in six.iteritems(_options):
-        if isinstance(v, six.string_types) and v.lower() == 'none':
+        if isinstance(v, six.string_types) and v.lower() == "none":
             # Ensure 'None' is rendered as None
             _options[k] = None
-        if k == 'port':
+        if k == "port":
             # Ensure port is an int
             _options[k] = int(v)
 
@@ -229,46 +240,50 @@ def _get_options(ret=None):
 
 @contextmanager
 def _get_serv(ret=None, commit=False):
-    '''
+    """
     Return a mysql cursor
-    '''
+    """
     _options = _get_options(ret)
 
     connect = True
-    if __context__ and 'mysql_returner_conn' in __context__:
+    if __context__ and "mysql_returner_conn" in __context__:
         try:
-            log.debug('Trying to reuse MySQL connection pool')
-            conn = __context__['mysql_returner_conn']
+            log.debug("Trying to reuse MySQL connection pool")
+            conn = __context__["mysql_returner_conn"]
             conn.ping()
             connect = False
         except OperationalError as exc:
-            log.debug('OperationalError on ping: %s', exc)
+            log.debug("OperationalError on ping: %s", exc)
 
     if connect:
-        log.debug('Generating new MySQL connection pool')
+        log.debug("Generating new MySQL connection pool")
         try:
             # An empty ssl_options dictionary passed to MySQLdb.connect will
             # effectively connect w/o SSL.
             ssl_options = {}
-            if _options.get('ssl_ca'):
-                ssl_options['ca'] = _options.get('ssl_ca')
-            if _options.get('ssl_cert'):
-                ssl_options['cert'] = _options.get('ssl_cert')
-            if _options.get('ssl_key'):
-                ssl_options['key'] = _options.get('ssl_key')
-            conn = MySQLdb.connect(host=_options.get('host'),
-                                   user=_options.get('user'),
-                                   passwd=_options.get('pass'),
-                                   db=_options.get('db'),
-                                   port=_options.get('port'),
-                                   ssl=ssl_options)
+            if _options.get("ssl_ca"):
+                ssl_options["ca"] = _options.get("ssl_ca")
+            if _options.get("ssl_cert"):
+                ssl_options["cert"] = _options.get("ssl_cert")
+            if _options.get("ssl_key"):
+                ssl_options["key"] = _options.get("ssl_key")
+            conn = MySQLdb.connect(
+                host=_options.get("host"),
+                user=_options.get("user"),
+                passwd=_options.get("pass"),
+                db=_options.get("db"),
+                port=_options.get("port"),
+                ssl=ssl_options,
+            )
 
             try:
-                __context__['mysql_returner_conn'] = conn
+                __context__["mysql_returner_conn"] = conn
             except TypeError:
                 pass
         except OperationalError as exc:
-            raise salt.exceptions.SaltMasterError('MySQL returner could not connect to database: {exc}'.format(exc=exc))
+            raise salt.exceptions.SaltMasterError(
+                "MySQL returner could not connect to database: {exc}".format(exc=exc)
+            )
 
     cursor = conn.cursor()
 
@@ -278,7 +293,7 @@ def _get_serv(ret=None, commit=False):
         error = err.args
         sys.stderr.write(six.text_type(error))
         cursor.execute("ROLLBACK")
-        raise err
+        six.reraise(*sys.exc_info())
     else:
         if commit:
             cursor.execute("COMMIT")
@@ -287,53 +302,61 @@ def _get_serv(ret=None, commit=False):
 
 
 def returner(ret):
-    '''
+    """
     Return data to a mysql server
-    '''
+    """
     # if a minion is returning a standalone job, get a jobid
-    if ret['jid'] == 'req':
-        ret['jid'] = prep_jid(nocache=ret.get('nocache', False))
-        save_load(ret['jid'], ret)
+    if ret["jid"] == "req":
+        ret["jid"] = prep_jid(nocache=ret.get("nocache", False))
+        save_load(ret["jid"], ret)
 
     try:
         with _get_serv(ret, commit=True) as cur:
-            sql = '''INSERT INTO `salt_returns`
+            sql = """INSERT INTO `salt_returns`
                      (`fun`, `jid`, `return`, `id`, `success`, `full_ret`)
-                     VALUES (%s, %s, %s, %s, %s, %s)'''
+                     VALUES (%s, %s, %s, %s, %s, %s)"""
 
-            cur.execute(sql, (ret['fun'], ret['jid'],
-                              salt.utils.json.dumps(ret['return']),
-                              ret['id'],
-                              ret.get('success', False),
-                              salt.utils.json.dumps(ret)))
+            cur.execute(
+                sql,
+                (
+                    ret["fun"],
+                    ret["jid"],
+                    salt.utils.json.dumps(ret["return"]),
+                    ret["id"],
+                    ret.get("success", False),
+                    salt.utils.json.dumps(ret),
+                ),
+            )
     except salt.exceptions.SaltMasterError as exc:
         log.critical(exc)
-        log.critical('Could not store return with MySQL returner. MySQL server unavailable.')
+        log.critical(
+            "Could not store return with MySQL returner. MySQL server unavailable."
+        )
 
 
 def event_return(events):
-    '''
+    """
     Return event to mysql server
 
     Requires that configuration be enabled via 'event_return'
     option in master config.
-    '''
+    """
     with _get_serv(events, commit=True) as cur:
         for event in events:
-            tag = event.get('tag', '')
-            data = event.get('data', '')
-            sql = '''INSERT INTO `salt_events` (`tag`, `data`, `master_id`)
-                     VALUES (%s, %s, %s)'''
-            cur.execute(sql, (tag, salt.utils.json.dumps(data), __opts__['id']))
+            tag = event.get("tag", "")
+            data = event.get("data", "")
+            sql = """INSERT INTO `salt_events` (`tag`, `data`, `master_id`)
+                     VALUES (%s, %s, %s)"""
+            cur.execute(sql, (tag, salt.utils.json.dumps(data), __opts__["id"]))
 
 
 def save_load(jid, load, minions=None):
-    '''
+    """
     Save the load to the specified jid id
-    '''
+    """
     with _get_serv(commit=True) as cur:
 
-        sql = '''INSERT INTO `jids` (`jid`, `load`) VALUES (%s, %s)'''
+        sql = """INSERT INTO `jids` (`jid`, `load`) VALUES (%s, %s)"""
 
         try:
             cur.execute(sql, (jid, salt.utils.json.dumps(load)))
@@ -345,19 +368,18 @@ def save_load(jid, load, minions=None):
 
 
 def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument
-    '''
+    """
     Included for API consistency
-    '''
-    pass
+    """
 
 
 def get_load(jid):
-    '''
+    """
     Return the load data that marks a specified jid
-    '''
+    """
     with _get_serv(ret=None, commit=True) as cur:
 
-        sql = '''SELECT `load` FROM `jids` WHERE `jid` = %s;'''
+        sql = """SELECT `load` FROM `jids` WHERE `jid` = %s;"""
         cur.execute(sql, (jid,))
         data = cur.fetchone()
         if data:
@@ -366,13 +388,13 @@ def get_load(jid):
 
 
 def get_jid(jid):
-    '''
+    """
     Return the information returned when the specified job id was executed
-    '''
+    """
     with _get_serv(ret=None, commit=True) as cur:
 
-        sql = '''SELECT id, full_ret FROM `salt_returns`
-                WHERE `jid` = %s'''
+        sql = """SELECT id, full_ret FROM `salt_returns`
+                WHERE `jid` = %s"""
 
         cur.execute(sql, (jid,))
         data = cur.fetchall()
@@ -384,18 +406,18 @@ def get_jid(jid):
 
 
 def get_fun(fun):
-    '''
+    """
     Return a dict of the last function called for all minions
-    '''
+    """
     with _get_serv(ret=None, commit=True) as cur:
 
-        sql = '''SELECT s.id,s.jid, s.full_ret
+        sql = """SELECT s.id,s.jid, s.full_ret
                 FROM `salt_returns` s
                 JOIN ( SELECT MAX(`jid`) as jid
                     from `salt_returns` GROUP BY fun, id) max
                 ON s.jid = max.jid
                 WHERE s.fun = %s
-                '''
+                """
 
         cur.execute(sql, (fun,))
         data = cur.fetchall()
@@ -408,58 +430,60 @@ def get_fun(fun):
 
 
 def get_jids():
-    '''
+    """
     Return a list of all job ids
-    '''
+    """
     with _get_serv(ret=None, commit=True) as cur:
 
-        sql = '''SELECT DISTINCT `jid`, `load`
-                FROM `jids`'''
+        sql = """SELECT DISTINCT `jid`, `load`
+                FROM `jids`"""
 
         cur.execute(sql)
         data = cur.fetchall()
         ret = {}
         for jid in data:
             ret[jid[0]] = salt.utils.jid.format_jid_instance(
-                jid[0],
-                salt.utils.json.loads(jid[1]))
+                jid[0], salt.utils.json.loads(jid[1])
+            )
         return ret
 
 
 def get_jids_filter(count, filter_find_job=True):
-    '''
+    """
     Return a list of all job ids
     :param int count: show not more than the count of most recent jobs
     :param bool filter_find_jobs: filter out 'saltutil.find_job' jobs
-    '''
+    """
     with _get_serv(ret=None, commit=True) as cur:
 
-        sql = '''SELECT * FROM (
+        sql = """SELECT * FROM (
                      SELECT DISTINCT `jid` ,`load` FROM `jids`
                      {0}
                      ORDER BY `jid` DESC limit {1}
                      ) `tmp`
-                 ORDER BY `jid`;'''
-        where = '''WHERE `load` NOT LIKE '%"fun": "saltutil.find_job"%' '''
+                 ORDER BY `jid`;"""
+        where = """WHERE `load` NOT LIKE '%"fun": "saltutil.find_job"%' """
 
-        cur.execute(sql.format(where if filter_find_job else '', count))
+        cur.execute(sql.format(where if filter_find_job else "", count))
         data = cur.fetchall()
         ret = []
         for jid in data:
-            ret.append(salt.utils.jid.format_jid_instance_ext(
-                jid[0],
-                salt.utils.json.loads(jid[1])))
+            ret.append(
+                salt.utils.jid.format_jid_instance_ext(
+                    jid[0], salt.utils.json.loads(jid[1])
+                )
+            )
         return ret
 
 
 def get_minions():
-    '''
+    """
     Return a list of minions
-    '''
+    """
     with _get_serv(ret=None, commit=True) as cur:
 
-        sql = '''SELECT DISTINCT id
-                FROM `salt_returns`'''
+        sql = """SELECT DISTINCT id
+                FROM `salt_returns`"""
 
         cur.execute(sql)
         data = cur.fetchall()
@@ -470,43 +494,49 @@ def get_minions():
 
 
 def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
-    '''
+    """
     Do any work necessary to prepare a JID, including sending a custom id
-    '''
+    """
     return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid(__opts__)
 
 
 def _purge_jobs(timestamp):
-    '''
+    """
     Purge records from the returner tables.
     :param job_age_in_seconds:  Purge jobs older than this
     :return:
-    '''
+    """
     with _get_serv() as cur:
         try:
-            sql = 'delete from `jids` where jid in (select distinct jid from salt_returns where alter_time < %s)'
+            sql = "delete from `jids` where jid in (select distinct jid from salt_returns where alter_time < %s)"
             cur.execute(sql, (timestamp,))
-            cur.execute('COMMIT')
+            cur.execute("COMMIT")
         except MySQLdb.Error as e:
-            log.error('mysql returner archiver was unable to delete contents of table \'jids\'')
+            log.error(
+                "mysql returner archiver was unable to delete contents of table 'jids'"
+            )
             log.error(six.text_type(e))
             raise salt.exceptions.SaltRunnerError(six.text_type(e))
 
         try:
-            sql = 'delete from `salt_returns` where alter_time < %s'
+            sql = "delete from `salt_returns` where alter_time < %s"
             cur.execute(sql, (timestamp,))
-            cur.execute('COMMIT')
+            cur.execute("COMMIT")
         except MySQLdb.Error as e:
-            log.error('mysql returner archiver was unable to delete contents of table \'salt_returns\'')
+            log.error(
+                "mysql returner archiver was unable to delete contents of table 'salt_returns'"
+            )
             log.error(six.text_type(e))
             raise salt.exceptions.SaltRunnerError(six.text_type(e))
 
         try:
-            sql = 'delete from `salt_events` where alter_time < %s'
+            sql = "delete from `salt_events` where alter_time < %s"
             cur.execute(sql, (timestamp,))
-            cur.execute('COMMIT')
+            cur.execute("COMMIT")
         except MySQLdb.Error as e:
-            log.error('mysql returner archiver was unable to delete contents of table \'salt_events\'')
+            log.error(
+                "mysql returner archiver was unable to delete contents of table 'salt_events'"
+            )
             log.error(six.text_type(e))
             raise salt.exceptions.SaltRunnerError(six.text_type(e))
 
@@ -514,56 +544,70 @@ def _purge_jobs(timestamp):
 
 
 def _archive_jobs(timestamp):
-    '''
+    """
     Copy rows to a set of backup tables, then purge rows.
     :param timestamp: Archive rows older than this timestamp
     :return:
-    '''
-    source_tables = ['jids',
-                     'salt_returns',
-                     'salt_events']
+    """
+    source_tables = ["jids", "salt_returns", "salt_events"]
 
     with _get_serv() as cur:
         target_tables = {}
         for table_name in source_tables:
             try:
-                tmp_table_name = table_name + '_archive'
-                sql = 'create table if not exists {0} like {1}'.format(tmp_table_name, table_name)
+                tmp_table_name = table_name + "_archive"
+                sql = "create table if not exists {0} like {1}".format(
+                    tmp_table_name, table_name
+                )
                 cur.execute(sql)
-                cur.execute('COMMIT')
+                cur.execute("COMMIT")
                 target_tables[table_name] = tmp_table_name
             except MySQLdb.Error as e:
-                log.error('mysql returner archiver was unable to create the archive tables.')
+                log.error(
+                    "mysql returner archiver was unable to create the archive tables."
+                )
                 log.error(six.text_type(e))
                 raise salt.exceptions.SaltRunnerError(six.text_type(e))
 
         try:
-            sql = 'insert into `{0}` select * from `{1}` where jid in (select distinct jid from salt_returns where alter_time < %s)'.format(target_tables['jids'], 'jids')
+            sql = "insert into `{0}` select * from `{1}` where jid in (select distinct jid from salt_returns where alter_time < %s)".format(
+                target_tables["jids"], "jids"
+            )
             cur.execute(sql, (timestamp,))
-            cur.execute('COMMIT')
+            cur.execute("COMMIT")
         except MySQLdb.Error as e:
-            log.error('mysql returner archiver was unable to copy contents of table \'jids\'')
+            log.error(
+                "mysql returner archiver was unable to copy contents of table 'jids'"
+            )
             log.error(six.text_type(e))
             raise salt.exceptions.SaltRunnerError(six.text_type(e))
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             log.error(e)
             raise
 
         try:
-            sql = 'insert into `{0}` select * from `{1}` where alter_time < %s'.format(target_tables['salt_returns'], 'salt_returns')
+            sql = "insert into `{0}` select * from `{1}` where alter_time < %s".format(
+                target_tables["salt_returns"], "salt_returns"
+            )
             cur.execute(sql, (timestamp,))
-            cur.execute('COMMIT')
+            cur.execute("COMMIT")
         except MySQLdb.Error as e:
-            log.error('mysql returner archiver was unable to copy contents of table \'salt_returns\'')
+            log.error(
+                "mysql returner archiver was unable to copy contents of table 'salt_returns'"
+            )
             log.error(six.text_type(e))
             raise salt.exceptions.SaltRunnerError(six.text_type(e))
 
         try:
-            sql = 'insert into `{0}` select * from `{1}` where alter_time < %s'.format(target_tables['salt_events'], 'salt_events')
+            sql = "insert into `{0}` select * from `{1}` where alter_time < %s".format(
+                target_tables["salt_events"], "salt_events"
+            )
             cur.execute(sql, (timestamp,))
-            cur.execute('COMMIT')
+            cur.execute("COMMIT")
         except MySQLdb.Error as e:
-            log.error('mysql returner archiver was unable to copy contents of table \'salt_events\'')
+            log.error(
+                "mysql returner archiver was unable to copy contents of table 'salt_events'"
+            )
             log.error(six.text_type(e))
             raise salt.exceptions.SaltRunnerError(six.text_type(e))
 
@@ -571,24 +615,28 @@ def _archive_jobs(timestamp):
 
 
 def clean_old_jobs():
-    '''
+    """
     Called in the master's event loop every loop_interval.  Archives and/or
     deletes the events and job details from the database.
     :return:
-    '''
-    if __opts__.get('keep_jobs', False) and int(__opts__.get('keep_jobs', 0)) > 0:
+    """
+    if __opts__.get("keep_jobs", False) and int(__opts__.get("keep_jobs", 0)) > 0:
         try:
             with _get_serv() as cur:
-                sql = 'select date_sub(now(), interval {0} hour) as stamp;'.format(__opts__['keep_jobs'])
+                sql = "select date_sub(now(), interval {0} hour) as stamp;".format(
+                    __opts__["keep_jobs"]
+                )
                 cur.execute(sql)
                 rows = cur.fetchall()
                 stamp = rows[0][0]
 
-            if __opts__.get('archive_jobs', False):
+            if __opts__.get("archive_jobs", False):
                 _archive_jobs(stamp)
             else:
                 _purge_jobs(stamp)
         except MySQLdb.Error as e:
-            log.error('Mysql returner was unable to get timestamp for purge/archive of jobs')
+            log.error(
+                "Mysql returner was unable to get timestamp for purge/archive of jobs"
+            )
             log.error(six.text_type(e))
             raise salt.exceptions.SaltRunnerError(six.text_type(e))

@@ -89,7 +89,7 @@ functions include:
 A good, well commented example of this process is the Fedora deployment
 script:
 
-https://github.com/saltstack/salt/blob/develop/salt/cloud/deploy/Fedora.sh
+https://github.com/saltstack/salt/blob/|repo_primary_branch|/salt/cloud/deploy/Fedora.sh
 
 A number of legacy deploy scripts are included with the release tarball. None
 of them are as functional or complete as Salt Bootstrap, and are still included

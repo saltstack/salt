@@ -13,6 +13,7 @@ execution modules
         salt.modules.pkg
         salt.modules.service
         salt.modules.shadow
+        salt.modules.sysctl
         salt.modules.user
 
 .. currentmodule:: salt.modules
@@ -48,6 +49,7 @@ execution modules
     bigip
     bluez_bluetooth
     boto3_elasticache
+    boto3_elasticsearch
     boto3_route53
     boto_apigateway
     boto_asg
@@ -171,7 +173,6 @@ execution modules
     hashutil
     heat
     hg
-    hipchat
     hosts
     http
     ifttt
@@ -200,6 +201,7 @@ execution modules
     jboss7
     jboss7_cli
     jenkinsmod
+    jinja
     jira_mod
     junos
     k8s
@@ -211,6 +213,7 @@ execution modules
     keyboard
     keystone
     keystoneng
+    keystore
     kmod
     kubernetesmod
     launchctl_service
@@ -232,6 +235,7 @@ execution modules
     logrotate
     lvs
     lxc
+    lxd
     mac_assistive
     mac_brew_pkg
     macdefaults
@@ -362,7 +366,6 @@ execution modules
     qemu_nbd
     quota
     rabbitmq
-    raet_publish
     rallydev
     random_org
     rbac_solaris
@@ -386,6 +389,7 @@ execution modules
     s3
     s6
     salt_proxy
+    salt_version
     saltcheck
     saltcloudmod
     saltutil
@@ -505,10 +509,12 @@ execution modules
     win_timezone
     win_useradd
     win_wua
+    win_wusa
     x509
     xapi_virt
     xbpspkg
     xfs
+    xml
     xmpp
     yumpkg
     zabbix

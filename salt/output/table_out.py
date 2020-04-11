@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Display output in a table format
 =================================
 
 .. versionadded:: 2017.7.0
 
-This outputter displays a sequence of rows as table.
+The ``table`` outputter displays a sequence of rows as table.
 
-Example output::
+Example output:
+
+.. code-block:: text
 
     edge01.bjm01:
     ----------
@@ -32,7 +34,14 @@ Example output::
             ______________________________________________________________________________
         result:
         ----------
-'''
+
+
+CLI Example:
+
+.. code-block:: bash
+
+    salt '*' foo.bar --out=table
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
@@ -49,7 +58,7 @@ import salt.utils.data
 from salt.ext import six
 from salt.ext.six.moves import map, zip  # pylint: disable=redefined-builtin
 
-__virtualname__ = 'table'
+__virtualname__ = "table"
 
 
 def __virtual__():
@@ -57,33 +66,34 @@ def __virtual__():
 
 
 class TableDisplay(object):
-    '''
+    """
     Manage the table display content.
-    '''
+    """
 
     _JUSTIFY_MAP = {
-        'center': six.text_type.center,
-        'right': six.text_type.rjust,
-        'left': six.text_type.ljust
+        "center": six.text_type.center,
+        "right": six.text_type.rjust,
+        "left": six.text_type.ljust,
     }
 
-    def __init__(self,
-                 has_header=True,  # if header will be displayed
-                 row_delimiter='-',  # row delimiter char
-                 delim=' | ',  # column delimiter
-                 justify='center',  # text justify
-                 separate_rows=True,  # display the line separating two consecutive rows
-                 prefix='| ',  # character to display at the beginning of the row
-                 suffix=' |',  # character to display at the end of the row
-                 width=50,  # column max width
-                 wrapfunc=None):  # function wrapper
+    def __init__(
+        self,
+        has_header=True,  # if header will be displayed
+        row_delimiter="-",  # row delimiter char
+        delim=" | ",  # column delimiter
+        justify="center",  # text justify
+        separate_rows=True,  # display the line separating two consecutive rows
+        prefix="| ",  # character to display at the beginning of the row
+        suffix=" |",  # character to display at the end of the row
+        width=50,  # column max width
+        wrapfunc=None,
+    ):  # function wrapper
         self.__dict__.update(
             salt.utils.color.get_colors(
-                __opts__.get('color'),
-                __opts__.get('color_theme')
+                __opts__.get("color"), __opts__.get("color_theme")
             )
         )
-        self.strip_colors = __opts__.get('strip_colors', True)
+        self.strip_colors = __opts__.get("strip_colors", True)
 
         self.has_header = has_header
         self.row_delimiter = row_delimiter
@@ -94,121 +104,112 @@ class TableDisplay(object):
         self.suffix = suffix
         self.width = width
 
-        if not(wrapfunc and callable(wrapfunc)):
+        if not (wrapfunc and callable(wrapfunc)):
             self.wrapfunc = self.wrap_onspace
         else:
             self.wrapfunc = wrapfunc
 
-    def ustring(self,
-                indent,
-                color,
-                msg,
-                prefix='',
-                suffix='',
-                endc=None):
-        '''Build the unicode string to be displayed.'''
+    def ustring(self, indent, color, msg, prefix="", suffix="", endc=None):
+        """Build the unicode string to be displayed."""
         if endc is None:
             endc = self.ENDC  # pylint: disable=no-member
 
-        indent *= ' '
-        fmt = u'{0}{1}{2}{3}{4}{5}'
+        indent *= " "
+        fmt = "{0}{1}{2}{3}{4}{5}"
 
         try:
             return fmt.format(indent, color, prefix, msg, endc, suffix)
         except UnicodeDecodeError:
-            return fmt.format(indent, color, prefix, salt.utils.data.decode(msg), endc, suffix)
+            return fmt.format(
+                indent, color, prefix, salt.utils.data.decode(msg), endc, suffix
+            )
 
     def wrap_onspace(self, text):
 
-        '''
-        When the text inside the column is longer then the width, will split by space and continue on the next line.'''
+        """
+        When the text inside the column is longer then the width, will split by space and continue on the next line."""
 
         def _truncate(line, word):
-            return '{line}{part}{word}'.format(
-                        line=line,
-                        part=' \n'[(len(line[line.rfind('\n')+1:]) + len(word.split('\n', 1)[0]) >= self.width)],
-                        word=word
+            return "{line}{part}{word}".format(
+                line=line,
+                part=" \n"[
+                    (
+                        len(line[line.rfind("\n") + 1 :]) + len(word.split("\n", 1)[0])
+                        >= self.width
                     )
+                ],
+                word=word,
+            )
 
-        return reduce(_truncate, text.split(' '))
+        return reduce(_truncate, text.split(" "))
 
-    def prepare_rows(self,
-                     rows,
-                     indent,
-                     has_header):
+    def prepare_rows(self, rows, indent, has_header):
 
-        '''Prepare rows content to be displayed.'''
+        """Prepare rows content to be displayed."""
 
         out = []
 
         def row_wrapper(row):
-            new_rows = [
-                self.wrapfunc(item).split('\n')
-                for item in row
-            ]
+            new_rows = [self.wrapfunc(item).split("\n") for item in row]
             rows = []
             for item in map(lambda *args: args, *new_rows):
                 if isinstance(item, (tuple, list)):
-                    rows.append([substr or '' for substr in item])
+                    rows.append([substr or "" for substr in item])
                 else:
                     rows.append([item])
             return rows
 
-        logical_rows = [
-            row_wrapper(row)
-            for row in rows
-        ]
+        logical_rows = [row_wrapper(row) for row in rows]
 
         columns = map(lambda *args: args, *reduce(operator.add, logical_rows))
 
         max_widths = [
-            max([len(six.text_type(item)) for item in column])
-            for column in columns
+            max([len(six.text_type(item)) for item in column]) for column in columns
         ]
-        row_separator = self.row_delimiter * (len(self.prefix) + len(self.suffix) + sum(max_widths) +
-                                              len(self.delim) * (len(max_widths) - 1))
+        row_separator = self.row_delimiter * (
+            len(self.prefix)
+            + len(self.suffix)
+            + sum(max_widths)
+            + len(self.delim) * (len(max_widths) - 1)
+        )
 
         justify = self._JUSTIFY_MAP[self.justify.lower()]
 
         if self.separate_rows:
             out.append(
                 self.ustring(
-                    indent,
-                    self.LIGHT_GRAY,  # pylint: disable=no-member
-                    row_separator
+                    indent, self.LIGHT_GRAY, row_separator  # pylint: disable=no-member
                 )
             )
         for physical_rows in logical_rows:
             for row in physical_rows:
-                line = self.prefix \
-                        + self.delim.join([
-                                justify(six.text_type(item), width)
-                                for (item, width) in zip(row, max_widths)
-                        ]) + self.suffix
-                out.append(
-                    self.ustring(
-                        indent,
-                        self.WHITE,  # pylint: disable=no-member
-                        line
+                line = (
+                    self.prefix
+                    + self.delim.join(
+                        [
+                            justify(six.text_type(item), width)
+                            for (item, width) in zip(row, max_widths)
+                        ]
                     )
+                    + self.suffix
+                )
+                out.append(
+                    self.ustring(indent, self.WHITE, line)  # pylint: disable=no-member
                 )
             if self.separate_rows or has_header:
                 out.append(
                     self.ustring(
                         indent,
                         self.LIGHT_GRAY,  # pylint: disable=no-member
-                        row_separator
+                        row_separator,
                     )
                 )
                 has_header = False
         return out
 
-    def display_rows(self,
-                     rows,
-                     labels,
-                     indent):
+    def display_rows(self, rows, labels, indent):
 
-        '''Prepares row content and displays.'''
+        """Prepares row content and displays."""
 
         out = []
 
@@ -234,7 +235,10 @@ class TableDisplay(object):
         if first_row_type is dict:  # and all the others
             temp_rows = []
             if not labels:
-                labels = [six.text_type(label).replace('_', ' ').title() for label in sorted(rows[0])]
+                labels = [
+                    six.text_type(label).replace("_", " ").title()
+                    for label in sorted(rows[0])
+                ]
             for row in rows:
                 temp_row = []
                 for key in sorted(row):
@@ -242,21 +246,18 @@ class TableDisplay(object):
                 temp_rows.append(temp_row)
             rows = temp_rows
         elif isinstance(rows[0], six.string_types):
-            rows = [[row] for row in rows]  # encapsulate each row in a single-element list
+            rows = [
+                [row] for row in rows
+            ]  # encapsulate each row in a single-element list
 
         labels_and_rows = [labels] + rows if labels else rows
         has_header = self.has_header and labels
 
         return self.prepare_rows(labels_and_rows, indent + 4, has_header)
 
-    def display(self,
-                ret,
-                indent,
-                out,
-                rows_key=None,
-                labels_key=None):
+    def display(self, ret, indent, out, rows_key=None, labels_key=None):
 
-        '''Display table(s).'''
+        """Display table(s)."""
 
         rows = []
         labels = None
@@ -275,14 +276,14 @@ class TableDisplay(object):
                                 indent,
                                 self.DARK_GRAY,  # pylint: disable=no-member
                                 key,
-                                suffix=':'
+                                suffix=":",
                             )
                         )
                         out.append(
                             self.ustring(
                                 indent,
                                 self.DARK_GRAY,  # pylint: disable=no-member
-                                '----------'
+                                "----------",
                             )
                         )
                     if isinstance(val, (list, tuple)):
@@ -292,12 +293,20 @@ class TableDisplay(object):
                             labels = ret.get(labels_key)  # if any
                         out.extend(self.display_rows(rows, labels, indent))
                     else:
-                        self.display(val, indent + 4, out, rows_key=rows_key, labels_key=labels_key)
+                        self.display(
+                            val,
+                            indent + 4,
+                            out,
+                            rows_key=rows_key,
+                            labels_key=labels_key,
+                        )
             elif rows_key:
                 # dig deeper
                 for key in sorted(ret):
                     val = ret[key]
-                    self.display(val, indent, out, rows_key=rows_key, labels_key=labels_key)  # same indent
+                    self.display(
+                        val, indent, out, rows_key=rows_key, labels_key=labels_key
+                    )  # same indent
         elif isinstance(ret, (list, tuple)):
             if not rows_key:
                 rows = ret
@@ -307,7 +316,7 @@ class TableDisplay(object):
 
 
 def output(ret, **kwargs):
-    '''
+    """
     Display the output as table.
 
     Args:
@@ -324,29 +333,35 @@ def output(ret, **kwargs):
         * rows_key: display the rows under a specific key.
         * labels_key: use the labels under a certain key. Otherwise will try to use the dictionary keys (if any).
         * title: display title when only one table is selected (using the ``rows_key`` argument).
-    '''
+    """
 
     # to facilitate re-use
-    if 'opts' in kwargs:
+    if "opts" in kwargs:
         global __opts__  # pylint: disable=W0601
-        __opts__ = kwargs.pop('opts')
+        __opts__ = kwargs.pop("opts")
 
     # Prefer kwargs before opts
-    base_indent = kwargs.get('nested_indent', 0) \
-        or __opts__.get('out.table.nested_indent', 0)
-    rows_key = kwargs.get('rows_key') \
-        or __opts__.get('out.table.rows_key')
-    labels_key = kwargs.get('labels_key') \
-        or __opts__.get('out.table.labels_key')
-    title = kwargs.get('title') \
-        or __opts__.get('out.table.title')
+    base_indent = kwargs.get("nested_indent", 0) or __opts__.get(
+        "out.table.nested_indent", 0
+    )
+    rows_key = kwargs.get("rows_key") or __opts__.get("out.table.rows_key")
+    labels_key = kwargs.get("labels_key") or __opts__.get("out.table.labels_key")
+    title = kwargs.get("title") or __opts__.get("out.table.title")
 
     class_kvargs = {}
-    argks = ('has_header', 'row_delimiter', 'delim', 'justify', 'separate_rows', 'prefix', 'suffix', 'width')
+    argks = (
+        "has_header",
+        "row_delimiter",
+        "delim",
+        "justify",
+        "separate_rows",
+        "prefix",
+        "suffix",
+        "width",
+    )
 
     for argk in argks:
-        argv = kwargs.get(argk) \
-            or __opts__.get('out.table.{key}'.format(key=argk))
+        argv = kwargs.get(argk) or __opts__.get("out.table.{key}".format(key=argk))
         if argv is not None:
             class_kvargs[argk] = argv
 
@@ -359,12 +374,16 @@ def output(ret, **kwargs):
                 base_indent,
                 title,
                 table.WHITE,  # pylint: disable=no-member
-                suffix='\n'
+                suffix="\n",
             )
         )
 
-    return '\n'.join(table.display(salt.utils.data.decode(ret),
-                                   base_indent,
-                                   out,
-                                   rows_key=rows_key,
-                                   labels_key=labels_key))
+    return "\n".join(
+        table.display(
+            salt.utils.data.decode(ret),
+            base_indent,
+            out,
+            rows_key=rows_key,
+            labels_key=labels_key,
+        )
+    )
