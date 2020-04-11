@@ -1,87 +1,104 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Return config information
-'''
+"""
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import copy
-import re
-import os
+import fnmatch
 import logging
+import os
+
+import salt._compat
 
 # Import salt libs
 import salt.config
+import salt.syspaths as syspaths
 import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.platform
-try:
-    # Gated for salt-ssh (salt.utils.cloud imports msgpack)
-    import salt.utils.cloud
-    HAS_CLOUD = True
-except ImportError:
-    HAS_CLOUD = False
-
-import salt._compat
-import salt.syspaths as syspaths
 import salt.utils.sdb as sdb
 
 # Import 3rd-party libs
 from salt.ext import six
 
+try:
+    # Gated for salt-ssh (salt.utils.cloud imports msgpack)
+    import salt.utils.cloud
+
+    HAS_CLOUD = True
+except ImportError:
+    HAS_CLOUD = False
+
+
 if salt.utils.platform.is_windows():
     _HOSTS_FILE = os.path.join(
-        os.environ['SystemRoot'], 'System32', 'drivers', 'etc', 'hosts')
+        os.environ["SystemRoot"], "System32", "drivers", "etc", "hosts"
+    )
 else:
-    _HOSTS_FILE = os.path.join(os.sep, 'etc', 'hosts')
+    _HOSTS_FILE = os.path.join(os.sep, "etc", "hosts")
 
 log = logging.getLogger(__name__)
 
-__proxyenabled__ = ['*']
+__proxyenabled__ = ["*"]
 
 # Set up the default values for all systems
-DEFAULTS = {'mongo.db': 'salt',
-            'mongo.password': '',
-            'mongo.port': 27017,
-            'mongo.user': '',
-            'redis.db': '0',
-            'redis.host': 'salt',
-            'redis.port': 6379,
-            'test.foo': 'unconfigured',
-            'ca.cert_base_path': '/etc/pki',
-            'solr.cores': [],
-            'solr.host': 'localhost',
-            'solr.port': '8983',
-            'solr.baseurl': '/solr',
-            'solr.type': 'master',
-            'solr.request_timeout': None,
-            'solr.init_script': '/etc/rc.d/solr',
-            'solr.dih.import_options': {'clean': False, 'optimize': True,
-                                        'commit': True, 'verbose': False},
-            'solr.backup_path': None,
-            'solr.num_backups': 1,
-            'poudriere.config': '/usr/local/etc/poudriere.conf',
-            'poudriere.config_dir': '/usr/local/etc/poudriere.d',
-            'ldap.uri': '',
-            'ldap.server': 'localhost',
-            'ldap.port': '389',
-            'ldap.tls': False,
-            'ldap.no_verify': False,
-            'ldap.anonymous': True,
-            'ldap.scope': 2,
-            'ldap.attrs': None,
-            'ldap.binddn': '',
-            'ldap.bindpw': '',
-            'hosts.file': _HOSTS_FILE,
-            'aliases.file': '/etc/aliases',
-            'virt': {'tunnel': False,
-                     'images': os.path.join(syspaths.SRV_ROOT_DIR, 'salt-images')},
-            }
+DEFAULTS = {
+    "mongo.db": "salt",
+    "mongo.password": "",
+    "mongo.port": 27017,
+    "mongo.user": "",
+    "redis.db": "0",
+    "redis.host": "salt",
+    "redis.port": 6379,
+    "test.foo": "unconfigured",
+    "ca.cert_base_path": "/etc/pki",
+    "solr.cores": [],
+    "solr.host": "localhost",
+    "solr.port": "8983",
+    "solr.baseurl": "/solr",
+    "solr.type": "master",
+    "solr.request_timeout": None,
+    "solr.init_script": "/etc/rc.d/solr",
+    "solr.dih.import_options": {
+        "clean": False,
+        "optimize": True,
+        "commit": True,
+        "verbose": False,
+    },
+    "solr.backup_path": None,
+    "solr.num_backups": 1,
+    "poudriere.config": "/usr/local/etc/poudriere.conf",
+    "poudriere.config_dir": "/usr/local/etc/poudriere.d",
+    "ldap.uri": "",
+    "ldap.server": "localhost",
+    "ldap.port": "389",
+    "ldap.tls": False,
+    "ldap.no_verify": False,
+    "ldap.anonymous": True,
+    "ldap.scope": 2,
+    "ldap.attrs": None,
+    "ldap.binddn": "",
+    "ldap.bindpw": "",
+    "hosts.file": _HOSTS_FILE,
+    "aliases.file": "/etc/aliases",
+    "virt": {
+        "tunnel": False,
+        "images": os.path.join(syspaths.SRV_ROOT_DIR, "salt-images"),
+    },
+    "docker.exec_driver": "docker-exec",
+    "docker.compare_container_networks": {
+        "static": ["Aliases", "Links", "IPAMConfig"],
+        "automatic": ["IPAddress", "Gateway", "GlobalIPv6Address", "IPv6Gateway"],
+    },
+}
 
 
-def backup_mode(backup=''):
-    '''
+def backup_mode(backup=""):
+    """
     Return the backup mode
 
     CLI Example:
@@ -89,14 +106,14 @@ def backup_mode(backup=''):
     .. code-block:: bash
 
         salt '*' config.backup_mode
-    '''
+    """
     if backup:
         return backup
-    return option('backup_mode')
+    return option("backup_mode")
 
 
 def manage_mode(mode):
-    '''
+    """
     Return a mode value, normalized to a string
 
     CLI Example:
@@ -104,7 +121,7 @@ def manage_mode(mode):
     .. code-block:: bash
 
         salt '*' config.manage_mode
-    '''
+    """
     # config.manage_mode should no longer be invoked from the __salt__ dunder
     # in Salt code, this function is only being left here for backwards
     # compatibility.
@@ -112,7 +129,7 @@ def manage_mode(mode):
 
 
 def valid_fileproto(uri):
-    '''
+    """
     Returns a boolean value based on whether or not the URI passed has a valid
     remote file protocol designation
 
@@ -121,48 +138,120 @@ def valid_fileproto(uri):
     .. code-block:: bash
 
         salt '*' config.valid_fileproto salt://path/to/file
-    '''
-    try:
-        return bool(re.match('^(?:salt|https?|ftp)://', uri))
-    except Exception:
-        return False
+    """
+    return six.moves.urllib.parse.urlparse(uri).scheme in salt.utils.files.VALID_PROTOS
 
 
 def option(
-        value,
-        default='',
-        omit_opts=False,
-        omit_master=False,
-        omit_pillar=False):
-    '''
-    Pass in a generic option and receive the value that will be assigned
+    value,
+    default=None,
+    omit_opts=False,
+    omit_grains=False,
+    omit_pillar=False,
+    omit_master=False,
+    omit_all=False,
+    wildcard=False,
+):
+    """
+    Returns the setting for the specified config value. The priority for
+    matches is the same as in :py:func:`config.get <salt.modules.config.get>`,
+    only this function does not recurse into nested data structures. Another
+    difference between this function and :py:func:`config.get
+    <salt.modules.config.get>` is that it comes with a set of "sane defaults".
+    To view these, you can run the following command:
+
+    .. code-block:: bash
+
+        salt '*' config.option '*' omit_all=True wildcard=True
+
+    default
+        The default value if no match is found. If not specified, then the
+        fallback default will be an empty string, unless ``wildcard=True``, in
+        which case the return will be an empty dictionary.
+
+    omit_opts : False
+        Pass as ``True`` to exclude matches from the minion configuration file
+
+    omit_grains : False
+        Pass as ``True`` to exclude matches from the grains
+
+    omit_pillar : False
+        Pass as ``True`` to exclude matches from the pillar data
+
+    omit_master : False
+        Pass as ``True`` to exclude matches from the master configuration file
+
+    omit_all : True
+        Shorthand to omit all of the above and return matches only from the
+        "sane defaults".
+
+        .. versionadded:: 3000
+
+    wildcard : False
+        If used, this will perform pattern matching on keys. Note that this
+        will also significantly change the return data. Instead of only a value
+        being returned, a dictionary mapping the matched keys to their values
+        is returned. For example, using ``wildcard=True`` with a ``key`` of
+        ``'foo.ba*`` could return a dictionary like so:
+
+        .. code-block:: python
+
+            {'foo.bar': True, 'foo.baz': False}
+
+        .. versionadded:: 3000
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' config.option redis.host
-    '''
-    if not omit_opts:
-        if value in __opts__:
-            return __opts__[value]
-    if not omit_master:
-        if value in __pillar__.get('master', {}):
-            return __pillar__['master'][value]
-    if not omit_pillar:
-        if value in __pillar__:
-            return __pillar__[value]
-    if value in DEFAULTS:
-        return DEFAULTS[value]
-    return default
+    """
+    if omit_all:
+        omit_opts = omit_grains = omit_pillar = omit_master = True
+
+    if default is None:
+        default = "" if not wildcard else {}
+
+    if not wildcard:
+        if not omit_opts:
+            if value in __opts__:
+                return __opts__[value]
+        if not omit_grains:
+            if value in __grains__:
+                return __grains__[value]
+        if not omit_pillar:
+            if value in __pillar__:
+                return __pillar__[value]
+        if not omit_master:
+            if value in __pillar__.get("master", {}):
+                return __pillar__["master"][value]
+        if value in DEFAULTS:
+            return DEFAULTS[value]
+
+        # No match
+        return default
+    else:
+        # We need to do the checks in the reverse order so that minion opts
+        # takes precedence
+        ret = {}
+        for omit, data in (
+            (omit_master, __pillar__.get("master", {})),
+            (omit_pillar, __pillar__),
+            (omit_grains, __grains__),
+            (omit_opts, __opts__),
+        ):
+            if not omit:
+                ret.update({x: data[x] for x in fnmatch.filter(data, value)})
+        # Check the DEFAULTS as well to see if the pattern matches it
+        for item in (x for x in fnmatch.filter(DEFAULTS, value) if x not in ret):
+            ret[item] = DEFAULTS[item]
+
+        # If no matches, return the default
+        return ret or default
 
 
-def merge(value,
-          default='',
-          omit_opts=False,
-          omit_master=False,
-          omit_pillar=False):
-    '''
+def merge(value, default="", omit_opts=False, omit_master=False, omit_pillar=False):
+    """
     Retrieves an option based on key, merging all matches.
 
     Same as ``option()`` except that it merges all matches, rather than taking
@@ -173,7 +262,7 @@ def merge(value,
     .. code-block:: bash
 
         salt '*' config.merge schedule
-    '''
+    """
     ret = None
     if not omit_opts:
         if value in __opts__:
@@ -181,8 +270,8 @@ def merge(value,
             if isinstance(ret, six.string_types):
                 return ret
     if not omit_master:
-        if value in __pillar__.get('master', {}):
-            tmp = __pillar__['master'][value]
+        if value in __pillar__.get("master", {}):
+            tmp = __pillar__["master"][value]
             if ret is None:
                 ret = tmp
                 if isinstance(ret, six.string_types):
@@ -190,8 +279,7 @@ def merge(value,
             elif isinstance(ret, dict) and isinstance(tmp, dict):
                 tmp.update(ret)
                 ret = tmp
-            elif isinstance(ret, (list, tuple)) and isinstance(tmp,
-                                                               (list, tuple)):
+            elif isinstance(ret, (list, tuple)) and isinstance(tmp, (list, tuple)):
                 ret = list(ret) + list(tmp)
     if not omit_pillar:
         if value in __pillar__:
@@ -203,8 +291,7 @@ def merge(value,
             elif isinstance(ret, dict) and isinstance(tmp, dict):
                 tmp.update(ret)
                 ret = tmp
-            elif isinstance(ret, (list, tuple)) and isinstance(tmp,
-                                                               (list, tuple)):
+            elif isinstance(ret, (list, tuple)) and isinstance(tmp, (list, tuple)):
                 ret = list(ret) + list(tmp)
     if ret is None and value in DEFAULTS:
         return DEFAULTS[value]
@@ -213,15 +300,23 @@ def merge(value,
     return ret
 
 
-def get(key, default='', delimiter=':', merge=None, omit_opts=False,
-        omit_pillar=False, omit_master=False, omit_grains=False):
-    '''
+def get(
+    key,
+    default="",
+    delimiter=":",
+    merge=None,
+    omit_opts=False,
+    omit_pillar=False,
+    omit_master=False,
+    omit_grains=False,
+):
+    """
     .. versionadded: 0.14.0
 
     Attempt to retrieve the named value from the minion config file, pillar,
-    grains or the master config. If the named value is not available, return the
-    value specified by ``default``. If not specified, the default is an empty
-    string.
+    grains or the master config. If the named value is not available, return
+    the value specified by the ``default`` argument. If this argument is not
+    specified, ``default`` falls back to an empty string.
 
     Values can also be retrieved from nested dictionaries. Assume the below
     data structure:
@@ -352,78 +447,78 @@ def get(key, default='', delimiter=':', merge=None, omit_opts=False,
 
         salt '*' config.get pkg:apache
         salt '*' config.get lxc.container_profile:centos merge=recurse
-    '''
+    """
     if merge is None:
         if not omit_opts:
             ret = salt.utils.data.traverse_dict_and_list(
-                __opts__,
-                key,
-                '_|-',
-                delimiter=delimiter)
-            if ret != '_|-':
+                __opts__, key, "_|-", delimiter=delimiter
+            )
+            if ret != "_|-":
                 return sdb.sdb_get(ret, __opts__)
 
         if not omit_grains:
             ret = salt.utils.data.traverse_dict_and_list(
-                __grains__,
-                key,
-                '_|-',
-                delimiter)
-            if ret != '_|-':
+                __grains__, key, "_|-", delimiter
+            )
+            if ret != "_|-":
                 return sdb.sdb_get(ret, __opts__)
 
         if not omit_pillar:
             ret = salt.utils.data.traverse_dict_and_list(
-                __pillar__,
-                key,
-                '_|-',
-                delimiter=delimiter)
-            if ret != '_|-':
+                __pillar__, key, "_|-", delimiter=delimiter
+            )
+            if ret != "_|-":
                 return sdb.sdb_get(ret, __opts__)
 
         if not omit_master:
             ret = salt.utils.data.traverse_dict_and_list(
-                __pillar__.get('master', {}),
-                key,
-                '_|-',
-                delimiter=delimiter)
-            if ret != '_|-':
+                __pillar__.get("master", {}), key, "_|-", delimiter=delimiter
+            )
+            if ret != "_|-":
                 return sdb.sdb_get(ret, __opts__)
 
         ret = salt.utils.data.traverse_dict_and_list(
-            DEFAULTS,
-            key,
-            '_|-',
-            delimiter=delimiter)
+            DEFAULTS, key, "_|-", delimiter=delimiter
+        )
         log.debug("key: %s, ret: %s", key, ret)
-        if ret != '_|-':
+        if ret != "_|-":
             return sdb.sdb_get(ret, __opts__)
     else:
-        if merge not in ('recurse', 'overwrite'):
-            log.warning('Unsupported merge strategy \'{0}\'. Falling back '
-                        'to \'recurse\'.'.format(merge))
-            merge = 'recurse'
+        if merge not in ("recurse", "overwrite"):
+            log.warning(
+                "Unsupported merge strategy '{0}'. Falling back "
+                "to 'recurse'.".format(merge)
+            )
+            merge = "recurse"
 
-        merge_lists = salt.config.master_config('/etc/salt/master').get('pillar_merge_lists')
+        merge_lists = salt.config.master_config("/etc/salt/master").get(
+            "pillar_merge_lists"
+        )
 
         data = copy.copy(DEFAULTS)
-        data = salt.utils.dictupdate.merge(data, __pillar__.get('master', {}), strategy=merge, merge_lists=merge_lists)
-        data = salt.utils.dictupdate.merge(data, __pillar__, strategy=merge, merge_lists=merge_lists)
-        data = salt.utils.dictupdate.merge(data, __grains__, strategy=merge, merge_lists=merge_lists)
-        data = salt.utils.dictupdate.merge(data, __opts__, strategy=merge, merge_lists=merge_lists)
+        data = salt.utils.dictupdate.merge(
+            data, __pillar__.get("master", {}), strategy=merge, merge_lists=merge_lists
+        )
+        data = salt.utils.dictupdate.merge(
+            data, __pillar__, strategy=merge, merge_lists=merge_lists
+        )
+        data = salt.utils.dictupdate.merge(
+            data, __grains__, strategy=merge, merge_lists=merge_lists
+        )
+        data = salt.utils.dictupdate.merge(
+            data, __opts__, strategy=merge, merge_lists=merge_lists
+        )
         ret = salt.utils.data.traverse_dict_and_list(
-            data,
-            key,
-            '_|-',
-            delimiter=delimiter)
-        if ret != '_|-':
+            data, key, "_|-", delimiter=delimiter
+        )
+        if ret != "_|-":
             return sdb.sdb_get(ret, __opts__)
 
     return default
 
 
 def dot_vals(value):
-    '''
+    """
     Pass in a configuration value that should be preceded by the module name
     and a dot, this will return a list of all read key/value pairs
 
@@ -432,19 +527,19 @@ def dot_vals(value):
     .. code-block:: bash
 
         salt '*' config.dot_vals host
-    '''
+    """
     ret = {}
-    for key, val in six.iteritems(__pillar__.get('master', {})):
-        if key.startswith('{0}.'.format(value)):
+    for key, val in six.iteritems(__pillar__.get("master", {})):
+        if key.startswith("{0}.".format(value)):
             ret[key] = val
     for key, val in six.iteritems(__opts__):
-        if key.startswith('{0}.'.format(value)):
+        if key.startswith("{0}.".format(value)):
             ret[key] = val
     return ret
 
 
 def gather_bootstrap_script(bootstrap=None):
-    '''
+    """
     Download the salt-bootstrap script, and return its location
 
     bootstrap
@@ -455,16 +550,16 @@ def gather_bootstrap_script(bootstrap=None):
     .. code-block:: bash
 
         salt '*' config.gather_bootstrap_script
-    '''
+    """
     if not HAS_CLOUD:
-        return False, 'config.gather_bootstrap_script is unavailable'
+        return False, "config.gather_bootstrap_script is unavailable"
     ret = salt.utils.cloud.update_bootstrap(__opts__, url=bootstrap)
-    if 'Success' in ret and len(ret['Success']['Files updated']) > 0:
-        return ret['Success']['Files updated'][0]
+    if "Success" in ret and len(ret["Success"]["Files updated"]) > 0:
+        return ret["Success"]["Files updated"][0]
 
 
 def items():
-    '''
+    """
     Return the complete config from the currently running minion process.
     This includes defaults for values not set in the config file.
 
@@ -473,5 +568,5 @@ def items():
     .. code-block:: bash
 
         salt '*' config.items
-    '''
+    """
     return __opts__

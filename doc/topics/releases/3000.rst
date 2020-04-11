@@ -1,0 +1,888 @@
+.. _release-3000:
+
+=======================================
+Salt 3000 Release Notes - Codename Neon
+=======================================
+
+Security Advisory
+=================
+
+For historical reasons, Salt requires PyCrypto as a "lowest common
+denominator". However, `PyCrypto is unmaintained`_ and best practice is to
+manually upgrade to use a more maintained library such as `PyCryptodome`_. See
+`Issue #52674`_ and `Issue #54115`_ for more info
+
+New Versioning
+==============
+The neon release has removed the date versioning. Going forward we will
+use a non-date based version schema beginning at 3000. The version will
+be MAJOR.PATCH. For a planned release containing features and/or bug fixes
+the MAJOR version will be incremented. Please review the approved
+`SEP <https://github.com/saltstack/salt-enhancement-proposals/pull/20>`_
+for further details.
+
+The new versioning scheme is PEP 440 compliant, but distutils.StrictVersion
+will result in an error ``invalid version number``. If using StrictVersion to
+compare Salt's versions, please use LooseVersion. There is also the packaging
+library you can use to compare versions. Another alternative is using the
+:py:func:`salt version module<salt.modules.salt_version>`
+
+Python 3.8 Not Supported
+==========================
+Please note that running Salt with Python 3.8 is currently not supported.
+It is recommended to not use a version higher than 3.7.
+
+Vendored Tornado Code Base
+==========================
+
+The Tornado code base has been included as ``salt.ext.tornado``. This was done
+to provide a consistent version of Tornado across all operating systems while
+we continue to work on upgrading Tornado to a recent version. New code that
+uses Tornado should import the module from ``salt.ext.tornado`` instead of
+importing the system version of Tornado.
+
+Msgpack 1.0.0rc1 Incompatibility
+================================
+Salt is currently incompatible with mgspack 1.0.0rc1. We recommend using
+versions < 1.0.0 . This impacts the Salt Master's ability to run commands
+against minions. Please see `Issue 56007 <https://github.com/saltstack/salt/issues/56007>`_
+for more details and updates.
+
+
+Pip Installing Salt On Windows
+==============================
+
+This release will not install correctly on windows when using pip to install salt.
+This issue is addressed in `PR 56099 <https://github.com/saltstack/salt/pull/56099>`_.
+The workaround for this issue is:
+
+.. code-block:: text
+
+   pip install "pywin32==224" "WMI==1.4.9"
+
+
+Those using the Salt Windows Installer are not affected by this issue.
+
+
+Saltcheck Updates
+=================
+
+Available since 2018.3, the :py:func:`saltcheck module <salt.modules.saltcheck>`
+has been enhanced to:
+
+* Support saltenv environments
+* Associate tests with states by naming convention
+* Adds report_highstate_tests function
+* Adds empty and notempty assertions
+* Adds skip keyword
+* Adds print_result keyword
+* Adds assertion_section keyword
+* Use saltcheck.state_apply to run state.apply for test setup or teardown
+* Changes output to display test time
+* Works with salt-ssh
+
+Saltcheck provides unittest like functionality requiring only the knowledge of
+salt module execution and yaml. Saltcheck uses salt modules to return data, then
+runs an assertion against that return. This allows for testing with all the
+features included in salt modules.
+
+In order to run state and highstate saltcheck tests, a sub-folder in the state directory
+must be created and named ``saltcheck-tests``. Tests for a state should be created in files
+ending in ``*.tst`` and placed in the ``saltcheck-tests`` folder. ``tst`` files are run
+through the salt rendering system, enabling tests to be written in yaml (or renderer of choice),
+and include jinja, as well as the usual grain and pillar information. Like states, multiple tests can
+be specified in a ``tst`` file. Multiple ``tst`` files can be created in the ``saltcheck-tests``
+folder, and should be named the same as the associated state. The ``id`` of a test works in the
+same manner as in salt state files and should be unique and descriptive.
+
+Usage
+-----
+
+Example file system layout:
+
+.. code-block:: text
+
+    /srv/salt/apache/
+        init.sls
+        config.sls
+        saltcheck-tests/
+            init.tst
+            config.tst
+            deployment_validation.tst
+
+Tests can be run for each state by name, for all ``apache/saltcheck/*.tst`` files,
+or for all states assigned to the minion in top.sls. Tests may also be created
+with no associated state. These tests will be run through the use of
+``saltcheck.run_state_tests``, but will not be automatically run by
+``saltcheck.run_highstate_tests``.
+
+.. code-block:: bash
+
+    salt '*' saltcheck.run_state_tests apache,apache.config
+    salt '*' saltcheck.run_state_tests apache check_all=True
+    salt '*' saltcheck.run_highstate_tests
+    salt '*' saltcheck.run_state_tests apache.deployment_validation
+
+Example Tests
+-------------
+
+.. code-block:: jinja
+
+    {# will run the common salt state before further testing #}
+    setup_test_environment:
+      module_and_function: saltcheck.state_apply
+      args:
+        - common
+      pillar-data:
+        data: value
+
+    {% for package in ["apache2", "openssh"] %}
+    {# or another example #}
+    {# for package in salt['pillar.get']("packages") #}
+    jinja_test_{{ package }}_latest:
+      module_and_function: pkg.upgrade_available
+      args:
+        - {{ package }}
+      assertion: assertFalse
+    {% endfor %}
+
+    validate_user_present_and_shell:
+      module_and_function: user.info
+      args:
+        - root
+      assertion: assertEqual
+      expected-return: /bin/bash
+      assertion_section: shell
+      print_result: False
+
+    skip_test:
+      module_and_function: pkg.upgrade_available
+      args:
+        - apache2
+      assertion: assertFalse
+      skip: True
+
+Output Format Changes
+---------------------
+
+Saltcheck output has been enhanced to display the time taken per test. This results
+in a change to the output format.
+
+Previous Output:
+
+.. code-block:: text
+
+  local:
+    |_
+      ----------
+      ntp:
+          ----------
+          ntp-client-installed:
+              Pass
+          ntp-service-status:
+              Pass
+    |_
+      ----------
+      TEST RESULTS:
+          ----------
+          Failed:
+              0
+          Missing Tests:
+              0
+          Passed:
+              2
+
+New output:
+
+.. code-block:: text
+
+  local:
+    |_
+      ----------
+      ntp:
+          ----------
+          ntp-client-installed:
+              ----------
+              duration:
+                  1.0408
+              status:
+                  Pass
+          ntp-service-status:
+              ----------
+              duration:
+                  1.464
+              status:
+                  Pass
+    |_
+      ----------
+      TEST RESULTS:
+          ----------
+          Execution Time:
+              2.5048
+          Failed:
+              0
+          Missing Tests:
+              0
+          Passed:
+              2
+          Skipped:
+              0
+
+
+Unless and onlyif Enhancements
+==============================
+
+The ``unless`` and ``onlyif`` requisites can now be operated with salt modules.
+The dictionary must contain an argument ``fun`` which is the module that is
+being run, and everything else must be passed in under the args key or will be
+passed as individual kwargs to the module function.
+
+.. note::
+
+  Certain states have an ``unless``/``onlyif`` implementation that predates this feature, and may not work as expected:
+
+  * states.git
+  * states.cmd
+  * states.macpackage
+  * states.file
+  * states.docker_container
+
+Examples:
+
+.. code-block:: yaml
+
+  check external ip address:
+    http.query:
+      - name: https://icanhazip.com
+      - status: 200
+      - onlyif:
+        - fun: file.file_exists
+          path: /usr/local/bin/whatever
+
+is equivalent to
+
+.. code-block:: yaml
+
+  check another ip address:
+    http.query:
+      - name: https://icanhazip.com
+      - status: 200
+      - onlyif:
+        - test -f /tmp/fnord.txt
+
+Another example:
+
+.. code-block:: yaml
+
+  set mysql root password:
+    debconf.set:
+      - name: mysql-server-5.7
+      - data:
+          'mysql-server/root_password': {'type': 'password', 'value': {{pillar['mysql.pass']}} }
+      - unless:
+        - fun: pkg.version
+          args:
+            - mysql-server-5.7
+
+Keystore State and Module
+=========================
+
+A new :py:func:`state <salt.states.keystore>` and
+:py:func:`execution module <salt.modules.keystore>` for manaing Java
+Keystore files is now included. It allows for adding/removing/listing
+as well as managing keystore files.
+
+.. code-block:: bash
+
+  # salt-call keystore.list /path/to/keystore.jks changeit
+  local:
+    |_
+      ----------
+      alias:
+          hostname1
+      expired:
+          True
+      sha1:
+          CB:5E:DE:50:57:99:51:87:8E:2E:67:13:C5:3B:E9:38:EB:23:7E:40
+      type:
+          TrustedCertEntry
+      valid_start:
+          August 22 2012
+      valid_until:
+          August 21 2017
+
+.. code-block:: yaml
+
+  define_keystore:
+    keystore.managed:
+      - name: /tmp/statestore.jks
+      - passphrase: changeit
+      - force_remove: True
+      - entries:
+        - alias: hostname1
+          certificate: /tmp/testcert.crt
+        - alias: remotehost
+          certificate: /tmp/512.cert
+          private_key: /tmp/512.key
+        - alias: stringhost
+          certificate: |
+            -----BEGIN CERTIFICATE-----
+            MIICEjCCAX
+            Hn+GmxZA
+            -----END CERTIFICATE-----
+
+XML Module
+==========
+
+A new state and execution module for editing XML files is now included. Currently it allows for
+editing values from an xpath query, or editing XML IDs.
+
+.. code-block:: bash
+
+  # salt-call xml.set_attribute /tmp/test.xml ".//actor[@id='3']" editedby "Jane Doe"
+  local:
+      True
+  # salt-call xml.get_attribute /tmp/test.xml ".//actor[@id='3']"
+  local:
+      ----------
+      editedby:
+          Jane Doe
+      id:
+          3
+  # salt-call xml.get_value /tmp/test.xml ".//actor[@id='2']"
+  local:
+      Liam Neeson
+  # salt-call xml.set_value /tmp/test.xml ".//actor[@id='2']" "Patrick Stewart"
+  local:
+      True
+  # salt-call xml.get_value /tmp/test.xml ".//actor[@id='2']"
+  local:
+      Patrick Stewart
+
+.. code-block:: yaml
+
+    ensure_value_true:
+      xml.value_present:
+        - name: /tmp/test.xml
+        - xpath: .//actor[@id='1']
+        - value: William Shatner
+
+
+LGPO Execution Module
+=====================
+Multiple fixes were made to the :py:func:`win_lgpo <salt.modules.win_lgpo>` to
+expand support for additional policies and improve performance. Issues with
+encoding and unsupported characters (smart-quotes, em-dash, etc) found in the
+ADML files as well as whitespace in some policies have been addressed.
+
+Speed enhancements include:
+
+- Caching the compiled xml from ADMX/ADML files in ``__context__``
+- Lowercasing all keys before compiling XML to remove an expensive XPath lookup
+
+Additional functionality:
+
+- Adds the :py:func:`lgpo.get_policy <salt.modules.win_lgpo.get_policy>`
+  function that allows you to get the current settings for a single policy.
+- Changes some policy names that were overly long
+
+
+LGPO State Module
+=================
+Multiple changes were made to the :py:func:`win_lgpo <salt.states.win_lgpo>`
+state to improve performance.
+
+It now uses the :py:func:`lgpo.get_policy <salt.modules.win_lgpo.get_policy>`
+function instead of the :py:func:`lgpo.get <salt.modules.win_lgpo.get>` to avoid
+reloading all settings on the machine at the beginning and end of each state
+run.
+
+Supports the new shorter policy names but also attempts to resolve the older,
+longer policy names.
+
+
+Win_network Salt Util
+=====================
+Now uses .NET libraries to obtain Interface information on Windows systems that
+support it. Unsupported systems fall back to the more expensive WMI calls. This
+is important as this data is gathered for grains and occurs each time a process
+is forked.
+
+
+Jinja enhancements
+==================
+
+Troubleshooting Jinja map files
+-------------------------------
+
+A new :py:func:`execution module <salt.modules.jinja>` for ``map.jinja`` troubleshooting
+has been added.
+
+Assuming the map is loaded in your formula SLS as follows:
+
+.. code-block:: jinja
+
+  {% from "myformula/map.jinja" import myformula with context %}
+
+The following command can be used to load the map and check the results:
+
+.. code-block:: bash
+
+  salt myminion jinja.load_map myformula/map.jinja myformula
+
+The module can be also used to test ``json`` and ``yaml`` maps:
+
+.. code-block:: bash
+
+  salt myminion jinja.import_yaml myformula/defaults.yaml
+
+  salt myminion jinja.import_json myformula/defaults.json
+
+json_query filter
+-----------------
+
+A port of Ansible :jinja_ref:`json_query` Jinja filter has been added. It allows
+making queries against JSON data using `JMESPath language`_. Could be used to
+filter ``pillar`` data, ``yaml`` maps, and also useful with :jinja_ref:`http_query`.
+
+Depends on the `jmespath`_ Python module.
+
+.. _`JMESPath language`: http://jmespath.org/
+.. _`jmespath`: https://github.com/jmespath/jmespath.py
+
+Slot Syntax Updates
+===================
+
+The slot syntax has been updated to support parsing dictionary responses and to append text.
+
+.. code-block:: yaml
+
+  demo dict parsing and append:
+    test.configurable_test_state:
+      - name: slot example
+      - changes: False
+      - comment: __slot__:salt:test.arg(shell="/bin/bash").kwargs.shell ~ /appended
+
+.. code-block:: none
+
+  local:
+    ----------
+          ID: demo dict parsing and append
+    Function: test.configurable_test_state
+        Name: slot example
+      Result: True
+     Comment: /bin/bash/appended
+     Started: 09:59:58.623575
+    Duration: 1.229 ms
+     Changes:
+
+Also, slot parsing is now supported inside of nested state data structures (dicts, lists, unless/onlyif args):
+
+.. code-block:: yaml
+
+  demo slot parsing for nested elements:
+    file.managed:
+      - name: /tmp/slot.txt
+      - source: salt://slot.j2
+      - template: jinja
+      - context:
+          # Slot inside of the nested context dictionary
+          variable: __slot__:salt:test.echo(a_value)
+      - unless:
+        - fun: file.search
+          args:
+            # Slot as unless argument
+            - __slot__:salt:test.echo(/tmp/slot.txt)
+            - "DO NOT OVERRIDE"
+          ignore_if_missing: True
+
+State Changes
+=============
+
+- The :py:func:`file.symlink <salt.states.file.symlink>` state was
+  fixed to remove existing file system entries other than files,
+  directories and symbolic links properly.
+
+- The ``onchanges`` and ``prereq`` :ref:`requisites <requisites>` now behave
+  properly in test mode, due to removing ``pchanges``.
+
+- Added new :py:func:`ssh_auth.manage <salt.states.ssh_auth.manage>` state to
+  ensure only the specified ssh keys are present for the specified user.
+
+- Added new :py:func:`saltutil <salt.states.saltutil>` state to use instead of
+  ``module.run`` to more easily handle change.
+
+
+Module Changes
+==============
+
+- Added new :py:func:`boto_ssm <salt.modules.boto_ssm>` module to set and query
+  secrets in AWS SSM parameters.
+
+- The :py:func:`file.remove <salt.modules.file.remove>` module was
+  fixed to remove file system entries other than files, directories
+  and symbolic links properly.
+
+
+Enhancements to Engines
+=======================
+
+Multiple copies of a particular Salt engine can be configured by including
+the ``engine_module`` parameter in the engine configuration.
+
+.. code-block:: yaml
+
+   engines:
+     - production_logstash:
+         host: production_log.my_network.com
+         port: 5959
+         proto: tcp
+         engine_module: logstash
+     - develop_logstash:
+         host: develop_log.my_network.com
+         port: 5959
+         proto: tcp
+         engine_module: logstash
+
+
+- A new :py:func:`fluent engine <salt.engines.salt.engines.fluent>` has been
+  added to export Salt events to fluentd.
+
+  .. code-block:: yaml
+
+    engines:
+      - fluent
+          host: localhost
+          port: 24224
+
+  .. code-block::
+
+    <source>
+      @type forward
+      port 24224
+    </source>
+    <match saltstack.**>
+      @type file
+      path /var/log/td-agent/saltstack
+    </match>
+
+Enhancements to Beacons
+=======================
+
+Multiple copies of a particular Salt beacon can be configured by including
+the ``beacon_module`` parameter in the beacon configuration.
+
+ .. code-block:: yaml
+
+    beacons:
+      watch_importand_file:
+        - files:
+            /etc/important_file: {}
+        - beacon_module: inotify
+      watch_another_file:
+        - files:
+            /etc/another_file: {}
+        - beacon_module: inotify
+
+Enhancements to chroot
+======================
+
+- New functions added to chroot :py:func:`apply<salt.modules.chroot.apply_>`,
+  :py:func:`sls<salt.modules.chroot.sls>`, and
+  :py:func:`highstate<salt.modules.chroot.highstate>` that allow executing
+  states in sls files or running apply/highstate inside of a chroot.
+
+Minion-side ACL
+---------------
+
+Salt has had master-side ACL for the salt mine for some time, where the master
+configuration contained `mine_get` that specified which minions could request
+which functions. However, now you can specify which minions can access a function
+in the salt mine function definition itself (or when calling :py:func:`mine.send <salt.modules.mine.send>`).
+This targeting works the same as the generic minion targeting as specified
+:ref:`here <targeting>`. The parameters used are ``allow_tgt`` and ``allow_tgt_type``.
+See also :ref:`the documentation of the Salt Mine <mine_minion-side-acl>`. Please
+note that if you want to use this new feature both your minion and masters will need
+to be on atleast version 3000.
+
+Deprecations
+============
+
+Raet Deprecated
+---------------
+- The Raet transport has been deprecated. Please use the supported
+  transport protocols tcp or zeromq.
+
+Module Deprecations
+-------------------
+
+- The hipchat module has been removed due to the service being retired.
+  :py:func:`Google Chat <salt.modules.google_chat>`,
+  :py:func:`MS Teams <salt.modules.msteams>`, or
+  :py:func:`Slack <salt.modules.slack_notify>` may be suitable replacements.
+
+- The :py:mod:`dockermod <salt.modules.dockermod>` module has been
+  changed as follows:
+
+    - Support for the ``tags`` kwarg has been removed from the
+      :py:func:`dockermod.resolve_tag <salt.modules.dockermod.resolve_tag>`
+      function.
+    - Support for the ``network_id`` kwarg has been removed from the
+      :py:func:`dockermod.connect_container_to_network <salt.modules.dockermod.connect_container_to_network>`
+      function. Please use ``net_id`` instead.
+    - Support for the ``name`` kwarg has been removed from the
+      :py:func:`dockermod.sls_build <salt.modules.dockermod.sls_build>`
+      function. Please use ``repository`` and ``tag`` instead.
+    - Support for the ``image`` kwarg has been removed from the following
+      functions. In all cases, please use both the ``repository`` and ``tag``
+      options instead:
+
+        - :py:func:`dockermod.build <salt.modules.dockermod.build>`
+        - :py:func:`dockermod.commit <salt.modules.dockermod.commit>`
+        - :py:func:`dockermod.import <salt.modules.dockermod.import_>`
+        - :py:func:`dockermod.load <salt.modules.dockermod.load>`
+        - :py:func:`dockermod.tag <salt.modules.dockermod.tag_>`
+
+- The heat module has removed the ``enviroment`` kwarg from the
+  :py:func:`heat.create_stack <salt.modules.heat.create_stack>` and
+  :py:func:`heat.update_stack <salt.modules.heat.update_stack>` functions due
+  to a spelling error. Please use ``environment`` instead.
+
+- The :py:mod:`ssh <salt.modules.ssh>` execution module has been
+  changed as follows:
+
+    - Support for the ``ssh.get_known_host`` function has been removed. Please use the
+      :py:func:`ssh.get_known_host_entries <salt.modules.ssh.get_known_host_entries>`
+      function instead.
+    - Support for the ``ssh.recv_known_host`` function has been removed. Please use the
+      :py:func:`ssh.recv_known_host_entries <salt.modules.ssh.recv_known_host_entries>`
+      function instead.
+
+- The :py:mod`firewalld <salt.modules.firewalld>` module has been changed as
+  follows:
+
+    - The default setting for the ``force_masquerade`` option in the
+      :py:func:`firewalld.add_port <salt.module.firewalld.add_port` function has changed
+      from ``True`` to ``False``.
+    - Support for the ``force_masquerade`` option in the
+      :py:func:`firewalld.add_port_fwd <salt.module.firewalld.add_port_fwd` function has
+      been changed from ``True`` to ``False``.
+
+State Deprecations
+------------------
+
+- The hipchat state has been removed due to the service being retired.
+  :py:func:`MS Teams <salt.states.msteams>` or
+  :py:func:`Slack <salt.states.slack>` may be suitable replacements.
+
+- The cmd state module has removed the ``quiet`` kwarg from the
+  :py:func:`cmd.run <salt.states.cmd.run>` function. Please
+  set ``output_loglevel`` to ``quiet`` instead.
+
+- The heat state module has removed the ``enviroment`` kwarg from the
+  :py:func:`heat.deployed <salt.states.heat.deployed>` function due
+  to a spelling error. Please use ``environment`` instead.
+
+- The :py:mod`firewalld <salt.states.firewalld>` state has been changed as follows:
+
+    - The default setting for the ``prune_services`` option in the
+      :py:func:`firewalld.present <salt.states.firewalld.present>` function has changed
+      from ``True`` to ``False``.
+
+Fileserver Deprecations
+-----------------------
+
+- The hgfs fileserver had the following config options removed:
+
+    - The ``hgfs_env_whitelist`` config option has been removed in favor of ``hgfs_saltenv_whitelist``.
+    - The ``hgfs_env_blacklist`` config option has been removed in favor of ``hgfs_saltenv_blacklist``.
+
+- The svnfs fileserver had the following config options removed:
+
+    - The ``svnfs_env_whitelist`` config option has been removed in favor of ``svnfs_saltenv_whitelist``.
+    - The ``svnfs_env_blacklist`` config option has been removed in favor of ``svnfs_saltenv_blacklist``.
+
+- The gitfs fileserver had the following config options removed:
+
+    - The ``gitfs_env_whitelist`` config option has been removed in favor of ``gitfs_saltenv_whitelist``.
+    - The ``gitfs_env_blacklist`` config option has been removed in favor of ``gitfs_saltenv_blacklist``.
+
+Engine Removal
+--------------
+
+- The hipchat engine has been removed due to the service being retired. For users migrating
+  to Slack, the :py:func:`slack <salt.engines.slack>` engine may be a suitable replacement.
+
+Returner Removal
+----------------
+
+- The hipchat returner has been removed due to the service being retired. For users migrating
+  to Slack, the :py:func:`slack <salt.returners.slack_returner>` returner may be a suitable
+  replacement.
+
+Grain Deprecations
+------------------
+
+For ``smartos`` some grains have been deprecated. These grains have been removed.
+
+  - The ``hypervisor_uuid`` has been replaced with ``mdata:sdc:server_uuid`` grain.
+  - The ``datacenter`` has been replaced with ``mdata:sdc:datacenter_name`` grain.
+
+Cloud Deprecations
+------------------
+
+- The nova cloud driver has been removed in favor of the openstack cloud driver.
+
+
+Jinja Filter Deprecations
+-------------------------
+
+- The following jinja filters are set to be removed in the Aluminium release:
+
+  - :jinja_ref:`json_decode_dict` in favor of :jinja_ref:`tojson`
+  - :jinja_ref:`json_decode_list` in favor of :jinja_ref:`tojson`
+
+Utils Deprecations
+------------------
+- All of the functions in salt.utils.__init__.py have been removed. These
+  include:
+
+    - `salt.utils.option`
+    - `salt.utils.required_module_list`
+    - `salt.utils.required_modules_error`
+    - `salt.utils.get_accumulator_dir`. Please use :py:func:`salt.state.get_accumulator_dir` instead.
+    - `salt.utils.fnmatch_multiple`. Please use :py:func:`salt.utils.itertools.fnmatch_multiple` instead.
+    - `salt.utils.appendproctitle`. Please use :py:func:`salt.utils.process.appendproctitle` instead.
+    - `salt.utils.daemonize`. Please use :py:func:`salt.utils.process.daemonize` instead.
+    - `salt.utils.daemonize_if`. Please use :py:func:`salt.utils.process.daemonize_if` instead.
+    - `salt.utils.reinit_crypto`. Please use :py:func:`salt.utils.crypt.reinit_crypto` instead.
+    - `salt.utils.pem_finger`. Please use :py:func:`salt.utils.crypt.pem_finger` instead.
+    - `salt.utils.to_bytes`. Please use :py:func:`salt.utils.stringutils.to_bytes` instead.
+    - `salt.utils.to_str`. Please use :py:func:`salt.utils.stringutils.to_str` instead.
+    - `salt.utils.to_unicode`. Please use :py:func:`salt.utils.stringutils.to_unicode` instead.
+    - `salt.utils.str_to_num`. Please use :py:func:`salt.utils.stringutils.to_num` instead.
+    - `salt.utils.is_quoted`. Please use :py:func:`salt.utils.stringutils.is_quoted` instead.
+    - `salt.utils.dequote`. Please use :py:func:`salt.utils.stringutils.dequote` instead.
+    - `salt.utils.is_hex`. Please use :py:func:`salt.utils.stringutils.is_hex` instead.
+    - `salt.utils.is_bin_str`. Please use :py:func:`salt.utils.stringutils.is_binary` instead.
+    - `salt.utils.rand_string`. Please use :py:func:`salt.utils.stringutils.random` instead.
+    - `salt.utils.contains_whitespace`. Please use :py:func:`salt.utils.stringutils.contains_whitespace` instead.
+    - `salt.utils.build_whitespace_split_regex`. Please use :py:func:`salt.utils.stringutils.build_whitespace_split_regex` instead.
+    - `salt.utils.expr_match`. Please use :py:func:`salt.utils.stringutils.expr_match` instead.
+    - `salt.utils.check_whitelist_blacklist`. Please use :py:func:`salt.utils.stringutils.check_whitelist_blacklist` instead.
+    - `salt.utils.check_include_exclude`.Please use :py:func:`salt.utils.stringutils.check_include_exclude` instead.
+    - `salt.utils.print_cli`.Please use :py:func:`salt.utils.stringutils.print_cli` instead.
+    - `salt.utils.clean_kwargs`.Please use :py:func:`salt.utils.args.clean_kwargs` instead.
+    - `salt.utils.invalid_kwargs`.Please use :py:func:`salt.utils.args.invalid_kwargs` instead.
+    - `salt.utils.shlex_split`.Please use :py:func:`salt.utils.args.shlex_split` instead.
+    - `salt.utils.arg_lookup`.Please use :py:func:`salt.utils.args.arg_lookup` instead.
+    - `salt.utils.argspec_report`.Please use :py:func:`salt.utils.args.argspec_report` instead.
+    - `salt.utils.split_input`.Please use :py:func:`salt.utils.args.split_input` instead.
+    - `salt.utils.test_mode`.Please use :py:func:`salt.utils.args.test_mode` instead.
+    - `salt.utils.format_call`.Please use :py:func:`salt.utils.args.format_call` instead.
+    - `salt.utils.which`.Please use :py:func:`salt.utils.path.which` instead.
+    - `salt.utils.which_bin`.Please use :py:func:`salt.utils.path.which_bin` instead.
+    - `salt.utils.path_join`.Please use :py:func:`salt.utils.path.join` instead.
+    - `salt.utils.check_or_die`.Please use :py:func:`salt.utils.path.check_or_die` instead.
+    - `salt.utils.sanitize_win_path_string`.Please use :py:func:`salt.utils.path.sanitize_win_path` instead.
+    - `salt.utils.rand_str`.Please use :py:func:`salt.utils.hashutils.random_hash` instead.
+    - `salt.utils.get_hash`.Please use :py:func:`salt.utils.hashutils.get_hash` instead.
+    - `salt.utils.is_windows`.Please use :py:func:`salt.utils.platform.is_windows` instead.
+    - `salt.utils.is_proxy`.Please use :py:func:`salt.utils.platform.is_proxy` instead.
+    - `salt.utils.is_linux`.Please use :py:func:`salt.utils.platform.is_linux` instead.
+    - `salt.utils.is_darwin`.Please use :py:func:`salt.utils.platform.is_darwin` instead.
+    - `salt.utils.is_sunos`.Please use :py:func:`salt.utils.platform.is_sunos` instead.
+    - `salt.utils.is_smartos`.Please use :py:func:`salt.utils.platform.is_smartos` instead.
+    - `salt.utils.is_smartos_globalzone`.Please use :py:func:`salt.utils.platform.is_smartos_globalzone` instead.
+    - `salt.utils.is_smartos_zone`.Please use :py:func:`salt.utils.platform.is_smartos_zone` instead.
+    - `salt.utils.is_freebsd`.Please use :py:func:`salt.utils.platform.is_freebsd` instead.
+    - `salt.utils.is_netbsd`.Please use :py:func:`salt.utils.platform.is_netbsd` instead.
+    - `salt.utils.is_openbsd`.Please use :py:func:`salt.utils.platform.is_openbsd` instead.
+    - `salt.utils.is_aix`.Please use :py:func:`salt.utils.platform.is_aix` instead.
+    - `salt.utils.safe_rm`.Please use :py:func:`salt.utils.files.safe_rm` instead.
+    - `salt.utils.is_empty`.Please use :py:func:`salt.utils.files.is_empty` instead.
+    - `salt.utils.fopen`.Please use :py:func:`salt.utils.files.fopen` instead.
+    - `salt.utils.flopen`.Please use :py:func:`salt.utils.files.flopen` instead.
+    - `salt.utils.fpopen`.Please use :py:func:`salt.utils.files.fpopen` instead.
+    - `salt.utils.rm_rf`.Please use :py:func:`salt.utils.files.rm_rf` instead.
+    - `salt.utils.mkstemp`.Please use :py:func:`salt.utils.files.mkstemp` instead.
+    - `salt.utils.istextfile`.Please use :py:func:`salt.utils.files.is_text_file` instead.
+    - `salt.utils.is_bin_file`.Please use :py:func:`salt.utils.files.is_binary` instead.
+    - `salt.utils.list_files`.Please use :py:func:`salt.utils.files.list_files` instead.
+    - `salt.utils.safe_walk`.Please use :py:func:`salt.utils.files.safe_walk` instead.
+    - `salt.utils.st_mode_to_octal`.Please use :py:func:`salt.utils.files.st_mode_to_octal` instead.
+    - `salt.utils.normalize_mode`.Please use :py:func:`salt.utils.files.normalize_mode` instead.
+    - `salt.utils.human_size_to_bytes`.Please use :py:func:`salt.utils.files.human_size_to_bytes` instead.
+    - `salt.utils.backup_minion`.Please use :py:func:`salt.utils.files.backup_minion` instead.
+    - `salt.utils.str_version_to_evr`.Please use :py:func:`salt.utils.pkg.rpm.version_to_evr` instead.
+    - `salt.utils.parse_docstring`.Please use :py:func:`salt.utils.doc.parse_docstring` instead.
+    - `salt.utils.compare_versions`.Please use :py:func:`salt.utils.versions.compare` instead.
+    - `salt.utils.version_cmp`.Please use :py:func:`salt.utils.versions.version_cmp` instead.
+    - `salt.utils.warn_until`.Please use :py:func:`salt.utils.versions.warn_until` instead.
+    - `salt.utils.kwargs_warn_until`.Please use :py:func:`salt.utils.versions.kwargs_warn_until` instead.
+    - `salt.utils.get_color_theme`.Please use :py:func:`salt.utils.color.get_color_theme` instead.
+    - `salt.utils.get_colors`.Please use :py:func:`salt.utils.color.get_colors` instead.
+    - `salt.utils.gen_state_tag`.Please use :py:func:`salt.utils.state.gen_tag` instead.
+    - `salt.utils.search_onfail_requisites`.Please use :py:func:`salt.utils.state.search_onfail_requisites` instead.
+    - `salt.utils.check_onfail_requisites`.Please use :py:func:`salt.utils.state.check_onfail_requisites` instead.
+    - `salt.utils.check_state_result`.Please use :py:func:`salt.utils.state.check_result` instead.
+    - `salt.utils.get_user`.Please use :py:func:`salt.utils.user.get_user` instead.
+    - `salt.utils.get_uid`.Please use :py:func:`salt.utils.user.get_uid` instead.
+    - `salt.utils.get_specific_user`.Please use :py:func:`salt.utils.user.get_specific_user` instead.
+    - `salt.utils.chugid`.Please use :py:func:`salt.utils.user.chugid` instead.
+    - `salt.utils.chugid_and_umask`.Please use :py:func:`salt.utils.user.chugid_and_umask` instead.
+    - `salt.utils.get_default_group`.Please use :py:func:`salt.utils.user.get_default_group` instead.
+    - `salt.utils.get_group_list`.Please use :py:func:`salt.utils.user.get_group_list` instead.
+    - `salt.utils.get_group_dict`.Please use :py:func:`salt.utils.user.get_group_dict` instead.
+    - `salt.utils.get_gid_list`.Please use :py:func:`salt.utils.user.get_gid_list` instead.
+    - `salt.utils.get_gid`.Please use :py:func:`salt.utils.user.get_gid` instead.
+    - `salt.utils.enable_ctrl_logoff_handler`.Please use :py:func:`salt.utils.win_functions.enable_ctrl_logoff_handler` instead.
+    - `salt.utils.traverse_dict`.Please use :py:func:`salt.utils.data.traverse_dict` instead.
+    - `salt.utils.traverse_dict_and_list`.Please use :py:func:`salt.utils.data.traverse_dict_and_list` instead.
+    - `salt.utils.filter_by`.Please use :py:func:`salt.utils.data.filter_by` instead.
+    - `salt.utils.subdict_match`.Please use :py:func:`salt.utils.data.subdict_match` instead.
+    - `salt.utils.substr_in_list`.Please use :py:func:`salt.utils.data.substr_in_list` instead.
+    - `salt.utils.is_dictlist`.Please use :py:func:`salt.utils.data.is_dictlist` instead.
+    - `salt.utils.repack_dictlist`.Please use :py:func:`salt.utils.data.repack_dictlist` instead.
+    - `salt.utils.compare_dicts`.Please use :py:func:`salt.utils.data.compare_dicts` instead.
+    - `salt.utils.compare_lists`.Please use :py:func:`salt.utils.data.compare_lists` instead.
+    - `salt.utils.decode_dict`.Please use :py:func:`salt.utils.data.encode_dict` instead.
+    - `salt.utils.decode_list`.Please use :py:func:`salt.utils.data.encode_list` instead.
+    - `salt.utils.exactly_n`.Please use :py:func:`salt.utils.data.exactly_n` instead.
+    - `salt.utils.exactly_one`.Please use :py:func:`salt.utils.data.exactly_one` instead.
+    - `salt.utils.is_list`.Please use :py:func:`salt.utils.data.is_list` instead.
+    - `salt.utils.is_iter`.Please use :py:func:`salt.utils.data.is_iter` instead.
+    - `salt.utils.isorted`.Please use :py:func:`salt.utils.data.sorted_ignorecase` instead.
+    - `salt.utils.is_true`.Please use :py:func:`salt.utils.data.is_true` instead.
+    - `salt.utils.mysql_to_dict`.Please use :py:func:`salt.utils.data.mysql_to_dict` instead.
+    - `salt.utils.simple_types_filter`.Please use :py:func:`salt.utils.data.simple_types_filter` instead.
+    - `salt.utils.ip_bracket`.Please use :py:func:`salt.utils.zeromq.ip_bracket` instead.
+    - `salt.utils.gen_mac`.Please use :py:func:`salt.utils.network.gen_mac` instead.
+    - `salt.utils.mac_str_to_bytes`.Please use :py:func:`salt.utils.network.mac_str_to_bytes` instead.
+    - `salt.utils.refresh_dns`.Please use :py:func:`salt.utils.network.refresh_dns` instead.
+    - `salt.utils.dns_check`.Please use :py:func:`salt.utils.network.dns_check` instead.
+    - `salt.utils.get_context`.Please use :py:func:`salt.utils.stringutils.get_context` instead.
+    - `salt.utils.get_master_key`.Please use :py:func:`salt.utils.master.get_master_key` instead.
+    - `salt.utils.get_values_of_matching_keys`.Please use :py:func:`salt.utils.master.get_values_of_matching_keys` instead.
+    - `salt.utils.date_cast`.Please use :py:func:`salt.utils.dateutils.date_cast` instead.
+    - `salt.utils.date_format`.Please use :py:func:`salt.utils.dateutils.strftime` instead.
+    - `salt.utils.total_seconds`.Please use :py:func:`salt.utils.dateutils.total_seconds` instead.
+    - `salt.utils.find_json`.Please use :py:func:`salt.utils.json.find_json` instead.
+    - `salt.utils.import_json`.Please use :py:func:`salt.utils.json.import_json` instead.
+    - `salt.utils.namespaced_function`.Please use :py:func:`salt.utils.functools.namespaced_function` instead.
+    - `salt.utils.alias_function`.Please use :py:func:`salt.utils.functools.alias_function` instead.
+    - `salt.utils.profile_func`.Please use :py:func:`salt.utils.profile.profile_func` instead.
+    - `salt.utils.activate_profile`.Please use :py:func:`salt.utils.profile.activate_profile` instead.
+    - `salt.utils.output_profile`.Please use :py:func:`salt.utils.profile.output_profile` instead.
+
+salt.auth.Authorize Class Removal
+---------------------------------
+- The salt.auth.Authorize Class inside of the `salt/auth/__init__.py` file has been removed and
+  the `any_auth` method inside of the file `salt/utils/minions.py`. These method and classes were
+  not being used inside of the salt code base.
+
+
+.. _PyCrypto is unmaintained: https://github.com/dlitz/pycrypto/issues/301#issue-551975699
+.. _PyCryptodome: https://pypi.org/project/pycryptodome/
+.. _Issue #52674: https://github.com/saltstack/salt/issues/52674
+.. _Issue #54115: https://github.com/saltstack/salt/issues/54115

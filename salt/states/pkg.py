@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Installation of packages using OS package managers such as yum or apt-get
 =========================================================================
 
@@ -31,7 +31,6 @@ A more involved example involves pulling from a custom repository.
 
     base:
       pkgrepo.managed:
-        - humanname: Logstash PPA
         - name: ppa:wolfnet/logstash
         - dist: precise
         - file: /etc/apt/sources.list.d/logstash.list
@@ -49,7 +48,6 @@ state module
 
     dotdeb.repo:
       pkgrepo.managed:
-        - humanname: Dotdeb
         - name: deb http://packages.dotdeb.org wheezy-php55 all
         - dist: wheezy-php55
         - file: /etc/apt/sources.list.d/dotbeb.list
@@ -71,10 +69,11 @@ state module
     package manager which is not case-sensitive (such as :mod:`pkgng
     <salt.modules.pkgng>`), then this state will fail if the proper case is not
     used. This will be addressed in a future release of Salt.
-'''
+"""
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import fnmatch
 import logging
 import os
@@ -84,16 +83,14 @@ import re
 import salt.utils.pkg
 import salt.utils.platform
 import salt.utils.versions
-from salt.output import nested
-from salt.utils.functools import namespaced_function as _namespaced_function
-from salt.utils.odict import OrderedDict as _OrderedDict
-from salt.exceptions import (
-    CommandExecutionError, MinionError, SaltInvocationError
-)
-from salt.modules.pkg_resource import _repack_pkgs
+from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
 
 # Import 3rd-party libs
 from salt.ext import six
+from salt.modules.pkg_resource import _repack_pkgs
+from salt.output import nested
+from salt.utils.functools import namespaced_function as _namespaced_function
+from salt.utils.odict import OrderedDict as _OrderedDict
 
 # pylint: disable=invalid-name
 _repack_pkgs = _namespaced_function(_repack_pkgs, globals())
@@ -107,6 +104,7 @@ if salt.utils.platform.is_windows():
     import errno
     import time
     from functools import cmp_to_key
+
     # pylint: disable=import-error
     # pylint: enable=unused-import
     from salt.modules.win_pkg import _get_package_info
@@ -118,28 +116,24 @@ if salt.utils.platform.is_windows():
     from salt.modules.win_pkg import _repo_process_pkg_sls
     from salt.modules.win_pkg import _get_latest_pkg_version
     from salt.modules.win_pkg import _reverse_cmp_pkg_versions
+
     _get_package_info = _namespaced_function(_get_package_info, globals())
     get_repo_data = _namespaced_function(get_repo_data, globals())
-    _get_repo_details = \
-        _namespaced_function(_get_repo_details, globals())
-    _refresh_db_conditional = \
-        _namespaced_function(_refresh_db_conditional, globals())
+    _get_repo_details = _namespaced_function(_get_repo_details, globals())
+    _refresh_db_conditional = _namespaced_function(_refresh_db_conditional, globals())
     refresh_db = _namespaced_function(refresh_db, globals())
     genrepo = _namespaced_function(genrepo, globals())
-    _repo_process_pkg_sls = \
-        _namespaced_function(_repo_process_pkg_sls, globals())
-    _get_latest_pkg_version = \
-        _namespaced_function(_get_latest_pkg_version, globals())
-    _reverse_cmp_pkg_versions = \
-        _namespaced_function(_reverse_cmp_pkg_versions, globals())
+    _repo_process_pkg_sls = _namespaced_function(_repo_process_pkg_sls, globals())
+    _get_latest_pkg_version = _namespaced_function(_get_latest_pkg_version, globals())
+    _reverse_cmp_pkg_versions = _namespaced_function(
+        _reverse_cmp_pkg_versions, globals()
+    )
     # The following imports are used by the namespaced win_pkg funcs
     # and need to be included in their globals.
     # pylint: disable=import-error,unused-import
-    try:
-        import msgpack
-    except ImportError:
-        import msgpack_pure as msgpack
+    import salt.utils.msgpack as msgpack
     from salt.utils.versions import LooseVersion
+
     # pylint: enable=import-error,unused-import
 # pylint: enable=invalid-name
 
@@ -147,41 +141,46 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     Only make these states available if a pkg provider has been detected or
     assigned for this minion
-    '''
-    return 'pkg.install' in __salt__
+    """
+    return "pkg.install" in __salt__
 
 
 def _get_comparison_spec(pkgver):
-    '''
+    """
     Return a tuple containing the comparison operator and the version. If no
     comparison operator was passed, the comparison is assumed to be an "equals"
     comparison, and "==" will be the operator returned.
-    '''
+    """
     oper, verstr = salt.utils.pkg.split_comparison(pkgver.strip())
-    if oper in ('=', ''):
-        oper = '=='
+    if oper in ("=", ""):
+        oper = "=="
     return oper, verstr
 
 
 def _parse_version_string(version_conditions_string):
-    '''
+    """
     Returns a list of two-tuples containing (operator, version).
-    '''
+    """
     result = []
     version_conditions_string = version_conditions_string.strip()
     if not version_conditions_string:
         return result
-    for version_condition in version_conditions_string.split(','):
+    for version_condition in version_conditions_string.split(","):
         operator_and_version = _get_comparison_spec(version_condition)
         result.append(operator_and_version)
     return result
 
 
-def _fulfills_version_string(installed_versions, version_conditions_string, ignore_epoch=False, allow_updates=False):
-    '''
+def _fulfills_version_string(
+    installed_versions,
+    version_conditions_string,
+    ignore_epoch=False,
+    allow_updates=False,
+):
+    """
     Returns True if any of the installed versions match the specified version conditions,
     otherwise returns False.
 
@@ -206,80 +205,87 @@ def _fulfills_version_string(installed_versions, version_conditions_string, igno
         This means a package on the Minion can have a newer version than the latest available in
         the repository without enforcing a re-installation of the package.
         (Only applicable if only one strict version condition is specified E.G. version: 2.0.6~ubuntu3)
-    '''
+    """
     version_conditions = _parse_version_string(version_conditions_string)
     for installed_version in installed_versions:
         fullfills_all = True
         for operator, version_string in version_conditions:
-            if allow_updates and len(version_conditions) == 1 and operator == '==':
-                operator = '>='
-            fullfills_all = fullfills_all and _fulfills_version_spec([installed_version], operator, version_string, ignore_epoch=ignore_epoch)
+            if allow_updates and len(version_conditions) == 1 and operator == "==":
+                operator = ">="
+            fullfills_all = fullfills_all and _fulfills_version_spec(
+                [installed_version], operator, version_string, ignore_epoch=ignore_epoch
+            )
         if fullfills_all:
             return True
     return False
 
 
-def _fulfills_version_spec(versions, oper, desired_version,
-                           ignore_epoch=False):
-    '''
+def _fulfills_version_spec(versions, oper, desired_version, ignore_epoch=False):
+    """
     Returns True if any of the installed versions match the specified version,
     otherwise returns False
-    '''
-    cmp_func = __salt__.get('pkg.version_cmp')
+    """
+    cmp_func = __salt__.get("pkg.version_cmp")
     # stripping "with_origin" dict wrapper
     if salt.utils.platform.is_freebsd():
-        if isinstance(versions, dict) and 'version' in versions:
-            versions = versions['version']
+        if isinstance(versions, dict) and "version" in versions:
+            versions = versions["version"]
     for ver in versions:
-        if (oper == '==' and fnmatch.fnmatch(ver, desired_version)) \
-                or salt.utils.versions.compare(ver1=ver,
-                                               oper=oper,
-                                               ver2=desired_version,
-                                               cmp_func=cmp_func,
-                                               ignore_epoch=ignore_epoch):
+        if (
+            oper == "==" and fnmatch.fnmatch(ver, desired_version)
+        ) or salt.utils.versions.compare(
+            ver1=ver,
+            oper=oper,
+            ver2=desired_version,
+            cmp_func=cmp_func,
+            ignore_epoch=ignore_epoch,
+        ):
             return True
     return False
 
 
 def _find_unpurge_targets(desired):
-    '''
+    """
     Find packages which are marked to be purged but can't yet be removed
     because they are dependencies for other installed packages. These are the
     packages which will need to be 'unpurged' because they are part of
     pkg.installed states. This really just applies to Debian-based Linuxes.
-    '''
-    return [
-        x for x in desired
-        if x in __salt__['pkg.list_pkgs'](purge_desired=True)
-    ]
+    """
+    return [x for x in desired if x in __salt__["pkg.list_pkgs"](purge_desired=True)]
 
 
-def _find_download_targets(name=None,
-                           version=None,
-                           pkgs=None,
-                           normalize=True,
-                           skip_suggestions=False,
-                           ignore_epoch=False,
-                           **kwargs):
-    '''
+def _find_download_targets(
+    name=None,
+    version=None,
+    pkgs=None,
+    normalize=True,
+    skip_suggestions=False,
+    ignore_epoch=False,
+    **kwargs
+):
+    """
     Inspect the arguments to pkg.downloaded and discover what packages need to
     be downloaded. Return a dict of packages to download.
-    '''
-    cur_pkgs = __salt__['pkg.list_downloaded']()
+    """
+    cur_pkgs = __salt__["pkg.list_downloaded"]()
     if pkgs:
+        # pylint: disable=not-callable
         to_download = _repack_pkgs(pkgs, normalize=normalize)
+        # pylint: enable=not-callable
 
         if not to_download:
             # Badly-formatted SLS
-            return {'name': name,
-                    'changes': {},
-                    'result': False,
-                    'comment': 'Invalidly formatted pkgs parameter. See '
-                               'minion log.'}
+            return {
+                "name": name,
+                "changes": {},
+                "result": False,
+                "comment": "Invalidly formatted pkgs parameter. See " "minion log.",
+            }
     else:
         if normalize:
-            _normalize_name = \
-                __salt__.get('pkg.normalize_name', lambda pkgname: pkgname)
+            _normalize_name = __salt__.get(
+                "pkg.normalize_name", lambda pkgname: pkgname
+            )
             to_download = {_normalize_name(name): version}
         else:
             to_download = {name: version}
@@ -288,20 +294,23 @@ def _find_download_targets(name=None,
         if name in to_download:
             # Package already downloaded, no need to download again
             if cver and version in cver:
-                return {'name': name,
-                        'changes': {},
-                        'result': True,
-                        'comment': 'Version {0} of package \'{1}\' is already '
-                                   'downloaded'.format(version, name)}
+                return {
+                    "name": name,
+                    "changes": {},
+                    "result": True,
+                    "comment": "Version {0} of package '{1}' is already "
+                    "downloaded".format(version, name),
+                }
 
             # if cver is not an empty string, the package is already downloaded
             elif cver and version is None:
                 # The package is downloaded
-                return {'name': name,
-                        'changes': {},
-                        'result': True,
-                        'comment': 'Package {0} is already '
-                                   'downloaded'.format(name)}
+                return {
+                    "name": name,
+                    "changes": {},
+                    "result": True,
+                    "comment": "Package {0} is already " "downloaded".format(name),
+                }
 
     version_spec = False
     if not skip_suggestions:
@@ -311,28 +320,27 @@ def _find_download_targets(name=None,
             pass
         else:
             comments = []
-            if problems.get('no_suggest'):
+            if problems.get("no_suggest"):
                 comments.append(
-                    'The following package(s) were not found, and no '
-                    'possible matches were found in the package db: '
-                    '{0}'.format(
-                ', '.join(sorted(problems['no_suggest']))
-                    )
+                    "The following package(s) were not found, and no "
+                    "possible matches were found in the package db: "
+                    "{0}".format(", ".join(sorted(problems["no_suggest"])))
                 )
-            if problems.get('suggest'):
-                for pkgname, suggestions in \
-                        six.iteritems(problems['suggest']):
+            if problems.get("suggest"):
+                for pkgname, suggestions in six.iteritems(problems["suggest"]):
                     comments.append(
-                        'Package \'{0}\' not found (possible matches: '
-                        '{1})'.format(pkgname, ', '.join(suggestions))
+                        "Package '{0}' not found (possible matches: "
+                        "{1})".format(pkgname, ", ".join(suggestions))
                     )
             if comments:
                 if len(comments) > 1:
-                    comments.append('')
-                return {'name': name,
-                        'changes': {},
-                        'result': False,
-                        'comment': '. '.join(comments).rstrip()}
+                    comments.append("")
+                return {
+                    "name": name,
+                    "changes": {},
+                    "result": False,
+                    "comment": ". ".join(comments).rstrip(),
+                }
 
     # Find out which packages will be targeted in the call to pkg.download
     # Check current downloaded versions against specified versions
@@ -350,51 +358,50 @@ def _find_download_targets(name=None,
 
         version_spec = True
         try:
-            if not _fulfills_version_string(cver.keys(), pkgver, ignore_epoch=ignore_epoch):
+            if not _fulfills_version_string(
+                cver.keys(), pkgver, ignore_epoch=ignore_epoch
+            ):
                 targets[pkgname] = pkgver
         except CommandExecutionError as exc:
             problems.append(exc.strerror)
             continue
 
     if problems:
-        return {'name': name,
-                'changes': {},
-                'result': False,
-                'comment': ' '.join(problems)}
+        return {
+            "name": name,
+            "changes": {},
+            "result": False,
+            "comment": " ".join(problems),
+        }
 
     if not targets:
         # All specified packages are already downloaded
-        msg = (
-            'All specified packages{0} are already downloaded'
-            .format(' (matching specified versions)' if version_spec else '')
+        msg = "All specified packages{0} are already downloaded".format(
+            " (matching specified versions)" if version_spec else ""
         )
-        return {'name': name,
-                'changes': {},
-                'result': True,
-                'comment': msg}
+        return {"name": name, "changes": {}, "result": True, "comment": msg}
 
     return targets
 
 
-def _find_advisory_targets(name=None,
-                           advisory_ids=None,
-                           **kwargs):
-    '''
+def _find_advisory_targets(name=None, advisory_ids=None, **kwargs):
+    """
     Inspect the arguments to pkg.patch_installed and discover what advisory
     patches need to be installed. Return a dict of advisory patches to install.
-    '''
-    cur_patches = __salt__['pkg.list_installed_patches']()
+    """
+    cur_patches = __salt__["pkg.list_installed_patches"]()
     if advisory_ids:
         to_download = advisory_ids
     else:
         to_download = [name]
         if cur_patches.get(name, {}):
             # Advisory patch already installed, no need to install it again
-            return {'name': name,
-                    'changes': {},
-                    'result': True,
-                    'comment': 'Advisory patch {0} is already '
-                               'installed'.format(name)}
+            return {
+                "name": name,
+                "changes": {},
+                "result": True,
+                "comment": "Advisory patch {0} is already " "installed".format(name),
+            }
 
     # Find out which advisory patches will be targeted in the call to pkg.install
     targets = []
@@ -407,41 +414,37 @@ def _find_advisory_targets(name=None,
 
     if not targets:
         # All specified packages are already downloaded
-        msg = ('All specified advisory patches are already installed')
-        return {'name': name,
-                'changes': {},
-                'result': True,
-                'comment': msg}
+        msg = "All specified advisory patches are already installed"
+        return {"name": name, "changes": {}, "result": True, "comment": msg}
 
     return targets
 
 
-def _find_remove_targets(name=None,
-                         version=None,
-                         pkgs=None,
-                         normalize=True,
-                         ignore_epoch=False,
-                         **kwargs):
-    '''
+def _find_remove_targets(
+    name=None, version=None, pkgs=None, normalize=True, ignore_epoch=False, **kwargs
+):
+    """
     Inspect the arguments to pkg.removed and discover what packages need to
     be removed. Return a dict of packages to remove.
-    '''
-    if __grains__['os'] == 'FreeBSD':
-        kwargs['with_origin'] = True
-    cur_pkgs = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
+    """
+    if __grains__["os"] == "FreeBSD":
+        kwargs["with_origin"] = True
+    cur_pkgs = __salt__["pkg.list_pkgs"](versions_as_list=True, **kwargs)
     if pkgs:
+        # pylint: disable=not-callable
         to_remove = _repack_pkgs(pkgs, normalize=normalize)
+        # pylint: enable=not-callable
 
         if not to_remove:
             # Badly-formatted SLS
-            return {'name': name,
-                    'changes': {},
-                    'result': False,
-                    'comment': 'Invalidly formatted pkgs parameter. See '
-                               'minion log.'}
+            return {
+                "name": name,
+                "changes": {},
+                "result": False,
+                "comment": "Invalidly formatted pkgs parameter. See " "minion log.",
+            }
     else:
-        _normalize_name = \
-            __salt__.get('pkg.normalize_name', lambda pkgname: pkgname)
+        _normalize_name = __salt__.get("pkg.normalize_name", lambda pkgname: pkgname)
         to_remove = {_normalize_name(name): version}
 
     version_spec = False
@@ -451,10 +454,10 @@ def _find_remove_targets(name=None,
     problems = []
     for pkgname, pkgver in six.iteritems(to_remove):
         # FreeBSD pkg supports `openjdk` and `java/openjdk7` package names
-        origin = bool(re.search('/', pkgname))
+        origin = bool(re.search("/", pkgname))
 
-        if __grains__['os'] == 'FreeBSD' and origin:
-            cver = [k for k, v in six.iteritems(cur_pkgs) if v['origin'] == pkgname]
+        if __grains__["os"] == "FreeBSD" and origin:
+            cver = [k for k, v in six.iteritems(cur_pkgs) if v["origin"] == pkgname]
         else:
             cver = cur_pkgs.get(pkgname, [])
 
@@ -462,7 +465,7 @@ def _find_remove_targets(name=None,
         if not cver:
             continue
         # No version specified and pkg is installed
-        elif __salt__['pkg_resource.version_clean'](pkgver) is None:
+        elif __salt__["pkg_resource.version_clean"](pkgver) is None:
             targets.append(pkgname)
             continue
         version_spec = True
@@ -471,138 +474,153 @@ def _find_remove_targets(name=None,
                 targets.append(pkgname)
             else:
                 log.debug(
-                    'Current version (%s) did not match desired version '
-                    'specification (%s), will not remove', cver, pkgver
+                    "Current version (%s) did not match desired version "
+                    "specification (%s), will not remove",
+                    cver,
+                    pkgver,
                 )
         except CommandExecutionError as exc:
             problems.append(exc.strerror)
             continue
 
     if problems:
-        return {'name': name,
-                'changes': {},
-                'result': False,
-                'comment': ' '.join(problems)}
+        return {
+            "name": name,
+            "changes": {},
+            "result": False,
+            "comment": " ".join(problems),
+        }
 
     if not targets:
         # All specified packages are already absent
-        msg = 'All specified packages{0} are already absent'.format(
-            ' (matching specified versions)' if version_spec else ''
+        msg = "All specified packages{0} are already absent".format(
+            " (matching specified versions)" if version_spec else ""
         )
-        return {'name': name,
-                'changes': {},
-                'result': True,
-                'comment': msg}
+        return {"name": name, "changes": {}, "result": True, "comment": msg}
 
     return targets
 
 
-def _find_install_targets(name=None,
-                          version=None,
-                          pkgs=None,
-                          sources=None,
-                          skip_suggestions=False,
-                          pkg_verify=False,
-                          normalize=True,
-                          ignore_epoch=False,
-                          reinstall=False,
-                          refresh=False,
-                          **kwargs):
-    '''
+def _find_install_targets(
+    name=None,
+    version=None,
+    pkgs=None,
+    sources=None,
+    skip_suggestions=False,
+    pkg_verify=False,
+    normalize=True,
+    ignore_epoch=False,
+    reinstall=False,
+    refresh=False,
+    **kwargs
+):
+    """
     Inspect the arguments to pkg.installed and discover what packages need to
     be installed. Return a dict of desired packages
-    '''
+    """
     was_refreshed = False
 
     if all((pkgs, sources)):
-        return {'name': name,
-                'changes': {},
-                'result': False,
-                'comment': 'Only one of "pkgs" and "sources" is permitted.'}
+        return {
+            "name": name,
+            "changes": {},
+            "result": False,
+            "comment": 'Only one of "pkgs" and "sources" is permitted.',
+        }
 
     # dict for packages that fail pkg.verify and their altered files
     altered_files = {}
     # Get the ignore_types list if any from the pkg_verify argument
-    if isinstance(pkg_verify, list) \
-            and any(x.get('ignore_types') is not None
-                    for x in pkg_verify
-                    if isinstance(x, _OrderedDict)
-                    and 'ignore_types' in x):
-        ignore_types = next(x.get('ignore_types')
-                            for x in pkg_verify
-                            if 'ignore_types' in x)
+    if isinstance(pkg_verify, list) and any(
+        x.get("ignore_types") is not None
+        for x in pkg_verify
+        if isinstance(x, _OrderedDict) and "ignore_types" in x
+    ):
+        ignore_types = next(
+            x.get("ignore_types") for x in pkg_verify if "ignore_types" in x
+        )
     else:
         ignore_types = []
 
     # Get the verify_options list if any from the pkg_verify argument
-    if isinstance(pkg_verify, list) \
-            and any(x.get('verify_options') is not None
-                    for x in pkg_verify
-                    if isinstance(x, _OrderedDict)
-                    and 'verify_options' in x):
-        verify_options = next(x.get('verify_options')
-                            for x in pkg_verify
-                            if 'verify_options' in x)
+    if isinstance(pkg_verify, list) and any(
+        x.get("verify_options") is not None
+        for x in pkg_verify
+        if isinstance(x, _OrderedDict) and "verify_options" in x
+    ):
+        verify_options = next(
+            x.get("verify_options") for x in pkg_verify if "verify_options" in x
+        )
     else:
         verify_options = []
 
-    if __grains__['os'] == 'FreeBSD':
-        kwargs['with_origin'] = True
+    if __grains__["os"] == "FreeBSD":
+        kwargs["with_origin"] = True
 
     if salt.utils.platform.is_windows():
         # Windows requires a refresh to establish a pkg db if refresh=True, so
         # add it to the kwargs.
-        kwargs['refresh'] = refresh
+        kwargs["refresh"] = refresh
 
-    resolve_capabilities = kwargs.get('resolve_capabilities', False) and 'pkg.list_provides' in __salt__
+    resolve_capabilities = (
+        kwargs.get("resolve_capabilities", False) and "pkg.list_provides" in __salt__
+    )
     try:
-        cur_pkgs = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
-        cur_prov = resolve_capabilities and __salt__['pkg.list_provides'](**kwargs) or dict()
+        cur_pkgs = __salt__["pkg.list_pkgs"](versions_as_list=True, **kwargs)
+        cur_prov = (
+            resolve_capabilities and __salt__["pkg.list_provides"](**kwargs) or dict()
+        )
     except CommandExecutionError as exc:
-        return {'name': name,
-                'changes': {},
-                'result': False,
-                'comment': exc.strerror}
+        return {"name": name, "changes": {}, "result": False, "comment": exc.strerror}
 
-    if salt.utils.platform.is_windows() and kwargs.pop('refresh', False):
+    if salt.utils.platform.is_windows() and kwargs.pop("refresh", False):
         # We already refreshed when we called pkg.list_pkgs
         was_refreshed = True
         refresh = False
 
     if any((pkgs, sources)):
         if pkgs:
+            # pylint: disable=not-callable
             desired = _repack_pkgs(pkgs, normalize=normalize)
+            # pylint: enable=not-callable
         elif sources:
-            desired = __salt__['pkg_resource.pack_sources'](
-                sources,
-                normalize=normalize,
+            desired = __salt__["pkg_resource.pack_sources"](
+                sources, normalize=normalize,
             )
 
         if not desired:
             # Badly-formatted SLS
-            return {'name': name,
-                    'changes': {},
-                    'result': False,
-                    'comment': 'Invalidly formatted \'{0}\' parameter. See '
-                               'minion log.'.format('pkgs' if pkgs
-                                                    else 'sources')}
+            return {
+                "name": name,
+                "changes": {},
+                "result": False,
+                "comment": "Invalidly formatted '{0}' parameter. See "
+                "minion log.".format("pkgs" if pkgs else "sources"),
+            }
 
         to_unpurge = _find_unpurge_targets(desired)
     else:
         if salt.utils.platform.is_windows():
-            pkginfo = _get_package_info(name, saltenv=kwargs['saltenv'])
+            # pylint: disable=not-callable
+            pkginfo = _get_package_info(name, saltenv=kwargs["saltenv"])
+            # pylint: enable=not-callable
             if not pkginfo:
-                return {'name': name,
-                        'changes': {},
-                        'result': False,
-                        'comment': 'Package {0} not found in the '
-                                   'repository.'.format(name)}
+                return {
+                    "name": name,
+                    "changes": {},
+                    "result": False,
+                    "comment": "Package {0} not found in the "
+                    "repository.".format(name),
+                }
             if version is None:
+                # pylint: disable=not-callable
                 version = _get_latest_pkg_version(pkginfo)
+                # pylint: enable=not-callable
 
         if normalize:
-            _normalize_name = \
-                __salt__.get('pkg.normalize_name', lambda pkgname: pkgname)
+            _normalize_name = __salt__.get(
+                "pkg.normalize_name", lambda pkgname: pkgname
+            )
             desired = {_normalize_name(name): version}
         else:
             desired = {name: version}
@@ -610,35 +628,33 @@ def _find_install_targets(name=None,
         to_unpurge = _find_unpurge_targets(desired)
 
         # FreeBSD pkg supports `openjdk` and `java/openjdk7` package names
-        origin = bool(re.search('/', name))
+        origin = bool(re.search("/", name))
 
-        if __grains__['os'] == 'FreeBSD' and origin:
-            cver = [k for k, v in six.iteritems(cur_pkgs)
-                    if v['origin'] == name]
+        if __grains__["os"] == "FreeBSD" and origin:
+            cver = [k for k, v in six.iteritems(cur_pkgs) if v["origin"] == name]
         else:
             cver = cur_pkgs.get(name, [])
 
         if name not in to_unpurge:
-            if version and version in cver \
-                    and not reinstall \
-                    and not pkg_verify:
+            if version and version in cver and not reinstall and not pkg_verify:
                 # The package is installed and is the correct version
-                return {'name': name,
-                        'changes': {},
-                        'result': True,
-                        'comment': 'Version {0} of package \'{1}\' is already '
-                                   'installed'.format(version, name)}
+                return {
+                    "name": name,
+                    "changes": {},
+                    "result": True,
+                    "comment": "Version {0} of package '{1}' is already "
+                    "installed".format(version, name),
+                }
 
             # if cver is not an empty string, the package is already installed
-            elif cver and version is None \
-                    and not reinstall \
-                    and not pkg_verify:
+            elif cver and version is None and not reinstall and not pkg_verify:
                 # The package is installed
-                return {'name': name,
-                        'changes': {},
-                        'result': True,
-                        'comment': 'Package {0} is already '
-                                   'installed'.format(name)}
+                return {
+                    "name": name,
+                    "changes": {},
+                    "result": True,
+                    "comment": "Package {0} is already " "installed".format(name),
+                }
 
     version_spec = False
     if not sources:
@@ -646,11 +662,19 @@ def _find_install_targets(name=None,
         # enforced. Takes extra time. Disable for improved performance
         if not skip_suggestions:
             # Perform platform-specific pre-flight checks
-            not_installed = dict([
-                (name, version)
-                for name, version in desired.items()
-                if not (name in cur_pkgs and (version is None or _fulfills_version_string(cur_pkgs[name], version)))
-            ])
+            not_installed = dict(
+                [
+                    (name, version)
+                    for name, version in desired.items()
+                    if not (
+                        name in cur_pkgs
+                        and (
+                            version is None
+                            or _fulfills_version_string(cur_pkgs[name], version)
+                        )
+                    )
+                ]
+            )
             if not_installed:
                 try:
                     problems = _preflight_check(not_installed, **kwargs)
@@ -658,38 +682,37 @@ def _find_install_targets(name=None,
                     pass
                 else:
                     comments = []
-                    if problems.get('no_suggest'):
+                    if problems.get("no_suggest"):
                         comments.append(
-                            'The following package(s) were not found, and no '
-                            'possible matches were found in the package db: '
-                            '{0}'.format(
-                                ', '.join(sorted(problems['no_suggest']))
-                            )
+                            "The following package(s) were not found, and no "
+                            "possible matches were found in the package db: "
+                            "{0}".format(", ".join(sorted(problems["no_suggest"])))
                         )
-                    if problems.get('suggest'):
-                        for pkgname, suggestions in \
-                                six.iteritems(problems['suggest']):
+                    if problems.get("suggest"):
+                        for pkgname, suggestions in six.iteritems(problems["suggest"]):
                             comments.append(
-                                'Package \'{0}\' not found (possible matches: '
-                                '{1})'.format(pkgname, ', '.join(suggestions))
+                                "Package '{0}' not found (possible matches: "
+                                "{1})".format(pkgname, ", ".join(suggestions))
                             )
                     if comments:
                         if len(comments) > 1:
-                            comments.append('')
-                        return {'name': name,
-                                'changes': {},
-                                'result': False,
-                                'comment': '. '.join(comments).rstrip()}
+                            comments.append("")
+                        return {
+                            "name": name,
+                            "changes": {},
+                            "result": False,
+                            "comment": ". ".join(comments).rstrip(),
+                        }
 
     # Resolve the latest package version for any packages with "latest" in the
     # package version
-    wants_latest = [] \
-        if sources \
-        else [x for x, y in six.iteritems(desired) if y == 'latest']
+    wants_latest = (
+        [] if sources else [x for x, y in six.iteritems(desired) if y == "latest"]
+    )
     if wants_latest:
-        resolved_latest = __salt__['pkg.latest_version'](*wants_latest,
-                                                         refresh=refresh,
-                                                         **kwargs)
+        resolved_latest = __salt__["pkg.latest_version"](
+            *wants_latest, refresh=refresh, **kwargs
+        )
         if len(wants_latest) == 1:
             resolved_latest = {wants_latest[0]: resolved_latest}
         if refresh:
@@ -729,44 +752,50 @@ def _find_install_targets(name=None,
             if reinstall:
                 to_reinstall[package_name] = version_string
                 continue
-            elif 'lowpkg.bin_pkg_info' not in __salt__:
+            elif "lowpkg.bin_pkg_info" not in __salt__:
                 continue
             # Metadata parser is available, cache the file and derive the
             # package's name and version
-            err = 'Unable to cache {0}: {1}'
+            err = "Unable to cache {0}: {1}"
             try:
-                cached_path = __salt__['cp.cache_file'](version_string, saltenv=kwargs['saltenv'])
+                cached_path = __salt__["cp.cache_file"](
+                    version_string, saltenv=kwargs["saltenv"]
+                )
             except CommandExecutionError as exc:
                 problems.append(err.format(version_string, exc))
                 continue
             if not cached_path:
-                problems.append(err.format(version_string, 'file not found'))
+                problems.append(err.format(version_string, "file not found"))
                 continue
             elif not os.path.exists(cached_path):
-                problems.append('{0} does not exist on minion'.format(version_string))
+                problems.append("{0} does not exist on minion".format(version_string))
                 continue
-            source_info = __salt__['lowpkg.bin_pkg_info'](cached_path)
+            source_info = __salt__["lowpkg.bin_pkg_info"](cached_path)
             if source_info is None:
-                warnings.append('Failed to parse metadata for {0}'.format(version_string))
+                warnings.append(
+                    "Failed to parse metadata for {0}".format(version_string)
+                )
                 continue
             else:
-                verstr = source_info['version']
+                verstr = source_info["version"]
         else:
             verstr = version_string
             if reinstall:
                 to_reinstall[package_name] = version_string
                 continue
-            if not __salt__['pkg_resource.check_extra_requirements'](package_name, version_string):
+            if not __salt__["pkg_resource.check_extra_requirements"](
+                package_name, version_string
+            ):
                 targets[package_name] = version_string
                 continue
             # No version specified and pkg is installed
-            elif __salt__['pkg_resource.version_clean'](version_string) is None:
+            elif __salt__["pkg_resource.version_clean"](version_string) is None:
                 if (not reinstall) and pkg_verify:
                     try:
-                        verify_result = __salt__['pkg.verify'](
+                        verify_result = __salt__["pkg.verify"](
                             package_name,
                             ignore_types=ignore_types,
-                            verify_options=verify_options
+                            verify_options=verify_options,
                         )
                     except (CommandExecutionError, SaltInvocationError) as exc:
                         failed_verify = exc.strerror
@@ -776,9 +805,11 @@ def _find_install_targets(name=None,
                         altered_files[package_name] = verify_result
                 continue
         version_fulfilled = False
-        allow_updates = bool(not sources and kwargs.get('allow_updates'))
+        allow_updates = bool(not sources and kwargs.get("allow_updates"))
         try:
-            version_fulfilled = _fulfills_version_string(cver, verstr, ignore_epoch=ignore_epoch, allow_updates=allow_updates)
+            version_fulfilled = _fulfills_version_string(
+                cver, verstr, ignore_epoch=ignore_epoch, allow_updates=allow_updates
+            )
         except CommandExecutionError as exc:
             problems.append(exc.strerror)
             continue
@@ -790,12 +821,15 @@ def _find_install_targets(name=None,
                 to_reinstall[package_name] = version_string
             else:
                 version_conditions = _parse_version_string(version_string)
-                if pkg_verify and any(oper == '==' for oper, version in version_conditions):
+                if pkg_verify and any(
+                    oper == "==" for oper, version in version_conditions
+                ):
                     try:
-                        verify_result = __salt__['pkg.verify'](
+                        verify_result = __salt__["pkg.verify"](
                             package_name,
                             ignore_types=ignore_types,
-                            verify_options=verify_options)
+                            verify_options=verify_options,
+                        )
                     except (CommandExecutionError, SaltInvocationError) as exc:
                         failed_verify = exc.strerror
                         continue
@@ -804,9 +838,10 @@ def _find_install_targets(name=None,
                         altered_files[package_name] = verify_result
                 else:
                     log.debug(
-                        'Current version (%s) did not match desired version '
-                        'specification (%s), adding to installation targets',
-                        cver, version_string
+                        "Current version (%s) did not match desired version "
+                        "specification (%s), adding to installation targets",
+                        cver,
+                        version_string,
                     )
                     targets[package_name] = version_string
 
@@ -814,36 +849,41 @@ def _find_install_targets(name=None,
         problems.append(failed_verify)
 
     if problems:
-        return {'name': name,
-                'changes': {},
-                'result': False,
-                'comment': ' '.join(problems)}
+        return {
+            "name": name,
+            "changes": {},
+            "result": False,
+            "comment": " ".join(problems),
+        }
 
     if not any((targets, to_unpurge, to_reinstall)):
         # All specified packages are installed
-        msg = 'All specified packages are already installed{0}'
+        msg = "All specified packages are already installed{0}"
         msg = msg.format(
-            ' and are at the desired version' if version_spec and not sources
-            else ''
+            " and are at the desired version" if version_spec and not sources else ""
         )
-        ret = {'name': name,
-               'changes': {},
-               'result': True,
-               'comment': msg}
+        ret = {"name": name, "changes": {}, "result": True, "comment": msg}
         if warnings:
-            ret.setdefault('warnings', []).extend(warnings)
+            ret.setdefault("warnings", []).extend(warnings)
         return ret
 
-    return (desired, targets, to_unpurge, to_reinstall, altered_files,
-            warnings, was_refreshed)
+    return (
+        desired,
+        targets,
+        to_unpurge,
+        to_reinstall,
+        altered_files,
+        warnings,
+        was_refreshed,
+    )
 
 
 def _verify_install(desired, new_pkgs, ignore_epoch=False, new_caps=None):
-    '''
+    """
     Determine whether or not the installed packages match what was requested in
     the SLS file.
-    '''
-    ok = []
+    """
+    _ok = []
     failed = []
     if not new_caps:
         new_caps = dict()
@@ -851,16 +891,16 @@ def _verify_install(desired, new_pkgs, ignore_epoch=False, new_caps=None):
         # FreeBSD pkg supports `openjdk` and `java/openjdk7` package names.
         # Homebrew for Mac OSX does something similar with tap names
         # prefixing package names, separated with a slash.
-        has_origin = '/' in pkgname
+        has_origin = "/" in pkgname
 
-        if __grains__['os'] == 'FreeBSD' and has_origin:
-            cver = [k for k, v in six.iteritems(new_pkgs) if v['origin'] == pkgname]
-        elif __grains__['os'] == 'MacOS' and has_origin:
-            cver = new_pkgs.get(pkgname, new_pkgs.get(pkgname.split('/')[-1]))
-        elif __grains__['os'] == 'OpenBSD':
-            cver = new_pkgs.get(pkgname.split('%')[0])
-        elif __grains__['os_family'] == 'Debian':
-            cver = new_pkgs.get(pkgname.split('=')[0])
+        if __grains__["os"] == "FreeBSD" and has_origin:
+            cver = [k for k, v in six.iteritems(new_pkgs) if v["origin"] == pkgname]
+        elif __grains__["os"] == "MacOS" and has_origin:
+            cver = new_pkgs.get(pkgname, new_pkgs.get(pkgname.split("/")[-1]))
+        elif __grains__["os"] == "OpenBSD":
+            cver = new_pkgs.get(pkgname.split("%")[0])
+        elif __grains__["os_family"] == "Debian":
+            cver = new_pkgs.get(pkgname.split("=")[0])
         else:
             cver = new_pkgs.get(pkgname)
             if not cver and pkgname in new_caps:
@@ -869,66 +909,65 @@ def _verify_install(desired, new_pkgs, ignore_epoch=False, new_caps=None):
         if not cver:
             failed.append(pkgname)
             continue
-        elif pkgver == 'latest':
-            ok.append(pkgname)
+        elif pkgver == "latest":
+            _ok.append(pkgname)
             continue
-        elif not __salt__['pkg_resource.version_clean'](pkgver):
-            ok.append(pkgname)
+        elif not __salt__["pkg_resource.version_clean"](pkgver):
+            _ok.append(pkgname)
             continue
         elif pkgver.endswith("*") and cver[0].startswith(pkgver[:-1]):
-            ok.append(pkgname)
+            _ok.append(pkgname)
             continue
         if _fulfills_version_string(cver, pkgver, ignore_epoch=ignore_epoch):
-            ok.append(pkgname)
+            _ok.append(pkgname)
         else:
             failed.append(pkgname)
-    return ok, failed
+    return _ok, failed
 
 
 def _get_desired_pkg(name, desired):
-    '''
+    """
     Helper function that retrieves and nicely formats the desired pkg (and
     version if specified) so that helpful information can be printed in the
     comment for the state.
-    '''
-    if not desired[name] or desired[name].startswith(('<', '>', '=')):
-        oper = ''
+    """
+    if not desired[name] or desired[name].startswith(("<", ">", "=")):
+        oper = ""
     else:
-        oper = '='
-    return '{0}{1}{2}'.format(name, oper,
-                              '' if not desired[name] else desired[name])
+        oper = "="
+    return "{0}{1}{2}".format(name, oper, "" if not desired[name] else desired[name])
 
 
 def _preflight_check(desired, fromrepo, **kwargs):
-    '''
+    """
     Perform platform-specific checks on desired packages
-    '''
-    if 'pkg.check_db' not in __salt__:
+    """
+    if "pkg.check_db" not in __salt__:
         return {}
-    ret = {'suggest': {}, 'no_suggest': []}
-    pkginfo = __salt__['pkg.check_db'](
+    ret = {"suggest": {}, "no_suggest": []}
+    pkginfo = __salt__["pkg.check_db"](
         *list(desired.keys()), fromrepo=fromrepo, **kwargs
     )
     for pkgname in pkginfo:
-        if pkginfo[pkgname]['found'] is False:
-            if pkginfo[pkgname]['suggestions']:
-                ret['suggest'][pkgname] = pkginfo[pkgname]['suggestions']
+        if pkginfo[pkgname]["found"] is False:
+            if pkginfo[pkgname]["suggestions"]:
+                ret["suggest"][pkgname] = pkginfo[pkgname]["suggestions"]
             else:
-                ret['no_suggest'].append(pkgname)
+                ret["no_suggest"].append(pkgname)
     return ret
 
 
 def _nested_output(obj):
-    '''
+    """
     Serialize obj and format for output
-    '''
+    """
     nested.__opts__ = __opts__
     ret = nested.output(obj).rstrip()
     return ret
 
 
 def _resolve_capabilities(pkgs, refresh=False, **kwargs):
-    '''
+    """
     Resolve capabilities in ``pkgs`` and exchange them with real package
     names, when the result is distinct.
     This feature can be turned on while setting the paramter
@@ -939,31 +978,32 @@ def _resolve_capabilities(pkgs, refresh=False, **kwargs):
 
     In case of ``resolve_capabilities`` is False (disabled) or not
     supported by the implementation the input is returned unchanged.
-    '''
-    if not pkgs or 'pkg.resolve_capabilities' not in __salt__:
+    """
+    if not pkgs or "pkg.resolve_capabilities" not in __salt__:
         return pkgs, refresh
 
-    ret = __salt__['pkg.resolve_capabilities'](pkgs, refresh=refresh, **kwargs)
+    ret = __salt__["pkg.resolve_capabilities"](pkgs, refresh=refresh, **kwargs)
     return ret, False
 
 
 def installed(
-        name,
-        version=None,
-        refresh=None,
-        fromrepo=None,
-        skip_verify=False,
-        skip_suggestions=False,
-        pkgs=None,
-        sources=None,
-        allow_updates=False,
-        pkg_verify=False,
-        normalize=True,
-        ignore_epoch=False,
-        reinstall=False,
-        update_holds=False,
-        **kwargs):
-    '''
+    name,
+    version=None,
+    refresh=None,
+    fromrepo=None,
+    skip_verify=False,
+    skip_suggestions=False,
+    pkgs=None,
+    sources=None,
+    allow_updates=False,
+    pkg_verify=False,
+    normalize=True,
+    ignore_epoch=False,
+    reinstall=False,
+    update_holds=False,
+    **kwargs
+):
+    """
     Ensure that the package is installed, and that it is the correct version
     (if specified).
 
@@ -1514,12 +1554,83 @@ def installed(
         see the :ref:`Reloading Modules <reloading-modules>` documentation for more
         information.
 
-    '''
+    .. seealso:: unless and onlyif
+
+        You can use the :ref:`unless <unless-requisite>` or
+        :ref:`onlyif <onlyif-requisite>` syntax to skip a full package run.
+        This can be helpful in large environments with multiple states that
+        include requisites for packages to be installed.
+
+        .. code-block:: yaml
+
+            # Using file.file_exists for a single-factor check
+            install_nginx:
+              pkg.installed:
+                - name: nginx
+                - unless:
+                  - fun: file.file_exists
+                    args:
+                      - /etc/nginx/nginx.conf
+
+        .. code-block:: yaml
+
+            # Using file.search for a two-factor check
+            install_nginx:
+              pkg.installed:
+                - name: nginx
+                - unless:
+                  - fun: file.search
+                    args:
+                      - /etc/nginx/nginx.conf
+                      - 'user www-data;'
+
+        The above examples use two different methods to reasonably ensure
+        that a package has already been installed. First, with checking for a
+        file that would be created with the package. Second, by checking for
+        specific text within a file that would be created or managed by salt.
+        With these requisists satisfied, unless will return ``True`` and the
+        ``pkg.installed`` state will be skipped.
+
+        .. code-block:: bash
+
+            # Example of state run without unless used
+            salt 'saltdev' state.apply nginx
+            saltdev:
+            ----------
+                      ID: install_nginx
+                      Function: pkg.installed
+                      Name: nginx
+                      Result: True
+                      Comment: All specified packages are already installed
+                      Started: 20:11:56.388331
+                      Duration: 4290.0 ms
+                      Changes:
+
+            # Example of state run using unless requisite
+            salt 'saltdev' state.apply nginx
+            saltdev:
+            ----------
+                      ID: install_nginx
+                      Function: pkg.installed
+                      Name: nginx
+                      Result: True
+                      Comment: unless condition is true
+                      Started: 20:10:50.659215
+                      Duration: 1530.0 ms
+                      Changes:
+
+        The result is a reduction of almost 3 seconds. In larger environments,
+        small reductions in waiting time can add up.
+
+        :ref:`Unless Requisite <unless-requisite>`
+    """
     if isinstance(pkgs, list) and len(pkgs) == 0:
-        return {'name': name,
-                'changes': {},
-                'result': True,
-                'comment': 'No packages to install provided'}
+        return {
+            "name": name,
+            "changes": {},
+            "result": True,
+            "comment": "No packages to install provided",
+        }
 
     # If just a name (and optionally a version) is passed, just pack them into
     # the pkgs argument.
@@ -1530,7 +1641,7 @@ def installed(
         else:
             pkgs = [name]
 
-    kwargs['saltenv'] = __env__
+    kwargs["saltenv"] = __env__
     refresh = salt.utils.pkg.check_refresh(__opts__, refresh)
 
     # check if capabilities should be checked and modify the requested packages
@@ -1540,86 +1651,106 @@ def installed(
 
     if not isinstance(pkg_verify, list):
         pkg_verify = pkg_verify is True
-    if (pkg_verify or isinstance(pkg_verify, list)) \
-            and 'pkg.verify' not in __salt__:
-        return {'name': name,
-                'changes': {},
-                'result': False,
-                'comment': 'pkg.verify not implemented'}
+    if (pkg_verify or isinstance(pkg_verify, list)) and "pkg.verify" not in __salt__:
+        return {
+            "name": name,
+            "changes": {},
+            "result": False,
+            "comment": "pkg.verify not implemented",
+        }
 
     if not isinstance(version, six.string_types) and version is not None:
         version = six.text_type(version)
 
-    kwargs['allow_updates'] = allow_updates
+    kwargs["allow_updates"] = allow_updates
 
-    result = _find_install_targets(name, version, pkgs, sources,
-                                   fromrepo=fromrepo,
-                                   skip_suggestions=skip_suggestions,
-                                   pkg_verify=pkg_verify,
-                                   normalize=normalize,
-                                   ignore_epoch=ignore_epoch,
-                                   reinstall=reinstall,
-                                   refresh=refresh,
-                                   **kwargs)
+    result = _find_install_targets(
+        name,
+        version,
+        pkgs,
+        sources,
+        fromrepo=fromrepo,
+        skip_suggestions=skip_suggestions,
+        pkg_verify=pkg_verify,
+        normalize=normalize,
+        ignore_epoch=ignore_epoch,
+        reinstall=reinstall,
+        refresh=refresh,
+        **kwargs
+    )
 
     try:
-        (desired, targets, to_unpurge, to_reinstall,
-         altered_files, warnings, was_refreshed) = result
+        (
+            desired,
+            targets,
+            to_unpurge,
+            to_reinstall,
+            altered_files,
+            warnings,
+            was_refreshed,
+        ) = result
         if was_refreshed:
             refresh = False
     except ValueError:
         # _find_install_targets() found no targets or encountered an error
 
         # check that the hold function is available
-        if 'pkg.hold' in __salt__ and 'hold' in kwargs:
+        if "pkg.hold" in __salt__ and "hold" in kwargs:
             try:
-                action = 'pkg.hold' if kwargs['hold'] else 'pkg.unhold'
-                hold_ret = __salt__[action](
-                    name=name, pkgs=pkgs, sources=sources
-                )
+                action = "pkg.hold" if kwargs["hold"] else "pkg.unhold"
+                hold_ret = __salt__[action](name=name, pkgs=pkgs, sources=sources)
             except (CommandExecutionError, SaltInvocationError) as exc:
-                return {'name': name,
-                        'changes': {},
-                        'result': False,
-                        'comment': six.text_type(exc)}
+                return {
+                    "name": name,
+                    "changes": {},
+                    "result": False,
+                    "comment": six.text_type(exc),
+                }
 
-            if 'result' in hold_ret and not hold_ret['result']:
-                return {'name': name,
-                        'changes': {},
-                        'result': False,
-                        'comment': 'An error was encountered while '
-                                   'holding/unholding package(s): {0}'
-                                   .format(hold_ret['comment'])}
+            if "result" in hold_ret and not hold_ret["result"]:
+                return {
+                    "name": name,
+                    "changes": {},
+                    "result": False,
+                    "comment": "An error was encountered while "
+                    "holding/unholding package(s): {0}".format(hold_ret["comment"]),
+                }
             else:
-                modified_hold = [hold_ret[x] for x in hold_ret
-                                 if hold_ret[x]['changes']]
-                not_modified_hold = [hold_ret[x] for x in hold_ret
-                                     if not hold_ret[x]['changes']
-                                     and hold_ret[x]['result']]
-                failed_hold = [hold_ret[x] for x in hold_ret
-                               if not hold_ret[x]['result']]
+                modified_hold = [
+                    hold_ret[x] for x in hold_ret if hold_ret[x]["changes"]
+                ]
+                not_modified_hold = [
+                    hold_ret[x]
+                    for x in hold_ret
+                    if not hold_ret[x]["changes"] and hold_ret[x]["result"]
+                ]
+                failed_hold = [
+                    hold_ret[x] for x in hold_ret if not hold_ret[x]["result"]
+                ]
 
                 for i in modified_hold:
-                    result['comment'] += '.\n{0}'.format(i['comment'])
-                    result['result'] = i['result']
-                    result['changes'][i['name']] = i['changes']
+                    result["comment"] += ".\n{0}".format(i["comment"])
+                    result["result"] = i["result"]
+                    result["changes"][i["name"]] = i["changes"]
 
                 for i in not_modified_hold:
-                    result['comment'] += '.\n{0}'.format(i['comment'])
-                    result['result'] = i['result']
+                    result["comment"] += ".\n{0}".format(i["comment"])
+                    result["result"] = i["result"]
 
                 for i in failed_hold:
-                    result['comment'] += '.\n{0}'.format(i['comment'])
-                    result['result'] = i['result']
+                    result["comment"] += ".\n{0}".format(i["comment"])
+                    result["result"] = i["result"]
         return result
 
-    if to_unpurge and 'lowpkg.unpurge' not in __salt__:
-        ret = {'name': name,
-               'changes': {},
-               'result': False,
-               'comment': 'lowpkg.unpurge not implemented'}
+    if to_unpurge and "lowpkg.unpurge" not in __salt__:
+        ret = {
+            "name": name,
+            "changes": {},
+            "result": False,
+            "comment": "lowpkg.unpurge not implemented",
+        }
         if warnings:
-            ret.setdefault('warnings', []).extend(warnings)
+            ret.setdefault("warnings", []).extend(warnings)
         return ret
 
     # Remove any targets not returned by _find_install_targets
@@ -1628,26 +1759,26 @@ def installed(
         pkgs.extend([dict([(x, y)]) for x, y in six.iteritems(to_reinstall)])
     elif sources:
         oldsources = sources
-        sources = [x for x in oldsources
-                   if next(iter(list(x.keys()))) in targets]
-        sources.extend([x for x in oldsources
-                        if next(iter(list(x.keys()))) in to_reinstall])
+        sources = [x for x in oldsources if next(iter(list(x.keys()))) in targets]
+        sources.extend(
+            [x for x in oldsources if next(iter(list(x.keys()))) in to_reinstall]
+        )
 
     comment = []
-    if __opts__['test']:
+    if __opts__["test"]:
         if targets:
             if sources:
-                summary = ', '.join(targets)
+                summary = ", ".join(targets)
             else:
-                summary = ', '.join([_get_desired_pkg(x, targets)
-                                     for x in targets])
-            comment.append('The following packages would be '
-                           'installed/updated: {0}'.format(summary))
+                summary = ", ".join([_get_desired_pkg(x, targets) for x in targets])
+            comment.append(
+                "The following packages would be "
+                "installed/updated: {0}".format(summary)
+            )
         if to_unpurge:
             comment.append(
-                'The following packages would have their selection status '
-                'changed from \'purge\' to \'install\': {0}'
-                .format(', '.join(to_unpurge))
+                "The following packages would have their selection status "
+                "changed from 'purge' to 'install': {0}".format(", ".join(to_unpurge))
             )
         if to_reinstall:
             # Add a comment for each package in to_reinstall with its
@@ -1661,8 +1792,8 @@ def installed(
                         reinstall_targets.append(
                             _get_desired_pkg(reinstall_pkg, to_reinstall)
                         )
-                msg = 'The following packages would be reinstalled: '
-                msg += ', '.join(reinstall_targets)
+                msg = "The following packages would be reinstalled: "
+                msg += ", ".join(reinstall_targets)
                 comment.append(msg)
             else:
                 for reinstall_pkg in to_reinstall:
@@ -1671,57 +1802,61 @@ def installed(
                     else:
                         pkgstr = _get_desired_pkg(reinstall_pkg, to_reinstall)
                     comment.append(
-                        'Package \'{0}\' would be reinstalled because the '
-                        'following files have been altered:'.format(pkgstr)
+                        "Package '{0}' would be reinstalled because the "
+                        "following files have been altered:".format(pkgstr)
                     )
-                    comment.append(
-                        _nested_output(altered_files[reinstall_pkg])
-                    )
-        ret = {'name': name,
-               'changes': {},
-               'result': None,
-               'comment': '\n'.join(comment)}
+                    comment.append(_nested_output(altered_files[reinstall_pkg]))
+        ret = {
+            "name": name,
+            "changes": {},
+            "result": None,
+            "comment": "\n".join(comment),
+        }
         if warnings:
-            ret.setdefault('warnings', []).extend(warnings)
+            ret.setdefault("warnings", []).extend(warnings)
         return ret
 
-    changes = {'installed': {}}
+    changes = {"installed": {}}
     modified_hold = None
     not_modified_hold = None
     failed_hold = None
     if targets or to_reinstall:
         try:
-            pkg_ret = __salt__['pkg.install'](name=None,
-                                              refresh=refresh,
-                                              version=version,
-                                              fromrepo=fromrepo,
-                                              skip_verify=skip_verify,
-                                              pkgs=pkgs,
-                                              sources=sources,
-                                              reinstall=bool(to_reinstall),
-                                              normalize=normalize,
-                                              update_holds=update_holds,
-                                              ignore_epoch=ignore_epoch,
-                                              **kwargs)
+            pkg_ret = __salt__["pkg.install"](
+                name=None,
+                refresh=refresh,
+                version=version,
+                fromrepo=fromrepo,
+                skip_verify=skip_verify,
+                pkgs=pkgs,
+                sources=sources,
+                reinstall=bool(to_reinstall),
+                normalize=normalize,
+                update_holds=update_holds,
+                ignore_epoch=ignore_epoch,
+                **kwargs
+            )
         except CommandExecutionError as exc:
-            ret = {'name': name, 'result': False}
+            ret = {"name": name, "result": False}
             if exc.info:
                 # Get information for state return from the exception.
-                ret['changes'] = exc.info.get('changes', {})
-                ret['comment'] = exc.strerror_without_changes
+                ret["changes"] = exc.info.get("changes", {})
+                ret["comment"] = exc.strerror_without_changes
             else:
-                ret['changes'] = {}
-                ret['comment'] = ('An error was encountered while installing '
-                                  'package(s): {0}'.format(exc))
+                ret["changes"] = {}
+                ret["comment"] = (
+                    "An error was encountered while installing "
+                    "package(s): {0}".format(exc)
+                )
             if warnings:
-                ret.setdefault('warnings', []).extend(warnings)
+                ret.setdefault("warnings", []).extend(warnings)
             return ret
 
         if refresh:
             refresh = False
 
         if isinstance(pkg_ret, dict):
-            changes['installed'].update(pkg_ret)
+            changes["installed"].update(pkg_ret)
         elif isinstance(pkg_ret, six.string_types):
             comment.append(pkg_ret)
             # Code below will be looking for a dictionary. If this is a string
@@ -1731,168 +1866,174 @@ def installed(
             # checks reinstall targets works.
             pkg_ret = {}
 
-    if 'pkg.hold' in __salt__ and 'hold' in kwargs:
+    if "pkg.hold" in __salt__ and "hold" in kwargs:
         try:
-            action = 'pkg.hold' if kwargs['hold'] else 'pkg.unhold'
-            hold_ret = __salt__[action](
-                name=name, pkgs=desired
-            )
+            action = "pkg.hold" if kwargs["hold"] else "pkg.unhold"
+            hold_ret = __salt__[action](name=name, pkgs=desired)
         except (CommandExecutionError, SaltInvocationError) as exc:
             comment.append(six.text_type(exc))
-            ret = {'name': name,
-                   'changes': changes,
-                   'result': False,
-                   'comment': '\n'.join(comment)}
+            ret = {
+                "name": name,
+                "changes": changes,
+                "result": False,
+                "comment": "\n".join(comment),
+            }
             if warnings:
-                ret.setdefault('warnings', []).extend(warnings)
+                ret.setdefault("warnings", []).extend(warnings)
             return ret
         else:
-            if 'result' in hold_ret and not hold_ret['result']:
-                ret = {'name': name,
-                       'changes': {},
-                       'result': False,
-                       'comment': 'An error was encountered while '
-                                  'holding/unholding package(s): {0}'
-                                  .format(hold_ret['comment'])}
+            if "result" in hold_ret and not hold_ret["result"]:
+                ret = {
+                    "name": name,
+                    "changes": {},
+                    "result": False,
+                    "comment": "An error was encountered while "
+                    "holding/unholding package(s): {0}".format(hold_ret["comment"]),
+                }
                 if warnings:
-                    ret.setdefault('warnings', []).extend(warnings)
+                    ret.setdefault("warnings", []).extend(warnings)
                 return ret
             else:
-                modified_hold = [hold_ret[x] for x in hold_ret
-                                 if hold_ret[x]['changes']]
-                not_modified_hold = [hold_ret[x] for x in hold_ret
-                                     if not hold_ret[x]['changes']
-                                     and hold_ret[x]['result']]
-                failed_hold = [hold_ret[x] for x in hold_ret
-                               if not hold_ret[x]['result']]
+                modified_hold = [
+                    hold_ret[x] for x in hold_ret if hold_ret[x]["changes"]
+                ]
+                not_modified_hold = [
+                    hold_ret[x]
+                    for x in hold_ret
+                    if not hold_ret[x]["changes"] and hold_ret[x]["result"]
+                ]
+                failed_hold = [
+                    hold_ret[x] for x in hold_ret if not hold_ret[x]["result"]
+                ]
 
     if to_unpurge:
-        changes['purge_desired'] = __salt__['lowpkg.unpurge'](*to_unpurge)
+        changes["purge_desired"] = __salt__["lowpkg.unpurge"](*to_unpurge)
 
     # Analyze pkg.install results for packages in targets
     if sources:
-        modified = [x for x in changes['installed'] if x in targets]
-        not_modified = [x for x in desired
-                        if x not in targets
-                        and x not in to_reinstall]
+        modified = [x for x in changes["installed"] if x in targets]
+        not_modified = [
+            x for x in desired if x not in targets and x not in to_reinstall
+        ]
         failed = [x for x in targets if x not in modified]
     else:
-        if __grains__['os'] == 'FreeBSD':
-            kwargs['with_origin'] = True
-        new_pkgs = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
-        if kwargs.get('resolve_capabilities', False) and 'pkg.list_provides' in __salt__:
-            new_caps = __salt__['pkg.list_provides'](**kwargs)
+        if __grains__["os"] == "FreeBSD":
+            kwargs["with_origin"] = True
+        new_pkgs = __salt__["pkg.list_pkgs"](versions_as_list=True, **kwargs)
+        if (
+            kwargs.get("resolve_capabilities", False)
+            and "pkg.list_provides" in __salt__
+        ):
+            new_caps = __salt__["pkg.list_provides"](**kwargs)
         else:
             new_caps = {}
-        ok, failed = _verify_install(desired, new_pkgs,
-                                     ignore_epoch=ignore_epoch,
-                                     new_caps=new_caps)
-        modified = [x for x in ok if x in targets]
-        not_modified = [x for x in ok
-                        if x not in targets
-                        and x not in to_reinstall]
+        _ok, failed = _verify_install(
+            desired, new_pkgs, ignore_epoch=ignore_epoch, new_caps=new_caps
+        )
+        modified = [x for x in _ok if x in targets]
+        not_modified = [x for x in _ok if x not in targets and x not in to_reinstall]
         failed = [x for x in failed if x in targets]
 
     # If there was nothing unpurged, just set the changes dict to the contents
     # of changes['installed'].
-    if not changes.get('purge_desired'):
-        changes = changes['installed']
+    if not changes.get("purge_desired"):
+        changes = changes["installed"]
 
     if modified:
         if sources:
-            summary = ', '.join(modified)
+            summary = ", ".join(modified)
         else:
-            summary = ', '.join([_get_desired_pkg(x, desired)
-                                 for x in modified])
+            summary = ", ".join([_get_desired_pkg(x, desired) for x in modified])
         if len(summary) < 20:
-            comment.append('The following packages were installed/updated: '
-                           '{0}'.format(summary))
+            comment.append(
+                "The following packages were installed/updated: " "{0}".format(summary)
+            )
         else:
             comment.append(
-                '{0} targeted package{1} {2} installed/updated.'.format(
+                "{0} targeted package{1} {2} installed/updated.".format(
                     len(modified),
-                    's' if len(modified) > 1 else '',
-                    'were' if len(modified) > 1 else 'was'
+                    "s" if len(modified) > 1 else "",
+                    "were" if len(modified) > 1 else "was",
                 )
             )
 
     if modified_hold:
         for i in modified_hold:
-            change_name = i['name']
+            change_name = i["name"]
             if change_name in changes:
-                comment.append(i['comment'])
-                if len(changes[change_name]['new']) > 0:
-                    changes[change_name]['new'] += '\n'
-                changes[change_name]['new'] += '{0}'.format(i['changes']['new'])
-                if len(changes[change_name]['old']) > 0:
-                    changes[change_name]['old'] += '\n'
-                changes[change_name]['old'] += '{0}'.format(i['changes']['old'])
+                comment.append(i["comment"])
+                if len(changes[change_name]["new"]) > 0:
+                    changes[change_name]["new"] += "\n"
+                changes[change_name]["new"] += "{0}".format(i["changes"]["new"])
+                if len(changes[change_name]["old"]) > 0:
+                    changes[change_name]["old"] += "\n"
+                changes[change_name]["old"] += "{0}".format(i["changes"]["old"])
             else:
-                comment.append(i['comment'])
+                comment.append(i["comment"])
                 changes[change_name] = {}
-                changes[change_name]['new'] = '{0}'.format(i['changes']['new'])
+                changes[change_name]["new"] = "{0}".format(i["changes"]["new"])
 
     # Any requested packages that were not targeted for install or reinstall
     if not_modified:
         if sources:
-            summary = ', '.join(not_modified)
+            summary = ", ".join(not_modified)
         else:
-            summary = ', '.join([_get_desired_pkg(x, desired)
-                                 for x in not_modified])
+            summary = ", ".join([_get_desired_pkg(x, desired) for x in not_modified])
         if len(not_modified) <= 20:
-            comment.append('The following packages were already installed: '
-                           '{0}'.format(summary))
+            comment.append(
+                "The following packages were already installed: " "{0}".format(summary)
+            )
         else:
             comment.append(
-                '{0} targeted package{1} {2} already installed'.format(
+                "{0} targeted package{1} {2} already installed".format(
                     len(not_modified),
-                    's' if len(not_modified) > 1 else '',
-                    'were' if len(not_modified) > 1 else 'was'
+                    "s" if len(not_modified) > 1 else "",
+                    "were" if len(not_modified) > 1 else "was",
                 )
             )
 
     if not_modified_hold:
         for i in not_modified_hold:
-            comment.append(i['comment'])
+            comment.append(i["comment"])
 
     result = True
 
     if failed:
         if sources:
-            summary = ', '.join(failed)
+            summary = ", ".join(failed)
         else:
-            summary = ', '.join([_get_desired_pkg(x, desired)
-                                 for x in failed])
-        comment.insert(0, 'The following packages failed to '
-                          'install/update: {0}'.format(summary))
+            summary = ", ".join([_get_desired_pkg(x, desired) for x in failed])
+        comment.insert(
+            0, "The following packages failed to " "install/update: {0}".format(summary)
+        )
         result = False
 
     if failed_hold:
         for i in failed_hold:
-            comment.append(i['comment'])
+            comment.append(i["comment"])
         result = False
 
     # Get the ignore_types list if any from the pkg_verify argument
-    if isinstance(pkg_verify, list) \
-            and any(x.get('ignore_types') is not None
-                    for x in pkg_verify
-                    if isinstance(x, _OrderedDict)
-                    and 'ignore_types' in x):
-        ignore_types = next(x.get('ignore_types')
-                            for x in pkg_verify
-                            if 'ignore_types' in x)
+    if isinstance(pkg_verify, list) and any(
+        x.get("ignore_types") is not None
+        for x in pkg_verify
+        if isinstance(x, _OrderedDict) and "ignore_types" in x
+    ):
+        ignore_types = next(
+            x.get("ignore_types") for x in pkg_verify if "ignore_types" in x
+        )
     else:
         ignore_types = []
 
     # Get the verify_options list if any from the pkg_verify argument
-    if isinstance(pkg_verify, list) \
-            and any(x.get('verify_options') is not None
-                    for x in pkg_verify
-                    if isinstance(x, _OrderedDict)
-                    and 'verify_options' in x):
-        verify_options = next(x.get('verify_options')
-                            for x in pkg_verify
-                            if 'verify_options' in x)
+    if isinstance(pkg_verify, list) and any(
+        x.get("verify_options") is not None
+        for x in pkg_verify
+        if isinstance(x, _OrderedDict) and "verify_options" in x
+    ):
+        verify_options = next(
+            x.get("verify_options") for x in pkg_verify if "verify_options" in x
+        )
     else:
         verify_options = []
 
@@ -1908,9 +2049,9 @@ def installed(
         elif pkg_verify:
             # No need to wrap this in a try/except because we would already
             # have caught invalid arguments earlier.
-            verify_result = __salt__['pkg.verify'](reinstall_pkg,
-                                                   ignore_types=ignore_types,
-                                                   verify_options=verify_options)
+            verify_result = __salt__["pkg.verify"](
+                reinstall_pkg, ignore_types=ignore_types, verify_options=verify_options
+            )
             if verify_result:
                 failed.append(reinstall_pkg)
                 altered_files[reinstall_pkg] = verify_result
@@ -1924,9 +2065,9 @@ def installed(
                 pkgstr = modified_pkg
             else:
                 pkgstr = _get_desired_pkg(modified_pkg, desired)
-            msg = 'Package {0} was reinstalled.'.format(pkgstr)
+            msg = "Package {0} was reinstalled.".format(pkgstr)
             if modified_pkg in altered_files:
-                msg += ' The following files were remediated:'
+                msg += " The following files were remediated:"
                 comment.append(msg)
                 comment.append(_nested_output(altered_files[modified_pkg]))
             else:
@@ -1939,39 +2080,37 @@ def installed(
                 pkgstr = failed_pkg
             else:
                 pkgstr = _get_desired_pkg(failed_pkg, desired)
-            msg = ('Reinstall was not successful for package {0}.'
-                   .format(pkgstr))
+            msg = "Reinstall was not successful for package {0}.".format(pkgstr)
             if failed_pkg in altered_files:
-                msg += ' The following files could not be remediated:'
+                msg += " The following files could not be remediated:"
                 comment.append(msg)
                 comment.append(_nested_output(altered_files[failed_pkg]))
             else:
                 comment.append(msg)
         result = False
 
-    ret = {'name': name,
-           'changes': changes,
-           'result': result,
-           'comment': '\n'.join(comment)}
+    ret = {
+        "name": name,
+        "changes": changes,
+        "result": result,
+        "comment": "\n".join(comment),
+    }
     if warnings:
-        ret.setdefault('warnings', []).extend(warnings)
+        ret.setdefault("warnings", []).extend(warnings)
     return ret
 
 
-def downloaded(name,
-               version=None,
-               pkgs=None,
-               fromrepo=None,
-               ignore_epoch=None,
-               **kwargs):
-    '''
+def downloaded(
+    name, version=None, pkgs=None, fromrepo=None, ignore_epoch=None, **kwargs
+):
+    """
     .. versionadded:: 2017.7.0
 
     Ensure that the package is downloaded, and that it is the correct version
     (if specified).
 
     Currently supported for the following pkg providers:
-    :mod:`yumpkg <salt.modules.yumpkg>` and :mod:`zypper <salt.modules.zypper>`
+    :mod:`yumpkg <salt.modules.yumpkg>`, :mod:`zypper <salt.modules.zypper>` and :mod:`zypper <salt.modules.aptpkg>`
 
     :param str name:
         The name of the package to be downloaded. This parameter is ignored if
@@ -2022,21 +2161,17 @@ def downloaded(name,
           pkg.downloaded:
             - version: 5.0.5-4.63
             - fromrepo: "myrepository"
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': None,
-           'comment': ''}
+    """
+    ret = {"name": name, "changes": {}, "result": None, "comment": ""}
 
-    if 'pkg.list_downloaded' not in __salt__:
-        ret['result'] = False
-        ret['comment'] = 'The pkg.downloaded state is not available on ' \
-                         'this platform'
+    if "pkg.list_downloaded" not in __salt__:
+        ret["result"] = False
+        ret["comment"] = "The pkg.downloaded state is not available on " "this platform"
         return ret
 
     if isinstance(pkgs, list) and len(pkgs) == 0:
-        ret['result'] = True
-        ret['comment'] = 'No packages to download provided'
+        ret["result"] = True
+        ret["comment"] = "No packages to download provided"
         return ret
 
     # If just a name (and optionally a version) is passed, just pack them into
@@ -2050,74 +2185,76 @@ def downloaded(name,
 
     # It doesn't make sense here to received 'downloadonly' as kwargs
     # as we're explicitly passing 'downloadonly=True' to execution module.
-    if 'downloadonly' in kwargs:
-        del kwargs['downloadonly']
+    if "downloadonly" in kwargs:
+        del kwargs["downloadonly"]
 
     pkgs, _refresh = _resolve_capabilities(pkgs, **kwargs)
 
     # Only downloading not yet downloaded packages
-    targets = _find_download_targets(name,
-                                     version,
-                                     pkgs,
-                                     fromrepo=fromrepo,
-                                     ignore_epoch=ignore_epoch,
-                                     **kwargs)
-    if isinstance(targets, dict) and 'result' in targets:
+    targets = _find_download_targets(
+        name, version, pkgs, fromrepo=fromrepo, ignore_epoch=ignore_epoch, **kwargs
+    )
+    if isinstance(targets, dict) and "result" in targets:
         return targets
     elif not isinstance(targets, dict):
-        ret['result'] = False
-        ret['comment'] = 'An error was encountered while checking targets: ' \
-                         '{0}'.format(targets)
+        ret["result"] = False
+        ret[
+            "comment"
+        ] = "An error was encountered while checking targets: " "{0}".format(targets)
         return ret
 
-    if __opts__['test']:
-        summary = ', '.join(targets)
-        ret['comment'] = 'The following packages would be ' \
-                         'downloaded: {0}'.format(summary)
+    if __opts__["test"]:
+        summary = ", ".join(targets)
+        ret["comment"] = "The following packages would be " "downloaded: {0}".format(
+            summary
+        )
         return ret
 
     try:
-        pkg_ret = __salt__['pkg.install'](name=name,
-                                          pkgs=pkgs,
-                                          version=version,
-                                          downloadonly=True,
-                                          fromrepo=fromrepo,
-                                          ignore_epoch=ignore_epoch,
-                                          **kwargs)
-        ret['result'] = True
-        ret['changes'].update(pkg_ret)
+        pkg_ret = __salt__["pkg.install"](
+            name=name,
+            pkgs=pkgs,
+            version=version,
+            downloadonly=True,
+            fromrepo=fromrepo,
+            ignore_epoch=ignore_epoch,
+            **kwargs
+        )
+        ret["result"] = True
+        ret["changes"].update(pkg_ret)
     except CommandExecutionError as exc:
-        ret = {'name': name, 'result': False}
+        ret = {"name": name, "result": False}
         if exc.info:
             # Get information for state return from the exception.
-            ret['changes'] = exc.info.get('changes', {})
-            ret['comment'] = exc.strerror_without_changes
+            ret["changes"] = exc.info.get("changes", {})
+            ret["comment"] = exc.strerror_without_changes
         else:
-            ret['changes'] = {}
-            ret['comment'] = 'An error was encountered while downloading ' \
-                             'package(s): {0}'.format(exc)
+            ret["changes"] = {}
+            ret["comment"] = (
+                "An error was encountered while downloading "
+                "package(s): {0}".format(exc)
+            )
         return ret
 
-    new_pkgs = __salt__['pkg.list_downloaded']()
-    ok, failed = _verify_install(targets, new_pkgs, ignore_epoch=ignore_epoch)
+    new_pkgs = __salt__["pkg.list_downloaded"]()
+    _ok, failed = _verify_install(targets, new_pkgs, ignore_epoch=ignore_epoch)
 
     if failed:
-        summary = ', '.join([_get_desired_pkg(x, targets)
-                             for x in failed])
-        ret['result'] = False
-        ret['comment'] = 'The following packages failed to ' \
-                         'download: {0}'.format(summary)
+        summary = ", ".join([_get_desired_pkg(x, targets) for x in failed])
+        ret["result"] = False
+        ret["comment"] = "The following packages failed to " "download: {0}".format(
+            summary
+        )
 
-    if not ret['changes'] and not ret['comment']:
-        ret['result'] = True
-        ret['comment'] = 'Packages are already downloaded: ' \
-                         '{0}'.format(', '.join(targets))
+    if not ret["changes"] and not ret["comment"]:
+        ret["result"] = True
+        ret["comment"] = "Packages downloaded: " "{0}".format(", ".join(targets))
 
     return ret
 
 
 def patch_installed(name, advisory_ids=None, downloadonly=None, **kwargs):
-    '''
+    """
     .. versionadded:: 2017.7.0
 
     Ensure that packages related to certain advisory ids are installed.
@@ -2135,69 +2272,72 @@ def patch_installed(name, advisory_ids=None, downloadonly=None, **kwargs):
               - SUSE-SLE-SERVER-12-SP2-2017-185
               - SUSE-SLE-SERVER-12-SP2-2017-150
               - SUSE-SLE-SERVER-12-SP2-2017-120
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': None,
-           'comment': ''}
+    """
+    ret = {"name": name, "changes": {}, "result": None, "comment": ""}
 
-    if 'pkg.list_patches' not in __salt__:
-        ret['result'] = False
-        ret['comment'] = 'The pkg.patch_installed state is not available on ' \
-                         'this platform'
+    if "pkg.list_patches" not in __salt__:
+        ret["result"] = False
+        ret["comment"] = (
+            "The pkg.patch_installed state is not available on " "this platform"
+        )
         return ret
 
     if isinstance(advisory_ids, list) and len(advisory_ids) == 0:
-        ret['result'] = True
-        ret['comment'] = 'No advisory ids provided'
+        ret["result"] = True
+        ret["comment"] = "No advisory ids provided"
         return ret
 
     # Only downloading not yet downloaded packages
     targets = _find_advisory_targets(name, advisory_ids, **kwargs)
-    if isinstance(targets, dict) and 'result' in targets:
+    if isinstance(targets, dict) and "result" in targets:
         return targets
     elif not isinstance(targets, list):
-        ret['result'] = False
-        ret['comment'] = 'An error was encountered while checking targets: ' \
-                         '{0}'.format(targets)
+        ret["result"] = False
+        ret[
+            "comment"
+        ] = "An error was encountered while checking targets: " "{0}".format(targets)
         return ret
 
-    if __opts__['test']:
-        summary = ', '.join(targets)
-        ret['comment'] = 'The following advisory patches would be ' \
-                         'downloaded: {0}'.format(summary)
+    if __opts__["test"]:
+        summary = ", ".join(targets)
+        ret[
+            "comment"
+        ] = "The following advisory patches would be " "downloaded: {0}".format(summary)
         return ret
 
     try:
-        pkg_ret = __salt__['pkg.install'](name=name,
-                                          advisory_ids=advisory_ids,
-                                          downloadonly=downloadonly,
-                                          **kwargs)
-        ret['result'] = True
-        ret['changes'].update(pkg_ret)
+        pkg_ret = __salt__["pkg.install"](
+            name=name, advisory_ids=advisory_ids, downloadonly=downloadonly, **kwargs
+        )
+        ret["result"] = True
+        ret["changes"].update(pkg_ret)
     except CommandExecutionError as exc:
-        ret = {'name': name, 'result': False}
+        ret = {"name": name, "result": False}
         if exc.info:
             # Get information for state return from the exception.
-            ret['changes'] = exc.info.get('changes', {})
-            ret['comment'] = exc.strerror_without_changes
+            ret["changes"] = exc.info.get("changes", {})
+            ret["comment"] = exc.strerror_without_changes
         else:
-            ret['changes'] = {}
-            ret['comment'] = ('An error was encountered while downloading '
-                              'package(s): {0}'.format(exc))
+            ret["changes"] = {}
+            ret["comment"] = (
+                "An error was encountered while downloading "
+                "package(s): {0}".format(exc)
+            )
         return ret
 
-    if not ret['changes'] and not ret['comment']:
-        status = 'downloaded' if downloadonly else 'installed'
-        ret['result'] = True
-        ret['comment'] = ('Advisory patch is not needed or related packages '
-                          'are already {0}'.format(status))
+    if not ret["changes"] and not ret["comment"]:
+        status = "downloaded" if downloadonly else "installed"
+        ret["result"] = True
+        ret["comment"] = (
+            "Advisory patch is not needed or related packages "
+            "are already {0}".format(status)
+        )
 
     return ret
 
 
 def patch_downloaded(name, advisory_ids=None, **kwargs):
-    '''
+    """
     .. versionadded:: 2017.7.0
 
     Ensure that packages related to certain advisory ids are downloaded.
@@ -2215,30 +2355,35 @@ def patch_downloaded(name, advisory_ids=None, **kwargs):
               - SUSE-SLE-SERVER-12-SP2-2017-185
               - SUSE-SLE-SERVER-12-SP2-2017-150
               - SUSE-SLE-SERVER-12-SP2-2017-120
-    '''
-    if 'pkg.list_patches' not in __salt__:
-        return {'name': name,
-                'result': False,
-                'changes': {},
-                'comment': 'The pkg.patch_downloaded state is not available on '
-                           'this platform'}
+    """
+    if "pkg.list_patches" not in __salt__:
+        return {
+            "name": name,
+            "result": False,
+            "changes": {},
+            "comment": "The pkg.patch_downloaded state is not available on "
+            "this platform",
+        }
 
     # It doesn't make sense here to received 'downloadonly' as kwargs
     # as we're explicitly passing 'downloadonly=True' to execution module.
-    if 'downloadonly' in kwargs:
-        del kwargs['downloadonly']
-    return patch_installed(name=name, advisory_ids=advisory_ids, downloadonly=True, **kwargs)
+    if "downloadonly" in kwargs:
+        del kwargs["downloadonly"]
+    return patch_installed(
+        name=name, advisory_ids=advisory_ids, downloadonly=True, **kwargs
+    )
 
 
 def latest(
-        name,
-        refresh=None,
-        fromrepo=None,
-        skip_verify=False,
-        pkgs=None,
-        watch_flags=True,
-        **kwargs):
-    '''
+    name,
+    refresh=None,
+    fromrepo=None,
+    skip_verify=False,
+    pkgs=None,
+    watch_flags=True,
+    **kwargs
+):
+    """
     Ensure that the named package is installed and the latest available
     package. If the package can be updated, this state function will update
     the package. Generally it is better for the
@@ -2372,60 +2517,62 @@ def latest(
                - name: ms-vcpp
                - report_reboot_exit_codes: False
 
-    '''
+    """
     refresh = salt.utils.pkg.check_refresh(__opts__, refresh)
 
-    if kwargs.get('sources'):
-        return {'name': name,
-                'changes': {},
-                'result': False,
-                'comment': 'The "sources" parameter is not supported.'}
+    if kwargs.get("sources"):
+        return {
+            "name": name,
+            "changes": {},
+            "result": False,
+            "comment": 'The "sources" parameter is not supported.',
+        }
     elif pkgs:
-        desired_pkgs = list(_repack_pkgs(pkgs).keys())
+        desired_pkgs = list(_repack_pkgs(pkgs).keys())  # pylint: disable=not-callable
         if not desired_pkgs:
             # Badly-formatted SLS
-            return {'name': name,
-                    'changes': {},
-                    'result': False,
-                    'comment': 'Invalidly formatted "pkgs" parameter. See '
-                               'minion log.'}
+            return {
+                "name": name,
+                "changes": {},
+                "result": False,
+                "comment": 'Invalidly formatted "pkgs" parameter. See ' "minion log.",
+            }
     else:
         if isinstance(pkgs, list) and len(pkgs) == 0:
             return {
-                'name': name,
-                'changes': {},
-                'result': True,
-                'comment': 'No packages to install provided'
+                "name": name,
+                "changes": {},
+                "result": True,
+                "comment": "No packages to install provided",
             }
         else:
             desired_pkgs = [name]
 
-    kwargs['saltenv'] = __env__
+    kwargs["saltenv"] = __env__
 
     # check if capabilities should be checked and modify the requested packages
     # accordingly.
-    desired_pkgs, refresh = _resolve_capabilities(desired_pkgs, refresh=refresh, **kwargs)
+    desired_pkgs, refresh = _resolve_capabilities(
+        desired_pkgs, refresh=refresh, **kwargs
+    )
 
     try:
-        avail = __salt__['pkg.latest_version'](*desired_pkgs,
-                                               fromrepo=fromrepo,
-                                               refresh=refresh,
-                                               **kwargs)
+        avail = __salt__["pkg.latest_version"](
+            *desired_pkgs, fromrepo=fromrepo, refresh=refresh, **kwargs
+        )
     except CommandExecutionError as exc:
-        return {'name': name,
-                'changes': {},
-                'result': False,
-                'comment': 'An error was encountered while checking the '
-                           'newest available version of package(s): {0}'
-                           .format(exc)}
+        return {
+            "name": name,
+            "changes": {},
+            "result": False,
+            "comment": "An error was encountered while checking the "
+            "newest available version of package(s): {0}".format(exc),
+        }
 
     try:
-        cur = __salt__['pkg.version'](*desired_pkgs, **kwargs)
+        cur = __salt__["pkg.version"](*desired_pkgs, **kwargs)
     except CommandExecutionError as exc:
-        return {'name': name,
-                'changes': {},
-                'result': False,
-                'comment': exc.strerror}
+        return {"name": name, "changes": {}, "result": False, "comment": exc.strerror}
 
     # Repack the cur/avail data if only a single package is being checked
     if isinstance(cur, six.string_types):
@@ -2440,12 +2587,14 @@ def latest(
             # Package either a) is up-to-date, or b) does not exist
             if not cur.get(pkg):
                 # Package does not exist
-                msg = 'No information found for \'{0}\'.'.format(pkg)
+                msg = "No information found for '{0}'.".format(pkg)
                 log.error(msg)
                 problems.append(msg)
-            elif watch_flags \
-                    and __grains__.get('os') == 'Gentoo' \
-                    and __salt__['portage_config.is_changed_uses'](pkg):
+            elif (
+                watch_flags
+                and __grains__.get("os") == "Gentoo"
+                and __salt__["portage_config.is_changed_uses"](pkg)
+            ):
                 # Package is up-to-date, but Gentoo USE flags are changing so
                 # we need to add it to the targets
                 targets[pkg] = cur[pkg]
@@ -2456,10 +2605,10 @@ def latest(
 
     if problems:
         return {
-            'name': name,
-            'changes': {},
-            'result': False,
-            'comment': ' '.join(problems)
+            "name": name,
+            "changes": {},
+            "result": False,
+            "comment": " ".join(problems),
         }
 
     if targets:
@@ -2472,32 +2621,32 @@ def latest(
         else:
             up_to_date = [x for x in pkgs if x not in targets]
 
-        if __opts__['test']:
+        if __opts__["test"]:
             comments = []
             comments.append(
-                'The following packages would be installed/upgraded: ' +
-                ', '.join(sorted(targets))
+                "The following packages would be installed/upgraded: "
+                + ", ".join(sorted(targets))
             )
             if up_to_date:
                 up_to_date_count = len(up_to_date)
                 if up_to_date_count <= 10:
                     comments.append(
-                        'The following packages are already up-to-date: ' +
-                        ', '.join(
-                            ['{0} ({1})'.format(x, cur[x])
-                             for x in sorted(up_to_date)]
+                        "The following packages are already up-to-date: "
+                        + ", ".join(
+                            ["{0} ({1})".format(x, cur[x]) for x in sorted(up_to_date)]
                         )
                     )
                 else:
                     comments.append(
-                        '{0} packages are already up-to-date'
-                        .format(up_to_date_count)
+                        "{0} packages are already up-to-date".format(up_to_date_count)
                     )
 
-            return {'name': name,
-                    'changes': {},
-                    'result': None,
-                    'comment': '\n'.join(comments)}
+            return {
+                "name": name,
+                "changes": {},
+                "result": None,
+                "comment": "\n".join(comments),
+            }
 
         if salt.utils.platform.is_windows():
             # pkg.install execution module on windows ensures the software
@@ -2513,202 +2662,241 @@ def latest(
         # No need to refresh, if a refresh was necessary it would have been
         # performed above when pkg.latest_version was run.
         try:
-            changes = __salt__['pkg.install'](name=None,
-                                              refresh=False,
-                                              fromrepo=fromrepo,
-                                              skip_verify=skip_verify,
-                                              pkgs=targeted_pkgs,
-                                              **kwargs)
+            changes = __salt__["pkg.install"](
+                name=None,
+                refresh=False,
+                fromrepo=fromrepo,
+                skip_verify=skip_verify,
+                pkgs=targeted_pkgs,
+                **kwargs
+            )
         except CommandExecutionError as exc:
-            return {'name': name,
-                    'changes': {},
-                    'result': False,
-                    'comment': 'An error was encountered while installing '
-                               'package(s): {0}'.format(exc)}
+            return {
+                "name": name,
+                "changes": {},
+                "result": False,
+                "comment": "An error was encountered while installing "
+                "package(s): {0}".format(exc),
+            }
 
         if changes:
             # Find failed and successful updates
-            failed = [x for x in targets
-                      if not changes.get(x) or
-                      changes[x].get('new') != targets[x] and
-                      targets[x] != 'latest']
+            failed = [
+                x
+                for x in targets
+                if not changes.get(x)
+                or changes[x].get("new") != targets[x]
+                and targets[x] != "latest"
+            ]
             successful = [x for x in targets if x not in failed]
 
             comments = []
             if failed:
-                msg = 'The following packages failed to update: ' \
-                      '{0}'.format(', '.join(sorted(failed)))
+                msg = "The following packages failed to update: " "{0}".format(
+                    ", ".join(sorted(failed))
+                )
                 comments.append(msg)
             if successful:
-                msg = 'The following packages were successfully ' \
-                      'installed/upgraded: ' \
-                      '{0}'.format(', '.join(sorted(successful)))
+                msg = (
+                    "The following packages were successfully "
+                    "installed/upgraded: "
+                    "{0}".format(", ".join(sorted(successful)))
+                )
                 comments.append(msg)
             if up_to_date:
                 if len(up_to_date) <= 10:
-                    msg = 'The following packages were already up-to-date: ' \
-                        '{0}'.format(', '.join(sorted(up_to_date)))
+                    msg = (
+                        "The following packages were already up-to-date: "
+                        "{0}".format(", ".join(sorted(up_to_date)))
+                    )
                 else:
-                    msg = '{0} packages were already up-to-date '.format(
-                        len(up_to_date))
+                    msg = "{0} packages were already up-to-date ".format(
+                        len(up_to_date)
+                    )
                 comments.append(msg)
 
-            return {'name': name,
-                    'changes': changes,
-                    'result': False if failed else True,
-                    'comment': ' '.join(comments)}
+            return {
+                "name": name,
+                "changes": changes,
+                "result": False if failed else True,
+                "comment": " ".join(comments),
+            }
         else:
             if len(targets) > 10:
-                comment = ('{0} targeted packages failed to update. '
-                           'See debug log for details.'.format(len(targets)))
+                comment = (
+                    "{0} targeted packages failed to update. "
+                    "See debug log for details.".format(len(targets))
+                )
             elif len(targets) > 1:
-                comment = ('The following targeted packages failed to update. '
-                           'See debug log for details: ({0}).'
-                           .format(', '.join(sorted(targets))))
+                comment = (
+                    "The following targeted packages failed to update. "
+                    "See debug log for details: ({0}).".format(
+                        ", ".join(sorted(targets))
+                    )
+                )
             else:
-                comment = 'Package {0} failed to ' \
-                          'update.'.format(next(iter(list(targets.keys()))))
+                comment = "Package {0} failed to " "update.".format(
+                    next(iter(list(targets.keys())))
+                )
             if up_to_date:
                 if len(up_to_date) <= 10:
-                    comment += ' The following packages were already ' \
-                        'up-to-date: ' \
-                        '{0}'.format(', '.join(sorted(up_to_date)))
+                    comment += (
+                        " The following packages were already "
+                        "up-to-date: "
+                        "{0}".format(", ".join(sorted(up_to_date)))
+                    )
                 else:
-                    comment += '{0} packages were already ' \
-                        'up-to-date'.format(len(up_to_date))
+                    comment += "{0} packages were already " "up-to-date".format(
+                        len(up_to_date)
+                    )
 
-            return {'name': name,
-                    'changes': changes,
-                    'result': False,
-                    'comment': comment}
+            return {
+                "name": name,
+                "changes": changes,
+                "result": False,
+                "comment": comment,
+            }
     else:
         if len(desired_pkgs) > 10:
-            comment = 'All {0} packages are up-to-date.'.format(
-                len(desired_pkgs))
+            comment = "All {0} packages are up-to-date.".format(len(desired_pkgs))
         elif len(desired_pkgs) > 1:
-            comment = 'All packages are up-to-date ' \
-                '({0}).'.format(', '.join(sorted(desired_pkgs)))
+            comment = "All packages are up-to-date " "({0}).".format(
+                ", ".join(sorted(desired_pkgs))
+            )
         else:
-            comment = 'Package {0} is already ' \
-                'up-to-date'.format(desired_pkgs[0])
+            comment = "Package {0} is already " "up-to-date".format(desired_pkgs[0])
 
-        return {'name': name,
-                'changes': {},
-                'result': True,
-                'comment': comment}
+        return {"name": name, "changes": {}, "result": True, "comment": comment}
 
 
 def _uninstall(
-    action='remove',
+    action="remove",
     name=None,
     version=None,
     pkgs=None,
     normalize=True,
     ignore_epoch=False,
-    **kwargs):
-    '''
+    **kwargs
+):
+    """
     Common function for package removal
-    '''
-    if action not in ('remove', 'purge'):
-        return {'name': name,
-                'changes': {},
-                'result': False,
-                'comment': 'Invalid action \'{0}\'. '
-                           'This is probably a bug.'.format(action)}
+    """
+    if action not in ("remove", "purge"):
+        return {
+            "name": name,
+            "changes": {},
+            "result": False,
+            "comment": "Invalid action '{0}'. "
+            "This is probably a bug.".format(action),
+        }
 
     try:
-        pkg_params = __salt__['pkg_resource.parse_targets'](
-            name,
-            pkgs,
-            normalize=normalize)[0]
+        pkg_params = __salt__["pkg_resource.parse_targets"](
+            name, pkgs, normalize=normalize
+        )[0]
     except MinionError as exc:
-        return {'name': name,
-                'changes': {},
-                'result': False,
-                'comment': 'An error was encountered while parsing targets: '
-                           '{0}'.format(exc)}
-    targets = _find_remove_targets(name, version, pkgs, normalize,
-                                   ignore_epoch=ignore_epoch, **kwargs)
-    if isinstance(targets, dict) and 'result' in targets:
+        return {
+            "name": name,
+            "changes": {},
+            "result": False,
+            "comment": "An error was encountered while parsing targets: "
+            "{0}".format(exc),
+        }
+    targets = _find_remove_targets(
+        name, version, pkgs, normalize, ignore_epoch=ignore_epoch, **kwargs
+    )
+    if isinstance(targets, dict) and "result" in targets:
         return targets
     elif not isinstance(targets, list):
-        return {'name': name,
-                'changes': {},
-                'result': False,
-                'comment': 'An error was encountered while checking targets: '
-                           '{0}'.format(targets)}
-    if action == 'purge':
-        old_removed = __salt__['pkg.list_pkgs'](versions_as_list=True,
-                                                removed=True,
-                                                **kwargs)
+        return {
+            "name": name,
+            "changes": {},
+            "result": False,
+            "comment": "An error was encountered while checking targets: "
+            "{0}".format(targets),
+        }
+    if action == "purge":
+        old_removed = __salt__["pkg.list_pkgs"](
+            versions_as_list=True, removed=True, **kwargs
+        )
         targets.extend([x for x in pkg_params if x in old_removed])
     targets.sort()
 
     if not targets:
-        return {'name': name,
-                'changes': {},
-                'result': True,
-                'comment': 'None of the targeted packages are installed'
-                           '{0}'.format(' or partially installed'
-                                        if action == 'purge' else '')}
+        return {
+            "name": name,
+            "changes": {},
+            "result": True,
+            "comment": "None of the targeted packages are installed"
+            "{0}".format(" or partially installed" if action == "purge" else ""),
+        }
 
-    if __opts__['test']:
-        return {'name': name,
-                'changes': {},
-                'result': None,
-                'comment': 'The following packages will be {0}d: '
-                           '{1}.'.format(action, ', '.join(targets))}
+    if __opts__["test"]:
+        return {
+            "name": name,
+            "changes": {},
+            "result": None,
+            "comment": "The following packages will be {0}d: "
+            "{1}.".format(action, ", ".join(targets)),
+        }
 
-    changes = __salt__['pkg.{0}'.format(action)](name, pkgs=pkgs, version=version, **kwargs)
-    new = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
+    changes = __salt__["pkg.{0}".format(action)](
+        name, pkgs=pkgs, version=version, **kwargs
+    )
+    new = __salt__["pkg.list_pkgs"](versions_as_list=True, **kwargs)
     failed = []
-    for x in pkg_params:
-        if __grains__['os_family'] in ['Suse', 'RedHat']:
+    for param in pkg_params:
+        if __grains__["os_family"] in ["Suse", "RedHat"]:
             # Check if the package version set to be removed is actually removed:
-            if x in new and not pkg_params[x]:
-                failed.append(x)
-            elif x in new and pkg_params[x] in new[x]:
-                failed.append(x + "-" + pkg_params[x])
-        elif x in new:
-            failed.append(x)
+            if param in new and not pkg_params[param]:
+                failed.append(param)
+            elif param in new and pkg_params[param] in new[param]:
+                failed.append(param + "-" + pkg_params[param])
+        elif param in new:
+            failed.append(param)
 
-    if action == 'purge':
-        new_removed = __salt__['pkg.list_pkgs'](versions_as_list=True,
-                                                removed=True,
-                                                **kwargs)
+    if action == "purge":
+        new_removed = __salt__["pkg.list_pkgs"](
+            versions_as_list=True, removed=True, **kwargs
+        )
         failed.extend([x for x in pkg_params if x in new_removed])
     failed.sort()
 
     if failed:
-        return {'name': name,
-                'changes': changes,
-                'result': False,
-                'comment': 'The following packages failed to {0}: '
-                           '{1}.'.format(action, ', '.join(failed))}
+        return {
+            "name": name,
+            "changes": changes,
+            "result": False,
+            "comment": "The following packages failed to {0}: "
+            "{1}.".format(action, ", ".join(failed)),
+        }
 
     comments = []
     not_installed = sorted([x for x in pkg_params if x not in targets])
     if not_installed:
-        comments.append('The following packages were not installed: '
-                        '{0}'.format(', '.join(not_installed)))
-        comments.append('The following packages were {0}d: '
-                        '{1}.'.format(action, ', '.join(targets)))
+        comments.append(
+            "The following packages were not installed: "
+            "{0}".format(", ".join(not_installed))
+        )
+        comments.append(
+            "The following packages were {0}d: "
+            "{1}.".format(action, ", ".join(targets))
+        )
     else:
-        comments.append('All targeted packages were {0}d.'.format(action))
+        comments.append("All targeted packages were {0}d.".format(action))
 
-    return {'name': name,
-            'changes': changes,
-            'result': True,
-            'comment': ' '.join(comments)}
+    return {
+        "name": name,
+        "changes": changes,
+        "result": True,
+        "comment": " ".join(comments),
+    }
 
 
-def removed(name,
-            version=None,
-            pkgs=None,
-            normalize=True,
-            ignore_epoch=False,
-            **kwargs):
-    '''
+def removed(
+    name, version=None, pkgs=None, normalize=True, ignore_epoch=False, **kwargs
+):
+    """
     Verify that a package is not installed, calling ``pkg.remove`` if necessary
     to remove the package.
 
@@ -2789,32 +2977,34 @@ def removed(name,
         version numbers as well.
 
         .. versionadded:: 0.16.0
-    '''
-    kwargs['saltenv'] = __env__
+    """
+    kwargs["saltenv"] = __env__
     try:
-        return _uninstall(action='remove', name=name, version=version,
-                          pkgs=pkgs, normalize=normalize,
-                          ignore_epoch=ignore_epoch, **kwargs)
+        return _uninstall(
+            action="remove",
+            name=name,
+            version=version,
+            pkgs=pkgs,
+            normalize=normalize,
+            ignore_epoch=ignore_epoch,
+            **kwargs
+        )
     except CommandExecutionError as exc:
-        ret = {'name': name, 'result': False}
+        ret = {"name": name, "result": False}
         if exc.info:
             # Get information for state return from the exception.
-            ret['changes'] = exc.info.get('changes', {})
-            ret['comment'] = exc.strerror_without_changes
+            ret["changes"] = exc.info.get("changes", {})
+            ret["comment"] = exc.strerror_without_changes
         else:
-            ret['changes'] = {}
-            ret['comment'] = ('An error was encountered while removing '
-                              'package(s): {0}'.format(exc))
+            ret["changes"] = {}
+            ret[
+                "comment"
+            ] = "An error was encountered while removing " "package(s): {0}".format(exc)
         return ret
 
 
-def purged(name,
-           version=None,
-           pkgs=None,
-           normalize=True,
-           ignore_epoch=False,
-           **kwargs):
-    '''
+def purged(name, version=None, pkgs=None, normalize=True, ignore_epoch=False, **kwargs):
+    """
     Verify that a package is not installed, calling ``pkg.purge`` if necessary
     to purge the package. All configuration files are also removed.
 
@@ -2895,27 +3085,34 @@ def purged(name,
         version numbers as well.
 
     .. versionadded:: 0.16.0
-    '''
-    kwargs['saltenv'] = __env__
+    """
+    kwargs["saltenv"] = __env__
     try:
-        return _uninstall(action='purge', name=name, version=version,
-                          pkgs=pkgs, normalize=normalize,
-                          ignore_epoch=ignore_epoch, **kwargs)
+        return _uninstall(
+            action="purge",
+            name=name,
+            version=version,
+            pkgs=pkgs,
+            normalize=normalize,
+            ignore_epoch=ignore_epoch,
+            **kwargs
+        )
     except CommandExecutionError as exc:
-        ret = {'name': name, 'result': False}
+        ret = {"name": name, "result": False}
         if exc.info:
             # Get information for state return from the exception.
-            ret['changes'] = exc.info.get('changes', {})
-            ret['comment'] = exc.strerror_without_changes
+            ret["changes"] = exc.info.get("changes", {})
+            ret["comment"] = exc.strerror_without_changes
         else:
-            ret['changes'] = {}
-            ret['comment'] = ('An error was encountered while purging '
-                              'package(s): {0}'.format(exc))
+            ret["changes"] = {}
+            ret[
+                "comment"
+            ] = "An error was encountered while purging " "package(s): {0}".format(exc)
         return ret
 
 
 def uptodate(name, refresh=False, pkgs=None, **kwargs):
-    '''
+    """
     .. versionadded:: 2014.7.0
     .. versionchanged:: 2018.3.0
 
@@ -2955,77 +3152,83 @@ def uptodate(name, refresh=False, pkgs=None, **kwargs):
         Any keyword arguments to pass through to ``pkg.upgrade``.
 
         .. versionadded:: 2015.5.0
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': False,
-           'comment': 'Failed to update'}
+    """
+    ret = {"name": name, "changes": {}, "result": False, "comment": "Failed to update"}
 
-    if 'pkg.list_upgrades' not in __salt__:
-        ret['comment'] = 'State pkg.uptodate is not available'
+    if "pkg.list_upgrades" not in __salt__:
+        ret["comment"] = "State pkg.uptodate is not available"
         return ret
 
     # emerge --update doesn't appear to support repo notation
-    if 'fromrepo' in kwargs and __grains__['os'] == 'Gentoo':
-        ret['comment'] = '\'fromrepo\' argument not supported on this platform'
+    if "fromrepo" in kwargs and __grains__["os"] == "Gentoo":
+        ret["comment"] = "'fromrepo' argument not supported on this platform"
         return ret
 
     if isinstance(refresh, bool):
         pkgs, refresh = _resolve_capabilities(pkgs, refresh=refresh, **kwargs)
         try:
-            packages = __salt__['pkg.list_upgrades'](refresh=refresh, **kwargs)
-            expected = {pkgname: {'new': pkgver, 'old': __salt__['pkg.version'](pkgname)}
-                        for pkgname, pkgver in six.iteritems(packages)}
+            packages = __salt__["pkg.list_upgrades"](refresh=refresh, **kwargs)
+            expected = {
+                pkgname: {"new": pkgver, "old": __salt__["pkg.version"](pkgname)}
+                for pkgname, pkgver in six.iteritems(packages)
+            }
             if isinstance(pkgs, list):
                 packages = [pkg for pkg in packages if pkg in pkgs]
-                expected = {pkgname: pkgver for pkgname, pkgver in six.iteritems(expected) if pkgname in pkgs}
-        except Exception as exc:
-            ret['comment'] = six.text_type(exc)
+                expected = {
+                    pkgname: pkgver
+                    for pkgname, pkgver in six.iteritems(expected)
+                    if pkgname in pkgs
+                }
+        except Exception as exc:  # pylint: disable=broad-except
+            ret["comment"] = six.text_type(exc)
             return ret
     else:
-        ret['comment'] = 'refresh must be either True or False'
+        ret["comment"] = "refresh must be either True or False"
         return ret
 
     if not packages:
-        ret['comment'] = 'System is already up-to-date'
-        ret['result'] = True
+        ret["comment"] = "System is already up-to-date"
+        ret["result"] = True
         return ret
-    elif __opts__['test']:
-        ret['comment'] = 'System update will be performed'
-        ret['changes'] = expected
-        ret['result'] = None
+    elif __opts__["test"]:
+        ret["comment"] = "System update will be performed"
+        ret["changes"] = expected
+        ret["result"] = None
         return ret
 
     try:
-        ret['changes'] = __salt__['pkg.upgrade'](refresh=refresh, pkgs=pkgs, **kwargs)
+        ret["changes"] = __salt__["pkg.upgrade"](refresh=refresh, pkgs=pkgs, **kwargs)
     except CommandExecutionError as exc:
         if exc.info:
             # Get information for state return from the exception.
-            ret['changes'] = exc.info.get('changes', {})
-            ret['comment'] = exc.strerror_without_changes
+            ret["changes"] = exc.info.get("changes", {})
+            ret["comment"] = exc.strerror_without_changes
         else:
-            ret['changes'] = {}
-            ret['comment'] = ('An error was encountered while updating '
-                              'packages: {0}'.format(exc))
+            ret["changes"] = {}
+            ret[
+                "comment"
+            ] = "An error was encountered while updating " "packages: {0}".format(exc)
         return ret
 
     # If a package list was provided, ensure those packages were updated
     missing = []
     if isinstance(pkgs, list):
-        missing = [pkg for pkg in six.iterkeys(expected) if pkg not in ret['changes']]
+        missing = [pkg for pkg in six.iterkeys(expected) if pkg not in ret["changes"]]
 
     if missing:
-        ret['comment'] = 'The following package(s) failed to update: {0}'.format(', '.join(missing))
-        ret['result'] = False
+        ret["comment"] = "The following package(s) failed to update: {0}".format(
+            ", ".join(missing)
+        )
+        ret["result"] = False
     else:
-        ret['comment'] = 'Upgrade ran successfully'
-        ret['result'] = True
+        ret["comment"] = "Upgrade ran successfully"
+        ret["result"] = True
 
     return ret
 
 
 def group_installed(name, skip=None, include=None, **kwargs):
-    '''
+    """
     .. versionadded:: 2015.8.0
 
     .. versionchanged:: 2016.11.0
@@ -3068,21 +3271,18 @@ def group_installed(name, skip=None, include=None, **kwargs):
         <salt.modules.yumpkg.install>`, any argument which can be passed to
         pkg.install may also be included here, and it will be passed on to the
         call to :py:func:`pkg.install <salt.modules.yumpkg.install>`.
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': False,
-           'comment': ''}
+    """
+    ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
-    if 'pkg.group_diff' not in __salt__:
-        ret['comment'] = 'pkg.group_install not available for this platform'
+    if "pkg.group_diff" not in __salt__:
+        ret["comment"] = "pkg.group_install not available for this platform"
         return ret
 
     if skip is None:
         skip = []
     else:
         if not isinstance(skip, list):
-            ret['comment'] = 'skip must be formatted as a list'
+            ret["comment"] = "skip must be formatted as a list"
             return ret
         for idx, item in enumerate(skip):
             if not isinstance(item, six.string_types):
@@ -3092,88 +3292,89 @@ def group_installed(name, skip=None, include=None, **kwargs):
         include = []
     else:
         if not isinstance(include, list):
-            ret['comment'] = 'include must be formatted as a list'
+            ret["comment"] = "include must be formatted as a list"
             return ret
         for idx, item in enumerate(include):
             if not isinstance(item, six.string_types):
                 include[idx] = six.text_type(item)
 
     try:
-        diff = __salt__['pkg.group_diff'](name)
+        diff = __salt__["pkg.group_diff"](name)
     except CommandExecutionError as err:
-        ret['comment'] = ('An error was encountered while installing/updating '
-                          'group \'{0}\': {1}.'.format(name, err))
+        ret["comment"] = (
+            "An error was encountered while installing/updating "
+            "group '{0}': {1}.".format(name, err)
+        )
         return ret
 
-    mandatory = diff['mandatory']['installed'] + \
-        diff['mandatory']['not installed']
+    mandatory = diff["mandatory"]["installed"] + diff["mandatory"]["not installed"]
 
     invalid_skip = [x for x in mandatory if x in skip]
     if invalid_skip:
-        ret['comment'] = (
-            'The following mandatory packages cannot be skipped: {0}'
-            .format(', '.join(invalid_skip))
+        ret[
+            "comment"
+        ] = "The following mandatory packages cannot be skipped: {0}".format(
+            ", ".join(invalid_skip)
         )
         return ret
 
-    targets = diff['mandatory']['not installed']
-    targets.extend([x for x in diff['default']['not installed']
-                    if x not in skip])
+    targets = diff["mandatory"]["not installed"]
+    targets.extend([x for x in diff["default"]["not installed"] if x not in skip])
     targets.extend(include)
 
     if not targets:
-        ret['result'] = True
-        ret['comment'] = 'Group \'{0}\' is already installed'.format(name)
+        ret["result"] = True
+        ret["comment"] = "Group '{0}' is already installed".format(name)
         return ret
 
-    partially_installed = diff['mandatory']['installed'] \
-        or diff['default']['installed'] \
-        or diff['optional']['installed']
+    partially_installed = (
+        diff["mandatory"]["installed"]
+        or diff["default"]["installed"]
+        or diff["optional"]["installed"]
+    )
 
-    if __opts__['test']:
-        ret['result'] = None
+    if __opts__["test"]:
+        ret["result"] = None
         if partially_installed:
-            ret['comment'] = (
-                'Group \'{0}\' is partially installed and will be updated'
-                .format(name)
-            )
+            ret[
+                "comment"
+            ] = "Group '{0}' is partially installed and will be updated".format(name)
         else:
-            ret['comment'] = 'Group \'{0}\' will be installed'.format(name)
+            ret["comment"] = "Group '{0}' will be installed".format(name)
         return ret
 
     try:
-        ret['changes'] = __salt__['pkg.install'](pkgs=targets, **kwargs)
+        ret["changes"] = __salt__["pkg.install"](pkgs=targets, **kwargs)
     except CommandExecutionError as exc:
-        ret = {'name': name, 'result': False}
+        ret = {"name": name, "result": False}
         if exc.info:
             # Get information for state return from the exception.
-            ret['changes'] = exc.info.get('changes', {})
-            ret['comment'] = exc.strerror_without_changes
+            ret["changes"] = exc.info.get("changes", {})
+            ret["comment"] = exc.strerror_without_changes
         else:
-            ret['changes'] = {}
-            ret['comment'] = ('An error was encountered while '
-                              'installing/updating group \'{0}\': {1}'
-                              .format(name, exc))
+            ret["changes"] = {}
+            ret["comment"] = (
+                "An error was encountered while "
+                "installing/updating group '{0}': {1}".format(name, exc)
+            )
         return ret
 
-    failed = [x for x in targets if x not in __salt__['pkg.list_pkgs']()]
+    failed = [x for x in targets if x not in __salt__["pkg.list_pkgs"]()]
     if failed:
-        ret['comment'] = (
-            'Failed to install the following packages: {0}'
-            .format(', '.join(failed))
+        ret["comment"] = "Failed to install the following packages: {0}".format(
+            ", ".join(failed)
         )
         return ret
 
-    ret['result'] = True
-    ret['comment'] = 'Group \'{0}\' was {1}'.format(
-        name,
-        'updated' if partially_installed else 'installed'
+    ret["result"] = True
+    ret["comment"] = "Group '{0}' was {1}".format(
+        name, "updated" if partially_installed else "installed"
     )
     return ret
 
 
 def mod_init(low):
-    '''
+    """
     Set a flag to tell the install functions to refresh the package database.
     This ensures that the package database is refreshed only once during
     a state run significantly improving the speed of package management
@@ -3190,69 +3391,69 @@ def mod_init(low):
     .. seealso::
        :py:func:`salt.modules.ebuild.ex_mod_init`
 
-    '''
+    """
     ret = True
-    if 'pkg.ex_mod_init' in __salt__:
-        ret = __salt__['pkg.ex_mod_init'](low)
+    if "pkg.ex_mod_init" in __salt__:
+        ret = __salt__["pkg.ex_mod_init"](low)
 
-    if low['fun'] == 'installed' or low['fun'] == 'latest':
+    if low["fun"] == "installed" or low["fun"] == "latest":
         salt.utils.pkg.write_rtag(__opts__)
         return ret
     return False
 
 
 def mod_aggregate(low, chunks, running):
-    '''
+    """
     The mod_aggregate function which looks up all packages in the available
     low chunks and merges them into a single pkgs ref in the present low data
-    '''
+    """
     pkgs = []
     pkg_type = None
     agg_enabled = [
-        'installed',
-        'latest',
-        'removed',
-        'purged',
+        "installed",
+        "latest",
+        "removed",
+        "purged",
     ]
-    if low.get('fun') not in agg_enabled:
+    if low.get("fun") not in agg_enabled:
         return low
     for chunk in chunks:
-        tag = __utils__['state.gen_tag'](chunk)
+        tag = __utils__["state.gen_tag"](chunk)
         if tag in running:
             # Already ran the pkg state, skip aggregation
             continue
-        if chunk.get('state') == 'pkg':
-            if '__agg__' in chunk:
+        if chunk.get("state") == "pkg":
+            if "__agg__" in chunk:
                 continue
             # Check for the same function
-            if chunk.get('fun') != low.get('fun'):
+            if chunk.get("fun") != low.get("fun"):
                 continue
             # Check for the same repo
-            if chunk.get('fromrepo') != low.get('fromrepo'):
+            if chunk.get("fromrepo") != low.get("fromrepo"):
                 continue
             # Check first if 'sources' was passed so we don't aggregate pkgs
             # and sources together.
-            if 'sources' in chunk:
+            if "sources" in chunk:
                 if pkg_type is None:
-                    pkg_type = 'sources'
-                if pkg_type == 'sources':
-                    pkgs.extend(chunk['sources'])
-                    chunk['__agg__'] = True
+                    pkg_type = "sources"
+                if pkg_type == "sources":
+                    pkgs.extend(chunk["sources"])
+                    chunk["__agg__"] = True
             else:
                 if pkg_type is None:
-                    pkg_type = 'pkgs'
-                if pkg_type == 'pkgs':
+                    pkg_type = "pkgs"
+                if pkg_type == "pkgs":
                     # Pull out the pkg names!
-                    if 'pkgs' in chunk:
-                        pkgs.extend(chunk['pkgs'])
-                        chunk['__agg__'] = True
-                    elif 'name' in chunk:
-                        version = chunk.pop('version', None)
+                    if "pkgs" in chunk:
+                        pkgs.extend(chunk["pkgs"])
+                        chunk["__agg__"] = True
+                    elif "name" in chunk:
+                        version = chunk.pop("version", None)
                         if version is not None:
-                            pkgs.append({chunk['name']: version})
+                            pkgs.append({chunk["name"]: version})
                         else:
-                            pkgs.append(chunk['name'])
-                        chunk['__agg__'] = True
+                            pkgs.append(chunk["name"])
+                        chunk["__agg__"] = True
     if pkg_type is not None and pkgs:
         if pkg_type in low:
             low[pkg_type].extend(pkgs)
@@ -3262,7 +3463,7 @@ def mod_aggregate(low, chunks, running):
 
 
 def mod_watch(name, **kwargs):
-    '''
+    """
     Install/reinstall a package based on a watch requisite
 
     .. note::
@@ -3270,15 +3471,19 @@ def mod_watch(name, **kwargs):
         :ref:`requisite <requisites>`. It should not be called directly.
 
         Parameters for this function should be set by the state being triggered.
-    '''
-    sfun = kwargs.pop('sfun', None)
-    mapfun = {'purged': purged,
-              'latest': latest,
-              'removed': removed,
-              'installed': installed}
+    """
+    sfun = kwargs.pop("sfun", None)
+    mapfun = {
+        "purged": purged,
+        "latest": latest,
+        "removed": removed,
+        "installed": installed,
+    }
     if sfun in mapfun:
         return mapfun[sfun](name, **kwargs)
-    return {'name': name,
-            'changes': {},
-            'comment': 'pkg.{0} does not work with the watch requisite'.format(sfun),
-            'result': False}
+    return {
+        "name": name,
+        "changes": {},
+        "comment": "pkg.{0} does not work with the watch requisite".format(sfun),
+        "result": False,
+    }

@@ -1,20 +1,19 @@
 # encoding: utf-8
 from __future__ import absolute_import, print_function, unicode_literals
 
-try:
-    import cherrypy
+# pylint: disable=3rd-party-module-not-gated
+import cherrypy
+from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool
+from ws4py.websocket import WebSocket
 
-    from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool
-    from ws4py.websocket import WebSocket
-except ImportError:
-    raise
+# pylint: enable=3rd-party-module-not-gated
 
 cherrypy.tools.websocket = WebSocketTool()
 WebSocketPlugin(cherrypy.engine).subscribe()
 
 
 class SynchronizingWebsocket(WebSocket):
-    '''
+    """
     Class to handle requests sent to this websocket connection.
     Each instance of this class represents a Salt websocket connection.
     Waits to receive a ``ready`` message from the client.
@@ -24,8 +23,9 @@ class SynchronizingWebsocket(WebSocket):
     This class also kicks off initial information probing jobs when clients
     initially connect. These jobs help gather information about minions, jobs,
     and documentation.
-    '''
-    def __init__(self, *args, **kwargs):  # pylint: disable=E1002
+    """
+
+    def __init__(self, *args, **kwargs):
         super(SynchronizingWebsocket, self).__init__(*args, **kwargs)
 
         # This pipe needs to represent the parent end of a pipe.
@@ -43,7 +43,7 @@ class SynchronizingWebsocket(WebSocket):
         self.opts = None
 
     def received_message(self, message):
-        '''
+        """
         Checks if the client has sent a ready message.
         A ready message causes ``send()`` to be called on the
         ``parent end`` of the pipe.
@@ -53,7 +53,7 @@ class SynchronizingWebsocket(WebSocket):
 
         This ensures completion of the underlying websocket connection
         and can be used to synchronize parallel senders.
-        '''
-        if message.data.decode('utf-8') == 'websocket client ready':
+        """
+        if message.data.decode("utf-8") == "websocket client ready":
             self.pipe.send(message)
-        self.send('server received message', False)
+        self.send("server received message", False)

@@ -1,0 +1,26 @@
+{
+  "386": {
+    "arch": 386
+  },
+  "amd64": {
+    "arch": "amd64"
+  },
+  "x86_64": {
+    "arch": "amd64"
+  },
+  "arm64": {
+    "arch": "arm64"
+  },
+  "armv6l": {
+    "arch": "armv6l"
+  },
+  "armv7l": {
+    "arch": "armv7l"
+  },
+  "ppc64le": {
+    "arch": "ppc64le"
+  },
+  "s390x": {
+    "arch": "s390x"
+  }
+}

@@ -1,18 +1,16 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Resources needed by pkg providers
-'''
+"""
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import copy
 import fnmatch
 import logging
 import os
 import pprint
-
-# Import third party libs
-from salt.ext import six
 
 # Import salt libs
 import salt.utils.data
@@ -20,29 +18,35 @@ import salt.utils.versions
 import salt.utils.yaml
 from salt.exceptions import SaltInvocationError
 
+# Import third party libs
+from salt.ext import six
+
 log = logging.getLogger(__name__)
-__SUFFIX_NOT_NEEDED = ('x86_64', 'noarch')
+__SUFFIX_NOT_NEEDED = ("x86_64", "noarch")
 
 
 def _repack_pkgs(pkgs, normalize=True):
-    '''
+    """
     Repack packages specified using "pkgs" argument to pkg states into a single
     dictionary
-    '''
-    if normalize and 'pkg.normalize_name' in __salt__:
-        _normalize_name = __salt__['pkg.normalize_name']
+    """
+    if normalize and "pkg.normalize_name" in __salt__:
+        _normalize_name = __salt__["pkg.normalize_name"]
     else:
         _normalize_name = lambda pkgname: pkgname
     return dict(
         [
-            (_normalize_name(six.text_type(x)), six.text_type(y) if y is not None else y)
+            (
+                _normalize_name(six.text_type(x)),
+                six.text_type(y) if y is not None else y,
+            )
             for x, y in six.iteritems(salt.utils.data.repack_dictlist(pkgs))
         ]
     )
 
 
 def pack_sources(sources, normalize=True):
-    '''
+    """
     Accepts list of dicts (or a string representing a list of dicts) and packs
     the key/value pairs into a single dict.
 
@@ -64,9 +68,9 @@ def pack_sources(sources, normalize=True):
     .. code-block:: bash
 
         salt '*' pkg_resource.pack_sources '[{"foo": "salt://foo.rpm"}, {"bar": "salt://bar.rpm"}]'
-    '''
-    if normalize and 'pkg.normalize_name' in __salt__:
-        _normalize_name = __salt__['pkg.normalize_name']
+    """
+    if normalize and "pkg.normalize_name" in __salt__:
+        _normalize_name = __salt__["pkg.normalize_name"]
     else:
         _normalize_name = lambda pkgname: pkgname
 
@@ -79,8 +83,8 @@ def pack_sources(sources, normalize=True):
     ret = {}
     for source in sources:
         if (not isinstance(source, dict)) or len(source) != 1:
-            log.error('Invalid input: %s', pprint.pformat(sources))
-            log.error('Input must be a list of 1-element dicts')
+            log.error("Invalid input: %s", pprint.pformat(sources))
+            log.error("Input must be a list of 1-element dicts")
             return {}
         else:
             key = next(iter(source))
@@ -88,13 +92,10 @@ def pack_sources(sources, normalize=True):
     return ret
 
 
-def parse_targets(name=None,
-                  pkgs=None,
-                  sources=None,
-                  saltenv='base',
-                  normalize=True,
-                  **kwargs):
-    '''
+def parse_targets(
+    name=None, pkgs=None, sources=None, saltenv="base", normalize=True, **kwargs
+):
+    """
     Parses the input to pkg.install and returns back the package(s) to be
     installed. Returns a list of packages, as well as a string noting whether
     the packages are to come from a repository or a binary package.
@@ -104,81 +105,84 @@ def parse_targets(name=None,
     .. code-block:: bash
 
         salt '*' pkg_resource.parse_targets
-    '''
-    if '__env__' in kwargs:
+    """
+    if "__env__" in kwargs:
         # "env" is not supported; Use "saltenv".
-        kwargs.pop('__env__')
+        kwargs.pop("__env__")
 
-    if __grains__['os'] == 'MacOS' and sources:
+    if __grains__["os"] == "MacOS" and sources:
         log.warning('Parameter "sources" ignored on MacOS hosts.')
 
-    version = kwargs.get('version')
+    version = kwargs.get("version")
 
     if pkgs and sources:
         log.error('Only one of "pkgs" and "sources" can be used.')
         return None, None
 
-    elif 'advisory_ids' in kwargs:
+    elif "advisory_ids" in kwargs:
         if pkgs:
             log.error('Cannot use "advisory_ids" and "pkgs" at the same time')
             return None, None
-        elif kwargs['advisory_ids']:
-            return kwargs['advisory_ids'], 'advisory'
+        elif kwargs["advisory_ids"]:
+            return kwargs["advisory_ids"], "advisory"
         else:
-            return [name], 'advisory'
+            return [name], "advisory"
 
     elif pkgs:
         if version is not None:
-            log.warning('\'version\' argument will be ignored for multiple '
-                        'package targets')
+            log.warning(
+                "'version' argument will be ignored for multiple " "package targets"
+            )
         pkgs = _repack_pkgs(pkgs, normalize=normalize)
         if not pkgs:
             return None, None
         else:
-            return pkgs, 'repository'
+            return pkgs, "repository"
 
-    elif sources and __grains__['os'] != 'MacOS':
+    elif sources and __grains__["os"] != "MacOS":
         if version is not None:
-            log.warning('\'version\' argument will be ignored for multiple '
-                        'package targets')
+            log.warning(
+                "'version' argument will be ignored for multiple " "package targets"
+            )
         sources = pack_sources(sources, normalize=normalize)
         if not sources:
             return None, None
 
         srcinfo = []
         for pkg_name, pkg_src in six.iteritems(sources):
-            if __salt__['config.valid_fileproto'](pkg_src):
+            if __salt__["config.valid_fileproto"](pkg_src):
                 # Cache package from remote source (salt master, HTTP, FTP) and
                 # append the cached path.
-                srcinfo.append(__salt__['cp.cache_file'](pkg_src, saltenv))
+                srcinfo.append(__salt__["cp.cache_file"](pkg_src, saltenv))
             else:
                 # Package file local to the minion, just append the path to the
                 # package file.
                 if not os.path.isabs(pkg_src):
                     raise SaltInvocationError(
-                        'Path {0} for package {1} is either not absolute or '
-                        'an invalid protocol'.format(pkg_src, pkg_name)
+                        "Path {0} for package {1} is either not absolute or "
+                        "an invalid protocol".format(pkg_src, pkg_name)
                     )
                 srcinfo.append(pkg_src)
 
-        return srcinfo, 'file'
+        return srcinfo, "file"
 
     elif name:
         if normalize:
-            _normalize_name = \
-                __salt__.get('pkg.normalize_name', lambda pkgname: pkgname)
-            packed = dict([(_normalize_name(x), version) for x in name.split(',')])
+            _normalize_name = __salt__.get(
+                "pkg.normalize_name", lambda pkgname: pkgname
+            )
+            packed = dict([(_normalize_name(x), version) for x in name.split(",")])
         else:
-            packed = dict([(x, version) for x in name.split(',')])
-        return packed, 'repository'
+            packed = dict([(x, version) for x in name.split(",")])
+        return packed, "repository"
 
     else:
-        log.error('No package sources provided')
+        log.error("No package sources provided")
         return None, None
 
 
 def version(*names, **kwargs):
-    '''
+    """
     Common interface for obtaining the version of installed packages.
 
     CLI Example:
@@ -188,34 +192,33 @@ def version(*names, **kwargs):
         salt '*' pkg_resource.version vim
         salt '*' pkg_resource.version foo bar baz
         salt '*' pkg_resource.version 'python*'
-    '''
+    """
     ret = {}
-    versions_as_list = \
-        salt.utils.data.is_true(kwargs.pop('versions_as_list', False))
+    versions_as_list = salt.utils.data.is_true(kwargs.pop("versions_as_list", False))
     pkg_glob = False
     if len(names) != 0:
-        pkgs = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
+        pkgs = __salt__["pkg.list_pkgs"](versions_as_list=True, **kwargs)
         for name in names:
-            if '*' in name:
+            if "*" in name:
                 pkg_glob = True
                 for match in fnmatch.filter(pkgs, name):
                     ret[match] = pkgs.get(match, [])
             else:
                 ret[name] = pkgs.get(name, [])
     if not versions_as_list:
-        __salt__['pkg_resource.stringify'](ret)
+        __salt__["pkg_resource.stringify"](ret)
     # Return a string if no globbing is used, and there is one item in the
     # return dict
     if len(ret) == 1 and not pkg_glob:
         try:
             return next(six.itervalues(ret))
         except StopIteration:
-            return ''
+            return ""
     return ret
 
 
 def add_pkg(pkgs, name, pkgver):
-    '''
+    """
     Add a package to a dict of installed packages.
 
     CLI Example:
@@ -223,7 +226,7 @@ def add_pkg(pkgs, name, pkgver):
     .. code-block:: bash
 
         salt '*' pkg_resource.add_pkg '{}' bind 9
-    '''
+    """
     try:
         pkgs.setdefault(name, []).append(pkgver)
     except AttributeError as exc:
@@ -231,7 +234,7 @@ def add_pkg(pkgs, name, pkgver):
 
 
 def sort_pkglist(pkgs):
-    '''
+    """
     Accepts a dict obtained from pkg.list_pkgs() and sorts in place the list of
     versions for any packages that have multiple versions installed, so that
     two package lists can be compared to one another.
@@ -241,7 +244,7 @@ def sort_pkglist(pkgs):
     .. code-block:: bash
 
         salt '*' pkg_resource.sort_pkglist '["3.45", "2.13"]'
-    '''
+    """
     # It doesn't matter that ['4.9','4.10'] would be sorted to ['4.10','4.9'],
     # so long as the sorting is consistent.
     try:
@@ -254,7 +257,7 @@ def sort_pkglist(pkgs):
 
 
 def stringify(pkgs):
-    '''
+    """
     Takes a dict of package name/version information and joins each list of
     installed versions into a string.
 
@@ -263,16 +266,16 @@ def stringify(pkgs):
     .. code-block:: bash
 
         salt '*' pkg_resource.stringify 'vim: 7.127'
-    '''
+    """
     try:
         for key in pkgs:
-            pkgs[key] = ','.join(pkgs[key])
+            pkgs[key] = ",".join(pkgs[key])
     except AttributeError as exc:
         log.exception(exc)
 
 
 def version_clean(verstr):
-    '''
+    """
     Clean the version string removing extra data.
     This function will simply try to call ``pkg.version_clean``.
 
@@ -281,14 +284,14 @@ def version_clean(verstr):
     .. code-block:: bash
 
         salt '*' pkg_resource.version_clean <version_string>
-    '''
-    if verstr and 'pkg.version_clean' in __salt__:
-        return __salt__['pkg.version_clean'](verstr)
+    """
+    if verstr and "pkg.version_clean" in __salt__:
+        return __salt__["pkg.version_clean"](verstr)
     return verstr
 
 
 def check_extra_requirements(pkgname, pkgver):
-    '''
+    """
     Check if the installed package already has the given requirements.
     This function will return the result of ``pkg.check_extra_requirements`` if
     this function exists for the minion, otherwise it will return True.
@@ -298,48 +301,67 @@ def check_extra_requirements(pkgname, pkgver):
     .. code-block:: bash
 
         salt '*' pkg_resource.check_extra_requirements <pkgname> <extra_requirements>
-    '''
-    if pkgver and 'pkg.check_extra_requirements' in __salt__:
-        return __salt__['pkg.check_extra_requirements'](pkgname, pkgver)
+    """
+    if pkgver and "pkg.check_extra_requirements" in __salt__:
+        return __salt__["pkg.check_extra_requirements"](pkgname, pkgver)
 
     return True
 
 
 def format_pkg_list(packages, versions_as_list, attr):
-    '''
+    """
     Formats packages according to parameters for list_pkgs.
-    '''
+    """
     ret = copy.deepcopy(packages)
     if attr:
-        requested_attr = {'epoch', 'version', 'release', 'arch', 'install_date', 'install_date_time_t'}
+        ret_attr = {}
+        requested_attr = {
+            "epoch",
+            "version",
+            "release",
+            "arch",
+            "install_date",
+            "install_date_time_t",
+        }
 
-        if attr != 'all':
-            requested_attr &= set(attr + ['version'])
+        if attr != "all":
+            requested_attr &= set(attr + ["version"] + ["arch"])
 
         for name in ret:
+            if "pkg.parse_arch" in __salt__:
+                _parse_arch = __salt__["pkg.parse_arch"](name)
+            else:
+                _parse_arch = {"name": name, "arch": None}
+            _name = _parse_arch["name"]
+            _arch = _parse_arch["arch"]
+
             versions = []
+            pkgname = None
             for all_attr in ret[name]:
                 filtered_attr = {}
                 for key in requested_attr:
-                    if all_attr[key]:
+                    if key in all_attr:
                         filtered_attr[key] = all_attr[key]
                 versions.append(filtered_attr)
-            ret[name] = versions
-        return ret
+                if _name and filtered_attr.get("arch", None) == _arch:
+                    pkgname = _name
+            ret_attr.setdefault(pkgname or name, []).extend(versions)
+        return ret_attr
 
     for name in ret:
-        ret[name] = [format_version(d['epoch'], d['version'], d['release'])
-                     for d in ret[name]]
+        ret[name] = [
+            format_version(d["epoch"], d["version"], d["release"]) for d in ret[name]
+        ]
     if not versions_as_list:
         stringify(ret)
     return ret
 
 
 def format_version(epoch, version, release):
-    '''
+    """
     Formats a version string for list_pkgs.
-    '''
-    full_version = '{0}:{1}'.format(epoch, version) if epoch else version
+    """
+    full_version = "{0}:{1}".format(epoch, version) if epoch else version
     if release:
-        full_version += '-{0}'.format(release)
+        full_version += "-{0}".format(release)
     return full_version

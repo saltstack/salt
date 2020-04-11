@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
 
@@ -18,22 +18,30 @@
     .. __: https://github.com/python-mirror/python/blob/3.3/Lib/pty.py
     .. __: https://github.com/pexpect/pexpect
 
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
+
+import errno
+import logging
 
 # Import python libs
 import os
+import select
+import signal
 import sys
 import time
-import errno
-import signal
-import select
-import logging
+
+# Import salt libs
+import salt.utils.crypt
+import salt.utils.data
+import salt.utils.stringutils
 
 # Import salt libs
 from salt.ext import six
+from salt.ext.six import string_types
+from salt.log.setup import LOG_LEVELS
 
-mswindows = (sys.platform == "win32")
+mswindows = sys.platform == "win32"
 
 try:
     # pylint: disable=F0401,W0611
@@ -43,6 +51,7 @@ try:
     import win32api
     import win32con
     import win32process
+
     # pylint: enable=F0401,W0611
 except ImportError:
     import pty
@@ -51,20 +60,14 @@ except ImportError:
     import termios
     import resource
 
-# Import salt libs
-import salt.utils.crypt
-import salt.utils.data
-import salt.utils.stringutils
-from salt.ext.six import string_types
-from salt.log.setup import LOG_LEVELS
 
 log = logging.getLogger(__name__)
 
 
 class TerminalException(Exception):
-    '''
+    """
     Terminal specific exception
-    '''
+    """
 
 
 # ----- Cleanup Running Instances ------------------------------------------->
@@ -76,10 +79,10 @@ _ACTIVE = []
 
 
 def _cleanup():
-    '''
+    """
     Make sure that any terminal processes still running when __del__ was called
     to the waited and cleaned up.
-    '''
+    """
     for inst in _ACTIVE[:]:
         res = inst.isalive()
         if res is not True:
@@ -89,37 +92,38 @@ def _cleanup():
                 # This can happen if two threads create a new Terminal instance
                 # It's harmless that it was already removed, so ignore.
                 pass
+
+
 # <---- Cleanup Running Instances --------------------------------------------
 
 
 class Terminal(object):
-    '''
+    """
     I'm a virtual terminal
-    '''
-    def __init__(self,
-                 args=None,
-                 executable=None,
-                 shell=False,
-                 cwd=None,
-                 env=None,
-                 preexec_fn=None,
+    """
 
-                 # Terminal Size
-                 rows=None,
-                 cols=None,
-
-                 # Logging options
-                 log_stdin=None,
-                 log_stdin_level='debug',
-                 log_stdout=None,
-                 log_stdout_level='debug',
-                 log_stderr=None,
-                 log_stderr_level='debug',
-
-                 # sys.stdXYZ streaming options
-                 stream_stdout=None,
-                 stream_stderr=None,
-                 ):
+    def __init__(
+        self,
+        args=None,
+        executable=None,
+        shell=False,
+        cwd=None,
+        env=None,
+        preexec_fn=None,
+        # Terminal Size
+        rows=None,
+        cols=None,
+        # Logging options
+        log_stdin=None,
+        log_stdin_level="debug",
+        log_stdout=None,
+        log_stdout_level="debug",
+        log_stderr=None,
+        log_stderr_level="debug",
+        # sys.stdXYZ streaming options
+        stream_stdout=None,
+        stream_stderr=None,
+    ):
 
         # Let's avoid Zombies!!!
         _cleanup()
@@ -164,7 +168,7 @@ class Terminal(object):
         self.signalstatus = None
         # status returned by os.waitpid
         self.status = None
-        self.__irix_hack = 'irix' in sys.platform.lower()
+        self.__irix_hack = "irix" in sys.platform.lower()
         # <---- Internally Set Attributes ------------------------------------
 
         # ----- Direct Streaming Setup -------------------------------------->
@@ -173,18 +177,20 @@ class Terminal(object):
         elif stream_stdout is False:
             self.stream_stdout = None
         elif stream_stdout is not None:
-            if not hasattr(stream_stdout, 'write') or \
-                    not hasattr(stream_stdout, 'flush') or \
-                    not hasattr(stream_stdout, 'close'):
+            if (
+                not hasattr(stream_stdout, "write")
+                or not hasattr(stream_stdout, "flush")
+                or not hasattr(stream_stdout, "close")
+            ):
                 raise TerminalException(
-                    '\'stream_stdout\' needs to have at least 3 methods, '
-                    '\'write()\', \'flush()\' and \'close()\'.'
+                    "'stream_stdout' needs to have at least 3 methods, "
+                    "'write()', 'flush()' and 'close()'."
                 )
             self.stream_stdout = stream_stdout
         else:
             raise TerminalException(
-                'Don\'t know how to handle \'{0}\' as the VT\'s '
-                '\'stream_stdout\' parameter.'.format(stream_stdout)
+                "Don't know how to handle '{0}' as the VT's "
+                "'stream_stdout' parameter.".format(stream_stdout)
             )
 
         if stream_stderr is True:
@@ -192,18 +198,20 @@ class Terminal(object):
         elif stream_stderr is False:
             self.stream_stderr = None
         elif stream_stderr is not None:
-            if not hasattr(stream_stderr, 'write') or \
-                    not hasattr(stream_stderr, 'flush') or \
-                    not hasattr(stream_stderr, 'close'):
+            if (
+                not hasattr(stream_stderr, "write")
+                or not hasattr(stream_stderr, "flush")
+                or not hasattr(stream_stderr, "close")
+            ):
                 raise TerminalException(
-                    '\'stream_stderr\' needs to have at least 3 methods, '
-                    '\'write()\', \'flush()\' and \'close()\'.'
+                    "'stream_stderr' needs to have at least 3 methods, "
+                    "'write()', 'flush()' and 'close()'."
                 )
             self.stream_stderr = stream_stderr
         else:
             raise TerminalException(
-                'Don\'t know how to handle \'{0}\' as the VT\'s '
-                '\'stream_stderr\' parameter.'.format(stream_stderr)
+                "Don't know how to handle '{0}' as the VT's "
+                "'stream_stderr' parameter.".format(stream_stderr)
             )
         # <---- Direct Streaming Setup ---------------------------------------
 
@@ -214,23 +222,25 @@ class Terminal(object):
             # A lot can go wrong, so that's why we're catching the most general
             # exception type
             log.warning(
-                'Failed to spawn the VT: %s', err,
-                 exc_info_on_loglevel=logging.DEBUG
+                "Failed to spawn the VT: %s", err, exc_info_on_loglevel=logging.DEBUG
             )
-            raise TerminalException(
-                'Failed to spawn the VT. Error: {0}'.format(err)
-            )
+            raise TerminalException("Failed to spawn the VT. Error: {0}".format(err))
 
         log.debug(
-            'Child Forked! PID: %s  STDOUT_FD: %s  STDERR_FD: %s',
-            self.pid, self.child_fd, self.child_fde
+            "Child Forked! PID: %s  STDOUT_FD: %s  STDERR_FD: %s",
+            self.pid,
+            self.child_fd,
+            self.child_fde,
         )
-        terminal_command = ' '.join(self.args)
-        if 'decode("base64")' in terminal_command or 'base64.b64decode(' in terminal_command:
-            log.debug('VT: Salt-SSH SHIM Terminal Command executed. Logged to TRACE')
-            log.trace('Terminal Command: %s', terminal_command)
+        terminal_command = " ".join(self.args)
+        if (
+            'decode("base64")' in terminal_command
+            or "base64.b64decode(" in terminal_command
+        ):
+            log.debug("VT: Salt-SSH SHIM Terminal Command executed. Logged to TRACE")
+            log.trace("Terminal Command: %s", terminal_command)
         else:
-            log.debug('Terminal Command: %s', terminal_command)
+            log.debug("Terminal Command: %s", terminal_command)
         # <---- Spawn our terminal -------------------------------------------
 
         # ----- Setup Logging ----------------------------------------------->
@@ -238,15 +248,13 @@ class Terminal(object):
         self.stdin_logger_level = LOG_LEVELS.get(log_stdin_level, log_stdin_level)
         if log_stdin is True:
             self.stdin_logger = logging.getLogger(
-                '{0}.{1}.PID-{2}.STDIN'.format(
+                "{0}.{1}.PID-{2}.STDIN".format(
                     __name__, self.__class__.__name__, self.pid
                 )
             )
         elif log_stdin is not None:
             if not isinstance(log_stdin, logging.Logger):
-                raise RuntimeError(
-                    '\'log_stdin\' needs to subclass `logging.Logger`'
-                )
+                raise RuntimeError("'log_stdin' needs to subclass `logging.Logger`")
             self.stdin_logger = log_stdin
         else:
             self.stdin_logger = None
@@ -254,15 +262,13 @@ class Terminal(object):
         self.stdout_logger_level = LOG_LEVELS.get(log_stdout_level, log_stdout_level)
         if log_stdout is True:
             self.stdout_logger = logging.getLogger(
-                '{0}.{1}.PID-{2}.STDOUT'.format(
+                "{0}.{1}.PID-{2}.STDOUT".format(
                     __name__, self.__class__.__name__, self.pid
                 )
             )
         elif log_stdout is not None:
             if not isinstance(log_stdout, logging.Logger):
-                raise RuntimeError(
-                    '\'log_stdout\' needs to subclass `logging.Logger`'
-                )
+                raise RuntimeError("'log_stdout' needs to subclass `logging.Logger`")
             self.stdout_logger = log_stdout
         else:
             self.stdout_logger = None
@@ -270,15 +276,13 @@ class Terminal(object):
         self.stderr_logger_level = LOG_LEVELS.get(log_stderr_level, log_stderr_level)
         if log_stderr is True:
             self.stderr_logger = logging.getLogger(
-                '{0}.{1}.PID-{2}.STDERR'.format(
+                "{0}.{1}.PID-{2}.STDERR".format(
                     __name__, self.__class__.__name__, self.pid
                 )
             )
         elif log_stderr is not None:
             if not isinstance(log_stderr, logging.Logger):
-                raise RuntimeError(
-                    '\'log_stderr\' needs to subclass `logging.Logger`'
-                )
+                raise RuntimeError("'log_stderr' needs to subclass `logging.Logger`")
             self.stderr_logger = log_stderr
         else:
             self.stderr_logger = None
@@ -286,24 +290,24 @@ class Terminal(object):
 
     # ----- Common Public API ----------------------------------------------->
     def send(self, data):
-        '''
+        """
         Send data to the terminal. You are responsible to send any required
         line feeds.
-        '''
+        """
         return self._send(data)
 
     def sendline(self, data, linesep=os.linesep):
-        '''
+        """
         Send the provided data to the terminal appending a line feed.
-        '''
-        return self.send('{0}{1}'.format(data, linesep))
+        """
+        return self.send("{0}{1}".format(data, linesep))
 
     def recv(self, maxsize=None):
-        '''
+        """
         Receive data from the terminal as a (``stdout``, ``stderr``) tuple. If
         any of those is ``None`` we can no longer communicate with the
         terminal's child process.
-        '''
+        """
         if maxsize is None:
             maxsize = 1024
         elif maxsize < 1:
@@ -311,12 +315,12 @@ class Terminal(object):
         return self._recv(maxsize)
 
     def close(self, terminate=True, kill=False):
-        '''
+        """
         Close the communication with the terminal's child.
         If ``terminate`` is ``True`` then additionally try to terminate the
         terminal, and if ``kill`` is also ``True``, kill the terminal if
         terminating it was not enough.
-        '''
+        """
         if not self.closed:
             if self.child_fd is not None:
                 os.close(self.child_fd)
@@ -327,7 +331,7 @@ class Terminal(object):
             time.sleep(0.1)
             if terminate:
                 if not self.terminate(kill):
-                    raise TerminalException('Failed to terminate child process.')
+                    raise TerminalException("Failed to terminate child process.")
             self.closed = True
 
     @property
@@ -341,7 +345,8 @@ class Terminal(object):
         if data is None or not data:
             return
         # PTY's always return \r\n as the line feeds
-        return data.replace('\r\n', os.linesep)
+        return data.replace("\r\n", os.linesep)
+
     # <---- Common Internal API ----------------------------------------------
 
     # ----- Context Manager Methods ----------------------------------------->
@@ -353,9 +358,10 @@ class Terminal(object):
         # Wait for the process to terminate, to avoid zombies.
         if self.isalive():
             self.wait()
+
     # <---- Context Manager Methods ------------------------------------------
 
-# ----- Platform Specific Methods ------------------------------------------->
+    # ----- Platform Specific Methods ------------------------------------------->
     if mswindows:
         # ----- Windows Methods --------------------------------------------->
         def _execute(self):
@@ -371,9 +377,9 @@ class Terminal(object):
             raise NotImplementedError
 
         def send_signal(self, sig):
-            '''
+            """
             Send a signal to the process
-            '''
+            """
             # pylint: disable=E1101
             if sig == signal.SIGTERM:
                 self.terminate()
@@ -382,13 +388,13 @@ class Terminal(object):
             elif sig == signal.CTRL_BREAK_EVENT:
                 os.kill(self.pid, signal.CTRL_BREAK_EVENT)
             else:
-                raise ValueError('Unsupported signal: {0}'.format(sig))
+                raise ValueError("Unsupported signal: {0}".format(sig))
             # pylint: enable=E1101
 
-        def terminate(self):
-            '''
+        def terminate(self, force=False):
+            """
             Terminates the process
-            '''
+            """
             try:
                 win32api.TerminateProcess(self._handle, 1)
             except OSError:
@@ -415,9 +421,9 @@ class Terminal(object):
                 args = []
 
             if self.shell and self.args:
-                self.args = ['/bin/sh', '-c', ' '.join(args)]
+                self.args = ["/bin/sh", "-c", " ".join(args)]
             elif self.shell:
-                self.args = ['/bin/sh']
+                self.args = ["/bin/sh"]
             else:
                 self.args = args
 
@@ -442,8 +448,9 @@ class Terminal(object):
                         self.setwinsize(self.rows, self.cols)
                     except IOError as err:
                         log.warning(
-                            'Failed to set the VT terminal size: %s',
-                            err, exc_info_on_loglevel=logging.DEBUG
+                            "Failed to set the VT terminal size: %s",
+                            err,
+                            exc_info_on_loglevel=logging.DEBUG,
                         )
 
                 # Do not allow child to inherit open file descriptors from
@@ -470,23 +477,23 @@ class Terminal(object):
             self.terminated = False
 
         def __fork_ptys(self):
-            '''
+            """
             Fork the PTY
 
             The major difference from the python source is that we separate the
             stdout from stderr output.
-            '''
+            """
             stdout_parent_fd, stdout_child_fd = pty.openpty()
             if stdout_parent_fd < 0 or stdout_child_fd < 0:
-                raise TerminalException('Failed to open a TTY for stdout')
+                raise TerminalException("Failed to open a TTY for stdout")
 
             stderr_parent_fd, stderr_child_fd = pty.openpty()
             if stderr_parent_fd < 0 or stderr_child_fd < 0:
-                raise TerminalException('Failed to open a TTY for stderr')
+                raise TerminalException("Failed to open a TTY for stderr")
 
             pid = os.fork()
             if pid < pty.CHILD:
-                raise TerminalException('Failed to fork')
+                raise TerminalException("Failed to fork")
             elif pid == pty.CHILD:
                 # Child.
                 # Close parent FDs
@@ -499,11 +506,11 @@ class Terminal(object):
                 # Disconnect from controlling tty. Harmless if not already
                 # connected
                 try:
-                    tty_fd = os.open('/dev/tty', os.O_RDWR | os.O_NOCTTY)
+                    tty_fd = os.open("/dev/tty", os.O_RDWR | os.O_NOCTTY)
                     if tty_fd >= 0:
                         os.close(tty_fd)
                 # which exception, shouldn't we catch explicitly .. ?
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     # Already disconnected. This happens if running inside cron
                     pass
 
@@ -513,15 +520,15 @@ class Terminal(object):
                 # Verify we are disconnected from controlling tty
                 # by attempting to open it again.
                 try:
-                    tty_fd = os.open('/dev/tty', os.O_RDWR | os.O_NOCTTY)
+                    tty_fd = os.open("/dev/tty", os.O_RDWR | os.O_NOCTTY)
                     if tty_fd >= 0:
                         os.close(tty_fd)
                         raise TerminalException(
-                            'Failed to disconnect from controlling tty. It is '
-                            'still possible to open /dev/tty.'
+                            "Failed to disconnect from controlling tty. It is "
+                            "still possible to open /dev/tty."
                         )
                 # which exception, shouldn't we catch explicitly .. ?
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     # Good! We are disconnected from a controlling tty.
                     pass
 
@@ -529,18 +536,18 @@ class Terminal(object):
                 tty_fd = os.open(child_name, os.O_RDWR)
                 if tty_fd < 0:
                     raise TerminalException(
-                        'Could not open child pty, {0}'.format(child_name)
+                        "Could not open child pty, {0}".format(child_name)
                     )
                 else:
                     os.close(tty_fd)
 
                 # Verify we now have a controlling tty.
-                if os.name != 'posix':
+                if os.name != "posix":
                     # Only do this check in not BSD-like operating systems. BSD-like operating systems breaks at this point
-                    tty_fd = os.open('/dev/tty', os.O_WRONLY)
+                    tty_fd = os.open("/dev/tty", os.O_WRONLY)
                     if tty_fd < 0:
                         raise TerminalException(
-                            'Could not open controlling tty, /dev/tty'
+                            "Could not open controlling tty, /dev/tty"
                         )
                     else:
                         os.close(tty_fd)
@@ -570,7 +577,9 @@ class Terminal(object):
                 if self.stdin_logger:
                     self.stdin_logger.log(self.stdin_logger_level, data)
                 if six.PY3:
-                    written = os.write(self.child_fd, data.encode(__salt_system_encoding__))
+                    written = os.write(
+                        self.child_fd, data.encode(__salt_system_encoding__)
+                    )
                 else:
                     written = os.write(self.child_fd, data)
             except OSError as why:
@@ -594,7 +603,7 @@ class Terminal(object):
                 rlist, _, _ = select.select(rfds, [], [], 0)
                 if not rlist:
                     self.flag_eof_stdout = self.flag_eof_stderr = True
-                    log.debug('End of file(EOL). Brain-dead platform.')
+                    log.debug("End of file(EOL). Brain-dead platform.")
                     return None, None
             elif self.__irix_hack:
                 # Irix takes a long time before it realizes a child was
@@ -605,11 +614,11 @@ class Terminal(object):
                 rlist, _, _ = select.select(rfds, [], [], 2)
                 if not rlist:
                     self.flag_eof_stdout = self.flag_eof_stderr = True
-                    log.debug('End of file(EOL). Slow platform.')
+                    log.debug("End of file(EOL). Slow platform.")
                     return None, None
 
-            stderr = ''
-            stdout = ''
+            stderr = ""
+            stdout = ""
 
             # ----- Store FD Flags ------------------------------------------>
             if self.child_fd:
@@ -620,11 +629,9 @@ class Terminal(object):
 
             # ----- Non blocking Reads -------------------------------------->
             if self.child_fd:
-                fcntl.fcntl(self.child_fd,
-                            fcntl.F_SETFL, fd_flags | os.O_NONBLOCK)
+                fcntl.fcntl(self.child_fd, fcntl.F_SETFL, fd_flags | os.O_NONBLOCK)
             if self.child_fde:
-                fcntl.fcntl(self.child_fde,
-                            fcntl.F_SETFL, fde_flags | os.O_NONBLOCK)
+                fcntl.fcntl(self.child_fde, fcntl.F_SETFL, fde_flags | os.O_NONBLOCK)
             # <---- Non blocking Reads ---------------------------------------
 
             # ----- Check for any incoming data ----------------------------->
@@ -635,7 +642,7 @@ class Terminal(object):
             if not rlist:
                 if not self.isalive():
                     self.flag_eof_stdout = self.flag_eof_stderr = True
-                    log.debug('End of file(EOL). Very slow platform.')
+                    log.debug("End of file(EOL). Very slow platform.")
                     return None, None
             # <---- Nothing to Process!? -------------------------------------
 
@@ -659,9 +666,11 @@ class Terminal(object):
                         if self.stderr_logger:
                             stripped = stderr.rstrip()
                             if stripped.startswith(os.linesep):
-                                stripped = stripped[len(os.linesep):]
+                                stripped = stripped[len(os.linesep) :]
                             if stripped:
-                                self.stderr_logger.log(self.stderr_logger_level, stripped)
+                                self.stderr_logger.log(
+                                    self.stderr_logger_level, stripped
+                                )
                 except OSError:
                     os.close(self.child_fde)
                     self.child_fde = None
@@ -686,15 +695,19 @@ class Terminal(object):
                         stdout = None
                     else:
                         if self.stream_stdout:
-                            self.stream_stdout.write(salt.utils.stringutils.to_str(stdout))
+                            self.stream_stdout.write(
+                                salt.utils.stringutils.to_str(stdout)
+                            )
                             self.stream_stdout.flush()
 
                         if self.stdout_logger:
                             stripped = stdout.rstrip()
                             if stripped.startswith(os.linesep):
-                                stripped = stripped[len(os.linesep):]
+                                stripped = stripped[len(os.linesep) :]
                             if stripped:
-                                self.stdout_logger.log(self.stdout_logger_level, stripped)
+                                self.stdout_logger.log(
+                                    self.stdout_logger_level, stripped
+                                )
                 except OSError:
                     os.close(self.child_fd)
                     self.child_fd = None
@@ -708,36 +721,37 @@ class Terminal(object):
 
         def __detect_parent_terminal_size(self):
             try:
-                TIOCGWINSZ = getattr(termios, 'TIOCGWINSZ', 1074295912)
-                packed = struct.pack(b'HHHH', 0, 0, 0, 0)
+                TIOCGWINSZ = getattr(termios, "TIOCGWINSZ", 1074295912)
+                packed = struct.pack(b"HHHH", 0, 0, 0, 0)
                 ioctl = fcntl.ioctl(sys.stdin.fileno(), TIOCGWINSZ, packed)
-                return struct.unpack(b'HHHH', ioctl)[0:2]
+                return struct.unpack(b"HHHH", ioctl)[0:2]
             except IOError:
                 # Return a default value of 24x80
                 return 24, 80
+
         # <---- Internal API -------------------------------------------------
 
         # ----- Public API -------------------------------------------------->
         def getwinsize(self):
-            '''
+            """
             This returns the terminal window size of the child tty. The return
             value is a tuple of (rows, cols).
 
             Thank you for the shortcut PEXPECT
-            '''
+            """
             if self.child_fd is None:
                 raise TerminalException(
-                    'Can\'t check the size of the terminal since we\'re not '
-                    'connected to the child process.'
+                    "Can't check the size of the terminal since we're not "
+                    "connected to the child process."
                 )
 
-            TIOCGWINSZ = getattr(termios, 'TIOCGWINSZ', 1074295912)
-            packed = struct.pack(b'HHHH', 0, 0, 0, 0)
+            TIOCGWINSZ = getattr(termios, "TIOCGWINSZ", 1074295912)
+            packed = struct.pack(b"HHHH", 0, 0, 0, 0)
             ioctl = fcntl.ioctl(self.child_fd, TIOCGWINSZ, packed)
-            return struct.unpack(b'HHHH', ioctl)[0:2]
+            return struct.unpack(b"HHHH", ioctl)[0:2]
 
         def setwinsize(self, rows, cols):
-            '''
+            """
             This sets the terminal window size of the child tty. This will
             cause a SIGWINCH signal to be sent to the child. This does not
             change the physical window size. It changes the size reported to
@@ -745,7 +759,7 @@ class Terminal(object):
             respond to the SIGWINCH signal.
 
             Thank you for the shortcut PEXPECT
-            '''
+            """
             # Check for buggy platforms. Some Python versions on some platforms
             # (notably OSF1 Alpha and RedHat 7.1) truncate the value for
             # termios.TIOCSWINSZ. It is not clear why this happens.
@@ -755,32 +769,34 @@ class Terminal(object):
             # Newer versions of Linux have totally different values for
             # TIOCSWINSZ.
             # Note that this fix is a hack.
-            TIOCSWINSZ = getattr(termios, 'TIOCSWINSZ', -2146929561)
+            TIOCSWINSZ = getattr(termios, "TIOCSWINSZ", -2146929561)
             if TIOCSWINSZ == 2148037735:
                 # Same bits, but with sign.
                 TIOCSWINSZ = -2146929561
             # Note, assume ws_xpixel and ws_ypixel are zero.
-            packed = struct.pack(b'HHHH', rows, cols, 0, 0)
+            packed = struct.pack(b"HHHH", rows, cols, 0, 0)
             fcntl.ioctl(self.child_fd, TIOCSWINSZ, packed)
 
-        def isalive(self,
-                    _waitpid=os.waitpid,
-                    _wnohang=os.WNOHANG,
-                    _wifexited=os.WIFEXITED,
-                    _wexitstatus=os.WEXITSTATUS,
-                    _wifsignaled=os.WIFSIGNALED,
-                    _wifstopped=os.WIFSTOPPED,
-                    _wtermsig=os.WTERMSIG,
-                    _os_error=os.error,
-                    _errno_echild=errno.ECHILD,
-                    _terminal_exception=TerminalException):
-            '''
+        def isalive(
+            self,
+            _waitpid=os.waitpid,
+            _wnohang=os.WNOHANG,
+            _wifexited=os.WIFEXITED,
+            _wexitstatus=os.WEXITSTATUS,
+            _wifsignaled=os.WIFSIGNALED,
+            _wifstopped=os.WIFSTOPPED,
+            _wtermsig=os.WTERMSIG,
+            _os_error=os.error,
+            _errno_echild=errno.ECHILD,
+            _terminal_exception=TerminalException,
+        ):
+            """
             This tests if the child process is running or not. This is
             non-blocking. If the child was terminated then this will read the
             exitstatus or signalstatus of the child. This returns True if the
             child process appears to be running or False if not. It can take
             literally SECONDS for Solaris to return the right status.
-            '''
+            """
             if self.terminated:
                 return False
 
@@ -801,11 +817,11 @@ class Terminal(object):
                 if err.errno == _errno_echild:
                     raise _terminal_exception(
                         'isalive() encountered condition where "terminated" '
-                        'is 0, but there was no child process. Did someone '
-                        'else call waitpid() on our process?'
+                        "is 0, but there was no child process. Did someone "
+                        "else call waitpid() on our process?"
                     )
                 else:
-                    raise err
+                    six.reraise(*sys.exc_info())
 
             # I have to do this twice for Solaris.
             # I can't even believe that I figured this out...
@@ -819,12 +835,12 @@ class Terminal(object):
                     # This should never happen...
                     if exc.errno == _errno_echild:
                         raise _terminal_exception(
-                            'isalive() encountered condition that should '
-                            'never happen. There was no child process. Did '
-                            'someone else call waitpid() on our process?'
+                            "isalive() encountered condition that should "
+                            "never happen. There was no child process. Did "
+                            "someone else call waitpid() on our process?"
                         )
                     else:
-                        raise
+                        six.reraise(*sys.exc_info())
 
                 # If pid is still 0 after two calls to waitpid() then the
                 # process really is alive. This seems to work on all platforms,
@@ -849,19 +865,19 @@ class Terminal(object):
                 self.terminated = True
             elif _wifstopped(status):
                 raise _terminal_exception(
-                    'isalive() encountered condition where child process is '
-                    'stopped. This is not supported. Is some other process '
-                    'attempting job control with our child pid?'
+                    "isalive() encountered condition where child process is "
+                    "stopped. This is not supported. Is some other process "
+                    "attempting job control with our child pid?"
                 )
             return False
 
         def terminate(self, force=False):
-            '''
+            """
             This forces a child process to terminate. It starts nicely with
             SIGHUP and SIGINT. If "force" is True then moves onto SIGKILL. This
             returns True if the child was terminated. This returns False if the
             child could not be terminated.
-            '''
+            """
             if not self.closed:
                 self.close(terminate=False)
 
@@ -900,11 +916,11 @@ class Terminal(object):
                     return False
 
         def wait(self):
-            '''
+            """
             This waits until the child exits internally consuming any remaining
             output from the child, thus, no blocking forever because the child
             has unread data.
-            '''
+            """
             if self.isalive():
                 while self.isalive():
                     stdout, stderr = self.recv()
@@ -913,24 +929,26 @@ class Terminal(object):
                     if stderr is None:
                         break
             else:
-                raise TerminalException('Cannot wait for dead child process.')
+                raise TerminalException("Cannot wait for dead child process.")
             return self.exitstatus
 
         def send_signal(self, sig):
-            '''
+            """
             Send a signal to the process
-            '''
+            """
             os.kill(self.pid, sig)
 
         def kill(self):
-            '''
+            """
             Kill the process with SIGKILL
-            '''
+            """
             self.send_signal(signal.SIGKILL)
+
         # <---- Public API ---------------------------------------------------
     # <---- Linux Methods ----------------------------------------------------
 
     # ----- Cleanup!!! ------------------------------------------------------>
+    # pylint: disable=W1701
     def __del__(self, _maxsize=sys.maxsize, _active=_ACTIVE):  # pylint: disable=W0102
         # I've disabled W0102 above which is regarding a dangerous default
         # value of [] for _ACTIVE, though, this is how Python itself handles
@@ -945,5 +963,9 @@ class Terminal(object):
         if self.isalive() and _ACTIVE is not None:
             # Child is still running, keep us alive until we can wait on it.
             _ACTIVE.append(self)
+
+    # pylint: enable=W1701
     # <---- Cleanup!!! -------------------------------------------------------
+
+
 # <---- Platform Specific Methods --------------------------------------------

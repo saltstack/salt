@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Azure (ARM) Resource State Module
 
 .. versionadded:: 2019.2.0
@@ -79,30 +79,37 @@ Azure (ARM) Resource State Module
                 - name: other_rg
                 - connection_auth: {{ profile }}
 
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import
+
 import json
 import logging
 
 # Import Salt libs
 import salt.utils.files
 
-__virtualname__ = 'azurearm_resource'
+__virtualname__ = "azurearm_resource"
 
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     Only make this state available if the azurearm_resource module is available.
-    '''
-    return __virtualname__ if 'azurearm_resource.resource_group_check_existence' in __salt__ else False
+    """
+    return (
+        __virtualname__
+        if "azurearm_resource.resource_group_check_existence" in __salt__
+        else False
+    )
 
 
-def resource_group_present(name, location, managed_by=None, tags=None, connection_auth=None, **kwargs):
-    '''
+def resource_group_present(
+    name, location, managed_by=None, tags=None, connection_auth=None, **kwargs
+):
+    """
     .. versionadded:: 2019.2.0
 
     Ensure a resource group exists.
@@ -137,81 +144,78 @@ def resource_group_present(name, location, managed_by=None, tags=None, connectio
                     contact_name: Elmer Fudd Gantry
                 - connection_auth: {{ profile }}
 
-    '''
-    ret = {
-        'name': name,
-        'result': False,
-        'comment': '',
-        'changes': {}
-    }
+    """
+    ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret['comment'] = 'Connection information must be specified via connection_auth dictionary!'
+        ret[
+            "comment"
+        ] = "Connection information must be specified via connection_auth dictionary!"
         return ret
 
     group = {}
 
-    present = __salt__['azurearm_resource.resource_group_check_existence'](name, **connection_auth)
+    present = __salt__["azurearm_resource.resource_group_check_existence"](
+        name, **connection_auth
+    )
 
     if present:
-        group = __salt__['azurearm_resource.resource_group_get'](name, **connection_auth)
-        ret['changes'] = __utils__['dictdiffer.deep_diff'](group.get('tags', {}), tags or {})
+        group = __salt__["azurearm_resource.resource_group_get"](
+            name, **connection_auth
+        )
+        ret["changes"] = __utils__["dictdiffer.deep_diff"](
+            group.get("tags", {}), tags or {}
+        )
 
-        if not ret['changes']:
-            ret['result'] = True
-            ret['comment'] = 'Resource group {0} is already present.'.format(name)
+        if not ret["changes"]:
+            ret["result"] = True
+            ret["comment"] = "Resource group {0} is already present.".format(name)
             return ret
 
-        if __opts__['test']:
-            ret['comment'] = 'Resource group {0} tags would be updated.'.format(name)
-            ret['result'] = None
-            ret['changes'] = {
-                'old': group.get('tags', {}),
-                'new': tags
-            }
+        if __opts__["test"]:
+            ret["comment"] = "Resource group {0} tags would be updated.".format(name)
+            ret["result"] = None
+            ret["changes"] = {"old": group.get("tags", {}), "new": tags}
             return ret
 
-    elif __opts__['test']:
-        ret['comment'] = 'Resource group {0} would be created.'.format(name)
-        ret['result'] = None
-        ret['changes'] = {
-            'old': {},
-            'new': {
-                'name': name,
-                'location': location,
-                'managed_by': managed_by,
-                'tags': tags,
-            }
+    elif __opts__["test"]:
+        ret["comment"] = "Resource group {0} would be created.".format(name)
+        ret["result"] = None
+        ret["changes"] = {
+            "old": {},
+            "new": {
+                "name": name,
+                "location": location,
+                "managed_by": managed_by,
+                "tags": tags,
+            },
         }
         return ret
 
     group_kwargs = kwargs.copy()
     group_kwargs.update(connection_auth)
 
-    group = __salt__['azurearm_resource.resource_group_create_or_update'](
-        name,
-        location,
-        managed_by=managed_by,
-        tags=tags,
-        **group_kwargs
+    group = __salt__["azurearm_resource.resource_group_create_or_update"](
+        name, location, managed_by=managed_by, tags=tags, **group_kwargs
     )
-    present = __salt__['azurearm_resource.resource_group_check_existence'](name, **connection_auth)
+    present = __salt__["azurearm_resource.resource_group_check_existence"](
+        name, **connection_auth
+    )
 
     if present:
-        ret['result'] = True
-        ret['comment'] = 'Resource group {0} has been created.'.format(name)
-        ret['changes'] = {
-            'old': {},
-            'new': group
-        }
+        ret["result"] = True
+        ret["comment"] = "Resource group {0} has been created.".format(name)
+        ret["changes"] = {"old": {}, "new": group}
         return ret
 
-    ret['comment'] = 'Failed to create resource group {0}! ({1})'.format(name, group.get('error'))
+    ret["comment"] = "Failed to create resource group {0}! ({1})".format(
+        name, group.get("error")
+    )
     return ret
 
 
 def resource_group_absent(name, connection_auth=None):
-    '''
+    """
     .. versionadded:: 2019.2.0
 
     Ensure a resource group does not exist in the current subscription.
@@ -222,64 +226,80 @@ def resource_group_absent(name, connection_auth=None):
     :param connection_auth:
         A dict with subscription and authentication parameters to be used in connecting to the
         Azure Resource Manager API.
-    '''
-    ret = {
-        'name': name,
-        'result': False,
-        'comment': '',
-        'changes': {}
-    }
+    """
+    ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret['comment'] = 'Connection information must be specified via connection_auth dictionary!'
+        ret[
+            "comment"
+        ] = "Connection information must be specified via connection_auth dictionary!"
         return ret
 
     group = {}
 
-    present = __salt__['azurearm_resource.resource_group_check_existence'](name, **connection_auth)
+    present = __salt__["azurearm_resource.resource_group_check_existence"](
+        name, **connection_auth
+    )
 
     if not present:
-        ret['result'] = True
-        ret['comment'] = 'Resource group {0} is already absent.'.format(name)
+        ret["result"] = True
+        ret["comment"] = "Resource group {0} is already absent.".format(name)
         return ret
 
-    elif __opts__['test']:
-        group = __salt__['azurearm_resource.resource_group_get'](name, **connection_auth)
+    elif __opts__["test"]:
+        group = __salt__["azurearm_resource.resource_group_get"](
+            name, **connection_auth
+        )
 
-        ret['comment'] = 'Resource group {0} would be deleted.'.format(name)
-        ret['result'] = None
-        ret['changes'] = {
-            'old': group,
-            'new': {},
+        ret["comment"] = "Resource group {0} would be deleted.".format(name)
+        ret["result"] = None
+        ret["changes"] = {
+            "old": group,
+            "new": {},
         }
         return ret
 
-    group = __salt__['azurearm_resource.resource_group_get'](name, **connection_auth)
-    deleted = __salt__['azurearm_resource.resource_group_delete'](name, **connection_auth)
+    group = __salt__["azurearm_resource.resource_group_get"](name, **connection_auth)
+    deleted = __salt__["azurearm_resource.resource_group_delete"](
+        name, **connection_auth
+    )
 
     if deleted:
         present = False
     else:
-        present = __salt__['azurearm_resource.resource_group_check_existence'](name, **connection_auth)
+        present = __salt__["azurearm_resource.resource_group_check_existence"](
+            name, **connection_auth
+        )
 
     if not present:
-        ret['result'] = True
-        ret['comment'] = 'Resource group {0} has been deleted.'.format(name)
-        ret['changes'] = {
-            'old': group,
-            'new': {}
-        }
+        ret["result"] = True
+        ret["comment"] = "Resource group {0} has been deleted.".format(name)
+        ret["changes"] = {"old": group, "new": {}}
         return ret
 
-    ret['comment'] = 'Failed to delete resource group {0}!'.format(name)
+    ret["comment"] = "Failed to delete resource group {0}!".format(name)
     return ret
 
 
-def policy_definition_present(name, policy_rule=None, policy_type=None, mode=None, display_name=None, description=None,
-                              metadata=None, parameters=None, policy_rule_json=None, policy_rule_file=None,
-                              template='jinja', source_hash=None, source_hash_name=None, skip_verify=False,
-                              connection_auth=None, **kwargs):
-    '''
+def policy_definition_present(
+    name,
+    policy_rule=None,
+    policy_type=None,
+    mode=None,
+    display_name=None,
+    description=None,
+    metadata=None,
+    parameters=None,
+    policy_rule_json=None,
+    policy_rule_file=None,
+    template="jinja",
+    source_hash=None,
+    source_hash_name=None,
+    skip_verify=False,
+    connection_auth=None,
+    **kwargs
+):
+    """
     .. versionadded:: 2019.2.0
 
     Ensure a security policy definition exists.
@@ -365,42 +385,49 @@ def policy_definition_present(name, policy_rule=None, policy_type=None, mode=Non
                       effect: deny
                 - connection_auth: {{ profile }}
 
-    '''
-    ret = {
-        'name': name,
-        'result': False,
-        'comment': '',
-        'changes': {}
-    }
+    """
+    ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret['comment'] = 'Connection information must be specified via connection_auth dictionary!'
+        ret[
+            "comment"
+        ] = "Connection information must be specified via connection_auth dictionary!"
         return ret
 
     if not policy_rule and not policy_rule_json and not policy_rule_file:
-        ret['comment'] = 'One of "policy_rule", "policy_rule_json", or "policy_rule_file" is required!'
+        ret[
+            "comment"
+        ] = 'One of "policy_rule", "policy_rule_json", or "policy_rule_file" is required!'
         return ret
 
-    if sum(x is not None for x in [policy_rule, policy_rule_json, policy_rule_file]) > 1:
-        ret['comment'] = 'Only one of "policy_rule", "policy_rule_json", or "policy_rule_file" is allowed!'
+    if (
+        sum(x is not None for x in [policy_rule, policy_rule_json, policy_rule_file])
+        > 1
+    ):
+        ret[
+            "comment"
+        ] = 'Only one of "policy_rule", "policy_rule_json", or "policy_rule_file" is allowed!'
         return ret
 
-    if ((policy_rule_json or policy_rule_file) and
-       (policy_type or mode or display_name or description or metadata or parameters)):
-        ret['comment'] = 'Policy definitions cannot be passed when "policy_rule_json" or "policy_rule_file" is defined!'
+    if (policy_rule_json or policy_rule_file) and (
+        policy_type or mode or display_name or description or metadata or parameters
+    ):
+        ret[
+            "comment"
+        ] = 'Policy definitions cannot be passed when "policy_rule_json" or "policy_rule_file" is defined!'
         return ret
 
     temp_rule = {}
     if policy_rule_json:
         try:
             temp_rule = json.loads(policy_rule_json)
-        except Exception as exc:
-            ret['comment'] = 'Unable to load policy rule json! ({0})'.format(exc)
+        except Exception as exc:  # pylint: disable=broad-except
+            ret["comment"] = "Unable to load policy rule json! ({0})".format(exc)
             return ret
     elif policy_rule_file:
         try:
             # pylint: disable=unused-variable
-            sfn, source_sum, comment_ = __salt__['file.get_managed'](
+            sfn, source_sum, comment_ = __salt__["file.get_managed"](
                 None,
                 template,
                 policy_rule_file,
@@ -415,19 +442,25 @@ def policy_definition_present(name, policy_rule=None, policy_type=None, mode=Non
                 skip_verify=skip_verify,
                 **kwargs
             )
-        except Exception as exc:
-            ret['comment'] = 'Unable to locate policy rule file "{0}"! ({1})'.format(policy_rule_file, exc)
+        except Exception as exc:  # pylint: disable=broad-except
+            ret["comment"] = 'Unable to locate policy rule file "{0}"! ({1})'.format(
+                policy_rule_file, exc
+            )
             return ret
 
         if not sfn:
-            ret['comment'] = 'Unable to locate policy rule file "{0}"!)'.format(policy_rule_file)
+            ret["comment"] = 'Unable to locate policy rule file "{0}"!)'.format(
+                policy_rule_file
+            )
             return ret
 
         try:
-            with salt.utils.files.fopen(sfn, 'r') as prf:
+            with salt.utils.files.fopen(sfn, "r") as prf:
                 temp_rule = json.load(prf)
-        except Exception as exc:
-            ret['comment'] = 'Unable to load policy rule file "{0}"! ({1})'.format(policy_rule_file, exc)
+        except Exception as exc:  # pylint: disable=broad-except
+            ret["comment"] = 'Unable to load policy rule file "{0}"! ({1})'.format(
+                policy_rule_file, exc
+            )
             return ret
 
         if sfn:
@@ -435,83 +468,88 @@ def policy_definition_present(name, policy_rule=None, policy_type=None, mode=Non
 
     policy_name = name
     if policy_rule_json or policy_rule_file:
-        if temp_rule.get('name'):
-            policy_name = temp_rule.get('name')
-        policy_rule = temp_rule.get('properties', {}).get('policyRule')
-        policy_type = temp_rule.get('properties', {}).get('policyType')
-        mode = temp_rule.get('properties', {}).get('mode')
-        display_name = temp_rule.get('properties', {}).get('displayName')
-        description = temp_rule.get('properties', {}).get('description')
-        metadata = temp_rule.get('properties', {}).get('metadata')
-        parameters = temp_rule.get('properties', {}).get('parameters')
+        if temp_rule.get("name"):
+            policy_name = temp_rule.get("name")
+        policy_rule = temp_rule.get("properties", {}).get("policyRule")
+        policy_type = temp_rule.get("properties", {}).get("policyType")
+        mode = temp_rule.get("properties", {}).get("mode")
+        display_name = temp_rule.get("properties", {}).get("displayName")
+        description = temp_rule.get("properties", {}).get("description")
+        metadata = temp_rule.get("properties", {}).get("metadata")
+        parameters = temp_rule.get("properties", {}).get("parameters")
 
-    policy = __salt__['azurearm_resource.policy_definition_get'](name, azurearm_log_level='info', **connection_auth)
+    policy = __salt__["azurearm_resource.policy_definition_get"](
+        name, azurearm_log_level="info", **connection_auth
+    )
 
-    if 'error' not in policy:
-        if policy_type and policy_type.lower() != policy.get('policy_type', '').lower():
-            ret['changes']['policy_type'] = {
-                'old': policy.get('policy_type'),
-                'new': policy_type
+    if "error" not in policy:
+        if policy_type and policy_type.lower() != policy.get("policy_type", "").lower():
+            ret["changes"]["policy_type"] = {
+                "old": policy.get("policy_type"),
+                "new": policy_type,
             }
 
-        if (mode or '').lower() != policy.get('mode', '').lower():
-            ret['changes']['mode'] = {
-                'old': policy.get('mode'),
-                'new': mode
+        if (mode or "").lower() != policy.get("mode", "").lower():
+            ret["changes"]["mode"] = {"old": policy.get("mode"), "new": mode}
+
+        if (display_name or "").lower() != policy.get("display_name", "").lower():
+            ret["changes"]["display_name"] = {
+                "old": policy.get("display_name"),
+                "new": display_name,
             }
 
-        if (display_name or '').lower() != policy.get('display_name', '').lower():
-            ret['changes']['display_name'] = {
-                'old': policy.get('display_name'),
-                'new': display_name
+        if (description or "").lower() != policy.get("description", "").lower():
+            ret["changes"]["description"] = {
+                "old": policy.get("description"),
+                "new": description,
             }
 
-        if (description or '').lower() != policy.get('description', '').lower():
-            ret['changes']['description'] = {
-                'old': policy.get('description'),
-                'new': description
-            }
-
-        rule_changes = __utils__['dictdiffer.deep_diff'](policy.get('policy_rule', {}), policy_rule or {})
+        rule_changes = __utils__["dictdiffer.deep_diff"](
+            policy.get("policy_rule", {}), policy_rule or {}
+        )
         if rule_changes:
-            ret['changes']['policy_rule'] = rule_changes
+            ret["changes"]["policy_rule"] = rule_changes
 
-        meta_changes = __utils__['dictdiffer.deep_diff'](policy.get('metadata', {}), metadata or {})
+        meta_changes = __utils__["dictdiffer.deep_diff"](
+            policy.get("metadata", {}), metadata or {}
+        )
         if meta_changes:
-            ret['changes']['metadata'] = meta_changes
+            ret["changes"]["metadata"] = meta_changes
 
-        param_changes = __utils__['dictdiffer.deep_diff'](policy.get('parameters', {}), parameters or {})
+        param_changes = __utils__["dictdiffer.deep_diff"](
+            policy.get("parameters", {}), parameters or {}
+        )
         if param_changes:
-            ret['changes']['parameters'] = param_changes
+            ret["changes"]["parameters"] = param_changes
 
-        if not ret['changes']:
-            ret['result'] = True
-            ret['comment'] = 'Policy definition {0} is already present.'.format(name)
+        if not ret["changes"]:
+            ret["result"] = True
+            ret["comment"] = "Policy definition {0} is already present.".format(name)
             return ret
 
-        if __opts__['test']:
-            ret['comment'] = 'Policy definition {0} would be updated.'.format(name)
-            ret['result'] = None
+        if __opts__["test"]:
+            ret["comment"] = "Policy definition {0} would be updated.".format(name)
+            ret["result"] = None
             return ret
 
     else:
-        ret['changes'] = {
-            'old': {},
-            'new': {
-                'name': policy_name,
-                'policy_type': policy_type,
-                'mode': mode,
-                'display_name': display_name,
-                'description': description,
-                'metadata': metadata,
-                'parameters': parameters,
-                'policy_rule': policy_rule,
-            }
+        ret["changes"] = {
+            "old": {},
+            "new": {
+                "name": policy_name,
+                "policy_type": policy_type,
+                "mode": mode,
+                "display_name": display_name,
+                "description": description,
+                "metadata": metadata,
+                "parameters": parameters,
+                "policy_rule": policy_rule,
+            },
         }
 
-    if __opts__['test']:
-        ret['comment'] = 'Policy definition {0} would be created.'.format(name)
-        ret['result'] = None
+    if __opts__["test"]:
+        ret["comment"] = "Policy definition {0} would be created.".format(name)
+        ret["result"] = None
         return ret
 
     # Convert OrderedDict to dict
@@ -523,7 +561,7 @@ def policy_definition_present(name, policy_rule=None, policy_type=None, mode=Non
     policy_kwargs = kwargs.copy()
     policy_kwargs.update(connection_auth)
 
-    policy = __salt__['azurearm_resource.policy_definition_create_or_update'](
+    policy = __salt__["azurearm_resource.policy_definition_create_or_update"](
         name=policy_name,
         policy_rule=policy_rule,
         policy_type=policy_type,
@@ -535,17 +573,19 @@ def policy_definition_present(name, policy_rule=None, policy_type=None, mode=Non
         **policy_kwargs
     )
 
-    if 'error' not in policy:
-        ret['result'] = True
-        ret['comment'] = 'Policy definition {0} has been created.'.format(name)
+    if "error" not in policy:
+        ret["result"] = True
+        ret["comment"] = "Policy definition {0} has been created.".format(name)
         return ret
 
-    ret['comment'] = 'Failed to create policy definition {0}! ({1})'.format(name, policy.get('error'))
+    ret["comment"] = "Failed to create policy definition {0}! ({1})".format(
+        name, policy.get("error")
+    )
     return ret
 
 
 def policy_definition_absent(name, connection_auth=None):
-    '''
+    """
     .. versionadded:: 2019.2.0
 
     Ensure a policy definition does not exist in the current subscription.
@@ -556,52 +596,59 @@ def policy_definition_absent(name, connection_auth=None):
     :param connection_auth:
         A dict with subscription and authentication parameters to be used in connecting to the
         Azure Resource Manager API.
-    '''
-    ret = {
-        'name': name,
-        'result': False,
-        'comment': '',
-        'changes': {}
-    }
+    """
+    ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret['comment'] = 'Connection information must be specified via connection_auth dictionary!'
+        ret[
+            "comment"
+        ] = "Connection information must be specified via connection_auth dictionary!"
         return ret
 
-    policy = __salt__['azurearm_resource.policy_definition_get'](name, azurearm_log_level='info', **connection_auth)
+    policy = __salt__["azurearm_resource.policy_definition_get"](
+        name, azurearm_log_level="info", **connection_auth
+    )
 
-    if 'error' in policy:
-        ret['result'] = True
-        ret['comment'] = 'Policy definition {0} is already absent.'.format(name)
+    if "error" in policy:
+        ret["result"] = True
+        ret["comment"] = "Policy definition {0} is already absent.".format(name)
         return ret
 
-    elif __opts__['test']:
-        ret['comment'] = 'Policy definition {0} would be deleted.'.format(name)
-        ret['result'] = None
-        ret['changes'] = {
-            'old': policy,
-            'new': {},
+    elif __opts__["test"]:
+        ret["comment"] = "Policy definition {0} would be deleted.".format(name)
+        ret["result"] = None
+        ret["changes"] = {
+            "old": policy,
+            "new": {},
         }
         return ret
 
-    deleted = __salt__['azurearm_resource.policy_definition_delete'](name, **connection_auth)
+    deleted = __salt__["azurearm_resource.policy_definition_delete"](
+        name, **connection_auth
+    )
 
     if deleted:
-        ret['result'] = True
-        ret['comment'] = 'Policy definition {0} has been deleted.'.format(name)
-        ret['changes'] = {
-            'old': policy,
-            'new': {}
-        }
+        ret["result"] = True
+        ret["comment"] = "Policy definition {0} has been deleted.".format(name)
+        ret["changes"] = {"old": policy, "new": {}}
         return ret
 
-    ret['comment'] = 'Failed to delete policy definition {0}!'.format(name)
+    ret["comment"] = "Failed to delete policy definition {0}!".format(name)
     return ret
 
 
-def policy_assignment_present(name, scope, definition_name, display_name=None, description=None, assignment_type=None,
-                              parameters=None, connection_auth=None, **kwargs):
-    '''
+def policy_assignment_present(
+    name,
+    scope,
+    definition_name,
+    display_name=None,
+    description=None,
+    assignment_type=None,
+    parameters=None,
+    connection_auth=None,
+    **kwargs
+):
+    """
     .. versionadded:: 2019.2.0
 
     Ensure a security policy assignment exists.
@@ -644,88 +691,78 @@ def policy_assignment_present(name, scope, definition_name, display_name=None, d
                 - description: Test assignment for testing assignments.
                 - connection_auth: {{ profile }}
 
-    '''
-    ret = {
-        'name': name,
-        'result': False,
-        'comment': '',
-        'changes': {}
-    }
+    """
+    ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret['comment'] = 'Connection information must be specified via connection_auth dictionary!'
+        ret[
+            "comment"
+        ] = "Connection information must be specified via connection_auth dictionary!"
         return ret
 
-    policy = __salt__['azurearm_resource.policy_assignment_get'](
-        name,
-        scope,
-        azurearm_log_level='info',
-        **connection_auth
+    policy = __salt__["azurearm_resource.policy_assignment_get"](
+        name, scope, azurearm_log_level="info", **connection_auth
     )
 
-    if 'error' not in policy:
-        if assignment_type and assignment_type.lower() != policy.get('type', '').lower():
-            ret['changes']['type'] = {
-                'old': policy.get('type'),
-                'new': assignment_type
-            }
+    if "error" not in policy:
+        if (
+            assignment_type
+            and assignment_type.lower() != policy.get("type", "").lower()
+        ):
+            ret["changes"]["type"] = {"old": policy.get("type"), "new": assignment_type}
 
-        if scope.lower() != policy['scope'].lower():
-            ret['changes']['scope'] = {
-                'old': policy['scope'],
-                'new': scope
-            }
+        if scope.lower() != policy["scope"].lower():
+            ret["changes"]["scope"] = {"old": policy["scope"], "new": scope}
 
-        pa_name = policy['policy_definition_id'].split('/')[-1]
+        pa_name = policy["policy_definition_id"].split("/")[-1]
         if definition_name.lower() != pa_name.lower():
-            ret['changes']['definition_name'] = {
-                'old': pa_name,
-                'new': definition_name
+            ret["changes"]["definition_name"] = {"old": pa_name, "new": definition_name}
+
+        if (display_name or "").lower() != policy.get("display_name", "").lower():
+            ret["changes"]["display_name"] = {
+                "old": policy.get("display_name"),
+                "new": display_name,
             }
 
-        if (display_name or '').lower() != policy.get('display_name', '').lower():
-            ret['changes']['display_name'] = {
-                'old': policy.get('display_name'),
-                'new': display_name
+        if (description or "").lower() != policy.get("description", "").lower():
+            ret["changes"]["description"] = {
+                "old": policy.get("description"),
+                "new": description,
             }
 
-        if (description or '').lower() != policy.get('description', '').lower():
-            ret['changes']['description'] = {
-                'old': policy.get('description'),
-                'new': description
-            }
-
-        param_changes = __utils__['dictdiffer.deep_diff'](policy.get('parameters', {}), parameters or {})
+        param_changes = __utils__["dictdiffer.deep_diff"](
+            policy.get("parameters", {}), parameters or {}
+        )
         if param_changes:
-            ret['changes']['parameters'] = param_changes
+            ret["changes"]["parameters"] = param_changes
 
-        if not ret['changes']:
-            ret['result'] = True
-            ret['comment'] = 'Policy assignment {0} is already present.'.format(name)
+        if not ret["changes"]:
+            ret["result"] = True
+            ret["comment"] = "Policy assignment {0} is already present.".format(name)
             return ret
 
-        if __opts__['test']:
-            ret['comment'] = 'Policy assignment {0} would be updated.'.format(name)
-            ret['result'] = None
+        if __opts__["test"]:
+            ret["comment"] = "Policy assignment {0} would be updated.".format(name)
+            ret["result"] = None
             return ret
 
     else:
-        ret['changes'] = {
-            'old': {},
-            'new': {
-                'name': name,
-                'scope': scope,
-                'definition_name': definition_name,
-                'type': assignment_type,
-                'display_name': display_name,
-                'description': description,
-                'parameters': parameters,
-            }
+        ret["changes"] = {
+            "old": {},
+            "new": {
+                "name": name,
+                "scope": scope,
+                "definition_name": definition_name,
+                "type": assignment_type,
+                "display_name": display_name,
+                "description": description,
+                "parameters": parameters,
+            },
         }
 
-    if __opts__['test']:
-        ret['comment'] = 'Policy assignment {0} would be created.'.format(name)
-        ret['result'] = None
+    if __opts__["test"]:
+        ret["comment"] = "Policy assignment {0} would be created.".format(name)
+        ret["result"] = None
         return ret
 
     if isinstance(parameters, dict):
@@ -733,7 +770,7 @@ def policy_assignment_present(name, scope, definition_name, display_name=None, d
 
     policy_kwargs = kwargs.copy()
     policy_kwargs.update(connection_auth)
-    policy = __salt__['azurearm_resource.policy_assignment_create'](
+    policy = __salt__["azurearm_resource.policy_assignment_create"](
         name=name,
         scope=scope,
         definition_name=definition_name,
@@ -744,17 +781,19 @@ def policy_assignment_present(name, scope, definition_name, display_name=None, d
         **policy_kwargs
     )
 
-    if 'error' not in policy:
-        ret['result'] = True
-        ret['comment'] = 'Policy assignment {0} has been created.'.format(name)
+    if "error" not in policy:
+        ret["result"] = True
+        ret["comment"] = "Policy assignment {0} has been created.".format(name)
         return ret
 
-    ret['comment'] = 'Failed to create policy assignment {0}! ({1})'.format(name, policy.get('error'))
+    ret["comment"] = "Failed to create policy assignment {0}! ({1})".format(
+        name, policy.get("error")
+    )
     return ret
 
 
 def policy_assignment_absent(name, scope, connection_auth=None):
-    '''
+    """
     .. versionadded:: 2019.2.0
 
     Ensure a policy assignment does not exist in the provided scope.
@@ -768,49 +807,42 @@ def policy_assignment_absent(name, scope, connection_auth=None):
     connection_auth
         A dict with subscription and authentication parameters to be used in connecting to the
         Azure Resource Manager API.
-    '''
-    ret = {
-        'name': name,
-        'result': False,
-        'comment': '',
-        'changes': {}
-    }
+    """
+    ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     if not isinstance(connection_auth, dict):
-        ret['comment'] = 'Connection information must be specified via connection_auth dictionary!'
+        ret[
+            "comment"
+        ] = "Connection information must be specified via connection_auth dictionary!"
         return ret
 
-    policy = __salt__['azurearm_resource.policy_assignment_get'](
-        name,
-        scope,
-        azurearm_log_level='info',
-        **connection_auth
+    policy = __salt__["azurearm_resource.policy_assignment_get"](
+        name, scope, azurearm_log_level="info", **connection_auth
     )
 
-    if 'error' in policy:
-        ret['result'] = True
-        ret['comment'] = 'Policy assignment {0} is already absent.'.format(name)
+    if "error" in policy:
+        ret["result"] = True
+        ret["comment"] = "Policy assignment {0} is already absent.".format(name)
         return ret
 
-    elif __opts__['test']:
-        ret['comment'] = 'Policy assignment {0} would be deleted.'.format(name)
-        ret['result'] = None
-        ret['changes'] = {
-            'old': policy,
-            'new': {},
+    elif __opts__["test"]:
+        ret["comment"] = "Policy assignment {0} would be deleted.".format(name)
+        ret["result"] = None
+        ret["changes"] = {
+            "old": policy,
+            "new": {},
         }
         return ret
 
-    deleted = __salt__['azurearm_resource.policy_assignment_delete'](name, scope, **connection_auth)
+    deleted = __salt__["azurearm_resource.policy_assignment_delete"](
+        name, scope, **connection_auth
+    )
 
     if deleted:
-        ret['result'] = True
-        ret['comment'] = 'Policy assignment {0} has been deleted.'.format(name)
-        ret['changes'] = {
-            'old': policy,
-            'new': {}
-        }
+        ret["result"] = True
+        ret["comment"] = "Policy assignment {0} has been deleted.".format(name)
+        ret["changes"] = {"old": policy, "new": {}}
         return ret
 
-    ret['comment'] = 'Failed to delete policy assignment {0}!'.format(name)
+    ret["comment"] = "Failed to delete policy assignment {0}!".format(name)
     return ret
