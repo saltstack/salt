@@ -114,3 +114,4 @@ kitchen.local.yml
 .bundle/
 Gemfile.lock
 /artifacts/
+requirements/static/py*/*.log
