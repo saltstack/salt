@@ -2223,6 +2223,9 @@ auto-loading modules when states run, set this value to ``False``.
 
 .. conf_minion:: clean_dynamic_modules
 
+``clean_dynamic_modules``
+-------------------------
+
 Default: ``True``
 
 clean_dynamic_modules keeps the dynamic modules on the minion in sync with
