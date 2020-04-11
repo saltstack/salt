@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Manage SQS Queues
 
 .. versionadded:: 2014.7.0
@@ -56,7 +56,7 @@ passed in as a dict, or as a string to pull from pillars or minion config:
             - profile:
                 keyid: GKTADJGHEIQSXMKKRBJ08H
                 key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
@@ -73,21 +73,16 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     Only load if boto is available.
-    '''
-    return 'boto_sqs' if 'boto_sqs.exists' in __salt__ else False
+    """
+    return "boto_sqs" if "boto_sqs.exists" in __salt__ else False
 
 
 def present(
-        name,
-        attributes=None,
-        region=None,
-        key=None,
-        keyid=None,
-        profile=None,
+    name, attributes=None, region=None, key=None, keyid=None, profile=None,
 ):
-    '''
+    """
     Ensure the SQS queue exists.
 
     name
@@ -108,38 +103,32 @@ def present(
     profile
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
-    '''
+    """
     ret = {
-        'name': name,
-        'result': True,
-        'comment': [],
-        'changes': {},
+        "name": name,
+        "result": True,
+        "comment": [],
+        "changes": {},
     }
 
-    r = __salt__['boto_sqs.exists'](
-        name,
-        region=region,
-        key=key,
-        keyid=keyid,
-        profile=profile,
+    r = __salt__["boto_sqs.exists"](
+        name, region=region, key=key, keyid=keyid, profile=profile,
     )
-    if 'error' in r:
-        ret['result'] = False
-        ret['comment'].append(r['error'])
+    if "error" in r:
+        ret["result"] = False
+        ret["comment"].append(r["error"])
         return ret
 
-    if r['result']:
-        ret['comment'].append('SQS queue {0} present.'.format(name))
+    if r["result"]:
+        ret["comment"].append("SQS queue {0} present.".format(name))
     else:
-        if __opts__['test']:
-            ret['result'] = None
-            ret['comment'].append(
-                'SQS queue {0} is set to be created.'.format(name),
-            )
-            ret['changes'] = {'old': None, 'new': name}
+        if __opts__["test"]:
+            ret["result"] = None
+            ret["comment"].append("SQS queue {0} is set to be created.".format(name),)
+            ret["changes"] = {"old": None, "new": name}
             return ret
 
-        r = __salt__['boto_sqs.create'](
+        r = __salt__["boto_sqs.create"](
             name,
             attributes=attributes,
             region=region,
@@ -147,117 +136,96 @@ def present(
             keyid=keyid,
             profile=profile,
         )
-        if 'error' in r:
-            ret['result'] = False
-            ret['comment'].append(
-                'Failed to create SQS queue {0}: {1}'.format(name, r['error']),
+        if "error" in r:
+            ret["result"] = False
+            ret["comment"].append(
+                "Failed to create SQS queue {0}: {1}".format(name, r["error"]),
             )
             return ret
 
-        ret['comment'].append('SQS queue {0} created.'.format(name))
-        ret['changes']['old'] = None
-        ret['changes']['new'] = name
+        ret["comment"].append("SQS queue {0} created.".format(name))
+        ret["changes"]["old"] = None
+        ret["changes"]["new"] = name
         # Return immediately, as the create call also set all attributes
         return ret
 
     if not attributes:
         return ret
 
-    r = __salt__['boto_sqs.get_attributes'](
-        name,
-        region=region,
-        key=key,
-        keyid=keyid,
-        profile=profile,
+    r = __salt__["boto_sqs.get_attributes"](
+        name, region=region, key=key, keyid=keyid, profile=profile,
     )
-    if 'error' in r:
-        ret['result'] = False
-        ret['comment'].append(
-            'Failed to get queue attributes: {0}'.format(r['error']),
-        )
+    if "error" in r:
+        ret["result"] = False
+        ret["comment"].append("Failed to get queue attributes: {0}".format(r["error"]),)
         return ret
-    current_attributes = r['result']
+    current_attributes = r["result"]
 
     attrs_to_set = {}
     for attr, val in six.iteritems(attributes):
         _val = current_attributes.get(attr, None)
-        if attr == 'Policy':
+        if attr == "Policy":
             # Normalize by brute force
             if isinstance(_val, six.string_types):
                 _val = salt.utils.json.loads(_val)
             if isinstance(val, six.string_types):
                 val = salt.utils.json.loads(val)
             if _val != val:
-                log.debug('Policies differ:\n%s\n%s', _val, val)
+                log.debug("Policies differ:\n%s\n%s", _val, val)
                 attrs_to_set[attr] = salt.utils.json.dumps(val, sort_keys=True)
         elif six.text_type(_val) != six.text_type(val):
-            log.debug('Attributes differ:\n%s\n%s', _val, val)
+            log.debug("Attributes differ:\n%s\n%s", _val, val)
             attrs_to_set[attr] = val
-    attr_names = ', '.join(attrs_to_set)
+    attr_names = ", ".join(attrs_to_set)
 
     if not attrs_to_set:
-        ret['comment'].append('Queue attributes already set correctly.')
+        ret["comment"].append("Queue attributes already set correctly.")
         return ret
 
     final_attributes = current_attributes.copy()
     final_attributes.update(attrs_to_set)
 
     def _yaml_safe_dump(attrs):
-        '''
+        """
         Safely dump YAML using a readable flow style
-        '''
-        dumper = __utils__['yaml.get_dumper']('IndentedSafeOrderedDumper')
-        return __utils__['yaml.dump'](
-            attrs,
-            default_flow_style=False,
-            Dumper=dumper)
+        """
+        dumper = __utils__["yaml.get_dumper"]("IndentedSafeOrderedDumper")
+        return __utils__["yaml.dump"](attrs, default_flow_style=False, Dumper=dumper)
 
-    attributes_diff = ''.join(difflib.unified_diff(
-        _yaml_safe_dump(current_attributes).splitlines(True),
-        _yaml_safe_dump(final_attributes).splitlines(True),
-    ))
+    attributes_diff = "".join(
+        difflib.unified_diff(
+            _yaml_safe_dump(current_attributes).splitlines(True),
+            _yaml_safe_dump(final_attributes).splitlines(True),
+        )
+    )
 
-    if __opts__['test']:
-        ret['result'] = None
-        ret['comment'].append(
-            'Attribute(s) {0} set to be updated:\n{1}'.format(
-                attr_names,
-                attributes_diff,
+    if __opts__["test"]:
+        ret["result"] = None
+        ret["comment"].append(
+            "Attribute(s) {0} set to be updated:\n{1}".format(
+                attr_names, attributes_diff,
             )
         )
-        ret['changes'] = {'attributes': {'diff': attributes_diff}}
+        ret["changes"] = {"attributes": {"diff": attributes_diff}}
         return ret
 
-    r = __salt__['boto_sqs.set_attributes'](
-        name,
-        attrs_to_set,
-        region=region,
-        key=key,
-        keyid=keyid,
-        profile=profile,
+    r = __salt__["boto_sqs.set_attributes"](
+        name, attrs_to_set, region=region, key=key, keyid=keyid, profile=profile,
     )
-    if 'error' in r:
-        ret['result'] = False
-        ret['comment'].append(
-            'Failed to set queue attributes: {0}'.format(r['error']),
-        )
+    if "error" in r:
+        ret["result"] = False
+        ret["comment"].append("Failed to set queue attributes: {0}".format(r["error"]),)
         return ret
 
-    ret['comment'].append(
-        'Updated SQS queue attribute(s) {0}.'.format(attr_names),
-    )
-    ret['changes']['attributes'] = {'diff': attributes_diff}
+    ret["comment"].append("Updated SQS queue attribute(s) {0}.".format(attr_names),)
+    ret["changes"]["attributes"] = {"diff": attributes_diff}
     return ret
 
 
 def absent(
-        name,
-        region=None,
-        key=None,
-        keyid=None,
-        profile=None,
+    name, region=None, key=None, keyid=None, profile=None,
 ):
-    '''
+    """
     Ensure the named sqs queue is deleted.
 
     name
@@ -275,47 +243,36 @@ def absent(
     profile
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
-    '''
-    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    """
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
-    r = __salt__['boto_sqs.exists'](
-        name,
-        region=region,
-        key=key,
-        keyid=keyid,
-        profile=profile,
+    r = __salt__["boto_sqs.exists"](
+        name, region=region, key=key, keyid=keyid, profile=profile,
     )
-    if 'error' in r:
-        ret['result'] = False
-        ret['comment'] = six.text_type(r['error'])
+    if "error" in r:
+        ret["result"] = False
+        ret["comment"] = six.text_type(r["error"])
         return ret
 
-    if not r['result']:
-        ret['comment'] = 'SQS queue {0} does not exist in {1}.'.format(
-            name,
-            region,
-        )
+    if not r["result"]:
+        ret["comment"] = "SQS queue {0} does not exist in {1}.".format(name, region,)
         return ret
 
-    if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = 'SQS queue {0} is set to be removed.'.format(name)
-        ret['changes'] = {'old': name, 'new': None}
+    if __opts__["test"]:
+        ret["result"] = None
+        ret["comment"] = "SQS queue {0} is set to be removed.".format(name)
+        ret["changes"] = {"old": name, "new": None}
         return ret
 
-    r = __salt__['boto_sqs.delete'](
-        name,
-        region=region,
-        key=key,
-        keyid=keyid,
-        profile=profile,
+    r = __salt__["boto_sqs.delete"](
+        name, region=region, key=key, keyid=keyid, profile=profile,
     )
-    if 'error' in r:
-        ret['result'] = False
-        ret['comment'] = six.text_type(r['error'])
+    if "error" in r:
+        ret["result"] = False
+        ret["comment"] = six.text_type(r["error"])
         return ret
 
-    ret['comment'] = 'SQS queue {0} was deleted.'.format(name)
-    ret['changes']['old'] = name
-    ret['changes']['new'] = None
+    ret["comment"] = "SQS queue {0} was deleted.".format(name)
+    ret["changes"]["old"] = name
+    ret["changes"]["new"] = None
     return ret

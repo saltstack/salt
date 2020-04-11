@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Manage the information in the hosts file
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import errno
 import os
 
@@ -15,42 +16,43 @@ import salt.utils.stringutils
 
 # Import 3rd-party libs
 from salt.ext import six
-from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
+from salt.ext.six.moves import range
 
 
 # pylint: disable=C0103
 def __get_hosts_filename():
-    '''
+    """
     Return the path to the appropriate hosts file
-    '''
+    """
     try:
-        return __context__['hosts.__get_hosts_filename']
+        return __context__["hosts.__get_hosts_filename"]
     except KeyError:
-        __context__['hosts.__get_hosts_filename'] = \
-            __salt__['config.option']('hosts.file')
-        return __context__['hosts.__get_hosts_filename']
+        __context__["hosts.__get_hosts_filename"] = __salt__["config.option"](
+            "hosts.file"
+        )
+        return __context__["hosts.__get_hosts_filename"]
 
 
 def _get_or_create_hostfile():
-    '''
+    """
     Wrapper of __get_hosts_filename but create host file if it
     does not exist.
-    '''
+    """
     hfn = __get_hosts_filename()
     if hfn is None:
-        hfn = ''
+        hfn = ""
     if not os.path.exists(hfn):
-        with salt.utils.files.fopen(hfn, 'w'):
+        with salt.utils.files.fopen(hfn, "w"):
             pass
     return hfn
 
 
 def _list_hosts():
-    '''
+    """
     Return the hosts found in the hosts file in as an OrderedDict
-    '''
+    """
     try:
-        return __context__['hosts._list_hosts']
+        return __context__["hosts._list_hosts"]
     except KeyError:
         count = 0
         hfn = __get_hosts_filename()
@@ -61,12 +63,12 @@ def _list_hosts():
                     line = salt.utils.stringutils.to_unicode(line).strip()
                     if not line:
                         continue
-                    if line.startswith('#'):
-                        ret.setdefault('comment-{0}'.format(count), []).append(line)
+                    if line.startswith("#"):
+                        ret.setdefault("comment-{0}".format(count), []).append(line)
                         count += 1
                         continue
-                    if '#' in line:
-                        line = line[:line.index('#')].strip()
+                    if "#" in line:
+                        line = line[: line.index("#")].strip()
                     comps = line.split()
                     ip = comps.pop(0)
                     ret.setdefault(ip, []).extend(comps)
@@ -76,12 +78,12 @@ def _list_hosts():
             # hosts file.
             return ret
 
-        __context__['hosts._list_hosts'] = ret
+        __context__["hosts._list_hosts"] = ret
         return ret
 
 
 def list_hosts():
-    '''
+    """
     Return the hosts found in the hosts file in this format::
 
         {'<ip addr>': ['alias1', 'alias2', ...]}
@@ -91,13 +93,13 @@ def list_hosts():
     .. code-block:: bash
 
         salt '*' hosts.list_hosts
-    '''
+    """
     # msgpack does not like OrderedDict's
     return dict(_list_hosts())
 
 
 def get_ip(host):
-    '''
+    """
     Return the ip associated with the named host
 
     CLI Example:
@@ -105,20 +107,20 @@ def get_ip(host):
     .. code-block:: bash
 
         salt '*' hosts.get_ip <hostname>
-    '''
+    """
     hosts = _list_hosts()
     if not hosts:
-        return ''
+        return ""
     # Look for the op
     for addr in hosts:
         if host in hosts[addr]:
             return addr
     # ip not found
-    return ''
+    return ""
 
 
 def get_alias(ip):
-    '''
+    """
     Return the list of aliases associated with an ip
 
     Aliases (host names) are returned in the order in which they
@@ -130,7 +132,7 @@ def get_alias(ip):
     .. code-block:: bash
 
         salt '*' hosts.get_alias <ip addr>
-    '''
+    """
     hosts = _list_hosts()
     if ip in hosts:
         return hosts[ip]
@@ -138,7 +140,7 @@ def get_alias(ip):
 
 
 def has_pair(ip, alias):
-    '''
+    """
     Return true if the alias is set
 
     CLI Example:
@@ -146,7 +148,7 @@ def has_pair(ip, alias):
     .. code-block:: bash
 
         salt '*' hosts.has_pair <ip> <alias>
-    '''
+    """
     hosts = _list_hosts()
     try:
         return alias in hosts[ip]
@@ -155,7 +157,7 @@ def has_pair(ip, alias):
 
 
 def set_host(ip, alias):
-    '''
+    """
     Set the host entry in the hosts file for the given ip, this will overwrite
     any previous entry for the given ip
 
@@ -169,29 +171,27 @@ def set_host(ip, alias):
     .. code-block:: bash
 
         salt '*' hosts.set_host <ip> <alias>
-    '''
+    """
     hfn = _get_or_create_hostfile()
     ovr = False
     if not os.path.isfile(hfn):
         return False
 
     # Make sure future calls to _list_hosts() will re-read the file
-    __context__.pop('hosts._list_hosts', None)
+    __context__.pop("hosts._list_hosts", None)
 
-    line_to_add = salt.utils.stringutils.to_bytes(
-        ip + '\t\t' + alias + os.linesep
-    )
+    line_to_add = salt.utils.stringutils.to_bytes(ip + "\t\t" + alias + os.linesep)
     # support removing a host entry by providing an empty string
     if not alias.strip():
-        line_to_add = b''
+        line_to_add = b""
 
-    with salt.utils.files.fopen(hfn, 'rb') as fp_:
+    with salt.utils.files.fopen(hfn, "rb") as fp_:
         lines = fp_.readlines()
     for ind, _ in enumerate(lines):
         tmpline = lines[ind].strip()
         if not tmpline:
             continue
-        if tmpline.startswith(b'#'):
+        if tmpline.startswith(b"#"):
             continue
         comps = tmpline.split()
         if comps[0] == salt.utils.stringutils.to_bytes(ip):
@@ -199,7 +199,7 @@ def set_host(ip, alias):
                 lines[ind] = line_to_add
                 ovr = True
             else:  # remove other entries
-                lines[ind] = b''
+                lines[ind] = b""
     linesep_bytes = salt.utils.stringutils.to_bytes(os.linesep)
     if not ovr:
         # make sure there is a newline
@@ -207,13 +207,13 @@ def set_host(ip, alias):
             lines[-1] += linesep_bytes
         line = line_to_add
         lines.append(line)
-    with salt.utils.files.fopen(hfn, 'wb') as ofile:
+    with salt.utils.files.fopen(hfn, "wb") as ofile:
         ofile.writelines(lines)
     return True
 
 
 def rm_host(ip, alias):
-    '''
+    """
     Remove a host entry from the hosts file
 
     CLI Example:
@@ -221,42 +221,42 @@ def rm_host(ip, alias):
     .. code-block:: bash
 
         salt '*' hosts.rm_host <ip> <alias>
-    '''
+    """
     if not has_pair(ip, alias):
         return True
     # Make sure future calls to _list_hosts() will re-read the file
-    __context__.pop('hosts._list_hosts', None)
+    __context__.pop("hosts._list_hosts", None)
     hfn = _get_or_create_hostfile()
-    with salt.utils.files.fopen(hfn, 'rb') as fp_:
+    with salt.utils.files.fopen(hfn, "rb") as fp_:
         lines = fp_.readlines()
     for ind, _ in enumerate(lines):
         tmpline = lines[ind].strip()
         if not tmpline:
             continue
-        if tmpline.startswith(b'#'):
+        if tmpline.startswith(b"#"):
             continue
         comps = tmpline.split()
         b_ip = salt.utils.stringutils.to_bytes(ip)
         b_alias = salt.utils.stringutils.to_bytes(alias)
         if comps[0] == b_ip:
-            newline = comps[0] + b'\t\t'
+            newline = comps[0] + b"\t\t"
             for existing in comps[1:]:
                 if existing == b_alias:
                     continue
-                newline += existing + b' '
+                newline += existing + b" "
             if newline.strip() == b_ip:
                 # No aliases exist for the line, make it empty
-                lines[ind] = b''
+                lines[ind] = b""
             else:
                 # Only an alias was removed
                 lines[ind] = newline + salt.utils.stringutils.to_bytes(os.linesep)
-    with salt.utils.files.fopen(hfn, 'wb') as ofile:
+    with salt.utils.files.fopen(hfn, "wb") as ofile:
         ofile.writelines(lines)
     return True
 
 
 def add_host(ip, alias):
-    '''
+    """
     Add a host to an existing entry, if the entry is not in place then create
     it with the given host
 
@@ -265,7 +265,7 @@ def add_host(ip, alias):
     .. code-block:: bash
 
         salt '*' hosts.add_host <ip> <alias>
-    '''
+    """
     hfn = _get_or_create_hostfile()
     if not os.path.isfile(hfn):
         return False
@@ -276,12 +276,12 @@ def add_host(ip, alias):
     hosts = _list_hosts()
 
     # Make sure future calls to _list_hosts() will re-read the file
-    __context__.pop('hosts._list_hosts', None)
+    __context__.pop("hosts._list_hosts", None)
 
     inserted = False
     for i, h in six.iteritems(hosts):
         for j in range(len(h)):
-            if h[j].startswith('#') and i == ip:
+            if h[j].startswith("#") and i == ip:
                 h.insert(j, alias)
                 inserted = True
     if not inserted:
@@ -294,21 +294,20 @@ def _write_hosts(hosts):
     lines = []
     for ip, aliases in six.iteritems(hosts):
         if ip:
-            if ip.startswith('comment'):
-                line = ''.join(aliases)
+            if ip.startswith("comment"):
+                line = "".join(aliases)
             else:
-                line = '{0}\t\t{1}'.format(
-                    ip,
-                    ' '.join(aliases)
-                    )
+                line = "{0}\t\t{1}".format(ip, " ".join(aliases))
         lines.append(line)
 
     hfn = _get_or_create_hostfile()
-    with salt.utils.files.fopen(hfn, 'w+') as ofile:
+    with salt.utils.files.fopen(hfn, "w+") as ofile:
         for line in lines:
             if line.strip():
                 # /etc/hosts needs to end with a newline so that some utils
                 # that read it do not break
-                ofile.write(salt.utils.stringutils.to_str(
-                    line.strip() + six.text_type(os.linesep)
-                ))
+                ofile.write(
+                    salt.utils.stringutils.to_str(
+                        line.strip() + six.text_type(os.linesep)
+                    )
+                )
