@@ -197,6 +197,7 @@ class BadTestModuleNamesTestCase(TestCase):
             "integration.ssh.test_raw",
             "integration.ssh.test_saltcheck",
             "integration.ssh.test_state",
+            "integration.ssh.test_pre_flight",
             "integration.states.test_compiler",
             "integration.states.test_handle_error",
             "integration.states.test_handle_iorder",
