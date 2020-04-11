@@ -301,7 +301,9 @@ def present(
         else:
             ret["result"] = None
             ret["changes"][name] = "imported" if config["import"] else "created"
-            ret["comment"] = "storage pool {0} would have been {1}".format(name, ret["changes"][name])
+            ret["comment"] = "storage pool {0} would have been {1}".format(
+                name, ret["changes"][name]
+            )
 
     # update pool
     elif __salt__["zpool.exists"](name):
