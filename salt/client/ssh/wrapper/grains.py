@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Return/control aspects of the grains data
-'''
+"""
 
 # Import python libs
 from __future__ import absolute_import, print_function
+
 import collections
 import copy
 import math
@@ -24,34 +25,34 @@ __grains__ = {}
 
 
 def _serial_sanitizer(instr):
-    '''
+    """
     Replaces the last 1/4 of a string with X's
-    '''
+    """
     length = len(instr)
-    index = int(math.floor(length * .75))
-    return '{0}{1}'.format(instr[:index], 'X' * (length - index))
+    index = int(math.floor(length * 0.75))
+    return "{0}{1}".format(instr[:index], "X" * (length - index))
 
 
-_FQDN_SANITIZER = lambda x: 'MINION.DOMAINNAME'
-_HOSTNAME_SANITIZER = lambda x: 'MINION'
-_DOMAINNAME_SANITIZER = lambda x: 'DOMAINNAME'
+_FQDN_SANITIZER = lambda x: "MINION.DOMAINNAME"
+_HOSTNAME_SANITIZER = lambda x: "MINION"
+_DOMAINNAME_SANITIZER = lambda x: "DOMAINNAME"
 
 
 # A dictionary of grain -> function mappings for sanitizing grain output. This
 # is used when the 'sanitize' flag is given.
 _SANITIZERS = {
-    'serialnumber': _serial_sanitizer,
-    'domain': _DOMAINNAME_SANITIZER,
-    'fqdn': _FQDN_SANITIZER,
-    'id': _FQDN_SANITIZER,
-    'host': _HOSTNAME_SANITIZER,
-    'localhost': _HOSTNAME_SANITIZER,
-    'nodename': _HOSTNAME_SANITIZER,
+    "serialnumber": _serial_sanitizer,
+    "domain": _DOMAINNAME_SANITIZER,
+    "fqdn": _FQDN_SANITIZER,
+    "id": _FQDN_SANITIZER,
+    "host": _HOSTNAME_SANITIZER,
+    "localhost": _HOSTNAME_SANITIZER,
+    "nodename": _HOSTNAME_SANITIZER,
 }
 
 
-def get(key, default='', delimiter=DEFAULT_TARGET_DELIM, ordered=True):
-    '''
+def get(key, default="", delimiter=DEFAULT_TARGET_DELIM, ordered=True):
+    """
     Attempt to retrieve the named value from grains, if the named value is not
     available return the passed default. The default return is an empty string.
 
@@ -70,20 +71,16 @@ def get(key, default='', delimiter=DEFAULT_TARGET_DELIM, ordered=True):
     .. code-block:: bash
 
         salt '*' grains.get pkg:apache
-    '''
+    """
     if ordered is True:
         grains = __grains__
     else:
         grains = salt.utils.json.loads(salt.utils.json.dumps(__grains__))
-    return salt.utils.data.traverse_dict_and_list(
-        __grains__,
-        key,
-        default,
-        delimiter)
+    return salt.utils.data.traverse_dict_and_list(__grains__, key, default, delimiter)
 
 
 def has_value(key):
-    '''
+    """
     Determine whether a named value exists in the grains dictionary.
 
     Given a grains dictionary that contains the following structure::
@@ -99,14 +96,16 @@ def has_value(key):
     .. code-block:: bash
 
         salt '*' grains.has_value pkg:apache
-    '''
-    return True \
-        if salt.utils.data.traverse_dict_and_list(__grains__, key, False) \
+    """
+    return (
+        True
+        if salt.utils.data.traverse_dict_and_list(__grains__, key, False)
         else False
+    )
 
 
 def items(sanitize=False):
-    '''
+    """
     Return all of the minion's grains
 
     CLI Example:
@@ -120,7 +119,7 @@ def items(sanitize=False):
     .. code-block:: bash
 
         salt '*' grains.items sanitize=True
-    '''
+    """
     if salt.utils.data.is_true(sanitize):
         out = dict(__grains__)
         for key, func in six.iteritems(_SANITIZERS):
@@ -132,7 +131,7 @@ def items(sanitize=False):
 
 
 def item(*args, **kwargs):
-    '''
+    """
     Return one or more grains
 
     CLI Example:
@@ -147,14 +146,14 @@ def item(*args, **kwargs):
     .. code-block:: bash
 
         salt '*' grains.item host sanitize=True
-    '''
+    """
     ret = {}
     for arg in args:
         try:
             ret[arg] = __grains__[arg]
         except KeyError:
             pass
-    if salt.utils.data.is_true(kwargs.get('sanitize')):
+    if salt.utils.data.is_true(kwargs.get("sanitize")):
         for arg, func in six.iteritems(_SANITIZERS):
             if arg in ret:
                 ret[arg] = func(ret[arg])
@@ -162,7 +161,7 @@ def item(*args, **kwargs):
 
 
 def ls():  # pylint: disable=C0103
-    '''
+    """
     Return a list of all available grains
 
     CLI Example:
@@ -170,16 +169,12 @@ def ls():  # pylint: disable=C0103
     .. code-block:: bash
 
         salt '*' grains.ls
-    '''
+    """
     return sorted(__grains__)
 
 
-def filter_by(lookup_dict,
-              grain='os_family',
-              merge=None,
-              default='default',
-              base=None):
-    '''
+def filter_by(lookup_dict, grain="os_family", merge=None, default="default", base=None):
+    """
     .. versionadded:: 0.17.0
 
     Look up the given grain in a given dictionary for the current OS and return
@@ -256,13 +251,10 @@ def filter_by(lookup_dict,
         salt '*' grains.filter_by '{Debian: Debheads rule, RedHat: I love my hat}'
         # this one will render {D: {E: I, G: H}, J: K}
         salt '*' grains.filter_by '{A: B, C: {D: {E: F,G: H}}}' 'xxx' '{D: {E: I},J: K}' 'C'
-    '''
+    """
     ret = lookup_dict.get(
-            __grains__.get(
-                grain, default),
-            lookup_dict.get(
-                default, None)
-            )
+        __grains__.get(grain, default), lookup_dict.get(default, None)
+    )
 
     if base and base in lookup_dict:
         base_values = lookup_dict[base]
@@ -271,12 +263,14 @@ def filter_by(lookup_dict,
 
         elif isinstance(base_values, collections.Mapping):
             if not isinstance(ret, collections.Mapping):
-                raise SaltException('filter_by default and look-up values must both be dictionaries.')
+                raise SaltException(
+                    "filter_by default and look-up values must both be dictionaries."
+                )
             ret = salt.utils.dictupdate.update(copy.deepcopy(base_values), ret)
 
     if merge:
         if not isinstance(merge, collections.Mapping):
-            raise SaltException('filter_by merge argument must be a dictionary.')
+            raise SaltException("filter_by merge argument must be a dictionary.")
         else:
             if ret is None:
                 ret = merge
