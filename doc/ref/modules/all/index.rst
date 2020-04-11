@@ -13,6 +13,7 @@ execution modules
         salt.modules.pkg
         salt.modules.service
         salt.modules.shadow
+        salt.modules.sysctl
         salt.modules.user
 
 .. currentmodule:: salt.modules
