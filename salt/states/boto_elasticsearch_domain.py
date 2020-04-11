@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Manage Elasticsearch Domains
 ============================
 
@@ -76,10 +76,11 @@ config:
             - keyid: GKTADJGHEIQSXMKKRBJ08H
             - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 import os
 
@@ -93,26 +94,36 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     Only load if boto is available.
-    '''
-    return 'boto_elasticsearch_domain' if 'boto_elasticsearch_domain.exists' in __salt__ else False
+    """
+    return (
+        "boto_elasticsearch_domain"
+        if "boto_elasticsearch_domain.exists" in __salt__
+        else False
+    )
 
 
 def _compare_json(current, desired):
-    return __utils__['boto3.json_objs_equal'](current, desired)
+    return __utils__["boto3.json_objs_equal"](current, desired)
 
 
-def present(name, DomainName,
-            ElasticsearchClusterConfig=None,
-            EBSOptions=None,
-            AccessPolicies=None,
-            SnapshotOptions=None,
-            AdvancedOptions=None,
-            Tags=None,
-            region=None, key=None, keyid=None, profile=None,
-            ElasticsearchVersion="1.5"):
-    '''
+def present(
+    name,
+    DomainName,
+    ElasticsearchClusterConfig=None,
+    EBSOptions=None,
+    AccessPolicies=None,
+    SnapshotOptions=None,
+    AdvancedOptions=None,
+    Tags=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+    ElasticsearchVersion="1.5",
+):
+    """
     Ensure domain exists.
 
     name
@@ -195,139 +206,150 @@ def present(name, DomainName,
     ElasticsearchVersion
         String of format X.Y to specify version for the Elasticsearch domain eg.
         "1.5" or "2.3".
-    '''
-    ret = {'name': DomainName,
-           'result': True,
-           'comment': '',
-           'changes': {}
-           }
+    """
+    ret = {"name": DomainName, "result": True, "comment": "", "changes": {}}
 
     if ElasticsearchClusterConfig is None:
         ElasticsearchClusterConfig = {
-            'DedicatedMasterEnabled': False,
-            'InstanceCount': 1,
-            'InstanceType': 'm3.medium.elasticsearch',
-            'ZoneAwarenessEnabled': False
+            "DedicatedMasterEnabled": False,
+            "InstanceCount": 1,
+            "InstanceType": "m3.medium.elasticsearch",
+            "ZoneAwarenessEnabled": False,
         }
     if EBSOptions is None:
         EBSOptions = {
-            'EBSEnabled': False,
+            "EBSEnabled": False,
         }
     if SnapshotOptions is None:
-        SnapshotOptions = {
-            'AutomatedSnapshotStartHour': 0
-        }
+        SnapshotOptions = {"AutomatedSnapshotStartHour": 0}
     if AdvancedOptions is None:
-        AdvancedOptions = {
-            'rest.action.multi.allow_explicit_index': 'true'
-        }
+        AdvancedOptions = {"rest.action.multi.allow_explicit_index": "true"}
     if Tags is None:
         Tags = {}
     if AccessPolicies is not None and isinstance(AccessPolicies, six.string_types):
         try:
             AccessPolicies = salt.utils.json.loads(AccessPolicies)
         except ValueError as e:
-            ret['result'] = False
-            ret['comment'] = 'Failed to create domain: {0}.'.format(e.message)
+            ret["result"] = False
+            ret["comment"] = "Failed to create domain: {0}.".format(e.message)
             return ret
-    r = __salt__['boto_elasticsearch_domain.exists'](DomainName=DomainName,
-                              region=region, key=key, keyid=keyid, profile=profile)
+    r = __salt__["boto_elasticsearch_domain.exists"](
+        DomainName=DomainName, region=region, key=key, keyid=keyid, profile=profile
+    )
 
-    if 'error' in r:
-        ret['result'] = False
-        ret['comment'] = 'Failed to create domain: {0}.'.format(r['error']['message'])
+    if "error" in r:
+        ret["result"] = False
+        ret["comment"] = "Failed to create domain: {0}.".format(r["error"]["message"])
         return ret
 
-    if not r.get('exists'):
-        if __opts__['test']:
-            ret['comment'] = 'Domain {0} is set to be created.'.format(DomainName)
-            ret['result'] = None
+    if not r.get("exists"):
+        if __opts__["test"]:
+            ret["comment"] = "Domain {0} is set to be created.".format(DomainName)
+            ret["result"] = None
             return ret
-        r = __salt__['boto_elasticsearch_domain.create'](DomainName=DomainName,
-                                                     ElasticsearchClusterConfig=ElasticsearchClusterConfig,
-                                                     EBSOptions=EBSOptions,
-                                                     AccessPolicies=AccessPolicies,
-                                                     SnapshotOptions=SnapshotOptions,
-                                                     AdvancedOptions=AdvancedOptions,
-                                                     ElasticsearchVersion=str(ElasticsearchVersion),  # future lint: disable=blacklisted-function
-                                               region=region, key=key,
-                                               keyid=keyid, profile=profile)
-        if not r.get('created'):
-            ret['result'] = False
-            ret['comment'] = 'Failed to create domain: {0}.'.format(r['error']['message'])
+        r = __salt__["boto_elasticsearch_domain.create"](
+            DomainName=DomainName,
+            ElasticsearchClusterConfig=ElasticsearchClusterConfig,
+            EBSOptions=EBSOptions,
+            AccessPolicies=AccessPolicies,
+            SnapshotOptions=SnapshotOptions,
+            AdvancedOptions=AdvancedOptions,
+            ElasticsearchVersion=str(
+                ElasticsearchVersion
+            ),  # future lint: disable=blacklisted-function
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
+        )
+        if not r.get("created"):
+            ret["result"] = False
+            ret["comment"] = "Failed to create domain: {0}.".format(
+                r["error"]["message"]
+            )
             return ret
-        _describe = __salt__['boto_elasticsearch_domain.describe'](DomainName,
-                                   region=region, key=key, keyid=keyid, profile=profile)
-        ret['changes']['old'] = {'domain': None}
-        ret['changes']['new'] = _describe
-        ret['comment'] = 'Domain {0} created.'.format(DomainName)
+        _describe = __salt__["boto_elasticsearch_domain.describe"](
+            DomainName, region=region, key=key, keyid=keyid, profile=profile
+        )
+        ret["changes"]["old"] = {"domain": None}
+        ret["changes"]["new"] = _describe
+        ret["comment"] = "Domain {0} created.".format(DomainName)
         return ret
 
-    ret['comment'] = os.linesep.join([ret['comment'], 'Domain {0} is present.'.format(DomainName)])
-    ret['changes'] = {}
+    ret["comment"] = os.linesep.join(
+        [ret["comment"], "Domain {0} is present.".format(DomainName)]
+    )
+    ret["changes"] = {}
     # domain exists, ensure config matches
-    _status = __salt__['boto_elasticsearch_domain.status'](DomainName=DomainName,
-                                  region=region, key=key, keyid=keyid,
-                                  profile=profile)['domain']
-    if _status.get('ElasticsearchVersion') != str(ElasticsearchVersion):  # future lint: disable=blacklisted-function
-        ret['result'] = False
-        ret['comment'] = (
-            'Failed to update domain: version cannot be modified '
-            'from {0} to {1}.'.format(
-                _status.get('ElasticsearchVersion'),
-                str(ElasticsearchVersion)  # future lint: disable=blacklisted-function
+    _status = __salt__["boto_elasticsearch_domain.status"](
+        DomainName=DomainName, region=region, key=key, keyid=keyid, profile=profile
+    )["domain"]
+    if _status.get("ElasticsearchVersion") != str(
+        ElasticsearchVersion
+    ):  # future lint: disable=blacklisted-function
+        ret["result"] = False
+        ret["comment"] = (
+            "Failed to update domain: version cannot be modified "
+            "from {0} to {1}.".format(
+                _status.get("ElasticsearchVersion"),
+                str(ElasticsearchVersion),  # future lint: disable=blacklisted-function
             )
         )
         return ret
-    _describe = __salt__['boto_elasticsearch_domain.describe'](DomainName=DomainName,
-                                  region=region, key=key, keyid=keyid,
-                                  profile=profile)['domain']
-    _describe['AccessPolicies'] = salt.utils.json.loads(_describe['AccessPolicies'])
+    _describe = __salt__["boto_elasticsearch_domain.describe"](
+        DomainName=DomainName, region=region, key=key, keyid=keyid, profile=profile
+    )["domain"]
+    _describe["AccessPolicies"] = salt.utils.json.loads(_describe["AccessPolicies"])
 
     # When EBSEnabled is false, describe returns extra values that can't be set
-    if not _describe.get('EBSOptions', {}).get('EBSEnabled'):
-        opts = _describe.get('EBSOptions', {})
-        opts.pop('VolumeSize', None)
-        opts.pop('VolumeType', None)
+    if not _describe.get("EBSOptions", {}).get("EBSEnabled"):
+        opts = _describe.get("EBSOptions", {})
+        opts.pop("VolumeSize", None)
+        opts.pop("VolumeType", None)
 
     comm_args = {}
     need_update = False
-    es_opts = {'ElasticsearchClusterConfig': ElasticsearchClusterConfig,
-               'EBSOptions': EBSOptions,
-               'AccessPolicies': AccessPolicies,
-               'SnapshotOptions': SnapshotOptions,
-               'AdvancedOptions': AdvancedOptions}
+    es_opts = {
+        "ElasticsearchClusterConfig": ElasticsearchClusterConfig,
+        "EBSOptions": EBSOptions,
+        "AccessPolicies": AccessPolicies,
+        "SnapshotOptions": SnapshotOptions,
+        "AdvancedOptions": AdvancedOptions,
+    }
 
     for k, v in six.iteritems(es_opts):
         if not _compare_json(v, _describe[k]):
             need_update = True
             comm_args[k] = v
-            ret['changes'].setdefault('new', {})[k] = v
-            ret['changes'].setdefault('old', {})[k] = _describe[k]
+            ret["changes"].setdefault("new", {})[k] = v
+            ret["changes"].setdefault("old", {})[k] = _describe[k]
     if need_update:
-        if __opts__['test']:
-            msg = 'Domain {0} set to be modified.'.format(DomainName)
-            ret['comment'] = msg
-            ret['result'] = None
+        if __opts__["test"]:
+            msg = "Domain {0} set to be modified.".format(DomainName)
+            ret["comment"] = msg
+            ret["result"] = None
             return ret
 
-        ret['comment'] = os.linesep.join([ret['comment'], 'Domain to be modified'])
+        ret["comment"] = os.linesep.join([ret["comment"], "Domain to be modified"])
 
-        r = __salt__['boto_elasticsearch_domain.update'](DomainName=DomainName,
-                                               region=region, key=key,
-                                               keyid=keyid, profile=profile,
-                                               **comm_args)
-        if not r.get('updated'):
-            ret['result'] = False
-            ret['comment'] = 'Failed to update domain: {0}.'.format(r['error'])
-            ret['changes'] = {}
+        r = __salt__["boto_elasticsearch_domain.update"](
+            DomainName=DomainName,
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
+            **comm_args
+        )
+        if not r.get("updated"):
+            ret["result"] = False
+            ret["comment"] = "Failed to update domain: {0}.".format(r["error"])
+            ret["changes"] = {}
             return ret
     return ret
 
 
-def absent(name, DomainName,
-                  region=None, key=None, keyid=None, profile=None):
-    '''
+def absent(name, DomainName, region=None, key=None, keyid=None, profile=None):
+    """
     Ensure domain with passed properties is absent.
 
     name
@@ -348,38 +370,35 @@ def absent(name, DomainName,
     profile
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
-    '''
+    """
 
-    ret = {'name': DomainName,
-           'result': True,
-           'comment': '',
-           'changes': {}
-           }
+    ret = {"name": DomainName, "result": True, "comment": "", "changes": {}}
 
-    r = __salt__['boto_elasticsearch_domain.exists'](DomainName,
-                       region=region, key=key, keyid=keyid, profile=profile)
-    if 'error' in r:
-        ret['result'] = False
-        ret['comment'] = 'Failed to delete domain: {0}.'.format(r['error']['message'])
+    r = __salt__["boto_elasticsearch_domain.exists"](
+        DomainName, region=region, key=key, keyid=keyid, profile=profile
+    )
+    if "error" in r:
+        ret["result"] = False
+        ret["comment"] = "Failed to delete domain: {0}.".format(r["error"]["message"])
         return ret
 
-    if r and not r['exists']:
-        ret['comment'] = 'Domain {0} does not exist.'.format(DomainName)
+    if r and not r["exists"]:
+        ret["comment"] = "Domain {0} does not exist.".format(DomainName)
         return ret
 
-    if __opts__['test']:
-        ret['comment'] = 'Domain {0} is set to be removed.'.format(DomainName)
-        ret['result'] = None
+    if __opts__["test"]:
+        ret["comment"] = "Domain {0} is set to be removed.".format(DomainName)
+        ret["result"] = None
         return ret
 
-    r = __salt__['boto_elasticsearch_domain.delete'](DomainName,
-                                    region=region, key=key,
-                                    keyid=keyid, profile=profile)
-    if not r['deleted']:
-        ret['result'] = False
-        ret['comment'] = 'Failed to delete domain: {0}.'.format(r['error']['message'])
+    r = __salt__["boto_elasticsearch_domain.delete"](
+        DomainName, region=region, key=key, keyid=keyid, profile=profile
+    )
+    if not r["deleted"]:
+        ret["result"] = False
+        ret["comment"] = "Failed to delete domain: {0}.".format(r["error"]["message"])
         return ret
-    ret['changes']['old'] = {'domain': DomainName}
-    ret['changes']['new'] = {'domain': None}
-    ret['comment'] = 'Domain {0} deleted.'.format(DomainName)
+    ret["changes"]["old"] = {"domain": DomainName}
+    ret["changes"]["new"] = {"domain": None}
+    ret["comment"] = "Domain {0} deleted.".format(DomainName)
     return ret
