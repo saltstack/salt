@@ -1,7 +1,7 @@
 -r base.txt
 
 mock>=2.0.0
-SaltPyLint>=v2017.3.6
+SaltPyLint>=v2019.6.7
 testinfra>=1.7.0,!=1.17.0
 
 # httpretty Needs to be here for now even though it's a dependency of boto.

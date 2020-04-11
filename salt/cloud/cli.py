@@ -28,7 +28,7 @@ import salt.utils.cloud
 import salt.utils.parsers
 import salt.utils.user
 from salt.exceptions import SaltCloudException, SaltCloudSystemExit
-from salt.utils.verify import check_user, verify_env, verify_files, verify_log
+from salt.utils.verify import check_user, verify_env, verify_log_files, verify_log
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -70,11 +70,9 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
                     root_dir=self.config['root_dir'],
                 )
                 logfile = self.config['log_file']
-                if logfile is not None and not logfile.startswith('tcp://') \
-                        and not logfile.startswith('udp://') \
-                        and not logfile.startswith('file://'):
+                if logfile is not None:
                     # Logfile is not using Syslog, verify
-                    verify_files([logfile], salt_master_user)
+                    verify_log_files([logfile], salt_master_user)
         except (IOError, OSError) as err:
             log.error('Error while verifying the environment: %s', err)
             sys.exit(err.errno)

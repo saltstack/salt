@@ -546,6 +546,11 @@ VALID_OPTS = {
     # returner specified by 'event_return'
     'event_return_queue': int,
 
+    # The number of seconds that events can languish in the queue before we flush them.
+    # The goal here is to ensure that if the bus is not busy enough to reach a total
+    # `event_return_queue` events won't get stale.
+    'event_return_queue_max_seconds': int,
+
     # Only forward events to an event returner if it matches one of the tags in this list
     'event_return_whitelist': list,
 

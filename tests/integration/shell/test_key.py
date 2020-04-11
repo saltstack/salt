@@ -281,32 +281,3 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
             )
         finally:
             shutil.rmtree(tempdir)
-
-    def test_issue_7754(self):
-        old_cwd = os.getcwd()
-        config_dir = os.path.join(TMP, 'issue-7754')
-        if not os.path.isdir(config_dir):
-            os.makedirs(config_dir)
-
-        os.chdir(config_dir)
-
-        config_file_name = 'master'
-        with salt.utils.files.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
-            config = salt.utils.yaml.safe_load(fhr)
-            config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
-            with salt.utils.files.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
-                salt.utils.yaml.safe_dump(config, fhw, default_flow_style=False)
-        ret = self.run_script(
-            self._call_binary_,
-            '--config-dir {0} -L'.format(
-                config_dir
-            ),
-            timeout=60
-        )
-        try:
-            self.assertIn('minion', '\n'.join(ret))
-            self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
-        finally:
-            self.chdir(old_cwd)
-            if os.path.isdir(config_dir):
-                shutil.rmtree(config_dir)

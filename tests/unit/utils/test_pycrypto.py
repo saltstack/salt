@@ -9,7 +9,7 @@ import re
 import salt.utils.pycrypto
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 log = logging.getLogger(__name__)
 
@@ -19,6 +19,9 @@ class PycryptoTestCase(TestCase):
     TestCase for salt.utils.pycrypto module
     '''
 
+    # The crypt module is only available on Unix systems
+    # https://docs.python.org/dev/library/crypt.html
+    @skipIf(not salt.utils.pycrypto.HAS_CRYPT, 'crypt module not available')
     def test_gen_hash(self):
         '''
         Test gen_hash

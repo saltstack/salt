@@ -2,7 +2,7 @@
 /src
 *.py[co]
 pkg/arch/*.tar.xz
-*.sw[pon]
+*.sw[a-p]
 doc/_build
 doc/doc-archive.tar.gz
 dist
@@ -85,6 +85,8 @@ tests/unit/templates/roots
 
 # Pycharm
 .idea
+
+.vscode/
 
 # Ignore the log directory created by tests
 /logs
