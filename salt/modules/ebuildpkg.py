@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Support for Portage
 
 .. important::
@@ -12,15 +12,16 @@ Support for Portage
 
 For now all package names *MUST* include the package category,
 i.e. ``'vim'`` will not work, ``'app-editors/vim'`` will.
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
+
+import copy
+import datetime
+import logging
 
 # Import python libs
 import os
-import copy
-import logging
 import re
-import datetime
 
 # Import salt libs
 import salt.utils.args
@@ -34,20 +35,22 @@ import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError
 from salt.ext import six
 
-
 # Import third party libs
 HAS_PORTAGE = False
 try:
     import portage
+
     HAS_PORTAGE = True
 except ImportError:
     import os
     import sys
-    if os.path.isdir('/usr/lib/portage/pym'):
+
+    if os.path.isdir("/usr/lib/portage/pym"):
         try:
             # In a virtualenv, the portage python path needs to be manually added
-            sys.path.insert(0, '/usr/lib/portage/pym')
+            sys.path.insert(0, "/usr/lib/portage/pym")
             import portage
+
             HAS_PORTAGE = True
         except ImportError:
             pass
@@ -55,28 +58,33 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
-__virtualname__ = 'pkg'
+__virtualname__ = "pkg"
 
 
 def __virtual__():
-    '''
+    """
     Confirm this module is on a Gentoo based system
-    '''
-    if HAS_PORTAGE and __grains__['os'] == 'Gentoo':
+    """
+    if HAS_PORTAGE and __grains__["os"] == "Gentoo":
         return __virtualname__
-    return (False, 'The ebuild execution module cannot be loaded: either the system is not Gentoo or the portage python library is not available.')
+    return (
+        False,
+        "The ebuild execution module cannot be loaded: either the system is not Gentoo or the portage python library is not available.",
+    )
 
 
 def _vartree():
     import portage  # pylint: disable=3rd-party-module-not-gated
+
     portage = salt.utils.compat.reload(portage)
-    return portage.db[portage.root]['vartree']
+    return portage.db[portage.root]["vartree"]
 
 
 def _porttree():
     import portage  # pylint: disable=3rd-party-module-not-gated
+
     portage = salt.utils.compat.reload(portage)
-    return portage.db[portage.root]['porttree']
+    return portage.db[portage.root]["porttree"]
 
 
 def _p_to_cp(p):
@@ -88,7 +96,7 @@ def _p_to_cp(p):
         pass
 
     try:
-        ret = _porttree().dbapi.xmatch('bestmatch-visible', p)
+        ret = _porttree().dbapi.xmatch("bestmatch-visible", p)
         if ret:
             return portage.dep_getkey(ret)
     except portage.exception.InvalidAtom:
@@ -105,11 +113,11 @@ def _p_to_cp(p):
 
 
 def _allnodes():
-    if 'portage._allnodes' in __context__:
-        return __context__['portage._allnodes']
+    if "portage._allnodes" in __context__:
+        return __context__["portage._allnodes"]
     else:
         ret = _porttree().getallnodes()
-        __context__['portage._allnodes'] = ret
+        __context__["portage._allnodes"] = ret
         return ret
 
 
@@ -136,42 +144,41 @@ def _cpv_to_version(cpv):
 
 
 def _process_emerge_err(stdout, stderr):
-    '''
+    """
     Used to parse emerge output to provide meaningful output when emerge fails
-    '''
+    """
     ret = {}
-    rexp = re.compile(r'^[<>=][^ ]+/[^ ]+ [^\n]+', re.M)
+    rexp = re.compile(r"^[<>=][^ ]+/[^ ]+ [^\n]+", re.M)
 
-    slot_conflicts = re.compile(r'^[^ \n]+/[^ ]+:[^ ]', re.M).findall(stderr)
+    slot_conflicts = re.compile(r"^[^ \n]+/[^ ]+:[^ ]", re.M).findall(stderr)
     if slot_conflicts:
-        ret['slot conflicts'] = slot_conflicts
+        ret["slot conflicts"] = slot_conflicts
 
-    blocked = re.compile(r'(?m)^\[blocks .+\] '
-                         r'([^ ]+/[^ ]+-[0-9]+[^ ]+)'
-                         r'.*$').findall(stdout)
+    blocked = re.compile(
+        r"(?m)^\[blocks .+\] " r"([^ ]+/[^ ]+-[0-9]+[^ ]+)" r".*$"
+    ).findall(stdout)
 
-    unsatisfied = re.compile(
-            r'Error: The above package list contains').findall(stderr)
+    unsatisfied = re.compile(r"Error: The above package list contains").findall(stderr)
 
     # If there were blocks and emerge could not resolve it.
     if blocked and unsatisfied:
-        ret['blocked'] = blocked
+        ret["blocked"] = blocked
 
-    sections = re.split('\n\n', stderr)
+    sections = re.split("\n\n", stderr)
     for section in sections:
-        if 'The following keyword changes' in section:
-            ret['keywords'] = rexp.findall(section)
-        elif 'The following license changes' in section:
-            ret['license'] = rexp.findall(section)
-        elif 'The following USE changes' in section:
-            ret['use'] = rexp.findall(section)
-        elif 'The following mask changes' in section:
-            ret['mask'] = rexp.findall(section)
+        if "The following keyword changes" in section:
+            ret["keywords"] = rexp.findall(section)
+        elif "The following license changes" in section:
+            ret["license"] = rexp.findall(section)
+        elif "The following USE changes" in section:
+            ret["use"] = rexp.findall(section)
+        elif "The following mask changes" in section:
+            ret["mask"] = rexp.findall(section)
     return ret
 
 
 def check_db(*names, **kwargs):
-    '''
+    """
     .. versionadded:: 0.17.0
 
     Returns a dict containing the following information for each specified
@@ -190,27 +197,28 @@ def check_db(*names, **kwargs):
     .. code-block:: bash
 
         salt '*' pkg.check_db <package1> <package2> <package3>
-    '''
+    """
     ### NOTE: kwargs is not used here but needs to be present due to it being
     ### required in the check_db function in other package providers.
     ret = {}
     for name in names:
         if name in ret:
-            log.warning('pkg.check_db: Duplicate package name \'{0}\' '
-                        'submitted'.format(name))
+            log.warning(
+                "pkg.check_db: Duplicate package name '{0}' " "submitted".format(name)
+            )
             continue
-        if '/' not in name:
-            ret.setdefault(name, {})['found'] = False
-            ret[name]['suggestions'] = porttree_matches(name)
+        if "/" not in name:
+            ret.setdefault(name, {})["found"] = False
+            ret[name]["suggestions"] = porttree_matches(name)
         else:
-            ret.setdefault(name, {})['found'] = name in _allnodes()
-            if ret[name]['found'] is False:
-                ret[name]['suggestions'] = []
+            ret.setdefault(name, {})["found"] = name in _allnodes()
+            if ret[name]["found"] is False:
+                ret[name]["suggestions"] = []
     return ret
 
 
 def ex_mod_init(low):
-    '''
+    """
     If the config option ``ebuild.enforce_nice_config`` is set to True, this
     module will enforce a nice tree structure for /etc/portage/package.*
     configuration files.
@@ -236,14 +244,14 @@ def ex_mod_init(low):
     .. code-block:: bash
 
         salt '*' pkg.ex_mod_init
-    '''
-    if __salt__['config.get']('ebuild.enforce_nice_config', False):
-        __salt__['portage_config.enforce_nice_config']()
+    """
+    if __salt__["config.get"]("ebuild.enforce_nice_config", False):
+        __salt__["portage_config.enforce_nice_config"]()
     return True
 
 
 def latest_version(*names, **kwargs):
-    '''
+    """
     Return the latest version of the named package available for upgrade or
     installation. If more than one package name is specified, a dict of
     name/version pairs is returned.
@@ -254,11 +262,11 @@ def latest_version(*names, **kwargs):
 
         salt '*' pkg.latest_version <package name>
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
-    '''
-    refresh = salt.utils.data.is_true(kwargs.pop('refresh', True))
+    """
+    refresh = salt.utils.data.is_true(kwargs.pop("refresh", True))
 
     if len(names) == 0:
-        return ''
+        return ""
 
     # Refresh before looking for the latest version available
     if refresh:
@@ -267,10 +275,15 @@ def latest_version(*names, **kwargs):
     ret = {}
     # Initialize the dict with empty strings
     for name in names:
-        ret[name] = ''
+        ret[name] = ""
         installed = _cpv_to_version(_vartree().dep_bestmatch(name))
         avail = _cpv_to_version(_porttree().dep_bestmatch(name))
-        if avail and (not installed or salt.utils.versions.compare(ver1=installed, oper='<', ver2=avail, cmp_func=version_cmp)):
+        if avail and (
+            not installed
+            or salt.utils.versions.compare(
+                ver1=installed, oper="<", ver2=avail, cmp_func=version_cmp
+            )
+        ):
             ret[name] = avail
 
     # Return a string if only one package name passed
@@ -280,61 +293,67 @@ def latest_version(*names, **kwargs):
 
 
 # available_version is being deprecated
-available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
+available_version = salt.utils.functools.alias_function(
+    latest_version, "available_version"
+)
 
 
 def _get_upgradable(backtrack=3):
-    '''
+    """
     Utility function to get upgradable packages
 
     Sample return data:
     { 'pkgname': '1.2.3-45', ... }
-    '''
+    """
 
-    cmd = ['emerge',
-           '--ask', 'n',
-           '--backtrack', '{0}'.format(backtrack),
-           '--pretend',
-           '--update',
-           '--newuse',
-           '--deep',
-           '@world']
+    cmd = [
+        "emerge",
+        "--ask",
+        "n",
+        "--backtrack",
+        "{0}".format(backtrack),
+        "--pretend",
+        "--update",
+        "--newuse",
+        "--deep",
+        "@world",
+    ]
 
-    call = __salt__['cmd.run_all'](cmd,
-                                   output_loglevel='trace',
-                                   python_shell=False)
+    call = __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
 
-    if call['retcode'] != 0:
-        msg = 'Failed to get upgrades'
-        for key in ('stderr', 'stdout'):
+    if call["retcode"] != 0:
+        msg = "Failed to get upgrades"
+        for key in ("stderr", "stdout"):
             if call[key]:
-                msg += ': ' + call[key]
+                msg += ": " + call[key]
                 break
         raise CommandExecutionError(msg)
     else:
-        out = call['stdout']
+        out = call["stdout"]
 
-    rexp = re.compile(r'(?m)^\[.+\] '
-                      r'([^ ]+/[^ ]+)'    # Package string
-                      '-'
-                      r'([0-9]+[^ ]+)'          # Version
-                      r'.*$')
-    keys = ['name', 'version']
+    rexp = re.compile(
+        r"(?m)^\[.+\] "
+        r"([^ ]+/[^ ]+)"  # Package string
+        "-"
+        r"([0-9]+[^ ]+)"  # Version
+        r".*$"
+    )
+    keys = ["name", "version"]
     _get = lambda l, k: l[keys.index(k)]
 
     upgrades = rexp.findall(out)
 
     ret = {}
     for line in upgrades:
-        name = _get(line, 'name')
-        version_num = _get(line, 'version')
+        name = _get(line, "name")
+        version_num = _get(line, "version")
         ret[name] = version_num
 
     return ret
 
 
 def list_upgrades(refresh=True, backtrack=3, **kwargs):  # pylint: disable=W0613
-    '''
+    """
     List all available package upgrades.
 
     refresh
@@ -352,14 +371,14 @@ def list_upgrades(refresh=True, backtrack=3, **kwargs):  # pylint: disable=W0613
     .. code-block:: bash
 
         salt '*' pkg.list_upgrades
-    '''
+    """
     if salt.utils.data.is_true(refresh):
         refresh_db()
     return _get_upgradable(backtrack)
 
 
 def upgrade_available(name):
-    '''
+    """
     Check whether or not an upgrade is available for a given package
 
     CLI Example:
@@ -367,12 +386,12 @@ def upgrade_available(name):
     .. code-block:: bash
 
         salt '*' pkg.upgrade_available <package name>
-    '''
-    return latest_version(name) != ''
+    """
+    return latest_version(name) != ""
 
 
 def version(*names, **kwargs):
-    '''
+    """
     Returns a string representing the package version or an empty string if not
     installed. If more than one package name is specified, a dict of
     name/version pairs is returned.
@@ -383,17 +402,17 @@ def version(*names, **kwargs):
 
         salt '*' pkg.version <package name>
         salt '*' pkg.version <package1> <package2> <package3> ...
-    '''
-    return __salt__['pkg_resource.version'](*names, **kwargs)
+    """
+    return __salt__["pkg_resource.version"](*names, **kwargs)
 
 
 def porttree_matches(name):
-    '''
+    """
     Returns a list containing the matches for a given package name from the
     portage tree. Note that the specific version of the package will not be
     provided for packages that have several versions in the portage tree, but
     rather the name of the package (i.e. "dev-python/paramiko").
-    '''
+    """
     matches = []
     for category in _porttree().dbapi.categories:
         if _porttree().dbapi.cp_list(category + "/" + name):
@@ -402,7 +421,7 @@ def porttree_matches(name):
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
-    '''
+    """
     List the packages currently installed in a dict::
 
         {'<package_name>': '<version>'}
@@ -412,36 +431,35 @@ def list_pkgs(versions_as_list=False, **kwargs):
     .. code-block:: bash
 
         salt '*' pkg.list_pkgs
-    '''
+    """
     versions_as_list = salt.utils.data.is_true(versions_as_list)
     # not yet implemented or not applicable
-    if any([salt.utils.data.is_true(kwargs.get(x))
-            for x in ('removed', 'purge_desired')]):
+    if any(
+        [salt.utils.data.is_true(kwargs.get(x)) for x in ("removed", "purge_desired")]
+    ):
         return {}
 
-    if 'pkg.list_pkgs' in __context__:
+    if "pkg.list_pkgs" in __context__:
         if versions_as_list:
-            return __context__['pkg.list_pkgs']
+            return __context__["pkg.list_pkgs"]
         else:
-            ret = copy.deepcopy(__context__['pkg.list_pkgs'])
-            __salt__['pkg_resource.stringify'](ret)
+            ret = copy.deepcopy(__context__["pkg.list_pkgs"])
+            __salt__["pkg_resource.stringify"](ret)
             return ret
 
     ret = {}
     pkgs = _vartree().dbapi.cpv_all()
     for cpv in pkgs:
-        __salt__['pkg_resource.add_pkg'](ret,
-                                         _cpv_to_cp(cpv),
-                                         _cpv_to_version(cpv))
-    __salt__['pkg_resource.sort_pkglist'](ret)
-    __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
+        __salt__["pkg_resource.add_pkg"](ret, _cpv_to_cp(cpv), _cpv_to_version(cpv))
+    __salt__["pkg_resource.sort_pkglist"](ret)
+    __context__["pkg.list_pkgs"] = copy.deepcopy(ret)
     if not versions_as_list:
-        __salt__['pkg_resource.stringify'](ret)
+        __salt__["pkg_resource.stringify"](ret)
     return ret
 
 
 def refresh_db():
-    '''
+    """
     Update the portage tree using the first available method from the following
     list:
 
@@ -463,42 +481,46 @@ def refresh_db():
     .. code-block:: bash
 
         salt '*' pkg.refresh_db
-    '''
-    has_emaint = os.path.isdir('/etc/portage/repos.conf')
-    has_eix = True if 'eix.sync' in __salt__ else False
-    has_webrsync = True if __salt__['makeconf.features_contains']('webrsync-gpg') else False
+    """
+    has_emaint = os.path.isdir("/etc/portage/repos.conf")
+    has_eix = True if "eix.sync" in __salt__ else False
+    has_webrsync = (
+        True if __salt__["makeconf.features_contains"]("webrsync-gpg") else False
+    )
 
     # Remove rtag file to keep multiple refreshes from happening in pkg states
     salt.utils.pkg.clear_rtag(__opts__)
     # Option to prevent syncing package tree if done in the last 24 hours
-    if __salt__['pillar.get']('portage:sync_wait_one_day', False):
-        main_repo_root = __salt__['cmd.run']('portageq get_repo_path / gentoo')
+    if __salt__["pillar.get"]("portage:sync_wait_one_day", False):
+        main_repo_root = __salt__["cmd.run"]("portageq get_repo_path / gentoo")
         day = datetime.timedelta(days=1)
         now = datetime.datetime.now()
         timestamp = datetime.datetime.fromtimestamp(os.path.getmtime(main_repo_root))
         if now - timestamp < day:
-            log.info('Did not sync package tree since last sync was done at'
-                     ' {0}, less than 1 day ago'.format(timestamp))
+            log.info(
+                "Did not sync package tree since last sync was done at"
+                " {0}, less than 1 day ago".format(timestamp)
+            )
             return False
 
     if has_emaint:
-        return __salt__['cmd.retcode']('emaint sync -a') == 0
+        return __salt__["cmd.retcode"]("emaint sync -a") == 0
     elif has_eix:
-        return __salt__['eix.sync']()
+        return __salt__["eix.sync"]()
     elif has_webrsync:
         # GPG sign verify is supported only for 'webrsync'
-        cmd = 'emerge-webrsync -q'
+        cmd = "emerge-webrsync -q"
         # Prefer 'delta-webrsync' to 'webrsync'
-        if salt.utils.path.which('emerge-delta-webrsync'):
-            cmd = 'emerge-delta-webrsync -q'
-        return __salt__['cmd.retcode'](cmd) == 0
+        if salt.utils.path.which("emerge-delta-webrsync"):
+            cmd = "emerge-delta-webrsync -q"
+        return __salt__["cmd.retcode"](cmd) == 0
     else:
         # Default to deprecated `emerge --sync` form
-        return __salt__['cmd.retcode']('emerge --ask n --quiet --sync') == 0
+        return __salt__["cmd.retcode"]("emerge --ask n --quiet --sync") == 0
 
 
 def _flags_changed(inst_flags, conf_flags):
-    '''
+    """
     @type inst_flags: list
     @param inst_flags: list of use flags which were used
         when package was installed
@@ -506,7 +528,7 @@ def _flags_changed(inst_flags, conf_flags):
     @param conf_flags: list of use flags form portage/package.use
     @rtype: bool
     @return: True, if lists have changes
-    '''
+    """
     conf_flags = conf_flags[:]
     for i in inst_flags:
         try:
@@ -516,16 +538,18 @@ def _flags_changed(inst_flags, conf_flags):
     return True if conf_flags else False
 
 
-def install(name=None,
-            refresh=False,
-            pkgs=None,
-            sources=None,
-            slot=None,
-            fromrepo=None,
-            uses=None,
-            binhost=None,
-            **kwargs):
-    '''
+def install(
+    name=None,
+    refresh=False,
+    pkgs=None,
+    sources=None,
+    slot=None,
+    fromrepo=None,
+    uses=None,
+    binhost=None,
+    **kwargs
+):
+    """
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands which modify installed packages from the
@@ -628,22 +652,24 @@ def install(name=None,
 
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
-    '''
-    log.debug('Called modules.pkg.install: {0}'.format(
-        {
-            'name': name,
-            'refresh': refresh,
-            'pkgs': pkgs,
-            'sources': sources,
-            'kwargs': kwargs,
-            'binhost': binhost,
-        }
-    ))
+    """
+    log.debug(
+        "Called modules.pkg.install: {0}".format(
+            {
+                "name": name,
+                "refresh": refresh,
+                "pkgs": pkgs,
+                "sources": sources,
+                "kwargs": kwargs,
+                "binhost": binhost,
+            }
+        )
+    )
     if salt.utils.data.is_true(refresh):
         refresh_db()
 
     try:
-        pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
+        pkg_params, pkg_type = __salt__["pkg_resource.parse_targets"](
             name, pkgs, sources, **kwargs
         )
     except MinionError as exc:
@@ -651,34 +677,34 @@ def install(name=None,
 
     # Handle version kwarg for a single package target
     if pkgs is None and sources is None:
-        version_num = kwargs.get('version')
+        version_num = kwargs.get("version")
         if not version_num:
-            version_num = ''
+            version_num = ""
             if slot is not None:
-                version_num += ':{0}'.format(slot)
+                version_num += ":{0}".format(slot)
             if fromrepo is not None:
-                version_num += '::{0}'.format(fromrepo)
+                version_num += "::{0}".format(fromrepo)
             if uses is not None:
-                version_num += '[{0}]'.format(','.join(uses))
+                version_num += "[{0}]".format(",".join(uses))
             pkg_params = {name: version_num}
 
     if pkg_params is None or len(pkg_params) == 0:
         return {}
-    elif pkg_type == 'file':
-        emerge_opts = ['tbz2file']
+    elif pkg_type == "file":
+        emerge_opts = ["tbz2file"]
     else:
         emerge_opts = []
 
-    if binhost == 'try':
-        bin_opts = ['-g']
-    elif binhost == 'force':
-        bin_opts = ['-G']
+    if binhost == "try":
+        bin_opts = ["-g"]
+    elif binhost == "force":
+        bin_opts = ["-G"]
     else:
         bin_opts = []
 
     changes = {}
 
-    if pkg_type == 'repository':
+    if pkg_type == "repository":
         targets = list()
         for param, version_num in six.iteritems(pkg_params):
             original_param = param
@@ -691,33 +717,37 @@ def install(name=None,
             else:
                 keyword = None
 
-                match = re.match('^(~)?([<>])?(=)?([^<>=]*)$', version_num)
+                match = re.match("^(~)?([<>])?(=)?([^<>=]*)$", version_num)
                 if match:
                     keyword, gt_lt, eq, verstr = match.groups()
-                    prefix = gt_lt or ''
-                    prefix += eq or ''
+                    prefix = gt_lt or ""
+                    prefix += eq or ""
                     # If no prefix characters were supplied and verstr contains a version, use '='
-                    if len(verstr) > 0 and verstr[0] != ':' and verstr[0] != '[':
-                        prefix = prefix or '='
-                        target = '{0}{1}-{2}'.format(prefix, param, verstr)
+                    if len(verstr) > 0 and verstr[0] != ":" and verstr[0] != "[":
+                        prefix = prefix or "="
+                        target = "{0}{1}-{2}".format(prefix, param, verstr)
                     else:
-                        target = '{0}{1}'.format(param, verstr)
+                        target = "{0}{1}".format(param, verstr)
                 else:
-                    target = '{0}'.format(param)
+                    target = "{0}".format(param)
 
-                if '[' in target:
-                    old = __salt__['portage_config.get_flags_from_package_conf']('use', target)
-                    __salt__['portage_config.append_use_flags'](target)
-                    new = __salt__['portage_config.get_flags_from_package_conf']('use', target)
+                if "[" in target:
+                    old = __salt__["portage_config.get_flags_from_package_conf"](
+                        "use", target
+                    )
+                    __salt__["portage_config.append_use_flags"](target)
+                    new = __salt__["portage_config.get_flags_from_package_conf"](
+                        "use", target
+                    )
                     if old != new:
-                        changes[param + '-USE'] = {'old': old, 'new': new}
-                    target = target[:target.rfind('[')]
+                        changes[param + "-USE"] = {"old": old, "new": new}
+                    target = target[: target.rfind("[")]
 
                 if keyword is not None:
-                    __salt__['portage_config.append_to_package_conf']('accept_keywords',
-                                                                        target,
-                                                                        ['~ARCH'])
-                    changes[param + '-ACCEPT_KEYWORD'] = {'old': '', 'new': '~ARCH'}
+                    __salt__["portage_config.append_to_package_conf"](
+                        "accept_keywords", target, ["~ARCH"]
+                    )
+                    changes[param + "-ACCEPT_KEYWORD"] = {"old": "", "new": "~ARCH"}
 
                 if not changes:
                     inst_v = version(param)
@@ -725,48 +755,49 @@ def install(name=None,
                     # Prevent latest_version from calling refresh_db. Either we
                     # just called it or we were asked not to.
                     if latest_version(param, refresh=False) == inst_v:
-                        all_uses = __salt__['portage_config.get_cleared_flags'](param)
+                        all_uses = __salt__["portage_config.get_cleared_flags"](param)
                         if _flags_changed(*all_uses):
-                            changes[param] = {'version': inst_v,
-                                              'old': {'use': all_uses[0]},
-                                              'new': {'use': all_uses[1]}}
+                            changes[param] = {
+                                "version": inst_v,
+                                "old": {"use": all_uses[0]},
+                                "new": {"use": all_uses[1]},
+                            }
                 targets.append(target)
     else:
         targets = pkg_params
 
     cmd = []
-    if salt.utils.systemd.has_scope(__context__) \
-            and __salt__['config.get']('systemd.scope', True):
-        cmd.extend(['systemd-run', '--scope'])
-    cmd.extend(['emerge', '--ask', 'n', '--quiet'])
+    if salt.utils.systemd.has_scope(__context__) and __salt__["config.get"](
+        "systemd.scope", True
+    ):
+        cmd.extend(["systemd-run", "--scope"])
+    cmd.extend(["emerge", "--ask", "n", "--quiet"])
     cmd.extend(bin_opts)
     cmd.extend(emerge_opts)
     cmd.extend(targets)
 
     old = list_pkgs()
-    call = __salt__['cmd.run_all'](cmd,
-                                   output_loglevel='trace',
-                                   python_shell=False)
-    if call['retcode'] != 0:
-        needed_changes = _process_emerge_err(call['stdout'], call['stderr'])
+    call = __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
+    if call["retcode"] != 0:
+        needed_changes = _process_emerge_err(call["stdout"], call["stderr"])
     else:
         needed_changes = []
 
-    __context__.pop('pkg.list_pkgs', None)
+    __context__.pop("pkg.list_pkgs", None)
     new = list_pkgs()
     changes.update(salt.utils.data.compare_dicts(old, new))
 
     if needed_changes:
         raise CommandExecutionError(
-            'Error occurred installing package(s)',
-            info={'needed changes': needed_changes, 'changes': changes}
+            "Error occurred installing package(s)",
+            info={"needed changes": needed_changes, "changes": changes},
         )
 
     return changes
 
 
 def update(pkg, slot=None, fromrepo=None, refresh=False, binhost=None):
-    '''
+    """
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands which modify installed packages from the
@@ -805,61 +836,55 @@ def update(pkg, slot=None, fromrepo=None, refresh=False, binhost=None):
     .. code-block:: bash
 
         salt '*' pkg.update <package name>
-    '''
+    """
     if salt.utils.data.is_true(refresh):
         refresh_db()
 
     full_atom = pkg
 
     if slot is not None:
-        full_atom = '{0}:{1}'.format(full_atom, slot)
+        full_atom = "{0}:{1}".format(full_atom, slot)
 
     if fromrepo is not None:
-        full_atom = '{0}::{1}'.format(full_atom, fromrepo)
+        full_atom = "{0}::{1}".format(full_atom, fromrepo)
 
-    if binhost == 'try':
-        bin_opts = ['-g']
-    elif binhost == 'force':
-        bin_opts = ['-G']
+    if binhost == "try":
+        bin_opts = ["-g"]
+    elif binhost == "force":
+        bin_opts = ["-G"]
     else:
         bin_opts = []
 
     old = list_pkgs()
     cmd = []
-    if salt.utils.systemd.has_scope(__context__) \
-            and __salt__['config.get']('systemd.scope', True):
-        cmd.extend(['systemd-run', '--scope'])
-    cmd.extend(['emerge',
-                '--ask', 'n',
-                '--quiet',
-                '--update',
-                '--newuse',
-                '--oneshot'])
+    if salt.utils.systemd.has_scope(__context__) and __salt__["config.get"](
+        "systemd.scope", True
+    ):
+        cmd.extend(["systemd-run", "--scope"])
+    cmd.extend(["emerge", "--ask", "n", "--quiet", "--update", "--newuse", "--oneshot"])
     cmd.extend(bin_opts)
     cmd.append(full_atom)
-    call = __salt__['cmd.run_all'](cmd,
-                                   output_loglevel='trace',
-                                   python_shell=False)
-    if call['retcode'] != 0:
-        needed_changes = _process_emerge_err(call['stdout'], call['stderr'])
+    call = __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
+    if call["retcode"] != 0:
+        needed_changes = _process_emerge_err(call["stdout"], call["stderr"])
     else:
         needed_changes = []
 
-    __context__.pop('pkg.list_pkgs', None)
+    __context__.pop("pkg.list_pkgs", None)
     new = list_pkgs()
     ret = salt.utils.data.compare_dicts(old, new)
 
     if needed_changes:
         raise CommandExecutionError(
-            'Problem encountered updating package(s)',
-            info={'needed_changes': needed_changes, 'changes': ret}
+            "Problem encountered updating package(s)",
+            info={"needed_changes": needed_changes, "changes": ret},
         )
 
     return ret
 
 
 def upgrade(refresh=True, binhost=None, backtrack=3):
-    '''
+    """
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands which modify installed packages from the
@@ -901,55 +926,58 @@ def upgrade(refresh=True, binhost=None, backtrack=3):
     .. code-block:: bash
 
         salt '*' pkg.upgrade
-    '''
-    ret = {'changes': {},
-           'result': True,
-           'comment': ''}
+    """
+    ret = {"changes": {}, "result": True, "comment": ""}
 
     if salt.utils.data.is_true(refresh):
         refresh_db()
 
-    if binhost == 'try':
-        bin_opts = ['--getbinpkg']
-    elif binhost == 'force':
-        bin_opts = ['--getbinpkgonly']
+    if binhost == "try":
+        bin_opts = ["--getbinpkg"]
+    elif binhost == "force":
+        bin_opts = ["--getbinpkgonly"]
     else:
         bin_opts = []
 
     old = list_pkgs()
     cmd = []
-    if salt.utils.systemd.has_scope(__context__) \
-            and __salt__['config.get']('systemd.scope', True):
-        cmd.extend(['systemd-run', '--scope'])
-    cmd.extend(['emerge',
-                '--ask', 'n',
-                '--quiet',
-                '--backtrack', '{0}'.format(backtrack),
-                '--update',
-                '--newuse',
-                '--deep'])
+    if salt.utils.systemd.has_scope(__context__) and __salt__["config.get"](
+        "systemd.scope", True
+    ):
+        cmd.extend(["systemd-run", "--scope"])
+    cmd.extend(
+        [
+            "emerge",
+            "--ask",
+            "n",
+            "--quiet",
+            "--backtrack",
+            "{0}".format(backtrack),
+            "--update",
+            "--newuse",
+            "--deep",
+        ]
+    )
     if bin_opts:
         cmd.extend(bin_opts)
-    cmd.append('@world')
+    cmd.append("@world")
 
-    result = __salt__['cmd.run_all'](cmd,
-                                     output_loglevel='trace',
-                                     python_shell=False)
-    __context__.pop('pkg.list_pkgs', None)
+    result = __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
+    __context__.pop("pkg.list_pkgs", None)
     new = list_pkgs()
     ret = salt.utils.data.compare_dicts(old, new)
 
-    if result['retcode'] != 0:
+    if result["retcode"] != 0:
         raise CommandExecutionError(
-            'Problem encountered upgrading packages',
-            info={'changes': ret, 'result': result}
+            "Problem encountered upgrading packages",
+            info={"changes": ret, "result": result},
         )
 
     return ret
 
 
 def remove(name=None, slot=None, fromrepo=None, pkgs=None, **kwargs):
-    '''
+    """
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands which modify installed packages from the
@@ -993,19 +1021,24 @@ def remove(name=None, slot=None, fromrepo=None, pkgs=None, **kwargs):
         salt '*' pkg.remove <package name> slot=4.4 fromrepo=gentoo
         salt '*' pkg.remove <package1>,<package2>,<package3>
         salt '*' pkg.remove pkgs='["foo", "bar"]'
-    '''
+    """
     try:
-        pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
+        pkg_params = __salt__["pkg_resource.parse_targets"](name, pkgs)[0]
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
     old = list_pkgs()
-    if name and not pkgs and (slot is not None or fromrepo is not None)and len(pkg_params) == 1:
+    if (
+        name
+        and not pkgs
+        and (slot is not None or fromrepo is not None)
+        and len(pkg_params) == 1
+    ):
         fullatom = name
         if slot is not None:
-            targets = ['{0}:{1}'.format(fullatom, slot)]
+            targets = ["{0}:{1}".format(fullatom, slot)]
         if fromrepo is not None:
-            targets = ['{0}::{1}'.format(fullatom, fromrepo)]
+            targets = ["{0}::{1}".format(fullatom, fromrepo)]
         targets = [fullatom]
     else:
         targets = [x for x in pkg_params if x in old]
@@ -1014,41 +1047,34 @@ def remove(name=None, slot=None, fromrepo=None, pkgs=None, **kwargs):
         return {}
 
     cmd = []
-    if salt.utils.systemd.has_scope(__context__) \
-            and __salt__['config.get']('systemd.scope', True):
-        cmd.extend(['systemd-run', '--scope'])
-    cmd.extend(['emerge',
-                '--ask', 'n',
-                '--quiet',
-                '--unmerge',
-                '--quiet-unmerge-warn'])
+    if salt.utils.systemd.has_scope(__context__) and __salt__["config.get"](
+        "systemd.scope", True
+    ):
+        cmd.extend(["systemd-run", "--scope"])
+    cmd.extend(["emerge", "--ask", "n", "--quiet", "--unmerge", "--quiet-unmerge-warn"])
     cmd.extend(targets)
 
-    out = __salt__['cmd.run_all'](
-        cmd,
-        output_loglevel='trace',
-        python_shell=False
-    )
-    if out['retcode'] != 0 and out['stderr']:
-        errors = [out['stderr']]
+    out = __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
+    if out["retcode"] != 0 and out["stderr"]:
+        errors = [out["stderr"]]
     else:
         errors = []
 
-    __context__.pop('pkg.list_pkgs', None)
+    __context__.pop("pkg.list_pkgs", None)
     new = list_pkgs()
     ret = salt.utils.data.compare_dicts(old, new)
 
     if errors:
         raise CommandExecutionError(
-            'Problem encountered removing package(s)',
-            info={'errors': errors, 'changes': ret}
+            "Problem encountered removing package(s)",
+            info={"errors": errors, "changes": ret},
         )
 
     return ret
 
 
 def purge(name=None, slot=None, fromrepo=None, pkgs=None, **kwargs):
-    '''
+    """
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands which modify installed packages from the
@@ -1094,14 +1120,14 @@ def purge(name=None, slot=None, fromrepo=None, pkgs=None, **kwargs):
         salt '*' pkg.purge <package name> slot=4.4
         salt '*' pkg.purge <package1>,<package2>,<package3>
         salt '*' pkg.purge pkgs='["foo", "bar"]'
-    '''
+    """
     ret = remove(name=name, slot=slot, fromrepo=fromrepo, pkgs=pkgs)
     ret.update(depclean(name=name, slot=slot, fromrepo=fromrepo, pkgs=pkgs))
     return ret
 
 
 def depclean(name=None, slot=None, fromrepo=None, pkgs=None):
-    '''
+    """
     Portage has a function to remove unused dependencies. If a package
     is provided, it will only removed the package if no other package
     depends on it.
@@ -1126,34 +1152,37 @@ def depclean(name=None, slot=None, fromrepo=None, pkgs=None):
     .. code-block:: bash
 
         salt '*' pkg.depclean <package name>
-    '''
+    """
     try:
-        pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
+        pkg_params = __salt__["pkg_resource.parse_targets"](name, pkgs)[0]
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
     old = list_pkgs()
-    if name and not pkgs and (slot is not None or fromrepo is not None)and len(pkg_params) == 1:
+    if (
+        name
+        and not pkgs
+        and (slot is not None or fromrepo is not None)
+        and len(pkg_params) == 1
+    ):
         fullatom = name
         if slot is not None:
-            targets = ['{0}:{1}'.format(fullatom, slot)]
+            targets = ["{0}:{1}".format(fullatom, slot)]
         if fromrepo is not None:
-            targets = ['{0}::{1}'.format(fullatom, fromrepo)]
+            targets = ["{0}::{1}".format(fullatom, fromrepo)]
         targets = [fullatom]
     else:
         targets = [x for x in pkg_params if x in old]
 
-    cmd = ['emerge', '--ask', 'n', '--quiet', '--depclean'] + targets
-    __salt__['cmd.run_all'](cmd,
-                            output_loglevel='trace',
-                            python_shell=False)
-    __context__.pop('pkg.list_pkgs', None)
+    cmd = ["emerge", "--ask", "n", "--quiet", "--depclean"] + targets
+    __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
+    __context__.pop("pkg.list_pkgs", None)
     new = list_pkgs()
     return salt.utils.data.compare_dicts(old, new)
 
 
 def version_cmp(pkg1, pkg2, **kwargs):
-    '''
+    """
     Do a cmp-style comparison on two packages. Return -1 if pkg1 < pkg2, 0 if
     pkg1 == pkg2, and 1 if pkg1 > pkg2. Return None if there was a problem
     making the comparison.
@@ -1163,18 +1192,18 @@ def version_cmp(pkg1, pkg2, **kwargs):
     .. code-block:: bash
 
         salt '*' pkg.version_cmp '0.2.4-0' '0.2.4.1-0'
-    '''
+    """
     # ignore_epoch is not supported here, but has to be included for API
     # compatibility. Rather than putting this argument into the function
     # definition (and thus have it show up in the docs), we just pop it out of
     # the kwargs dict and then raise an exception if any kwargs other than
     # ignore_epoch were passed.
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
-    kwargs.pop('ignore_epoch', None)
+    kwargs.pop("ignore_epoch", None)
     if kwargs:
         salt.utils.args.invalid_kwargs(kwargs)
 
-    regex = r'^~?([^:\[]+):?[^\[]*\[?.*$'
+    regex = r"^~?([^:\[]+):?[^\[]*\[?.*$"
     ver1 = re.match(regex, pkg1)
     ver2 = re.match(regex, pkg2)
 
@@ -1184,7 +1213,7 @@ def version_cmp(pkg1, pkg2, **kwargs):
 
 
 def version_clean(version):
-    '''
+    """
     Clean the version string removing extra data.
 
     CLI Example:
@@ -1192,12 +1221,12 @@ def version_clean(version):
     .. code-block:: bash
 
         salt '*' pkg.version_clean <version_string>
-    '''
-    return re.match(r'^~?[<>]?=?([^<>=:\[]+).*$', version)
+    """
+    return re.match(r"^~?[<>]?=?([^<>=:\[]+).*$", version)
 
 
 def check_extra_requirements(pkgname, pkgver):
-    '''
+    """
     Check if the installed package already has the given requirements.
 
     CLI Example:
@@ -1205,51 +1234,55 @@ def check_extra_requirements(pkgname, pkgver):
     .. code-block:: bash
 
         salt '*' pkg.check_extra_requirements 'sys-devel/gcc' '~>4.1.2:4.1::gentoo[nls,fortran]'
-    '''
+    """
     keyword = None
 
-    match = re.match('^(~)?([<>])?(=)?([^<>=]*)$', pkgver)
+    match = re.match("^(~)?([<>])?(=)?([^<>=]*)$", pkgver)
     if match:
         keyword, gt_lt, eq, verstr = match.groups()
-        prefix = gt_lt or ''
-        prefix += eq or ''
+        prefix = gt_lt or ""
+        prefix += eq or ""
         # We need to delete quotes around use flag list elements
         verstr = verstr.replace("'", "")
         # If no prefix characters were supplied and verstr contains a version, use '='
-        if verstr[0] != ':' and verstr[0] != '[':
-            prefix = prefix or '='
-            atom = '{0}{1}-{2}'.format(prefix, pkgname, verstr)
+        if verstr[0] != ":" and verstr[0] != "[":
+            prefix = prefix or "="
+            atom = "{0}{1}-{2}".format(prefix, pkgname, verstr)
         else:
-            atom = '{0}{1}'.format(pkgname, verstr)
+            atom = "{0}{1}".format(pkgname, verstr)
     else:
         return True
 
     try:
-        cpv = _porttree().dbapi.xmatch('bestmatch-visible', atom)
+        cpv = _porttree().dbapi.xmatch("bestmatch-visible", atom)
     except portage.exception.InvalidAtom as iae:
-        log.error('Unable to find a matching package for {0}: ({1})'.format(atom, iae))
+        log.error("Unable to find a matching package for {0}: ({1})".format(atom, iae))
         return False
 
-    if cpv == '':
+    if cpv == "":
         return False
 
     try:
-        cur_repo, cur_use = _vartree().dbapi.aux_get(cpv, ['repository', 'USE'])
+        cur_repo, cur_use = _vartree().dbapi.aux_get(cpv, ["repository", "USE"])
     except KeyError:
         return False
 
-    des_repo = re.match(r'^.+::([^\[]+).*$', atom)
+    des_repo = re.match(r"^.+::([^\[]+).*$", atom)
     if des_repo and des_repo.group(1) != cur_repo:
         return False
 
     des_uses = set(portage.dep.dep_getusedeps(atom))
     cur_use = cur_use.split()
-    if len([x for x in des_uses.difference(cur_use)
-            if x[0] != '-' or x[1:] in cur_use]) > 0:
+    if (
+        len(
+            [x for x in des_uses.difference(cur_use) if x[0] != "-" or x[1:] in cur_use]
+        )
+        > 0
+    ):
         return False
 
     if keyword:
-        if not __salt__['portage_config.has_flag']('accept_keywords', atom, '~ARCH'):
+        if not __salt__["portage_config.has_flag"]("accept_keywords", atom, "~ARCH"):
             return False
 
     return True
