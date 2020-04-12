@@ -419,12 +419,12 @@ def certificate_managed(name,
         Initial validity date for the certificate. This date must be specified
         in the format '%Y-%m-%d %H:%M:%S'.
 
-        .. versionadded:: Neon
+        .. versionadded:: Sodium
     not_after:
         Final validity date for the certificate. This date must be specified in
         the format '%Y-%m-%d %H:%M:%S'.
 
-        .. versionadded:: Neon
+        .. versionadded:: Sodium
 
     Examples:
 
