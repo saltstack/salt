@@ -118,11 +118,11 @@ class TestVaultSDB(LoaderModuleMockMixin, TestCase):
         mock_version = MagicMock(return_value=version)
         mock_vault = MagicMock()
         mock_vault.return_value.status_code = 200
-        mock_vault.content.return_value = [{"data": {"bar", "test"}}]
+        mock_vault.return_value.json.return_value = {"data": {"bar": "test"}}
         with patch.dict(
             vault.__utils__, {"vault.make_request": mock_vault}
         ), patch.dict(vault.__utils__, {"vault.is_v2": mock_version}):
-            vault.get("sdb://myvault/path/to/foo/bar")
+            self.assertEqual(vault.get("sdb://myvault/path/to/foo/bar"), "test")
 
         self.assertEqual(
             mock_vault.call_args_list,
@@ -142,11 +142,11 @@ class TestVaultSDB(LoaderModuleMockMixin, TestCase):
         mock_version = MagicMock(return_value=version)
         mock_vault = MagicMock()
         mock_vault.return_value.status_code = 200
-        mock_vault.content.return_value = [{"data": {"bar", "test"}}]
+        mock_vault.return_value.json.return_value = {"data": {"data": {"bar": "test"}}}
         with patch.dict(
             vault.__utils__, {"vault.make_request": mock_vault}
         ), patch.dict(vault.__utils__, {"vault.is_v2": mock_version}):
-            vault.get("sdb://myvault/path/to/foo/bar")
+            self.assertEqual(vault.get("sdb://myvault/path/to/foo/bar"), "test")
 
         self.assertEqual(
             mock_vault.call_args_list, [call("GET", "v1/path/data/to/foo", None)]
@@ -161,12 +161,49 @@ class TestVaultSDB(LoaderModuleMockMixin, TestCase):
         mock_version = MagicMock(return_value=version)
         mock_vault = MagicMock()
         mock_vault.return_value.status_code = 200
-        mock_vault.content.return_value = [{"data": {"bar", "test"}}]
+        mock_vault.return_value.json.return_value = {"data": {"bar": "test"}}
         with patch.dict(
             vault.__utils__, {"vault.make_request": mock_vault}
         ), patch.dict(vault.__utils__, {"vault.is_v2": mock_version}):
-            vault.get("sdb://myvault/path/to/foo?bar")
+            self.assertEqual(vault.get("sdb://myvault/path/to/foo?bar"), "test")
         self.assertEqual(
             mock_vault.call_args_list,
             [call("GET", "v1/sdb://myvault/path/to/foo", None)],
         )
+
+    def test_get_missing(self):
+        """
+        Test salt.sdb.vault.get function returns None
+        if vault does not have an entry
+        """
+        version = {"v2": False, "data": None, "metadata": None, "type": None}
+        mock_version = MagicMock(return_value=version)
+        mock_vault = MagicMock()
+        mock_vault.return_value.status_code = 404
+        with patch.dict(
+            vault.__utils__, {"vault.make_request": mock_vault}
+        ), patch.dict(vault.__utils__, {"vault.is_v2": mock_version}):
+            self.assertIsNone(vault.get("sdb://myvault/path/to/foo/bar"))
+
+        assert mock_vault.call_args_list == [
+            call("GET", "v1/sdb://myvault/path/to/foo", None)
+        ]
+
+    def test_get_missing_key(self):
+        """
+        Test salt.sdb.vault.get function returns None
+        if vault does not have the key but does have the entry
+        """
+        version = {"v2": False, "data": None, "metadata": None, "type": None}
+        mock_version = MagicMock(return_value=version)
+        mock_vault = MagicMock()
+        mock_vault.return_value.status_code = 200
+        mock_vault.return_value.json.return_value = {"data": {"bar": "test"}}
+        with patch.dict(
+            vault.__utils__, {"vault.make_request": mock_vault}
+        ), patch.dict(vault.__utils__, {"vault.is_v2": mock_version}):
+            self.assertIsNone(vault.get("sdb://myvault/path/to/foo/foo"))
+
+        assert mock_vault.call_args_list == [
+            call("GET", "v1/sdb://myvault/path/to/foo", None)
+        ]
