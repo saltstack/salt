@@ -121,6 +121,8 @@ def get_async_pillar(
     file_client = opts["file_client"]
     if opts.get("master_type") == "disable" and file_client == "remote":
         file_client = "local"
+    elif file_client == "local" and opts.get("use_master_when_local"):
+        file_client = "remote"
     ptype = {"remote": AsyncRemotePillar, "local": AsyncPillar}.get(
         file_client, AsyncPillar
     )
