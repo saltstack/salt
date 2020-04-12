@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Management of user groups
 =========================
 
@@ -32,85 +32,83 @@ In Windows, if no domain is specified in the user or group name (i.e.
           - bar
           - user1
           - user2
-'''
+"""
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import sys
 
-# Import 3rd-party libs
-from salt.ext import six
+import sys
 
 # Import Salt libs
 import salt.utils.platform
 import salt.utils.win_functions
 
+# Import 3rd-party libs
+from salt.ext import six
 
-def _changes(name,
-             gid=None,
-             addusers=None,
-             delusers=None,
-             members=None):
-    '''
+
+def _changes(name, gid=None, addusers=None, delusers=None, members=None):
+    """
     Return a dict of the changes required for a group if the group is present,
     otherwise return False.
-    '''
-    lgrp = __salt__['group.info'](name)
+    """
+    lgrp = __salt__["group.info"](name)
     if not lgrp:
         return False
 
     # User and Domain names are not case sensitive in Windows. Let's make them
     # all lower case so we can compare properly
     if salt.utils.platform.is_windows():
-        if lgrp['members']:
-            lgrp['members'] = [user.lower() for user in lgrp['members']]
+        if lgrp["members"]:
+            lgrp["members"] = [user.lower() for user in lgrp["members"]]
         if members:
-            members = [salt.utils.win_functions.get_sam_name(user).lower() for user in members]
+            members = [
+                salt.utils.win_functions.get_sam_name(user).lower() for user in members
+            ]
         if addusers:
-            addusers = [salt.utils.win_functions.get_sam_name(user).lower() for user in addusers]
+            addusers = [
+                salt.utils.win_functions.get_sam_name(user).lower() for user in addusers
+            ]
         if delusers:
-            delusers = [salt.utils.win_functions.get_sam_name(user).lower() for user in delusers]
+            delusers = [
+                salt.utils.win_functions.get_sam_name(user).lower() for user in delusers
+            ]
 
     change = {}
     ret = {}
     if gid:
         try:
             gid = int(gid)
-            if lgrp['gid'] != gid:
-                change['gid'] = gid
+            if lgrp["gid"] != gid:
+                change["gid"] = gid
         except (TypeError, ValueError):
-            ret['result'] = False
-            ret['comment'] = 'Invalid gid'
+            ret["result"] = False
+            ret["comment"] = "Invalid gid"
             return ret
 
     if members is not None and not members:
-        if set(lgrp['members']).symmetric_difference(members):
-            change['delusers'] = set(lgrp['members'])
+        if set(lgrp["members"]).symmetric_difference(members):
+            change["delusers"] = set(lgrp["members"])
     elif members:
         # if new member list if different than the current
-        if set(lgrp['members']).symmetric_difference(members):
-            change['members'] = members
+        if set(lgrp["members"]).symmetric_difference(members):
+            change["members"] = members
 
     if addusers:
-        users_2add = [user for user in addusers if user not in lgrp['members']]
+        users_2add = [user for user in addusers if user not in lgrp["members"]]
         if users_2add:
-            change['addusers'] = users_2add
+            change["addusers"] = users_2add
 
     if delusers:
-        users_2del = [user for user in delusers if user in lgrp['members']]
+        users_2del = [user for user in delusers if user in lgrp["members"]]
         if users_2del:
-            change['delusers'] = users_2del
+            change["delusers"] = users_2del
 
     return change
 
 
-def present(name,
-            gid=None,
-            system=False,
-            addusers=None,
-            delusers=None,
-            members=None):
-    r'''
+def present(name, gid=None, system=False, addusers=None, delusers=None, members=None):
+    r"""
     Ensure that a group is present
 
     Args:
@@ -162,131 +160,124 @@ def present(name,
             - members:
               - DOMAIN\domain_admins
               - Administrator
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': True,
-           'comment': 'Group {0} is present and up to date'.format(name)}
+    """
+    ret = {
+        "name": name,
+        "changes": {},
+        "result": True,
+        "comment": "Group {0} is present and up to date".format(name),
+    }
 
     if members is not None and (addusers is not None or delusers is not None):
-        ret['result'] = None
-        ret['comment'] = (
+        ret["result"] = None
+        ret["comment"] = (
             'Error: Conflicting options "members" with "addusers" and/or'
-            ' "delusers" can not be used together. ')
+            ' "delusers" can not be used together. '
+        )
         return ret
 
     if addusers and delusers:
         # -- if trying to add and delete the same user(s) at the same time.
         if not set(addusers).isdisjoint(set(delusers)):
-            ret['result'] = None
-            ret['comment'] = (
-                'Error. Same user(s) can not be added and deleted'
-                ' simultaneously')
+            ret["result"] = None
+            ret["comment"] = (
+                "Error. Same user(s) can not be added and deleted" " simultaneously"
+            )
             return ret
 
-    changes = _changes(name,
-                       gid,
-                       addusers,
-                       delusers,
-                       members)
+    changes = _changes(name, gid, addusers, delusers, members)
     if changes:
-        ret['comment'] = (
-            'The following group attributes are set to be changed:\n')
+        ret["comment"] = "The following group attributes are set to be changed:\n"
         for key, val in six.iteritems(changes):
-            ret['comment'] += '{0}: {1}\n'.format(key, val)
+            ret["comment"] += "{0}: {1}\n".format(key, val)
 
-        if __opts__['test']:
-            ret['result'] = None
+        if __opts__["test"]:
+            ret["result"] = None
             return ret
 
         for key, val in six.iteritems(changes):
-            if key == 'gid':
-                __salt__['group.chgid'](name, gid)
+            if key == "gid":
+                __salt__["group.chgid"](name, gid)
                 continue
-            if key == 'addusers':
+            if key == "addusers":
                 for user in val:
-                    __salt__['group.adduser'](name, user)
+                    __salt__["group.adduser"](name, user)
                 continue
-            if key == 'delusers':
+            if key == "delusers":
                 for user in val:
-                    __salt__['group.deluser'](name, user)
+                    __salt__["group.deluser"](name, user)
                 continue
-            if key == 'members':
-                __salt__['group.members'](name, ','.join(members))
+            if key == "members":
+                __salt__["group.members"](name, ",".join(members))
                 continue
         # Clear cached group data
-        sys.modules[
-            __salt__['test.ping'].__module__
-            ].__context__.pop('group.getent', None)
-        changes = _changes(name,
-                           gid,
-                           addusers,
-                           delusers,
-                           members)
+        sys.modules[__salt__["test.ping"].__module__].__context__.pop(
+            "group.getent", None
+        )
+        changes = _changes(name, gid, addusers, delusers, members)
         if changes:
-            ret['result'] = False
-            ret['comment'] += 'Some changes could not be applied'
-            ret['changes'] = {'Failed': changes}
+            ret["result"] = False
+            ret["comment"] += "Some changes could not be applied"
+            ret["changes"] = {"Failed": changes}
         else:
-            ret['changes'] = {'Final': 'All changes applied successfully'}
+            ret["changes"] = {"Final": "All changes applied successfully"}
 
     if changes is False:
         # The group is not present, make it!
-        if __opts__['test']:
-            ret['result'] = None
-            ret['comment'] = 'Group {0} set to be added'.format(name)
+        if __opts__["test"]:
+            ret["result"] = None
+            ret["comment"] = "Group {0} set to be added".format(name)
             return ret
 
-        grps = __salt__['group.getent']()
+        grps = __salt__["group.getent"]()
         # Test if gid is free
         if gid is not None:
             gid_group = None
             for lgrp in grps:
-                if lgrp['gid'] == gid:
-                    gid_group = lgrp['name']
+                if lgrp["gid"] == gid:
+                    gid_group = lgrp["name"]
                     break
 
             if gid_group is not None:
-                ret['result'] = False
-                ret['comment'] = (
-                    'Group {0} is not present but gid {1} is already taken by'
-                    ' group {2}'.format(name, gid, gid_group))
+                ret["result"] = False
+                ret["comment"] = (
+                    "Group {0} is not present but gid {1} is already taken by"
+                    " group {2}".format(name, gid, gid_group)
+                )
                 return ret
 
         # Group is not present, make it.
-        if __salt__['group.add'](name, gid=gid, system=system):
+        if __salt__["group.add"](name, gid=gid, system=system):
             # if members to be added
             grp_members = None
             if members:
-                grp_members = ','.join(members)
+                grp_members = ",".join(members)
             if addusers:
-                grp_members = ','.join(addusers)
+                grp_members = ",".join(addusers)
             if grp_members:
-                __salt__['group.members'](name, grp_members)
+                __salt__["group.members"](name, grp_members)
             # Clear cached group data
-            sys.modules[__salt__['test.ping'].__module__].__context__.pop(
-                'group.getent', None)
-            ret['comment'] = 'New group {0} created'.format(name)
-            ret['changes'] = __salt__['group.info'](name)
-            changes = _changes(name,
-                               gid,
-                               addusers,
-                               delusers,
-                               members)
+            sys.modules[__salt__["test.ping"].__module__].__context__.pop(
+                "group.getent", None
+            )
+            ret["comment"] = "New group {0} created".format(name)
+            ret["changes"] = __salt__["group.info"](name)
+            changes = _changes(name, gid, addusers, delusers, members)
             if changes:
-                ret['result'] = False
-                ret['comment'] = (
-                    'Group {0} has been created but, some changes could not'
-                    ' be applied'.format(name))
-                ret['changes'] = {'Failed': changes}
+                ret["result"] = False
+                ret["comment"] = (
+                    "Group {0} has been created but, some changes could not"
+                    " be applied".format(name)
+                )
+                ret["changes"] = {"Failed": changes}
         else:
-            ret['result'] = False
-            ret['comment'] = 'Failed to create new group {0}'.format(name)
+            ret["result"] = False
+            ret["comment"] = "Failed to create new group {0}".format(name)
     return ret
 
 
 def absent(name):
-    '''
+    """
     Ensure that the named group is absent
 
     Args:
@@ -300,26 +291,23 @@ def absent(name):
         # Removes the local group `db_admin`
         db_admin:
           group.absent
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': True,
-           'comment': ''}
-    grp_info = __salt__['group.info'](name)
+    """
+    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
+    grp_info = __salt__["group.info"](name)
     if grp_info:
         # Group already exists. Remove the group.
-        if __opts__['test']:
-            ret['result'] = None
-            ret['comment'] = 'Group {0} is set for removal'.format(name)
+        if __opts__["test"]:
+            ret["result"] = None
+            ret["comment"] = "Group {0} is set for removal".format(name)
             return ret
-        ret['result'] = __salt__['group.delete'](name)
-        if ret['result']:
-            ret['changes'] = {name: ''}
-            ret['comment'] = 'Removed group {0}'.format(name)
+        ret["result"] = __salt__["group.delete"](name)
+        if ret["result"]:
+            ret["changes"] = {name: ""}
+            ret["comment"] = "Removed group {0}".format(name)
             return ret
         else:
-            ret['comment'] = 'Failed to remove group {0}'.format(name)
+            ret["comment"] = "Failed to remove group {0}".format(name)
             return ret
     else:
-        ret['comment'] = 'Group not present'
+        ret["comment"] = "Group not present"
         return ret
