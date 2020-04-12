@@ -11,7 +11,6 @@ proxy modules
     :template: autosummary.rst.tmpl
 
     arista_pyeapi
-    cimc
     chronos
     cimc
     cisconso
