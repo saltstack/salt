@@ -819,5 +819,5 @@ def versions_report(include_salt_cloud=False):
         yield line
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     print(__version__)
