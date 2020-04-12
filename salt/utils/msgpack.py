@@ -67,7 +67,7 @@ def _sanitize_msgpack_kwargs(kwargs):
     assert isinstance(kwargs, dict)
     if version < (0, 6, 0) and kwargs.pop("strict_map_key", None) is not None:
         log.info("removing unsupported `strict_map_key` argument from msgpack call")
-    if version < (0, 5, 5) and kwargs.pop("raw", None) is not None:
+    if version < (0, 5, 2) and kwargs.pop("raw", None) is not None:
         log.info("removing unsupported `raw` argument from msgpack call")
     if version < (0, 4, 0) and kwargs.pop("use_bin_type", None) is not None:
         log.info("removing unsupported `use_bin_type` argument from msgpack call")
