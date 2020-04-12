@@ -634,7 +634,15 @@ class AptUtilsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             aptpkg._call_apt(["apt-get", "purge", "vim"])  # pylint: disable=W0106
             aptpkg.__salt__["cmd.run_all"].assert_called_once_with(
-                ["systemd-run", "--scope", "apt-get", "purge", "vim"],
+                [
+                    "systemd-run",
+                    "--scope",
+                    "--description",
+                    '"salt.modules.aptpkg"',
+                    "apt-get",
+                    "purge",
+                    "vim",
+                ],
                 env={},
                 output_loglevel="trace",
                 python_shell=False,
