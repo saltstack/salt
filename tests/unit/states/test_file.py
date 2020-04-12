@@ -1619,6 +1619,8 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                             "comment": "Directory /etc/testdir updated",
                             "changes": {"recursion": "Changes silenced"},
                         }
+                        if salt.utils.platform.is_windows():
+                            ret["comment"] = ret["comment"].replace("/", "\\")
                         with patch.dict(
                             filestate.__salt__, {"file.check_perms": mock_perms}
                         ):
