@@ -119,26 +119,26 @@ def available(
     Args:
 
         software (bool):
-            Include software updates in the results (default is True)
+            Include software updates in the results. Default is ``True``
 
         drivers (bool):
-            Include driver updates in the results (default is True)
+            Include driver updates in the results. Default is ``True``
 
         summary (bool):
             - True: Return a summary of updates available for each category.
             - False (default): Return a detailed list of available updates.
 
         skip_installed (bool):
-            Skip updates that are already installed. Default is False.
+            Skip updates that are already installed. Default is ``True``
 
         skip_hidden (bool):
-            Skip updates that have been hidden. Default is True.
+            Skip updates that have been hidden. Default is ``True``
 
         skip_mandatory (bool):
-            Skip mandatory updates. Default is False.
+            Skip mandatory updates. Default is ``False``
 
         skip_reboot (bool):
-            Skip updates that require a reboot. Default is False.
+            Skip updates that require a reboot. Default is ``False``
 
         categories (list):
             Specify the categories to list. Must be passed as a list. All
@@ -357,29 +357,29 @@ def list(
     Args:
 
         software (bool):
-            Include software updates in the results (default is True)
+            Include software updates in the results. Default is ``True``
 
         drivers (bool):
-            Include driver updates in the results (default is False)
+            Include driver updates in the results. Default is ``False``
 
         summary (bool):
             - True: Return a summary of updates available for each category.
             - False (default): Return a detailed list of available updates.
 
         skip_installed (bool):
-            Skip installed updates in the results (default is False)
+            Skip installed updates in the results. Default is ``True``
 
         download (bool):
             (Overrides reporting functionality) Download the list of updates
             returned by this function. Run this function first with
             ``download=False`` to see what will be downloaded, then set
-            ``download=True`` to download the updates.
+            ``download=True`` to download the updates. Default is ``False``
 
         install (bool):
             (Overrides reporting functionality) Install the list of updates
             returned by this function. Run this function first with
             ``install=False`` to see what will be installed, then set
-            ``install=True`` to install the updates.
+            ``install=True`` to install the updates. Default is ``False``
 
         categories (list):
             Specify the categories to list. Must be passed as a list. All
