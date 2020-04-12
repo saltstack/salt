@@ -22,7 +22,7 @@ import salt.syspaths
 # Import salt libs
 import salt.utils.yaml
 from salt._compat import ElementTree as ET
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # Import third party libs
 from salt.ext import six
@@ -1277,7 +1277,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         root_dir = os.path.join(salt.syspaths.ROOT_DIR, "srv", "salt-images")
         xml = """
             <domain type='kvm' id='7'>
-              <name>my vm</name>
+              <name>my_vm</name>
               <memory unit='KiB'>1048576</memory>
               <currentMemory unit='KiB'>1048576</currentMemory>
               <vcpu placement='auto'>1</vcpu>
@@ -1287,7 +1287,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
               <devices>
                 <disk type='file' device='disk'>
                   <driver name='qemu' type='qcow2'/>
-                  <source file='{0}{1}my vm_system.qcow2'/>
+                  <source file='{0}{1}my_vm_system.qcow2'/>
                   <backingStore/>
                   <target dev='vda' bus='virtio'/>
                   <alias name='virtio-disk0'/>
@@ -1295,7 +1295,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 </disk>
                 <disk type='file' device='disk'>
                   <driver name='qemu' type='qcow2'/>
-                  <source file='{0}{1}my vm_data.qcow2'/>
+                  <source file='{0}{1}my_vm_data.qcow2'/>
                   <backingStore/>
                   <target dev='vdb' bus='virtio'/>
                   <alias name='virtio-disk1'/>
@@ -1330,7 +1330,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         """.format(
             root_dir, os.sep
         )
-        domain_mock = self.set_mock_vm("my vm", xml)
+        domain_mock = self.set_mock_vm("my_vm", xml)
         domain_mock.OSType = MagicMock(return_value="hvm")
         define_mock = MagicMock(return_value=True)
         self.mock_conn.defineXML = define_mock
@@ -1345,7 +1345,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 "disk": {"attached": [], "detached": []},
                 "interface": {"attached": [], "detached": []},
             },
-            virt.update("my vm", cpu=2),
+            virt.update("my_vm", cpu=2),
         )
         setxml = ET.fromstring(define_mock.call_args[0][0])
         self.assertEqual(setxml.find("vcpu").text, "2")
@@ -1357,6 +1357,16 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             "cmdline": "console=ttyS0 ks=http://example.com/f8-i386/os/",
         }
 
+        boot_uefi = {
+            "loader": "/usr/share/OVMF/OVMF_CODE.fd",
+            "nvram": "/usr/share/OVMF/OVMF_VARS.ms.fd",
+        }
+
+        invalid_boot = {
+            "loader": "/usr/share/OVMF/OVMF_CODE.fd",
+            "initrd": "/root/f8-i386-initrd",
+        }
+
         # Update with boot parameter case
         self.assertEqual(
             {
@@ -1364,7 +1374,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 "disk": {"attached": [], "detached": []},
                 "interface": {"attached": [], "detached": []},
             },
-            virt.update("my vm", boot=boot),
+            virt.update("my_vm", boot=boot),
         )
         setxml = ET.fromstring(define_mock.call_args[0][0])
         self.assertEqual(setxml.find("os").find("kernel").text, "/root/f8-i386-vmlinuz")
@@ -1373,6 +1383,35 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             setxml.find("os").find("cmdline").text,
             "console=ttyS0 ks=http://example.com/f8-i386/os/",
         )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("os").find("kernel").text, "/root/f8-i386-vmlinuz")
+        self.assertEqual(setxml.find("os").find("initrd").text, "/root/f8-i386-initrd")
+        self.assertEqual(
+            setxml.find("os").find("cmdline").text,
+            "console=ttyS0 ks=http://example.com/f8-i386/os/",
+        )
+
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("my_vm", boot=boot_uefi),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(
+            setxml.find("os").find("loader").text, "/usr/share/OVMF/OVMF_CODE.fd"
+        )
+        self.assertEqual(setxml.find("os").find("loader").attrib.get("readonly"), "yes")
+        self.assertEqual(setxml.find("os").find("loader").attrib["type"], "pflash")
+        self.assertEqual(
+            setxml.find("os").find("nvram").attrib["template"],
+            "/usr/share/OVMF/OVMF_VARS.ms.fd",
+        )
+
+        with self.assertRaises(SaltInvocationError):
+            virt.update("my_vm", boot=invalid_boot)
 
         # Update memory case
         setmem_mock = MagicMock(return_value=0)
@@ -1385,7 +1424,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 "disk": {"attached": [], "detached": []},
                 "interface": {"attached": [], "detached": []},
             },
-            virt.update("my vm", mem=2048),
+            virt.update("my_vm", mem=2048),
         )
         setxml = ET.fromstring(define_mock.call_args[0][0])
         self.assertEqual(setxml.find("memory").text, "2048")
@@ -1406,7 +1445,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 virt.__salt__, {"cmd.run": mock_run}
             ):  # pylint: disable=no-member
                 ret = virt.update(
-                    "my vm",
+                    "my_vm",
                     disk_profile="default",
                     disks=[
                         {
@@ -1419,7 +1458,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                     ],
                 )
                 added_disk_path = os.path.join(
-                    virt.__salt__["config.get"]("virt:images"), "my vm_added.qcow2"
+                    virt.__salt__["config.get"]("virt:images"), "my_vm_added.qcow2"
                 )  # pylint: disable=no-member
                 self.assertEqual(
                     mock_run.call_args[0][0],
@@ -1427,7 +1466,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertEqual(mock_chmod.call_args[0][0], added_disk_path)
                 self.assertListEqual(
-                    [None, os.path.join(root_dir, "my vm_added.qcow2")],
+                    [None, os.path.join(root_dir, "my_vm_added.qcow2")],
                     [
                         ET.fromstring(disk).find("source").get("file")
                         if str(disk).find("<source") > -1
@@ -1437,7 +1476,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 )
 
                 self.assertListEqual(
-                    [os.path.join(root_dir, "my vm_data.qcow2")],
+                    [os.path.join(root_dir, "my_vm_data.qcow2")],
                     [
                         ET.fromstring(disk).find("source").get("file")
                         for disk in ret["disk"]["detached"]
@@ -1461,7 +1500,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             salt.modules.config.__opts__, mock_config
         ):  # pylint: disable=no-member
             ret = virt.update(
-                "my vm",
+                "my_vm",
                 nic_profile="myprofile",
                 interfaces=[
                     {
@@ -1493,7 +1532,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         # Remove nics case
         devattach_mock.reset_mock()
         devdetach_mock.reset_mock()
-        ret = virt.update("my vm", nic_profile=None, interfaces=[])
+        ret = virt.update("my_vm", nic_profile=None, interfaces=[])
         self.assertEqual([], ret["interface"]["attached"])
         self.assertEqual(2, len(ret["interface"]["detached"]))
         devattach_mock.assert_not_called()
@@ -1502,7 +1541,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         # Remove disks case (yeah, it surely is silly)
         devattach_mock.reset_mock()
         devdetach_mock.reset_mock()
-        ret = virt.update("my vm", disk_profile=None, disks=[])
+        ret = virt.update("my_vm", disk_profile=None, disks=[])
         self.assertEqual([], ret["disk"]["attached"])
         self.assertEqual(2, len(ret["disk"]["detached"]))
         devattach_mock.assert_not_called()
@@ -1515,7 +1554,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 "disk": {"attached": [], "detached": []},
                 "interface": {"attached": [], "detached": []},
             },
-            virt.update("my vm", graphics={"type": "vnc"}),
+            virt.update("my_vm", graphics={"type": "vnc"}),
         )
         setxml = ET.fromstring(define_mock.call_args[0][0])
         self.assertEqual("vnc", setxml.find("devices/graphics").get("type"))
@@ -1528,7 +1567,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 "interface": {"attached": [], "detached": []},
             },
             virt.update(
-                "my vm",
+                "my_vm",
                 cpu=1,
                 mem=1024,
                 disk_profile="default",
@@ -1561,7 +1600,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         )
         setmem_mock.reset_mock()
         with self.assertRaises(self.mock_libvirt.libvirtError):
-            virt.update("my vm", mem=2048)
+            virt.update("my_vm", mem=2048)
 
         # Failed single update failure case
         self.mock_conn.defineXML = MagicMock(return_value=True)
@@ -1575,7 +1614,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 "disk": {"attached": [], "detached": []},
                 "interface": {"attached": [], "detached": []},
             },
-            virt.update("my vm", mem=2048),
+            virt.update("my_vm", mem=2048),
         )
 
         # Failed multiple updates failure case
@@ -1587,7 +1626,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 "disk": {"attached": [], "detached": []},
                 "interface": {"attached": [], "detached": []},
             },
-            virt.update("my vm", cpu=4, mem=2048),
+            virt.update("my_vm", cpu=4, mem=2048),
         )
 
     def test_update_existing_boot_params(self):
@@ -1597,7 +1636,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         root_dir = os.path.join(salt.syspaths.ROOT_DIR, "srv", "salt-images")
         xml_boot = """
             <domain type='kvm' id='8'>
-              <name>vm_boot</name>
+              <name>vm_with_boot_param</name>
               <memory unit='KiB'>1048576</memory>
               <currentMemory unit='KiB'>1048576</currentMemory>
               <vcpu placement='auto'>1</vcpu>
@@ -1605,12 +1644,14 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 <type arch='x86_64' machine='pc-i440fx-2.6'>hvm</type>
                 <kernel>/boot/oldkernel</kernel>
                 <initrd>/boot/initrdold.img</initrd>
-                <cmdline>console=ttyS0 ks=http://example.com/new/os/</cmdline>
+                <cmdline>console=ttyS0 ks=http://example.com/old/os/</cmdline>
+                <loader>/usr/share/old/OVMF_CODE.fd</loader>
+                <nvram>/usr/share/old/OVMF_VARS.ms.fd</nvram>
               </os>
               <devices>
                 <disk type='file' device='disk'>
                   <driver name='qemu' type='qcow2'/>
-                  <source file='{0}{1}my vm_system.qcow2'/>
+                  <source file='{0}{1}vm_with_boot_param_system.qcow2'/>
                   <backingStore/>
                   <target dev='vda' bus='virtio'/>
                   <alias name='virtio-disk0'/>
@@ -1618,7 +1659,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 </disk>
                 <disk type='file' device='disk'>
                   <driver name='qemu' type='qcow2'/>
-                  <source file='{0}{1}my vm_data.qcow2'/>
+                  <source file='{0}{1}vm_with_boot_param_data.qcow2'/>
                   <backingStore/>
                   <target dev='vdb' bus='virtio'/>
                   <alias name='virtio-disk1'/>
@@ -1653,7 +1694,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         """.format(
             root_dir, os.sep
         )
-        domain_mock_boot = self.set_mock_vm("vm_boot", xml_boot)
+        domain_mock_boot = self.set_mock_vm("vm_with_boot_param", xml_boot)
         domain_mock_boot.OSType = MagicMock(return_value="hvm")
         define_mock_boot = MagicMock(return_value=True)
         self.mock_conn.defineXML = define_mock_boot
@@ -1663,13 +1704,18 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             "cmdline": "console=ttyS0 ks=http://example.com/new/os/",
         }
 
+        uefi_boot_new = {
+            "loader": "/usr/share/new/OVMF_CODE.fd",
+            "nvram": "/usr/share/new/OVMF_VARS.ms.fd",
+        }
+
         self.assertEqual(
             {
                 "definition": True,
                 "disk": {"attached": [], "detached": []},
                 "interface": {"attached": [], "detached": []},
             },
-            virt.update("vm_boot", boot=boot_new),
+            virt.update("vm_with_boot_param", boot=boot_new),
         )
         setxml_boot = ET.fromstring(define_mock_boot.call_args[0][0])
         self.assertEqual(
@@ -1680,6 +1726,61 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             setxml_boot.find("os").find("cmdline").text,
             "console=ttyS0 ks=http://example.com/new/os/",
         )
+
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_boot_param", boot=uefi_boot_new),
+        )
+
+        setxml = ET.fromstring(define_mock_boot.call_args[0][0])
+        self.assertEqual(
+            setxml.find("os").find("loader").text, "/usr/share/new/OVMF_CODE.fd"
+        )
+        self.assertEqual(setxml.find("os").find("loader").attrib.get("readonly"), "yes")
+        self.assertEqual(setxml.find("os").find("loader").attrib["type"], "pflash")
+        self.assertEqual(
+            setxml.find("os").find("nvram").attrib["template"],
+            "/usr/share/new/OVMF_VARS.ms.fd",
+        )
+
+        kernel_none = {
+            "kernel": None,
+            "initrd": None,
+            "cmdline": None,
+        }
+
+        uefi_none = {"loader": None, "nvram": None}
+
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_boot_param", boot=kernel_none),
+        )
+
+        setxml = ET.fromstring(define_mock_boot.call_args[0][0])
+        self.assertEqual(setxml.find("os").find("kernel"), None)
+        self.assertEqual(setxml.find("os").find("initrd"), None)
+        self.assertEqual(setxml.find("os").find("cmdline"), None)
+
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_boot_param", boot=uefi_none),
+        )
+
+        setxml = ET.fromstring(define_mock_boot.call_args[0][0])
+        self.assertEqual(setxml.find("os").find("loader"), None)
+        self.assertEqual(setxml.find("os").find("nvram"), None)
 
     def test_mixed_dict_and_list_as_profile_objects(self):
         """
