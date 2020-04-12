@@ -57,6 +57,18 @@ Or delete all existing names for an address:
         host.only:
           - hostnames: []
 
+You can also include comments:
+
+.. code-block:: yaml
+
+    server1:
+      host.present:
+        - ip: 192.168.0.42
+        - names:
+          - server1
+          - florida
+        - comment: A very important comment
+
 """
 
 # Import Python libs
@@ -85,6 +97,8 @@ def present(name, ip, comment="", clean=False):  # pylint: disable=C0103
 
     comment
         A comment to include for the host entry
+
+        .. versionadded:: Sodium
 
     clean
         Remove any entries which don't match those configured in the ``ip``
