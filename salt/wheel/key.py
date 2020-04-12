@@ -195,7 +195,7 @@ def delete_dict(match):
                 'stuart',
                 'bob',
             ],
-        })
+        }})
         {'jid': '20160826201244808521', 'tag': 'salt/wheel/20160826201244808521'}
     """
     skey = get_key(__opts__)
@@ -256,7 +256,7 @@ def reject_dict(match, include_accepted=False, include_denied=False):
                 'stuart',
                 'bob',
             ],
-        })
+        }})
         {'jid': '20160826201244808521', 'tag': 'salt/wheel/20160826201244808521'}
     """
     skey = get_key(__opts__)
