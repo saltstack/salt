@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Trigger an event in IFTTT
 =========================
 
@@ -22,26 +22,21 @@ The api key can be specified in the master or minion configuration like below:
     ifttt:
       secret_key: bzMRb-KKIAaNOwKEEw792J7Eb-B3z7muhdhYblJn4V6
 
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():
-    '''
+    """
     Only load if the ifttt module is available in __salt__
-    '''
-    return 'ifttt' if 'ifttt.trigger_event' in __salt__ else False
+    """
+    return "ifttt" if "ifttt.trigger_event" in __salt__ else False
 
 
-def trigger_event(name,
-                  event,
-                  value1=None,
-                  value2=None,
-                  value3=None
-                  ):
-    '''
+def trigger_event(name, event, value1=None, value2=None, value3=None):
+    """
     Trigger an event in IFTTT
 
     .. code-block:: yaml
@@ -71,28 +66,24 @@ def trigger_event(name,
 
     value3
         One of the values that we can send to IFTT.
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': False,
-           'comment': ''}
+    """
+    ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
-    if __opts__['test']:
-        ret['comment'] = 'The following trigger would be sent to IFTTT: {0}'.format(event)
-        ret['result'] = None
+    if __opts__["test"]:
+        ret["comment"] = "The following trigger would be sent to IFTTT: {0}".format(
+            event
+        )
+        ret["result"] = None
         return ret
 
-    ret['result'] = __salt__['ifttt.trigger_event'](
-        event=event,
-        value1=value1,
-        value2=value2,
-        value3=value3
+    ret["result"] = __salt__["ifttt.trigger_event"](
+        event=event, value1=value1, value2=value2, value3=value3
     )
 
-    if ret and ret['result']:
-        ret['result'] = True
-        ret['comment'] = 'Triggered Event: {0}'.format(name)
+    if ret and ret["result"]:
+        ret["result"] = True
+        ret["comment"] = "Triggered Event: {0}".format(name)
     else:
-        ret['comment'] = 'Failed to trigger event: {0}'.format(name)
+        ret["comment"] = "Failed to trigger event: {0}".format(name)
 
     return ret
