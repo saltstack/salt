@@ -58,9 +58,22 @@ def get_pillar(
     """
     Return the correct pillar driver based on the file_client option
     """
+    # When file_client is 'local' this makes the minion masterless
+    # but sometimes we want the minion to read its files from the local
+    # filesystem instead of asking for them from the master, but still
+    # get commands from the master.
+    # To enable this functionality set file_client=local and
+    # use_master_when_local=True in the minion config.  Then here we override
+    # the file client to be 'remote' for getting pillar.  If we don't do this
+    # then the minion never sends the event that the master uses to update
+    # its minion_data_cache.  If the master doesn't update the minion_data_cache
+    # then the SSE salt-master plugin won't see any grains for those minions.
     file_client = opts["file_client"]
     if opts.get("master_type") == "disable" and file_client == "remote":
         file_client = "local"
+    elif file_client == "local" and opts.get("use_master_when_local"):
+        file_client = "remote"
+
     ptype = {"remote": RemotePillar, "local": Pillar}.get(file_client, Pillar)
     # If local pillar and we're caching, run through the cache system first
     log.debug("Determining pillar cache")
@@ -489,7 +502,9 @@ class Pillar(object):
         self.client = salt.fileclient.get_file_client(self.opts, True)
         self.avail = self.__gather_avail()
 
-        if opts.get("file_client", "") == "local":
+        if opts.get("file_client", "") == "local" and not opts.get(
+            "use_master_when_local", False
+        ):
             opts["grains"] = grains
 
         # if we didn't pass in functions, lets load them
@@ -1191,7 +1206,6 @@ class Pillar(object):
         decrypt_errors = self.decrypt_pillar(pillar)
         if decrypt_errors:
             pillar.setdefault("_errors", []).extend(decrypt_errors)
-
         return pillar
 
     def decrypt_pillar(self, pillar):
