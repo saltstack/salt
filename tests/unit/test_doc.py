@@ -384,6 +384,7 @@ class DocTestCase(TestCase):
             "user",
             "service",
             "shadow",
+            "sysctl",
         ]
         doc_dir = ["doc", "ref", "modules", "all"]
         self._check_doc_files(skip_module_files, module_dir, skip_doc_files, doc_dir)
