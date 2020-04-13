@@ -519,13 +519,19 @@ def check_password(name, password, runas=None):
             runas=runas,
             python_shell=False,
         )
-        server_version = re.search(r'\{rabbit,"RabbitMQ","(.+)"\}', res)
+        # Check regex against older RabbitMQ version status output
+        old_server_version = re.search(r'\{rabbit,"RabbitMQ","(.+)"\}', res)
+        # Check regex against newer RabbitMQ version status output
+        server_version = re.search(r"RabbitMQ version:\s*(.+)", res)
 
-        if server_version is None:
+        if server_version is None and old_server_version is None:
             raise ValueError
 
+        if old_server_version:
+            server_version = old_server_version
         server_version = server_version.group(1).split("-")[0]
         version = [int(i) for i in server_version.split(".")]
+
     except ValueError:
         version = (0, 0, 0)
     if len(version) < 3:
