@@ -2028,13 +2028,13 @@ def update(
     # We need to search for each possible subelement, and update it.
     for tag in boot_tags:
         # The Existing Tag...
-        found_tag = desc.find(tag)
+        found_tag = parent_tag.find(tag)
 
         # The new value
         boot_tag_value = boot.get(tag, None) if boot else None
 
         # Existing tag is found and values don't match
-        if found_tag and found_tag.text != boot_tag_value:
+        if found_tag is not None and found_tag.text != boot_tag_value:
 
             # If the existing tag is found, but the new value is None
             # remove it. If the existing tag is found, and the new value
