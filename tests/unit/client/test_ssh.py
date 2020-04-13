@@ -7,6 +7,7 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
+import re
 import shutil
 import tempfile
 
@@ -392,3 +393,42 @@ class SSHSingleTests(TestCase):
                 call("/bin/sh '{0}'".format(exp_tmp)),
                 call("rm '{0}'".format(exp_tmp)),
             ] == mock_cmd.call_args_list
+
+    def test_cmd_run_set_path(self):
+        """
+        test when set_path is set
+        """
+        target = self.target
+        target["set_path"] = "$PATH:/tmp/path/"
+        single = ssh.Single(
+            self.opts,
+            self.opts["argv"],
+            "localhost",
+            mods={},
+            fsclient=None,
+            thin=salt.utils.thin.thin_path(self.opts["cachedir"]),
+            mine=False,
+            **self.target
+        )
+
+        ret = single._cmd_str()
+        assert re.search("\\" + target["set_path"], ret)
+
+    def test_cmd_run_not_set_path(self):
+        """
+        test when set_path is not set
+        """
+        target = self.target
+        single = ssh.Single(
+            self.opts,
+            self.opts["argv"],
+            "localhost",
+            mods={},
+            fsclient=None,
+            thin=salt.utils.thin.thin_path(self.opts["cachedir"]),
+            mine=False,
+            **self.target
+        )
+
+        ret = single._cmd_str()
+        assert re.search('SET_PATH=""', ret)

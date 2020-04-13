@@ -755,8 +755,10 @@ class TestDaemon(object):
         ) as roster:
             roster.write("  user: {0}\n".format(RUNTIME_VARS.RUNNING_TESTS_USER))
             roster.write(
-                "  priv: {0}/{1}".format(RUNTIME_VARS.TMP_CONF_DIR, "key_test")
+                "  priv: {0}/{1}\n".format(RUNTIME_VARS.TMP_CONF_DIR, "key_test")
             )
+            if salt.utils.platform.is_darwin():
+                roster.write("  set_path: $PATH:/usr/local/bin/\n")
         sys.stdout.write(" {LIGHT_GREEN}STARTED!\n{ENDC}".format(**self.colors))
 
     @classmethod
