@@ -1162,7 +1162,7 @@ class TransportMethods(object):
             try:
                 return getattr(self, name)
             except AttributeError:
-                log.error("Expose method not found: %s", name)
+                log.error("Requested method not exposed: %s", name)
         else:
             log.error("Requested method not exposed: %s", name)
 
