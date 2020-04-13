@@ -144,7 +144,12 @@ def _yum():
     """
     contextkey = "yum_bin"
     if contextkey not in __context__:
-        if "fedora" in __grains__["os"].lower() and int(__grains__["osrelease"]) >= 22:
+        if (
+            "fedora" in __grains__["os"].lower() and int(__grains__["osrelease"]) >= 22
+        ) or (
+            __grains__["os"].lower() in ("redhat", "centos")
+            and int(__grains__["osmajorrelease"]) >= 8
+        ):
             __context__[contextkey] = "dnf"
         else:
             __context__[contextkey] = "yum"
@@ -215,7 +220,13 @@ def _check_versionlock():
     Ensure that the appropriate versionlock plugin is present
     """
     if _yum() == "dnf":
-        if int(__grains__.get("osmajorrelease")) >= 26:
+        if (
+            "fedora" in __grains__["os"].lower()
+            and int(__grains__.get("osrelease")) >= 26
+        ) or (
+            __grains__.get("os").lower() in ("redhat", "centos")
+            and int(__grains__.get("osmajorrelease")) >= 8
+        ):
             if six.PY3:
                 vl_plugin = "python3-dnf-plugin-versionlock"
             else:
