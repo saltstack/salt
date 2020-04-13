@@ -334,7 +334,7 @@ def present(
         databases.
 
         .. note::
-            Not supported on Windows or Mac OS.
+            Not supported on Windows.
 
     password
         A password hash to set for the user. This field is only supported on
@@ -497,8 +497,8 @@ def present(
     if other is not None:
         other = salt.utils.data.decode(other)
 
-    # createhome not supported on Windows or Mac
-    if __grains__["kernel"] in ("Darwin", "Windows"):
+    # createhome not supported on Windows
+    if __grains__["kernel"] == "Windows":
         createhome = False
 
     ret = {
