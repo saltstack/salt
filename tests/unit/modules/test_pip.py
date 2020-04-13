@@ -27,7 +27,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
         if salt.utils.platform.is_windows():
             self.assertEqual(ret, "C:/Users/ch44d/Documents/salt/tests")
         else:
-            self.assertEqual(ret, None)
+            self.assertIsNone(ret)
 
     def test__pip_bin_env_no_change(self):
         cwd = "C:/Users/ch44d/Desktop"
@@ -36,7 +36,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
 
     def test__pip_bin_env_no_bin_env(self):
         ret = pip._pip_bin_env(None, None)
-        self.assertEqual(None, None)
+        self.assertIsNone(ret)
 
     def test_fix4361(self):
         mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
