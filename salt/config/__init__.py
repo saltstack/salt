@@ -786,6 +786,7 @@ VALID_OPTS = immutabletypes.freeze(
         "ssh_log_file": six.string_types,
         "ssh_config_file": six.string_types,
         "ssh_merge_pillar": bool,
+        "ssh_run_pre_flight": bool,
         "cluster_mode": bool,
         "sqlite_queue_dir": six.string_types,
         "queue_dirs": list,
