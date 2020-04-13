@@ -763,7 +763,7 @@ def junos_rpc(cmd=None, dest=None, format=None, **kwargs):
     .. code-block:: bash
 
         salt '*' napalm.junos_rpc get-lldp-neighbors-information
-        salt '*' napalm.junos_rcp get-config <configuration><system><ntp/></system></configuration>
+        salt '*' napalm.junos_rpc get-config <configuration><system><ntp/></system></configuration>
     """
     prep = _junos_prep_fun(napalm_device)  # pylint: disable=undefined-variable
     if not prep["result"]:

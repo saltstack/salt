@@ -1173,6 +1173,65 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
             with pytest.raises(CommandExecutionError):
                 yumpkg._get_yum_config()
 
+    def test_group_install(self):
+        """
+        Test group_install uses the correct keys from group_info and installs
+        default and mandatory packages.
+        """
+        groupinfo_output = """
+        Group: Printing Client
+         Group-Id: print-client
+         Description: Tools for printing to a local printer or a remote print server.
+         Mandatory Packages:
+           +cups
+           +cups-pk-helper
+           +enscript
+           +ghostscript-cups
+         Default Packages:
+           +colord
+           +gutenprint
+           +gutenprint-cups
+           +hpijs
+           +paps
+           +pnm2ppa
+           +python-smbc
+           +system-config-printer
+           +system-config-printer-udev
+         Optional Packages:
+           hplip
+           hplip-gui
+           samba-krb5-printing
+        """
+        install = MagicMock()
+        with patch.dict(
+            yumpkg.__salt__,
+            {"cmd.run_stdout": MagicMock(return_value=groupinfo_output)},
+        ):
+            with patch.dict(yumpkg.__salt__, {"cmd.run": MagicMock(return_value="")}):
+                with patch.dict(
+                    yumpkg.__salt__,
+                    {"pkg_resource.format_pkg_list": MagicMock(return_value={})},
+                ):
+                    with patch.object(yumpkg, "install", install):
+                        yumpkg.group_install("Printing Client")
+                        install.assert_called_once_with(
+                            pkgs=[
+                                "cups",
+                                "cups-pk-helper",
+                                "enscript",
+                                "ghostscript-cups",
+                                "colord",
+                                "gutenprint",
+                                "gutenprint-cups",
+                                "hpijs",
+                                "paps",
+                                "pnm2ppa",
+                                "python-smbc",
+                                "system-config-printer",
+                                "system-config-printer-udev",
+                            ]
+                        )
+
 
 @skipIf(pytest is None, "PyTest is missing")
 class YumUtilsTestCase(TestCase, LoaderModuleMockMixin):

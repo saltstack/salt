@@ -21,3 +21,11 @@
 	compress
 	notifempty
 }
+
+/var/log/salt/api {
+	weekly
+	missingok
+	rotate 7
+	compress
+	notifempty
+}
