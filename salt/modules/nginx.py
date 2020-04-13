@@ -1,17 +1,18 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Support for nginx
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import 3rd-party libs
-from salt.ext.six.moves.urllib.request import urlopen as _urlopen  # pylint: disable=no-name-in-module,import-error
+import re
+
+import salt.utils.decorators as decorators
 
 # Import salt libs
 import salt.utils.path
-import salt.utils.decorators as decorators
 
-import re
+# Import 3rd-party libs
+from salt.ext.six.moves.urllib.request import urlopen as _urlopen
 
 
 # Cache the output of running which('nginx') so this module
@@ -19,20 +20,23 @@ import re
 # for nginx over and over and over for each function herein
 @decorators.memoize
 def __detect_os():
-    return salt.utils.path.which('nginx')
+    return salt.utils.path.which("nginx")
 
 
 def __virtual__():
-    '''
+    """
     Only load the module if nginx is installed
-    '''
+    """
     if __detect_os():
         return True
-    return (False, 'The nginx execution module cannot be loaded: nginx is not installed.')
+    return (
+        False,
+        "The nginx execution module cannot be loaded: nginx is not installed.",
+    )
 
 
 def version():
-    '''
+    """
     Return server version from nginx -v
 
     CLI Example:
@@ -40,15 +44,15 @@ def version():
     .. code-block:: bash
 
         salt '*' nginx.version
-    '''
-    cmd = '{0} -v'.format(__detect_os())
-    out = __salt__['cmd.run'](cmd).splitlines()
-    ret = out[0].split(': ')
+    """
+    cmd = "{0} -v".format(__detect_os())
+    out = __salt__["cmd.run"](cmd).splitlines()
+    ret = out[0].split(": ")
     return ret[-1]
 
 
 def build_info():
-    '''
+    """
     Return server and build arguments
 
     CLI Example:
@@ -56,22 +60,22 @@ def build_info():
     .. code-block:: bash
 
         salt '*' nginx.build_info
-    '''
-    ret = {'info': []}
-    out = __salt__['cmd.run']('{0} -V'.format(__detect_os()))
+    """
+    ret = {"info": []}
+    out = __salt__["cmd.run"]("{0} -V".format(__detect_os()))
 
     for i in out.splitlines():
-        if i.startswith('configure argument'):
-            ret['build arguments'] = re.findall(r"(?:[^\s]*'.*')|(?:[^\s]+)", i)[2:]
+        if i.startswith("configure argument"):
+            ret["build arguments"] = re.findall(r"(?:[^\s]*'.*')|(?:[^\s]+)", i)[2:]
             continue
 
-        ret['info'].append(i)
+        ret["info"].append(i)
 
     return ret
 
 
 def configtest():
-    '''
+    """
     test configuration and exit
 
     CLI Example:
@@ -79,28 +83,28 @@ def configtest():
     .. code-block:: bash
 
         salt '*' nginx.configtest
-    '''
+    """
     ret = {}
 
-    cmd = '{0} -t'.format(__detect_os())
-    out = __salt__['cmd.run_all'](cmd)
+    cmd = "{0} -t".format(__detect_os())
+    out = __salt__["cmd.run_all"](cmd)
 
-    if out['retcode'] != 0:
-        ret['comment'] = 'Syntax Error'
-        ret['stderr'] = out['stderr']
-        ret['result'] = False
+    if out["retcode"] != 0:
+        ret["comment"] = "Syntax Error"
+        ret["stderr"] = out["stderr"]
+        ret["result"] = False
 
         return ret
 
-    ret['comment'] = 'Syntax OK'
-    ret['stdout'] = out['stderr']
-    ret['result'] = True
+    ret["comment"] = "Syntax OK"
+    ret["stdout"] = out["stderr"]
+    ret["result"] = True
 
     return ret
 
 
 def signal(signal=None):
-    '''
+    """
     Signals nginx to start, reload, reopen or stop.
 
     CLI Example:
@@ -108,28 +112,28 @@ def signal(signal=None):
     .. code-block:: bash
 
         salt '*' nginx.signal reload
-    '''
-    valid_signals = ('start', 'reopen', 'stop', 'quit', 'reload')
+    """
+    valid_signals = ("start", "reopen", "stop", "quit", "reload")
 
     if signal not in valid_signals:
         return
 
     # Make sure you use the right arguments
     if signal == "start":
-        arguments = ''
+        arguments = ""
     else:
-        arguments = ' -s {0}'.format(signal)
+        arguments = " -s {0}".format(signal)
     cmd = __detect_os() + arguments
-    out = __salt__['cmd.run_all'](cmd)
+    out = __salt__["cmd.run_all"](cmd)
 
     # A non-zero return code means fail
-    if out['retcode'] and out['stderr']:
-        ret = out['stderr'].strip()
+    if out["retcode"] and out["stderr"]:
+        ret = out["stderr"].strip()
     # 'nginxctl configtest' returns 'Syntax OK' to stderr
-    elif out['stderr']:
-        ret = out['stderr'].strip()
-    elif out['stdout']:
-        ret = out['stdout'].strip()
+    elif out["stderr"]:
+        ret = out["stderr"].strip()
+    elif out["stdout"]:
+        ret = out["stdout"].strip()
     # No output for something like: nginxctl graceful
     else:
         ret = 'Command: "{0}" completed successfully!'.format(cmd)
@@ -165,11 +169,11 @@ def status(url="http://127.0.0.1/status"):
     # "Reading: 0 Writing: 1 Waiting: 0 "
     _, reading, _, writing, _, waiting = lines[3].split()
     return {
-        'active connections': int(active_connections),
-        'accepted': int(accepted),
-        'handled': int(handled),
-        'requests': int(requests),
-        'reading': int(reading),
-        'writing': int(writing),
-        'waiting': int(waiting),
+        "active connections": int(active_connections),
+        "accepted": int(accepted),
+        "handled": int(handled),
+        "requests": int(requests),
+        "reading": int(reading),
+        "writing": int(writing),
+        "waiting": int(waiting),
     }

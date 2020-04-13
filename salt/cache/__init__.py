@@ -1,33 +1,34 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Loader mechanism for caching data, with data expiration, etc.
 
 .. versionadded:: 2016.11.0
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 import time
 
 # Import Salt libs
 import salt.config
+import salt.loader
+import salt.syspaths
 from salt.ext import six
 from salt.payload import Serial
 from salt.utils.odict import OrderedDict
-import salt.loader
-import salt.syspaths
 
 log = logging.getLogger(__name__)
 
 
 def factory(opts, **kwargs):
-    '''
+    """
     Creates and returns the cache class.
     If memory caching is enabled by opts MemCache class will be instantiated.
     If not Cache class will be returned.
-    '''
-    if opts.get('memcache_expire_seconds', 0):
+    """
+    if opts.get("memcache_expire_seconds", 0):
         cls = MemCache
     else:
         cls = Cache
@@ -35,7 +36,7 @@ def factory(opts, **kwargs):
 
 
 class Cache(object):
-    '''
+    """
     Base caching object providing access to the modular cache subsystem.
 
     Related configuration options:
@@ -66,22 +67,23 @@ class Cache(object):
 
     Key name is a string identifier of a data container (like a file inside a
     directory) which will hold the data.
-    '''
+    """
+
     def __init__(self, opts, cachedir=None, **kwargs):
         self.opts = opts
         if cachedir is None:
-            self.cachedir = opts.get('cachedir', salt.syspaths.CACHE_DIR)
+            self.cachedir = opts.get("cachedir", salt.syspaths.CACHE_DIR)
         else:
             self.cachedir = cachedir
-        self.driver = opts.get('cache', salt.config.DEFAULT_MASTER_OPTS['cache'])
+        self.driver = opts.get("cache", salt.config.DEFAULT_MASTER_OPTS["cache"])
         self.serial = Serial(opts)
         self._modules = None
         self._kwargs = kwargs
-        self._kwargs['cachedir'] = self.cachedir
+        self._kwargs["cachedir"] = self.cachedir
 
     def __lazy_init(self):
         self._modules = salt.loader.cache(self.opts, self.serial)
-        fun = '{0}.init_kwargs'.format(self.driver)
+        fun = "{0}.init_kwargs".format(self.driver)
         if fun in self.modules:
             self._kwargs = self.modules[fun](self._kwargs)
         else:
@@ -94,7 +96,7 @@ class Cache(object):
         return self._modules
 
     def cache(self, bank, key, fun, loop_fun=None, **kwargs):
-        '''
+        """
         Check cache for the data. If it is there, check to see if it needs to
         be refreshed.
 
@@ -106,8 +108,8 @@ class Cache(object):
         the second function is passed in as ``loop_fun``. Each item in the
         return list from the first function will be the only argument for the
         second function.
-        '''
-        expire_seconds = kwargs.get('expire', 86400)  # 1 day
+        """
+        expire_seconds = kwargs.get("expire", 86400)  # 1 day
 
         updated = self.updated(bank, key)
         update_cache = False
@@ -132,7 +134,7 @@ class Cache(object):
         return data
 
     def store(self, bank, key, data):
-        '''
+        """
         Store data using the specified module
 
         :param bank:
@@ -151,12 +153,12 @@ class Cache(object):
         :raises SaltCacheError:
             Raises an exception if cache driver detected an error accessing data
             in the cache backend (auth, permissions, etc).
-        '''
-        fun = '{0}.store'.format(self.driver)
+        """
+        fun = "{0}.store".format(self.driver)
         return self.modules[fun](bank, key, data, **self._kwargs)
 
     def fetch(self, bank, key):
-        '''
+        """
         Fetch data using the specified module
 
         :param bank:
@@ -175,12 +177,12 @@ class Cache(object):
         :raises SaltCacheError:
             Raises an exception if cache driver detected an error accessing data
             in the cache backend (auth, permissions, etc).
-        '''
-        fun = '{0}.fetch'.format(self.driver)
+        """
+        fun = "{0}.fetch".format(self.driver)
         return self.modules[fun](bank, key, **self._kwargs)
 
     def updated(self, bank, key):
-        '''
+        """
         Get the last updated epoch for the specified key
 
         :param bank:
@@ -199,12 +201,12 @@ class Cache(object):
         :raises SaltCacheError:
             Raises an exception if cache driver detected an error accessing data
             in the cache backend (auth, permissions, etc).
-        '''
-        fun = '{0}.updated'.format(self.driver)
+        """
+        fun = "{0}.updated".format(self.driver)
         return self.modules[fun](bank, key, **self._kwargs)
 
     def flush(self, bank, key=None):
-        '''
+        """
         Remove the key from the cache bank with all the key content. If no key is specified remove
         the entire bank with all keys and sub-banks inside.
 
@@ -220,12 +222,12 @@ class Cache(object):
         :raises SaltCacheError:
             Raises an exception if cache driver detected an error accessing data
             in the cache backend (auth, permissions, etc).
-        '''
-        fun = '{0}.flush'.format(self.driver)
+        """
+        fun = "{0}.flush".format(self.driver)
         return self.modules[fun](bank, key=key, **self._kwargs)
 
     def list(self, bank):
-        '''
+        """
         Lists entries stored in the specified bank.
 
         :param bank:
@@ -239,12 +241,12 @@ class Cache(object):
         :raises SaltCacheError:
             Raises an exception if cache driver detected an error accessing data
             in the cache backend (auth, permissions, etc).
-        '''
-        fun = '{0}.list'.format(self.driver)
+        """
+        fun = "{0}.list".format(self.driver)
         return self.modules[fun](bank, **self._kwargs)
 
     def contains(self, bank, key=None):
-        '''
+        """
         Checks if the specified bank contains the specified key.
 
         :param bank:
@@ -264,25 +266,26 @@ class Cache(object):
         :raises SaltCacheError:
             Raises an exception if cache driver detected an error accessing data
             in the cache backend (auth, permissions, etc).
-        '''
-        fun = '{0}.contains'.format(self.driver)
+        """
+        fun = "{0}.contains".format(self.driver)
         return self.modules[fun](bank, key, **self._kwargs)
 
 
 class MemCache(Cache):
-    '''
+    """
     Short-lived in-memory cache store keeping values on time and/or size (count)
     basis.
-    '''
+    """
+
     # {<storage_id>: odict({<key>: [atime, data], ...}), ...}
     data = {}
 
     def __init__(self, opts, **kwargs):
         super(MemCache, self).__init__(opts, **kwargs)
-        self.expire = opts.get('memcache_expire_seconds', 10)
-        self.max = opts.get('memcache_max_items', 1024)
-        self.cleanup = opts.get('memcache_full_cleanup', False)
-        self.debug = opts.get('memcache_debug', False)
+        self.expire = opts.get("memcache_expire_seconds", 10)
+        self.max = opts.get("memcache_max_items", 1024)
+        self.cleanup = opts.get("memcache_full_cleanup", False)
+        self.debug = opts.get("memcache_debug", False)
         if self.debug:
             self.call = 0
             self.hit = 0
@@ -299,7 +302,7 @@ class MemCache(Cache):
                     break
 
     def _get_storage_id(self):
-        fun = '{0}.storage_id'.format(self.driver)
+        fun = "{0}.storage_id".format(self.driver)
         if fun in self.modules:
             return self.modules[fun](self.kwargs)
         else:
@@ -324,8 +327,10 @@ class MemCache(Cache):
             if self.debug:
                 self.hit += 1
                 log.debug(
-                    'MemCache stats (call/hit/rate): %s/%s/%s',
-                    self.call, self.hit, float(self.hit) / self.call
+                    "MemCache stats (call/hit/rate): %s/%s/%s",
+                    self.call,
+                    self.hit,
+                    float(self.hit) / self.call,
                 )
             # update atime and return
             record[0] = now

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Support for MacPorts under macOS.
 
 This module has some caveats.
@@ -28,10 +28,11 @@ don't upgrade the packaging software when doing a package database update.
 In other words `salt mac-machine pkg.refresh_db` is more like
 `apt-get update; apt-get upgrade dpkg apt-get` than simply `apt-get update`.
 
-'''
+"""
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import copy
 import logging
 import re
@@ -39,10 +40,10 @@ import re
 # Import salt libs
 import salt.utils.data
 import salt.utils.functools
+import salt.utils.mac_utils
 import salt.utils.path
 import salt.utils.pkg
 import salt.utils.platform
-import salt.utils.mac_utils
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError
 
@@ -52,30 +53,30 @@ from salt.ext import six
 log = logging.getLogger(__name__)
 
 LIST_ACTIVE_ONLY = True
-__virtualname__ = 'pkg'
+__virtualname__ = "pkg"
 
 
 def __virtual__():
-    '''
+    """
     Confine this module to Mac OS with MacPorts.
-    '''
+    """
     if not salt.utils.platform.is_darwin():
-        return False, 'mac_ports only available on MacOS'
+        return False, "mac_ports only available on MacOS"
 
-    if not salt.utils.path.which('port'):
+    if not salt.utils.path.which("port"):
         return False, 'mac_ports requires the "port" binary'
 
     return __virtualname__
 
 
-def _list(query=''):
-    cmd = 'port list {0}'.format(query)
+def _list(query=""):
+    cmd = "port list {0}".format(query)
     out = salt.utils.mac_utils.execute_return_result(cmd)
 
     ret = {}
     for line in out.splitlines():
         try:
-            name, version_num, category = re.split(r'\s+', line.lstrip())[0:3]
+            name, version_num, category = re.split(r"\s+", line.lstrip())[0:3]
             version_num = version_num[1:]
         except ValueError:
             continue
@@ -85,7 +86,7 @@ def _list(query=''):
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
-    '''
+    """
     List the packages currently installed in a dict::
 
         {'<package_name>': '<version>'}
@@ -95,42 +96,43 @@ def list_pkgs(versions_as_list=False, **kwargs):
     .. code-block:: bash
 
         salt '*' pkg.list_pkgs
-    '''
+    """
     versions_as_list = salt.utils.data.is_true(versions_as_list)
     # 'removed', 'purge_desired' not yet implemented or not applicable
-    if any([salt.utils.data.is_true(kwargs.get(x))
-            for x in ('removed', 'purge_desired')]):
+    if any(
+        [salt.utils.data.is_true(kwargs.get(x)) for x in ("removed", "purge_desired")]
+    ):
         return {}
 
-    if 'pkg.list_pkgs' in __context__:
+    if "pkg.list_pkgs" in __context__:
         if versions_as_list:
-            return __context__['pkg.list_pkgs']
+            return __context__["pkg.list_pkgs"]
         else:
-            ret = copy.deepcopy(__context__['pkg.list_pkgs'])
-            __salt__['pkg_resource.stringify'](ret)
+            ret = copy.deepcopy(__context__["pkg.list_pkgs"])
+            __salt__["pkg_resource.stringify"](ret)
             return ret
 
     ret = {}
-    cmd = ['port', 'installed']
+    cmd = ["port", "installed"]
     out = salt.utils.mac_utils.execute_return_result(cmd)
     for line in out.splitlines():
         try:
-            name, version_num, active = re.split(r'\s+', line.lstrip())[0:3]
+            name, version_num, active = re.split(r"\s+", line.lstrip())[0:3]
             version_num = version_num[1:]
         except ValueError:
             continue
-        if not LIST_ACTIVE_ONLY or active == '(active)':
-            __salt__['pkg_resource.add_pkg'](ret, name, version_num)
+        if not LIST_ACTIVE_ONLY or active == "(active)":
+            __salt__["pkg_resource.add_pkg"](ret, name, version_num)
 
-    __salt__['pkg_resource.sort_pkglist'](ret)
-    __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
+    __salt__["pkg_resource.sort_pkglist"](ret)
+    __context__["pkg.list_pkgs"] = copy.deepcopy(ret)
     if not versions_as_list:
-        __salt__['pkg_resource.stringify'](ret)
+        __salt__["pkg_resource.stringify"](ret)
     return ret
 
 
 def version(*names, **kwargs):
-    '''
+    """
     Returns a string representing the package version or an empty string if not
     installed. If more than one package name is specified, a dict of
     name/version pairs is returned.
@@ -141,12 +143,12 @@ def version(*names, **kwargs):
 
         salt '*' pkg.version <package name>
         salt '*' pkg.version <package1> <package2> <package3>
-    '''
-    return __salt__['pkg_resource.version'](*names, **kwargs)
+    """
+    return __salt__["pkg_resource.version"](*names, **kwargs)
 
 
 def latest_version(*names, **kwargs):
-    '''
+    """
     Return the latest version of the named package available for upgrade or
     installation
 
@@ -161,31 +163,35 @@ def latest_version(*names, **kwargs):
 
         salt '*' pkg.latest_version <package name>
         salt '*' pkg.latest_version <package1> <package2> <package3>
-    '''
+    """
 
-    if salt.utils.data.is_true(kwargs.get('refresh', True)):
+    if salt.utils.data.is_true(kwargs.get("refresh", True)):
         refresh_db()
 
-    available = _list(' '.join(names)) or {}
-    installed = __salt__['pkg.list_pkgs']() or {}
+    available = _list(" ".join(names)) or {}
+    installed = __salt__["pkg.list_pkgs"]() or {}
 
     ret = {}
 
     for key, val in six.iteritems(available):
-        if key not in installed or salt.utils.versions.compare(ver1=installed[key], oper='<', ver2=val):
+        if key not in installed or salt.utils.versions.compare(
+            ver1=installed[key], oper="<", ver2=val
+        ):
             ret[key] = val
         else:
-            ret[key] = '{0} (installed)'.format(version(key))
+            ret[key] = "{0} (installed)".format(version(key))
 
     return ret
 
 
 # available_version is being deprecated
-available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
+available_version = salt.utils.functools.alias_function(
+    latest_version, "available_version"
+)
 
 
 def remove(name=None, pkgs=None, **kwargs):
-    '''
+    """
     Removes packages with ``port uninstall``.
 
     name
@@ -210,38 +216,37 @@ def remove(name=None, pkgs=None, **kwargs):
         salt '*' pkg.remove <package name>
         salt '*' pkg.remove <package1>,<package2>,<package3>
         salt '*' pkg.remove pkgs='["foo", "bar"]'
-    '''
-    pkg_params = __salt__['pkg_resource.parse_targets'](name,
-                                                        pkgs,
-                                                        **kwargs)[0]
+    """
+    pkg_params = __salt__["pkg_resource.parse_targets"](name, pkgs, **kwargs)[0]
     old = list_pkgs()
     targets = [x for x in pkg_params if x in old]
     if not targets:
         return {}
 
-    cmd = ['port', 'uninstall']
+    cmd = ["port", "uninstall"]
     cmd.extend(targets)
 
-    err_message = ''
+    err_message = ""
     try:
         salt.utils.mac_utils.execute_return_success(cmd)
     except CommandExecutionError as exc:
         err_message = exc.strerror
 
-    __context__.pop('pkg.list_pkgs', None)
+    __context__.pop("pkg.list_pkgs", None)
     new = list_pkgs()
     ret = salt.utils.data.compare_dicts(old, new)
 
     if err_message:
         raise CommandExecutionError(
-            'Problem encountered removing package(s)',
-            info={'errors': err_message, 'changes': ret})
+            "Problem encountered removing package(s)",
+            info={"errors": err_message, "changes": ret},
+        )
 
     return ret
 
 
 def install(name=None, refresh=False, pkgs=None, **kwargs):
-    '''
+    """
     Install the passed package(s) with ``port install``
 
     name
@@ -298,24 +303,23 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
     .. code-block:: bash
 
         salt '*' pkg.install 'package package package'
-    '''
-    pkg_params, pkg_type = \
-        __salt__['pkg_resource.parse_targets'](name, pkgs, {})
+    """
+    pkg_params, pkg_type = __salt__["pkg_resource.parse_targets"](name, pkgs, {})
 
     if salt.utils.data.is_true(refresh):
         refresh_db()
 
     # Handle version kwarg for a single package target
     if pkgs is None:
-        version_num = kwargs.get('version')
-        variant_spec = kwargs.get('variant')
+        version_num = kwargs.get("version")
+        variant_spec = kwargs.get("variant")
         spec = {}
 
         if version_num:
-            spec['version'] = version_num
+            spec["version"] = version_num
 
         if variant_spec:
-            spec['variant'] = variant_spec
+            spec["variant"] = variant_spec
 
         pkg_params = {name: spec}
 
@@ -327,36 +331,37 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
         formulas_array.append(pname)
 
         if pparams:
-            if 'version' in pparams:
-                formulas_array.append('@' + pparams['version'])
+            if "version" in pparams:
+                formulas_array.append("@" + pparams["version"])
 
-            if 'variant' in pparams:
-                formulas_array.append(pparams['variant'])
+            if "variant" in pparams:
+                formulas_array.append(pparams["variant"])
 
     old = list_pkgs()
-    cmd = ['port', 'install']
+    cmd = ["port", "install"]
     cmd.extend(formulas_array)
 
-    err_message = ''
+    err_message = ""
     try:
         salt.utils.mac_utils.execute_return_success(cmd)
     except CommandExecutionError as exc:
         err_message = exc.strerror
 
-    __context__.pop('pkg.list_pkgs', None)
+    __context__.pop("pkg.list_pkgs", None)
     new = list_pkgs()
     ret = salt.utils.data.compare_dicts(old, new)
 
     if err_message:
         raise CommandExecutionError(
-            'Problem encountered installing package(s)',
-            info={'errors': err_message, 'changes': ret})
+            "Problem encountered installing package(s)",
+            info={"errors": err_message, "changes": ret},
+        )
 
     return ret
 
 
 def list_upgrades(refresh=True, **kwargs):  # pylint: disable=W0613
-    '''
+    """
     Check whether or not an upgrade is available for all packages
 
     Options:
@@ -369,15 +374,15 @@ def list_upgrades(refresh=True, **kwargs):  # pylint: disable=W0613
     .. code-block:: bash
 
         salt '*' pkg.list_upgrades
-    '''
+    """
 
     if refresh:
         refresh_db()
-    return _list('outdated')
+    return _list("outdated")
 
 
 def upgrade_available(pkg, refresh=True):
-    '''
+    """
     Check whether or not an upgrade is available for a given package
 
     CLI Example:
@@ -385,12 +390,12 @@ def upgrade_available(pkg, refresh=True):
     .. code-block:: bash
 
         salt '*' pkg.upgrade_available <package name>
-    '''
+    """
     return pkg in list_upgrades(refresh=refresh)
 
 
 def refresh_db():
-    '''
+    """
     Update ports with ``port selfupdate``
 
     CLI Example:
@@ -398,15 +403,15 @@ def refresh_db():
     .. code-block:: bash
 
         salt mac pkg.refresh_db
-    '''
+    """
     # Remove rtag file to keep multiple refreshes from happening in pkg states
     salt.utils.pkg.clear_rtag(__opts__)
-    cmd = ['port', 'selfupdate']
+    cmd = ["port", "selfupdate"]
     return salt.utils.mac_utils.execute_return_success(cmd)
 
 
 def upgrade(refresh=True):  # pylint: disable=W0613
-    '''
+    """
     Run a full upgrade using MacPorts 'port upgrade outdated'
 
     Options:
@@ -427,23 +432,21 @@ def upgrade(refresh=True):  # pylint: disable=W0613
     .. code-block:: bash
 
         salt '*' pkg.upgrade
-    '''
+    """
     if refresh:
         refresh_db()
 
     old = list_pkgs()
-    cmd = ['port', 'upgrade', 'outdated']
-    result = __salt__['cmd.run_all'](cmd,
-                                     output_loglevel='trace',
-                                     python_shell=False)
-    __context__.pop('pkg.list_pkgs', None)
+    cmd = ["port", "upgrade", "outdated"]
+    result = __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
+    __context__.pop("pkg.list_pkgs", None)
     new = list_pkgs()
     ret = salt.utils.data.compare_dicts(old, new)
 
-    if result['retcode'] != 0:
+    if result["retcode"] != 0:
         raise CommandExecutionError(
-            'Problem encountered upgrading packages',
-            info={'changes': ret, 'result': result}
+            "Problem encountered upgrading packages",
+            info={"changes": ret, "result": result},
         )
 
     return ret

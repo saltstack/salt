@@ -19,6 +19,7 @@ cloud modules
     gce
     gogrid
     joyent
+    libvirt
     linode
     lxc
     msazure
