@@ -10,8 +10,8 @@ grains modules
     :toctree:
     :template: autosummary.rst.tmpl
 
-    cimc
     chronos
+    cimc
     core
     disks
     esxi
