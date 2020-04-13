@@ -20,7 +20,6 @@ import time
 
 # Import salt libs
 import salt
-import salt.client
 import salt.client.ssh.client
 import salt.config
 import salt.payload
@@ -1719,7 +1718,7 @@ def runner(
     asynchronous
         Run the salt command but don't wait for a reply.
 
-        .. versionadded:: neon
+        .. versionadded:: sodium
 
     CLI Example:
 
@@ -1796,7 +1795,7 @@ def wheel(name, *args, **kwargs):
     asynchronous
         Run the salt command but don't wait for a reply.
 
-        .. versionadded:: neon
+        .. versionadded:: sodium
 
     CLI Example:
 

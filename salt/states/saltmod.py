@@ -228,7 +228,7 @@ def state(
         NOTE: This flag conflicts with subset and batch flags and cannot be
         used at the same time.
 
-        .. versionadded:: neon
+        .. versionadded:: sodium
 
     failhard
         pass failhard down to the executing state
@@ -512,7 +512,7 @@ def function(
     asynchronous
         Run the salt command but don't wait for a reply.
 
-        .. versionadded:: neon
+        .. versionadded:: sodium
 
     failhard
         pass failhard down to the executing state
