@@ -40,3 +40,11 @@ class KeyWheelModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertTrue(
             ret.get("priv", "").startswith("-----BEGIN RSA PRIVATE KEY-----")
         )
+
+    def test_master_key_str(self):
+        ret = self.wheel.cmd("key.master_key_str", print_event=False)
+        self.assertIn("local", ret)
+        self.assertIn("master.pub", ret.get("local"))
+        self.assertTrue(
+            ret.get("local").get("master.pub").startswith("-----BEGIN PUBLIC KEY-----")
+        )
