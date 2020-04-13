@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Manage Cloudwatch alarms
 
 .. versionadded:: 2014.7.0
@@ -51,7 +51,7 @@ as a passed in dict, or as a string to pull from pillars or minion config:
                 - the-sqs-queue-name
             alarm_actions:
               - arn:aws:sns:us-east-1:1111111:myalerting-action
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
@@ -64,20 +64,14 @@ from salt.ext import six
 
 
 def __virtual__():
-    '''
+    """
     Only load if boto is available.
-    '''
-    return 'boto_cloudwatch_alarm' if 'boto_cloudwatch.get_alarm' in __salt__ else False
+    """
+    return "boto_cloudwatch_alarm" if "boto_cloudwatch.get_alarm" in __salt__ else False
 
 
-def present(
-        name,
-        attributes,
-        region=None,
-        key=None,
-        keyid=None,
-        profile=None):
-    '''
+def present(name, attributes, region=None, key=None, keyid=None, profile=None):
+    """
     Ensure the cloudwatch alarm exists.
 
     name
@@ -98,16 +92,16 @@ def present(
     profile
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
-    '''
-    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
-    alarm_details = __salt__['boto_cloudwatch.get_alarm'](
+    """
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
+    alarm_details = __salt__["boto_cloudwatch.get_alarm"](
         name, region, key, keyid, profile
     )
 
     # Convert to arn's
     for k in ["alarm_actions", "insufficient_data_actions", "ok_actions"]:
         if k in attributes:
-            attributes[k] = __salt__['boto_cloudwatch.convert_to_arn'](
+            attributes[k] = __salt__["boto_cloudwatch.convert_to_arn"](
                 attributes[k], region, key, keyid, profile
             )
 
@@ -139,51 +133,46 @@ def present(
         "region": region,
         "key": key,
         "keyid": keyid,
-        "profile": profile
+        "profile": profile,
     }
     create_or_update_alarm_args.update(attributes)
-    if alarm_details:   # alarm is present.  update, or do nothing
+    if alarm_details:  # alarm is present.  update, or do nothing
         # check to see if attributes matches is_present. If so, do nothing.
         if len(difference) == 0:
-            ret['comment'] = "alarm {0} present and matching".format(name)
+            ret["comment"] = "alarm {0} present and matching".format(name)
             return ret
-        if __opts__['test']:
-            msg = 'alarm {0} is to be created/updated.'.format(name)
-            ret['comment'] = msg
-            ret['result'] = None
+        if __opts__["test"]:
+            msg = "alarm {0} is to be created/updated.".format(name)
+            ret["comment"] = msg
+            ret["result"] = None
             return ret
-        result = __salt__['boto_cloudwatch.create_or_update_alarm'](
+        result = __salt__["boto_cloudwatch.create_or_update_alarm"](
             **create_or_update_alarm_args
         )
         if result:
-            ret['changes']['diff'] = difference
+            ret["changes"]["diff"] = difference
         else:
-            ret['result'] = False
-            ret['comment'] = 'Failed to create {0} alarm'.format(name)
+            ret["result"] = False
+            ret["comment"] = "Failed to create {0} alarm".format(name)
     else:  # alarm is absent. create it.
-        if __opts__['test']:
-            msg = 'alarm {0} is to be created/updated.'.format(name)
-            ret['comment'] = msg
-            ret['result'] = None
+        if __opts__["test"]:
+            msg = "alarm {0} is to be created/updated.".format(name)
+            ret["comment"] = msg
+            ret["result"] = None
             return ret
-        result = __salt__['boto_cloudwatch.create_or_update_alarm'](
+        result = __salt__["boto_cloudwatch.create_or_update_alarm"](
             **create_or_update_alarm_args
         )
         if result:
-            ret['changes']['new'] = attributes
+            ret["changes"]["new"] = attributes
         else:
-            ret['result'] = False
-            ret['comment'] = 'Failed to create {0} alarm'.format(name)
+            ret["result"] = False
+            ret["comment"] = "Failed to create {0} alarm".format(name)
     return ret
 
 
-def absent(
-        name,
-        region=None,
-        key=None,
-        keyid=None,
-        profile=None):
-    '''
+def absent(name, region=None, key=None, keyid=None, profile=None):
+    """
     Ensure the named cloudwatch alarm is deleted.
 
     name
@@ -201,26 +190,28 @@ def absent(
     profile
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
-    '''
-    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    """
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
-    is_present = __salt__['boto_cloudwatch.get_alarm'](name, region, key,
-                                                       keyid, profile)
+    is_present = __salt__["boto_cloudwatch.get_alarm"](
+        name, region, key, keyid, profile
+    )
 
     if is_present:
-        if __opts__['test']:
-            ret['comment'] = 'alarm {0} is set to be removed.'.format(name)
-            ret['result'] = None
+        if __opts__["test"]:
+            ret["comment"] = "alarm {0} is set to be removed.".format(name)
+            ret["result"] = None
             return ret
-        deleted = __salt__['boto_cloudwatch.delete_alarm'](name, region, key,
-                                                           keyid, profile)
+        deleted = __salt__["boto_cloudwatch.delete_alarm"](
+            name, region, key, keyid, profile
+        )
         if deleted:
-            ret['changes']['old'] = name
-            ret['changes']['new'] = None
+            ret["changes"]["old"] = name
+            ret["changes"]["new"] = None
         else:
-            ret['result'] = False
-            ret['comment'] = 'Failed to delete {0} alarm.'.format(name)
+            ret["result"] = False
+            ret["comment"] = "Failed to delete {0} alarm.".format(name)
     else:
-        ret['comment'] = '{0} does not exist in {1}.'.format(name, region)
+        ret["comment"] = "{0} does not exist in {1}.".format(name, region)
 
     return ret
