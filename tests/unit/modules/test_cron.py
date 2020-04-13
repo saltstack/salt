@@ -635,7 +635,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
     def test_write_cron_file_root_rh(self):
         '''
         Assert that write_cron_file() is called with the correct cron command and user: RedHat
-          - If instance running uid matches crontab user uid, runas STUB_USER without -u flag.
+          - If instance running uid matches crontab user uid, run without -u flag.
         '''
         with patch.dict(cron.__grains__, {'os_family': 'RedHat'}), \
                 patch.dict(cron.__salt__, {'cmd.retcode': MagicMock()}), \
@@ -643,20 +643,20 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                           new=MagicMock(return_value=True)):
             cron.write_cron_file(STUB_USER, STUB_PATH)
             cron.__salt__['cmd.retcode'].assert_called_with("crontab /tmp",
-                                                            runas=STUB_USER,
                                                             python_shell=False)
 
     def test_write_cron_file_foo_rh(self):
         '''
         Assert that write_cron_file() is called with the correct cron command and user: RedHat
-          - If instance running with uid that doesn't match crontab user uid, run with -u flag
+          - If instance running with uid that doesn't match crontab user uid, runas foo
         '''
         with patch.dict(cron.__grains__, {'os_family': 'RedHat'}), \
                 patch.dict(cron.__salt__, {'cmd.retcode': MagicMock()}), \
                     patch('salt.modules.cron._check_instance_uid_match',
                           MagicMock(return_value=False)):
             cron.write_cron_file('foo', STUB_PATH)
-            cron.__salt__['cmd.retcode'].assert_called_with("crontab -u foo /tmp",
+            cron.__salt__['cmd.retcode'].assert_called_with("crontab /tmp",
+                                                            runas='foo',
                                                             python_shell=False)
 
     def test_write_cron_file_root_sol(self):
@@ -664,10 +664,8 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
         Assert that write_cron_file() is called with the correct cron command and user: Solaris
           - Solaris should always run without a -u flag
         '''
-        with patch.dict(cron.__grains__, {'os_family': 'RedHat'}), \
-                patch.dict(cron.__salt__, {'cmd.retcode': MagicMock()}), \
-                    patch('salt.modules.cron._check_instance_uid_match',
-                          MagicMock(return_value=True)):
+        with patch.dict(cron.__grains__, {'os_family': 'Solaris'}), \
+                patch.dict(cron.__salt__, {'cmd.retcode': MagicMock()}):
             cron.write_cron_file(STUB_USER, STUB_PATH)
             cron.__salt__['cmd.retcode'].assert_called_with("crontab /tmp",
                                                             runas=STUB_USER,
@@ -679,9 +677,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
           - Solaris should always run without a -u flag
         '''
         with patch.dict(cron.__grains__, {'os_family': 'Solaris'}), \
-                patch.dict(cron.__salt__, {'cmd.retcode': MagicMock()}), \
-                    patch('salt.modules.cron._check_instance_uid_match',
-                          MagicMock(return_value=False)):
+                patch.dict(cron.__salt__, {'cmd.retcode': MagicMock()}):
             cron.write_cron_file('foo', STUB_PATH)
             cron.__salt__['cmd.retcode'].assert_called_with("crontab /tmp",
                                                             runas='foo',
@@ -693,9 +689,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
           - AIX should always run without a -u flag
         '''
         with patch.dict(cron.__grains__, {'os_family': 'AIX'}), \
-                patch.dict(cron.__salt__, {'cmd.retcode': MagicMock()}), \
-                    patch('salt.modules.cron._check_instance_uid_match',
-                          MagicMock(return_value=True)):
+                patch.dict(cron.__salt__, {'cmd.retcode': MagicMock()}):
             cron.write_cron_file(STUB_USER, STUB_PATH)
             cron.__salt__['cmd.retcode'].assert_called_with("crontab /tmp",
                                                             runas=STUB_USER,
@@ -707,9 +701,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
           - AIX should always run without a -u flag
         '''
         with patch.dict(cron.__grains__, {'os_family': 'AIX'}), \
-                patch.dict(cron.__salt__, {'cmd.retcode': MagicMock()}), \
-                    patch('salt.modules.cron._check_instance_uid_match',
-                          MagicMock(return_value=False)):
+                patch.dict(cron.__salt__, {'cmd.retcode': MagicMock()}):
             cron.write_cron_file('foo', STUB_PATH)
             cron.__salt__['cmd.retcode'].assert_called_with("crontab /tmp",
                                                             runas='foo',
@@ -718,7 +710,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
     def test_write_cr_file_v_root_rh(self):
         '''
         Assert that write_cron_file_verbose() is called with the correct cron command and user: RedHat
-          - If instance running uid matches crontab user uid, runas STUB_USER without -u flag.
+          - If instance running uid matches crontab user uid, run without -u flag.
         '''
         with patch.dict(cron.__grains__, {'os_family': 'Redhat'}), \
                 patch.dict(cron.__salt__, {'cmd.run_all': MagicMock()}), \
@@ -726,20 +718,20 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                           MagicMock(return_value=True)):
             cron.write_cron_file_verbose(STUB_USER, STUB_PATH)
             cron.__salt__['cmd.run_all'].assert_called_with("crontab /tmp",
-                                                            runas=STUB_USER,
                                                             python_shell=False)
 
     def test_write_cr_file_v_foo_rh(self):
         '''
         Assert that write_cron_file_verbose() is called with the correct cron command and user: RedHat
-          - If instance running with uid that doesn't match crontab user uid, run with -u flag
+          - If instance running with uid that doesn't match crontab user uid, runas 'foo'
         '''
         with patch.dict(cron.__grains__, {'os_family': 'Redhat'}), \
                 patch.dict(cron.__salt__, {'cmd.run_all': MagicMock()}), \
                     patch('salt.modules.cron._check_instance_uid_match',
                             MagicMock(return_value=False)):
             cron.write_cron_file_verbose('foo', STUB_PATH)
-            cron.__salt__['cmd.run_all'].assert_called_with("crontab -u foo /tmp",
+            cron.__salt__['cmd.run_all'].assert_called_with("crontab /tmp",
+                                                            runas='foo',
                                                             python_shell=False)
 
     def test_write_cr_file_v_root_sol(self):
@@ -748,9 +740,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
           - Solaris should always run without a -u flag
         '''
         with patch.dict(cron.__grains__, {'os_family': 'Solaris'}), \
-                patch.dict(cron.__salt__, {'cmd.run_all': MagicMock()}), \
-                    patch('salt.modules.cron._check_instance_uid_match',
-                          MagicMock(return_value=True)):
+                patch.dict(cron.__salt__, {'cmd.run_all': MagicMock()}):
             cron.write_cron_file_verbose(STUB_USER, STUB_PATH)
             cron.__salt__['cmd.run_all'].assert_called_with("crontab /tmp",
                                                             runas=STUB_USER,
@@ -762,9 +752,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
           - Solaris should always run without a -u flag
         '''
         with patch.dict(cron.__grains__, {'os_family': 'Solaris'}), \
-                patch.dict(cron.__salt__, {'cmd.run_all': MagicMock()}), \
-                    patch('salt.modules.cron._check_instance_uid_match',
-                          MagicMock(return_value=False)):
+                patch.dict(cron.__salt__, {'cmd.run_all': MagicMock()}):
             cron.write_cron_file_verbose('foo', STUB_PATH)
             cron.__salt__['cmd.run_all'].assert_called_with("crontab /tmp",
                                                             runas='foo',
@@ -776,9 +764,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
           - AIX should always run without a -u flag
         '''
         with patch.dict(cron.__grains__, {'os_family': 'AIX'}), \
-                patch.dict(cron.__salt__, {'cmd.run_all': MagicMock()}), \
-                    patch('salt.modules.cron._check_instance_uid_match',
-                          MagicMock(return_value=True)):
+                patch.dict(cron.__salt__, {'cmd.run_all': MagicMock()}):
             cron.write_cron_file_verbose(STUB_USER, STUB_PATH)
             cron.__salt__['cmd.run_all'].assert_called_with("crontab /tmp",
                                                             runas=STUB_USER,
@@ -790,9 +776,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
           - AIX should always run without a -u flag
         '''
         with patch.dict(cron.__grains__, {'os_family': 'AIX'}), \
-                patch.dict(cron.__salt__, {'cmd.run_all': MagicMock()}), \
-                    patch('salt.modules.cron._check_instance_uid_match',
-                          MagicMock(return_value=False)):
+                patch.dict(cron.__salt__, {'cmd.run_all': MagicMock()}):
             cron.write_cron_file_verbose('foo', STUB_PATH)
             cron.__salt__['cmd.run_all'].assert_called_with("crontab /tmp",
                                                             runas='foo',
@@ -809,7 +793,6 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                           MagicMock(return_value=True)):
             cron.raw_cron(STUB_USER)
             cron.__salt__['cmd.run_stdout'].assert_called_with("crontab -l",
-                                                               runas=STUB_USER,
                                                                ignore_retcode=True,
                                                                rstrip=False,
                                                                python_shell=False)
@@ -824,7 +807,8 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                     patch('salt.modules.cron._check_instance_uid_match',
                           MagicMock(return_value=False)):
             cron.raw_cron(STUB_USER)
-            cron.__salt__['cmd.run_stdout'].assert_called_with("crontab -u root -l",
+            cron.__salt__['cmd.run_stdout'].assert_called_with("crontab -l",
+                                                               runas=STUB_USER,
                                                                ignore_retcode=True,
                                                                rstrip=False,
                                                                python_shell=False)

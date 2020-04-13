@@ -12,7 +12,7 @@ def __virtual__():
     '''
     Only works on Gentoo systems with eix installed
     '''
-    if __grains__['os_family'] == 'Gentoo' and salt.utils.path.which('eix'):
+    if __grains__.get('os_family') == 'Gentoo' and salt.utils.path.which('eix'):
         return 'eix'
     return (False, 'The eix execution module cannot be loaded: either the system is not Gentoo or the eix binary is not in the path.')
 

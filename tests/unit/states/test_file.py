@@ -612,6 +612,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 ret = filestate.managed(
                     filename,
                     contents_pillar='fnord',
+                    encoding='utf-8'
                 )
                 actual_contents = mock_manage.call_args[0][14]
                 self.assertEqual(actual_contents, expected_contents)

@@ -2,7 +2,7 @@
 '''
 Salt states to create and manage VMware vSphere datacenters (datacenters).
 
-:codeauthor: :email:`Alexandru Bleotu <alexandru.bleotu@morganstaley.com>`
+:codeauthor: `Alexandru Bleotu <alexandru.bleotu@morganstaley.com>`
 
 Dependencies
 ============
@@ -32,6 +32,7 @@ Example:
 Proxy minion configuration (connects passthrough to the vCenter):
 
 .. code-block:: yaml
+
     proxy:
       proxytype: esxdatacenter
       datacenter: target_dc
