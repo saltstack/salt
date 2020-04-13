@@ -133,6 +133,7 @@ class BadTestModuleNamesTestCase(TestCase):
             'integration.logging.test_jid_logging',
             'integration.logging.handlers.test_logstash_mod',
             'integration.master.test_event_return',
+            'integration.master.test_clear_funcs',
             'integration.minion.test_blackout',
             'integration.minion.test_executor',
             'integration.minion.test_minion_cache',
