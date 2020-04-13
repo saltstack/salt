@@ -2587,7 +2587,12 @@ def path():
     """
     # Provides:
     #   path
-    return {"path": os.environ.get("PATH", "").strip()}
+    #   systempath
+    _path = salt.utils.stringutils.to_unicode(os.environ.get("PATH", "").strip())
+    return {
+        "path": _path,
+        "systempath": _path.split(os.path.pathsep),
+    }
 
 
 def pythonversion():
