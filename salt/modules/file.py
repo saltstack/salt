@@ -2383,6 +2383,16 @@ def replace(
                     # Identity check the potential change
                     has_changes = True if pattern != repl else has_changes
 
+                orig_file = (
+                    r_data.read(filesize).splitlines(True)
+                    if isinstance(r_data, mmap.mmap)
+                    else r_data.splitlines(True)
+                )
+                new_file = result.splitlines(True)
+
+                if orig_file == new_file:
+                    has_changes = False
+
                 if prepend_if_not_found or append_if_not_found:
                     # Search for content, to avoid pre/appending the
                     # content if it was pre/appended in a previous run.
@@ -2395,13 +2405,6 @@ def replace(
                     ):
                         # Content was found, so set found.
                         found = True
-
-                orig_file = (
-                    r_data.read(filesize).splitlines(True)
-                    if isinstance(r_data, mmap.mmap)
-                    else r_data.splitlines(True)
-                )
-                new_file = result.splitlines(True)
 
     except (OSError, IOError) as exc:
         raise CommandExecutionError(
