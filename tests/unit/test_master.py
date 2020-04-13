@@ -12,6 +12,22 @@ from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
 
+class TransportMethodsTest(TestCase):
+    def test_transport_methods(self):
+        class Foo(salt.master.TransportMethods):
+            expose_methods = ["bar"]
+
+            def bar(self):
+                pass
+
+            def bang(self):
+                pass
+
+        foo = Foo()
+        assert foo.get_method("bar") is not None
+        assert foo.get_method("bang") is None
+
+
 class ClearFuncsTestCase(TestCase):
     """
     TestCase for salt.master.ClearFuncs class
@@ -25,6 +41,13 @@ class ClearFuncsTestCase(TestCase):
     @classmethod
     def tearDownClass(cls):
         del cls.clear_funcs
+
+    def tearDown(self):
+        del self.clear_funcs
+
+    def test_get_method(self):
+        assert getattr(self.clear_funcs, "_send_pub", None) is not None
+        assert self.clear_funcs.get_method("_send_pub") is None
 
     # runner tests
 
