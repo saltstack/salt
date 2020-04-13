@@ -25,13 +25,13 @@ NO_MYSQL = False
 NO_PyMYSQL = False
 try:
     import MySQLdb  # pylint: disable=W0611
-except ImportError:  # pylint: disable=broad-except
+except ImportError:
     NO_MYSQL = True
 
 try:
     # MySQLdb import failed, try to import PyMySQL
     import pymysql
-except ImportError:  # pylint: disable=broad-except
+except ImportError:
     NO_PyMYSQL = True
 
 __all_privileges__ = [
