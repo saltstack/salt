@@ -259,7 +259,7 @@ Fork a Repo Guide_>`_ and is well worth reading.
     take a couple of hours.  Depending on your GitHub notification settings
     you may also receive an email message about the test results.
 
-    Test progress and results can be found at http://jenkins.saltstack.com/.
+    Test progress and results can be found at https://jenkinsci.saltstack.com/.
 
 .. _which-salt-branch:
 
