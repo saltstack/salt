@@ -21,7 +21,7 @@ modules. These state functions wrap Salt's :ref:`Python API <python-api>`.
     * :ref:`Full Orchestrate Tutorial <orchestrate-runner>`
     * :py:func:`The Orchestrate runner <salt.runners.state.orchestrate>`
 """
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import fnmatch
@@ -30,10 +30,11 @@ import sys
 import threading
 import time
 
-# Import salt libs
-import salt.syspaths
 import salt.exceptions
 import salt.output
+
+# Import salt libs
+import salt.syspaths
 import salt.utils.data
 import salt.utils.event
 from salt.ext import six

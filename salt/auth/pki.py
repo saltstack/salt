@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # Majority of code shamelessly stolen from
 # http://www.v13.gr/blog/?p=303
-'''
+"""
 Authenticate via a PKI certificate.
 
 .. note::
@@ -14,16 +14,21 @@ a user via their public cert against a pre-defined Certificate Authority.
 TODO: Add a 'ca_dir' option to configure a directory of CA files, a la Apache.
 
 :depends:    - pyOpenSSL module
-'''
+"""
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
+
+# Import salt libs
+import salt.utils.files
 
 # Import third party libs
 # pylint: disable=import-error
 try:
     try:
         from M2Crypto import X509
+
         HAS_M2 = True
     except ImportError:
         HAS_M2 = False
@@ -37,23 +42,21 @@ except ImportError:
     HAS_DEPS = False
 # pylint: enable=import-error
 
-# Import salt libs
-import salt.utils.files
 
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     Requires newer pycrypto and pyOpenSSL
-    '''
+    """
     if HAS_DEPS:
         return True
     return False
 
 
 def auth(username, password, **kwargs):
-    '''
+    """
     Returns True if the given user cert (password is the cert contents)
     was issued by the CA and if cert's Common Name is equal to username.
 
@@ -73,22 +76,22 @@ def auth(username, password, **kwargs):
             ca_file: /etc/pki/tls/ca_certs/trusted-ca.crt
             your_user:
               - .*
-    '''
+    """
     pem = password
-    cacert_file = __salt__['config.get']('external_auth:pki:ca_file')
+    cacert_file = __salt__["config.get"]("external_auth:pki:ca_file")
 
-    log.debug('Attempting to authenticate via pki.')
-    log.debug('Using CA file: %s', cacert_file)
-    log.debug('Certificate contents: %s', pem)
+    log.debug("Attempting to authenticate via pki.")
+    log.debug("Using CA file: %s", cacert_file)
+    log.debug("Certificate contents: %s", pem)
 
     if HAS_M2:
         cert = X509.load_cert_string(pem, X509.FORMAT_PEM)
         cacert = X509.load_cert(cacert_file, X509.FORMAT_PEM)
         if cert.verify(cacert.get_pubkey()):
-            log.info('Successfully authenticated certificate: {0}'.format(pem))
+            log.info("Successfully authenticated certificate: {0}".format(pem))
             return True
         else:
-            log.info('Failed to authenticate certificate: {0}'.format(pem))
+            log.info("Failed to authenticate certificate: {0}".format(pem))
             return False
 
     c = OpenSSL.crypto
@@ -113,7 +116,7 @@ def auth(username, password, **kwargs):
     # - signature
     # http://usefulfor.com/nothing/2009/06/10/x509-certificate-basics/
     der_cert = der[0]
-    #der_algo = der[1]
+    # der_algo = der[1]
     der_sig = der[2]
 
     # The signature is a BIT STRING (Type 3)
@@ -129,17 +132,19 @@ def auth(username, password, **kwargs):
 
     # First byte is the number of unused bits. This should be 0
     # http://msdn.microsoft.com/en-us/library/windows/desktop/bb540792(v=vs.85).aspx
-    if sig0[0] != '\x00':
-        raise Exception('Number of unused bits is strange')
+    if sig0[0] != "\x00":
+        raise Exception("Number of unused bits is strange")
     # Now get the signature itself
     sig = sig0[1:]
 
     # And verify the certificate
     try:
         c.verify(cacert, sig, der_cert, algo)
-        assert dict(cert.get_subject().get_components())['CN'] == username, "Certificate's CN should match the username"
-        log.info('Successfully authenticated certificate: %s', pem)
+        assert (
+            dict(cert.get_subject().get_components())["CN"] == username
+        ), "Certificate's CN should match the username"
+        log.info("Successfully authenticated certificate: %s", pem)
         return True
     except (OpenSSL.crypto.Error, AssertionError):
-        log.info('Failed to authenticate certificate: %s', pem)
+        log.info("Failed to authenticate certificate: %s", pem)
     return False

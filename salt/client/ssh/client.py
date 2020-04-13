@@ -2,15 +2,16 @@
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import os
+
 import copy
 import logging
+import os
 import random
 
 # Import Salt libs
 import salt.config
-import salt.utils.args
 import salt.syspaths as syspaths
+import salt.utils.args
 from salt.exceptions import SaltClientError  # Temporary
 
 log = logging.getLogger(__name__)

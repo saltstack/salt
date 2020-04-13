@@ -9,6 +9,11 @@ The data structure needs to be:
               'key': '<read in the key file>'}
 """
 
+# Import python libs
+from __future__ import absolute_import, print_function, unicode_literals
+
+import logging
+
 # The components here are simple, and they need to be and stay simple, we
 # want a client to have 3 external concerns, and maybe a forth configurable
 # option.
@@ -17,23 +22,23 @@ The data structure needs to be:
 # 2. What is the function being run?
 # 3. What arguments need to be passed to the function?
 # 4. How long do we wait for all of the replies?
-#
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 import os
+import random
 import sys
 import time
-import random
-import logging
 from datetime import datetime
 
 # Import salt libs
-import salt.config
 import salt.cache
+import salt.config
 import salt.defaults.exitcodes
-import salt.payload
-import salt.transport.client
+
+# Import tornado
+import salt.ext.tornado.gen  # pylint: disable=F0401
 import salt.loader
+import salt.payload
+import salt.syspaths as syspaths
+import salt.transport.client
 import salt.utils.args
 import salt.utils.event
 import salt.utils.files
@@ -44,22 +49,18 @@ import salt.utils.stringutils
 import salt.utils.user
 import salt.utils.verify
 import salt.utils.zeromq
-import salt.syspaths as syspaths
 from salt.exceptions import (
     AuthenticationError,
     AuthorizationError,
     EauthAuthenticationError,
     PublishError,
+    SaltClientError,
     SaltInvocationError,
     SaltReqTimeoutError,
-    SaltClientError,
 )
-
-# Import third party libs
 from salt.ext import six
 
 # pylint: disable=import-error
-
 # Try to import range from https://github.com/ytoolshed/range
 HAS_RANGE = False
 try:
@@ -70,8 +71,6 @@ except ImportError:
     pass
 # pylint: enable=import-error
 
-# Import tornado
-import salt.ext.tornado.gen  # pylint: disable=F0401
 
 log = logging.getLogger(__name__)
 

@@ -6,20 +6,21 @@
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Testing libs
-from tests.support.mixins import SaltClientTestCaseMixin
-from tests.support.mock import patch, MagicMock
-from tests.support.unit import TestCase, skipIf
+import salt.utils.platform
 
 # Import Salt libs
 from salt import client
-import salt.utils.platform
 from salt.exceptions import (
     EauthAuthenticationError,
-    SaltInvocationError,
     SaltClientError,
+    SaltInvocationError,
     SaltReqTimeoutError,
 )
+
+# Import Salt Testing libs
+from tests.support.mixins import SaltClientTestCaseMixin
+from tests.support.mock import MagicMock, patch
+from tests.support.unit import TestCase, skipIf
 
 
 class LocalClientTestCase(TestCase, SaltClientTestCaseMixin):

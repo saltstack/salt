@@ -13,40 +13,20 @@ import copy
 import fnmatch
 import logging
 import os
+import shutil
 import signal
 import sys
 import time
-import shutil
-
-# Import 3rd-party libs
-# pylint: disable=import-error
-try:
-    import esky
-    from esky import EskyVersionError
-
-    HAS_ESKY = True
-except ImportError:
-    HAS_ESKY = False
-# pylint: disable=no-name-in-module
-from salt.ext import six
-from salt.ext.six.moves.urllib.error import URLError
-
-# pylint: enable=import-error,no-name-in-module
-
-# Fix a nasty bug with Win32 Python not supporting all of the standard signals
-try:
-    salt_SIGKILL = signal.SIGKILL
-except AttributeError:
-    salt_SIGKILL = signal.SIGTERM
 
 # Import salt libs
 import salt
-import salt.config
 import salt.client
 import salt.client.ssh.client
+import salt.config
 import salt.payload
 import salt.runner
 import salt.state
+import salt.transport.client
 import salt.utils.args
 import salt.utils.event
 import salt.utils.extmods
@@ -58,7 +38,35 @@ import salt.utils.path
 import salt.utils.process
 import salt.utils.url
 import salt.wheel
-import salt.transport.client
+from salt.exceptions import (
+    CommandExecutionError,
+    SaltInvocationError,
+    SaltRenderError,
+    SaltReqTimeoutError,
+)
+
+# pylint: disable=no-name-in-module
+from salt.ext import six
+from salt.ext.six.moves.urllib.error import URLError
+
+# Import 3rd-party libs
+# pylint: disable=import-error
+try:
+    import esky
+    from esky import EskyVersionError
+
+    HAS_ESKY = True
+except ImportError:
+    HAS_ESKY = False
+
+# pylint: enable=import-error,no-name-in-module
+
+# Fix a nasty bug with Win32 Python not supporting all of the standard signals
+try:
+    salt_SIGKILL = signal.SIGKILL
+except AttributeError:
+    salt_SIGKILL = signal.SIGTERM
+
 
 HAS_PSUTIL = True
 try:
@@ -66,12 +74,6 @@ try:
 except ImportError:
     HAS_PSUTIL = False
 
-from salt.exceptions import (
-    SaltReqTimeoutError,
-    SaltRenderError,
-    CommandExecutionError,
-    SaltInvocationError,
-)
 
 __proxyenabled__ = ["*"]
 
@@ -1859,7 +1861,7 @@ def wheel(name, *args, **kwargs):
                 print_event=False,
                 full_return=True,
             )
-    except SaltInvocationError as e:
+    except SaltInvocationError:
         raise CommandExecutionError(
             "This command can only be executed on a minion that is located on "
             "the master."
