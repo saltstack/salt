@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Sending Messages via SMTP
 ==========================
 
@@ -15,26 +15,28 @@ protocol
         - name: 'This is a server warning message'
         - profile: my-smtp-account
         - recipient: admins@example.com
-'''
+"""
 # Import Python libs
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():
-    '''
+    """
     Only load if the SMTP module is available in __salt__
-    '''
-    return 'smtp' if 'smtp.send_msg' in __salt__ else False
+    """
+    return "smtp" if "smtp.send_msg" in __salt__ else False
 
 
-def send_msg(name,
-             recipient,
-             subject,
-             sender=None,
-             profile=None,
-             use_ssl='True',
-             attachments=None):
-    '''
+def send_msg(
+    name,
+    recipient,
+    subject,
+    sender=None,
+    profile=None,
+    use_ssl="True",
+    attachments=None,
+):
+    """
     Send a message via SMTP
 
     .. code-block:: yaml
@@ -53,24 +55,18 @@ def send_msg(name,
 
     name
         The message to send via SMTP
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': None,
-           'comment': ''}
+    """
+    ret = {"name": name, "changes": {}, "result": None, "comment": ""}
 
     if profile is None and sender is None:
-        ret['result'] = False
-        ret['comment'] = 'Missing parameter sender or profile for state smtp.send_msg'
+        ret["result"] = False
+        ret["comment"] = "Missing parameter sender or profile for state smtp.send_msg"
         return ret
 
-    if __opts__['test']:
-        ret['comment'] = 'Need to send message to {0}: {1}'.format(
-            recipient,
-            name,
-        )
+    if __opts__["test"]:
+        ret["comment"] = "Need to send message to {0}: {1}".format(recipient, name,)
         return ret
-    command = __salt__['smtp.send_msg'](
+    command = __salt__["smtp.send_msg"](
         message=name,
         recipient=recipient,
         profile=profile,
@@ -81,14 +77,15 @@ def send_msg(name,
     )
 
     if command:
-        ret['result'] = True
+        ret["result"] = True
         if attachments:
-            atts = ', '.join(attachments)
-            ret['comment'] = 'Sent message to {0} with attachments ({2}): {1}' \
-                             .format(recipient, name, atts)
+            atts = ", ".join(attachments)
+            ret["comment"] = "Sent message to {0} with attachments ({2}): {1}".format(
+                recipient, name, atts
+            )
         else:
-            ret['comment'] = 'Sent message to {0}: {1}'.format(recipient, name)
+            ret["comment"] = "Sent message to {0}: {1}".format(recipient, name)
     else:
-        ret['result'] = False
-        ret['comment'] = 'Unable to send message to {0}: {1}'.format(recipient, name)
+        ret["result"] = False
+        ret["comment"] = "Unable to send message to {0}: {1}".format(recipient, name)
     return ret

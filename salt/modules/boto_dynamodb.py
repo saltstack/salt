@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Connection module for Amazon DynamoDB
 
 .. versionadded:: 2015.5.0
@@ -40,54 +40,74 @@ Connection module for Amazon DynamoDB
             region: us-east-1
 
 :depends: boto
-'''
+"""
 # keep lint from choking on _get_conn and _cache_id
-#pylint: disable=E0602
+# pylint: disable=E0602
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 import time
 
-logger = logging.getLogger(__name__)
-logging.getLogger('boto').setLevel(logging.INFO)
+import salt.utils.versions
+from salt.exceptions import SaltInvocationError
 
 # Import third party libs
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-from salt.exceptions import SaltInvocationError
-import salt.utils.versions
+
+logger = logging.getLogger(__name__)
+logging.getLogger("boto").setLevel(logging.INFO)
+
 
 try:
-    #pylint: disable=unused-import
+    # pylint: disable=unused-import
     import boto
     import boto.dynamodb2
-    #pylint: enable=unused-import
+
+    # pylint: enable=unused-import
     from boto.dynamodb2.fields import HashKey, RangeKey
-    from boto.dynamodb2.fields import AllIndex, GlobalAllIndex, GlobalIncludeIndex, GlobalKeysOnlyIndex
+    from boto.dynamodb2.fields import (
+        AllIndex,
+        GlobalAllIndex,
+        GlobalIncludeIndex,
+        GlobalKeysOnlyIndex,
+    )
     from boto.dynamodb2.table import Table
     from boto.exception import JSONResponseError
+
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
 
 
 def __virtual__():
-    '''
+    """
     Only load if boto libraries exist.
-    '''
+    """
     has_boto_reqs = salt.utils.versions.check_boto_reqs(check_boto3=False)
     if has_boto_reqs is True:
-        __utils__['boto.assign_funcs'](__name__, 'dynamodb2', pack=__salt__)
+        __utils__["boto.assign_funcs"](__name__, "dynamodb2", pack=__salt__)
     return has_boto_reqs
 
 
-def create_table(table_name, region=None, key=None, keyid=None, profile=None,
-                 read_capacity_units=None, write_capacity_units=None,
-                 hash_key=None, hash_key_data_type=None, range_key=None,
-                 range_key_data_type=None, local_indexes=None,
-                 global_indexes=None):
-    '''
+def create_table(
+    table_name,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+    read_capacity_units=None,
+    write_capacity_units=None,
+    hash_key=None,
+    hash_key_data_type=None,
+    range_key=None,
+    range_key_data_type=None,
+    local_indexes=None,
+    global_indexes=None,
+):
+    """
     Creates a DynamoDB table.
 
     CLI Example:
@@ -102,10 +122,10 @@ def create_table(table_name, region=None, key=None, keyid=None, profile=None,
         range_key_data_type=N /
         read_capacity_units=1 /
         write_capacity_units=1
-    '''
+    """
     schema = []
     primary_index_fields = []
-    primary_index_name = ''
+    primary_index_name = ""
     if hash_key:
         hash_key_obj = HashKey(hash_key, data_type=hash_key_data_type)
         schema.append(hash_key_obj)
@@ -115,13 +135,10 @@ def create_table(table_name, region=None, key=None, keyid=None, profile=None,
         range_key_obj = RangeKey(range_key, data_type=range_key_data_type)
         schema.append(range_key_obj)
         primary_index_fields.append(range_key_obj)
-        primary_index_name += '_'
+        primary_index_name += "_"
         primary_index_name += range_key
-    primary_index_name += '_index'
-    throughput = {
-        'read':     read_capacity_units,
-        'write':    write_capacity_units
-    }
+    primary_index_name += "_index"
+    throughput = {"read": read_capacity_units, "write": write_capacity_units}
     local_table_indexes = []
     if local_indexes:
         for index in local_indexes:
@@ -129,9 +146,7 @@ def create_table(table_name, region=None, key=None, keyid=None, profile=None,
     global_table_indexes = []
     if global_indexes:
         for index in global_indexes:
-            global_table_indexes.append(
-                extract_index(index, global_index=True)
-            )
+            global_table_indexes.append(extract_index(index, global_index=True))
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
@@ -141,28 +156,22 @@ def create_table(table_name, region=None, key=None, keyid=None, profile=None,
         throughput=throughput,
         indexes=local_table_indexes,
         global_indexes=global_table_indexes,
-        connection=conn
+        connection=conn,
     )
 
     # Table creation can take several seconds to propagate.
     # We will check MAX_ATTEMPTS times.
     MAX_ATTEMPTS = 30
     for i in range(MAX_ATTEMPTS):
-        if exists(
-            table_name,
-            region,
-            key,
-            keyid,
-            profile
-        ):
+        if exists(table_name, region, key, keyid, profile):
             return True
         else:
-            time.sleep(1)   # sleep for one second and try again
+            time.sleep(1)  # sleep for one second and try again
     return False
 
 
 def exists(table_name, region=None, key=None, keyid=None, profile=None):
-    '''
+    """
     Check to see if a table exists.
 
     CLI Example:
@@ -170,12 +179,12 @@ def exists(table_name, region=None, key=None, keyid=None, profile=None):
     .. code-block:: bash
 
         salt myminion boto_dynamodb.exists table_name region=us-east-1
-    '''
+    """
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         conn.describe_table(table_name)
     except JSONResponseError as e:
-        if e.error_code == 'ResourceNotFoundException':
+        if e.error_code == "ResourceNotFoundException":
             return False
         raise
 
@@ -183,7 +192,7 @@ def exists(table_name, region=None, key=None, keyid=None, profile=None):
 
 
 def delete(table_name, region=None, key=None, keyid=None, profile=None):
-    '''
+    """
     Delete a DynamoDB table.
 
     CLI Example:
@@ -191,7 +200,7 @@ def delete(table_name, region=None, key=None, keyid=None, profile=None):
     .. code-block:: bash
 
         salt myminion boto_dynamodb.delete table_name region=us-east-1
-    '''
+    """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     table = Table(table_name, connection=conn)
@@ -204,27 +213,35 @@ def delete(table_name, region=None, key=None, keyid=None, profile=None):
         if not exists(table_name, region, key, keyid, profile):
             return True
         else:
-            time.sleep(1)   # sleep for one second and try again
+            time.sleep(1)  # sleep for one second and try again
     return False
 
 
-def update(table_name, throughput=None, global_indexes=None,
-           region=None, key=None, keyid=None, profile=None):
-    '''
+def update(
+    table_name,
+    throughput=None,
+    global_indexes=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+):
+    """
     Update a DynamoDB table.
 
     CLI example::
 
         salt myminion boto_dynamodb.update table_name region=us-east-1
-    '''
+    """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     table = Table(table_name, connection=conn)
     return table.update(throughput=throughput, global_indexes=global_indexes)
 
 
-def create_global_secondary_index(table_name, global_index, region=None,
-                                  key=None, keyid=None, profile=None):
-    '''
+def create_global_secondary_index(
+    table_name, global_index, region=None, key=None, keyid=None, profile=None
+):
+    """
     Creates a single global secondary index on a DynamoDB table.
 
     CLI Example:
@@ -232,15 +249,16 @@ def create_global_secondary_index(table_name, global_index, region=None,
 
         salt myminion boto_dynamodb.create_global_secondary_index table_name /
         index_name
-    '''
+    """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     table = Table(table_name, connection=conn)
     return table.create_global_secondary_index(global_index)
 
 
-def update_global_secondary_index(table_name, global_indexes, region=None,
-                                  key=None, keyid=None, profile=None):
-    '''
+def update_global_secondary_index(
+    table_name, global_indexes, region=None, key=None, keyid=None, profile=None
+):
+    """
     Updates the throughput of the given global secondary indexes.
 
     CLI Example:
@@ -248,106 +266,104 @@ def update_global_secondary_index(table_name, global_indexes, region=None,
 
         salt myminion boto_dynamodb.update_global_secondary_index table_name /
         indexes
-    '''
+    """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     table = Table(table_name, connection=conn)
     return table.update_global_secondary_index(global_indexes)
 
 
 def describe(table_name, region=None, key=None, keyid=None, profile=None):
-    '''
+    """
     Describe a DynamoDB table.
 
     CLI example::
 
         salt myminion boto_dynamodb.describe table_name region=us-east-1
-    '''
+    """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     table = Table(table_name, connection=conn)
     return table.describe()
 
 
 def extract_index(index_data, global_index=False):
-    '''
+    """
     Instantiates and returns an AllIndex object given a valid index
     configuration
 
     CLI Example:
         salt myminion boto_dynamodb.extract_index index
-    '''
+    """
     parsed_data = {}
     keys = []
 
     for key, value in six.iteritems(index_data):
         for item in value:
             for field, data in six.iteritems(item):
-                if field == 'hash_key':
-                    parsed_data['hash_key'] = data
-                elif field == 'hash_key_data_type':
-                    parsed_data['hash_key_data_type'] = data
-                elif field == 'range_key':
-                    parsed_data['range_key'] = data
-                elif field == 'range_key_data_type':
-                    parsed_data['range_key_data_type'] = data
-                elif field == 'name':
-                    parsed_data['name'] = data
-                elif field == 'read_capacity_units':
-                    parsed_data['read_capacity_units'] = data
-                elif field == 'write_capacity_units':
-                    parsed_data['write_capacity_units'] = data
-                elif field == 'includes':
-                    parsed_data['includes'] = data
-                elif field == 'keys_only':
-                    parsed_data['keys_only'] = True
+                if field == "hash_key":
+                    parsed_data["hash_key"] = data
+                elif field == "hash_key_data_type":
+                    parsed_data["hash_key_data_type"] = data
+                elif field == "range_key":
+                    parsed_data["range_key"] = data
+                elif field == "range_key_data_type":
+                    parsed_data["range_key_data_type"] = data
+                elif field == "name":
+                    parsed_data["name"] = data
+                elif field == "read_capacity_units":
+                    parsed_data["read_capacity_units"] = data
+                elif field == "write_capacity_units":
+                    parsed_data["write_capacity_units"] = data
+                elif field == "includes":
+                    parsed_data["includes"] = data
+                elif field == "keys_only":
+                    parsed_data["keys_only"] = True
 
-    if parsed_data['hash_key']:
+    if parsed_data["hash_key"]:
         keys.append(
             HashKey(
-                parsed_data['hash_key'],
-                data_type=parsed_data['hash_key_data_type']
+                parsed_data["hash_key"], data_type=parsed_data["hash_key_data_type"]
             )
         )
-    if parsed_data.get('range_key'):
+    if parsed_data.get("range_key"):
         keys.append(
             RangeKey(
-                parsed_data['range_key'],
-                data_type=parsed_data['range_key_data_type']
+                parsed_data["range_key"], data_type=parsed_data["range_key_data_type"]
             )
         )
     if (
-            global_index and
-            parsed_data['read_capacity_units'] and
-            parsed_data['write_capacity_units']):
-        parsed_data['throughput'] = {
-            'read':     parsed_data['read_capacity_units'],
-            'write':    parsed_data['write_capacity_units']
+        global_index
+        and parsed_data["read_capacity_units"]
+        and parsed_data["write_capacity_units"]
+    ):
+        parsed_data["throughput"] = {
+            "read": parsed_data["read_capacity_units"],
+            "write": parsed_data["write_capacity_units"],
         }
-    if parsed_data['name'] and len(keys) > 0:
+    if parsed_data["name"] and len(keys) > 0:
         if global_index:
-            if parsed_data.get('keys_only') and parsed_data.get('includes'):
-                raise SaltInvocationError('Only one type of GSI projection can be used.')
-
-            if parsed_data.get('includes'):
-                return GlobalIncludeIndex(
-                    parsed_data['name'],
-                    parts=keys,
-                    throughput=parsed_data['throughput'],
-                    includes=parsed_data['includes']
+            if parsed_data.get("keys_only") and parsed_data.get("includes"):
+                raise SaltInvocationError(
+                    "Only one type of GSI projection can be used."
                 )
-            elif parsed_data.get('keys_only'):
-                return GlobalKeysOnlyIndex(
-                    parsed_data['name'],
+
+            if parsed_data.get("includes"):
+                return GlobalIncludeIndex(
+                    parsed_data["name"],
                     parts=keys,
-                    throughput=parsed_data['throughput'],
+                    throughput=parsed_data["throughput"],
+                    includes=parsed_data["includes"],
+                )
+            elif parsed_data.get("keys_only"):
+                return GlobalKeysOnlyIndex(
+                    parsed_data["name"],
+                    parts=keys,
+                    throughput=parsed_data["throughput"],
                 )
             else:
                 return GlobalAllIndex(
-                    parsed_data['name'],
+                    parsed_data["name"],
                     parts=keys,
-                    throughput=parsed_data['throughput']
+                    throughput=parsed_data["throughput"],
                 )
         else:
-            return AllIndex(
-                parsed_data['name'],
-                parts=keys
-            )
+            return AllIndex(parsed_data["name"], parts=keys)
