@@ -24,7 +24,7 @@ For remote signing, peers must be permitted to remotely call the
 
     peer:
       .*:
-        - x509.sign_remote_certificate
+        - sign_remote_certificate
 
 
 /srv/salt/top.sls
@@ -50,12 +50,12 @@ the mine where it can be easily retrieved by other minions.
     salt-minion:
       service.running:
         - enable: True
-        - listen:
-          - file: /etc/salt/minion.d/signing_policies.conf
+        - watch:
+          - file: /etc/salt/minion.d/x509.conf
 
-    /etc/salt/minion.d/signing_policies.conf:
+    /etc/salt/minion.d/x509.conf:
       file.managed:
-        - source: salt://signing_policies.conf
+        - source: salt://x509.conf
 
     /etc/pki:
       file.directory
@@ -84,21 +84,16 @@ the mine where it can be easily retrieved by other minions.
         - require:
           - file: /etc/pki
 
-    mine.send:
-      module.run:
-        - func: x509.get_pem_entries
-        - kwargs:
-            glob_path: /etc/pki/ca.crt
-        - onchanges:
-          - x509: /etc/pki/ca.crt
-
 
 The signing policy defines properties that override any property requested or included in a CRL. It also
 can define a restricted list of minions which are allowed to remotely invoke this signing policy.
 
-/srv/salt/signing_policies.conf
+/srv/salt/x509.conf
 
 .. code-block:: yaml
+
+    mine_functions:
+      x509.get_pem_entries: [/etc/pki/ca.crt]
 
     x509_signing_policies:
       www:

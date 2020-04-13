@@ -132,8 +132,8 @@ def present(
             The ``tag`` must be manually specified using the ``tag`` argument.
 
     load
-        Loads a tar archive created with :py:func:`docker.load
-        <salt.modules.dockermod.load>` (or the ``docker load`` Docker CLI
+        Loads a tar archive created with :py:func:`docker.save
+        <salt.modules.dockermod.save>` (or the ``docker save`` Docker CLI
         command), and assigns it the specified repo and tag.
 
         .. code-block:: yaml
