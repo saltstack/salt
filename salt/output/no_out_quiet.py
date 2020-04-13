@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Display no output
 =================
 
@@ -10,10 +10,10 @@ CLI Example:
 .. code-block:: bash
 
     salt '*' foo.bar --out=quiet
-'''
+"""
 
 # Define the module's virtual name
-__virtualname__ = 'quiet'
+__virtualname__ = "quiet"
 
 
 def __virtual__():
@@ -21,8 +21,8 @@ def __virtual__():
 
 
 def output(ret, **kwargs):  # pylint: disable=unused-argument
-    '''
+    """
     Don't display data. Used when you only are interested in the
     return.
-    '''
-    return ''
+    """
+    return ""
