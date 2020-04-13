@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 A state module to manage Cisco UCS chassis devices.
 
 :codeauthor: ``Spencer Ervin <spencer_ervin@hotmail.com>``
@@ -16,35 +16,31 @@ relies on the CIMC proxy module to interface with the device.
 .. seealso::
     :py:mod:`CIMC Proxy Module <salt.proxy.cimc>`
 
-'''
+"""
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    return 'cimc.get_system_info' in __salt__
+    return "cimc.get_system_info" in __salt__
 
 
 def _default_ret(name):
-    '''
+    """
     Set the default response values.
 
-    '''
-    ret = {
-        'name': name,
-        'changes': {},
-        'result': False,
-        'comment': ''
-    }
+    """
+    ret = {"name": name, "changes": {}, "result": False, "comment": ""}
     return ret
 
 
 def hostname(name, hostname=None):
-    '''
+    """
     Ensures that the hostname is set to the specified value.
 
     .. versionadded:: 2019.2.0
@@ -61,11 +57,11 @@ def hostname(name, hostname=None):
           cimc.hostname:
             - hostname: foobar
 
-    '''
+    """
 
     ret = _default_ret(name)
 
-    current_name = __salt__['cimc.get_hostname']()
+    current_name = __salt__["cimc.get_hostname"]()
 
     req_change = False
 
@@ -76,32 +72,32 @@ def hostname(name, hostname=None):
 
         if req_change:
 
-            update = __salt__['cimc.set_hostname'](hostname)
+            update = __salt__["cimc.set_hostname"](hostname)
 
             if not update:
-                ret['result'] = False
-                ret['comment'] = "Error setting hostname."
+                ret["result"] = False
+                ret["comment"] = "Error setting hostname."
                 return ret
 
-            ret['changes']['before'] = current_name
-            ret['changes']['after'] = hostname
-            ret['comment'] = "Hostname modified."
+            ret["changes"]["before"] = current_name
+            ret["changes"]["after"] = hostname
+            ret["comment"] = "Hostname modified."
         else:
-            ret['comment'] = "Hostname already configured. No changes required."
+            ret["comment"] = "Hostname already configured. No changes required."
 
-    except Exception as err:
-        ret['result'] = False
-        ret['comment'] = "Error occurred setting hostname."
+    except Exception as err:  # pylint: disable=broad-except
+        ret["result"] = False
+        ret["comment"] = "Error occurred setting hostname."
         log.error(err)
         return ret
 
-    ret['result'] = True
+    ret["result"] = True
 
     return ret
 
 
 def logging_levels(name, remote=None, local=None):
-    '''
+    """
     Ensures that the logging levels are set on the device. The logging levels
     must match the following options: emergency, alert, critical, error, warning,
     notice, informational, debug.
@@ -123,50 +119,50 @@ def logging_levels(name, remote=None, local=None):
             - remote: informational
             - local: notice
 
-    '''
+    """
 
     ret = _default_ret(name)
 
-    syslog_conf = __salt__['cimc.get_syslog_settings']()
+    syslog_conf = __salt__["cimc.get_syslog_settings"]()
 
     req_change = False
 
     try:
-        syslog_dict = syslog_conf['outConfigs']['commSyslog'][0]
+        syslog_dict = syslog_conf["outConfigs"]["commSyslog"][0]
 
-        if remote and syslog_dict['remoteSeverity'] != remote:
+        if remote and syslog_dict["remoteSeverity"] != remote:
             req_change = True
-        elif local and syslog_dict['localSeverity'] != local:
+        elif local and syslog_dict["localSeverity"] != local:
             req_change = True
 
         if req_change:
 
-            update = __salt__['cimc.set_logging_levels'](remote, local)
+            update = __salt__["cimc.set_logging_levels"](remote, local)
 
-            if update['outConfig']['commSyslog'][0]['status'] != 'modified':
-                ret['result'] = False
-                ret['comment'] = "Error setting logging levels."
+            if update["outConfig"]["commSyslog"][0]["status"] != "modified":
+                ret["result"] = False
+                ret["comment"] = "Error setting logging levels."
                 return ret
 
-            ret['changes']['before'] = syslog_conf
-            ret['changes']['after'] = __salt__['cimc.get_syslog_settings']()
-            ret['comment'] = "Logging level settings modified."
+            ret["changes"]["before"] = syslog_conf
+            ret["changes"]["after"] = __salt__["cimc.get_syslog_settings"]()
+            ret["comment"] = "Logging level settings modified."
         else:
-            ret['comment'] = "Logging level already configured. No changes required."
+            ret["comment"] = "Logging level already configured. No changes required."
 
-    except Exception as err:
-        ret['result'] = False
-        ret['comment'] = "Error occurred setting logging level settings."
+    except Exception as err:  # pylint: disable=broad-except
+        ret["result"] = False
+        ret["comment"] = "Error occurred setting logging level settings."
         log.error(err)
         return ret
 
-    ret['result'] = True
+    ret["result"] = True
 
     return ret
 
 
 def ntp(name, servers):
-    '''
+    """
     Ensures that the NTP servers are configured. Servers are provided as an individual string or list format. Only four
     NTP servers will be reviewed. Any entries past four will be ignored.
 
@@ -188,10 +184,10 @@ def ntp(name, servers):
           cimc.ntp:
             - servers: foo.bar.com
 
-    '''
+    """
     ret = _default_ret(name)
 
-    ntp_servers = ['', '', '', '']
+    ntp_servers = ["", "", "", ""]
 
     # Parse our server arguments
     if isinstance(servers, list):
@@ -202,53 +198,54 @@ def ntp(name, servers):
     else:
         ntp_servers[0] = servers
 
-    conf = __salt__['cimc.get_ntp']()
+    conf = __salt__["cimc.get_ntp"]()
 
     # Check if our NTP configuration is already set
     req_change = False
     try:
-        if conf['outConfigs']['commNtpProvider'][0]['ntpEnable'] != 'yes' \
-                or ntp_servers[0] != conf['outConfigs']['commNtpProvider'][0]['ntpServer1'] \
-                or ntp_servers[1] != conf['outConfigs']['commNtpProvider'][0]['ntpServer2'] \
-                or ntp_servers[2] != conf['outConfigs']['commNtpProvider'][0]['ntpServer3'] \
-                or ntp_servers[3] != conf['outConfigs']['commNtpProvider'][0]['ntpServer4']:
+        if (
+            conf["outConfigs"]["commNtpProvider"][0]["ntpEnable"] != "yes"
+            or ntp_servers[0] != conf["outConfigs"]["commNtpProvider"][0]["ntpServer1"]
+            or ntp_servers[1] != conf["outConfigs"]["commNtpProvider"][0]["ntpServer2"]
+            or ntp_servers[2] != conf["outConfigs"]["commNtpProvider"][0]["ntpServer3"]
+            or ntp_servers[3] != conf["outConfigs"]["commNtpProvider"][0]["ntpServer4"]
+        ):
             req_change = True
     except KeyError as err:
-        ret['result'] = False
-        ret['comment'] = "Unable to confirm current NTP settings."
+        ret["result"] = False
+        ret["comment"] = "Unable to confirm current NTP settings."
         log.error(err)
         return ret
 
     if req_change:
 
         try:
-            update = __salt__['cimc.set_ntp_server'](ntp_servers[0],
-                                                     ntp_servers[1],
-                                                     ntp_servers[2],
-                                                     ntp_servers[3])
-            if update['outConfig']['commNtpProvider'][0]['status'] != 'modified':
-                ret['result'] = False
-                ret['comment'] = "Error setting NTP configuration."
+            update = __salt__["cimc.set_ntp_server"](
+                ntp_servers[0], ntp_servers[1], ntp_servers[2], ntp_servers[3]
+            )
+            if update["outConfig"]["commNtpProvider"][0]["status"] != "modified":
+                ret["result"] = False
+                ret["comment"] = "Error setting NTP configuration."
                 return ret
-        except Exception as err:
-            ret['result'] = False
-            ret['comment'] = "Error setting NTP configuration."
+        except Exception as err:  # pylint: disable=broad-except
+            ret["result"] = False
+            ret["comment"] = "Error setting NTP configuration."
             log.error(err)
             return ret
 
-        ret['changes']['before'] = conf
-        ret['changes']['after'] = __salt__['cimc.get_ntp']()
-        ret['comment'] = "NTP settings modified."
+        ret["changes"]["before"] = conf
+        ret["changes"]["after"] = __salt__["cimc.get_ntp"]()
+        ret["comment"] = "NTP settings modified."
     else:
-        ret['comment'] = "NTP already configured. No changes required."
+        ret["comment"] = "NTP already configured. No changes required."
 
-    ret['result'] = True
+    ret["result"] = True
 
     return ret
 
 
 def power_configuration(name, policy=None, delayType=None, delayValue=None):
-    '''
+    """
     Ensures that the power configuration is configured on the system. This is
     only available on some C-Series servers.
 
@@ -296,60 +293,63 @@ def power_configuration(name, policy=None, delayType=None, delayValue=None):
             - policy: stay-off
 
 
-    '''
+    """
 
     ret = _default_ret(name)
 
-    power_conf = __salt__['cimc.get_power_configuration']()
+    power_conf = __salt__["cimc.get_power_configuration"]()
 
     req_change = False
 
     try:
-        power_dict = power_conf['outConfigs']['biosVfResumeOnACPowerLoss'][0]
+        power_dict = power_conf["outConfigs"]["biosVfResumeOnACPowerLoss"][0]
 
-        if policy and power_dict['vpResumeOnACPowerLoss'] != policy:
+        if policy and power_dict["vpResumeOnACPowerLoss"] != policy:
             req_change = True
         elif policy == "reset":
-            if power_dict['delayType'] != delayType:
+            if power_dict["delayType"] != delayType:
                 req_change = True
-            elif power_dict['delayType'] == "fixed":
-                if str(power_dict['delay']) != str(delayValue):
+            elif power_dict["delayType"] == "fixed":
+                if str(power_dict["delay"]) != str(delayValue):
                     req_change = True
         else:
-            ret['result'] = False
-            ret['comment'] = "The power policy must be specified."
+            ret["result"] = False
+            ret["comment"] = "The power policy must be specified."
             return ret
 
         if req_change:
 
-            update = __salt__['cimc.set_power_configuration'](policy,
-                                                              delayType,
-                                                              delayValue)
+            update = __salt__["cimc.set_power_configuration"](
+                policy, delayType, delayValue
+            )
 
-            if update['outConfig']['biosVfResumeOnACPowerLoss'][0]['status'] != 'modified':
-                ret['result'] = False
-                ret['comment'] = "Error setting power configuration."
+            if (
+                update["outConfig"]["biosVfResumeOnACPowerLoss"][0]["status"]
+                != "modified"
+            ):
+                ret["result"] = False
+                ret["comment"] = "Error setting power configuration."
                 return ret
 
-            ret['changes']['before'] = power_conf
-            ret['changes']['after'] = __salt__['cimc.get_power_configuration']()
-            ret['comment'] = "Power settings modified."
+            ret["changes"]["before"] = power_conf
+            ret["changes"]["after"] = __salt__["cimc.get_power_configuration"]()
+            ret["comment"] = "Power settings modified."
         else:
-            ret['comment'] = "Power settings already configured. No changes required."
+            ret["comment"] = "Power settings already configured. No changes required."
 
-    except Exception as err:
-        ret['result'] = False
-        ret['comment'] = "Error occurred setting power settings."
+    except Exception as err:  # pylint: disable=broad-except
+        ret["result"] = False
+        ret["comment"] = "Error occurred setting power settings."
         log.error(err)
         return ret
 
-    ret['result'] = True
+    ret["result"] = True
 
     return ret
 
 
 def syslog(name, primary=None, secondary=None):
-    '''
+    """
     Ensures that the syslog servers are set to the specified values. A value of None will be ignored.
 
     name: The name of the module function to execute.
@@ -367,75 +367,75 @@ def syslog(name, primary=None, secondary=None):
             - primary: 10.10.10.10
             - secondary: foo.bar.com
 
-    '''
+    """
     ret = _default_ret(name)
 
-    conf = __salt__['cimc.get_syslog']()
+    conf = __salt__["cimc.get_syslog"]()
 
     req_change = False
 
     if primary:
         prim_change = True
-        if 'outConfigs' in conf and 'commSyslogClient' in conf['outConfigs']:
-            for entry in conf['outConfigs']['commSyslogClient']:
-                if entry['name'] != 'primary':
+        if "outConfigs" in conf and "commSyslogClient" in conf["outConfigs"]:
+            for entry in conf["outConfigs"]["commSyslogClient"]:
+                if entry["name"] != "primary":
                     continue
-                if entry['adminState'] == 'enabled' and entry['hostname'] == primary:
+                if entry["adminState"] == "enabled" and entry["hostname"] == primary:
                     prim_change = False
 
         if prim_change:
             try:
-                update = __salt__['cimc.set_syslog_server'](primary, "primary")
-                if update['outConfig']['commSyslogClient'][0]['status'] == 'modified':
+                update = __salt__["cimc.set_syslog_server"](primary, "primary")
+                if update["outConfig"]["commSyslogClient"][0]["status"] == "modified":
                     req_change = True
                 else:
-                    ret['result'] = False
-                    ret['comment'] = "Error setting primary SYSLOG server."
+                    ret["result"] = False
+                    ret["comment"] = "Error setting primary SYSLOG server."
                     return ret
-            except Exception as err:
-                ret['result'] = False
-                ret['comment'] = "Error setting primary SYSLOG server."
+            except Exception as err:  # pylint: disable=broad-except
+                ret["result"] = False
+                ret["comment"] = "Error setting primary SYSLOG server."
                 log.error(err)
                 return ret
 
     if secondary:
         sec_change = True
-        if 'outConfig' in conf and 'commSyslogClient' in conf['outConfig']:
-            for entry in conf['outConfig']['commSyslogClient']:
-                if entry['name'] != 'secondary':
+        if "outConfig" in conf and "commSyslogClient" in conf["outConfig"]:
+            for entry in conf["outConfig"]["commSyslogClient"]:
+                if entry["name"] != "secondary":
                     continue
-                if entry['adminState'] == 'enabled' and entry['hostname'] == secondary:
+                if entry["adminState"] == "enabled" and entry["hostname"] == secondary:
                     sec_change = False
 
         if sec_change:
             try:
-                update = __salt__['cimc.set_syslog_server'](secondary, "secondary")
-                if update['outConfig']['commSyslogClient'][0]['status'] == 'modified':
+                update = __salt__["cimc.set_syslog_server"](secondary, "secondary")
+                if update["outConfig"]["commSyslogClient"][0]["status"] == "modified":
                     req_change = True
                 else:
-                    ret['result'] = False
-                    ret['comment'] = "Error setting secondary SYSLOG server."
+                    ret["result"] = False
+                    ret["comment"] = "Error setting secondary SYSLOG server."
                     return ret
-            except Exception as err:
-                ret['result'] = False
-                ret['comment'] = "Error setting secondary SYSLOG server."
+            except Exception as err:  # pylint: disable=broad-except
+                ret["result"] = False
+                ret["comment"] = "Error setting secondary SYSLOG server."
                 log.error(err)
                 return ret
 
     if req_change:
-        ret['changes']['before'] = conf
-        ret['changes']['after'] = __salt__['cimc.get_syslog']()
-        ret['comment'] = "SYSLOG settings modified."
+        ret["changes"]["before"] = conf
+        ret["changes"]["after"] = __salt__["cimc.get_syslog"]()
+        ret["comment"] = "SYSLOG settings modified."
     else:
-        ret['comment'] = "SYSLOG already configured. No changes required."
+        ret["comment"] = "SYSLOG already configured. No changes required."
 
-    ret['result'] = True
+    ret["result"] = True
 
     return ret
 
 
-def user(name, id='', user='', priv='', password='', status='active'):
-    '''
+def user(name, id="", user="", priv="", password="", status="active"):
+    """
     Ensures that a user is configured on the device. Due to being unable to
     verify the user password. This is a forced operation.
 
@@ -465,39 +465,41 @@ def user(name, id='', user='', priv='', password='', status='active'):
             - password: mypassword
             - status: active
 
-    '''
+    """
 
     ret = _default_ret(name)
 
-    user_conf = __salt__['cimc.get_users']()
+    user_conf = __salt__["cimc.get_users"]()
 
     try:
-        for entry in user_conf['outConfigs']['aaaUser']:
-            if entry['id'] == str(id):
+        for entry in user_conf["outConfigs"]["aaaUser"]:
+            if entry["id"] == str(id):
                 conf = entry
 
         if not conf:
-            ret['result'] = False
-            ret['comment'] = "Unable to find requested user id on device. Please verify id is valid."
+            ret["result"] = False
+            ret[
+                "comment"
+            ] = "Unable to find requested user id on device. Please verify id is valid."
             return ret
 
-        updates = __salt__['cimc.set_user'](str(id), user, password, priv, status)
+        updates = __salt__["cimc.set_user"](str(id), user, password, priv, status)
 
-        if 'outConfig' in updates:
-            ret['changes']['before'] = conf
-            ret['changes']['after'] = updates['outConfig']['aaaUser']
-            ret['comment'] = "User settings modified."
+        if "outConfig" in updates:
+            ret["changes"]["before"] = conf
+            ret["changes"]["after"] = updates["outConfig"]["aaaUser"]
+            ret["comment"] = "User settings modified."
         else:
-            ret['result'] = False
-            ret['comment'] = "Error setting user configuration."
+            ret["result"] = False
+            ret["comment"] = "Error setting user configuration."
             return ret
 
-    except Exception as err:
-        ret['result'] = False
-        ret['comment'] = "Error setting user configuration."
+    except Exception as err:  # pylint: disable=broad-except
+        ret["result"] = False
+        ret["comment"] = "Error setting user configuration."
         log.error(err)
         return ret
 
-    ret['result'] = True
+    ret["result"] = True
 
     return ret

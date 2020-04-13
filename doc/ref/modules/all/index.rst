@@ -13,6 +13,7 @@ execution modules
         salt.modules.pkg
         salt.modules.service
         salt.modules.shadow
+        salt.modules.sysctl
         salt.modules.user
 
 .. currentmodule:: salt.modules
@@ -48,6 +49,7 @@ execution modules
     bigip
     bluez_bluetooth
     boto3_elasticache
+    boto3_elasticsearch
     boto3_route53
     boto_apigateway
     boto_asg
@@ -111,10 +113,10 @@ execution modules
     ddns
     deb_apache
     deb_postgres
-    debuild_pkgbuild
     debconfmod
     debian_ip
     debian_service
+    debuild_pkgbuild
     defaults
     devmap
     dig
@@ -173,12 +175,12 @@ execution modules
     hg
     hosts
     http
+    icinga2
     ifttt
     ilo
-    icinga2
     incron
-    influxdbmod
     influxdb08mod
+    influxdbmod
     infoblox
     ini_manage
     inspectlib
@@ -236,11 +238,9 @@ execution modules
     lxd
     mac_assistive
     mac_brew_pkg
-    macdefaults
     mac_desktop
     mac_group
     mac_keychain
-    macpackage
     mac_pkgutil
     mac_portspkg
     mac_power
@@ -252,6 +252,8 @@ execution modules
     mac_timezone
     mac_user
     mac_xattr
+    macdefaults
+    macpackage
     makeconf
     mandrill
     marathon
@@ -275,16 +277,15 @@ execution modules
     nacl
     nagios
     nagios_rpc
-    namecheap_domains_dns
     namecheap_domains
+    namecheap_domains_dns
     namecheap_domains_ns
     namecheap_ssl
     namecheap_users
-    napalm_mod
-    napalm_netacl
     napalm_bgp
     napalm_formula
     napalm_mod
+    napalm_netacl
     napalm_network
     napalm_ntp
     napalm_probes
@@ -387,6 +388,7 @@ execution modules
     s3
     s6
     salt_proxy
+    salt_version
     saltcheck
     saltcloudmod
     saltutil
@@ -411,6 +413,7 @@ execution modules
     smbios
     smf_service
     smtp
+    snapper
     solaris_fmadm
     solaris_group
     solaris_shadow
@@ -426,7 +429,6 @@ execution modules
     ssh
     ssh_pkg
     ssh_service
-    snapper
     state
     status
     statuspage
@@ -447,8 +449,8 @@ execution modules
     telemetry
     temp
     test
-    testinframod
     test_virtual
+    testinframod
     textfsm_mod
     timezone
     tls
@@ -494,7 +496,6 @@ execution modules
     win_pki
     win_powercfg
     win_psget
-    winrepo
     win_servermanager
     win_service
     win_shadow
@@ -507,10 +508,12 @@ execution modules
     win_useradd
     win_wua
     win_wusa
+    winrepo
     x509
     xapi_virt
     xbpspkg
     xfs
+    xml
     xmpp
     yumpkg
     zabbix

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Managing implicit state and baselines using snapshots
 =====================================================
 
@@ -105,34 +105,36 @@ and include this change.
 
 :maturity:      new
 :platform:      Linux
-'''
+"""
 
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
 
 def __virtual__():
-    '''
+    """
     Only load if the snapper module is available in __salt__
-    '''
-    return 'snapper' if 'snapper.diff' in __salt__ else False
+    """
+    return "snapper" if "snapper.diff" in __salt__ else False
 
 
 def _get_baseline_from_tag(config, tag):
-    '''
+    """
     Returns the last created baseline snapshot marked with `tag`
-    '''
+    """
     last_snapshot = None
-    for snapshot in __salt__['snapper.list_snapshots'](config):
-        if tag == snapshot['userdata'].get("baseline_tag"):
-            if not last_snapshot or last_snapshot['timestamp'] < snapshot['timestamp']:
+    for snapshot in __salt__["snapper.list_snapshots"](config):
+        if tag == snapshot["userdata"].get("baseline_tag"):
+            if not last_snapshot or last_snapshot["timestamp"] < snapshot["timestamp"]:
                 last_snapshot = snapshot
     return last_snapshot
 
 
-def baseline_snapshot(name, number=None, tag=None, include_diff=True, config='root', ignore=None):
-    '''
+def baseline_snapshot(
+    name, number=None, tag=None, include_diff=True, config="root", ignore=None
+):
+    """
     Enforces that no file is modified comparing against a previously
     defined snapshot identified by number.
 
@@ -152,68 +154,78 @@ def baseline_snapshot(name, number=None, tag=None, include_diff=True, config='ro
 
     ignore
         List of files to ignore. (Default: None)
-    '''
+    """
     if not ignore:
         ignore = []
 
-    ret = {'changes': {},
-           'comment': '',
-           'name': name,
-           'result': True}
+    ret = {"changes": {}, "comment": "", "name": name, "result": True}
 
     if number is None and tag is None:
-        ret.update({'result': False,
-                    'comment': 'Snapshot tag or number must be specified'})
+        ret.update(
+            {"result": False, "comment": "Snapshot tag or number must be specified"}
+        )
         return ret
 
     if number and tag:
-        ret.update({'result': False,
-                    'comment': 'Cannot use snapshot tag and number at the same time'})
+        ret.update(
+            {
+                "result": False,
+                "comment": "Cannot use snapshot tag and number at the same time",
+            }
+        )
         return ret
 
     if tag:
         snapshot = _get_baseline_from_tag(config, tag)
         if not snapshot:
-            ret.update({'result': False,
-                        'comment': 'Baseline tag "{0}" not found'.format(tag)})
+            ret.update(
+                {"result": False, "comment": 'Baseline tag "{0}" not found'.format(tag)}
+            )
             return ret
-        number = snapshot['id']
+        number = snapshot["id"]
 
-    status = __salt__['snapper.status'](
-        config, num_pre=0, num_post=number)
+    status = __salt__["snapper.status"](config, num_pre=0, num_post=number)
 
     for target in ignore:
         if os.path.isfile(target):
             status.pop(target, None)
         elif os.path.isdir(target):
-            for target_file in [target_file for target_file in status.keys() if target_file.startswith(target)]:
+            for target_file in [
+                target_file
+                for target_file in status.keys()
+                if target_file.startswith(target)
+            ]:
                 status.pop(target_file, None)
 
     for file in status:
         # Only include diff for modified files
         if "modified" in status[file]["status"] and include_diff:
             status[file].pop("status")
-            status[file].update(__salt__['snapper.diff'](config,
-                                                         num_pre=0,
-                                                         num_post=number,
-                                                         filename=file).get(file, {}))
+            status[file].update(
+                __salt__["snapper.diff"](
+                    config, num_pre=0, num_post=number, filename=file
+                ).get(file, {})
+            )
 
-    if __opts__['test'] and status:
-        ret['changes'] = status
-        ret['comment'] = "{0} files changes are set to be undone".format(len(status.keys()))
-        ret['result'] = None
-    elif __opts__['test'] and not status:
-        ret['changes'] = {}
-        ret['comment'] = "Nothing to be done"
-        ret['result'] = True
-    elif not __opts__['test'] and status:
-        undo = __salt__['snapper.undo'](config, num_pre=number, num_post=0,
-                                        files=status.keys())
-        ret['changes']['sumary'] = undo
-        ret['changes']['files'] = status
-        ret['result'] = True
+    if __opts__["test"] and status:
+        ret["changes"] = status
+        ret["comment"] = "{0} files changes are set to be undone".format(
+            len(status.keys())
+        )
+        ret["result"] = None
+    elif __opts__["test"] and not status:
+        ret["changes"] = {}
+        ret["comment"] = "Nothing to be done"
+        ret["result"] = True
+    elif not __opts__["test"] and status:
+        undo = __salt__["snapper.undo"](
+            config, num_pre=number, num_post=0, files=status.keys()
+        )
+        ret["changes"]["sumary"] = undo
+        ret["changes"]["files"] = status
+        ret["result"] = True
     else:
-        ret['comment'] = "No changes were done"
-        ret['result'] = True
+        ret["comment"] = "No changes were done"
+        ret["result"] = True
 
     return ret

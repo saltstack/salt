@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Apache state
 
 .. versionadded:: 2014.7.0
@@ -83,9 +83,9 @@ it still needs keyword ``this`` with empty string (or "\b" if nicer output is re
                 - Else:
                     this: "\b"
                     do: another thing
-'''
+"""
 
-from __future__ import absolute_import, with_statement, print_function, unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals, with_statement
 
 # Import python libs
 import os
@@ -96,45 +96,36 @@ import salt.utils.stringutils
 
 
 def __virtual__():
-    return 'apache.config' in __salt__
+    return "apache.config" in __salt__
 
 
 def configfile(name, config):
-    ret = {'name': name,
-           'changes': {},
-           'result': None,
-           'comment': ''}
+    ret = {"name": name, "changes": {}, "result": None, "comment": ""}
 
-    configs = __salt__['apache.config'](name, config, edit=False)
-    current_configs = ''
+    configs = __salt__["apache.config"](name, config, edit=False)
+    current_configs = ""
     if os.path.exists(name):
         with salt.utils.files.fopen(name) as config_file:
             current_configs = salt.utils.stringutils.to_unicode(config_file.read())
 
     if configs.strip() == current_configs.strip():
-        ret['result'] = True
-        ret['comment'] = 'Configuration is up to date.'
+        ret["result"] = True
+        ret["comment"] = "Configuration is up to date."
         return ret
-    elif __opts__['test']:
-        ret['comment'] = 'Configuration will update.'
-        ret['changes'] = {
-            'old': current_configs,
-            'new': configs
-        }
-        ret['result'] = None
+    elif __opts__["test"]:
+        ret["comment"] = "Configuration will update."
+        ret["changes"] = {"old": current_configs, "new": configs}
+        ret["result"] = None
         return ret
 
     try:
-        with salt.utils.files.fopen(name, 'w') as config_file:
+        with salt.utils.files.fopen(name, "w") as config_file:
             print(salt.utils.stringutils.to_str(configs), file=config_file)
-        ret['changes'] = {
-            'old': current_configs,
-            'new': configs
-        }
-        ret['result'] = True
-        ret['comment'] = 'Successfully created configuration.'
-    except Exception as exc:
-        ret['result'] = False
-        ret['comment'] = 'Failed to create apache configuration.'
+        ret["changes"] = {"old": current_configs, "new": configs}
+        ret["result"] = True
+        ret["comment"] = "Successfully created configuration."
+    except Exception as exc:  # pylint: disable=broad-except
+        ret["result"] = False
+        ret["comment"] = "Failed to create apache configuration."
 
     return ret

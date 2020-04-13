@@ -1024,7 +1024,7 @@ Returns:
 ``set_dict_key_value``
 ----------------------
 
-..versionadded:: Neon
+..versionadded:: 3000
 
 Allows you to set a value in a nested dictionary without having to worry if all the nested keys actually exist.
 Missing keys will be automatically created if they do not exist.
@@ -1057,7 +1057,7 @@ Example 2:
 ``append_dict_key_value``
 -------------------------
 
-..versionadded:: Neon
+..versionadded:: 3000
 
 Allows you to append to a list nested (deep) in a dictionary without having to worry if all the nested keys (or the list itself) actually exist.
 Missing keys will automatically be created if they do not exist.
@@ -1091,7 +1091,7 @@ Example 2:
 ``extend_dict_key_value``
 -------------------------
 
-..versionadded:: Neon
+..versionadded:: 3000
 
 Allows you to extend a list nested (deep) in a dictionary without having to worry if all the nested keys (or the list itself) actually exist.
 Missing keys will automatically be created if they do not exist.
@@ -1124,7 +1124,7 @@ Example 2:
 ``update_dict_key_value``
 -------------------------
 
-..versionadded:: Neon
+..versionadded:: 3000
 
 Allows you to update a dictionary nested (deep) in another dictionary without having to worry if all the nested keys actually exist.
 Missing keys will automatically be created if they do not exist.
@@ -1343,16 +1343,59 @@ Returns:
 
   'default'
 
+
+.. jinja_ref:: json_query
+
+``json_query``
+--------------
+
+.. versionadded:: 3000
+
+A port of Ansible ``json_query`` Jinja filter to make queries against JSON data using `JMESPath language`_.
+Could be used to filter ``pillar`` data, ``yaml`` maps, and together with :jinja_ref:`http_query`.
+Depends on the `jmespath`_ Python module.
+
+Examples:
+
+.. code-block:: jinja
+
+  Example 1: {{ [1, 2, 3, 4, [5, 6]] | json_query('[]') }}
+
+  Example 2: {{
+  {"machines": [
+    {"name": "a", "state": "running"},
+    {"name": "b", "state": "stopped"},
+    {"name": "c", "state": "running"}
+  ]} | json_query("machines[?state=='running'].name") }}
+
+  Example 3: {{
+  {"services": [
+    {"name": "http", "host": "1.2.3.4", "port": 80},
+    {"name": "smtp", "host": "1.2.3.5", "port": 25},
+    {"name": "ssh",  "host": "1.2.3.6", "port": 22},
+  ]} | json_query("services[].port") }}
+
+Returns:
+
+.. code-block:: text
+
+  Example 1: [1, 2, 3, 4, 5, 6]
+
+  Example 2: ['a', 'c']
+
+  Example 3: [80, 25, 22]
+
 .. _`builtin filters`: http://jinja.pocoo.org/docs/templates/#builtin-filters
 .. _`timelib`: https://github.com/pediapress/timelib/
-
+.. _`JMESPath language`: http://jmespath.org/
+.. _`jmespath`: https://github.com/jmespath/jmespath.py
 
 .. jinja_ref:: to_snake_case
 
 ``to_snake_case``
 -----------------
 
-.. versionadded:: Neon
+.. versionadded:: 3000
 
 Converts a string from camelCase (or CamelCase) to snake_case.
 
@@ -1372,7 +1415,7 @@ Returns:
 ``to_camelcase``
 ----------------
 
-.. versionadded:: Neon
+.. versionadded:: 3000
 
 Converts a string from snake_case to camelCase (or UpperCamelCase if so indicated).
 

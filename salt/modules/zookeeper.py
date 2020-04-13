@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Zookeeper Module
 ~~~~~~~~~~~~~~~~
 :maintainer:    SaltStack
@@ -63,21 +63,23 @@ Configuration
                 admin: true
             username: daniel
             password: test
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
+
+# Import Salt libraries
+import salt.utils.stringutils
 
 # Import python libraries
 try:
     import kazoo.client
     import kazoo.security
+
     HAS_KAZOO = True
 except ImportError:
     HAS_KAZOO = False
 
-# Import Salt libraries
-import salt.utils.stringutils
 
-__virtualname__ = 'zookeeper'
+__virtualname__ = "zookeeper"
 
 
 def __virtual__():
@@ -88,31 +90,33 @@ def __virtual__():
 
 def _get_zk_conn(profile=None, **connection_args):
     if profile:
-        prefix = 'zookeeper:' + profile
+        prefix = "zookeeper:" + profile
     else:
-        prefix = 'zookeeper'
+        prefix = "zookeeper"
 
     def get(key, default=None):
-        '''
+        """
         look in connection_args first, then default to config file
-        '''
-        return connection_args.get(key) or __salt__['config.get'](':'.join([prefix, key]), default)
+        """
+        return connection_args.get(key) or __salt__["config.get"](
+            ":".join([prefix, key]), default
+        )
 
-    hosts = get('hosts', '127.0.0.1:2181')
-    scheme = get('scheme', None)
-    username = get('username', None)
-    password = get('password', None)
-    default_acl = get('default_acl', None)
+    hosts = get("hosts", "127.0.0.1:2181")
+    scheme = get("scheme", None)
+    username = get("username", None)
+    password = get("password", None)
+    default_acl = get("default_acl", None)
 
     if isinstance(hosts, list):
-        hosts = ','.join(hosts)
+        hosts = ",".join(hosts)
 
     if username is not None and password is not None and scheme is None:
-        scheme = 'digest'
+        scheme = "digest"
 
     auth_data = None
     if scheme and username and password:
-        auth_data = [(scheme, ':'.join([username, password]))]
+        auth_data = [(scheme, ":".join([username, password]))]
 
     if default_acl is not None:
         if isinstance(default_acl, list):
@@ -120,20 +124,34 @@ def _get_zk_conn(profile=None, **connection_args):
         else:
             default_acl = [make_digest_acl(**default_acl)]
 
-    __context__.setdefault('zkconnection', {}).setdefault(profile or hosts,
-                                                          kazoo.client.KazooClient(hosts=hosts,
-                                                                                   default_acl=default_acl,
-                                                                                   auth_data=auth_data))
+    __context__.setdefault("zkconnection", {}).setdefault(
+        profile or hosts,
+        kazoo.client.KazooClient(
+            hosts=hosts, default_acl=default_acl, auth_data=auth_data
+        ),
+    )
 
-    if not __context__['zkconnection'][profile or hosts].connected:
-        __context__['zkconnection'][profile or hosts].start()
+    if not __context__["zkconnection"][profile or hosts].connected:
+        __context__["zkconnection"][profile or hosts].start()
 
-    return __context__['zkconnection'][profile or hosts]
+    return __context__["zkconnection"][profile or hosts]
 
 
-def create(path, value='', acls=None, ephemeral=False, sequence=False, makepath=False, profile=None,
-           hosts=None, scheme=None, username=None, password=None, default_acl=None):
-    '''
+def create(
+    path,
+    value="",
+    acls=None,
+    ephemeral=False,
+    sequence=False,
+    makepath=False,
+    profile=None,
+    hosts=None,
+    scheme=None,
+    username=None,
+    password=None,
+    default_acl=None,
+):
+    """
     Create Znode
 
     path
@@ -178,18 +196,39 @@ def create(path, value='', acls=None, ephemeral=False, sequence=False, makepath=
 
         salt minion1 zookeeper.create /test/name daniel profile=prod
 
-    '''
+    """
     if acls is None:
         acls = []
     acls = [make_digest_acl(**acl) for acl in acls]
-    conn = _get_zk_conn(profile=profile, hosts=hosts, scheme=scheme,
-                        username=username, password=password, default_acl=default_acl)
-    return conn.create(path, salt.utils.stringutils.to_bytes(value), acls, ephemeral, sequence, makepath)
+    conn = _get_zk_conn(
+        profile=profile,
+        hosts=hosts,
+        scheme=scheme,
+        username=username,
+        password=password,
+        default_acl=default_acl,
+    )
+    return conn.create(
+        path,
+        salt.utils.stringutils.to_bytes(value),
+        acls,
+        ephemeral,
+        sequence,
+        makepath,
+    )
 
 
-def ensure_path(path, acls=None, profile=None, hosts=None, scheme=None,
-                username=None, password=None, default_acl=None):
-    '''
+def ensure_path(
+    path,
+    acls=None,
+    profile=None,
+    hosts=None,
+    scheme=None,
+    username=None,
+    password=None,
+    default_acl=None,
+):
+    """
     Ensure Znode path exists
 
     path
@@ -222,17 +261,31 @@ def ensure_path(path, acls=None, profile=None, hosts=None, scheme=None,
 
         salt minion1 zookeeper.ensure_path /test/name profile=prod
 
-    '''
+    """
     if acls is None:
         acls = []
     acls = [make_digest_acl(**acl) for acl in acls]
-    conn = _get_zk_conn(profile=profile, hosts=hosts, scheme=scheme,
-                        username=username, password=password, default_acl=default_acl)
+    conn = _get_zk_conn(
+        profile=profile,
+        hosts=hosts,
+        scheme=scheme,
+        username=username,
+        password=password,
+        default_acl=default_acl,
+    )
     return conn.ensure_path(path, acls)
 
 
-def exists(path, profile=None, hosts=None, scheme=None, username=None, password=None, default_acl=None):
-    '''
+def exists(
+    path,
+    profile=None,
+    hosts=None,
+    scheme=None,
+    username=None,
+    password=None,
+    default_acl=None,
+):
+    """
     Check if path exists
 
     path
@@ -262,14 +315,28 @@ def exists(path, profile=None, hosts=None, scheme=None, username=None, password=
 
         salt minion1 zookeeper.exists /test/name profile=prod
 
-    '''
-    conn = _get_zk_conn(profile=profile, hosts=hosts, scheme=scheme,
-                        username=username, password=password, default_acl=default_acl)
+    """
+    conn = _get_zk_conn(
+        profile=profile,
+        hosts=hosts,
+        scheme=scheme,
+        username=username,
+        password=password,
+        default_acl=default_acl,
+    )
     return bool(conn.exists(path))
 
 
-def get(path, profile=None, hosts=None, scheme=None, username=None, password=None, default_acl=None):
-    '''
+def get(
+    path,
+    profile=None,
+    hosts=None,
+    scheme=None,
+    username=None,
+    password=None,
+    default_acl=None,
+):
+    """
     Get value saved in znode
 
     path
@@ -299,15 +366,29 @@ def get(path, profile=None, hosts=None, scheme=None, username=None, password=Non
 
         salt minion1 zookeeper.get /test/name profile=prod
 
-    '''
-    conn = _get_zk_conn(profile=profile, hosts=hosts, scheme=scheme,
-                        username=username, password=password, default_acl=default_acl)
+    """
+    conn = _get_zk_conn(
+        profile=profile,
+        hosts=hosts,
+        scheme=scheme,
+        username=username,
+        password=password,
+        default_acl=default_acl,
+    )
     ret, _ = conn.get(path)
     return salt.utils.stringutils.to_str(ret)
 
 
-def get_children(path, profile=None, hosts=None, scheme=None, username=None, password=None, default_acl=None):
-    '''
+def get_children(
+    path,
+    profile=None,
+    hosts=None,
+    scheme=None,
+    username=None,
+    password=None,
+    default_acl=None,
+):
+    """
     Get children in znode path
 
     path
@@ -337,16 +418,31 @@ def get_children(path, profile=None, hosts=None, scheme=None, username=None, pas
 
         salt minion1 zookeeper.get_children /test profile=prod
 
-    '''
-    conn = _get_zk_conn(profile=profile, hosts=hosts, scheme=scheme,
-                        username=username, password=password, default_acl=default_acl)
+    """
+    conn = _get_zk_conn(
+        profile=profile,
+        hosts=hosts,
+        scheme=scheme,
+        username=username,
+        password=password,
+        default_acl=default_acl,
+    )
     ret = conn.get_children(path)
     return ret or []
 
 
-def set(path, value, version=-1, profile=None, hosts=None, scheme=None,
-        username=None, password=None, default_acl=None):
-    '''
+def set(
+    path,
+    value,
+    version=-1,
+    profile=None,
+    hosts=None,
+    scheme=None,
+    username=None,
+    password=None,
+    default_acl=None,
+):
+    """
     Update znode with new value
 
     path
@@ -382,14 +478,28 @@ def set(path, value, version=-1, profile=None, hosts=None, scheme=None,
 
         salt minion1 zookeeper.set /test/name gtmanfred profile=prod
 
-    '''
-    conn = _get_zk_conn(profile=profile, hosts=hosts, scheme=scheme,
-                        username=username, password=password, default_acl=default_acl)
+    """
+    conn = _get_zk_conn(
+        profile=profile,
+        hosts=hosts,
+        scheme=scheme,
+        username=username,
+        password=password,
+        default_acl=default_acl,
+    )
     return conn.set(path, salt.utils.stringutils.to_bytes(value), version=version)
 
 
-def get_acls(path, profile=None, hosts=None, scheme=None, username=None, password=None, default_acl=None):
-    '''
+def get_acls(
+    path,
+    profile=None,
+    hosts=None,
+    scheme=None,
+    username=None,
+    password=None,
+    default_acl=None,
+):
+    """
     Get acls on a znode
 
     path
@@ -419,15 +529,30 @@ def get_acls(path, profile=None, hosts=None, scheme=None, username=None, passwor
 
         salt minion1 zookeeper.get_acls /test/name profile=prod
 
-    '''
-    conn = _get_zk_conn(profile=profile, hosts=hosts, scheme=scheme,
-                        username=username, password=password, default_acl=default_acl)
+    """
+    conn = _get_zk_conn(
+        profile=profile,
+        hosts=hosts,
+        scheme=scheme,
+        username=username,
+        password=password,
+        default_acl=default_acl,
+    )
     return conn.get_acls(path)[0]
 
 
-def set_acls(path, acls, version=-1, profile=None, hosts=None, scheme=None,
-             username=None, password=None, default_acl=None):
-    '''
+def set_acls(
+    path,
+    acls,
+    version=-1,
+    profile=None,
+    hosts=None,
+    scheme=None,
+    username=None,
+    password=None,
+    default_acl=None,
+):
+    """
     Set acls on a znode
 
     path
@@ -463,20 +588,41 @@ def set_acls(path, acls, version=-1, profile=None, hosts=None, scheme=None,
 
         salt minion1 zookeeper.set_acls /test/name acls='[{"username": "gtmanfred", "password": "test", "all": True}]' profile=prod
 
-    '''
-    conn = _get_zk_conn(profile=profile, hosts=hosts, scheme=scheme,
-                        username=username, password=password, default_acl=default_acl)
+    """
+    conn = _get_zk_conn(
+        profile=profile,
+        hosts=hosts,
+        scheme=scheme,
+        username=username,
+        password=password,
+        default_acl=default_acl,
+    )
     if acls is None:
         acls = []
     acls = [make_digest_acl(**acl) for acl in acls]
-    conn = _get_zk_conn(profile=profile, hosts=hosts, scheme=scheme,
-                        username=username, password=password, default_acl=default_acl)
+    conn = _get_zk_conn(
+        profile=profile,
+        hosts=hosts,
+        scheme=scheme,
+        username=username,
+        password=password,
+        default_acl=default_acl,
+    )
     return conn.set_acls(path, acls, version)
 
 
-def delete(path, version=-1, recursive=False, profile=None, hosts=None, scheme=None,
-           username=None, password=None, default_acl=None):
-    '''
+def delete(
+    path,
+    version=-1,
+    recursive=False,
+    profile=None,
+    hosts=None,
+    scheme=None,
+    username=None,
+    password=None,
+    default_acl=None,
+):
+    """
     Delete znode
 
     path
@@ -509,15 +655,29 @@ def delete(path, version=-1, recursive=False, profile=None, hosts=None, scheme=N
 
         salt minion1 zookeeper.delete /test/name profile=prod
 
-    '''
-    conn = _get_zk_conn(profile=profile, hosts=hosts, scheme=scheme,
-                        username=username, password=password, default_acl=default_acl)
+    """
+    conn = _get_zk_conn(
+        profile=profile,
+        hosts=hosts,
+        scheme=scheme,
+        username=username,
+        password=password,
+        default_acl=default_acl,
+    )
     return conn.delete(path, version, recursive)
 
 
-def make_digest_acl(username, password, read=False, write=False, create=False, delete=False, admin=False,
-                    allperms=False):
-    '''
+def make_digest_acl(
+    username,
+    password,
+    read=False,
+    write=False,
+    create=False,
+    delete=False,
+    admin=False,
+    allperms=False,
+):
+    """
     Generate acl object
 
     .. note:: This is heavily used in the zookeeper state and probably is not useful as a cli module
@@ -551,5 +711,7 @@ def make_digest_acl(username, password, read=False, write=False, create=False, d
     .. code-block:: bash
 
         salt minion1 zookeeper.make_digest_acl username=daniel password=mypass allperms=True
-    '''
-    return kazoo.security.make_digest_acl(username, password, read, write, create, delete, admin, allperms)
+    """
+    return kazoo.security.make_digest_acl(
+        username, password, read, write, create, delete, admin, allperms
+    )

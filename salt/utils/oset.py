@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 
 Available at repository https://github.com/LuminosoInsight/ordered-set
 
@@ -20,12 +20,13 @@ Rob Speer's changes are as follows:
     - index() just returns the index of an item
     - added a __getstate__ and __setstate__ so it can be pickled
     - added __getitem__
-'''
-from __future__ import absolute_import, unicode_literals, print_function
+"""
+from __future__ import absolute_import, print_function, unicode_literals
+
 import collections
 
 SLICE_ALL = slice(None)
-__version__ = '2.0.1'
+__version__ = "2.0.1"
 
 
 def is_iterable(obj):
@@ -41,7 +42,11 @@ def is_iterable(obj):
     We don't need to check for the Python 2 `unicode` type, because it doesn't
     have an `__iter__` attribute anyway.
     """
-    return hasattr(obj, '__iter__') and not isinstance(obj, str) and not isinstance(obj, tuple)
+    return (
+        hasattr(obj, "__iter__")
+        and not isinstance(obj, str)
+        and not isinstance(obj, tuple)
+    )
 
 
 class OrderedSet(collections.MutableSet):
@@ -49,6 +54,7 @@ class OrderedSet(collections.MutableSet):
     An OrderedSet is a custom MutableSet that remembers its order, so that
     every entry has an index that can be looked up.
     """
+
     def __init__(self, iterable=None):
         self.items = []
         self.map = {}
@@ -72,7 +78,7 @@ class OrderedSet(collections.MutableSet):
         """
         if index == SLICE_ALL:
             return self
-        elif hasattr(index, '__index__') or isinstance(index, slice):
+        elif hasattr(index, "__index__") or isinstance(index, slice):
             result = self.items[index]
             if isinstance(result, list):
                 return OrderedSet(result)
@@ -81,7 +87,9 @@ class OrderedSet(collections.MutableSet):
         elif is_iterable(index):
             return OrderedSet([self.items[i] for i in index])
         else:
-            raise TypeError("Don't know how to index an OrderedSet by {}".format(repr(index)))
+            raise TypeError(
+                "Don't know how to index an OrderedSet by {}".format(repr(index))
+            )
 
     def copy(self):
         return OrderedSet(self)
@@ -107,7 +115,7 @@ class OrderedSet(collections.MutableSet):
     def __contains__(self, key):
         return key in self.map
 
-    def add(self, key):
+    def add(self, key):  # pylint: disable=arguments-differ
         """
         Add `key` as an item to this OrderedSet, then return its index.
 
@@ -118,6 +126,7 @@ class OrderedSet(collections.MutableSet):
             self.map[key] = len(self.items)
             self.items.append(key)
         return self.map[key]
+
     append = add
 
     def update(self, sequence):
@@ -130,7 +139,9 @@ class OrderedSet(collections.MutableSet):
             for item in sequence:
                 item_index = self.add(item)
         except TypeError:
-            raise ValueError("Argument needs to be an iterable, got {}".format(type(sequence)))
+            raise ValueError(
+                "Argument needs to be an iterable, got {}".format(type(sequence))
+            )
         return item_index
 
     def index(self, key):
@@ -152,14 +163,14 @@ class OrderedSet(collections.MutableSet):
         Raises KeyError if the set is empty.
         """
         if not self.items:
-            raise KeyError('Set is empty')
+            raise KeyError("Set is empty")
 
         elem = self.items[-1]
         del self.items[-1]
         del self.map[elem]
         return elem
 
-    def discard(self, key):
+    def discard(self, key):  # pylint: disable=arguments-differ
         """
         Remove an element.  Do not raise an exception if absent.
 

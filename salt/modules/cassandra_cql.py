@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Cassandra Database Module
 
 .. versionadded:: 2015.5.0
@@ -78,38 +78,43 @@ queries based on the internal schema of said version.
           # defaults to 4, if not set
           protocol_version: 3
 
-'''
+"""
 
 # Import Python Libs
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 import re
 import ssl
 
 # Import Salt Libs
 import salt.utils.json
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import range
-import salt.utils.versions
 
-SSL_VERSION = 'ssl_version'
+SSL_VERSION = "ssl_version"
 
 log = logging.getLogger(__name__)
 
-__virtualname__ = 'cassandra_cql'
+__virtualname__ = "cassandra_cql"
 
 HAS_DRIVER = False
 try:
     # pylint: disable=import-error,no-name-in-module
     from cassandra.cluster import Cluster
     from cassandra.cluster import NoHostAvailable
-    from cassandra.connection import ConnectionException, \
-        ConnectionShutdown, OperationTimedOut
+    from cassandra.connection import (
+        ConnectionException,
+        ConnectionShutdown,
+        OperationTimedOut,
+    )
     from cassandra.auth import PlainTextAuthProvider
     from cassandra.query import dict_factory
+
     # pylint: enable=import-error,no-name-in-module
     HAS_DRIVER = True
 except ImportError:
@@ -117,23 +122,23 @@ except ImportError:
 
 
 def __virtual__():
-    '''
+    """
     Return virtual name of the module only if the python driver can be loaded.
 
     :return: The virtual name of the module.
     :rtype:  str
-    '''
+    """
     if HAS_DRIVER:
         return __virtualname__
-    return (False, 'Cannot load cassandra_cql module: python driver not found')
+    return (False, "Cannot load cassandra_cql module: python driver not found")
 
 
 def _async_log_errors(errors):
-    log.error('Cassandra_cql asynchronous call returned: %s', errors)
+    log.error("Cassandra_cql asynchronous call returned: %s", errors)
 
 
 def _load_properties(property_name, config_option, set_default=False, default=None):
-    '''
+    """
     Load properties for the cassandra module from config or pillar.
 
     :param property_name: The property to load.
@@ -146,11 +151,13 @@ def _load_properties(property_name, config_option, set_default=False, default=No
     :type  default:       str or int
     :return:              The property fetched from the configuration or default.
     :rtype:               str or list of str
-    '''
+    """
     if not property_name:
-        log.debug("No property specified in function, trying to load from salt configuration")
+        log.debug(
+            "No property specified in function, trying to load from salt configuration"
+        )
         try:
-            options = __salt__['config.option']('cassandra')
+            options = __salt__["config.option"]("cassandra")
         except BaseException as e:
             log.error("Failed to get cassandra config options. Reason: %s", e)
             raise
@@ -158,49 +165,56 @@ def _load_properties(property_name, config_option, set_default=False, default=No
         loaded_property = options.get(config_option)
         if not loaded_property:
             if set_default:
-                log.debug('Setting default Cassandra %s to %s', config_option, default)
+                log.debug("Setting default Cassandra %s to %s", config_option, default)
                 loaded_property = default
             else:
-                log.error('No cassandra %s specified in the configuration or passed to the module.', config_option)
-                raise CommandExecutionError("ERROR: Cassandra {0} cannot be empty.".format(config_option))
+                log.error(
+                    "No cassandra %s specified in the configuration or passed to the module.",
+                    config_option,
+                )
+                raise CommandExecutionError(
+                    "ERROR: Cassandra {0} cannot be empty.".format(config_option)
+                )
         return loaded_property
     return property_name
 
 
 def _get_ssl_opts():
-    '''
+    """
     Parse out ssl_options for Cassandra cluster connection.
     Make sure that the ssl_version (if any specified) is valid.
-    '''
-    sslopts = __salt__['config.option']('cassandra').get('ssl_options', None)
+    """
+    sslopts = __salt__["config.option"]("cassandra").get("ssl_options", None)
     ssl_opts = {}
 
     if sslopts:
-        ssl_opts['ca_certs'] = sslopts['ca_certs']
+        ssl_opts["ca_certs"] = sslopts["ca_certs"]
         if SSL_VERSION in sslopts:
-            if not sslopts[SSL_VERSION].startswith('PROTOCOL_'):
-                valid_opts = ', '.join(
-                    [x for x in dir(ssl) if x.startswith('PROTOCOL_')]
+            if not sslopts[SSL_VERSION].startswith("PROTOCOL_"):
+                valid_opts = ", ".join(
+                    [x for x in dir(ssl) if x.startswith("PROTOCOL_")]
                 )
-                raise CommandExecutionError('Invalid protocol_version '
-                                            'specified! '
-                                            'Please make sure '
-                                            'that the ssl protocol'
-                                            'version is one from the SSL'
-                                            'module. '
-                                            'Valid options are '
-                                            '{0}'.format(valid_opts))
+                raise CommandExecutionError(
+                    "Invalid protocol_version "
+                    "specified! "
+                    "Please make sure "
+                    "that the ssl protocol"
+                    "version is one from the SSL"
+                    "module. "
+                    "Valid options are "
+                    "{0}".format(valid_opts)
+                )
             else:
-                ssl_opts[SSL_VERSION] = \
-                    getattr(ssl, sslopts[SSL_VERSION])
+                ssl_opts[SSL_VERSION] = getattr(ssl, sslopts[SSL_VERSION])
         return ssl_opts
     else:
         return None
 
 
-def _connect(contact_points=None, port=None, cql_user=None, cql_pass=None,
-             protocol_version=None):
-    '''
+def _connect(
+    contact_points=None, port=None, cql_user=None, cql_pass=None, protocol_version=None
+):
+    """
     Connect to a Cassandra cluster.
 
     :param contact_points: The Cassandra cluster addresses, can either be a string or a list of IPs.
@@ -215,7 +229,7 @@ def _connect(contact_points=None, port=None, cql_user=None, cql_pass=None,
     :type  port:           int
     :return:               The session and cluster objects.
     :rtype:                cluster object, session object
-    '''
+    """
     # Lazy load the Cassandra cluster and session for this module by creating a
     # cluster and session when cql_query is called the first time. Get the
     # Cassandra cluster and session from this module's __context__ after it is
@@ -229,61 +243,98 @@ def _connect(contact_points=None, port=None, cql_user=None, cql_pass=None,
     # Perhaps if Master/Minion daemons could be enhanced to call an "__unload__"
     # function, or something similar for each loaded module, connection pools
     # and the like can be gracefully reclaimed/shutdown.
-    if (__context__
-        and 'cassandra_cql_returner_cluster' in __context__
-        and 'cassandra_cql_returner_session' in __context__):
-        return __context__['cassandra_cql_returner_cluster'], __context__['cassandra_cql_returner_session']
+    if (
+        __context__
+        and "cassandra_cql_returner_cluster" in __context__
+        and "cassandra_cql_returner_session" in __context__
+    ):
+        return (
+            __context__["cassandra_cql_returner_cluster"],
+            __context__["cassandra_cql_returner_session"],
+        )
     else:
 
-        contact_points = _load_properties(property_name=contact_points, config_option='cluster')
-        contact_points = contact_points if isinstance(contact_points, list) else contact_points.split(',')
-        port = _load_properties(property_name=port, config_option='port', set_default=True, default=9042)
-        cql_user = _load_properties(property_name=cql_user, config_option='username', set_default=True, default="cassandra")
-        cql_pass = _load_properties(property_name=cql_pass, config_option='password', set_default=True, default="cassandra")
-        protocol_version = _load_properties(property_name=protocol_version,
-                                            config_option='protocol_version',
-                                            set_default=True, default=4)
+        contact_points = _load_properties(
+            property_name=contact_points, config_option="cluster"
+        )
+        contact_points = (
+            contact_points
+            if isinstance(contact_points, list)
+            else contact_points.split(",")
+        )
+        port = _load_properties(
+            property_name=port, config_option="port", set_default=True, default=9042
+        )
+        cql_user = _load_properties(
+            property_name=cql_user,
+            config_option="username",
+            set_default=True,
+            default="cassandra",
+        )
+        cql_pass = _load_properties(
+            property_name=cql_pass,
+            config_option="password",
+            set_default=True,
+            default="cassandra",
+        )
+        protocol_version = _load_properties(
+            property_name=protocol_version,
+            config_option="protocol_version",
+            set_default=True,
+            default=4,
+        )
 
         try:
             auth_provider = PlainTextAuthProvider(username=cql_user, password=cql_pass)
             ssl_opts = _get_ssl_opts()
             if ssl_opts:
-                cluster = Cluster(contact_points,
-                                  port=port,
-                                  auth_provider=auth_provider,
-                                  ssl_options=ssl_opts,
-                                  protocol_version=protocol_version,
-                                  compression=True)
+                cluster = Cluster(
+                    contact_points,
+                    port=port,
+                    auth_provider=auth_provider,
+                    ssl_options=ssl_opts,
+                    protocol_version=protocol_version,
+                    compression=True,
+                )
             else:
-                cluster = Cluster(contact_points, port=port,
-                                  auth_provider=auth_provider,
-                                  protocol_version=protocol_version,
-                                  compression=True)
+                cluster = Cluster(
+                    contact_points,
+                    port=port,
+                    auth_provider=auth_provider,
+                    protocol_version=protocol_version,
+                    compression=True,
+                )
             for recontimes in range(1, 4):
                 try:
                     session = cluster.connect()
                     break
                 except OperationTimedOut:
-                    log.warning('Cassandra cluster.connect timed out, try %s', recontimes)
+                    log.warning(
+                        "Cassandra cluster.connect timed out, try %s", recontimes
+                    )
                     if recontimes >= 3:
                         raise
 
             # TODO: Call cluster.shutdown() when the module is unloaded on shutdown.
-            __context__['cassandra_cql_returner_cluster'] = cluster
-            __context__['cassandra_cql_returner_session'] = session
-            __context__['cassandra_cql_prepared'] = {}
+            __context__["cassandra_cql_returner_cluster"] = cluster
+            __context__["cassandra_cql_returner_session"] = session
+            __context__["cassandra_cql_prepared"] = {}
 
-            log.debug('Successfully connected to Cassandra cluster at %s', contact_points)
+            log.debug(
+                "Successfully connected to Cassandra cluster at %s", contact_points
+            )
             return cluster, session
         except TypeError:
             pass
         except (ConnectionException, ConnectionShutdown, NoHostAvailable):
-            log.error('Could not connect to Cassandra cluster at %s', contact_points)
-            raise CommandExecutionError('ERROR: Could not connect to Cassandra cluster.')
+            log.error("Could not connect to Cassandra cluster at %s", contact_points)
+            raise CommandExecutionError(
+                "ERROR: Could not connect to Cassandra cluster."
+            )
 
 
 def cql_query(query, contact_points=None, port=None, cql_user=None, cql_pass=None):
-    '''
+    """
     Run a query on a Cassandra cluster and return a dictionary.
 
     :param query:          The query to execute.
@@ -306,14 +357,19 @@ def cql_query(query, contact_points=None, port=None, cql_user=None, cql_pass=Non
     .. code-block:: bash
 
          salt 'cassandra-server' cassandra_cql.cql_query "SELECT * FROM users_by_name WHERE first_name = 'jane'"
-    '''
+    """
     try:
-        cluster, session = _connect(contact_points=contact_points, port=port, cql_user=cql_user, cql_pass=cql_pass)
+        cluster, session = _connect(
+            contact_points=contact_points,
+            port=port,
+            cql_user=cql_user,
+            cql_pass=cql_pass,
+        )
     except CommandExecutionError:
-        log.critical('Could not get Cassandra cluster session.')
+        log.critical("Could not get Cassandra cluster session.")
         raise
     except BaseException as e:
-        log.critical('Unexpected error while getting Cassandra cluster session: %s', e)
+        log.critical("Unexpected error while getting Cassandra cluster session: %s", e)
         raise
 
     session.row_factory = dict_factory
@@ -324,11 +380,13 @@ def cql_query(query, contact_points=None, port=None, cql_user=None, cql_pass=Non
     # Find the query for the current cluster version.
     # https://issues.apache.org/jira/browse/CASSANDRA-6717
     if isinstance(query, dict):
-        cluster_version = version(contact_points=contact_points,
-                                  port=port,
-                                  cql_user=cql_user,
-                                  cql_pass=cql_pass)
-        match = re.match(r'^(\d+)\.(\d+)(?:\.(\d+))?', cluster_version)
+        cluster_version = version(
+            contact_points=contact_points,
+            port=port,
+            cql_user=cql_user,
+            cql_pass=cql_pass,
+        )
+        match = re.match(r"^(\d+)\.(\d+)(?:\.(\d+))?", cluster_version)
         major, minor, point = match.groups()
         # try to find the specific version in the query dictionary
         # then try the major version
@@ -337,12 +395,12 @@ def cql_query(query, contact_points=None, port=None, cql_user=None, cql_pass=Non
             query = query[cluster_version]
         except KeyError:
             query = query.get(major, max(query))
-        log.debug('New query is: %s', query)
+        log.debug("New query is: %s", query)
 
     try:
         results = session.execute(query)
     except BaseException as e:
-        log.error('Failed to execute query: %s\n reason: %s', query, e)
+        log.error("Failed to execute query: %s\n reason: %s", query, e)
         msg = "ERROR: Cassandra query failed: {0} reason: {1}".format(query, e)
         raise CommandExecutionError(msg)
 
@@ -362,9 +420,18 @@ def cql_query(query, contact_points=None, port=None, cql_user=None, cql_pass=Non
     return ret
 
 
-def cql_query_with_prepare(query, statement_name, statement_arguments, callback_errors=None, contact_points=None,
-                           port=None, cql_user=None, cql_pass=None, **kwargs):
-    '''
+def cql_query_with_prepare(
+    query,
+    statement_name,
+    statement_arguments,
+    callback_errors=None,
+    contact_points=None,
+    port=None,
+    cql_user=None,
+    cql_pass=None,
+    **kwargs
+):
+    """
     Run a query on a Cassandra cluster and return a dictionary.
 
     This function should not be used asynchronously for SELECTs -- it will not
@@ -406,40 +473,46 @@ def cql_query_with_prepare(query, statement_name, statement_arguments, callback_
         # Select data, should not be asynchronous because there is not currently a facility to return data from a future
         salt this-node cassandra_cql.cql_query_with_prepare "name_select" "SELECT * FROM USERS WHERE first_name=?" \
             statement_arguments=['John']
-    '''
+    """
     # Backward-compatibility with Python 3.7: "async" is a reserved word
-    asynchronous = kwargs.get('async', False)
+    asynchronous = kwargs.get("async", False)
     try:
-        cluster, session = _connect(contact_points=contact_points, port=port,
-                                    cql_user=cql_user, cql_pass=cql_pass)
+        cluster, session = _connect(
+            contact_points=contact_points,
+            port=port,
+            cql_user=cql_user,
+            cql_pass=cql_pass,
+        )
     except CommandExecutionError:
-        log.critical('Could not get Cassandra cluster session.')
+        log.critical("Could not get Cassandra cluster session.")
         raise
     except BaseException as e:
-        log.critical('Unexpected error while getting Cassandra cluster session: %s', e)
+        log.critical("Unexpected error while getting Cassandra cluster session: %s", e)
         raise
 
-    if statement_name not in __context__['cassandra_cql_prepared']:
+    if statement_name not in __context__["cassandra_cql_prepared"]:
         try:
             bound_statement = session.prepare(query)
-            __context__['cassandra_cql_prepared'][statement_name] = bound_statement
+            __context__["cassandra_cql_prepared"][statement_name] = bound_statement
         except BaseException as e:
-            log.critical('Unexpected error while preparing SQL statement: %s', e)
+            log.critical("Unexpected error while preparing SQL statement: %s", e)
             raise
     else:
-        bound_statement = __context__['cassandra_cql_prepared'][statement_name]
+        bound_statement = __context__["cassandra_cql_prepared"][statement_name]
 
     session.row_factory = dict_factory
     ret = []
 
     try:
         if asynchronous:
-            future_results = session.execute_async(bound_statement.bind(statement_arguments))
+            future_results = session.execute_async(
+                bound_statement.bind(statement_arguments)
+            )
             # future_results.add_callbacks(_async_log_errors)
         else:
             results = session.execute(bound_statement.bind(statement_arguments))
     except BaseException as e:
-        log.error('Failed to execute query: %s\n reason: %s', query, e)
+        log.error("Failed to execute query: %s\n reason: %s", query, e)
         msg = "ERROR: Cassandra query failed: {0} reason: {1}".format(query, e)
         raise CommandExecutionError(msg)
 
@@ -463,7 +536,7 @@ def cql_query_with_prepare(query, statement_name, statement_arguments, callback_
 
 
 def version(contact_points=None, port=None, cql_user=None, cql_pass=None):
-    '''
+    """
     Show the Cassandra version.
 
     :param contact_points: The Cassandra cluster addresses, can either be a string or a list of IPs.
@@ -484,25 +557,25 @@ def version(contact_points=None, port=None, cql_user=None, cql_pass=None):
         salt 'minion1' cassandra_cql.version
 
         salt 'minion1' cassandra_cql.version contact_points=minion1
-    '''
-    query = '''select release_version
+    """
+    query = """select release_version
                  from system.local
-                limit 1;'''
+                limit 1;"""
 
     try:
         ret = cql_query(query, contact_points, port, cql_user, cql_pass)
     except CommandExecutionError:
-        log.critical('Could not get Cassandra version.')
+        log.critical("Could not get Cassandra version.")
         raise
     except BaseException as e:
-        log.critical('Unexpected error while getting Cassandra version: %s', e)
+        log.critical("Unexpected error while getting Cassandra version: %s", e)
         raise
 
-    return ret[0].get('release_version')
+    return ret[0].get("release_version")
 
 
 def info(contact_points=None, port=None, cql_user=None, cql_pass=None):
-    '''
+    """
     Show the Cassandra information for this cluster.
 
     :param contact_points: The Cassandra cluster addresses, can either be a string or a list of IPs.
@@ -523,9 +596,9 @@ def info(contact_points=None, port=None, cql_user=None, cql_pass=None):
         salt 'minion1' cassandra_cql.info
 
         salt 'minion1' cassandra_cql.info contact_points=minion1
-    '''
+    """
 
-    query = '''select cluster_name,
+    query = """select cluster_name,
                       data_center,
                       partitioner,
                       host_id,
@@ -535,24 +608,24 @@ def info(contact_points=None, port=None, cql_user=None, cql_pass=None):
                       schema_version,
                       thrift_version
                  from system.local
-                limit 1;'''
+                limit 1;"""
 
     ret = {}
 
     try:
         ret = cql_query(query, contact_points, port, cql_user, cql_pass)
     except CommandExecutionError:
-        log.critical('Could not list Cassandra info.')
+        log.critical("Could not list Cassandra info.")
         raise
     except BaseException as e:
-        log.critical('Unexpected error while listing Cassandra info: %s', e)
+        log.critical("Unexpected error while listing Cassandra info: %s", e)
         raise
 
     return ret
 
 
 def list_keyspaces(contact_points=None, port=None, cql_user=None, cql_pass=None):
-    '''
+    """
     List keyspaces in a Cassandra cluster.
 
     :param contact_points: The Cassandra cluster addresses, can either be a string or a list of IPs.
@@ -573,10 +646,10 @@ def list_keyspaces(contact_points=None, port=None, cql_user=None, cql_pass=None)
         salt 'minion1' cassandra_cql.list_keyspaces
 
         salt 'minion1' cassandra_cql.list_keyspaces contact_points=minion1 port=9000
-    '''
+    """
     query = {
-        '2': 'select keyspace_name from system.schema_keyspaces;',
-        '3': 'select keyspace_name from system_schema.keyspaces;',
+        "2": "select keyspace_name from system.schema_keyspaces;",
+        "3": "select keyspace_name from system_schema.keyspaces;",
     }
 
     ret = {}
@@ -584,17 +657,19 @@ def list_keyspaces(contact_points=None, port=None, cql_user=None, cql_pass=None)
     try:
         ret = cql_query(query, contact_points, port, cql_user, cql_pass)
     except CommandExecutionError:
-        log.critical('Could not list keyspaces.')
+        log.critical("Could not list keyspaces.")
         raise
     except BaseException as e:
-        log.critical('Unexpected error while listing keyspaces: %s', e)
+        log.critical("Unexpected error while listing keyspaces: %s", e)
         raise
 
     return ret
 
 
-def list_column_families(keyspace=None, contact_points=None, port=None, cql_user=None, cql_pass=None):
-    '''
+def list_column_families(
+    keyspace=None, contact_points=None, port=None, cql_user=None, cql_pass=None
+):
+    """
     List column families in a Cassandra cluster for all keyspaces or just the provided one.
 
     :param keyspace:       The keyspace to provide the column families for, optional.
@@ -619,14 +694,18 @@ def list_column_families(keyspace=None, contact_points=None, port=None, cql_user
         salt 'minion1' cassandra_cql.list_column_families contact_points=minion1
 
         salt 'minion1' cassandra_cql.list_column_families keyspace=system
-    '''
+    """
     where_clause = "where keyspace_name = '{0}'".format(keyspace) if keyspace else ""
 
     query = {
-        '2': '''select columnfamily_name from system.schema_columnfamilies
-                {0};'''.format(where_clause),
-        '3': '''select column_name from system_schema.columns
-                {0};'''.format(where_clause),
+        "2": """select columnfamily_name from system.schema_columnfamilies
+                {0};""".format(
+            where_clause
+        ),
+        "3": """select column_name from system_schema.columns
+                {0};""".format(
+            where_clause
+        ),
     }
 
     ret = {}
@@ -634,17 +713,19 @@ def list_column_families(keyspace=None, contact_points=None, port=None, cql_user
     try:
         ret = cql_query(query, contact_points, port, cql_user, cql_pass)
     except CommandExecutionError:
-        log.critical('Could not list column families.')
+        log.critical("Could not list column families.")
         raise
     except BaseException as e:
-        log.critical('Unexpected error while listing column families: %s', e)
+        log.critical("Unexpected error while listing column families: %s", e)
         raise
 
     return ret
 
 
-def keyspace_exists(keyspace, contact_points=None, port=None, cql_user=None, cql_pass=None):
-    '''
+def keyspace_exists(
+    keyspace, contact_points=None, port=None, cql_user=None, cql_pass=None
+):
+    """
     Check if a keyspace exists in a Cassandra cluster.
 
     :param keyspace        The keyspace name to check for.
@@ -665,29 +746,41 @@ def keyspace_exists(keyspace, contact_points=None, port=None, cql_user=None, cql
     .. code-block:: bash
 
         salt 'minion1' cassandra_cql.keyspace_exists keyspace=system
-    '''
+    """
     query = {
-        '2': '''select keyspace_name from system.schema_keyspaces
-                where keyspace_name = '{0}';'''.format(keyspace),
-        '3': '''select keyspace_name from system_schema.keyspaces
-                where keyspace_name = '{0}';'''.format(keyspace),
+        "2": """select keyspace_name from system.schema_keyspaces
+                where keyspace_name = '{0}';""".format(
+            keyspace
+        ),
+        "3": """select keyspace_name from system_schema.keyspaces
+                where keyspace_name = '{0}';""".format(
+            keyspace
+        ),
     }
 
     try:
         ret = cql_query(query, contact_points, port, cql_user, cql_pass)
     except CommandExecutionError:
-        log.critical('Could not determine if keyspace exists.')
+        log.critical("Could not determine if keyspace exists.")
         raise
     except BaseException as e:
-        log.critical('Unexpected error while determining if keyspace exists: %s', e)
+        log.critical("Unexpected error while determining if keyspace exists: %s", e)
         raise
 
     return True if ret else False
 
 
-def create_keyspace(keyspace, replication_strategy='SimpleStrategy', replication_factor=1, replication_datacenters=None,
-                    contact_points=None, port=None, cql_user=None, cql_pass=None):
-    '''
+def create_keyspace(
+    keyspace,
+    replication_strategy="SimpleStrategy",
+    replication_factor=1,
+    replication_datacenters=None,
+    contact_points=None,
+    port=None,
+    cql_user=None,
+    cql_pass=None,
+):
+    """
     Create a new keyspace in Cassandra.
 
     :param keyspace:                The keyspace name
@@ -719,18 +812,18 @@ def create_keyspace(keyspace, replication_strategy='SimpleStrategy', replication
 
         salt 'minion1' cassandra_cql.create_keyspace keyspace=newkeyspace replication_strategy=NetworkTopologyStrategy \
         replication_datacenters='{"datacenter_1": 3, "datacenter_2": 2}'
-    '''
+    """
     existing_keyspace = keyspace_exists(keyspace, contact_points, port)
     if not existing_keyspace:
         # Add the strategy, replication_factor, etc.
-        replication_map = {
-            'class': replication_strategy
-        }
+        replication_map = {"class": replication_strategy}
 
         if replication_datacenters:
             if isinstance(replication_datacenters, six.string_types):
                 try:
-                    replication_datacenter_map = salt.utils.json.loads(replication_datacenters)
+                    replication_datacenter_map = salt.utils.json.loads(
+                        replication_datacenters
+                    )
                     replication_map.update(**replication_datacenter_map)
                 except BaseException:  # pylint: disable=W0703
                     log.error("Could not load json replication_datacenters.")
@@ -738,24 +831,28 @@ def create_keyspace(keyspace, replication_strategy='SimpleStrategy', replication
             else:
                 replication_map.update(**replication_datacenters)
         else:
-            replication_map['replication_factor'] = replication_factor
+            replication_map["replication_factor"] = replication_factor
 
-        query = '''create keyspace {0}
+        query = """create keyspace {0}
                      with replication = {1}
-                      and durable_writes = true;'''.format(keyspace, replication_map)
+                      and durable_writes = true;""".format(
+            keyspace, replication_map
+        )
 
         try:
             cql_query(query, contact_points, port, cql_user, cql_pass)
         except CommandExecutionError:
-            log.critical('Could not create keyspace.')
+            log.critical("Could not create keyspace.")
             raise
         except BaseException as e:
-            log.critical('Unexpected error while creating keyspace: %s', e)
+            log.critical("Unexpected error while creating keyspace: %s", e)
             raise
 
 
-def drop_keyspace(keyspace, contact_points=None, port=None, cql_user=None, cql_pass=None):
-    '''
+def drop_keyspace(
+    keyspace, contact_points=None, port=None, cql_user=None, cql_pass=None
+):
+    """
     Drop a keyspace if it exists in a Cassandra cluster.
 
     :param keyspace:       The keyspace to drop.
@@ -778,24 +875,24 @@ def drop_keyspace(keyspace, contact_points=None, port=None, cql_user=None, cql_p
         salt 'minion1' cassandra_cql.drop_keyspace keyspace=test
 
         salt 'minion1' cassandra_cql.drop_keyspace keyspace=test contact_points=minion1
-    '''
+    """
     existing_keyspace = keyspace_exists(keyspace, contact_points, port)
     if existing_keyspace:
-        query = '''drop keyspace {0};'''.format(keyspace)
+        query = """drop keyspace {0};""".format(keyspace)
         try:
             cql_query(query, contact_points, port, cql_user, cql_pass)
         except CommandExecutionError:
-            log.critical('Could not drop keyspace.')
+            log.critical("Could not drop keyspace.")
             raise
         except BaseException as e:
-            log.critical('Unexpected error while dropping keyspace: %s', e)
+            log.critical("Unexpected error while dropping keyspace: %s", e)
             raise
 
     return True
 
 
 def list_users(contact_points=None, port=None, cql_user=None, cql_pass=None):
-    '''
+    """
     List existing users in this Cassandra cluster.
 
     :param contact_points: The Cassandra cluster addresses, can either be a string or a list of IPs.
@@ -816,7 +913,7 @@ def list_users(contact_points=None, port=None, cql_user=None, cql_pass=None):
         salt 'minion1' cassandra_cql.list_users
 
         salt 'minion1' cassandra_cql.list_users contact_points=minion1
-    '''
+    """
     query = "list users;"
 
     ret = {}
@@ -824,17 +921,25 @@ def list_users(contact_points=None, port=None, cql_user=None, cql_pass=None):
     try:
         ret = cql_query(query, contact_points, port, cql_user, cql_pass)
     except CommandExecutionError:
-        log.critical('Could not list users.')
+        log.critical("Could not list users.")
         raise
     except BaseException as e:
-        log.critical('Unexpected error while listing users: %s', e)
+        log.critical("Unexpected error while listing users: %s", e)
         raise
 
     return ret
 
 
-def create_user(username, password, superuser=False, contact_points=None, port=None, cql_user=None, cql_pass=None):
-    '''
+def create_user(
+    username,
+    password,
+    superuser=False,
+    contact_points=None,
+    port=None,
+    cql_user=None,
+    cql_pass=None,
+):
+    """
     Create a new cassandra user with credentials and superuser status.
 
     :param username:       The name of the new user.
@@ -863,28 +968,42 @@ def create_user(username, password, superuser=False, contact_points=None, port=N
         salt 'minion1' cassandra_cql.create_user username=joe password=secret superuser=True
 
         salt 'minion1' cassandra_cql.create_user username=joe password=secret superuser=True contact_points=minion1
-    '''
-    superuser_cql = 'superuser' if superuser else 'nosuperuser'
-    query = '''create user if not exists {0} with password '{1}' {2};'''.format(username, password, superuser_cql)
-    log.debug("Attempting to create a new user with username=%s superuser=%s", username, superuser_cql)
+    """
+    superuser_cql = "superuser" if superuser else "nosuperuser"
+    query = """create user if not exists {0} with password '{1}' {2};""".format(
+        username, password, superuser_cql
+    )
+    log.debug(
+        "Attempting to create a new user with username=%s superuser=%s",
+        username,
+        superuser_cql,
+    )
 
     # The create user query doesn't actually return anything if the query succeeds.
     # If the query fails, catch the exception, log a messange and raise it again.
     try:
         cql_query(query, contact_points, port, cql_user, cql_pass)
     except CommandExecutionError:
-        log.critical('Could not create user.')
+        log.critical("Could not create user.")
         raise
     except BaseException as e:
-        log.critical('Unexpected error while creating user: %s', e)
+        log.critical("Unexpected error while creating user: %s", e)
         raise
 
     return True
 
 
-def list_permissions(username=None, resource=None, resource_type='keyspace', permission=None, contact_points=None,
-                     port=None, cql_user=None, cql_pass=None):
-    '''
+def list_permissions(
+    username=None,
+    resource=None,
+    resource_type="keyspace",
+    permission=None,
+    contact_points=None,
+    port=None,
+    cql_user=None,
+    cql_pass=None,
+):
+    """
     List permissions.
 
     :param username:       The name of the user to list permissions for.
@@ -916,9 +1035,13 @@ def list_permissions(username=None, resource=None, resource_type='keyspace', per
 
         salt 'minion1' cassandra_cql.list_permissions username=joe resource=test_table resource_type=table \
           permission=select contact_points=minion1
-    '''
-    keyspace_cql = "{0} {1}".format(resource_type, resource) if resource else "all keyspaces"
-    permission_cql = "{0} permission".format(permission) if permission else "all permissions"
+    """
+    keyspace_cql = (
+        "{0} {1}".format(resource_type, resource) if resource else "all keyspaces"
+    )
+    permission_cql = (
+        "{0} permission".format(permission) if permission else "all permissions"
+    )
     query = "list {0} on {1}".format(permission_cql, keyspace_cql)
 
     if username:
@@ -931,18 +1054,26 @@ def list_permissions(username=None, resource=None, resource_type='keyspace', per
     try:
         ret = cql_query(query, contact_points, port, cql_user, cql_pass)
     except CommandExecutionError:
-        log.critical('Could not list permissions.')
+        log.critical("Could not list permissions.")
         raise
     except BaseException as e:
-        log.critical('Unexpected error while listing permissions: %s', e)
+        log.critical("Unexpected error while listing permissions: %s", e)
         raise
 
     return ret
 
 
-def grant_permission(username, resource=None, resource_type='keyspace', permission=None, contact_points=None, port=None,
-                     cql_user=None, cql_pass=None):
-    '''
+def grant_permission(
+    username,
+    resource=None,
+    resource_type="keyspace",
+    permission=None,
+    contact_points=None,
+    port=None,
+    cql_user=None,
+    cql_pass=None,
+):
+    """
     Grant permissions to a user.
 
     :param username:       The name of the user to grant permissions to.
@@ -974,19 +1105,23 @@ def grant_permission(username, resource=None, resource_type='keyspace', permissi
 
         salt 'minion1' cassandra_cql.grant_permission username=joe resource=test_table resource_type=table \
         permission=select contact_points=minion1
-    '''
-    permission_cql = "grant {0}".format(permission) if permission else "grant all permissions"
-    resource_cql = "on {0} {1}".format(resource_type, resource) if resource else "on all keyspaces"
+    """
+    permission_cql = (
+        "grant {0}".format(permission) if permission else "grant all permissions"
+    )
+    resource_cql = (
+        "on {0} {1}".format(resource_type, resource) if resource else "on all keyspaces"
+    )
     query = "{0} {1} to {2}".format(permission_cql, resource_cql, username)
     log.debug("Attempting to grant permissions with query '%s'", query)
 
     try:
         cql_query(query, contact_points, port, cql_user, cql_pass)
     except CommandExecutionError:
-        log.critical('Could not grant permissions.')
+        log.critical("Could not grant permissions.")
         raise
     except BaseException as e:
-        log.critical('Unexpected error while granting permissions: %s', e)
+        log.critical("Unexpected error while granting permissions: %s", e)
         raise
 
     return True

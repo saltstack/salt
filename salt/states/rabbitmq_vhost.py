@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Manage RabbitMQ Virtual Hosts
 =============================
 
@@ -13,10 +13,11 @@ Example:
         - conf: .*
         - write: .*
         - read: .*
-'''
+"""
 
 # Import python libs
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 
 # Import salt libs
@@ -26,14 +27,14 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     Only load if RabbitMQ is installed.
-    '''
-    return salt.utils.path.which('rabbitmqctl') is not None
+    """
+    return salt.utils.path.which("rabbitmqctl") is not None
 
 
 def present(name):
-    '''
+    """
     Ensure the RabbitMQ VHost exists.
 
     name
@@ -65,36 +66,36 @@ def present(name):
         Name of the user to run the command
 
         .. deprecated:: 2015.8.0
-    '''
-    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    """
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
-    vhost_exists = __salt__['rabbitmq.vhost_exists'](name)
+    vhost_exists = __salt__["rabbitmq.vhost_exists"](name)
 
     if vhost_exists:
-        ret['comment'] = 'Virtual Host \'{0}\' already exists.'.format(name)
+        ret["comment"] = "Virtual Host '{0}' already exists.".format(name)
         return ret
 
-    if not __opts__['test']:
-        result = __salt__['rabbitmq.add_vhost'](name)
-        if 'Error' in result:
-            ret['result'] = False
-            ret['comment'] = result['Error']
+    if not __opts__["test"]:
+        result = __salt__["rabbitmq.add_vhost"](name)
+        if "Error" in result:
+            ret["result"] = False
+            ret["comment"] = result["Error"]
             return ret
-        elif 'Added' in result:
-            ret['comment'] = result['Added']
+        elif "Added" in result:
+            ret["comment"] = result["Added"]
 
     # If we've reached this far before returning, we have changes.
-    ret['changes'] = {'old': '', 'new': name}
+    ret["changes"] = {"old": "", "new": name}
 
-    if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = 'Virtual Host \'{0}\' will be created.'.format(name)
+    if __opts__["test"]:
+        ret["result"] = None
+        ret["comment"] = "Virtual Host '{0}' will be created.".format(name)
 
     return ret
 
 
 def absent(name):
-    '''
+    """
     Ensure the RabbitMQ Virtual Host is absent
 
     name
@@ -103,29 +104,29 @@ def absent(name):
         User to run the command
 
         .. deprecated:: 2015.8.0
-    '''
-    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    """
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
-    vhost_exists = __salt__['rabbitmq.vhost_exists'](name)
+    vhost_exists = __salt__["rabbitmq.vhost_exists"](name)
 
     if not vhost_exists:
-        ret['comment'] = 'Virtual Host \'{0}\' is not present.'.format(name)
+        ret["comment"] = "Virtual Host '{0}' is not present.".format(name)
         return ret
 
-    if not __opts__['test']:
-        result = __salt__['rabbitmq.delete_vhost'](name)
-        if 'Error' in result:
-            ret['result'] = False
-            ret['comment'] = result['Error']
+    if not __opts__["test"]:
+        result = __salt__["rabbitmq.delete_vhost"](name)
+        if "Error" in result:
+            ret["result"] = False
+            ret["comment"] = result["Error"]
             return ret
-        elif 'Deleted' in result:
-            ret['comment'] = result['Deleted']
+        elif "Deleted" in result:
+            ret["comment"] = result["Deleted"]
 
     # If we've reached this far before returning, we have changes.
-    ret['changes'] = {'new': '', 'old': name}
+    ret["changes"] = {"new": "", "old": name}
 
-    if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = 'Virtual Host \'{0}\' will be removed.'.format(name)
+    if __opts__["test"]:
+        ret["result"] = None
+        ret["comment"] = "Virtual Host '{0}' will be removed.".format(name)
 
     return ret

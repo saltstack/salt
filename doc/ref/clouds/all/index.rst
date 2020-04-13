@@ -19,6 +19,7 @@ cloud modules
     gce
     gogrid
     joyent
+    libvirt
     linode
     lxc
     msazure
@@ -34,6 +35,7 @@ cloud modules
     scaleway
     softlayer
     softlayer_hw
+    tencentcloud
     vagrant
     virtualbox
     vmware
