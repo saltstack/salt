@@ -406,6 +406,22 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
             }
             self.assertEqual(output, expected)
 
+    def test_btrfs_fstypes(self):
+        """Tests if we see btrfs as valid fs type"""
+        with patch("salt.modules.parted_partition._validate_device", MagicMock()):
+            try:
+                parted.mkfs("/dev/foo", "btrfs")
+            except CommandExecutionError:
+                self.fail("Btrfs is not in the supported fstypes")
+
+    def test_xfs_fstypes(self):
+        """Tests if we see xfs as valid fs type"""
+        with patch("salt.modules.parted_partition._validate_device", MagicMock()):
+            try:
+                parted.mkfs("/dev/foo", "xfs")
+            except CommandExecutionError:
+                self.fail("XFS is not in the supported fstypes")
+
     def test_disk_set(self):
         with patch("salt.modules.parted_partition._validate_device", MagicMock()):
             self.cmdrun.return_value = ""
