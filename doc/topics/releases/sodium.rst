@@ -17,7 +17,6 @@ The old syntax for the mine_function - as a dict, or as a list with dicts that
 contain more than exactly one key - is still supported but discouraged in favor
 of the more uniform syntax of module.run.
 
-
 State updates
 =============
 
@@ -26,7 +25,17 @@ The ``creates`` state requisite has been migrated from the
 states to become a global option. This acts similar to an equivalent
 ``unless: test -f filename`` but can also accept a list of filenames.
 
+New Grains
+==========
 
+systempath
+----------
+
+This grain provides the same information as the ``path`` grain, only formatted
+as a list of directories.
+
+
+================
 Salt-SSH updates
 ================
 
