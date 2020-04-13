@@ -18,6 +18,7 @@ from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
@@ -43,6 +44,7 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
         self.addCleanup(self.__clear_hosts)
         super(HostTest, self).setUp()
 
+    @skipIf(True, "SLOWTEST skip")
     def test_present(self):
         """
         host.present

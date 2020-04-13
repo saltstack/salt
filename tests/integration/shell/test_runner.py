@@ -18,6 +18,7 @@ from tests.integration.utils import testprogram
 from tests.support.case import ShellCase
 from tests.support.helpers import skip_if_not_root
 from tests.support.mixins import ShellCaseCommonTestsMixin
+from tests.support.unit import skipIf
 
 USERA = "saltdev"
 USERA_PWD = "saltdev"
@@ -60,6 +61,7 @@ class RunTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin)
             if USERA in user:
                 self.run_call("user.delete {0} remove=True".format(USERA))
 
+    @skipIf(True, "SLOWTEST skip")
     def test_in_docs(self):
         """
         test the salt-run docs system
@@ -74,6 +76,7 @@ class RunTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin)
         self.assertIn("network.wol:", data)
         self.assertIn("network.wollist:", data)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_notin_docs(self):
         """
         Verify that hidden methods are not in run docs
@@ -82,6 +85,7 @@ class RunTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin)
         data = "\n".join(data)
         self.assertNotIn("jobs.SaltException:", data)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_salt_documentation_too_many_arguments(self):
         """
         Test to see if passing additional arguments shows an error
@@ -92,6 +96,7 @@ class RunTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin)
             "\n".join(data[1]),
         )
 
+    @skipIf(True, "SLOWTEST skip")
     def test_exit_status_unknown_argument(self):
         """
         Ensure correct exit status when an unknown argument is passed to salt-run.
@@ -110,6 +115,7 @@ class RunTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin)
         )
         # runner.shutdown() should be unnecessary since the start-up should fail
 
+    @skipIf(True, "SLOWTEST skip")
     def test_exit_status_correct_usage(self):
         """
         Ensure correct exit status when salt-run starts correctly.
@@ -126,6 +132,7 @@ class RunTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin)
         )
 
     @skip_if_not_root
+    @skipIf(True, "SLOWTEST skip")
     def test_salt_run_with_eauth_all_args(self):
         """
         test salt-run with eauth
@@ -152,6 +159,7 @@ class RunTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin)
         self._remove_user()
 
     @skip_if_not_root
+    @skipIf(True, "SLOWTEST skip")
     def test_salt_run_with_eauth_bad_passwd(self):
         """
         test salt-run with eauth and bad password
@@ -167,6 +175,7 @@ class RunTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin)
         self.assertEqual(expect, run_cmd)
         self._remove_user()
 
+    @skipIf(True, "SLOWTEST skip")
     def test_salt_run_with_wrong_eauth(self):
         """
         test salt-run with wrong eauth parameter

@@ -17,7 +17,7 @@ import salt.utils.platform
 from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 log = logging.getLogger(__name__)
 
@@ -27,6 +27,7 @@ class DocTestCase(TestCase):
     Unit test case for testing doc files and strings.
     """
 
+    @skipIf(True, "SLOWTEST skip")
     def test_check_for_doc_inline_markup(self):
         """
         We should not be using the ``:doc:`` inline markup option when

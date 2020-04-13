@@ -12,10 +12,12 @@ import salt.utils.args
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import requires_salt_modules
+from tests.support.unit import skipIf
 
 
 @requires_salt_modules("test.ping", "test.arg")
 class ArgumentTestCase(ModuleCase):
+    @skipIf(True, "SLOWTEST skip")
     def test_unsupported_kwarg(self):
         """
         Test passing a non-supported keyword argument. The relevant code that
@@ -27,6 +29,7 @@ class ArgumentTestCase(ModuleCase):
             self.run_function("test.ping", foo="bar"),
         )
 
+    @skipIf(True, "SLOWTEST skip")
     def test_kwarg_name_containing_dashes(self):
         """
         Tests the arg parser to ensure that kwargs with dashes in the arg name
@@ -43,6 +46,7 @@ class ArgumentTestCase(ModuleCase):
             "baz",
         )
 
+    @skipIf(True, "SLOWTEST skip")
     def test_argument_containing_pound_sign(self):
         """
         Tests the argument parsing to ensure that a CLI argument with a pound

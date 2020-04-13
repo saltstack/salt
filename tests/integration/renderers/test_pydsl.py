@@ -15,6 +15,7 @@ import salt.utils.stringutils
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest
+from tests.support.unit import skipIf
 
 
 class PyDSLRendererIncludeTestCase(ModuleCase):
@@ -31,6 +32,7 @@ class PyDSLRendererIncludeTestCase(ModuleCase):
                 shutil.rmtree("\\tmp")
 
     @destructiveTest
+    @skipIf(True, "SLOWTEST skip")
     def test_rendering_includes(self):
         """
         This test is currently hard-coded to /tmp to work-around a seeming

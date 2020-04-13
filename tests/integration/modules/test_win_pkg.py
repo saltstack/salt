@@ -39,6 +39,7 @@ class WinPKGTest(ModuleCase):
             os.remove(self.curl_sls_path)
 
     @destructiveTest
+    @skipIf(True, "SLOWTEST skip")
     def test_adding_removing_pkg_sls(self):
         """
         Test add and removing a new pkg sls

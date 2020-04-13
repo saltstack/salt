@@ -27,6 +27,7 @@ from tests.support.mixins import ShellCaseCommonTestsMixin
 
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
@@ -35,6 +36,7 @@ class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
 
     _call_binary_ = "salt-cp"
 
+    @skipIf(True, "SLOWTEST skip")
     def test_cp_testfile(self):
         """
         test salt-cp

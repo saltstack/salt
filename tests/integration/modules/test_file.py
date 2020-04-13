@@ -139,6 +139,7 @@ class FileModuleTest(ModuleCase):
         ret = self.run_function("file.chgrp", arg=[self.myfile, group])
         self.assertIn("not exist", ret)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_patch(self):
         if not self.run_function("cmd.has_exec", ["patch"]):
             self.skipTest("patch is not installed")
@@ -161,44 +162,53 @@ class FileModuleTest(ModuleCase):
                 salt.utils.stringutils.to_unicode(fp.read()), "Hello world\n"
             )
 
+    @skipIf(True, "SLOWTEST skip")
     def test_remove_file(self):
         ret = self.run_function("file.remove", arg=[self.myfile])
         self.assertTrue(ret)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_remove_dir(self):
         ret = self.run_function("file.remove", arg=[self.mydir])
         self.assertTrue(ret)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_remove_symlink(self):
         ret = self.run_function("file.remove", arg=[self.mysymlink])
         self.assertTrue(ret)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_remove_broken_symlink(self):
         ret = self.run_function("file.remove", arg=[self.mybadsymlink])
         self.assertTrue(ret)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_cannot_remove(self):
         ret = self.run_function("file.remove", arg=["tty"])
         self.assertEqual(
             "ERROR executing 'file.remove': File path must be absolute: tty", ret
         )
 
+    @skipIf(True, "SLOWTEST skip")
     def test_source_list_for_single_file_returns_unchanged(self):
         ret = self.run_function(
             "file.source_list", ["salt://http/httpd.conf", "filehash", "base"]
         )
         self.assertEqual(list(ret), ["salt://http/httpd.conf", "filehash"])
 
+    @skipIf(True, "SLOWTEST skip")
     def test_source_list_for_single_local_file_slash_returns_unchanged(self):
         ret = self.run_function("file.source_list", [self.myfile, "filehash", "base"])
         self.assertEqual(list(ret), [self.myfile, "filehash"])
 
+    @skipIf(True, "SLOWTEST skip")
     def test_source_list_for_single_local_file_proto_returns_unchanged(self):
         ret = self.run_function(
             "file.source_list", ["file://" + self.myfile, "filehash", "base"]
         )
         self.assertEqual(list(ret), ["file://" + self.myfile, "filehash"])
 
+    @skipIf(True, "SLOWTEST skip")
     def test_file_line_changes_format(self):
         """
         Test file.line changes output formatting.
@@ -210,6 +220,7 @@ class FileModuleTest(ModuleCase):
         )
         self.assertIn("Hello" + os.linesep + "+Goodbye", ret)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_file_line_content(self):
         self.minion_run(
             "file.line", self.myfile, "Goodbye", mode="insert", after="Hello"
@@ -218,6 +229,7 @@ class FileModuleTest(ModuleCase):
             content = fp.read()
         self.assertEqual(content, "Hello" + os.linesep + "Goodbye" + os.linesep)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_file_line_duplicate_insert_after(self):
         """
         Test file.line duplicates line.
@@ -233,6 +245,7 @@ class FileModuleTest(ModuleCase):
             content = fp.read()
         self.assertEqual(content, "Hello" + os.linesep + "Goodbye" + os.linesep)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_file_line_duplicate_insert_before(self):
         """
         Test file.line duplicates line.
@@ -248,6 +261,7 @@ class FileModuleTest(ModuleCase):
             content = fp.read()
         self.assertEqual(content, "Hello" + os.linesep + "Goodbye" + os.linesep)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_file_line_duplicate_ensure_after(self):
         """
         Test file.line duplicates line.
@@ -263,6 +277,7 @@ class FileModuleTest(ModuleCase):
             content = fp.read()
         self.assertEqual(content, "Hello" + os.linesep + "Goodbye" + os.linesep)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_file_line_duplicate_ensure_before(self):
         """
         Test file.line duplicates line.

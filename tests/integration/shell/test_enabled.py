@@ -90,6 +90,7 @@ class EnabledTest(ModuleCase):
             os.remove(state_file)
 
     @skipIf(salt.utils.platform.is_windows(), "Skip on Windows OS")
+    @skipIf(True, "SLOWTEST skip")
     def test_template_default_disabled(self):
         """
         test shell disabled output for templates (python_shell=False is the default

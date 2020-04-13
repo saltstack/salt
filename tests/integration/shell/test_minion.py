@@ -250,6 +250,7 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
                 minion.shutdown()
 
     @skipIf(salt.utils.platform.is_windows(), "Skip on Windows OS")
+    @skipIf(True, "SLOWTEST skip")
     def test_exit_status_unknown_user(self):
         """
         Ensure correct exit status when the minion is configured to run as an unknown user.
@@ -282,6 +283,7 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
             minion.shutdown()
 
     #    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows OS')
+    @skipIf(True, "SLOWTEST skip")
     def test_exit_status_unknown_argument(self):
         """
         Ensure correct exit status when an unknown argument is passed to salt-minion.
@@ -310,6 +312,7 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
             minion.shutdown()
 
     @skipIf(salt.utils.platform.is_windows(), "Skip on Windows OS")
+    @skipIf(True, "SLOWTEST skip")
     def test_exit_status_correct_usage(self):
         """
         Ensure correct exit status when salt-minion starts correctly.

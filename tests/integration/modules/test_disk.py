@@ -48,6 +48,7 @@ class DiskModuleTest(ModuleCase):
     Validate the disk module
     """
 
+    @skipIf(True, "SLOWTEST skip")
     def test_usage(self):
         """
         disk.usage

@@ -2431,6 +2431,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             self.assertTrue(filestate.mod_run_check_cmd(cmd, filename))
 
     @skipIf(not HAS_DATEUTIL, NO_DATEUTIL_REASON)
+    @skipIf(True, "SLOWTEST skip")
     def test_retention_schedule(self):
         """
         Test to execute the retention_schedule logic.

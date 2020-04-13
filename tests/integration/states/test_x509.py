@@ -85,6 +85,7 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
         return ret
 
     @with_tempfile(suffix=".pem", create=False)
+    @skipIf(True, "SLOWTEST skip")
     def test_issue_49027(self, pemfile):
         ret = self.run_state("x509.pem_managed", name=pemfile, text=self.x509_cert_text)
         assert isinstance(ret, dict), ret
@@ -96,6 +97,7 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
 
     @with_tempfile(suffix=".crt", create=False)
     @with_tempfile(suffix=".key", create=False)
+    @skipIf(True, "SLOWTEST skip")
     def test_issue_49008(self, keyfile, crtfile):
         ret = self.run_function(
             "state.apply",
@@ -108,6 +110,7 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
         assert os.path.exists(keyfile)
         assert os.path.exists(crtfile)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_cert_signing(self):
         ret = self.run_function(
             "state.apply", ["test_cert"], pillar={"tmp_dir": RUNTIME_VARS.TMP}

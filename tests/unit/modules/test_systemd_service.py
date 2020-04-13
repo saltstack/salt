@@ -16,7 +16,7 @@ from salt.exceptions import CommandExecutionError
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 _SYSTEMCTL_STATUS = {
     "sshd.service": {
@@ -242,6 +242,7 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(systemd, "show", mock):
                 self.assertDictEqual(systemd.execs(), {"a": "c", "b": "c"})
 
+    @skipIf(True, "SLOWTEST skip")
     def test_status(self):
         """
         Test to confirm that the function retries when the service is in the

@@ -19,6 +19,7 @@ class WinDNSTest(ModuleCase):
     """
 
     @destructiveTest
+    @skipIf(True, "SLOWTEST skip")
     def test_add_remove_dns(self):
         """
         Test add and removing a dns server

@@ -37,6 +37,7 @@ self:
 
 @skipIf(not salt.utils.path.which("ssh"), "No ssh binary found in path")
 class SSHPasswordTests(ShellCase):
+    @skipIf(True, "SLOWTEST skip")
     def test_password_failure(self):
         """
         Check password failures when trying to deploy keys

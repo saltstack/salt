@@ -7,6 +7,7 @@ from salt.ext import six
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
+from tests.support.unit import skipIf
 
 
 class SysModuleTest(ModuleCase):
@@ -14,6 +15,7 @@ class SysModuleTest(ModuleCase):
     Validate the sys module
     """
 
+    @skipIf(True, "SLOWTEST skip")
     def test_valid_docs(self):
         """
         Make sure no functions are exposed that don't have valid docstrings
