@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Connection module for Amazon CloudTrail
 
 .. versionadded:: 2016.3.0
@@ -45,18 +45,20 @@ The dependencies listed above can be installed via package or pip.
             key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
             region: us-east-1
 
-'''
+"""
 # keep lint from choking on _get_conn and _cache_id
-#pylint: disable=E0602
+# pylint: disable=E0602
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
+
+import salt.utils.compat
+import salt.utils.versions
 
 # Import Salt libs
 from salt.ext import six
-import salt.utils.compat
-import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -64,12 +66,14 @@ log = logging.getLogger(__name__)
 
 # pylint: disable=import-error
 try:
-    #pylint: disable=unused-import
+    # pylint: disable=unused-import
     import boto
     import boto3
-    #pylint: enable=unused-import
+
+    # pylint: enable=unused-import
     from botocore.exceptions import ClientError
-    logging.getLogger('boto3').setLevel(logging.CRITICAL)
+
+    logging.getLogger("boto3").setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
@@ -77,27 +81,24 @@ except ImportError:
 
 
 def __virtual__():
-    '''
+    """
     Only load if boto libraries exist and if boto libraries are greater than
     a given version.
-    '''
+    """
     # the boto_lambda execution module relies on the connect_to_region() method
     # which was added in boto 2.8.0
     # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
-    return salt.utils.versions.check_boto_reqs(
-        boto3_ver='1.2.5'
-    )
+    return salt.utils.versions.check_boto_reqs(boto3_ver="1.2.5")
 
 
 def __init__(opts):
     salt.utils.compat.pack_dunder(__name__)
     if HAS_BOTO:
-        __utils__['boto3.assign_funcs'](__name__, 'cloudtrail')
+        __utils__["boto3.assign_funcs"](__name__, "cloudtrail")
 
 
-def exists(Name,
-           region=None, key=None, keyid=None, profile=None):
-    '''
+def exists(Name, region=None, key=None, keyid=None, profile=None):
+    """
     Given a trail name, check to see if the given trail exists.
 
     Returns True if the given trail exists and returns False if the given
@@ -109,30 +110,36 @@ def exists(Name,
 
         salt myminion boto_cloudtrail.exists mytrail
 
-    '''
+    """
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         conn.get_trail_status(Name=Name)
-        return {'exists': True}
+        return {"exists": True}
     except ClientError as e:
-        err = __utils__['boto3.get_error'](e)
-        if e.response.get('Error', {}).get('Code') == 'TrailNotFoundException':
-            return {'exists': False}
-        return {'error': err}
+        err = __utils__["boto3.get_error"](e)
+        if e.response.get("Error", {}).get("Code") == "TrailNotFoundException":
+            return {"exists": False}
+        return {"error": err}
 
 
-def create(Name,
-           S3BucketName, S3KeyPrefix=None,
-           SnsTopicName=None,
-           IncludeGlobalServiceEvents=None,
-           IsMultiRegionTrail=None,
-           EnableLogFileValidation=None,
-           CloudWatchLogsLogGroupArn=None,
-           CloudWatchLogsRoleArn=None,
-           KmsKeyId=None,
-           region=None, key=None, keyid=None, profile=None):
-    '''
+def create(
+    Name,
+    S3BucketName,
+    S3KeyPrefix=None,
+    SnsTopicName=None,
+    IncludeGlobalServiceEvents=None,
+    IsMultiRegionTrail=None,
+    EnableLogFileValidation=None,
+    CloudWatchLogsLogGroupArn=None,
+    CloudWatchLogsRoleArn=None,
+    KmsKeyId=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+):
+    """
     Given a valid config, create a trail.
 
     Returns {created: true} if the trail was created and returns
@@ -144,34 +151,37 @@ def create(Name,
 
         salt myminion boto_cloudtrail.create my_trail my_bucket
 
-    '''
+    """
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         kwargs = {}
-        for arg in ('S3KeyPrefix', 'SnsTopicName', 'IncludeGlobalServiceEvents',
-                    'IsMultiRegionTrail',
-                    'EnableLogFileValidation', 'CloudWatchLogsLogGroupArn',
-                    'CloudWatchLogsRoleArn', 'KmsKeyId'):
+        for arg in (
+            "S3KeyPrefix",
+            "SnsTopicName",
+            "IncludeGlobalServiceEvents",
+            "IsMultiRegionTrail",
+            "EnableLogFileValidation",
+            "CloudWatchLogsLogGroupArn",
+            "CloudWatchLogsRoleArn",
+            "KmsKeyId",
+        ):
             if locals()[arg] is not None:
                 kwargs[arg] = locals()[arg]
-        trail = conn.create_trail(Name=Name,
-                                  S3BucketName=S3BucketName,
-                                  **kwargs)
+        trail = conn.create_trail(Name=Name, S3BucketName=S3BucketName, **kwargs)
         if trail:
-            log.info('The newly created trail name is %s', trail['Name'])
+            log.info("The newly created trail name is %s", trail["Name"])
 
-            return {'created': True, 'name': trail['Name']}
+            return {"created": True, "name": trail["Name"]}
         else:
-            log.warning('Trail was not created')
-            return {'created': False}
+            log.warning("Trail was not created")
+            return {"created": False}
     except ClientError as e:
-        return {'created': False, 'error': __utils__['boto3.get_error'](e)}
+        return {"created": False, "error": __utils__["boto3.get_error"](e)}
 
 
-def delete(Name,
-            region=None, key=None, keyid=None, profile=None):
-    '''
+def delete(Name, region=None, key=None, keyid=None, profile=None):
+    """
     Given a trail name, delete it.
 
     Returns {deleted: true} if the trail was deleted and returns
@@ -183,19 +193,18 @@ def delete(Name,
 
         salt myminion boto_cloudtrail.delete mytrail
 
-    '''
+    """
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         conn.delete_trail(Name=Name)
-        return {'deleted': True}
+        return {"deleted": True}
     except ClientError as e:
-        return {'deleted': False, 'error': __utils__['boto3.get_error'](e)}
+        return {"deleted": False, "error": __utils__["boto3.get_error"](e)}
 
 
-def describe(Name,
-             region=None, key=None, keyid=None, profile=None):
-    '''
+def describe(Name, region=None, key=None, keyid=None, profile=None):
+    """
     Given a trail name describe its properties.
 
     Returns a dictionary of interesting properties.
@@ -206,32 +215,39 @@ def describe(Name,
 
         salt myminion boto_cloudtrail.describe mytrail
 
-    '''
+    """
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         trails = conn.describe_trails(trailNameList=[Name])
-        if trails and len(trails.get('trailList', [])) > 0:
-            keys = ('Name', 'S3BucketName', 'S3KeyPrefix',
-                    'SnsTopicName', 'IncludeGlobalServiceEvents',
-                    'IsMultiRegionTrail',
-                    'HomeRegion', 'TrailARN',
-                    'LogFileValidationEnabled', 'CloudWatchLogsLogGroupArn',
-                    'CloudWatchLogsRoleArn', 'KmsKeyId')
-            trail = trails['trailList'].pop()
-            return {'trail': dict([(k, trail.get(k)) for k in keys])}
+        if trails and len(trails.get("trailList", [])) > 0:
+            keys = (
+                "Name",
+                "S3BucketName",
+                "S3KeyPrefix",
+                "SnsTopicName",
+                "IncludeGlobalServiceEvents",
+                "IsMultiRegionTrail",
+                "HomeRegion",
+                "TrailARN",
+                "LogFileValidationEnabled",
+                "CloudWatchLogsLogGroupArn",
+                "CloudWatchLogsRoleArn",
+                "KmsKeyId",
+            )
+            trail = trails["trailList"].pop()
+            return {"trail": dict([(k, trail.get(k)) for k in keys])}
         else:
-            return {'trail': None}
+            return {"trail": None}
     except ClientError as e:
-        err = __utils__['boto3.get_error'](e)
-        if e.response.get('Error', {}).get('Code') == 'TrailNotFoundException':
-            return {'trail': None}
-        return {'error': __utils__['boto3.get_error'](e)}
+        err = __utils__["boto3.get_error"](e)
+        if e.response.get("Error", {}).get("Code") == "TrailNotFoundException":
+            return {"trail": None}
+        return {"error": __utils__["boto3.get_error"](e)}
 
 
-def status(Name,
-             region=None, key=None, keyid=None, profile=None):
-    '''
+def status(Name, region=None, key=None, keyid=None, profile=None):
+    """
     Given a trail name describe its properties.
 
     Returns a dictionary of interesting properties.
@@ -242,36 +258,43 @@ def status(Name,
 
         salt myminion boto_cloudtrail.describe mytrail
 
-    '''
+    """
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         trail = conn.get_trail_status(Name=Name)
         if trail:
-            keys = ('IsLogging', 'LatestDeliveryError', 'LatestNotificationError',
-                    'LatestDeliveryTime', 'LatestNotificationTime',
-                    'StartLoggingTime', 'StopLoggingTime',
-                    'LatestCloudWatchLogsDeliveryError',
-                    'LatestCloudWatchLogsDeliveryTime',
-                    'LatestDigestDeliveryTime', 'LatestDigestDeliveryError',
-                    'LatestDeliveryAttemptTime',
-                    'LatestNotificationAttemptTime',
-                    'LatestNotificationAttemptSucceeded',
-                    'LatestDeliveryAttemptSucceeded',
-                    'TimeLoggingStarted',
-                    'TimeLoggingStopped')
-            return {'trail': dict([(k, trail.get(k)) for k in keys])}
+            keys = (
+                "IsLogging",
+                "LatestDeliveryError",
+                "LatestNotificationError",
+                "LatestDeliveryTime",
+                "LatestNotificationTime",
+                "StartLoggingTime",
+                "StopLoggingTime",
+                "LatestCloudWatchLogsDeliveryError",
+                "LatestCloudWatchLogsDeliveryTime",
+                "LatestDigestDeliveryTime",
+                "LatestDigestDeliveryError",
+                "LatestDeliveryAttemptTime",
+                "LatestNotificationAttemptTime",
+                "LatestNotificationAttemptSucceeded",
+                "LatestDeliveryAttemptSucceeded",
+                "TimeLoggingStarted",
+                "TimeLoggingStopped",
+            )
+            return {"trail": dict([(k, trail.get(k)) for k in keys])}
         else:
-            return {'trail': None}
+            return {"trail": None}
     except ClientError as e:
-        err = __utils__['boto3.get_error'](e)
-        if e.response.get('Error', {}).get('Code') == 'TrailNotFoundException':
-            return {'trail': None}
-        return {'error': __utils__['boto3.get_error'](e)}
+        err = __utils__["boto3.get_error"](e)
+        if e.response.get("Error", {}).get("Code") == "TrailNotFoundException":
+            return {"trail": None}
+        return {"error": __utils__["boto3.get_error"](e)}
 
 
 def list(region=None, key=None, keyid=None, profile=None):
-    '''
+    """
     List all trails
 
     Returns list of trails
@@ -284,28 +307,34 @@ def list(region=None, key=None, keyid=None, profile=None):
           - {...}
           - {...}
 
-    '''
+    """
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         trails = conn.describe_trails()
-        if not bool(trails.get('trailList')):
-            log.warning('No trails found')
-        return {'trails': trails.get('trailList', [])}
+        if not bool(trails.get("trailList")):
+            log.warning("No trails found")
+        return {"trails": trails.get("trailList", [])}
     except ClientError as e:
-        return {'error': __utils__['boto3.get_error'](e)}
+        return {"error": __utils__["boto3.get_error"](e)}
 
 
-def update(Name,
-           S3BucketName, S3KeyPrefix=None,
-           SnsTopicName=None,
-           IncludeGlobalServiceEvents=None,
-           IsMultiRegionTrail=None,
-           EnableLogFileValidation=None,
-           CloudWatchLogsLogGroupArn=None,
-           CloudWatchLogsRoleArn=None,
-           KmsKeyId=None,
-           region=None, key=None, keyid=None, profile=None):
-    '''
+def update(
+    Name,
+    S3BucketName,
+    S3KeyPrefix=None,
+    SnsTopicName=None,
+    IncludeGlobalServiceEvents=None,
+    IsMultiRegionTrail=None,
+    EnableLogFileValidation=None,
+    CloudWatchLogsLogGroupArn=None,
+    CloudWatchLogsRoleArn=None,
+    KmsKeyId=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+):
+    """
     Given a valid config, update a trail.
 
     Returns {created: true} if the trail was created and returns
@@ -317,34 +346,37 @@ def update(Name,
 
         salt myminion boto_cloudtrail.update my_trail my_bucket
 
-    '''
+    """
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         kwargs = {}
-        for arg in ('S3KeyPrefix', 'SnsTopicName', 'IncludeGlobalServiceEvents',
-                    'IsMultiRegionTrail',
-                    'EnableLogFileValidation', 'CloudWatchLogsLogGroupArn',
-                    'CloudWatchLogsRoleArn', 'KmsKeyId'):
+        for arg in (
+            "S3KeyPrefix",
+            "SnsTopicName",
+            "IncludeGlobalServiceEvents",
+            "IsMultiRegionTrail",
+            "EnableLogFileValidation",
+            "CloudWatchLogsLogGroupArn",
+            "CloudWatchLogsRoleArn",
+            "KmsKeyId",
+        ):
             if locals()[arg] is not None:
                 kwargs[arg] = locals()[arg]
-        trail = conn.update_trail(Name=Name,
-                                  S3BucketName=S3BucketName,
-                                  **kwargs)
+        trail = conn.update_trail(Name=Name, S3BucketName=S3BucketName, **kwargs)
         if trail:
-            log.info('The updated trail name is %s', trail['Name'])
+            log.info("The updated trail name is %s", trail["Name"])
 
-            return {'updated': True, 'name': trail['Name']}
+            return {"updated": True, "name": trail["Name"]}
         else:
-            log.warning('Trail was not created')
-            return {'updated': False}
+            log.warning("Trail was not created")
+            return {"updated": False}
     except ClientError as e:
-        return {'updated': False, 'error': __utils__['boto3.get_error'](e)}
+        return {"updated": False, "error": __utils__["boto3.get_error"](e)}
 
 
-def start_logging(Name,
-           region=None, key=None, keyid=None, profile=None):
-    '''
+def start_logging(Name, region=None, key=None, keyid=None, profile=None):
+    """
     Start logging for a trail
 
     Returns {started: true} if the trail was started and returns
@@ -356,19 +388,18 @@ def start_logging(Name,
 
         salt myminion boto_cloudtrail.start_logging my_trail
 
-    '''
+    """
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         conn.start_logging(Name=Name)
-        return {'started': True}
+        return {"started": True}
     except ClientError as e:
-        return {'started': False, 'error': __utils__['boto3.get_error'](e)}
+        return {"started": False, "error": __utils__["boto3.get_error"](e)}
 
 
-def stop_logging(Name,
-           region=None, key=None, keyid=None, profile=None):
-    '''
+def stop_logging(Name, region=None, key=None, keyid=None, profile=None):
+    """
     Stop logging for a trail
 
     Returns {stopped: true} if the trail was stopped and returns
@@ -380,33 +411,32 @@ def stop_logging(Name,
 
         salt myminion boto_cloudtrail.stop_logging my_trail
 
-    '''
+    """
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         conn.stop_logging(Name=Name)
-        return {'stopped': True}
+        return {"stopped": True}
     except ClientError as e:
-        return {'stopped': False, 'error': __utils__['boto3.get_error'](e)}
+        return {"stopped": False, "error": __utils__["boto3.get_error"](e)}
 
 
 def _get_trail_arn(name, region=None, key=None, keyid=None, profile=None):
-    if name.startswith('arn:aws:cloudtrail:'):
+    if name.startswith("arn:aws:cloudtrail:"):
         return name
 
-    account_id = __salt__['boto_iam.get_account_id'](
+    account_id = __salt__["boto_iam.get_account_id"](
         region=region, key=key, keyid=keyid, profile=profile
     )
-    if profile and 'region' in profile:
-        region = profile['region']
+    if profile and "region" in profile:
+        region = profile["region"]
     if region is None:
-        region = 'us-east-1'
-    return 'arn:aws:cloudtrail:{0}:{1}:trail/{2}'.format(region, account_id, name)
+        region = "us-east-1"
+    return "arn:aws:cloudtrail:{0}:{1}:trail/{2}".format(region, account_id, name)
 
 
-def add_tags(Name,
-           region=None, key=None, keyid=None, profile=None, **kwargs):
-    '''
+def add_tags(Name, region=None, key=None, keyid=None, profile=None, **kwargs):
+    """
     Add tags to a trail
 
     Returns {tagged: true} if the trail was tagged and returns
@@ -418,26 +448,28 @@ def add_tags(Name,
 
         salt myminion boto_cloudtrail.add_tags my_trail tag_a=tag_value tag_b=tag_value
 
-    '''
+    """
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         tagslist = []
         for k, v in six.iteritems(kwargs):
-            if six.text_type(k).startswith('__'):
+            if six.text_type(k).startswith("__"):
                 continue
-            tagslist.append({'Key': six.text_type(k), 'Value': six.text_type(v)})
-        conn.add_tags(ResourceId=_get_trail_arn(Name,
-                      region=region, key=key, keyid=keyid,
-                      profile=profile), TagsList=tagslist)
-        return {'tagged': True}
+            tagslist.append({"Key": six.text_type(k), "Value": six.text_type(v)})
+        conn.add_tags(
+            ResourceId=_get_trail_arn(
+                Name, region=region, key=key, keyid=keyid, profile=profile
+            ),
+            TagsList=tagslist,
+        )
+        return {"tagged": True}
     except ClientError as e:
-        return {'tagged': False, 'error': __utils__['boto3.get_error'](e)}
+        return {"tagged": False, "error": __utils__["boto3.get_error"](e)}
 
 
-def remove_tags(Name,
-           region=None, key=None, keyid=None, profile=None, **kwargs):
-    '''
+def remove_tags(Name, region=None, key=None, keyid=None, profile=None, **kwargs):
+    """
     Remove tags from a trail
 
     Returns {tagged: true} if the trail was tagged and returns
@@ -449,26 +481,28 @@ def remove_tags(Name,
 
         salt myminion boto_cloudtrail.remove_tags my_trail tag_a=tag_value tag_b=tag_value
 
-    '''
+    """
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         tagslist = []
         for k, v in six.iteritems(kwargs):
-            if six.text_type(k).startswith('__'):
+            if six.text_type(k).startswith("__"):
                 continue
-            tagslist.append({'Key': six.text_type(k), 'Value': six.text_type(v)})
-        conn.remove_tags(ResourceId=_get_trail_arn(Name,
-                              region=region, key=key, keyid=keyid,
-                              profile=profile), TagsList=tagslist)
-        return {'tagged': True}
+            tagslist.append({"Key": six.text_type(k), "Value": six.text_type(v)})
+        conn.remove_tags(
+            ResourceId=_get_trail_arn(
+                Name, region=region, key=key, keyid=keyid, profile=profile
+            ),
+            TagsList=tagslist,
+        )
+        return {"tagged": True}
     except ClientError as e:
-        return {'tagged': False, 'error': __utils__['boto3.get_error'](e)}
+        return {"tagged": False, "error": __utils__["boto3.get_error"](e)}
 
 
-def list_tags(Name,
-           region=None, key=None, keyid=None, profile=None):
-    '''
+def list_tags(Name, region=None, key=None, keyid=None, profile=None):
+    """
     List tags of a trail
 
     Returns:
@@ -482,18 +516,16 @@ def list_tags(Name,
 
         salt myminion boto_cloudtrail.list_tags my_trail
 
-    '''
+    """
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        rid = _get_trail_arn(Name,
-                             region=region, key=key, keyid=keyid,
-                             profile=profile)
+        rid = _get_trail_arn(Name, region=region, key=key, keyid=keyid, profile=profile)
         ret = conn.list_tags(ResourceIdList=[rid])
-        tlist = ret.get('ResourceTagList', []).pop().get('TagsList')
+        tlist = ret.get("ResourceTagList", []).pop().get("TagsList")
         tagdict = {}
         for tag in tlist:
-            tagdict[tag.get('Key')] = tag.get('Value')
-        return {'tags': tagdict}
+            tagdict[tag.get("Key")] = tag.get("Value")
+        return {"tags": tagdict}
     except ClientError as e:
-        return {'error': __utils__['boto3.get_error'](e)}
+        return {"error": __utils__["boto3.get_error"](e)}

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Installation of Windows Updates using the Windows Update Agent
 
 .. versionadded:: 2017.7.0
@@ -48,37 +48,39 @@ For removal:
        - updates:
          - KB3194343
          - bb1dbb26-3fb6-45fd-bb05-e3c8e379195c
-'''
+"""
 # Import Python libs
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 
-# Import Salt libs
-from salt.ext import six
 import salt.utils.data
 import salt.utils.platform
 import salt.utils.win_update
 
+# Import Salt libs
+from salt.ext import six
+
 log = logging.getLogger(__name__)
 
-__virtualname__ = 'wua'
+__virtualname__ = "wua"
 
 
 def __virtual__():
-    '''
+    """
     Only valid on Windows machines
-    '''
+    """
     if not salt.utils.platform.is_windows():
-        return False, 'WUA: Only available on Window systems'
+        return False, "WUA: Only available on Window systems"
 
     if not salt.utils.win_update.HAS_PYWIN32:
-        return False, 'WUA: Requires PyWin32 libraries'
+        return False, "WUA: Requires PyWin32 libraries"
 
     return __virtualname__
 
 
 def installed(name, updates=None):
-    '''
+    """
     Ensure Microsoft Updates are installed. Updates will be downloaded if
     needed.
 
@@ -126,17 +128,14 @@ def installed(name, updates=None):
             - updates:
               - KB3194343
               - 28cf1b09-2b1a-458c-9bd1-971d1b26b211
-    '''
+    """
     if isinstance(updates, six.string_types):
         updates = [updates]
 
     if not updates:
         updates = name
 
-    ret = {'name': name,
-           'changes': {},
-           'result': True,
-           'comment': ''}
+    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
     wua = salt.utils.win_update.WindowsUpdateAgent()
 
@@ -145,7 +144,7 @@ def installed(name, updates=None):
 
     # No updates found
     if install_list.count() == 0:
-        ret['comment'] = 'No updates found'
+        ret["comment"] = "No updates found"
         return ret
 
     # List of updates to download
@@ -161,21 +160,20 @@ def installed(name, updates=None):
         if not salt.utils.data.is_true(item.IsInstalled):
             install.updates.Add(item)
         else:
-            installed_updates.extend('KB' + kb for kb in item.KBArticleIDs)
+            installed_updates.extend("KB" + kb for kb in item.KBArticleIDs)
 
     if install.count() == 0:
-        ret['comment'] = 'Updates already installed: '
-        ret['comment'] += '\n - '.join(installed_updates)
+        ret["comment"] = "Updates already installed: "
+        ret["comment"] += "\n - ".join(installed_updates)
         return ret
 
     # Return comment of changes if test.
-    if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = 'Updates will be installed:'
+    if __opts__["test"]:
+        ret["result"] = None
+        ret["comment"] = "Updates will be installed:"
         for update in install.updates:
-            ret['comment'] += '\n'
-            ret['comment'] += ': '.join(
-                [update.Identity.UpdateID, update.Title])
+            ret["comment"] += "\n"
+            ret["comment"] += ": ".join([update.Identity.UpdateID, update.Title])
         return ret
 
     # Download updates
@@ -190,29 +188,33 @@ def installed(name, updates=None):
 
     # Verify the installation
     for item in install.list():
-        if not salt.utils.data.is_true(post_info[item]['Installed']):
-            ret['changes']['failed'] = {
-                item: {'Title': post_info[item]['Title'][:40] + '...',
-                       'KBs': post_info[item]['KBs']}
+        if not salt.utils.data.is_true(post_info[item]["Installed"]):
+            ret["changes"]["failed"] = {
+                item: {
+                    "Title": post_info[item]["Title"][:40] + "...",
+                    "KBs": post_info[item]["KBs"],
+                }
             }
-            ret['result'] = False
+            ret["result"] = False
         else:
-            ret['changes']['installed'] = {
-                item: {'Title': post_info[item]['Title'][:40] + '...',
-                       'NeedsReboot': post_info[item]['NeedsReboot'],
-                       'KBs': post_info[item]['KBs']}
+            ret["changes"]["installed"] = {
+                item: {
+                    "Title": post_info[item]["Title"][:40] + "...",
+                    "NeedsReboot": post_info[item]["NeedsReboot"],
+                    "KBs": post_info[item]["KBs"],
+                }
             }
 
-    if ret['changes'].get('failed', False):
-        ret['comment'] = 'Updates failed'
+    if ret["changes"].get("failed", False):
+        ret["comment"] = "Updates failed"
     else:
-        ret['comment'] = 'Updates installed successfully'
+        ret["comment"] = "Updates installed successfully"
 
     return ret
 
 
 def removed(name, updates=None):
-    '''
+    """
     Ensure Microsoft Updates are uninstalled.
 
     Args:
@@ -259,17 +261,14 @@ def removed(name, updates=None):
             - updates:
               - KB3194343
               - 28cf1b09-2b1a-458c-9bd1-971d1b26b211
-    '''
+    """
     if isinstance(updates, six.string_types):
         updates = [updates]
 
     if not updates:
         updates = name
 
-    ret = {'name': name,
-           'changes': {},
-           'result': True,
-           'comment': ''}
+    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
     wua = salt.utils.win_update.WindowsUpdateAgent()
 
@@ -278,7 +277,7 @@ def removed(name, updates=None):
 
     # No updates found
     if updates.count() == 0:
-        ret['comment'] = 'No updates found'
+        ret["comment"] = "No updates found"
         return ret
 
     # List of updates to uninstall
@@ -288,21 +287,20 @@ def removed(name, updates=None):
         if salt.utils.data.is_true(item.IsInstalled):
             uninstall.updates.Add(item)
         else:
-            removed_updates.extend('KB' + kb for kb in item.KBArticleIDs)
+            removed_updates.extend("KB" + kb for kb in item.KBArticleIDs)
 
     if uninstall.count() == 0:
-        ret['comment'] = 'Updates already removed: '
-        ret['comment'] += '\n - '.join(removed_updates)
+        ret["comment"] = "Updates already removed: "
+        ret["comment"] += "\n - ".join(removed_updates)
         return ret
 
     # Return comment of changes if test.
-    if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = 'Updates will be removed:'
+    if __opts__["test"]:
+        ret["result"] = None
+        ret["comment"] = "Updates will be removed:"
         for update in uninstall.updates:
-            ret['comment'] += '\n'
-            ret['comment'] += ': '.join(
-                [update.Identity.UpdateID, update.Title])
+            ret["comment"] += "\n"
+            ret["comment"] += ": ".join([update.Identity.UpdateID, update.Title])
         return ret
 
     # Install updates
@@ -314,36 +312,42 @@ def removed(name, updates=None):
 
     # Verify the installation
     for item in uninstall.list():
-        if salt.utils.data.is_true(post_info[item]['Installed']):
-            ret['changes']['failed'] = {
-                item: {'Title': post_info[item]['Title'][:40] + '...',
-                       'KBs': post_info[item]['KBs']}
+        if salt.utils.data.is_true(post_info[item]["Installed"]):
+            ret["changes"]["failed"] = {
+                item: {
+                    "Title": post_info[item]["Title"][:40] + "...",
+                    "KBs": post_info[item]["KBs"],
+                }
             }
-            ret['result'] = False
+            ret["result"] = False
         else:
-            ret['changes']['removed'] = {
-                item: {'Title': post_info[item]['Title'][:40] + '...',
-                       'NeedsReboot': post_info[item]['NeedsReboot'],
-                       'KBs': post_info[item]['KBs']}
+            ret["changes"]["removed"] = {
+                item: {
+                    "Title": post_info[item]["Title"][:40] + "...",
+                    "NeedsReboot": post_info[item]["NeedsReboot"],
+                    "KBs": post_info[item]["KBs"],
+                }
             }
 
-    if ret['changes'].get('failed', False):
-        ret['comment'] = 'Updates failed'
+    if ret["changes"].get("failed", False):
+        ret["comment"] = "Updates failed"
     else:
-        ret['comment'] = 'Updates removed successfully'
+        ret["comment"] = "Updates removed successfully"
 
     return ret
 
 
-def uptodate(name,
-             software=True,
-             drivers=False,
-             skip_hidden=False,
-             skip_mandatory=False,
-             skip_reboot=True,
-             categories=None,
-             severities=None,):
-    '''
+def uptodate(
+    name,
+    software=True,
+    drivers=False,
+    skip_hidden=False,
+    skip_mandatory=False,
+    skip_reboot=True,
+    categories=None,
+    severities=None,
+):
+    """
     Ensure Microsoft Updates that match the passed criteria are installed.
     Updates will be downloaded if needed.
 
@@ -424,23 +428,25 @@ def uptodate(name,
           wua.uptodate:
             - severities:
               - Critical
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': True,
-           'comment': ''}
+    """
+    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
     wua = salt.utils.win_update.WindowsUpdateAgent()
 
     available_updates = wua.available(
-        skip_hidden=skip_hidden, skip_installed=True,
-        skip_mandatory=skip_mandatory, skip_reboot=skip_reboot,
-        software=software, drivers=drivers, categories=categories,
-        severities=severities)
+        skip_hidden=skip_hidden,
+        skip_installed=True,
+        skip_mandatory=skip_mandatory,
+        skip_reboot=skip_reboot,
+        software=software,
+        drivers=drivers,
+        categories=categories,
+        severities=severities,
+    )
 
     # No updates found
     if available_updates.count() == 0:
-        ret['comment'] = 'No updates found'
+        ret["comment"] = "No updates found"
         return ret
 
     updates = list(available_updates.list().keys())
@@ -461,13 +467,12 @@ def uptodate(name,
             install.updates.Add(item)
 
     # Return comment of changes if test.
-    if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = 'Updates will be installed:'
+    if __opts__["test"]:
+        ret["result"] = None
+        ret["comment"] = "Updates will be installed:"
         for update in install.updates:
-            ret['comment'] += '\n'
-            ret['comment'] += ': '.join(
-                [update.Identity.UpdateID, update.Title])
+            ret["comment"] += "\n"
+            ret["comment"] += ": ".join([update.Identity.UpdateID, update.Title])
         return ret
 
     # Download updates
@@ -483,22 +488,26 @@ def uptodate(name,
 
     # Verify the installation
     for item in install.list():
-        if not salt.utils.data.is_true(post_info[item]['Installed']):
-            ret['changes']['failed'] = {
-                item: {'Title': post_info[item]['Title'][:40] + '...',
-                       'KBs': post_info[item]['KBs']}
+        if not salt.utils.data.is_true(post_info[item]["Installed"]):
+            ret["changes"]["failed"] = {
+                item: {
+                    "Title": post_info[item]["Title"][:40] + "...",
+                    "KBs": post_info[item]["KBs"],
+                }
             }
-            ret['result'] = False
+            ret["result"] = False
         else:
-            ret['changes']['installed'] = {
-                item: {'Title': post_info[item]['Title'][:40] + '...',
-                       'NeedsReboot': post_info[item]['NeedsReboot'],
-                       'KBs': post_info[item]['KBs']}
+            ret["changes"]["installed"] = {
+                item: {
+                    "Title": post_info[item]["Title"][:40] + "...",
+                    "NeedsReboot": post_info[item]["NeedsReboot"],
+                    "KBs": post_info[item]["KBs"],
+                }
             }
 
-    if ret['changes'].get('failed', False):
-        ret['comment'] = 'Updates failed'
+    if ret["changes"].get("failed", False):
+        ret["comment"] = "Updates failed"
     else:
-        ret['comment'] = 'Updates installed successfully'
+        ret["comment"] = "Updates installed successfully"
 
     return ret
