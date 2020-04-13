@@ -17,15 +17,12 @@ jxmlease
 kazoo
 keyring==5.7.1
 kubernetes<4.0
-libnacl==1.6.0
+libnacl>=1.7.1
 mock>=3.0.5
 more-itertools==5.0.0
 moto
 paramiko>=2.1.6
 psutil
-# Let's install pycryptodome instead of pycrypto because of pycrypto's outstanding security issues
-# PyCrypto, if pulled, will be removed from the generated static requirements
-pycryptodome
 pygit2
 pyinotify
 pyopenssl

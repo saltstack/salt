@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Consul sdb Module
 
 :maintainer:    SaltStack
@@ -26,21 +26,20 @@ requires very little. For example:
 
 The ``driver`` refers to the Consul module, all other options are optional.
 For option details see: https://python-consul.readthedocs.io/en/latest/#consul
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 from salt.exceptions import CommandExecutionError
 
 try:
     import consul
+
     HAS_CONSUL = True
 except ImportError:
     HAS_CONSUL = False
 
 
-__func_alias__ = {
-    'set_': 'set'
-}
+__func_alias__ = {"set_": "set"}
 
 
 def set_(key, value, profile=None):
@@ -60,15 +59,15 @@ def get(key, profile=None):
 
     _, result = conn.kv.get(key)
 
-    return result['Value'] if result else None
+    return result["Value"] if result else None
 
 
 def get_conn(profile):
-    '''
+    """
     Return a client object for accessing consul
-    '''
+    """
     params = {}
-    for key in ('host', 'port', 'token', 'scheme', 'consistency', 'dc', 'verify'):
+    for key in ("host", "port", "token", "scheme", "consistency", "dc", "verify"):
         if key in profile:
             params[key] = profile[key]
 
@@ -76,6 +75,6 @@ def get_conn(profile):
         return consul.Consul(**params)
     else:
         raise CommandExecutionError(
-            '(unable to import consul, '
-            'module most likely not installed. PLease install python-consul)'
+            "(unable to import consul, "
+            "module most likely not installed. PLease install python-consul)"
         )

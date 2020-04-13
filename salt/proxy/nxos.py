@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-r'''
+r"""
 Proxy Minion for Cisco NX OS Switches
 
 .. versionadded: 2016.11.0
@@ -90,31 +90,32 @@ the :mod:`salt.modules.nxos<salt.modules.nxos>` execution module.
     only want one consistent connection used for everything, use
     `multiprocessing: False`
 
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 import multiprocessing
 import re
 
 # Import Salt libs
 from salt.utils.pycrypto import gen_hash, secure_password
-from salt.utils.vt_helper import SSHConnection
 from salt.utils.vt import TerminalException
+from salt.utils.vt_helper import SSHConnection
 
 log = logging.getLogger(__file__)
 
-__proxyenabled__ = ['nxos']
-__virtualname__ = 'nxos'
-DETAILS = {'grains_cache': {}}
+__proxyenabled__ = ["nxos"]
+__virtualname__ = "nxos"
+DETAILS = {"grains_cache": {}}
 
 
 def __virtual__():
-    '''
+    """
     Only return if all the modules are available
-    '''
-    log.info('nxos proxy __virtual__() called...')
+    """
+    log.info("nxos proxy __virtual__() called...")
 
     return __virtualname__
 
@@ -124,49 +125,50 @@ def _worker_name():
 
 
 def init(opts=None):
-    '''
+    """
     Required.
     Can be used to initialize the server connection.
-    '''
+    """
     if opts is None:
         opts = __opts__
     try:
         this_prompt = None
-        if 'prompt_regex' in opts['proxy']:
-            this_prompt = opts['proxy']['prompt_regex']
-        elif 'prompt_name' in opts['proxy']:
-            this_prompt = '{0}.*#'.format(opts['proxy']['prompt_name'])
+        if "prompt_regex" in opts["proxy"]:
+            this_prompt = opts["proxy"]["prompt_regex"]
+        elif "prompt_name" in opts["proxy"]:
+            this_prompt = "{0}.*#".format(opts["proxy"]["prompt_name"])
         else:
-            log.warning('nxos proxy configuration does not specify a prompt match.')
-            this_prompt = '.+#$'
+            log.warning("nxos proxy configuration does not specify a prompt match.")
+            this_prompt = ".+#$"
 
         DETAILS[_worker_name()] = SSHConnection(
-            host=opts['proxy']['host'],
-            username=opts['proxy']['username'],
-            password=opts['proxy']['password'],
-            key_accept=opts['proxy'].get('key_accept', False),
-            ssh_args=opts['proxy'].get('ssh_args', ''),
-            prompt=this_prompt)
-        out, err = DETAILS[_worker_name()].sendline('terminal length 0')
+            host=opts["proxy"]["host"],
+            username=opts["proxy"]["username"],
+            password=opts["proxy"]["password"],
+            key_accept=opts["proxy"].get("key_accept", False),
+            ssh_args=opts["proxy"].get("ssh_args", ""),
+            prompt=this_prompt,
+        )
+        out, err = DETAILS[_worker_name()].sendline("terminal length 0")
 
     except TerminalException as e:
         log.error(e)
         return False
-    DETAILS['initialized'] = True
+    DETAILS["initialized"] = True
 
 
 def initialized():
-    return DETAILS.get('initialized', False)
+    return DETAILS.get("initialized", False)
 
 
 def ping():
-    '''
+    """
     Ping the device on the other end of the connection
 
-    .. code-block: bash
+    .. code-block:: bash
 
         salt '*' nxos.cmd ping
-    '''
+    """
     if _worker_name() not in DETAILS:
         init()
     try:
@@ -177,107 +179,113 @@ def ping():
 
 
 def shutdown(opts):
-    '''
+    """
     Disconnect
-    '''
+    """
     DETAILS[_worker_name()].close_connection()
 
 
 def sendline(command):
-    '''
+    """
     Run command through switch's cli
 
-    .. code-block: bash
+    .. code-block:: bash
 
         salt '*' nxos.cmd sendline 'show run | include "^username admin password"'
-    '''
+    """
     if ping() is False:
         init()
     out, err = DETAILS[_worker_name()].sendline(command)
-    _, out = out.split('\n', 1)
-    out, _, _ = out.rpartition('\n')
+    _, out = out.split("\n", 1)
+    out, _, _ = out.rpartition("\n")
     return out
 
 
 def grains():
-    '''
+    """
     Get grains for proxy minion
 
-    .. code-block: bash
+    .. code-block:: bash
 
         salt '*' nxos.cmd grains
-    '''
-    if not DETAILS['grains_cache']:
+    """
+    if not DETAILS["grains_cache"]:
         ret = system_info()
         log.debug(ret)
-        DETAILS['grains_cache'].update(ret)
-    return {'nxos': DETAILS['grains_cache']}
+        DETAILS["grains_cache"].update(ret)
+    return {"nxos": DETAILS["grains_cache"]}
 
 
 def grains_refresh():
-    '''
+    """
     Refresh the grains from the proxy device.
 
-    .. code-block: bash
+    .. code-block:: bash
 
         salt '*' nxos.cmd grains_refresh
-    '''
-    DETAILS['grains_cache'] = {}
+    """
+    DETAILS["grains_cache"] = {}
     return grains()
 
 
 def get_user(username):
-    '''
+    """
     Get username line from switch
 
-    .. code-block: bash
+    .. code-block:: bash
 
         salt '*' nxos.cmd get_user username=admin
-    '''
+    """
     return sendline('show run | include "^username {0} password 5 "'.format(username))
 
 
 def get_roles(username):
-    '''
+    """
     Get roles that the username is assigned from switch
 
-    .. code-block: bash
+    .. code-block:: bash
 
         salt '*' nxos.cmd get_roles username=admin
-    '''
-    info = sendline('show user-account {0}'.format(username))
-    roles = re.search(r'^\s*roles:(.*)$', info, re.MULTILINE)
+    """
+    info = sendline("show user-account {0}".format(username))
+    roles = re.search(r"^\s*roles:(.*)$", info, re.MULTILINE)
     if roles:
-        roles = roles.group(1).strip().split(' ')
+        roles = roles.group(1).strip().split(" ")
     else:
         roles = []
     return roles
 
 
 def check_password(username, password, encrypted=False):
-    '''
+    """
     Check if passed password is the one assigned to user
 
-    .. code-block: bash
+    .. code-block:: bash
 
         salt '*' nxos.cmd check_password username=admin password=admin
         salt '*' nxos.cmd check_password username=admin \\
             password='$5$2fWwO2vK$s7.Hr3YltMNHuhywQQ3nfOd.gAPHgs3SOBYYdGT3E.A' \\
             encrypted=True
-    '''
-    hash_algorithms = {'1': 'md5',
-                       '2a': 'blowfish',
-                       '5': 'sha256',
-                       '6': 'sha512', }
+    """
+    hash_algorithms = {
+        "1": "md5",
+        "2a": "blowfish",
+        "5": "sha256",
+        "6": "sha512",
+    }
     password_line = get_user(username)
     if not password_line:
         return None
-    if '!!' in password_line:
+    if "!!" in password_line:
         return False
-    cur_hash = re.search(r'(\$[0-6](?:\$[^$ ]+)+)', password_line).group(0)
+    cur_hash = re.search(r"(\$[0-6](?:\$[^$ ]+)+)", password_line).group(0)
     if encrypted is False:
-        hash_type, cur_salt, hashed_pass = re.search(r'^\$([0-6])\$([^$]+)\$(.*)$', cur_hash).groups()
-        new_hash = gen_hash(crypt_salt=cur_salt, password=password, algorithm=hash_algorithms[hash_type])
+        hash_type, cur_salt, hashed_pass = re.search(
+            r"^\$([0-6])\$([^$]+)\$(.*)$", cur_hash
+        ).groups()
+        new_hash = gen_hash(
+            crypt_salt=cur_salt, password=password, algorithm=hash_algorithms[hash_type]
+        )
     else:
         new_hash = password
     if new_hash == cur_hash:
@@ -286,18 +294,20 @@ def check_password(username, password, encrypted=False):
 
 
 def check_role(username, role):
-    '''
+    """
     Check if user is assigned a specific role on switch
 
     .. code-block:: bash
 
         salt '*' nxos.cmd check_role username=admin role=network-admin
-    '''
+    """
     return role in get_roles(username)
 
 
-def set_password(username, password, encrypted=False, role=None, crypt_salt=None, algorithm='sha256'):
-    '''
+def set_password(
+    username, password, encrypted=False, role=None, crypt_salt=None, algorithm="sha256"
+):
+    """
     Set users password on switch
 
     .. code-block:: bash
@@ -306,100 +316,102 @@ def set_password(username, password, encrypted=False, role=None, crypt_salt=None
         salt '*' nxos.cmd set_password admin \\
             password='$5$2fWwO2vK$s7.Hr3YltMNHuhywQQ3nfOd.gAPHgs3SOBYYdGT3E.A' \\
             encrypted=True
-    '''
+    """
     password_line = get_user(username)
     if encrypted is False:
         if crypt_salt is None:
             # NXOS does not like non alphanumeric characters.  Using the random module from pycrypto
             # can lead to having non alphanumeric characters in the salt for the hashed password.
             crypt_salt = secure_password(8, use_random=False)
-        hashed_pass = gen_hash(crypt_salt=crypt_salt, password=password, algorithm=algorithm)
+        hashed_pass = gen_hash(
+            crypt_salt=crypt_salt, password=password, algorithm=algorithm
+        )
     else:
         hashed_pass = password
-    password_line = 'username {0} password 5 {1}'.format(username, hashed_pass)
+    password_line = "username {0} password 5 {1}".format(username, hashed_pass)
     if role is not None:
-        password_line += ' role {0}'.format(role)
+        password_line += " role {0}".format(role)
     try:
-        sendline('config terminal')
+        sendline("config terminal")
         ret = sendline(password_line)
-        sendline('end')
-        sendline('copy running-config startup-config')
-        return '\n'.join([password_line, ret])
+        sendline("end")
+        sendline("copy running-config startup-config")
+        return "\n".join([password_line, ret])
     except TerminalException as e:
         log.error(e)
-        return 'Failed to set password'
+        return "Failed to set password"
 
 
 def remove_user(username):
-    '''
+    """
     Remove user from switch
 
     .. code-block:: bash
 
         salt '*' nxos.cmd remove_user username=daniel
-    '''
+    """
     try:
-        sendline('config terminal')
-        user_line = 'no username {0}'.format(username)
+        sendline("config terminal")
+        user_line = "no username {0}".format(username)
         ret = sendline(user_line)
-        sendline('end')
-        sendline('copy running-config startup-config')
-        return '\n'.join([user_line, ret])
+        sendline("end")
+        sendline("copy running-config startup-config")
+        return "\n".join([user_line, ret])
     except TerminalException as e:
         log.error(e)
-        return 'Failed to set password'
+        return "Failed to set password"
 
 
 def set_role(username, role):
-    '''
+    """
     Assign role to username
 
     .. code-block:: bash
 
         salt '*' nxos.cmd set_role username=daniel role=vdc-admin
-    '''
+    """
     try:
-        sendline('config terminal')
-        role_line = 'username {0} role {1}'.format(username, role)
+        sendline("config terminal")
+        role_line = "username {0} role {1}".format(username, role)
         ret = sendline(role_line)
-        sendline('end')
-        sendline('copy running-config startup-config')
-        return '\n'.join([role_line, ret])
+        sendline("end")
+        sendline("copy running-config startup-config")
+        return "\n".join([role_line, ret])
     except TerminalException as e:
         log.error(e)
-        return 'Failed to set password'
+        return "Failed to set password"
 
 
 def unset_role(username, role):
-    '''
+    """
     Remove role from username
 
     .. code-block:: bash
 
         salt '*' nxos.cmd unset_role username=daniel role=vdc-admin
-    '''
+    """
     try:
-        sendline('config terminal')
-        role_line = 'no username {0} role {1}'.format(username, role)
+        sendline("config terminal")
+        role_line = "no username {0} role {1}".format(username, role)
         ret = sendline(role_line)
-        sendline('end')
-        sendline('copy running-config startup-config')
-        return '\n'.join([role_line, ret])
+        sendline("end")
+        sendline("copy running-config startup-config")
+        return "\n".join([role_line, ret])
     except TerminalException as e:
         log.error(e)
-        return 'Failed to set password'
+        return "Failed to set password"
 
 
 def show_run():
-    '''
+    """
     Shortcut to run `show run` on switch
 
     .. code-block:: bash
 
         salt '*' nxos.cmd show_run
-    '''
+    """
     try:
-        ret = sendline('show run')
+        ret = sendline("show run")
     except TerminalException as e:
         log.error(e)
         return 'Failed to "show run"'
@@ -407,15 +419,15 @@ def show_run():
 
 
 def show_ver():
-    '''
+    """
     Shortcut to run `show ver` on switch
 
     .. code-block:: bash
 
         salt '*' nxos.cmd show_ver
-    '''
+    """
     try:
-        ret = sendline('show ver')
+        ret = sendline("show ver")
     except TerminalException as e:
         log.error(e)
         return 'Failed to "show ver"'
@@ -423,7 +435,7 @@ def show_ver():
 
 
 def add_config(lines):
-    '''
+    """
     Add one or more config lines to the switch running config
 
     .. code-block:: bash
@@ -432,16 +444,16 @@ def add_config(lines):
 
     .. note::
         For more than one config added per command, lines should be a list.
-    '''
+    """
     if not isinstance(lines, list):
         lines = [lines]
     try:
-        sendline('config terminal')
+        sendline("config terminal")
         for line in lines:
             sendline(line)
 
-        sendline('end')
-        sendline('copy running-config startup-config')
+        sendline("end")
+        sendline("copy running-config startup-config")
     except TerminalException as e:
         log.error(e)
         return False
@@ -449,7 +461,7 @@ def add_config(lines):
 
 
 def delete_config(lines):
-    '''
+    """
     Delete one or more config lines to the switch running config
 
     .. code-block:: bash
@@ -458,16 +470,16 @@ def delete_config(lines):
 
     .. note::
         For more than one config deleted per command, lines should be a list.
-    '''
+    """
     if not isinstance(lines, list):
         lines = [lines]
     try:
-        sendline('config terminal')
+        sendline("config terminal")
         for line in lines:
-            sendline(' '.join(['no', line]))
+            sendline(" ".join(["no", line]))
 
-        sendline('end')
-        sendline('copy running-config startup-config')
+        sendline("end")
+        sendline("copy running-config startup-config")
     except TerminalException as e:
         log.error(e)
         return False
@@ -475,7 +487,7 @@ def delete_config(lines):
 
 
 def find(pattern):
-    '''
+    """
     Find all instances where the pattern is in the running command
 
     .. code-block:: bash
@@ -485,13 +497,13 @@ def find(pattern):
     .. note::
         This uses the `re.MULTILINE` regex format for python, and runs the
         regex against the whole show_run output.
-    '''
+    """
     matcher = re.compile(pattern, re.MULTILINE)
     return matcher.findall(show_run())
 
 
 def replace(old_value, new_value, full_match=False):
-    '''
+    """
     Replace string or full line matches in switch's running config
 
     If full_match is set to True, then the whole line will need to be matched
@@ -500,70 +512,70 @@ def replace(old_value, new_value, full_match=False):
     .. code-block:: bash
 
         salt '*' nxos.cmd replace 'TESTSTRINGHERE' 'NEWTESTSTRINGHERE'
-    '''
+    """
     if full_match is False:
-        matcher = re.compile('^.*{0}.*$'.format(re.escape(old_value)), re.MULTILINE)
+        matcher = re.compile("^.*{0}.*$".format(re.escape(old_value)), re.MULTILINE)
         repl = re.compile(re.escape(old_value))
     else:
         matcher = re.compile(old_value, re.MULTILINE)
         repl = re.compile(old_value)
 
-    lines = {'old': [], 'new': []}
+    lines = {"old": [], "new": []}
     for line in matcher.finditer(show_run()):
-        lines['old'].append(line.group(0))
-        lines['new'].append(repl.sub(new_value, line.group(0)))
+        lines["old"].append(line.group(0))
+        lines["new"].append(repl.sub(new_value, line.group(0)))
 
-    delete_config(lines['old'])
-    add_config(lines['new'])
+    delete_config(lines["old"])
+    add_config(lines["new"])
 
     return lines
 
 
 def _parser(block):
-    return re.compile('^{block}\n(?:^[ \n].*$\n?)+'.format(block=block), re.MULTILINE)
+    return re.compile("^{block}\n(?:^[ \n].*$\n?)+".format(block=block), re.MULTILINE)
 
 
 def _parse_software(data):
-    ret = {'software': {}}
-    software = _parser('Software').search(data).group(0)
-    matcher = re.compile('^  ([^:]+): *([^\n]+)', re.MULTILINE)
+    ret = {"software": {}}
+    software = _parser("Software").search(data).group(0)
+    matcher = re.compile("^  ([^:]+): *([^\n]+)", re.MULTILINE)
     for line in matcher.finditer(software):
         key, val = line.groups()
-        ret['software'][key] = val
-    return ret['software']
+        ret["software"][key] = val
+    return ret["software"]
 
 
 def _parse_hardware(data):
-    ret = {'hardware': {}}
-    hardware = _parser('Hardware').search(data).group(0)
-    matcher = re.compile('^  ([^:\n]+): *([^\n]+)', re.MULTILINE)
+    ret = {"hardware": {}}
+    hardware = _parser("Hardware").search(data).group(0)
+    matcher = re.compile("^  ([^:\n]+): *([^\n]+)", re.MULTILINE)
     for line in matcher.finditer(hardware):
         key, val = line.groups()
-        ret['hardware'][key] = val
-    return ret['hardware']
+        ret["hardware"][key] = val
+    return ret["hardware"]
 
 
 def _parse_plugins(data):
-    ret = {'plugins': []}
-    plugins = _parser('plugin').search(data).group(0)
-    matcher = re.compile('^  (?:([^,]+), )+([^\n]+)', re.MULTILINE)
+    ret = {"plugins": []}
+    plugins = _parser("plugin").search(data).group(0)
+    matcher = re.compile("^  (?:([^,]+), )+([^\n]+)", re.MULTILINE)
     for line in matcher.finditer(plugins):
-        ret['plugins'].extend(line.groups())
-    return ret['plugins']
+        ret["plugins"].extend(line.groups())
+    return ret["plugins"]
 
 
 def system_info():
-    '''
+    """
     Return system information for grains of the NX OS proxy minion
 
     .. code-block:: bash
 
         salt '*' nxos.system_info
-    '''
+    """
     data = show_ver()
     info = {
-        'software': _parse_software(data),
-        'hardware': _parse_hardware(data),
-        'plugins': _parse_plugins(data),
+        "software": _parse_software(data),
+        "hardware": _parse_hardware(data),
+        "plugins": _parse_plugins(data),
     }
     return info
