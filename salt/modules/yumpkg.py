@@ -2639,9 +2639,9 @@ def group_install(name, skip=(), include=(), **kwargs):
     targets = []
     for group in groups:
         group_detail = group_info(group)
-        targets.extend(group_detail.get("mandatory packages", []))
+        targets.extend(group_detail.get("mandatory", []))
         targets.extend(
-            [pkg for pkg in group_detail.get("default packages", []) if pkg not in skip]
+            [pkg for pkg in group_detail.get("default", []) if pkg not in skip]
         )
     if include:
         targets.extend(include)
