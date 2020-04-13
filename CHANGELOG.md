@@ -6,7 +6,49 @@ This changelog follows [keepachangelog](https://keepachangelog.com/en/1.0.0/) fo
 This project versioning is _similar_ to [Semantic Versioning](https://semver.org), and is documented in [SEP 14](https://github.com/saltstack/salt-enhancement-proposals/pull/20/files).
 Versions are `MAJOR.PATCH`.
 
-## Unreleased (Neon)
+### 3000.1
+
+### Removed
+
+### Deprecated
+
+### Changed
+
+### Fixed
+- [#56237](https://github.com/saltstack/salt/pull/56237) - Fix alphabetical ordering and remove duplicates across all documentation indexes - [@myii](https://github.com/myii)
+- [#56082](https://github.com/saltstack/salt/pull/56082) - Fix saltversioninfo grain for new version
+- [#56143](https://github.com/saltstack/salt/pull/56143) - Use encoding when caching pillar data
+- [#56172](https://github.com/saltstack/salt/pull/56172) - Only change mine data if using new allow_tgt feature
+- [#56094](https://github.com/saltstack/salt/pull/56094) - Fix type error in TornadoImporter
+- [#56174](https://github.com/saltstack/salt/pull/56174) - MySQL module fixes
+- [#56149](https://github.com/saltstack/salt/pull/56149) - Fix to scheduler for use of when and splay
+- [#56197](https://github.com/saltstack/salt/pull/56197) - Allows use of inline powershell for cmd.script args
+- [#55894](https://github.com/saltstack/salt/pull/55894) - pdbedit module should check for version 4.8.x or newer
+- [#55906](https://github.com/saltstack/salt/pull/55906) - smartos.vm_present could not handle nics with vrrp_vrid property
+- [#56218](https://github.com/saltstack/salt/pull/56218) - Changed StrictVersion checking of setuptools to LooseVersion
+- [#56099](https://github.com/saltstack/salt/pull/56099) - Fix Windows and macOS requirements handling in setup.py
+- [#56068](https://github.com/saltstack/salt/pull/56068) - Update the bootstrap script to latest version, v2020.02.24
+- [#56185](https://github.com/saltstack/salt/pull/56185) - Fix regression in service states with reload argument
+- [#56341](https://github.com/saltstack/salt/pull/56341) - Revert "Don't remove one directory level from slspath"
+- [#56290](https://github.com/saltstack/salt/pull/56290) - Ensures popping lgpo.secedit_data does not throw KeyError
+- [#56339](https://github.com/saltstack/salt/pull/56339) - Fix win_dns_client when used with scheduler
+- [#56215](https://github.com/saltstack/salt/pull/56215) - Fix for unless requisite when pip is not installed
+- [#56060](https://github.com/saltstack/salt/pull/56060) - Fix regex string for Del and DelVals
+- [#56337](https://github.com/saltstack/salt/pull/56337) - Handle Adapter Type 53 and Undefined Types
+- [#56160](https://github.com/saltstack/salt/pull/56160) - Fix issue with existing reg_dword entries
+- [#56358](https://github.com/saltstack/salt/pull/56358) - Fix version instantiation when minor is an empty string
+- [#56272](https://github.com/saltstack/salt/pull/56272) - Properly resolve the policy name
+- [#56310](https://github.com/saltstack/salt/pull/56310) - Only process ADMX files when loading policies
+- [#56327](https://github.com/saltstack/salt/pull/56327) - keep cache_copied_files variable a list
+- [#56360](https://github.com/saltstack/salt/pull/56360) - dont require virtualenv.virtualenv_version call, removed in 20.0.10
+- [#56378](https://github.com/saltstack/salt/pull/56378) - Include _version.py if building wheel
+- [#56376](https://github.com/saltstack/salt/pull/56376) - Fix win deps
+- [#56418](https://github.com/saltstack/salt/pull/56418) - Ensure version.py included before we install
+- [#56435](https://github.com/saltstack/salt/pull/56435) - Update mac build scripts
+
+### Added
+
+## 3000 - Neon [2020-02-10]
 
 ### Removed
 

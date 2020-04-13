@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Send a message card to Microsoft Teams
 ======================================
 
@@ -20,7 +20,7 @@ The hook_url can be specified in the master or minion configuration like below:
 
     msteams:
       hook_url: https://outlook.office.com/webhook/837
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
@@ -30,18 +30,14 @@ from salt.exceptions import SaltInvocationError
 
 
 def __virtual__():
-    '''
+    """
     Only load if the msteams module is available in __salt__
-    '''
-    return 'msteams' if 'msteams.post_card' in __salt__ else False
+    """
+    return "msteams" if "msteams.post_card" in __salt__ else False
 
 
-def post_card(name,
-              message,
-              hook_url=None,
-              title=None,
-              theme_color=None):
-    '''
+def post_card(name, message, hook_url=None, title=None, theme_color=None):
+    """
     Send a message to a Microsft Teams channel
 
     .. code-block:: yaml
@@ -65,35 +61,33 @@ def post_card(name,
         The title for the card posted to the channel
     theme_color
         A hex code for the desired highlight color
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': False,
-           'comment': ''}
+    """
+    ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
-    if __opts__['test']:
-        ret['comment'] = 'The following message is to be sent to Teams: {0}'.format(message)
-        ret['result'] = None
+    if __opts__["test"]:
+        ret["comment"] = "The following message is to be sent to Teams: {0}".format(
+            message
+        )
+        ret["result"] = None
         return ret
 
     if not message:
-        ret['comment'] = 'Teams message is missing: {0}'.format(message)
+        ret["comment"] = "Teams message is missing: {0}".format(message)
         return ret
 
     try:
-        result = __salt__['msteams.post_card'](
-            message=message,
-            hook_url=hook_url,
-            title=title,
-            theme_color=theme_color,
+        result = __salt__["msteams.post_card"](
+            message=message, hook_url=hook_url, title=title, theme_color=theme_color,
         )
     except SaltInvocationError as sie:
-        ret['comment'] = 'Failed to send message ({0}): {1}'.format(sie, name)
+        ret["comment"] = "Failed to send message ({0}): {1}".format(sie, name)
     else:
         if isinstance(result, bool) and result:
-            ret['result'] = True
-            ret['comment'] = 'Sent message: {0}'.format(name)
+            ret["result"] = True
+            ret["comment"] = "Sent message: {0}".format(name)
         else:
-            ret['comment'] = 'Failed to send message ({0}): {1}'.format(result['message'], name)
+            ret["comment"] = "Failed to send message ({0}): {1}".format(
+                result["message"], name
+            )
 
     return ret
