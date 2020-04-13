@@ -7,6 +7,21 @@ This project versioning is _similar_ to [Semantic Versioning](https://semver.org
 Versions are `MAJOR.PATCH`.
 
 ## 3001 - Sodium
+## Sodium
+
+### Removed
+
+### Deprecated
+
+### Changed
+
+### Fixed
+
+### Added
+- [#56627](https://github.com/saltstack/salt/pull/56627) - Add new salt-ssh set_path option
+
+
+## 3000.1
 
 ### Removed
 
