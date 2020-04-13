@@ -1,4 +1,4 @@
-@Library('salt@master-1.7') _
+@Library('salt@master-1.8') _
 
 runPreCommit(
     env: env)
