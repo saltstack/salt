@@ -484,6 +484,22 @@ grains for the master.
 
     enable_gpu_grains: True
 
+.. conf_master:: skip_grains
+
+``skip_grains``
+---------------------
+
+Default: ``False``
+
+MasterMinions should omit grains. A MasterMinion is "a minion function object
+for generic use on the master" that omit pillar. A RunnerClient creates a
+MasterMinion omitting states and renderer. Setting to True can improve master
+performance.
+
+.. code-block:: yaml
+
+    skip_grains: True
+
 .. conf_master:: job_cache
 
 ``job_cache``
@@ -1340,6 +1356,15 @@ salt-ssh.
     ssh_list_nodegroups:
       groupA: minion1,minion2
       groupB: minion1,minion3
+
+.. conf_master:: ssh_run_pre_flight
+
+Default: False
+
+Run the ssh_pre_flight script defined in the salt-ssh roster. By default
+the script will only run when the thin dir does not exist on the targeted
+minion. This will force the script to run and not check if the thin dir
+exists first.
 
 .. conf_master:: thin_extra_mods
 
