@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 To be used with proccessors in module `highstate_doc`.
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-__virtualname__ = 'highstate_doc'
+__virtualname__ = "highstate_doc"
 
 
 def note(name, source=None, contents=None, **kwargs):
-    '''
+    """
     Add content to a document generated using `highstate_doc.render`.
 
     This state does not preform any tasks on the host. It only is used in highstate_doc lowstate proccessers
@@ -36,10 +36,10 @@ def note(name, source=None, contents=None, **kwargs):
                 - name: example
                 - order: 0
                 - source: salt://{{tpldir}}/HELP.md
-    '''
-    comment = ''
+    """
+    comment = ""
     if source:
-        comment += 'include file: {0}\n'.format(source)
+        comment += "include file: {0}\n".format(source)
     if contents and len(contents) < 200:
         comment += contents
-    return {'name': name, 'result': True, 'comment': comment, 'changes': {}}
+    return {"name": name, "result": True, "comment": comment, "changes": {}}
