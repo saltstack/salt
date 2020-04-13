@@ -5,19 +5,18 @@ certifi
 cffi==1.12.2
 CherryPy==17.4.1
 cryptography==2.6.1
-enum34==1.1.6 ; python_version < '3.4'
-futures==3.3.0 ; python_version < '3.0'
-GitPython==2.1.15
+enum34==1.1.6; python_version < '3.4'
+futures==3.2.0; python_version < "3.0"
 idna==2.8
 ioloop==0.1a0
 ipaddress==1.0.22
 jinja2==2.10.1
-libnacl==1.6.1
+libnacl==1.7.1
 lxml==4.3.0
 Mako==1.0.7
 markupsafe==1.1.1
 msgpack-python==0.5.6
-psutil==5.6.1
+psutil==5.6.6
 pyasn1==0.4.5
 pycparser==2.19
 pycryptodomex==3.8.1
@@ -32,7 +31,12 @@ pyyaml==5.1.2
 pyzmq==18.0.1
 requests==2.21.0
 setproctitle
-singledispatch==3.4.0.3 ; python_version < '3.4'
+singledispatch==3.4.0.3; python_version < '3.4'
 timelib==0.2.4
 watchdog==0.9.0
 wheel==0.33.4
+
+# GitPython
+GitPython==2.1.10
+gitdb2==2.0.5             # via gitpython
+smmap2==2.0.5             # via gitdb2

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Neutron module for interacting with OpenStack Neutron
 
 .. versionadded:: 2018.3.0
@@ -24,35 +24,39 @@ Example configuration
         project_domain_name: myproject
         auth_url: https://example.org:5000/v3
       identity_api_version: 3
-'''
+"""
 
 from __future__ import absolute_import, print_function, unicode_literals
 
 HAS_SHADE = False
 try:
     import shade
+
     HAS_SHADE = True
 except ImportError:
     pass
 
-__virtualname__ = 'neutronng'
+__virtualname__ = "neutronng"
 
 
 def __virtual__():
-    '''
+    """
     Only load this module if shade python module is installed
-    '''
+    """
     if HAS_SHADE:
         return __virtualname__
-    return (False, 'The neutronng execution module failed to \
-                    load: shade python module is not available')
+    return (
+        False,
+        "The neutronng execution module failed to \
+                    load: shade python module is not available",
+    )
 
 
 def compare_changes(obj, **kwargs):
-    '''
+    """
     Compare two dicts returning only keys that exist in the first dict and are
     different in the second one
-    '''
+    """
     changes = {}
     for key, value in obj.items():
         if key in kwargs:
@@ -62,52 +66,52 @@ def compare_changes(obj, **kwargs):
 
 
 def _clean_kwargs(keep_name=False, **kwargs):
-    '''
+    """
     Sanatize the the arguments for use with shade
-    '''
-    if 'name' in kwargs and not keep_name:
-        kwargs['name_or_id'] = kwargs.pop('name')
+    """
+    if "name" in kwargs and not keep_name:
+        kwargs["name_or_id"] = kwargs.pop("name")
 
-    return __utils__['args.clean_kwargs'](**kwargs)
+    return __utils__["args.clean_kwargs"](**kwargs)
 
 
 def setup_clouds(auth=None):
-    '''
+    """
     Call functions to create Shade cloud objects in __context__ to take
     advantage of Shade's in-memory caching across several states
-    '''
+    """
     get_operator_cloud(auth)
     get_openstack_cloud(auth)
 
 
 def get_operator_cloud(auth=None):
-    '''
+    """
     Return an operator_cloud
-    '''
+    """
     if auth is None:
-        auth = __salt__['config.option']('neutron', {})
-    if 'shade_opcloud' in __context__:
-        if __context__['shade_opcloud'].auth == auth:
-            return __context__['shade_opcloud']
-    __context__['shade_opcloud'] = shade.operator_cloud(**auth)
-    return __context__['shade_opcloud']
+        auth = __salt__["config.option"]("neutron", {})
+    if "shade_opcloud" in __context__:
+        if __context__["shade_opcloud"].auth == auth:
+            return __context__["shade_opcloud"]
+    __context__["shade_opcloud"] = shade.operator_cloud(**auth)
+    return __context__["shade_opcloud"]
 
 
 def get_openstack_cloud(auth=None):
-    '''
+    """
     Return an openstack_cloud
-    '''
+    """
     if auth is None:
-        auth = __salt__['config.option']('neutron', {})
-    if 'shade_oscloud' in __context__:
-        if __context__['shade_oscloud'].auth == auth:
-            return __context__['shade_oscloud']
-    __context__['shade_oscloud'] = shade.openstack_cloud(**auth)
-    return __context__['shade_oscloud']
+        auth = __salt__["config.option"]("neutron", {})
+    if "shade_oscloud" in __context__:
+        if __context__["shade_oscloud"].auth == auth:
+            return __context__["shade_oscloud"]
+    __context__["shade_oscloud"] = shade.openstack_cloud(**auth)
+    return __context__["shade_oscloud"]
 
 
 def network_create(auth=None, **kwargs):
-    '''
+    """
     Create a network
 
     name
@@ -141,14 +145,14 @@ def network_create(auth=None, **kwargs):
                      "physical_network": "provider"}' \
           project_id=1dcac318a83b4610b7a7f7ba01465548
 
-    '''
+    """
     cloud = get_operator_cloud(auth)
     kwargs = _clean_kwargs(keep_name=True, **kwargs)
     return cloud.create_network(**kwargs)
 
 
 def network_delete(auth=None, **kwargs):
-    '''
+    """
     Delete a network
 
     name_or_id
@@ -161,14 +165,14 @@ def network_delete(auth=None, **kwargs):
         salt '*' neutronng.network_delete name_or_id=network1
         salt '*' neutronng.network_delete name_or_id=1dcac318a83b4610b7a7f7ba01465548
 
-    '''
+    """
     cloud = get_operator_cloud(auth)
     kwargs = _clean_kwargs(**kwargs)
     return cloud.delete_network(**kwargs)
 
 
 def list_networks(auth=None, **kwargs):
-    '''
+    """
     List networks
 
     filters
@@ -182,14 +186,14 @@ def list_networks(auth=None, **kwargs):
         salt '*' neutronng.list_networks \
           filters='{"tenant_id": "1dcac318a83b4610b7a7f7ba01465548"}'
 
-    '''
+    """
     cloud = get_operator_cloud(auth)
     kwargs = _clean_kwargs(**kwargs)
     return cloud.list_networks(**kwargs)
 
 
 def network_get(auth=None, **kwargs):
-    '''
+    """
     Get a single network
 
     filters
@@ -201,14 +205,14 @@ def network_get(auth=None, **kwargs):
 
         salt '*' neutronng.network_get name=XLB4
 
-    '''
+    """
     cloud = get_operator_cloud(auth)
     kwargs = _clean_kwargs(**kwargs)
     return cloud.get_network(**kwargs)
 
 
 def subnet_create(auth=None, **kwargs):
-    '''
+    """
     Create a subnet
 
     network_name_or_id
@@ -279,14 +283,14 @@ def subnet_create(auth=None, **kwargs):
         salt '*' neutronng.subnet_create network_name_or_id=network1 \
           subnet_name=subnet1 dns_nameservers='["8.8.8.8", "8.8.8.7"]'
 
-    '''
+    """
     cloud = get_operator_cloud(auth)
     kwargs = _clean_kwargs(**kwargs)
     return cloud.create_subnet(**kwargs)
 
 
 def subnet_update(auth=None, **kwargs):
-    '''
+    """
     Update a subnet
 
     name_or_id
@@ -322,14 +326,14 @@ def subnet_update(auth=None, **kwargs):
         salt '*' neutronng.subnet_update name=subnet1 subnet_name=subnet2
         salt '*' neutronng.subnet_update name=subnet1 dns_nameservers='["8.8.8.8", "8.8.8.7"]'
 
-    '''
+    """
     cloud = get_operator_cloud(auth)
     kwargs = _clean_kwargs(**kwargs)
     return cloud.update_subnet(**kwargs)
 
 
 def subnet_delete(auth=None, **kwargs):
-    '''
+    """
     Delete a subnet
 
     name
@@ -343,14 +347,14 @@ def subnet_delete(auth=None, **kwargs):
         salt '*' neutronng.subnet_delete \
           name=1dcac318a83b4610b7a7f7ba01465548
 
-    '''
+    """
     cloud = get_operator_cloud(auth)
     kwargs = _clean_kwargs(**kwargs)
     return cloud.delete_subnet(**kwargs)
 
 
 def list_subnets(auth=None, **kwargs):
-    '''
+    """
     List subnets
 
     filters
@@ -364,14 +368,14 @@ def list_subnets(auth=None, **kwargs):
         salt '*' neutronng.list_subnets \
           filters='{"tenant_id": "1dcac318a83b4610b7a7f7ba01465548"}'
 
-    '''
+    """
     cloud = get_operator_cloud(auth)
     kwargs = _clean_kwargs(**kwargs)
     return cloud.list_subnets(**kwargs)
 
 
 def subnet_get(auth=None, **kwargs):
-    '''
+    """
     Get a single subnet
 
     filters
@@ -383,14 +387,14 @@ def subnet_get(auth=None, **kwargs):
 
         salt '*' neutronng.subnet_get name=subnet1
 
-    '''
+    """
     cloud = get_operator_cloud(auth)
     kwargs = _clean_kwargs(**kwargs)
     return cloud.get_subnet(**kwargs)
 
 
 def security_group_create(auth=None, **kwargs):
-    '''
+    """
     Create a security group. Use security_group_get to create default.
 
     project_id
@@ -406,14 +410,14 @@ def security_group_create(auth=None, **kwargs):
           description="Very secure security group" \
           project_id=1dcac318a83b4610b7a7f7ba01465548
 
-    '''
+    """
     cloud = get_operator_cloud(auth)
     kwargs = _clean_kwargs(keep_name=True, **kwargs)
     return cloud.create_security_group(**kwargs)
 
 
 def security_group_update(secgroup=None, auth=None, **kwargs):
-    '''
+    """
     Update a security group
 
     secgroup
@@ -435,14 +439,14 @@ def security_group_update(secgroup=None, auth=None, **kwargs):
           description="Very secure security group" \
           project_id=1dcac318a83b4610b7a7f7ba01465548
 
-    '''
+    """
     cloud = get_operator_cloud(auth)
     kwargs = _clean_kwargs(keep_name=True, **kwargs)
     return cloud.update_security_group(secgroup, **kwargs)
 
 
 def security_group_delete(auth=None, **kwargs):
-    '''
+    """
     Delete a security group
 
     name_or_id
@@ -454,14 +458,14 @@ def security_group_delete(auth=None, **kwargs):
 
         salt '*' neutronng.security_group_delete name_or_id=secgroup1
 
-    '''
+    """
     cloud = get_operator_cloud(auth)
     kwargs = _clean_kwargs(**kwargs)
     return cloud.delete_security_group(**kwargs)
 
 
 def security_group_get(auth=None, **kwargs):
-    '''
+    """
     Get a single security group. This will create a default security group
     if one does not exist yet for a particular project id.
 
@@ -478,14 +482,14 @@ def security_group_get(auth=None, **kwargs):
         salt '*' neutronng.security_group_get \
           name=default\
           filters='{"tenant_id":"2e778bb64ca64a199eb526b5958d8710"}'
-    '''
+    """
     cloud = get_operator_cloud(auth)
     kwargs = _clean_kwargs(**kwargs)
     return cloud.get_security_group(**kwargs)
 
 
 def security_group_rule_create(auth=None, **kwargs):
-    '''
+    """
     Create a rule in a security group
 
     secgroup_name_or_id
@@ -546,14 +550,14 @@ def security_group_rule_create(auth=None, **kwargs):
           secgroup_name_or_id=c0e1d1ce-7296-405e-919d-1c08217be529\
           protocol=icmp project_id=1dcac318a83b4610b7a7f7ba01465548
 
-    '''
+    """
     cloud = get_operator_cloud(auth)
     kwargs = _clean_kwargs(**kwargs)
     return cloud.create_security_group_rule(**kwargs)
 
 
 def security_group_rule_delete(auth=None, **kwargs):
-    '''
+    """
     Delete a security group
 
     name_or_id
@@ -565,7 +569,7 @@ def security_group_rule_delete(auth=None, **kwargs):
 
         salt '*' neutronng.security_group_rule_delete name_or_id=1dcac318a83b4610b7a7f7ba01465548
 
-    '''
+    """
     cloud = get_operator_cloud(auth)
     kwargs = _clean_kwargs(**kwargs)
     return cloud.delete_security_group_rule(**kwargs)
