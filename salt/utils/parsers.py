@@ -3268,6 +3268,14 @@ class SaltSSHOptionParser(
             help="Pass a JID to be used instead of generating one.",
         )
 
+        self.add_option(
+            "--pre-flight",
+            default=False,
+            action="store_true",
+            dest="ssh_run_pre_flight",
+            help="Run the defined ssh_pre_flight script in the roster",
+        )
+
         ssh_group = optparse.OptionGroup(
             self, "SSH Options", "Parameters for the SSH client."
         )

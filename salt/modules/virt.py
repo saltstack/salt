@@ -288,7 +288,7 @@ def _get_domain(conn, *vms, **kwargs):
         for id_ in conn.listDefinedDomains():
             all_vms.append(id_)
 
-    if not all_vms:
+    if vms and not all_vms:
         raise CommandExecutionError("No virtual machines found.")
 
     if vms:
@@ -1242,17 +1242,28 @@ def _handle_remote_boot_params(orig_boot):
     """
     saltinst_dir = None
     new_boot = orig_boot.copy()
+    keys = orig_boot.keys()
+    cases = [
+        {"loader", "nvram"},
+        {"kernel", "initrd"},
+        {"kernel", "initrd", "cmdline"},
+        {"loader", "nvram", "kernel", "initrd"},
+        {"loader", "nvram", "kernel", "initrd", "cmdline"},
+    ]
 
     try:
-        for key in ["kernel", "initrd"]:
-            if check_remote(orig_boot.get(key)):
-                if saltinst_dir is None:
-                    os.makedirs(CACHE_DIR)
-                    saltinst_dir = CACHE_DIR
-
-                new_boot[key] = download_remote(orig_boot.get(key), saltinst_dir)
-
-        return new_boot
+        if keys in cases:
+            for key in keys:
+                if orig_boot.get(key) is not None and check_remote(orig_boot.get(key)):
+                    if saltinst_dir is None:
+                        os.makedirs(CACHE_DIR)
+                        saltinst_dir = CACHE_DIR
+                    new_boot[key] = download_remote(orig_boot.get(key), saltinst_dir)
+            return new_boot
+        else:
+            raise SaltInvocationError(
+                "Invalid boot parameters, (kernel, initrd) or/and (loader, nvram) must be both present"
+            )
     except Exception as err:  # pylint: disable=broad-except
         raise err
 
@@ -1942,7 +1953,9 @@ def update(
         for the virtual machine. This is an optionl parameter, and all of the
         keys are optional within the dictionary. If a remote path is provided
         to kernel or initrd, salt will handle the downloading of the specified
-        remote fild, and will modify the XML accordingly.
+        remote fild, and will modify the XML accordingly.Boot vm with UEFI,
+        loader and nvram can be specified to achieve the goal. To remove any
+        boot parameters, pass an None object to the relevant parameter, for instance: "kernel": None
 
         .. code-block:: python
 
@@ -1950,6 +1963,8 @@ def update(
                 'kernel': '/root/f8-i386-vmlinuz',
                 'initrd': '/root/f8-i386-initrd',
                 'cmdline': 'console=ttyS0 ks=http://example.com/f8-i386/os/'
+                'loader': /usr/share/OVMF/OVMF_CODE.fd
+                'nvram': /usr/share/OVMF/OVMF_VARS.ms.fd
             }
 
         .. versionadded:: 3000
@@ -2022,27 +2037,36 @@ def update(
         need_update = True
 
     # Update the kernel boot parameters
-    boot_tags = ["kernel", "initrd", "cmdline"]
+    boot_tags = ["kernel", "initrd", "cmdline", "loader", "nvram"]
     parent_tag = desc.find("os")
 
     # We need to search for each possible subelement, and update it.
     for tag in boot_tags:
         # The Existing Tag...
-        found_tag = desc.find(tag)
+        found_tag = parent_tag.find(tag)
 
         # The new value
         boot_tag_value = boot.get(tag, None) if boot else None
 
         # Existing tag is found and values don't match
-        if found_tag and found_tag.text != boot_tag_value:
+        if found_tag is not None and found_tag.text != boot_tag_value:
 
             # If the existing tag is found, but the new value is None
             # remove it. If the existing tag is found, and the new value
             # doesn't match update it. In either case, mark for update.
             if boot_tag_value is None and boot is not None and parent_tag is not None:
-                ElementTree.remove(parent_tag, tag)
+                parent_tag.remove(found_tag)
             else:
                 found_tag.text = boot_tag_value
+
+            # If the existing tag is loader or nvram, we need to update the corresponding attribute
+            if found_tag.tag == "loader" and boot_tag_value is not None:
+                found_tag.set("readonly", "yes")
+                found_tag.set("type", "pflash")
+
+            if found_tag.tag == "nvram" and boot_tag_value is not None:
+                found_tag.set("template", found_tag.text)
+                found_tag.text = None
 
             need_update = True
 
@@ -2059,6 +2083,16 @@ def update(
                 child_tag = ElementTree.SubElement(new_parent_tag, tag)
 
             child_tag.text = boot_tag_value
+
+            # If the newly created tag is loader or nvram, we need to update the corresponding attribute
+            if child_tag.tag == "loader":
+                child_tag.set("readonly", "yes")
+                child_tag.set("type", "pflash")
+
+            if child_tag.tag == "nvram":
+                child_tag.set("template", child_tag.text)
+                child_tag.text = None
+
             need_update = True
 
     # Update the memory, note that libvirt outputs all memory sizes in KiB
