@@ -9,19 +9,14 @@ Remove this section if not relevant
 ### New Behavior
 Remove this section if not relevant
 
-### Docs & changelog written?
-Yes/No 
+### Merge requirements satisfied?
+**[NOTICE] Bug fixes or features added to Salt require tests.**
+<!-- Please review the [test documentation](https://docs.saltstack.com/en/master/topics/tutorials/writing_tests.html) for details on how to implement tests into Salt's test suite. -->
 - [ ] Docs
 - [ ] Changelog
-
-### Tests written?
-**[NOTICE] Bug fixes or features added to Salt require tests.**
-Please review the [test documentation](https://docs.saltstack.com/en/master/topics/tutorials/writing_tests.html) for details on how to implement tests into Salt's test suite.
-
-Yes/No
+- [ ] Tests written/updated
 
 ### Commits signed with GPG?
-
 Yes/No
 
 Please review [Salt's Contributing Guide](https://docs.saltstack.com/en/master/topics/development/contributing.html) for best practices.
