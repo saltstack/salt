@@ -4,6 +4,9 @@
   stage: test
   tags:
     - saltstack-kitchen
+  only:
+    refs:
+      - schedules
   variables:
     FORCE_FULL: 'true'
     GOLDEN_IMAGES_CI_BRANCH: master

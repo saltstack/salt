@@ -34,6 +34,9 @@ lint-salt-full:
     key: nox-lint-cache
     paths:
       - .nox
+  only:
+    refs:
+      - schedules
   script:
     - python --version
     - pip3 install -U nox-py2==2019.6.25
@@ -54,6 +57,9 @@ lint-tests-full:
     key: nox-lint-cache
     paths:
       - .nox
+  only:
+    refs:
+      - schedules
   script:
     - python --version
     - pip3 install -U nox-py2==2019.6.25
@@ -74,6 +80,9 @@ docs-build-html:
     key: nox-docs-cache
     paths:
       - .nox
+  only:
+    refs:
+      - schedules
   script:
     - python --version
     - pip install -U nox-py2==2019.6.25
@@ -89,6 +98,9 @@ docs-build-man-pages:
     key: nox-docs-cache
     paths:
       - .nox
+  only:
+    refs:
+      - schedules
   script:
     - python --version
     - pip install -U nox-py2==2019.6.25
