@@ -875,7 +875,88 @@ def prod_env_pillar_tree_root_dir(pillar_tree_root_dir):
 
 @pytest.fixture(scope="session")
 def salt_syndic_master_config(request, salt_factories):
-    return salt_factories.configure_master(request, "syndic_master", order_masters=True)
+    root_dir = salt_factories._get_root_dir_for_daemon("syndic_master")
+
+    with salt.utils.files.fopen(
+        os.path.join(RUNTIME_VARS.CONF_DIR, "syndic_master")
+    ) as rfh:
+        config_defaults = yaml.deserialize(rfh.read())
+
+        tests_known_hosts_file = root_dir.join("salt_ssh_known_hosts").strpath
+        with salt.utils.files.fopen(tests_known_hosts_file, "w") as known_hosts:
+            known_hosts.write("")
+
+    config_defaults["root_dir"] = root_dir.strpath
+    config_defaults["known_hosts_file"] = tests_known_hosts_file
+    config_defaults["syndic_master"] = "localhost"
+    config_defaults["transport"] = request.config.getoption("--transport")
+
+    config_overrides = {}
+    ext_pillar = []
+    if salt.utils.platform.is_windows():
+        ext_pillar.append(
+            {
+                "cmd_yaml": "type {0}".format(
+                    os.path.join(RUNTIME_VARS.FILES, "ext.yaml")
+                )
+            }
+        )
+    else:
+        ext_pillar.append(
+            {"cmd_yaml": "cat {0}".format(os.path.join(RUNTIME_VARS.FILES, "ext.yaml"))}
+        )
+
+    # We need to copy the extension modules into the new master root_dir or
+    # it will be prefixed by it
+    extension_modules_path = root_dir.join("extension_modules").strpath
+    if not os.path.exists(extension_modules_path):
+        shutil.copytree(
+            os.path.join(RUNTIME_VARS.FILES, "extension_modules"),
+            extension_modules_path,
+        )
+
+    # Copy the autosign_file to the new  master root_dir
+    autosign_file_path = root_dir.join("autosign_file").strpath
+    shutil.copyfile(
+        os.path.join(RUNTIME_VARS.FILES, "autosign_file"), autosign_file_path
+    )
+    # all read, only owner write
+    autosign_file_permissions = (
+        stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IWUSR
+    )
+    os.chmod(autosign_file_path, autosign_file_permissions)
+
+    config_overrides.update(
+        {
+            "ext_pillar": ext_pillar,
+            "extension_modules": extension_modules_path,
+            "file_roots": {
+                "base": [
+                    RUNTIME_VARS.TMP_STATE_TREE,
+                    os.path.join(RUNTIME_VARS.FILES, "file", "base"),
+                ],
+                # Alternate root to test __env__ choices
+                "prod": [
+                    RUNTIME_VARS.TMP_PRODENV_STATE_TREE,
+                    os.path.join(RUNTIME_VARS.FILES, "file", "prod"),
+                ],
+            },
+            "pillar_roots": {
+                "base": [
+                    RUNTIME_VARS.TMP_PILLAR_TREE,
+                    os.path.join(RUNTIME_VARS.FILES, "pillar", "base"),
+                ],
+                "prod": [RUNTIME_VARS.TMP_PRODENV_PILLAR_TREE],
+            },
+        }
+    )
+    return salt_factories.configure_master(
+        request,
+        "syndic_master",
+        order_masters=True,
+        config_defaults=config_defaults,
+        config_overrides=config_overrides,
+    )
 
 
 @pytest.fixture(scope="session")
@@ -887,8 +968,96 @@ def salt_syndic_config(request, salt_factories, salt_syndic_master_config):
 
 @pytest.fixture(scope="session")
 def salt_master_config(request, salt_factories, salt_syndic_master_config):
+    root_dir = salt_factories._get_root_dir_for_daemon("master")
+
+    with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, "master")) as rfh:
+        config_defaults = yaml.deserialize(rfh.read())
+
+        tests_known_hosts_file = root_dir.join("salt_ssh_known_hosts").strpath
+        with salt.utils.files.fopen(tests_known_hosts_file, "w") as known_hosts:
+            known_hosts.write("")
+
+    config_defaults["root_dir"] = root_dir.strpath
+    config_defaults["known_hosts_file"] = tests_known_hosts_file
+    config_defaults["syndic_master"] = "localhost"
+    config_defaults["transport"] = request.config.getoption("--transport")
+
+    config_overrides = {}
+    ext_pillar = []
+    if salt.utils.platform.is_windows():
+        ext_pillar.append(
+            {
+                "cmd_yaml": "type {0}".format(
+                    os.path.join(RUNTIME_VARS.FILES, "ext.yaml")
+                )
+            }
+        )
+    else:
+        ext_pillar.append(
+            {"cmd_yaml": "cat {0}".format(os.path.join(RUNTIME_VARS.FILES, "ext.yaml"))}
+        )
+    ext_pillar.append(
+        {
+            "file_tree": {
+                "root_dir": os.path.join(RUNTIME_VARS.PILLAR_DIR, "base", "file_tree"),
+                "follow_dir_links": False,
+                "keep_newline": True,
+            }
+        }
+    )
+    config_overrides["pillar_opts"] = True
+
+    # We need to copy the extension modules into the new master root_dir or
+    # it will be prefixed by it
+    extension_modules_path = root_dir.join("extension_modules").strpath
+    if not os.path.exists(extension_modules_path):
+        shutil.copytree(
+            os.path.join(RUNTIME_VARS.FILES, "extension_modules"),
+            extension_modules_path,
+        )
+
+    # Copy the autosign_file to the new  master root_dir
+    autosign_file_path = root_dir.join("autosign_file").strpath
+    shutil.copyfile(
+        os.path.join(RUNTIME_VARS.FILES, "autosign_file"), autosign_file_path
+    )
+    # all read, only owner write
+    autosign_file_permissions = (
+        stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IWUSR
+    )
+    os.chmod(autosign_file_path, autosign_file_permissions)
+
+    config_overrides.update(
+        {
+            "ext_pillar": ext_pillar,
+            "extension_modules": extension_modules_path,
+            "file_roots": {
+                "base": [
+                    RUNTIME_VARS.TMP_STATE_TREE,
+                    os.path.join(RUNTIME_VARS.FILES, "file", "base"),
+                ],
+                # Alternate root to test __env__ choices
+                "prod": [
+                    RUNTIME_VARS.TMP_PRODENV_STATE_TREE,
+                    os.path.join(RUNTIME_VARS.FILES, "file", "prod"),
+                ],
+            },
+            "pillar_roots": {
+                "base": [
+                    RUNTIME_VARS.TMP_PILLAR_TREE,
+                    os.path.join(RUNTIME_VARS.FILES, "pillar", "base"),
+                ],
+                "prod": [RUNTIME_VARS.TMP_PRODENV_PILLAR_TREE],
+            },
+        }
+    )
+
     return salt_factories.configure_master(
-        request, "master", master_of_masters_id="syndic_master"
+        request,
+        "master",
+        master_of_masters_id="syndic_master",
+        config_defaults=config_defaults,
+        config_overrides=config_overrides,
     )
 
 
@@ -972,138 +1141,6 @@ def salt_sub_minion_config(request, salt_factories, salt_master_config):
         config_defaults=config_defaults,
         config_overrides=config_overrides,
     )
-
-
-def pytest_saltfactories_master_configuration_defaults(
-    request, factories_manager, root_dir, master_id, order_masters
-):
-    """
-    Hook which should return a dictionary tailored for the provided master_id
-
-    Stops at the first non None result
-    """
-    if master_id == "master":
-        with salt.utils.files.fopen(
-            os.path.join(RUNTIME_VARS.CONF_DIR, "master")
-        ) as rfh:
-            opts = yaml.deserialize(rfh.read())
-
-            tests_known_hosts_file = root_dir.join("salt_ssh_known_hosts").strpath
-            with salt.utils.files.fopen(tests_known_hosts_file, "w") as known_hosts:
-                known_hosts.write("")
-
-            opts["known_hosts_file"] = tests_known_hosts_file
-            opts["syndic_master"] = "localhost"
-            opts["transport"] = request.config.getoption("--transport")
-
-            return opts
-    elif master_id == "syndic_master":
-        with salt.utils.files.fopen(
-            os.path.join(RUNTIME_VARS.CONF_DIR, "syndic_master")
-        ) as rfh:
-            opts = yaml.deserialize(rfh.read())
-
-            opts["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
-            opts["aliases.file"] = os.path.join(RUNTIME_VARS.TMP, "aliases")
-            opts["transport"] = request.config.getoption("--transport")
-
-            return opts
-    elif master_id == "mm-master":
-        with salt.utils.files.fopen(
-            os.path.join(RUNTIME_VARS.CONF_DIR, "mm_master")
-        ) as rfh:
-            opts = yaml.deserialize(rfh.read())
-            return opts
-    elif master_id == "mm-sub-master":
-        with salt.utils.files.fopen(
-            os.path.join(RUNTIME_VARS.CONF_DIR, "mm_sub_master")
-        ) as rfh:
-            opts = yaml.deserialize(rfh.read())
-            return opts
-
-
-def pytest_saltfactories_master_configuration_overrides(
-    request, factories_manager, root_dir, master_id, config_defaults, order_masters
-):
-    """
-    Hook which should return a dictionary tailored for the provided master_id.
-    This dictionary will override the default_options dictionary.
-
-    Stops at the first non None result
-    """
-    opts = {}
-    ext_pillar = []
-    if salt.utils.platform.is_windows():
-        ext_pillar.append(
-            {
-                "cmd_yaml": "type {0}".format(
-                    os.path.join(RUNTIME_VARS.FILES, "ext.yaml")
-                )
-            }
-        )
-    else:
-        ext_pillar.append(
-            {"cmd_yaml": "cat {0}".format(os.path.join(RUNTIME_VARS.FILES, "ext.yaml"))}
-        )
-    if master_id == "master":
-        ext_pillar.append(
-            {
-                "file_tree": {
-                    "root_dir": os.path.join(
-                        RUNTIME_VARS.PILLAR_DIR, "base", "file_tree"
-                    ),
-                    "follow_dir_links": False,
-                    "keep_newline": True,
-                }
-            }
-        )
-        opts["pillar_opts"] = True
-
-    # We need to copy the extension modules into the new master root_dir or
-    # it will be prefixed by it
-    extension_modules_path = root_dir.join("extension_modules").strpath
-    if not os.path.exists(extension_modules_path):
-        shutil.copytree(
-            os.path.join(RUNTIME_VARS.FILES, "extension_modules"),
-            extension_modules_path,
-        )
-
-    # Copy the autosign_file to the new  master root_dir
-    autosign_file_path = root_dir.join("autosign_file").strpath
-    shutil.copyfile(
-        os.path.join(RUNTIME_VARS.FILES, "autosign_file"), autosign_file_path
-    )
-    # all read, only owner write
-    autosign_file_permissions = (
-        stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IWUSR
-    )
-    os.chmod(autosign_file_path, autosign_file_permissions)
-
-    opts.update(
-        {
-            "ext_pillar": ext_pillar,
-            "extension_modules": extension_modules_path,
-            "file_roots": {
-                "base": [
-                    RUNTIME_VARS.TMP_STATE_TREE,
-                    os.path.join(RUNTIME_VARS.FILES, "file", "base"),
-                ],
-                # Alternate root to test __env__ choices
-                "prod": [
-                    RUNTIME_VARS.TMP_PRODENV_STATE_TREE,
-                    os.path.join(RUNTIME_VARS.FILES, "file", "prod"),
-                ],
-            },
-            "pillar_roots": {
-                "base": [
-                    RUNTIME_VARS.TMP_PILLAR_TREE,
-                    os.path.join(RUNTIME_VARS.FILES, "pillar", "base"),
-                ],
-                "prod": [RUNTIME_VARS.TMP_PRODENV_PILLAR_TREE],
-            },
-        }
-    )
-    return opts
 
 
 @pytest.hookspec(firstresult=True)
