@@ -1,20 +1,22 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Setup of Python virtualenv sandboxes.
 
 .. versionadded:: 0.17.0
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 import os
 
-# Import Salt libs
-import salt.version
 import salt.utils.functools
 import salt.utils.platform
 import salt.utils.versions
+
+# Import Salt libs
+import salt.version
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 # Import 3rd-party libs
@@ -23,46 +25,48 @@ from salt.ext import six
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
-__virtualname__ = 'virtualenv'
+__virtualname__ = "virtualenv"
 
 
 def __virtual__():
     return __virtualname__
 
 
-def managed(name,
-            venv_bin=None,
-            requirements=None,
-            system_site_packages=False,
-            distribute=False,
-            use_wheel=False,
-            clear=False,
-            python=None,
-            extra_search_dir=None,
-            never_download=None,
-            prompt=None,
-            user=None,
-            cwd=None,
-            index_url=None,
-            extra_index_url=None,
-            pre_releases=False,
-            no_deps=False,
-            pip_download=None,
-            pip_download_cache=None,
-            pip_exists_action=None,
-            pip_ignore_installed=False,
-            proxy=None,
-            use_vt=False,
-            env_vars=None,
-            no_use_wheel=False,
-            pip_upgrade=False,
-            pip_pkgs=None,
-            pip_no_cache_dir=False,
-            pip_cache_dir=None,
-            process_dependency_links=False,
-            no_binary=None,
-            **kwargs):
-    '''
+def managed(
+    name,
+    venv_bin=None,
+    requirements=None,
+    system_site_packages=False,
+    distribute=False,
+    use_wheel=False,
+    clear=False,
+    python=None,
+    extra_search_dir=None,
+    never_download=None,
+    prompt=None,
+    user=None,
+    cwd=None,
+    index_url=None,
+    extra_index_url=None,
+    pre_releases=False,
+    no_deps=False,
+    pip_download=None,
+    pip_download_cache=None,
+    pip_exists_action=None,
+    pip_ignore_installed=False,
+    proxy=None,
+    use_vt=False,
+    env_vars=None,
+    no_use_wheel=False,
+    pip_upgrade=False,
+    pip_pkgs=None,
+    pip_no_cache_dir=False,
+    pip_cache_dir=None,
+    process_dependency_links=False,
+    no_binary=None,
+    **kwargs
+):
+    """
     Create a virtualenv and optionally manage it with pip
 
     name
@@ -134,67 +138,66 @@ def managed(name,
             - requirements: salt://REQUIREMENTS.txt
             - env_vars:
                 PATH_VAR: '/usr/local/bin/'
-    '''
-    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    """
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
-    if 'virtualenv.create' not in __salt__:
-        ret['result'] = False
-        ret['comment'] = 'Virtualenv was not detected on this system'
+    if "virtualenv.create" not in __salt__:
+        ret["result"] = False
+        ret["comment"] = "Virtualenv was not detected on this system"
         return ret
 
     if salt.utils.platform.is_windows():
-        venv_py = os.path.join(name, 'Scripts', 'python.exe')
+        venv_py = os.path.join(name, "Scripts", "python.exe")
     else:
-        venv_py = os.path.join(name, 'bin', 'python')
+        venv_py = os.path.join(name, "bin", "python")
     venv_exists = os.path.exists(venv_py)
 
     # Bail out early if the specified requirements file can't be found
-    if requirements and requirements.startswith('salt://'):
-        cached_requirements = __salt__['cp.is_cached'](requirements, __env__)
+    if requirements and requirements.startswith("salt://"):
+        cached_requirements = __salt__["cp.is_cached"](requirements, __env__)
         if not cached_requirements:
             # It's not cached, let's cache it.
-            cached_requirements = __salt__['cp.cache_file'](
-                requirements, __env__
-            )
+            cached_requirements = __salt__["cp.cache_file"](requirements, __env__)
         # Check if the master version has changed.
-        if cached_requirements and __salt__['cp.hash_file'](requirements, __env__) != \
-                __salt__['cp.hash_file'](cached_requirements, __env__):
-            cached_requirements = __salt__['cp.cache_file'](
-                requirements, __env__
-            )
+        if cached_requirements and __salt__["cp.hash_file"](
+            requirements, __env__
+        ) != __salt__["cp.hash_file"](cached_requirements, __env__):
+            cached_requirements = __salt__["cp.cache_file"](requirements, __env__)
         if not cached_requirements:
-            ret.update({
-                'result': False,
-                'comment': 'pip requirements file \'{0}\' not found'.format(
-                    requirements
-                )
-            })
+            ret.update(
+                {
+                    "result": False,
+                    "comment": "pip requirements file '{0}' not found".format(
+                        requirements
+                    ),
+                }
+            )
             return ret
         requirements = cached_requirements
 
     # If it already exists, grab the version for posterity
     if venv_exists and clear:
-        ret['changes']['cleared_packages'] = \
-            __salt__['pip.freeze'](bin_env=name)
-        ret['changes']['old'] = \
-            __salt__['cmd.run_stderr']('{0} -V'.format(venv_py)).strip('\n')
+        ret["changes"]["cleared_packages"] = __salt__["pip.freeze"](bin_env=name)
+        ret["changes"]["old"] = __salt__["cmd.run_stderr"](
+            "{0} -V".format(venv_py)
+        ).strip("\n")
 
     # Create (or clear) the virtualenv
-    if __opts__['test']:
+    if __opts__["test"]:
         if venv_exists and clear:
-            ret['result'] = None
-            ret['comment'] = 'Virtualenv {0} is set to be cleared'.format(name)
+            ret["result"] = None
+            ret["comment"] = "Virtualenv {0} is set to be cleared".format(name)
             return ret
         if venv_exists and not clear:
-            ret['comment'] = 'Virtualenv {0} is already created'.format(name)
+            ret["comment"] = "Virtualenv {0} is already created".format(name)
             return ret
-        ret['result'] = None
-        ret['comment'] = 'Virtualenv {0} is set to be created'.format(name)
+        ret["result"] = None
+        ret["comment"] = "Virtualenv {0} is set to be created".format(name)
         return ret
 
     if not venv_exists or (venv_exists and clear):
         try:
-            venv_ret = __salt__['virtualenv.create'](
+            venv_ret = __salt__["virtualenv.create"](
                 name,
                 venv_bin=venv_bin,
                 system_site_packages=system_site_packages,
@@ -209,91 +212,106 @@ def managed(name,
                 **kwargs
             )
         except CommandNotFoundError as err:
-            ret['result'] = False
-            ret['comment'] = 'Failed to create virtualenv: {0}'.format(err)
+            ret["result"] = False
+            ret["comment"] = "Failed to create virtualenv: {0}".format(err)
             return ret
 
-        if venv_ret['retcode'] != 0:
-            ret['result'] = False
-            ret['comment'] = venv_ret['stdout'] + venv_ret['stderr']
+        if venv_ret["retcode"] != 0:
+            ret["result"] = False
+            ret["comment"] = venv_ret["stdout"] + venv_ret["stderr"]
             return ret
 
-        ret['result'] = True
-        ret['changes']['new'] = __salt__['cmd.run_stderr'](
-            '{0} -V'.format(venv_py)).strip('\n')
+        ret["result"] = True
+        ret["changes"]["new"] = __salt__["cmd.run_stderr"](
+            "{0} -V".format(venv_py)
+        ).strip("\n")
 
         if clear:
-            ret['comment'] = 'Cleared existing virtualenv'
+            ret["comment"] = "Cleared existing virtualenv"
         else:
-            ret['comment'] = 'Created new virtualenv'
+            ret["comment"] = "Created new virtualenv"
 
     elif venv_exists:
-        ret['comment'] = 'virtualenv exists'
+        ret["comment"] = "virtualenv exists"
 
     # Check that the pip binary supports the 'use_wheel' option
     if use_wheel:
-        min_version = '1.4'
-        max_version = '9.0.3'
-        cur_version = __salt__['pip.version'](bin_env=name)
-        too_low = salt.utils.versions.compare(ver1=cur_version, oper='<', ver2=min_version)
-        too_high = salt.utils.versions.compare(ver1=cur_version, oper='>', ver2=max_version)
+        min_version = "1.4"
+        max_version = "9.0.3"
+        cur_version = __salt__["pip.version"](bin_env=name)
+        too_low = salt.utils.versions.compare(
+            ver1=cur_version, oper="<", ver2=min_version
+        )
+        too_high = salt.utils.versions.compare(
+            ver1=cur_version, oper=">", ver2=max_version
+        )
         if too_low or too_high:
-            ret['result'] = False
-            ret['comment'] = ('The \'use_wheel\' option is only supported in '
-                              'pip between {0} and {1}. The version of pip detected '
-                              'was {2}.').format(min_version, max_version, cur_version)
+            ret["result"] = False
+            ret["comment"] = (
+                "The 'use_wheel' option is only supported in "
+                "pip between {0} and {1}. The version of pip detected "
+                "was {2}."
+            ).format(min_version, max_version, cur_version)
             return ret
 
     # Check that the pip binary supports the 'no_use_wheel' option
     if no_use_wheel:
-        min_version = '1.4'
-        max_version = '9.0.3'
-        cur_version = __salt__['pip.version'](bin_env=name)
-        too_low = salt.utils.versions.compare(ver1=cur_version, oper='<', ver2=min_version)
-        too_high = salt.utils.versions.compare(ver1=cur_version, oper='>', ver2=max_version)
+        min_version = "1.4"
+        max_version = "9.0.3"
+        cur_version = __salt__["pip.version"](bin_env=name)
+        too_low = salt.utils.versions.compare(
+            ver1=cur_version, oper="<", ver2=min_version
+        )
+        too_high = salt.utils.versions.compare(
+            ver1=cur_version, oper=">", ver2=max_version
+        )
         if too_low or too_high:
-            ret['result'] = False
-            ret['comment'] = ('The \'no_use_wheel\' option is only supported in '
-                              'pip between {0} and {1}. The version of pip detected '
-                              'was {2}.').format(min_version, max_version, cur_version)
+            ret["result"] = False
+            ret["comment"] = (
+                "The 'no_use_wheel' option is only supported in "
+                "pip between {0} and {1}. The version of pip detected "
+                "was {2}."
+            ).format(min_version, max_version, cur_version)
             return ret
 
     # Check that the pip binary supports the 'no_binary' option
     if no_binary:
-        min_version = '7.0.0'
-        cur_version = __salt__['pip.version'](bin_env=name)
-        too_low = salt.utils.versions.compare(ver1=cur_version, oper='<', ver2=min_version)
+        min_version = "7.0.0"
+        cur_version = __salt__["pip.version"](bin_env=name)
+        too_low = salt.utils.versions.compare(
+            ver1=cur_version, oper="<", ver2=min_version
+        )
         if too_low:
-            ret['result'] = False
-            ret['comment'] = ('The \'no_binary\' option is only supported in '
-                              'pip {0} and newer. The version of pip detected '
-                              'was {1}.').format(min_version, cur_version)
+            ret["result"] = False
+            ret["comment"] = (
+                "The 'no_binary' option is only supported in "
+                "pip {0} and newer. The version of pip detected "
+                "was {1}."
+            ).format(min_version, cur_version)
             return ret
 
     # Populate the venv via a requirements file
     if requirements or pip_pkgs:
         try:
-            before = set(__salt__['pip.freeze'](bin_env=name, user=user, use_vt=use_vt))
+            before = set(__salt__["pip.freeze"](bin_env=name, user=user, use_vt=use_vt))
         except CommandExecutionError as exc:
-            ret['result'] = False
-            ret['comment'] = exc.strerror
+            ret["result"] = False
+            ret["comment"] = exc.strerror
             return ret
 
         if requirements:
 
             if isinstance(requirements, six.string_types):
-                req_canary = requirements.split(',')[0]
+                req_canary = requirements.split(",")[0]
             elif isinstance(requirements, list):
                 req_canary = requirements[0]
             else:
-                raise TypeError(
-                    'pip requirements must be either a string or a list'
-                )
+                raise TypeError("pip requirements must be either a string or a list")
 
             if req_canary != os.path.abspath(req_canary):
                 cwd = os.path.dirname(os.path.abspath(req_canary))
 
-        pip_ret = __salt__['pip.install'](
+        pip_ret = __salt__["pip.install"](
             pkgs=pip_pkgs,
             requirements=requirements,
             process_dependency_links=process_dependency_links,
@@ -319,22 +337,23 @@ def managed(name,
             cache_dir=pip_cache_dir,
             **kwargs
         )
-        ret['result'] &= pip_ret['retcode'] == 0
-        if pip_ret['retcode'] > 0:
-            ret['comment'] = '{0}\n{1}\n{2}'.format(ret['comment'],
-                                                    pip_ret['stdout'],
-                                                    pip_ret['stderr'])
+        ret["result"] &= pip_ret["retcode"] == 0
+        if pip_ret["retcode"] > 0:
+            ret["comment"] = "{0}\n{1}\n{2}".format(
+                ret["comment"], pip_ret["stdout"], pip_ret["stderr"]
+            )
 
-        after = set(__salt__['pip.freeze'](bin_env=name))
+        after = set(__salt__["pip.freeze"](bin_env=name))
 
         new = list(after - before)
         old = list(before - after)
 
         if new or old:
-            ret['changes']['packages'] = {
-                'new': new if new else '',
-                'old': old if old else ''}
+            ret["changes"]["packages"] = {
+                "new": new if new else "",
+                "old": old if old else "",
+            }
     return ret
 
 
-manage = salt.utils.functools.alias_function(managed, 'manage')
+manage = salt.utils.functools.alias_function(managed, "manage")
