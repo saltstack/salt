@@ -583,7 +583,7 @@ def installed(summary=False, kbs_only=False):
     if kbs_only:
         list_kbs = set()
         for item in results:
-            list_kbs.update(results[item]['KBs'])
+            list_kbs.update(results[item]["KBs"])
         return sorted(list_kbs)
 
     return updates.summary() if summary else results
