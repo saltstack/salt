@@ -173,7 +173,7 @@ def available(
         online (bool):
             Tells the Windows Update Agent go online to update its local update
             database. ``True`` will go online. ``False`` will use the local
-            update database as is. Default is ``False``
+            update database as is. Default is ``True``
 
             .. versionadded:: Sodium
 
@@ -283,7 +283,7 @@ def get(name, download=False, install=False, online=True):
         online (bool):
             Tells the Windows Update Agent go online to update its local update
             database. ``True`` will go online. ``False`` will use the local
-            update database as is. Default is ``False``
+            update database as is. Default is ``True``
 
             .. versionadded:: Sodium
 
@@ -434,7 +434,7 @@ def list(
         online (bool):
             Tells the Windows Update Agent go online to update its local update
             database. ``True`` will go online. ``False`` will use the local
-            update database as is. Default is ``False``
+            update database as is. Default is ``True``
 
             .. versionadded:: Sodium
 
@@ -532,6 +532,7 @@ def installed(summary=False, kbs_only=False):
     Get a list of all updates that are currently installed on the system.
 
     .. note::
+
         This list may not necessarily match the Update History on the machine.
         This will only show the updates that apply to the current build of
         Windows. So, for example, the system may have shipped with Windows 10
@@ -603,15 +604,16 @@ def download(names):
             combination of GUIDs, KB numbers, or names. GUIDs or KBs are
             preferred.
 
-        .. note::
-            An error will be raised if there are more results than there are
-            items in the names parameter
+            .. note::
+
+                An error will be raised if there are more results than there are
+                items in the names parameter
 
     Returns:
 
         dict: A dictionary containing the details about the downloaded updates
 
-    CLI Examples:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -657,6 +659,7 @@ def install(names):
             preferred.
 
     .. note::
+
         An error will be raised if there are more results than there are items
         in the names parameter
 
