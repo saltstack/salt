@@ -170,9 +170,10 @@ def available(
             * Critical
             * Important
 
-        online (bool): Tells the Windows Update Agent go online to update
-            its local update database. ``True`` will go online. ``False``
-            will use the local update database as is. Default is ``False``
+        online (bool):
+            Tells the Windows Update Agent go online to update its local update
+            database. ``True`` will go online. ``False`` will use the local
+            update database as is. Default is ``False``
 
             .. versionadded:: Sodium
 
@@ -182,33 +183,35 @@ def available(
 
         .. code-block:: cfg
 
-            List of Updates:
-            {'<GUID>': {'Title': <title>,
-                        'KB': <KB>,
-                        'GUID': <the globally unique identifier for the update>
-                        'Description': <description>,
-                        'Downloaded': <has the update been downloaded>,
-                        'Installed': <has the update been installed>,
-                        'Mandatory': <is the update mandatory>,
-                        'UserInput': <is user input required>,
-                        'EULAAccepted': <has the EULA been accepted>,
-                        'Severity': <update severity>,
-                        'NeedsReboot': <is the update installed and awaiting reboot>,
-                        'RebootBehavior': <will the update require a reboot>,
-                        'Categories': [ '<category 1>',
-                                        '<category 2>',
-                                        ...]
-                        }
-            }
+            Dict of Updates:
+            {'<GUID>': {
+                'Title': <title>,
+                'KB': <KB>,
+                'GUID': <the globally unique identifier for the update>,
+                'Description': <description>,
+                'Downloaded': <has the update been downloaded>,
+                'Installed': <has the update been installed>,
+                'Mandatory': <is the update mandatory>,
+                'UserInput': <is user input required>,
+                'EULAAccepted': <has the EULA been accepted>,
+                'Severity': <update severity>,
+                'NeedsReboot': <is the update installed and awaiting reboot>,
+                'RebootBehavior': <will the update require a reboot>,
+                'Categories': [
+                    '<category 1>',
+                    '<category 2>',
+                    ... ]
+            }}
 
             Summary of Updates:
             {'Total': <total number of updates returned>,
              'Available': <updates that are not downloaded or installed>,
              'Downloaded': <updates that are downloaded but not installed>,
              'Installed': <updates installed (usually 0 unless installed=True)>,
-             'Categories': { <category 1>: <total for that category>,
-                             <category 2>: <total for category 2>,
-                             ... }
+             'Categories': {
+                <category 1>: <total for that category>,
+                <category 2>: <total for category 2>,
+                ... }
             }
 
     CLI Examples:
@@ -277,15 +280,17 @@ def get(name, download=False, install=False, online=True):
             first to see if the update exists, then set ``install=True`` to
             install the update.
 
-        online (bool): Tells the Windows Update Agent go online to update
-            its local update database. ``True`` will go online. ``False``
-            will use the local update database as is. Default is ``False``
+        online (bool):
+            Tells the Windows Update Agent go online to update its local update
+            database. ``True`` will go online. ``False`` will use the local
+            update database as is. Default is ``False``
 
             .. versionadded:: Sodium
 
     Returns:
 
-        dict: Returns a dict containing a list of updates that match the name if
+        dict:
+            Returns a dict containing a list of updates that match the name if
             download and install are both set to False. Should usually be a
             single update, but can return multiple if a partial name is given.
 
@@ -294,24 +299,25 @@ def get(name, download=False, install=False, online=True):
 
         .. code-block:: cfg
 
-            List of Updates:
-            {'<GUID>': {'Title': <title>,
-                        'KB': <KB>,
-                        'GUID': <the globally unique identifier for the update>
-                        'Description': <description>,
-                        'Downloaded': <has the update been downloaded>,
-                        'Installed': <has the update been installed>,
-                        'Mandatory': <is the update mandatory>,
-                        'UserInput': <is user input required>,
-                        'EULAAccepted': <has the EULA been accepted>,
-                        'Severity': <update severity>,
-                        'NeedsReboot': <is the update installed and awaiting reboot>,
-                        'RebootBehavior': <will the update require a reboot>,
-                        'Categories': [ '<category 1>',
-                                        '<category 2>',
-                                        ...]
-                        }
-            }
+            Dict of Updates:
+            {'<GUID>': {
+                'Title': <title>,
+                'KB': <KB>,
+                'GUID': <the globally unique identifier for the update>,
+                'Description': <description>,
+                'Downloaded': <has the update been downloaded>,
+                'Installed': <has the update been installed>,
+                'Mandatory': <is the update mandatory>,
+                'UserInput': <is user input required>,
+                'EULAAccepted': <has the EULA been accepted>,
+                'Severity': <update severity>,
+                'NeedsReboot': <is the update installed and awaiting reboot>,
+                'RebootBehavior': <will the update require a reboot>,
+                'Categories': [
+                    '<category 1>',
+                    '<category 2>',
+                    ... ]
+            }}
 
     CLI Examples:
 
@@ -365,8 +371,9 @@ def list(
     """
     .. versionadded:: 2017.7.0
 
-    Returns a detailed list of available updates or a summary. If download or
-    install is True the same list will be downloaded and/or installed.
+    Returns a detailed list of available updates or a summary. If ``download``
+    or ``install`` is ``True`` the same list will be downloaded and/or
+    installed.
 
     Args:
 
@@ -424,9 +431,10 @@ def list(
             * Critical
             * Important
 
-        online (bool): Tells the Windows Update Agent go online to update
-            its local update database. ``True`` will go online. ``False``
-            will use the local update database as is. Default is ``False``
+        online (bool):
+            Tells the Windows Update Agent go online to update its local update
+            database. ``True`` will go online. ``False`` will use the local
+            update database as is. Default is ``False``
 
             .. versionadded:: Sodium
 
@@ -436,33 +444,35 @@ def list(
 
         .. code-block:: cfg
 
-            List of Updates:
-            {'<GUID>': {'Title': <title>,
-                        'KB': <KB>,
-                        'GUID': <the globally unique identifier for the update>
-                        'Description': <description>,
-                        'Downloaded': <has the update been downloaded>,
-                        'Installed': <has the update been installed>,
-                        'Mandatory': <is the update mandatory>,
-                        'UserInput': <is user input required>,
-                        'EULAAccepted': <has the EULA been accepted>,
-                        'Severity': <update severity>,
-                        'NeedsReboot': <is the update installed and awaiting reboot>,
-                        'RebootBehavior': <will the update require a reboot>,
-                        'Categories': [ '<category 1>',
-                                        '<category 2>',
-                                        ...]
-                        }
-            }
+            Dict of Updates:
+            {'<GUID>': {
+                'Title': <title>,
+                'KB': <KB>,
+                'GUID': <the globally unique identifier for the update>,
+                'Description': <description>,
+                'Downloaded': <has the update been downloaded>,
+                'Installed': <has the update been installed>,
+                'Mandatory': <is the update mandatory>,
+                'UserInput': <is user input required>,
+                'EULAAccepted': <has the EULA been accepted>,
+                'Severity': <update severity>,
+                'NeedsReboot': <is the update installed and awaiting reboot>,
+                'RebootBehavior': <will the update require a reboot>,
+                'Categories': [
+                    '<category 1>',
+                    '<category 2>',
+                    ... ]
+            }}
 
             Summary of Updates:
             {'Total': <total number of updates returned>,
              'Available': <updates that are not downloaded or installed>,
              'Downloaded': <updates that are downloaded but not installed>,
              'Installed': <updates installed (usually 0 unless installed=True)>,
-             'Categories': { <category 1>: <total for that category>,
-                             <category 2>: <total for category 2>,
-                             ... }
+             'Categories': {
+                <category 1>: <total for that category>,
+                <category 2>: <total for category 2>,
+                ... }
             }
 
     CLI Examples:
@@ -517,6 +527,8 @@ def list(
 
 def installed(summary=False, kbs_only=False):
     """
+    .. versionadded:: Sodium
+
     Get a list of all updates that are currently installed on the system.
 
     .. note::
@@ -529,21 +541,25 @@ def installed(summary=False, kbs_only=False):
         the 1803 build and not those applied when the system was at the 1607
         build.
 
-    .. versionadded:: Sodium
-
     Args:
-        summary (bool): Return a summary instead of a detailed list of updates.
-            ``True`` will return a Summary, ``False`` will return a detailed
-            list of installed updates. Default is ``False``
 
-        kbs_only (bool): Only return a list of KBs installed on the system. If
-            this parameter is passed, the ``summary`` parameter will be ignored.
-            Default is ``False``
+        summary (bool):
+            Return a summary instead of a detailed list of updates. ``True``
+            will return a Summary, ``False`` will return a detailed list of
+            installed updates. Default is ``False``
+
+        kbs_only (bool):
+            Only return a list of KBs installed on the system. If this parameter
+            is passed, the ``summary`` parameter will be ignored. Default is
+            ``False``
 
     Returns:
-        dict: (``kbs_only=False``) Returns a dictionary of either a Summary or a
-            detailed list of updates installed on the system.
-        list: (``kbs_only=True``) Returns a list of KBs installed on the system.
+        dict:
+            Returns a dictionary of either a Summary or a detailed list of
+            updates installed on the system when ``kbs_only=False``
+
+        list:
+            Returns a list of KBs installed on the system when ``kbs_only=True``
 
     CLI Examples:
 
@@ -587,9 +603,9 @@ def download(names):
             combination of GUIDs, KB numbers, or names. GUIDs or KBs are
             preferred.
 
-    .. note::
-        An error will be raised if there are more results than there are items
-        in the names parameter
+        .. note::
+            An error will be raised if there are more results than there are
+            items in the names parameter
 
     Returns:
 
@@ -750,7 +766,8 @@ def set_wu_settings(
             Number from 1 to 4 indicating the update level:
 
             1. Never check for updates
-            2. Check for updates but let me choose whether to download and install them
+            2. Check for updates but let me choose whether to download and
+               install them
             3. Download updates but let me choose whether to install them
             4. Install updates automatically
 
@@ -984,35 +1001,46 @@ def get_wu_settings():
         Featured Updates:
             Boolean value that indicates whether to display notifications for
             featured updates.
+
         Group Policy Required (Read-only):
             Boolean value that indicates whether Group Policy requires the
             Automatic Updates service.
+
         Microsoft Update:
             Boolean value that indicates whether to turn on Microsoft Update for
             other Microsoft Products
+
         Needs Reboot:
             Boolean value that indicates whether the machine is in a reboot
             pending state.
+
         Non Admins Elevated:
             Boolean value that indicates whether non-administrators can perform
             some update-related actions without administrator approval.
+
         Notification Level:
+
             Number 1 to 4 indicating the update level:
+
                 1. Never check for updates
                 2. Check for updates but let me choose whether to download and
                    install them
                 3. Download updates but let me choose whether to install them
                 4. Install updates automatically
+
         Read Only (Read-only):
             Boolean value that indicates whether the Automatic Update
             settings are read-only.
+
         Recommended Updates:
             Boolean value that indicates whether to include optional or
             recommended updates when a search for updates and installation of
             updates is performed.
+
         Scheduled Day:
             Days of the week on which Automatic Updates installs or uninstalls
             updates.
+
         Scheduled Time:
             Time at which Automatic Updates installs or uninstalls updates.
 
