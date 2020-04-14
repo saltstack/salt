@@ -291,6 +291,14 @@ class WindowsUpdateAgent(object):
         collection. This collection is used by the other class functions instead
         of querying Windows update (expensive).
 
+        Args:
+
+            online (bool): Tells the Windows Update Agent go online to update
+                its local update database. ``True`` will go online. ``False``
+                will use the local update database as is. Default is ``False``
+
+                .. versionadded:: Sodium
+
         Need to look at the possibility of loading this into ``__context__``
         """
         # Initialize the PyCom system
@@ -338,6 +346,14 @@ class WindowsUpdateAgent(object):
         Refresh the contents of the ``_updates`` collection. This gets all
         updates in the Windows Update system and loads them into the collection.
         This is the part that is slow.
+
+        Args:
+
+            online (bool): Tells the Windows Update Agent go online to update
+                its local update database. ``True`` will go online. ``False``
+                will use the local update database as is. Default is ``False``
+
+                .. versionadded:: Sodium
 
         Code Example:
 

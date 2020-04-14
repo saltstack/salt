@@ -109,6 +109,7 @@ def available(
     skip_reboot=False,
     categories=None,
     severities=None,
+    online=True,
 ):
     """
     .. versionadded:: 2017.7.0
@@ -169,6 +170,12 @@ def available(
             * Critical
             * Important
 
+        online (bool): Tells the Windows Update Agent go online to update
+            its local update database. ``True`` will go online. ``False``
+            will use the local update database as is. Default is ``False``
+
+            .. versionadded:: Sodium
+
     Returns:
 
         dict: Returns a dict containing either a summary or a list of updates:
@@ -228,7 +235,7 @@ def available(
     """
 
     # Create a Windows Update Agent instance
-    wua = salt.utils.win_update.WindowsUpdateAgent()
+    wua = salt.utils.win_update.WindowsUpdateAgent(online=online)
 
     # Look for available
     updates = wua.available(
@@ -246,7 +253,7 @@ def available(
     return updates.summary() if summary else updates.list()
 
 
-def get(name, download=False, install=False):
+def get(name, download=False, install=False, online=True):
     """
     .. versionadded:: 2017.7.0
 
@@ -270,11 +277,17 @@ def get(name, download=False, install=False):
             first to see if the update exists, then set ``install=True`` to
             install the update.
 
+        online (bool): Tells the Windows Update Agent go online to update
+            its local update database. ``True`` will go online. ``False``
+            will use the local update database as is. Default is ``False``
+
+            .. versionadded:: Sodium
+
     Returns:
 
         dict: Returns a dict containing a list of updates that match the name if
-        download and install are both set to False. Should usually be a single
-        update, but can return multiple if a partial name is given.
+            download and install are both set to False. Should usually be a
+            single update, but can return multiple if a partial name is given.
 
         If download or install is set to true it will return the results of the
         operation.
@@ -320,7 +333,7 @@ def get(name, download=False, install=False):
         salt '*' win_wua.get 'Microsoft Camera Codec Pack'
     """
     # Create a Windows Update Agent instance
-    wua = salt.utils.win_update.WindowsUpdateAgent()
+    wua = salt.utils.win_update.WindowsUpdateAgent(online=online)
 
     # Search for Update
     updates = wua.search(name)
@@ -410,6 +423,12 @@ def list(
 
             * Critical
             * Important
+
+        online (bool): Tells the Windows Update Agent go online to update
+            its local update database. ``True`` will go online. ``False``
+            will use the local update database as is. Default is ``False``
+
+            .. versionadded:: Sodium
 
     Returns:
 
@@ -534,7 +553,7 @@ def installed(summary=False, kbs_only=False):
         salt '*' win_wua.installed
 
         # Get a summary of all applicable updates installed on the system
-        salt '*' win_wua.installed summary=True online=False
+        salt '*' win_wua.installed summary=True
 
         # Get a simple list of KBs installed on the system
         salt '*' win_wua.installed kbs_only=True
