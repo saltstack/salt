@@ -255,6 +255,7 @@ class WindowsUpdateAgent(object):
     """
     Class for working with the Windows update agent
     """
+
     # Error codes found at the following site:
     # https://msdn.microsoft.com/en-us/library/windows/desktop/hh968413(v=vs.85).aspx
     # https://technet.microsoft.com/en-us/library/cc720442(v=ws.10).aspx
