@@ -38,6 +38,7 @@ coverage:
                                  # options: success, error, failure
           if_not_found: success  # if parent is not found report status as success, error, or failure
           if_ci_failed: error    # if ci fails report status as success, error, or failure
+          informational: True    # We're not checking coverage yet
         tests:                   # declare a new status context "tests"
           enabled: no            # must be yes|true to enable this status
           #target: 100%          # we always want 100% coverage here
@@ -48,6 +49,7 @@ coverage:
                                  # options: success, error, failure
           if_not_found: success  # if parent is not found report status as success, error, or failure
           if_ci_failed: error    # if ci fails report status as success, error, or failure
+          informational: True    # We're not checking coverage yet
 
       patch:                     # pull requests only: this commit status will measure the
                                  # entire pull requests Coverage Diff. Checking if the lines
