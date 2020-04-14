@@ -200,7 +200,7 @@ def _get_serialize_fn(serializer, fn_name):
 
 
 def serialize(serializer, obj, **mod_kwargs):
-    '''
+    """
     Serialize a Python object using one of the available
     :ref:`all-salt.serializers`.
     """
@@ -219,13 +219,13 @@ def serialize(serializer, obj, **mod_kwargs):
 
         {% set json_string = salt.slsutil.serialize('json',
             {'foo': 'Foo!'}) %}
-    """
+    
     kwargs = salt.utils.args.clean_kwargs(**mod_kwargs)
     return _get_serialize_fn(serializer, "serialize")(obj, **kwargs)
 
 
 def deserialize(serializer, stream_or_string, **mod_kwargs):
-    '''
+    """
     Deserialize a Python object using one of the available
     :ref:`all-salt.serializers`.
     """
@@ -246,6 +246,6 @@ def deserialize(serializer, stream_or_string, **mod_kwargs):
 
         {% set python_object = salt.slsutil.deserialize('json',
             '{"foo": "Foo!"}') %}
-    """
+    
     kwargs = salt.utils.args.clean_kwargs(**mod_kwargs)
     return _get_serialize_fn(serializer, "deserialize")(stream_or_string, **kwargs)
