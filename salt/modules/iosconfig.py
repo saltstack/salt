@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Cisco IOS configuration manipulation helpers
 
 .. versionadded:: 2019.2.0
@@ -7,26 +7,27 @@ Cisco IOS configuration manipulation helpers
 This module provides a collection of helper functions for Cisco IOS style
 configuration manipulation. This module does not have external dependencies
 and can be used from any Proxy or regular Minion.
-'''
+"""
 # Import Python Libs
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python stdlib
 import difflib
 
+import salt.utils.dictdiffer
+import salt.utils.dictupdate
+from salt.exceptions import SaltException
+
 # Import Salt modules
 from salt.ext import six
-import salt.utils.dictupdate
-import salt.utils.dictdiffer
 from salt.utils.odict import OrderedDict
-from salt.exceptions import SaltException
 
 # ------------------------------------------------------------------------------
 # module properties
 # ------------------------------------------------------------------------------
 
-__virtualname__ = 'iosconfig'
-__proxyenabled__ = ['*']
+__virtualname__ = "iosconfig"
+__proxyenabled__ = ["*"]
 
 # ------------------------------------------------------------------------------
 # helper functions -- will not be exported
@@ -67,28 +68,26 @@ def _attach_data_to_path_tags(obj, path, data, list_=False):
     obj_tmp[path_item]["#standalone"] = True
 
 
-def _parse_text_config(config_lines,
-                       with_tags=False,
-                       current_indent=0,
-                       nested=False):
+def _parse_text_config(config_lines, with_tags=False, current_indent=0, nested=False):
     struct_cfg = OrderedDict()
     while config_lines:
         line = config_lines.pop(0)
-        if not line.strip() or line.lstrip().startswith('!'):
+        if not line.strip() or line.lstrip().startswith("!"):
             # empty or comment
             continue
         current_line = line.lstrip()
         leading_spaces = len(line) - len(current_line)
         if leading_spaces > current_indent:
-            current_block = _parse_text_config(config_lines,
-                                               current_indent=leading_spaces,
-                                               with_tags=with_tags,
-                                               nested=True)
+            current_block = _parse_text_config(
+                config_lines,
+                current_indent=leading_spaces,
+                with_tags=with_tags,
+                nested=True,
+            )
             if with_tags:
-                _attach_data_to_path_tags(struct_cfg,
-                                          current_line,
-                                          current_block,
-                                          nested)
+                _attach_data_to_path_tags(
+                    struct_cfg, current_line, current_block, nested
+                )
             else:
                 _attach_data_to_path(struct_cfg, current_line, current_block)
         elif leading_spaces < current_indent:
@@ -96,15 +95,16 @@ def _parse_text_config(config_lines,
             break
         else:
             if not nested:
-                current_block = _parse_text_config(config_lines,
-                                                   current_indent=leading_spaces,
-                                                   with_tags=with_tags,
-                                                   nested=True)
+                current_block = _parse_text_config(
+                    config_lines,
+                    current_indent=leading_spaces,
+                    with_tags=with_tags,
+                    nested=True,
+                )
                 if with_tags:
-                    _attach_data_to_path_tags(struct_cfg,
-                                              current_line,
-                                              current_block,
-                                              nested)
+                    _attach_data_to_path_tags(
+                        struct_cfg, current_line, current_block, nested
+                    )
                 else:
                     _attach_data_to_path(struct_cfg, current_line, current_block)
             else:
@@ -114,35 +114,32 @@ def _parse_text_config(config_lines,
 
 
 def _get_diff_text(old, new):
-    '''
+    """
     Returns the diff of two text blobs.
-    '''
-    diff = difflib.unified_diff(old.splitlines(1),
-                                new.splitlines(1))
-    return ''.join([x.replace('\r', '') for x in diff])
+    """
+    diff = difflib.unified_diff(old.splitlines(1), new.splitlines(1))
+    return "".join([x.replace("\r", "") for x in diff])
 
 
 def _print_config_text(tree, indentation=0):
-    '''
+    """
     Return the config as text from a config tree.
-    '''
-    config = ''
+    """
+    config = ""
     for key, value in six.iteritems(tree):
-        config += '{indent}{line}\n'.format(indent=' '*indentation, line=key)
+        config += "{indent}{line}\n".format(indent=" " * indentation, line=key)
         if value:
-            config += _print_config_text(value, indentation=indentation+1)
+            config += _print_config_text(value, indentation=indentation + 1)
     return config
+
 
 # ------------------------------------------------------------------------------
 # callable functions
 # ------------------------------------------------------------------------------
 
 
-def tree(config=None,
-         path=None,
-         with_tags=False,
-         saltenv='base'):
-    '''
+def tree(config=None, path=None, with_tags=False, saltenv="base"):
+    """
     Transform Cisco IOS style configuration to structured Python dictionary.
     Depending on the value of the ``with_tags`` argument, this function may
     provide different views, valuable in different situations.
@@ -170,17 +167,17 @@ def tree(config=None,
 
         salt '*' iosconfig.tree path=salt://path/to/my/config.txt
         salt '*' iosconfig.tree path=https://bit.ly/2mAdq7z
-    '''
+    """
     if path:
-        config = __salt__['cp.get_file_str'](path, saltenv=saltenv)
+        config = __salt__["cp.get_file_str"](path, saltenv=saltenv)
         if config is False:
-            raise SaltException('{} is not available'.format(path))
+            raise SaltException("{} is not available".format(path))
     config_lines = config.splitlines()
     return _parse_text_config(config_lines, with_tags=with_tags)
 
 
-def clean(config=None, path=None, saltenv='base'):
-    '''
+def clean(config=None, path=None, saltenv="base"):
+    """
     Return a clean version of the config, without any special signs (such as
     ``!`` as an individual line) or empty lines, but just lines with significant
     value in the configuration of the network device.
@@ -205,17 +202,19 @@ def clean(config=None, path=None, saltenv='base'):
 
         salt '*' iosconfig.clean path=salt://path/to/my/config.txt
         salt '*' iosconfig.clean path=https://bit.ly/2mAdq7z
-    '''
+    """
     config_tree = tree(config=config, path=path, saltenv=saltenv)
     return _print_config_text(config_tree)
 
 
-def merge_tree(initial_config=None,
-               initial_path=None,
-               merge_config=None,
-               merge_path=None,
-               saltenv='base'):
-    '''
+def merge_tree(
+    initial_config=None,
+    initial_path=None,
+    merge_config=None,
+    merge_path=None,
+    saltenv="base",
+):
+    """
     Return the merge tree of the ``initial_config`` with the ``merge_config``,
     as a Python dictionary.
 
@@ -248,22 +247,20 @@ def merge_tree(initial_config=None,
     .. code-block:: bash
 
         salt '*' iosconfig.merge_tree initial_path=salt://path/to/running.cfg merge_path=salt://path/to/merge.cfg
-    '''
-    merge_tree = tree(config=merge_config,
-                      path=merge_path,
-                      saltenv=saltenv)
-    initial_tree = tree(config=initial_config,
-                        path=initial_path,
-                        saltenv=saltenv)
+    """
+    merge_tree = tree(config=merge_config, path=merge_path, saltenv=saltenv)
+    initial_tree = tree(config=initial_config, path=initial_path, saltenv=saltenv)
     return salt.utils.dictupdate.merge(initial_tree, merge_tree)
 
 
-def merge_text(initial_config=None,
-               initial_path=None,
-               merge_config=None,
-               merge_path=None,
-               saltenv='base'):
-    '''
+def merge_text(
+    initial_config=None,
+    initial_path=None,
+    merge_config=None,
+    merge_path=None,
+    saltenv="base",
+):
+    """
     Return the merge result of the ``initial_config`` with the ``merge_config``,
     as plain text.
 
@@ -296,21 +293,25 @@ def merge_text(initial_config=None,
     .. code-block:: bash
 
         salt '*' iosconfig.merge_text initial_path=salt://path/to/running.cfg merge_path=salt://path/to/merge.cfg
-    '''
-    candidate_tree = merge_tree(initial_config=initial_config,
-                                initial_path=initial_path,
-                                merge_config=merge_config,
-                                merge_path=merge_path,
-                                saltenv=saltenv)
+    """
+    candidate_tree = merge_tree(
+        initial_config=initial_config,
+        initial_path=initial_path,
+        merge_config=merge_config,
+        merge_path=merge_path,
+        saltenv=saltenv,
+    )
     return _print_config_text(candidate_tree)
 
 
-def merge_diff(initial_config=None,
-               initial_path=None,
-               merge_config=None,
-               merge_path=None,
-               saltenv='base'):
-    '''
+def merge_diff(
+    initial_config=None,
+    initial_path=None,
+    merge_config=None,
+    merge_path=None,
+    saltenv="base",
+):
+    """
     Return the merge diff, as text, after merging the merge config into the
     initial config.
 
@@ -343,24 +344,28 @@ def merge_diff(initial_config=None,
     .. code-block:: bash
 
         salt '*' iosconfig.merge_diff initial_path=salt://path/to/running.cfg merge_path=salt://path/to/merge.cfg
-    '''
+    """
     if initial_path:
-        initial_config = __salt__['cp.get_file_str'](initial_path, saltenv=saltenv)
-    candidate_config = merge_text(initial_config=initial_config,
-                                  merge_config=merge_config,
-                                  merge_path=merge_path,
-                                  saltenv=saltenv)
+        initial_config = __salt__["cp.get_file_str"](initial_path, saltenv=saltenv)
+    candidate_config = merge_text(
+        initial_config=initial_config,
+        merge_config=merge_config,
+        merge_path=merge_path,
+        saltenv=saltenv,
+    )
     clean_running_dict = tree(config=initial_config)
     clean_running = _print_config_text(clean_running_dict)
     return _get_diff_text(clean_running, candidate_config)
 
 
-def diff_tree(candidate_config=None,
-              candidate_path=None,
-              running_config=None,
-              running_path=None,
-              saltenv='base'):
-    '''
+def diff_tree(
+    candidate_config=None,
+    candidate_path=None,
+    running_config=None,
+    running_path=None,
+    saltenv="base",
+):
+    """
     Return the diff, as Python dictionary, between the candidate and the running
     configuration.
 
@@ -394,22 +399,20 @@ def diff_tree(candidate_config=None,
     .. code-block:: bash
 
         salt '*' iosconfig.diff_tree candidate_path=salt://path/to/candidate.cfg running_path=salt://path/to/running.cfg
-    '''
-    candidate_tree = tree(config=candidate_config,
-                          path=candidate_path,
-                          saltenv=saltenv)
-    running_tree = tree(config=running_config,
-                        path=running_path,
-                        saltenv=saltenv)
+    """
+    candidate_tree = tree(config=candidate_config, path=candidate_path, saltenv=saltenv)
+    running_tree = tree(config=running_config, path=running_path, saltenv=saltenv)
     return salt.utils.dictdiffer.deep_diff(running_tree, candidate_tree)
 
 
-def diff_text(candidate_config=None,
-              candidate_path=None,
-              running_config=None,
-              running_path=None,
-              saltenv='base'):
-    '''
+def diff_text(
+    candidate_config=None,
+    candidate_path=None,
+    running_config=None,
+    running_path=None,
+    saltenv="base",
+):
+    """
     Return the diff, as text, between the candidate and the running config.
 
     candidate_config
@@ -442,11 +445,9 @@ def diff_text(candidate_config=None,
     .. code-block:: bash
 
         salt '*' iosconfig.diff_text candidate_path=salt://path/to/candidate.cfg running_path=salt://path/to/running.cfg
-    '''
-    candidate_text = clean(config=candidate_config,
-                           path=candidate_path,
-                           saltenv=saltenv)
-    running_text = clean(config=running_config,
-                         path=running_path,
-                         saltenv=saltenv)
+    """
+    candidate_text = clean(
+        config=candidate_config, path=candidate_path, saltenv=saltenv
+    )
+    running_text = clean(config=running_config, path=running_path, saltenv=saltenv)
     return _get_diff_text(running_text, candidate_text)
