@@ -172,6 +172,7 @@ import re
 
 # Import Salt libs
 import salt.utils.nxos
+from salt.utils.args import clean_kwargs
 from salt.exceptions import CommandExecutionError, NxosCliError
 from salt.utils.vt import TerminalException
 from salt.utils.vt_helper import SSHConnection
@@ -232,11 +233,8 @@ def initialized():
 
 def ping():
     """
-    Ping the device on the other end of the connection.
-
-    .. code-block: bash
-
-        salt '*' nxos.cmd ping
+    Helper function for nxos execution module functions that need to
+    ping the nxos device using the proxy minion.
     """
     if CONNECTION == "ssh":
         return _ping_ssh()
@@ -246,11 +244,8 @@ def ping():
 
 def grains(**kwargs):
     """
-    Get grains for minion.
-
-    .. code-block: bash
-
-        salt '*' nxos.cmd grains
+    Helper function for nxos execution module functions that need to
+    retrieve nxos grains using the proxy minion.
     """
     if not DEVICE_DETAILS["grains_cache"]:
         data = sendline("show version")
@@ -264,47 +259,28 @@ def grains(**kwargs):
 
 def grains_refresh(**kwargs):
     """
-    Refresh the grains for the NX-OS device.
-
-    .. code-block: bash
-
-        salt '*' nxos.cmd grains_refresh
+    Helper function for nxos execution module functions that need to
+    refresh nxos grains using the proxy minion.
     """
     DEVICE_DETAILS["grains_cache"] = {}
     return grains(**kwargs)
 
 
-def shutdown(opts):
+def shutdown():
     """
-    Closes connection with the device.
+    Not supported.  Only used as a place holder to satisfy shutdown function
+    requirement.
     """
     if CONNECTION == "ssh":
-        return _shutdown_ssh(opts)
+        return _shutdown_ssh()
     elif CONNECTION == "nxapi":
-        return _shutdown_nxapi(opts)
+        return _shutdown_nxapi()
 
 
 def sendline(command, method="cli_show_ascii", **kwargs):
     """
-    Send arbitrary show or config commands to the NX-OS device.
-
-    command
-        The command to be sent.
-
-    method:
-        ``cli_show_ascii``: Return raw test or unstructured output.
-        ``cli_show``: Return structured output.
-        ``cli_conf``: Send configuration commands to the device.
-        Defaults to ``cli_show_ascii``.
-
-        NOTES for SSH proxy minon:
-          ``method`` is ignored for SSH proxy minion.
-          Only show commands are supported and data is returned unstructured.
-          This function is preserved for backwards compatibilty.
-
-    .. code-block: bash
-
-        salt '*' nxos.cmd sendline 'show run | include "^username admin password"'
+    Helper function for nxos execution module functions that need to
+    send commands to an nxos device using the proxy minion.
     """
     try:
         if CONNECTION == "ssh":
@@ -319,20 +295,8 @@ def sendline(command, method="cli_show_ascii", **kwargs):
 
 def proxy_config(commands, save_config=None):
     """
-    Send configuration commands over SSH or NX-API
-
-    commands
-        List of configuration commands
-
-    save_config
-        If False, don't save configuration commands to startup configuration.
-        If True, save configuration to startup configuration.
-        Default: True
-
-    .. code-block: bash
-
-        salt '*' nxos.cmd proxy_config 'feature bgp' save_config=False
-        salt '*' nxos.cmd proxy_config 'feature bgp'
+    Helper function for nxos execution module functions that need to
+    configure an nxos device using the proxy minion.
     """
     COPY_RS = "copy running-config startup-config"
 
@@ -428,8 +392,8 @@ def _ping_ssh():
         return False
 
 
-def _shutdown_ssh(opts):
-    DEVICE_DETAILS[_worker_name()].close_connection()
+def _shutdown_ssh():
+    return 'Shutdown of ssh proxy minion is not supported'
 
 
 def _sendline_ssh(command, **kwargs):
@@ -438,11 +402,12 @@ def _sendline_ssh(command, **kwargs):
     out, err = DEVICE_DETAILS[_worker_name()].sendline(command)
     _, out = out.split("\n", 1)
     out, _, _ = out.rpartition("\n")
+    kwargs = clean_kwargs(**kwargs)
     _parse_output_for_errors(out, command, **kwargs)
     return out
 
 
-def _parse_output_for_errors(data, command, error_pattern=None):
+def _parse_output_for_errors(data, command, **kwargs):
     """
     Helper method to parse command output for error information
     """
@@ -455,7 +420,8 @@ def _parse_output_for_errors(data, command, error_pattern=None):
                 "cli_error": data.lstrip(),
             }
         )
-    if error_pattern:
+    if kwargs.get('error_pattern'):
+        error_pattern = kwargs.get('error_pattern')
         if isinstance(error_pattern, str):
             error_pattern = [error_pattern]
         for re_line in error_pattern:
@@ -521,8 +487,8 @@ def _ping_nxapi():
     return DEVICE_DETAILS.get("up", False)
 
 
-def _shutdown_nxapi(opts):
-    log.debug("NXOS NX-API PROXY: Shutting Proxy Minion %s", opts["id"])
+def _shutdown_nxapi():
+    return 'Shutdown of nxapi proxy minion is not supported'
 
 
 def _nxapi_request(commands, method="cli_conf", **kwargs):
