@@ -242,7 +242,7 @@ repositories so if a repository does not yet have regular contributors or if
 your pull request has stayed open for more than a couple days feel free to
 "selfie-merge" your own pull request.
 
-.. _`at-mention`: https://help.github.com/articles/basic-writing-and-formatting-syntax/#mentioning-users-and-teams
+.. _`at-mention`: https://help.github.com/en/github/writing-on-github/basic-writing-and-formatting-syntax#mentioning-people-and-teams
 
 Style
 -----
@@ -1316,7 +1316,7 @@ A sample skeleton for the `CHANGELOG.rst` file:
 Versioning
 ----------
 
-Formula are versioned according to Semantic Versioning, http://semver.org/.
+Formula are versioned according to Semantic Versioning, https://semver.org/.
 
 .. note::
 

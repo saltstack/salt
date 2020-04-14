@@ -11,7 +11,7 @@ file that cause YAML issues. It is wise to be aware of these issues. While
 reports or running into them are generally rare they can still crop up at
 unexpected times.
 
-.. _`YAML`: http://yaml.org/spec/1.1/
+.. _`YAML`: https://yaml.org/spec/1.1/
 
 Spaces vs Tabs
 ==============
@@ -24,7 +24,7 @@ normal mode(you can hit `ESC` twice to be sure): ``/``, `Ctrl-v`, `Tab`, then
 hit `Enter`. Also, you can convert tabs to 2 spaces by these commands in Vim:
 ``:set tabstop=2 expandtab`` and then ``:retab``.
 
-.. _`YAML uses spaces`: http://yaml.org/spec/1.1/#id871998
+.. _`YAML uses spaces`: https://yaml.org/spec/1.1/#id871998
 
 Indentation
 ===========
@@ -181,7 +181,7 @@ them.
           day: 1 - Every Sunday
         {% endload %}
 
-.. __: http://stackoverflow.com/a/31007425
+.. __: https://stackoverflow.com/questions/23812676/pyyaml-parses-900-as-int/31007425#31007425
 
 YAML does not like "Double Short Decs"
 ======================================
@@ -289,7 +289,7 @@ Examples:
 
 List of usable `Unicode characters`_  will help you to identify correct numbers.
 
-.. _`Unicode characters`: http://en.wikipedia.org/wiki/List_of_Unicode_characters
+.. _`Unicode characters`: https://en.wikipedia.org/wiki/List_of_Unicode_characters
 
 
 Python can also be used to discover the Unicode number for a character:
@@ -316,7 +316,7 @@ If a definition only includes numbers and underscores, it is parsed by YAML as
 an integer and all underscores are stripped.  To ensure the object becomes a
 string, it should be surrounded by quotes.  `More information here`_.
 
-.. _`More information here`: http://stackoverflow.com/questions/2723321/snakeyaml-how-to-disable-underscore-stripping-when-parsing
+.. _`More information here`: https://stackoverflow.com/questions/2723321/snakeyaml-how-to-disable-underscore-stripping-when-parsing
 
 Here's an example:
 
@@ -383,4 +383,4 @@ Simple keys are limited to a single line and cannot be longer that 1024 characte
 This is a limitation from PyYaml, as seen in a comment in `PyYAML's code`_, and
 applies to anything parsed by YAML in Salt.
 
-.. _PyYAML's code: http://pyyaml.org/browser/pyyaml/trunk/lib/yaml/scanner.py#L91
+.. _PyYAML's code: https://pyyaml.org/browser/pyyaml/trunk/lib/yaml/scanner.py#L91

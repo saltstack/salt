@@ -604,7 +604,7 @@ Evaluating Truth
 A longer discussion on the types of assertions one can make can be found by
 reading `Python's documentation on unit testing`__.
 
-.. __: http://docs.python.org/2/library/unittest.html#unittest.TestCase
+.. __: https://docs.python.org/2/library/unittest.html#unittest.TestCase
 
 
 Tests Using Mock Objects
@@ -680,7 +680,7 @@ additional imports for MagicMock:
                 # assertion.
                 db_exq.assert_has_calls(expected_call)
 
-.. __: http://www.voidspace.org.uk/python/mock/index.html
+.. __: https://docs.python.org/3/library/unittest.mock.html
 
 
 Modifying ``__salt__`` In Place

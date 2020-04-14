@@ -150,17 +150,17 @@ Optional Dependencies
   settings)
 * gcc - dynamic `Cython`_ module compiling
 
-.. _`Python`: http://python.org/download/
-.. _`ZeroMQ`: http://zeromq.org/
+.. _`Python`: https://www.python.org/downloads/
+.. _`ZeroMQ`: https://zeromq.org/
 .. _`pyzmq`: https://github.com/zeromq/pyzmq
-.. _`msgpack-python`:  https://pypi.python.org/pypi/msgpack-python/
+.. _`msgpack-python`:  https://pypi.org/project/msgpack-python/
 .. _`M2Crypto`: https://gitlab.com/m2crypto/m2crypto
 .. _`PyCrypto`: https://www.dlitz.net/software/pycrypto/
-.. _`YAML`: http://pyyaml.org/
-.. _`Jinja2`: http://jinja.pocoo.org/
-.. _`MarkupSafe`: https://pypi.python.org/pypi/MarkupSafe
-.. _`mako`: http://www.makotemplates.org/
-.. _`Cython`: http://cython.org/
+.. _`YAML`: https://pyyaml.org/
+.. _`Jinja2`: https://jinja.palletsprojects.com/en/2.11.x/
+.. _`MarkupSafe`: https://pypi.org/project/MarkupSafe/
+.. _`mako`: https://www.makotemplates.org/
+.. _`Cython`: https://cython.org/
 .. _`apache-libcloud`: http://libcloud.apache.org
 .. _`Requests`: http://docs.python-requests.org/en/latest
 .. _`Tornado`: http://www.tornadoweb.org/en/stable/
