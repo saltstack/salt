@@ -2825,10 +2825,10 @@ def create(vm_):
         "win_run_once", vm_, __opts__, search_global=False, default=None
     )
     cpu_hot_add = config.get_cloud_config_value(
-        'cpu_hot_add', vm_, __opts__, search_global=False, default=None
+        "cpu_hot_add", vm_, __opts__, search_global=False, default=None
     )
     mem_hot_add = config.get_cloud_config_value(
-        'mem_hot_add', vm_, __opts__, search_global=False, default=None
+        "mem_hot_add", vm_, __opts__, search_global=False, default=None
     )
 
     # Get service instance object
@@ -3048,10 +3048,10 @@ def create(vm_):
         )
         config_spec.deviceChange = specs["device_specs"]
 
-    if cpu_hot_add and hasattr(config_spec, 'cpuHotAddEnabled'):
+    if cpu_hot_add and hasattr(config_spec, "cpuHotAddEnabled"):
         config_spec.cpuHotAddEnabled = bool(cpu_hot_add)
 
-    if mem_hot_add and hasattr(config_spec, 'memoryHotAddEnabled'):
+    if mem_hot_add and hasattr(config_spec, "memoryHotAddEnabled"):
         config_spec.memoryHotAddEnabled = bool(mem_hot_add)
 
     if extra_config:
