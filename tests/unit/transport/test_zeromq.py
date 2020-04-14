@@ -512,7 +512,10 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
                 last_msg = time.time()
                 results.append(payload["jid"])
 
-    @pytest.mark.skipif('grains["os_family"] == "Windows"', reason="Skip on Windows")
+    @pytest.mark.skipif(
+        'grains["os_family"] in ("MacOS", "Windows")',
+        reason="Skip on Windows and MacOS",
+    )
     def test_publish_to_pubserv_ipc(self):
         """
         Test sending 10K messags to ZeroMQPubServerChannel using IPC transport
@@ -696,6 +699,10 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         server_channel.pub_close()
         assert len(results) == send_num, (len(results), set(expect).difference(results))
 
+    @pytest.mark.skipif(
+        'grains["os_family"] in ("MacOS", "Windows")',
+        reason="Skip on Windows and MacOS",
+    )
     def test_publish_to_pubserv_tcp(self):
         """
         Test sending 10K messags to ZeroMQPubServerChannel using TCP transport
