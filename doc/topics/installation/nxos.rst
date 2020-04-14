@@ -151,7 +151,7 @@ GuestShell Salt Minion Installation
 This section is only required when running the SaltStack Minion from the ``guestshell``.
 
 STEP 1a: Enable the Guestshell on low footprint N3ks
----------------------------------------------------
+----------------------------------------------------
 
 **NOTE:** Skip down to **STEP 1b** if the target system is not a low footprint N3k.
 

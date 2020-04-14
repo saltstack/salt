@@ -5,9 +5,9 @@ Execution module for Cisco NX OS Switches.
 .. versionadded:: 2016.11.0
 
 This module supports execution using a Proxy Minion or Native Minion:
-1) Proxy Minion: Connect over SSH or NX-API HTTP(S).
+   1) Proxy Minion: Connect over SSH or NX-API HTTP(S).
    See :mod:`salt.proxy.nxos <salt.proxy.nxos>` for proxy minion setup details.
-2) Native Minion: Connect over NX-API Unix Domain Socket (UDS).
+   2) Native Minion: Connect over NX-API Unix Domain Socket (UDS).
    Install the minion inside the GuestShell running on the NX-OS device.
 
 :maturity:   new
@@ -54,7 +54,7 @@ cookie
 
 save_config:
     If True, 'copy running-config starting-config' is issues for every
-        configuration command.
+    configuration command.
     If False, Running config is not saved to startup config
     Default: True
 

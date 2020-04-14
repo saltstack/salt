@@ -61,7 +61,7 @@ password:
 
 save_config:
     If True, 'copy running-config starting-config' is issues for every
-        configuration command.
+    configuration command.
     If False, Running config is not saved to startup config
     Default: True
 
