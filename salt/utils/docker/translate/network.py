@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Functions to translate input for network creation
-'''
+"""
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
@@ -15,25 +15,27 @@ from salt.ext import six
 from . import helpers
 
 ALIASES = {
-    'driver_opt': 'options',
-    'driver_opts': 'options',
-    'ipv6': 'enable_ipv6',
+    "driver_opt": "options",
+    "driver_opts": "options",
+    "ipv6": "enable_ipv6",
 }
 IPAM_ALIASES = {
-    'ip_range': 'iprange',
-    'aux_address': 'aux_addresses',
+    "ip_range": "iprange",
+    "aux_address": "aux_addresses",
 }
 # ALIASES is a superset of IPAM_ALIASES
 ALIASES.update(IPAM_ALIASES)
 ALIASES_REVMAP = dict([(y, x) for x, y in six.iteritems(ALIASES)])
 
-DEFAULTS = {'check_duplicate': True}
+DEFAULTS = {"check_duplicate": True}
 
 
-def _post_processing(kwargs, skip_translate, invalid):  # pylint: disable=unused-argument
-    '''
+def _post_processing(
+    kwargs, skip_translate, invalid
+):  # pylint: disable=unused-argument
+    """
     Additional network-specific post-translation processing
-    '''
+    """
     # If any defaults were not expicitly passed, add them
     for item in DEFAULTS:
         if item not in kwargs:
@@ -46,7 +48,7 @@ def driver(val, **kwargs):  # pylint: disable=unused-argument
 
 
 def options(val, **kwargs):  # pylint: disable=unused-argument
-    return helpers.translate_key_val(val, delimiter='=')
+    return helpers.translate_key_val(val, delimiter="=")
 
 
 def ipam(val, **kwargs):  # pylint: disable=unused-argument
@@ -87,13 +89,12 @@ def ipam_opts(val, **kwargs):  # pylint: disable=unused-argument
 
 
 def ipam_pools(val, **kwargs):  # pylint: disable=unused-argument
-    if not hasattr(val, '__iter__') \
-            or not all(isinstance(x, dict) for x in val):
+    if not hasattr(val, "__iter__") or not all(isinstance(x, dict) for x in val):
         # Can't do a simple dictlist check because each dict may have more than
         # one element.
-        raise SaltInvocationError('ipam_pools must be a list of dictionaries')
-    skip_translate = kwargs.get('skip_translate', ())
-    if not (skip_translate is True or 'ipam_pools' in skip_translate):
+        raise SaltInvocationError("ipam_pools must be a list of dictionaries")
+    skip_translate = kwargs.get("skip_translate", ())
+    if not (skip_translate is True or "ipam_pools" in skip_translate):
         _globals = globals()
         for ipam_dict in val:
             for key in list(ipam_dict):
@@ -110,7 +111,7 @@ def ipam_pools(val, **kwargs):  # pylint: disable=unused-argument
 
 
 def subnet(val, **kwargs):  # pylint: disable=unused-argument
-    validate_ip_addrs = kwargs.get('validate_ip_addrs', True)
+    validate_ip_addrs = kwargs.get("validate_ip_addrs", True)
     val = helpers.translate_str(val)
     if validate_ip_addrs:
         helpers.validate_subnet(val)
@@ -118,7 +119,7 @@ def subnet(val, **kwargs):  # pylint: disable=unused-argument
 
 
 def iprange(val, **kwargs):  # pylint: disable=unused-argument
-    validate_ip_addrs = kwargs.get('validate_ip_addrs', True)
+    validate_ip_addrs = kwargs.get("validate_ip_addrs", True)
     val = helpers.translate_str(val)
     if validate_ip_addrs:
         helpers.validate_subnet(val)
@@ -126,7 +127,7 @@ def iprange(val, **kwargs):  # pylint: disable=unused-argument
 
 
 def gateway(val, **kwargs):  # pylint: disable=unused-argument
-    validate_ip_addrs = kwargs.get('validate_ip_addrs', True)
+    validate_ip_addrs = kwargs.get("validate_ip_addrs", True)
     val = helpers.translate_str(val)
     if validate_ip_addrs:
         helpers.validate_ip(val)
@@ -134,8 +135,8 @@ def gateway(val, **kwargs):  # pylint: disable=unused-argument
 
 
 def aux_addresses(val, **kwargs):  # pylint: disable=unused-argument
-    validate_ip_addrs = kwargs.get('validate_ip_addrs', True)
-    val = helpers.translate_key_val(val, delimiter='=')
+    validate_ip_addrs = kwargs.get("validate_ip_addrs", True)
+    val = helpers.translate_key_val(val, delimiter="=")
     if validate_ip_addrs:
         for address in six.itervalues(val):
             helpers.validate_ip(address)

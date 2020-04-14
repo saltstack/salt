@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Execute Chef client runs
 =====================================================================
 
@@ -18,7 +18,7 @@ Run chef-client or chef-solo
     my-solo-run:
       chef.solo:
         - environment: dev
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
@@ -26,14 +26,14 @@ import re
 
 
 def __virtual__():
-    '''
+    """
     Only load if Chef execution module is available.
-    '''
-    return True if 'chef.client' in __salt__ else False
+    """
+    return True if "chef.client" in __salt__ else False
 
 
 def client(name, **kwargs):
-    '''
+    """
     name
         Unique identifier for the state. Does not affect the Chef run.
 
@@ -89,12 +89,12 @@ def client(name, **kwargs):
 
     validation_key
         Set the validation key file location, used for registering new clients
-    '''
-    return _run(name, 'chef.client', kwargs)
+    """
+    return _run(name, "chef.client", kwargs)
 
 
 def solo(name, **kwargs):
-    '''
+    """
     name
         Unique identifier for the state. Does not affect the Chef run.
 
@@ -133,29 +133,26 @@ def solo(name, **kwargs):
     user
         User to set privilege to
 
-    '''
-    return _run(name, 'chef.solo', kwargs)
+    """
+    return _run(name, "chef.solo", kwargs)
 
 
 def _run(name, mod, kwargs):
-    ret = {'name': name,
-           'changes': {},
-           'result': None,
-           'comment': ''}
+    ret = {"name": name, "changes": {}, "result": None, "comment": ""}
 
-    result = __salt__[mod](whyrun=__opts__['test'], **kwargs)
-    if result['retcode'] == 0:
+    result = __salt__[mod](whyrun=__opts__["test"], **kwargs)
+    if result["retcode"] == 0:
 
-        if _has_changes(result['stdout']):
+        if _has_changes(result["stdout"]):
             # Populate the 'changes' dict if anything changed
-            ret['changes']['summary'] = _summary(result['stdout'])
-            ret['result'] = True if not __opts__['test'] else None
+            ret["changes"]["summary"] = _summary(result["stdout"])
+            ret["result"] = True if not __opts__["test"] else None
         else:
-            ret['result'] = True
+            ret["result"] = True
     else:
-        ret['result'] = False
+        ret["result"] = False
 
-    ret['comment'] = '\n'.join([result['stdout'], result['stderr']])
+    ret["comment"] = "\n".join([result["stdout"], result["stderr"]])
     return ret
 
 
@@ -164,9 +161,5 @@ def _summary(stdout):
 
 
 def _has_changes(stdout):
-    regex = re.search(
-        r'Chef Client finished, (\d+)',
-        _summary(stdout),
-        re.IGNORECASE
-    )
+    regex = re.search(r"Chef Client finished, (\d+)", _summary(stdout), re.IGNORECASE)
     return int(regex.group(1)) > 0
