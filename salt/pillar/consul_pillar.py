@@ -22,9 +22,9 @@ All parameters are optional.
 
 The ``consul.token`` requires python-consul >= 0.4.7.
 
-If you have a multi-datacenter Consul cluster you can map your ``pillarenv``s
-to your data centers by providing a dictionary of mappings in ``consul.dc``
-field:
+If you have a multi-datacenter Consul cluster you can map your ``pillarenv``
+entries to your data centers by providing a dictionary of mappings in
+``consul.dc`` field:
 
 .. code-block:: yaml
 
