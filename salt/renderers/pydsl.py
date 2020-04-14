@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 A Python-based DSL
 
 :maintainer: Jack Kuan <kjkuan@gmail.com>
@@ -333,20 +333,21 @@ For example:
     def main():
         my_mod = sys.modules['salt.loaded.ext.module.my_mod']
 
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 import types
+
 import salt.utils.pydsl as pydsl
 import salt.utils.stringutils
+from salt.exceptions import SaltRenderError
 from salt.ext.six import exec_
 from salt.utils.pydsl import PyDslError
-from salt.exceptions import SaltRenderError
 
-__all__ = ['render']
+__all__ = ["render"]
 
 
-def render(template, saltenv='base', sls='', tmplpath=None, rendered_sls=None, **kws):
+def render(template, saltenv="base", sls="", tmplpath=None, rendered_sls=None, **kws):
     sls = salt.utils.stringutils.to_str(sls)
     mod = types.ModuleType(sls)
     # Note: mod object is transient. It's existence only lasts as long as
@@ -372,7 +373,8 @@ def render(template, saltenv='base', sls='', tmplpath=None, rendered_sls=None, *
         __env__=saltenv,
         __sls__=sls,
         __file__=tmplpath,
-        **kws)
+        **kws
+    )
 
     dsl_sls.get_render_stack().append(dsl_sls)
     exec_(template.read(), mod.__dict__)
@@ -388,4 +390,5 @@ def _wrap_sls(method):
             return getattr(sls, method.__name__)(*args, **kws)
         except PyDslError as exc:
             raise SaltRenderError(exc)
+
     return _sls_method

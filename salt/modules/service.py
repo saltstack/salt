@@ -1,64 +1,62 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 If Salt's OS detection does not identify a different virtual service module, the minion will fall back to using this basic module, which simply wraps sysvinit scripts.
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
+
+import fnmatch
 
 # Import python libs
 import os
-import fnmatch
 import re
 
-__func_alias__ = {
-    'reload_': 'reload'
-}
+__func_alias__ = {"reload_": "reload"}
 
-_GRAINMAP = {
-    'Arch': '/etc/rc.d',
-    'Arch ARM': '/etc/rc.d'
-}
+_GRAINMAP = {"Arch": "/etc/rc.d", "Arch ARM": "/etc/rc.d"}
 
 
 def __virtual__():
-    '''
+    """
     Only work on systems which exclusively use sysvinit
-    '''
+    """
     # Disable on these platforms, specific service modules exist:
-    disable = set((
-        'RedHat',
-        'CentOS',
-        'Amazon',
-        'ScientificLinux',
-        'CloudLinux',
-        'Fedora',
-        'Gentoo',
-        'Ubuntu',
-        'Debian',
-        'Devuan',
-        'ALT',
-        'OEL',
-        'Linaro',
-        'elementary OS',
-        'McAfee  OS Server',
-        'Raspbian',
-        'SUSE',
-    ))
-    if __grains__.get('os') in disable:
-        return (False, 'Your OS is on the disabled list')
+    disable = set(
+        (
+            "RedHat",
+            "CentOS",
+            "Amazon",
+            "ScientificLinux",
+            "CloudLinux",
+            "Fedora",
+            "Gentoo",
+            "Ubuntu",
+            "Debian",
+            "Devuan",
+            "ALT",
+            "OEL",
+            "Linaro",
+            "elementary OS",
+            "McAfee  OS Server",
+            "Raspbian",
+            "SUSE",
+        )
+    )
+    if __grains__.get("os") in disable:
+        return (False, "Your OS is on the disabled list")
     # Disable on all non-Linux OSes as well
-    if __grains__['kernel'] != 'Linux':
-        return (False, 'Non Linux OSes are not supported')
-    init_grain = __grains__.get('init')
-    if init_grain not in (None, 'sysvinit', 'unknown'):
-        return (False, 'Minion is running {0}'.format(init_grain))
-    elif __utils__['systemd.booted'](__context__):
+    if __grains__["kernel"] != "Linux":
+        return (False, "Non Linux OSes are not supported")
+    init_grain = __grains__.get("init")
+    if init_grain not in (None, "sysvinit", "unknown"):
+        return (False, "Minion is running {0}".format(init_grain))
+    elif __utils__["systemd.booted"](__context__):
         # Should have been caught by init grain check, but check just in case
-        return (False, 'Minion is running systemd')
-    return 'service'
+        return (False, "Minion is running systemd")
+    return "service"
 
 
 def run(name, action):
-    '''
+    """
     Run the specified service with an action.
 
     .. versionadded:: 2015.8.1
@@ -75,16 +73,17 @@ def run(name, action):
 
         salt '*' service.run apache2 reload
         salt '*' service.run postgresql initdb
-    '''
-    cmd = os.path.join(
-        _GRAINMAP.get(__grains__.get('os'), '/etc/init.d'),
-        name
-    ) + ' ' + action
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    """
+    cmd = (
+        os.path.join(_GRAINMAP.get(__grains__.get("os"), "/etc/init.d"), name)
+        + " "
+        + action
+    )
+    return not __salt__["cmd.retcode"](cmd, python_shell=False)
 
 
 def start(name):
-    '''
+    """
     Start the specified service
 
     CLI Example:
@@ -92,12 +91,12 @@ def start(name):
     .. code-block:: bash
 
         salt '*' service.start <service name>
-    '''
-    return run(name, 'start')
+    """
+    return run(name, "start")
 
 
 def stop(name):
-    '''
+    """
     Stop the specified service
 
     CLI Example:
@@ -105,12 +104,12 @@ def stop(name):
     .. code-block:: bash
 
         salt '*' service.stop <service name>
-    '''
-    return run(name, 'stop')
+    """
+    return run(name, "stop")
 
 
 def restart(name):
-    '''
+    """
     Restart the specified service
 
     CLI Example:
@@ -118,12 +117,12 @@ def restart(name):
     .. code-block:: bash
 
         salt '*' service.restart <service name>
-    '''
-    return run(name, 'restart')
+    """
+    return run(name, "restart")
 
 
 def status(name, sig=None):
-    '''
+    """
     Return the status for a service.
     If the name contains globbing, a dict mapping service name to PID or empty
     string is returned.
@@ -144,25 +143,25 @@ def status(name, sig=None):
     .. code-block:: bash
 
         salt '*' service.status <service name> [service signature]
-    '''
+    """
     if sig:
-        return __salt__['status.pid'](sig)
+        return __salt__["status.pid"](sig)
 
-    contains_globbing = bool(re.search(r'\*|\?|\[.+\]', name))
+    contains_globbing = bool(re.search(r"\*|\?|\[.+\]", name))
     if contains_globbing:
         services = fnmatch.filter(get_all(), name)
     else:
         services = [name]
     results = {}
     for service in services:
-        results[service] = __salt__['status.pid'](service)
+        results[service] = __salt__["status.pid"](service)
     if contains_globbing:
         return results
     return results[name]
 
 
 def reload_(name):
-    '''
+    """
     Refreshes config files by calling service reload. Does not perform a full
     restart.
 
@@ -171,12 +170,12 @@ def reload_(name):
     .. code-block:: bash
 
         salt '*' service.reload <service name>
-    '''
-    return run(name, 'reload')
+    """
+    return run(name, "reload")
 
 
 def available(name):
-    '''
+    """
     Returns ``True`` if the specified service is available, otherwise returns
     ``False``.
 
@@ -185,12 +184,12 @@ def available(name):
     .. code-block:: bash
 
         salt '*' service.available sshd
-    '''
+    """
     return name in get_all()
 
 
 def missing(name):
-    '''
+    """
     The inverse of service.available.
     Returns ``True`` if the specified service is not available, otherwise returns
     ``False``.
@@ -200,12 +199,12 @@ def missing(name):
     .. code-block:: bash
 
         salt '*' service.missing sshd
-    '''
+    """
     return name not in get_all()
 
 
 def get_all():
-    '''
+    """
     Return a list of all available services
 
     CLI Example:
@@ -213,7 +212,7 @@ def get_all():
     .. code-block:: bash
 
         salt '*' service.get_all
-    '''
-    if not os.path.isdir(_GRAINMAP.get(__grains__.get('os'), '/etc/init.d')):
+    """
+    if not os.path.isdir(_GRAINMAP.get(__grains__.get("os"), "/etc/init.d")):
         return []
-    return sorted(os.listdir(_GRAINMAP.get(__grains__.get('os'), '/etc/init.d')))
+    return sorted(os.listdir(_GRAINMAP.get(__grains__.get("os"), "/etc/init.d")))
