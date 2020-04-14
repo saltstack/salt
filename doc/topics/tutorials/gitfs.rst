@@ -159,7 +159,7 @@ including by installing XCode_.
     GitPython advises against the use of its library for long-running processes
     (such as a salt-master or salt-minion). Please see their warning on potential
     leaks of system resources:
-        https://github.com/gitpython-developers/GitPython#leakage-of-system-resources.
+    https://github.com/gitpython-developers/GitPython#leakage-of-system-resources.
 
 .. warning::
 
