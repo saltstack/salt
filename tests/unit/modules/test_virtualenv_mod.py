@@ -22,6 +22,7 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
 
+
 class LegacyVirtualenvTestCase(TestCase, LoaderModuleMockMixin):
     """
     Legacy versions of virtualenv where virtualenv_version attribute was set instead of __version__.
@@ -53,6 +54,7 @@ class LegacyVirtualenvTestCase(TestCase, LoaderModuleMockMixin):
                 python_shell=False
             )
 
+            
 class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         base_virtualenv_mock = MagicMock(spec=['__version__'])
