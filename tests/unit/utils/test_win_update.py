@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 
 # Import Python Libs
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Libs
 import salt.utils.win_update as win_update
 
 # Import Salt Testing Libs
-from tests.support.mock import patch, MagicMock
+from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
 
 
@@ -15,13 +15,12 @@ class WinUpdateTestCase(TestCase):
     """
     Test cases for salt.utils.win_update
     """
+
     def test_installed_no_updates(self):
         """
         Test installed when there are no updates on the system
         """
-        with patch(
-            "salt.utils.winapi.Com", autospec=True
-        ), patch(
+        with patch("salt.utils.winapi.Com", autospec=True), patch(
             "win32com.client.Dispatch", autospec=True
         ), patch.object(
             win_update.WindowsUpdateAgent, "refresh", autospec=True
@@ -37,13 +36,9 @@ class WinUpdateTestCase(TestCase):
         """
         Test installed when there are no Installed updates on the system
         """
-        with patch(
-            "salt.utils.winapi.Com", autospec=True
-        ), patch(
+        with patch("salt.utils.winapi.Com", autospec=True), patch(
             "win32com.client.Dispatch", autospec=True
-        ), patch.object(
-            win_update.WindowsUpdateAgent, "refresh", autospec=True
-        ):
+        ), patch.object(win_update.WindowsUpdateAgent, "refresh", autospec=True):
             wua = win_update.WindowsUpdateAgent(online=False)
 
             wua._updates = [
@@ -60,13 +55,9 @@ class WinUpdateTestCase(TestCase):
         """
         Test installed when all updates on the system are Installed
         """
-        with patch(
-            "salt.utils.winapi.Com", autospec=True
-        ), patch(
+        with patch("salt.utils.winapi.Com", autospec=True), patch(
             "win32com.client.Dispatch", autospec=True
-        ), patch.object(
-            win_update.WindowsUpdateAgent, "refresh", autospec=True
-        ):
+        ), patch.object(win_update.WindowsUpdateAgent, "refresh", autospec=True):
             wua = win_update.WindowsUpdateAgent(online=False)
 
             wua._updates = [
@@ -83,13 +74,9 @@ class WinUpdateTestCase(TestCase):
         """
         Test installed when some updates are installed on the system
         """
-        with patch(
-            "salt.utils.winapi.Com", autospec=True
-        ), patch(
+        with patch("salt.utils.winapi.Com", autospec=True), patch(
             "win32com.client.Dispatch", autospec=True
-        ), patch.object(
-            win_update.WindowsUpdateAgent, "refresh", autospec=True
-        ):
+        ), patch.object(win_update.WindowsUpdateAgent, "refresh", autospec=True):
             wua = win_update.WindowsUpdateAgent(online=False)
 
             wua._updates = [

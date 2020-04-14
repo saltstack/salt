@@ -24,7 +24,7 @@ UPDATES_LIST = {
     "afda9e11-44a0-4602-9e9b-423af11ecaed": {"KBs": ["KB4541329"]},
     "a0f997b1-1abe-4a46-941f-b37f732f9fbd": {"KBs": ["KB3193497"]},
     "eac02b09-d745-4891-b80f-400e0e5e4b6d": {"KBs": ["KB4052623"]},
-    "0689e74b-54d1-4f55-a916-96e3c737db90": {"KBs": ["KB890830"]}
+    "0689e74b-54d1-4f55-a916-96e3c737db90": {"KBs": ["KB890830"]},
 }
 UPDATES_SUMMARY = {"Installed": 10}
 
@@ -48,15 +48,12 @@ class WinWuaInstalledTestCase(TestCase):
         Test installed function default
         """
         expected = UPDATES_LIST
-        with patch(
-            "salt.utils.winapi.Com", autospec=True
-        ), patch(
+        with patch("salt.utils.winapi.Com", autospec=True), patch(
             "win32com.client.Dispatch", autospec=True
         ), patch.object(
             salt.utils.win_update.WindowsUpdateAgent, "refresh", autospec=True
         ), patch.object(
-            salt.utils.win_update, "Updates", autospec=True,
-            return_value=Updates()
+            salt.utils.win_update, "Updates", autospec=True, return_value=Updates()
         ):
             result = win_wua.installed()
             self.assertDictEqual(result, expected)
@@ -67,15 +64,12 @@ class WinWuaInstalledTestCase(TestCase):
         """
         expected = UPDATES_SUMMARY
         # Remove all updates that are not installed
-        with patch(
-            "salt.utils.winapi.Com", autospec=True
-        ), patch(
+        with patch("salt.utils.winapi.Com", autospec=True), patch(
             "win32com.client.Dispatch", autospec=True
         ), patch.object(
             salt.utils.win_update.WindowsUpdateAgent, "refresh", autospec=True
         ), patch.object(
-            salt.utils.win_update, "Updates", autospec=True,
-            return_value=Updates()
+            salt.utils.win_update, "Updates", autospec=True, return_value=Updates()
         ):
             result = win_wua.installed(summary=True)
             self.assertDictEqual(result, expected)
@@ -89,15 +83,12 @@ class WinWuaInstalledTestCase(TestCase):
             expected.update(UPDATES_LIST[update]["KBs"])
         expected = sorted(expected)
         # Remove all updates that are not installed
-        with patch(
-            "salt.utils.winapi.Com", autospec=True
-        ), patch(
+        with patch("salt.utils.winapi.Com", autospec=True), patch(
             "win32com.client.Dispatch", autospec=True
         ), patch.object(
             salt.utils.win_update.WindowsUpdateAgent, "refresh", autospec=True
         ), patch.object(
-            salt.utils.win_update, "Updates", autospec=True,
-            return_value=Updates()
+            salt.utils.win_update, "Updates", autospec=True, return_value=Updates()
         ):
             result = win_wua.installed(kbs_only=True)
             self.assertListEqual(result, expected)

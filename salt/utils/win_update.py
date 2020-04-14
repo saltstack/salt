@@ -43,7 +43,8 @@ class Updates(object):
     Wrapper around the 'Microsoft.Update.UpdateColl' instance
     Adds the list and summary functions. For use by the WindowUpdateAgent class.
 
-    Usage:
+    Code Example:
+
     .. code-block:: python
 
         # Create an instance
@@ -298,7 +299,7 @@ class WindowsUpdateAgent(object):
             online (bool):
                 Tells the Windows Update Agent go online to update its local
                 update database. ``True`` will go online. ``False`` will use the
-                local update database as is. Default is ``False``
+                local update database as is. Default is ``True``
 
                 .. versionadded:: Sodium
 
@@ -359,7 +360,7 @@ class WindowsUpdateAgent(object):
             online (bool):
                 Tells the Windows Update Agent go online to update its local
                 update database. ``True`` will go online. ``False`` will use the
-                local update database as is. Default is ``False``
+                local update database as is. Default is ``True``
 
                 .. versionadded:: Sodium
 
@@ -848,6 +849,7 @@ class WindowsUpdateAgent(object):
         collection using the ``search`` or ``available`` functions.
 
         .. note::
+
             Starting with Windows 10 the Windows Update Agent is unable to
             uninstall updates. An ``Uninstall Not Allowed`` error is returned.
             If this error is encountered this function will instead attempt to
