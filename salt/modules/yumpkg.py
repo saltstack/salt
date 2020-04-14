@@ -2456,7 +2456,7 @@ def group_list():
 def group_info(name, expand=False, ignore_groups=None):
     """
     .. versionadded:: 2014.1.0
-    .. versionchanged:: Sodium,2015.8.4,2015.5.10
+    .. versionchanged:: Sodium,2016.3.0,2015.8.4,2015.5.10
         The return data has changed. A new key ``type`` has been added to
         distinguish environment groups from package groups. Also, keys for the
         group name and group ID have been added. The ``mandatory packages``,
@@ -2540,11 +2540,17 @@ def group_info(name, expand=False, ignore_groups=None):
                 if expand and ret["type"] == "environment group":
                     if not line or line in completed_groups:
                         continue
-                    log.trace("Adding group \"%s\" to completed list: %s", line, completed_groups)
+                    log.trace(
+                        'Adding group "%s" to completed list: %s',
+                        line,
+                        completed_groups,
+                    )
                     completed_groups.append(line)
                     # Using the @ prefix on the group here in order to prevent multiple matches
                     # being returned, such as with gnome-desktop
-                    expanded = group_info('@' + line, expand=True, ignore_groups=completed_groups)
+                    expanded = group_info(
+                        "@" + line, expand=True, ignore_groups=completed_groups
+                    )
                     # Don't shadow the pkgtype variable from the outer loop
                     for p_type in pkgtypes:
                         ret[p_type].update(set(expanded[p_type]))
