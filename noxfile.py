@@ -1215,3 +1215,25 @@ def invoke_pre_commit(session):
             reuse_existing=True,
         )
     _invoke(session)
+
+
+@nox.session(name="changelog", python="3")
+@nox.parametrize("draft", [False, True])
+def changelog(session, draft):
+    """
+    Generate salt's changelog
+    """
+    pydir = _get_pydir(session)
+    requirements_file = "requirements/static/changelog.in"
+    distro_constraints = [
+        "requirements/static/{}/changelog.txt".format(_get_pydir(session))
+    ]
+    install_command = ["--progress-bar=off", "-r", requirements_file]
+    for distro_constraint in distro_constraints:
+        install_command.extend(["--constraint", distro_constraint])
+    session.install(*install_command, silent=PIP_INSTALL_SILENT)
+
+    town_cmd = ["towncrier", "--version={0}".format(session.posargs[0])]
+    if draft:
+        town_cmd.append("--draft")
+    session.run(*town_cmd)
