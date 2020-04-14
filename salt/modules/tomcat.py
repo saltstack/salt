@@ -91,6 +91,9 @@ from salt.ext.six.moves.urllib.request import urlopen as _urlopen
 
 # pylint: enable=no-name-in-module,import-error
 
+# Import Salt libs
+import salt.utils.data
+import salt.utils.stringutils
 
 log = logging.getLogger(__name__)
 
