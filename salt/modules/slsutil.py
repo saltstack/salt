@@ -203,7 +203,7 @@ def serialize(serializer, obj, **mod_kwargs):
     """
     Serialize a Python object using one of the available
     :ref:`all-salt.serializers`.
-    
+
     CLI Example:
 
     .. code-block:: bash
@@ -225,7 +225,7 @@ def deserialize(serializer, stream_or_string, **mod_kwargs):
     """
     Deserialize a Python object using one of the available
     :ref:`all-salt.serializers`.
-   
+
     CLI Example:
 
     .. code-block:: bash
