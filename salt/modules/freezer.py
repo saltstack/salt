@@ -1,62 +1,63 @@
 # -*- coding: utf-8 -*-
 
-'''
+"""
 :maintainer:    Alberto Planas <aplanas@suse.com>
 :maturity:      new
 :depends:       None
 :platform:      Linux
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 import os
 
+import salt.utils.json as json
 from salt.exceptions import CommandExecutionError
+from salt.ext.six.moves import zip
 from salt.utils.args import clean_kwargs
 from salt.utils.files import fopen
-import salt.utils.json as json
-from salt.ext.six.moves import zip
 
 log = logging.getLogger(__name__)
 
 __func_alias__ = {
-    'list_': 'list',
+    "list_": "list",
 }
 
 
 def __virtual__():
-    '''
+    """
     Freezer is based on top of the pkg module.
 
     Return True since the `pkg` module should always exist. This
     avoids the overhead of loading all modules.
 
-    '''
+    """
     return True
 
 
 def _states_path():
-    '''
+    """
     Return the path where we will store the states.
-    '''
-    return os.path.join(__opts__['cachedir'], 'freezer')
+    """
+    return os.path.join(__opts__["cachedir"], "freezer")
 
 
 def _paths(name=None):
-    '''
+    """
     Return the full path for the packages and repository freezer
     files.
 
-    '''
-    name = 'freezer' if not name else name
+    """
+    name = "freezer" if not name else name
     states_path = _states_path()
     return (
-        os.path.join(states_path, '{}-pkgs.yml'.format(name)),
-        os.path.join(states_path, '{}-reps.yml'.format(name)),
+        os.path.join(states_path, "{}-pkgs.yml".format(name)),
+        os.path.join(states_path, "{}-reps.yml".format(name)),
     )
 
 
 def status(name=None):
-    '''
+    """
     Return True if there is already a frozen state.
 
     A frozen state is merely a list of packages (including the
@@ -74,13 +75,13 @@ def status(name=None):
         salt '*' freezer.status
         salt '*' freezer.status pre_install
 
-    '''
-    name = 'freezer' if not name else name
+    """
+    name = "freezer" if not name else name
     return all(os.path.isfile(i) for i in _paths(name))
 
 
 def list_():
-    '''
+    """
     Return the list of frozen states.
 
     CLI Example:
@@ -89,14 +90,14 @@ def list_():
 
         salt '*' freezer.list
 
-    '''
+    """
     ret = []
     states_path = _states_path()
     if not os.path.isdir(states_path):
         return ret
 
     for state in os.listdir(states_path):
-        if state.endswith(('-pkgs.yml', '-reps.yml')):
+        if state.endswith(("-pkgs.yml", "-reps.yml")):
             # Remove the suffix - both files start with the freezer
             # name
             ret.append(state[:-9])
@@ -104,7 +105,7 @@ def list_():
 
 
 def freeze(name=None, force=False, **kwargs):
-    '''
+    """
     Save the list of package and repos in a freeze file.
 
     As this module is build on top of the pkg module, the user can
@@ -127,32 +128,33 @@ def freeze(name=None, force=False, **kwargs):
         salt '*' freezer.freeze pre_install
         salt '*' freezer.freeze force=True root=/chroot
 
-    '''
+    """
     states_path = _states_path()
 
     try:
         if not os.path.exists(states_path):
             os.makedirs(states_path)
     except OSError as e:
-        msg = 'Error when trying to create the freezer storage %s: %s'
+        msg = "Error when trying to create the freezer storage %s: %s"
         log.error(msg, states_path, e)
         raise CommandExecutionError(msg % (states_path, e))
 
     if status(name) and not force:
-        raise CommandExecutionError('The state is already present. Use '
-                                    'force parameter to overwrite.')
+        raise CommandExecutionError(
+            "The state is already present. Use " "force parameter to overwrite."
+        )
     safe_kwargs = clean_kwargs(**kwargs)
-    pkgs = __salt__['pkg.list_pkgs'](**safe_kwargs)
-    repos = __salt__['pkg.list_repos'](**safe_kwargs)
+    pkgs = __salt__["pkg.list_pkgs"](**safe_kwargs)
+    repos = __salt__["pkg.list_repos"](**safe_kwargs)
     for fname, content in zip(_paths(name), (pkgs, repos)):
-        with fopen(fname, 'w') as fp:
+        with fopen(fname, "w") as fp:
             json.dump(content, fp)
     return True
 
 
 def _add_missing_repositories(frozen_repos, ret, **kwargs):
-    '''Add missing repositories and update the ret dict'''
-    repos = __salt__['pkg.list_repos'](**kwargs)
+    """Add missing repositories and update the ret dict"""
+    repos = __salt__["pkg.list_repos"](**kwargs)
     missing_repos = set(frozen_repos) - set(repos)
     for repo in missing_repos:
         try:
@@ -161,65 +163,65 @@ def _add_missing_repositories(frozen_repos, ret, **kwargs):
             # all the parameters
             _tmp_kwargs = frozen_repos[repo].copy()
             _tmp_kwargs.update(kwargs)
-            __salt__['pkg.mod_repo'](repo, **_tmp_kwargs)
-            ret['repos']['add'].append(repo)
-            log.info('Added missing repository %s', repo)
+            __salt__["pkg.mod_repo"](repo, **_tmp_kwargs)
+            ret["repos"]["add"].append(repo)
+            log.info("Added missing repository %s", repo)
         except Exception as e:  # pylint: disable=broad-except
-            msg = 'Error adding %s repository: %s'
+            msg = "Error adding %s repository: %s"
             log.error(msg, repo, e)
-            ret['comment'].append(msg % (repo, e))
+            ret["comment"].append(msg % (repo, e))
 
 
 def _remove_extra_repositories(frozen_repos, ret, **kwargs):
-    '''Remove extra repositories and update the ret dict'''
-    repos = __salt__['pkg.list_repos'](**kwargs)
+    """Remove extra repositories and update the ret dict"""
+    repos = __salt__["pkg.list_repos"](**kwargs)
     extra_repos = set(repos) - set(frozen_repos)
     for repo in extra_repos:
         try:
-            __salt__['pkg.del_repo'](repo, **kwargs)
-            ret['repos']['remove'].append(repo)
-            log.info('Removed extra repository %s', repo)
+            __salt__["pkg.del_repo"](repo, **kwargs)
+            ret["repos"]["remove"].append(repo)
+            log.info("Removed extra repository %s", repo)
         except Exception as e:  # pylint: disable=broad-except
-            msg = 'Error removing %s repository: %s'
+            msg = "Error removing %s repository: %s"
             log.error(msg, repo, e)
-            ret['comment'].append(msg % (repo, e))
+            ret["comment"].append(msg % (repo, e))
 
 
 def _add_missing_packages(frozen_pkgs, ret, **kwargs):
-    '''Add missing packages and update the ret dict'''
+    """Add missing packages and update the ret dict"""
     # NOTE: we can remove the `for` using `pkgs`. This will improve
     # performance, but I want to have a more detalied report of what
     # packages are installed or failed.
-    pkgs = __salt__['pkg.list_pkgs'](**kwargs)
+    pkgs = __salt__["pkg.list_pkgs"](**kwargs)
     missing_pkgs = set(frozen_pkgs) - set(pkgs)
     for pkg in missing_pkgs:
         try:
-            __salt__['pkg.install'](name=pkg, **kwargs)
-            ret['pkgs']['add'].append(pkg)
-            log.info('Added missing package %s', pkg)
+            __salt__["pkg.install"](name=pkg, **kwargs)
+            ret["pkgs"]["add"].append(pkg)
+            log.info("Added missing package %s", pkg)
         except Exception as e:  # pylint: disable=broad-except
-            msg = 'Error adding %s package: %s'
+            msg = "Error adding %s package: %s"
             log.error(msg, pkg, e)
-            ret['comment'].append(msg % (pkg, e))
+            ret["comment"].append(msg % (pkg, e))
 
 
 def _remove_extra_packages(frozen_pkgs, ret, **kwargs):
-    '''Remove extra packages and update the ret dict'''
-    pkgs = __salt__['pkg.list_pkgs'](**kwargs)
+    """Remove extra packages and update the ret dict"""
+    pkgs = __salt__["pkg.list_pkgs"](**kwargs)
     extra_pkgs = set(pkgs) - set(frozen_pkgs)
     for pkg in extra_pkgs:
         try:
-            __salt__['pkg.remove'](name=pkg, **kwargs)
-            ret['pkgs']['remove'].append(pkg)
-            log.info('Removed extra package %s', pkg)
+            __salt__["pkg.remove"](name=pkg, **kwargs)
+            ret["pkgs"]["remove"].append(pkg)
+            log.info("Removed extra package %s", pkg)
         except Exception as e:  # pylint: disable=broad-except
-            msg = 'Error removing %s package: %s'
+            msg = "Error removing %s package: %s"
             log.error(msg, pkg, e)
-            ret['comment'].append(msg % (pkg, e))
+            ret["comment"].append(msg % (pkg, e))
 
 
 def restore(name=None, clean=False, **kwargs):
-    '''
+    """
     Make sure that the system contains the packages and repos from a
     frozen state.
 
@@ -251,9 +253,9 @@ def restore(name=None, clean=False, **kwargs):
         salt '*' freezer.restore
         salt '*' freezer.restore root=/chroot
 
-    '''
+    """
     if not status(name):
-        raise CommandExecutionError('Frozen state not found.')
+        raise CommandExecutionError("Frozen state not found.")
 
     frozen_pkgs = {}
     frozen_repos = {}
@@ -280,9 +282,9 @@ def restore(name=None, clean=False, **kwargs):
     # recovery will be partial.
 
     ret = {
-        'pkgs': {'add': [], 'remove': []},
-        'repos': {'add': [], 'remove': []},
-        'comment': [],
+        "pkgs": {"add": [], "remove": []},
+        "repos": {"add": [], "remove": []},
+        "comment": [],
     }
 
     _add_missing_repositories(frozen_repos, ret, **safe_kwargs)
@@ -291,7 +293,7 @@ def restore(name=None, clean=False, **kwargs):
     _remove_extra_repositories(frozen_repos, ret, **safe_kwargs)
 
     # Clean the cached YAML files
-    if clean and not ret['comment']:
+    if clean and not ret["comment"]:
         for fname in _paths(name):
             os.remove(fname)
 
