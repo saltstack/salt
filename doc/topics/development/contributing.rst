@@ -139,7 +139,7 @@ Fork a Repo Guide_>`_ and is well worth reading.
 
     GOOD
 
-    .. code-block::
+    .. code-block:: none
 
         Fix broken things in file1 and file2
 
@@ -157,7 +157,7 @@ Fork a Repo Guide_>`_ and is well worth reading.
 
     BAD
 
-    .. code-block::
+    .. code-block:: none
 
         Fixes broken things
 
