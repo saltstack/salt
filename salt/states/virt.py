@@ -23,7 +23,7 @@ import salt.utils.args
 import salt.utils.files
 import salt.utils.stringutils
 import salt.utils.versions
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -1544,4 +1544,150 @@ def pool_deleted(name, purge=False, connection=None, username=None, password=Non
         ret["comment"] = "Failed deleting pool: {0}".format(err.get_error_message())
         ret["result"] = False
 
+    return ret
+
+
+def volume_defined(
+    pool,
+    name,
+    size,
+    allocation=0,
+    format=None,
+    type=None,
+    permissions=None,
+    backing_store=None,
+    nocow=False,
+    connection=None,
+    username=None,
+    password=None,
+):
+    """
+    Ensure a disk volume is existing.
+
+    :param pool: name of the pool containing the volume
+    :param name: name of the volume
+    :param size: capacity of the volume to define in MiB
+    :param allocation: allocated size of the volume in MiB. Defaults to 0.
+    :param format:
+        volume format. The allowed values are depending on the pool type.
+        Check the virt.pool_capabilities output for the possible values and the default.
+    :param type:
+        type of the volume. One of file, block, dir, network, netdiri, ploop or None.
+        By default, the type is guessed by libvirt from the pool type.
+    :param permissions:
+        Permissions to set on the target folder. This is mostly used for filesystem-based
+        pool types. See :ref:`pool-define-permissions` for more details on this structure.
+    :param backing_store:
+        dictionary describing a backing file for the volume. It must contain a ``path``
+        property pointing to the base volume and a ``format`` property defining the format
+        of the base volume.
+
+        The base volume format will not be guessed for security reasons and is thus mandatory.
+    :param nocow: disable COW for the volume.
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    .. rubric:: CLI Example:
+
+    Volume on ESX:
+
+    .. code-block:: yaml
+
+        esx_volume:
+          virt.volume_defined:
+            - pool: "[local-storage]"
+            - name: myvm/myvm.vmdk
+            - size: 8192
+
+    QCow2 volume with backing file:
+
+    .. code-block:: bash
+
+        myvolume:
+          virt.volume_defined:
+            - pool: default
+            - name: myvm.qcow2
+            - format: qcow2
+            - size: 8192
+            - permissions:
+                mode: '0775'
+                owner: '123'
+                group: '345'
+            - backing_store:
+                path: /path/to/base.img
+                format: raw
+            - nocow: True
+
+    .. versionadded:: Sodium
+    """
+    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
+
+    pools = __salt__["virt.list_pools"](
+        connection=connection, username=username, password=password
+    )
+    if pool not in pools:
+        raise SaltInvocationError("Storage pool {} not existing".format(pool))
+
+    vol_infos = (
+        __salt__["virt.volume_infos"](
+            pool, name, connection=connection, username=username, password=password
+        )
+        .get(pool, {})
+        .get(name)
+    )
+
+    if vol_infos:
+        ret["comment"] = "volume is existing"
+        # if backing store or format are different, return an error
+        backing_store_info = vol_infos.get("backing_store") or {}
+        same_backing_store = backing_store_info.get("path") == (
+            backing_store or {}
+        ).get("path") and backing_store_info.get("format") == (backing_store or {}).get(
+            "format"
+        )
+        if not same_backing_store or (
+            vol_infos.get("format") != format and format is not None
+        ):
+            ret["result"] = False
+            ret[
+                "comment"
+            ] = "A volume with the same name but different backing store or format is existing"
+            return ret
+
+        # otherwise assume the volume has already been defined
+        # if the sizes don't match, issue a warning comment: too dangerous to do this for now
+        if int(vol_infos.get("capacity")) != int(size) * 1024 * 1024:
+            ret[
+                "comment"
+            ] = "The capacity of the volume is different, but no resize performed"
+        return ret
+
+    ret["result"] = None if __opts__["test"] else True
+    test_comment = "would be "
+    try:
+        if not __opts__["test"]:
+            __salt__["virt.volume_define"](
+                pool,
+                name,
+                size,
+                allocation=allocation,
+                format=format,
+                type=type,
+                permissions=permissions,
+                backing_store=backing_store,
+                nocow=nocow,
+                connection=connection,
+                username=username,
+                password=password,
+            )
+            test_comment = ""
+
+        ret["comment"] = "Volume {} {}defined in pool {}".format(
+            name, test_comment, pool
+        )
+        ret["changes"] = {"{}/{}".format(pool, name): {"old": "", "new": "defined"}}
+    except libvirt.libvirtError as err:
+        ret["comment"] = err.get_error_message()
+        ret["result"] = False
     return ret
