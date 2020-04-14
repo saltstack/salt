@@ -43,6 +43,7 @@ class WinWuaInstalledTestCase(TestCase):
     """
     Test the functions in the win_wua.installed function
     """
+
     def test_installed(self):
         """
         Test installed function default

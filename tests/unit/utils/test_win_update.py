@@ -22,9 +22,7 @@ class WinUpdateTestCase(TestCase):
         """
         with patch("salt.utils.winapi.Com", autospec=True), patch(
             "win32com.client.Dispatch", autospec=True
-        ), patch.object(
-            win_update.WindowsUpdateAgent, "refresh", autospec=True
-        ):
+        ), patch.object(win_update.WindowsUpdateAgent, "refresh", autospec=True):
             wua = win_update.WindowsUpdateAgent(online=False)
             wua._updates = []
 
