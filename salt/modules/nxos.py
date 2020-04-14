@@ -284,7 +284,6 @@ def get_user(username, **kwargs):
         salt '*' nxos.cmd get_user username=admin
     """
     command = 'show run | include "^username {0} password 5 "'.format(username)
-    info = ""
     info = show(command, **kwargs)
     if isinstance(info, list):
         info = info[0]
