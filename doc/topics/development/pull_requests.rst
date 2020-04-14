@@ -179,6 +179,7 @@ Exceptions to all requirements
 ------------------------------
 As previously stated, all of the above requirements can be bypassed with 3 approvals.
 PR's that do not require tests include:
+
   * documentation
   * cosmetic changes (for example changing from log.debug to log.trace)
   * fixing tests
