@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Connection module for Amazon Cloud Formation
 
 .. versionadded:: 2015.8.0
@@ -35,10 +35,11 @@ Connection module for Amazon Cloud Formation
         stack-absent:
           boto_cfn.absent:
             - name: mystack
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 
 # Import Salt libs
@@ -49,6 +50,7 @@ from salt.ext import six
 # Import 3rd-party libs
 try:
     from salt._compat import ElementTree as ET
+
     HAS_ELEMENT_TREE = True
 except ImportError:
     HAS_ELEMENT_TREE = False
@@ -56,27 +58,54 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-__virtualname__ = 'boto_cfn'
+__virtualname__ = "boto_cfn"
 
 
 def __virtual__():
-    '''
+    """
     Only load if elementtree xml library and boto are available.
-    '''
+    """
     if not HAS_ELEMENT_TREE:
-        return (False, 'Cannot load {0} state: ElementTree library unavailable'.format(__virtualname__))
+        return (
+            False,
+            "Cannot load {0} state: ElementTree library unavailable".format(
+                __virtualname__
+            ),
+        )
 
-    if 'boto_cfn.exists' in __salt__:
+    if "boto_cfn.exists" in __salt__:
         return True
     else:
-        return (False, 'Cannot load {0} state: boto_cfn module unavailable'.format(__virtualname__))
+        return (
+            False,
+            "Cannot load {0} state: boto_cfn module unavailable".format(
+                __virtualname__
+            ),
+        )
 
 
-def present(name, template_body=None, template_url=None, parameters=None, notification_arns=None, disable_rollback=None,
-            timeout_in_minutes=None, capabilities=None, tags=None, on_failure=None, stack_policy_body=None,
-            stack_policy_url=None, use_previous_template=None, stack_policy_during_update_body=None,
-            stack_policy_during_update_url=None, region=None, key=None, keyid=None, profile=None):
-    '''
+def present(
+    name,
+    template_body=None,
+    template_url=None,
+    parameters=None,
+    notification_arns=None,
+    disable_rollback=None,
+    timeout_in_minutes=None,
+    capabilities=None,
+    tags=None,
+    on_failure=None,
+    stack_policy_body=None,
+    stack_policy_url=None,
+    use_previous_template=None,
+    stack_policy_during_update_body=None,
+    stack_policy_during_update_url=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+):
+    """
     Ensure cloud formation stack is present.
 
     name (string) - Name of the stack.
@@ -137,74 +166,112 @@ def present(name, template_body=None, template_url=None, parameters=None, notifi
 
     .. _`SNS_console`: https://console.aws.amazon.com/sns
 
-    '''
-    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    """
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
     template_body = _get_template(template_body, name)
     stack_policy_body = _get_template(stack_policy_body, name)
-    stack_policy_during_update_body = _get_template(stack_policy_during_update_body, name)
+    stack_policy_during_update_body = _get_template(
+        stack_policy_during_update_body, name
+    )
 
     for i in [template_body, stack_policy_body, stack_policy_during_update_body]:
         if isinstance(i, dict):
             return i
 
     _valid = _validate(template_body, template_url, region, key, keyid, profile)
-    log.debug('Validate is : %s.', _valid)
+    log.debug("Validate is : %s.", _valid)
     if _valid is not True:
         code, message = _valid
-        ret['result'] = False
-        ret['comment'] = 'Template could not be validated.\n{0} \n{1}'.format(code, message)
+        ret["result"] = False
+        ret["comment"] = "Template could not be validated.\n{0} \n{1}".format(
+            code, message
+        )
         return ret
-    log.debug('Template %s is valid.', name)
-    if __salt__['boto_cfn.exists'](name, region, key, keyid, profile):
-        template = __salt__['boto_cfn.get_template'](name, region, key, keyid, profile)
-        template = template['GetTemplateResponse']['GetTemplateResult']['TemplateBody'].encode('ascii', 'ignore')
+    log.debug("Template %s is valid.", name)
+    if __salt__["boto_cfn.exists"](name, region, key, keyid, profile):
+        template = __salt__["boto_cfn.get_template"](name, region, key, keyid, profile)
+        template = template["GetTemplateResponse"]["GetTemplateResult"][
+            "TemplateBody"
+        ].encode("ascii", "ignore")
         template = salt.utils.json.loads(template)
         _template_body = salt.utils.json.loads(template_body)
         compare = salt.utils.compat.cmp(template, _template_body)
         if compare != 0:
-            log.debug('Templates are not the same. Compare value is %s', compare)
+            log.debug("Templates are not the same. Compare value is %s", compare)
             # At this point we should be able to run update safely since we already validated the template
-            if __opts__['test']:
-                ret['comment'] = 'Stack {0} is set to be updated.'.format(name)
-                ret['result'] = None
+            if __opts__["test"]:
+                ret["comment"] = "Stack {0} is set to be updated.".format(name)
+                ret["result"] = None
                 return ret
-            updated = __salt__['boto_cfn.update_stack'](name, template_body, template_url, parameters,
-                                                        notification_arns, disable_rollback, timeout_in_minutes,
-                                                        capabilities, tags, use_previous_template,
-                                                        stack_policy_during_update_body,
-                                                        stack_policy_during_update_url, stack_policy_body,
-                                                        stack_policy_url,
-                                                        region, key, keyid, profile)
+            updated = __salt__["boto_cfn.update_stack"](
+                name,
+                template_body,
+                template_url,
+                parameters,
+                notification_arns,
+                disable_rollback,
+                timeout_in_minutes,
+                capabilities,
+                tags,
+                use_previous_template,
+                stack_policy_during_update_body,
+                stack_policy_during_update_url,
+                stack_policy_body,
+                stack_policy_url,
+                region,
+                key,
+                keyid,
+                profile,
+            )
             if isinstance(updated, six.string_types):
                 code, message = _get_error(updated)
-                log.debug('Update error is %s and message is %s', code, message)
-                ret['result'] = False
-                ret['comment'] = 'Stack {0} could not be updated.\n{1} \n{2}.'.format(name, code, message)
+                log.debug("Update error is %s and message is %s", code, message)
+                ret["result"] = False
+                ret["comment"] = "Stack {0} could not be updated.\n{1} \n{2}.".format(
+                    name, code, message
+                )
                 return ret
-            ret['comment'] = 'Cloud formation template {0} has been updated.'.format(name)
-            ret['changes']['new'] = updated
+            ret["comment"] = "Cloud formation template {0} has been updated.".format(
+                name
+            )
+            ret["changes"]["new"] = updated
             return ret
-        ret['comment'] = 'Stack {0} exists.'.format(name)
-        ret['changes'] = {}
+        ret["comment"] = "Stack {0} exists.".format(name)
+        ret["changes"] = {}
         return ret
-    if __opts__['test']:
-        ret['comment'] = 'Stack {0} is set to be created.'.format(name)
-        ret['result'] = None
+    if __opts__["test"]:
+        ret["comment"] = "Stack {0} is set to be created.".format(name)
+        ret["result"] = None
         return ret
-    created = __salt__['boto_cfn.create'](name, template_body, template_url, parameters, notification_arns,
-                                          disable_rollback, timeout_in_minutes, capabilities, tags, on_failure,
-                                          stack_policy_body, stack_policy_url, region, key, keyid, profile)
+    created = __salt__["boto_cfn.create"](
+        name,
+        template_body,
+        template_url,
+        parameters,
+        notification_arns,
+        disable_rollback,
+        timeout_in_minutes,
+        capabilities,
+        tags,
+        on_failure,
+        stack_policy_body,
+        stack_policy_url,
+        region,
+        key,
+        keyid,
+        profile,
+    )
     if created:
-        ret['comment'] = 'Stack {0} was created.'.format(name)
-        ret['changes']['new'] = created
+        ret["comment"] = "Stack {0} was created.".format(name)
+        ret["changes"]["new"] = created
         return ret
-    ret['result'] = False
+    ret["result"] = False
     return ret
 
 
 def absent(name, region=None, key=None, keyid=None, profile=None):
-    '''
+    """
     Ensure cloud formation stack is absent.
 
     name (string) – The name of the stack to delete.
@@ -217,57 +284,68 @@ def absent(name, region=None, key=None, keyid=None, profile=None):
 
     profile (dict) - A dict with region, key and keyid, or a pillar key (string) that contains a dict with region, key
     and keyid.
-    '''
-    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
-    if not __salt__['boto_cfn.exists'](name, region, key, keyid, profile):
-        ret['comment'] = 'Stack {0} does not exist.'.format(name)
-        ret['changes'] = {}
+    """
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
+    if not __salt__["boto_cfn.exists"](name, region, key, keyid, profile):
+        ret["comment"] = "Stack {0} does not exist.".format(name)
+        ret["changes"] = {}
         return ret
-    if __opts__['test']:
-        ret['comment'] = 'Stack {0} is set to be deleted.'.format(name)
-        ret['result'] = None
+    if __opts__["test"]:
+        ret["comment"] = "Stack {0} is set to be deleted.".format(name)
+        ret["result"] = None
         return ret
-    deleted = __salt__['boto_cfn.delete'](name, region, key, keyid, profile)
+    deleted = __salt__["boto_cfn.delete"](name, region, key, keyid, profile)
     if isinstance(deleted, six.string_types):
         code, message = _get_error(deleted)
-        ret['comment'] = 'Stack {0} could not be deleted.\n{1}\n{2}'.format(name, code, message)
-        ret['result'] = False
-        ret['changes'] = {}
+        ret["comment"] = "Stack {0} could not be deleted.\n{1}\n{2}".format(
+            name, code, message
+        )
+        ret["result"] = False
+        ret["changes"] = {}
         return ret
     if deleted:
-        ret['comment'] = 'Stack {0} was deleted.'.format(name)
-        ret['changes']['deleted'] = name
+        ret["comment"] = "Stack {0} was deleted.".format(name)
+        ret["changes"]["deleted"] = name
         return ret
 
 
 def _get_template(template, name):
     # Checks if template is a file in salt defined by salt://.
-    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
-    if template is not None and 'salt://' in template:
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
+    if template is not None and "salt://" in template:
         try:
-            return __salt__['cp.get_file_str'](template)
+            return __salt__["cp.get_file_str"](template)
         except IOError as e:
             log.debug(e)
-            ret['comment'] = 'File {0} not found.'.format(template)
-            ret['result'] = False
+            ret["comment"] = "File {0} not found.".format(template)
+            ret["result"] = False
             return ret
     return template
 
 
-def _validate(template_body=None, template_url=None, region=None, key=None, keyid=None, profile=None):
+def _validate(
+    template_body=None,
+    template_url=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+):
     # Validates template. returns true if template syntax is correct.
-    validate = __salt__['boto_cfn.validate_template'](template_body, template_url, region, key, keyid, profile)
-    log.debug('Validate result is %s.', validate)
+    validate = __salt__["boto_cfn.validate_template"](
+        template_body, template_url, region, key, keyid, profile
+    )
+    log.debug("Validate result is %s.", validate)
     if isinstance(validate, six.string_types):
         code, message = _get_error(validate)
-        log.debug('Validate error is %s and message is %s.', code, message)
+        log.debug("Validate error is %s and message is %s.", code, message)
         return code, message
     return True
 
 
 def _get_error(error):
     # Converts boto exception to string that can be used to output error.
-    error = '\n'.join(error.split('\n')[1:])
+    error = "\n".join(error.split("\n")[1:])
     error = ET.fromstring(error)
     code = error[0][1].text
     message = error[0][2].text

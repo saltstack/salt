@@ -1,36 +1,39 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Compendium of generic DNS utilities.
 The 'dig' command line tool must be installed in order to use this module.
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
+
+# Import python libs
+import logging
+import re
 
 # Import salt libs
 import salt.utils.network
 import salt.utils.path
 from salt.ext import six
 
-# Import python libs
-import logging
-import re
-
 log = logging.getLogger(__name__)
 
-__virtualname__ = 'dig'
+__virtualname__ = "dig"
 
 
 def __virtual__():
-    '''
+    """
     Only load module if dig binary is present
-    '''
-    if salt.utils.path.which('dig'):
+    """
+    if salt.utils.path.which("dig"):
         return __virtualname__
-    return (False, 'The dig execution module cannot be loaded: '
-            'the dig binary is not in the path.')
+    return (
+        False,
+        "The dig execution module cannot be loaded: "
+        "the dig binary is not in the path.",
+    )
 
 
 def check_ip(addr):
-    '''
+    """
     Check if address is a valid IP. returns True if valid, otherwise False.
 
     CLI Example:
@@ -39,10 +42,10 @@ def check_ip(addr):
 
         salt ns1 dig.check_ip 127.0.0.1
         salt ns1 dig.check_ip 1111:2222:3333:4444:5555:6666:7777:8888
-    '''
+    """
 
     try:
-        addr = addr.rsplit('/', 1)
+        addr = addr.rsplit("/", 1)
     except AttributeError:
         # Non-string passed
         return False
@@ -73,7 +76,7 @@ def check_ip(addr):
 
 
 def A(host, nameserver=None):
-    '''
+    """
     Return the A record for ``host``.
 
     Always returns a list.
@@ -83,29 +86,27 @@ def A(host, nameserver=None):
     .. code-block:: bash
 
         salt ns1 dig.A www.google.com
-    '''
-    dig = ['dig', '+short', six.text_type(host), 'A']
+    """
+    dig = ["dig", "+short", six.text_type(host), "A"]
 
     if nameserver is not None:
-        dig.append('@{0}'.format(nameserver))
+        dig.append("@{0}".format(nameserver))
 
-    cmd = __salt__['cmd.run_all'](dig, python_shell=False)
+    cmd = __salt__["cmd.run_all"](dig, python_shell=False)
     # In this case, 0 is not the same as False
-    if cmd['retcode'] != 0:
+    if cmd["retcode"] != 0:
         log.warning(
-            'dig returned exit code \'{0}\'. Returning empty list as '
-            'fallback.'.format(
-                cmd['retcode']
-            )
+            "dig returned exit code '{0}'. Returning empty list as "
+            "fallback.".format(cmd["retcode"])
         )
         return []
 
     # make sure all entries are IPs
-    return [x for x in cmd['stdout'].split('\n') if check_ip(x)]
+    return [x for x in cmd["stdout"].split("\n") if check_ip(x)]
 
 
 def AAAA(host, nameserver=None):
-    '''
+    """
     Return the AAAA record for ``host``.
 
     Always returns a list.
@@ -115,29 +116,27 @@ def AAAA(host, nameserver=None):
     .. code-block:: bash
 
         salt ns1 dig.AAAA www.google.com
-    '''
-    dig = ['dig', '+short', six.text_type(host), 'AAAA']
+    """
+    dig = ["dig", "+short", six.text_type(host), "AAAA"]
 
     if nameserver is not None:
-        dig.append('@{0}'.format(nameserver))
+        dig.append("@{0}".format(nameserver))
 
-    cmd = __salt__['cmd.run_all'](dig, python_shell=False)
+    cmd = __salt__["cmd.run_all"](dig, python_shell=False)
     # In this case, 0 is not the same as False
-    if cmd['retcode'] != 0:
+    if cmd["retcode"] != 0:
         log.warning(
-            'dig returned exit code \'{0}\'. Returning empty list as '
-            'fallback.'.format(
-                cmd['retcode']
-            )
+            "dig returned exit code '{0}'. Returning empty list as "
+            "fallback.".format(cmd["retcode"])
         )
         return []
 
     # make sure all entries are IPs
-    return [x for x in cmd['stdout'].split('\n') if check_ip(x)]
+    return [x for x in cmd["stdout"].split("\n") if check_ip(x)]
 
 
 def NS(domain, resolve=True, nameserver=None):
-    '''
+    """
     Return a list of IPs of the nameservers for ``domain``
 
     If ``resolve`` is False, don't resolve names.
@@ -147,35 +146,33 @@ def NS(domain, resolve=True, nameserver=None):
     .. code-block:: bash
 
         salt ns1 dig.NS google.com
-    '''
-    dig = ['dig', '+short', six.text_type(domain), 'NS']
+    """
+    dig = ["dig", "+short", six.text_type(domain), "NS"]
 
     if nameserver is not None:
-        dig.append('@{0}'.format(nameserver))
+        dig.append("@{0}".format(nameserver))
 
-    cmd = __salt__['cmd.run_all'](dig, python_shell=False)
+    cmd = __salt__["cmd.run_all"](dig, python_shell=False)
     # In this case, 0 is not the same as False
-    if cmd['retcode'] != 0:
+    if cmd["retcode"] != 0:
         log.warning(
-            'dig returned exit code \'{0}\'. Returning empty list as '
-            'fallback.'.format(
-                cmd['retcode']
-            )
+            "dig returned exit code '{0}'. Returning empty list as "
+            "fallback.".format(cmd["retcode"])
         )
         return []
 
     if resolve:
         ret = []
-        for ns_host in cmd['stdout'].split('\n'):
+        for ns_host in cmd["stdout"].split("\n"):
             for ip_addr in A(ns_host, nameserver):
                 ret.append(ip_addr)
         return ret
 
-    return cmd['stdout'].split('\n')
+    return cmd["stdout"].split("\n")
 
 
-def SPF(domain, record='SPF', nameserver=None):
-    '''
+def SPF(domain, record="SPF", nameserver=None):
+    """
     Return the allowed IPv4 ranges in the SPF record for ``domain``.
 
     If record is ``SPF`` and the SPF record is empty, the TXT record will be
@@ -187,34 +184,35 @@ def SPF(domain, record='SPF', nameserver=None):
     .. code-block:: bash
 
         salt ns1 dig.SPF google.com
-    '''
-    spf_re = re.compile(r'(?:\+|~)?(ip[46]|include):(.+)')
-    cmd = ['dig', '+short', six.text_type(domain), record]
+    """
+    spf_re = re.compile(r"(?:\+|~)?(ip[46]|include):(.+)")
+    cmd = ["dig", "+short", six.text_type(domain), record]
 
     if nameserver is not None:
-        cmd.append('@{0}'.format(nameserver))
+        cmd.append("@{0}".format(nameserver))
 
-    result = __salt__['cmd.run_all'](cmd, python_shell=False)
+    result = __salt__["cmd.run_all"](cmd, python_shell=False)
     # In this case, 0 is not the same as False
-    if result['retcode'] != 0:
+    if result["retcode"] != 0:
         log.warning(
-            'dig returned exit code \'{0}\'. Returning empty list as fallback.'
-            .format(result['retcode'])
+            "dig returned exit code '{0}'. Returning empty list as fallback.".format(
+                result["retcode"]
+            )
         )
         return []
 
-    if result['stdout'] == '' and record == 'SPF':
+    if result["stdout"] == "" and record == "SPF":
         # empty string is successful query, but nothing to return. So, try TXT
         # record.
-        return SPF(domain, 'TXT', nameserver)
+        return SPF(domain, "TXT", nameserver)
 
-    sections = re.sub('"', '', result['stdout']).split()
-    if len(sections) == 0 or sections[0] != 'v=spf1':
+    sections = re.sub('"', "", result["stdout"]).split()
+    if len(sections) == 0 or sections[0] != "v=spf1":
         return []
 
-    if sections[1].startswith('redirect='):
+    if sections[1].startswith("redirect="):
         # Run a lookup on the part after 'redirect=' (9 chars)
-        return SPF(sections[1][9:], 'SPF', nameserver)
+        return SPF(sections[1][9:], "SPF", nameserver)
     ret = []
     for section in sections[1:]:
         try:
@@ -222,15 +220,15 @@ def SPF(domain, record='SPF', nameserver=None):
         except AttributeError:
             # Regex was not matched
             continue
-        if mechanism == 'include':
-            ret.extend(SPF(address, 'SPF', nameserver))
-        elif mechanism in ('ip4', 'ip6') and check_ip(address):
+        if mechanism == "include":
+            ret.extend(SPF(address, "SPF", nameserver))
+        elif mechanism in ("ip4", "ip6") and check_ip(address):
             ret.append(address)
     return ret
 
 
 def MX(domain, resolve=False, nameserver=None):
-    '''
+    """
     Return a list of lists for the MX of ``domain``.
 
     If the ``resolve`` argument is True, resolve IPs for the servers.
@@ -245,35 +243,31 @@ def MX(domain, resolve=False, nameserver=None):
     .. code-block:: bash
 
         salt ns1 dig.MX google.com
-    '''
-    dig = ['dig', '+short', six.text_type(domain), 'MX']
+    """
+    dig = ["dig", "+short", six.text_type(domain), "MX"]
 
     if nameserver is not None:
-        dig.append('@{0}'.format(nameserver))
+        dig.append("@{0}".format(nameserver))
 
-    cmd = __salt__['cmd.run_all'](dig, python_shell=False)
+    cmd = __salt__["cmd.run_all"](dig, python_shell=False)
     # In this case, 0 is not the same as False
-    if cmd['retcode'] != 0:
+    if cmd["retcode"] != 0:
         log.warning(
-            'dig returned exit code \'{0}\'. Returning empty list as '
-            'fallback.'.format(
-                cmd['retcode']
-            )
+            "dig returned exit code '{0}'. Returning empty list as "
+            "fallback.".format(cmd["retcode"])
         )
         return []
 
-    stdout = [x.split() for x in cmd['stdout'].split('\n')]
+    stdout = [x.split() for x in cmd["stdout"].split("\n")]
 
     if resolve:
-        return [
-            (lambda x: [x[0], A(x[1], nameserver)[0]])(x) for x in stdout
-        ]
+        return [(lambda x: [x[0], A(x[1], nameserver)[0]])(x) for x in stdout]
 
     return stdout
 
 
 def TXT(host, nameserver=None):
-    '''
+    """
     Return the TXT record for ``host``.
 
     Always returns a list.
@@ -283,24 +277,22 @@ def TXT(host, nameserver=None):
     .. code-block:: bash
 
         salt ns1 dig.TXT google.com
-    '''
-    dig = ['dig', '+short', six.text_type(host), 'TXT']
+    """
+    dig = ["dig", "+short", six.text_type(host), "TXT"]
 
     if nameserver is not None:
-        dig.append('@{0}'.format(nameserver))
+        dig.append("@{0}".format(nameserver))
 
-    cmd = __salt__['cmd.run_all'](dig, python_shell=False)
+    cmd = __salt__["cmd.run_all"](dig, python_shell=False)
 
-    if cmd['retcode'] != 0:
+    if cmd["retcode"] != 0:
         log.warning(
-            'dig returned exit code \'{0}\'. Returning empty list as '
-            'fallback.'.format(
-                cmd['retcode']
-            )
+            "dig returned exit code '{0}'. Returning empty list as "
+            "fallback.".format(cmd["retcode"])
         )
         return []
 
-    return [i for i in cmd['stdout'].split('\n')]
+    return [i for i in cmd["stdout"].split("\n")]
 
 
 # Let lowercase work, since that is the convention for Salt functions
