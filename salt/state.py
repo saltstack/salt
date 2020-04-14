@@ -1906,6 +1906,7 @@ class State(object):
         # correctly calculate further down the chain
         utc_start_time = datetime.datetime.utcnow()
 
+        self.format_slots(cdata)
         tag = _gen_tag(low)
         try:
             ret = self.states[cdata["full"]](*cdata["args"], **cdata["kwargs"])

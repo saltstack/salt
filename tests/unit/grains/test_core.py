@@ -1784,3 +1784,10 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             assert len(info) == 2
         assert all([x is not None for x in info])
         assert all([isinstance(x, int) for x in info])
+
+    def test_path(self):
+        comps = ["foo", "bar", "baz"]
+        path = os.path.pathsep.join(comps)
+        with patch.dict(os.environ, {"PATH": path}):
+            result = core.path()
+        assert result == {"path": path, "systempath": comps}, result
