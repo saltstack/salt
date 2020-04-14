@@ -144,7 +144,12 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
         """
         mock_true = MagicMock(return_value=True)
         mock_false = MagicMock(return_value=False)
-        mock_info = MagicMock(side_effect=[{"Status": "Running", "Dependencies": []}])
+        mock_info = MagicMock(
+            side_effect=[
+                {"Dependencies": []},
+                {"Status": "Running"}
+            ]
+        )
         mock_get_all = MagicMock(return_value=["spongebob"])
 
         with patch.object(win32serviceutil, "StartService", mock_true), \
@@ -155,17 +160,17 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
 
         mock_info = MagicMock(
             side_effect=[
+                {"Dependencies": []},
                 {"Status": "Stopped", "Status_WaitHint": 0},
                 {"Status": "Start Pending", "Status_WaitHint": 0},
-                {"Status": "Running"},
+                {"Status": "Running"}
             ]
         )
 
-        with patch.object(win32serviceutil, "StartService", mock_true), patch.object(
-            win_service, "disabled", mock_false
-        ), patch.object(win_service, "info", mock_info), patch.object(
-            win_service, "status", mock_true
-        ):
+        with patch.object(win32serviceutil, "StartService", mock_true), \
+            patch.object(win_service, "disabled", mock_false), \
+            patch.object(win_service, "info", mock_info), \
+            patch.object(win_service, "status", mock_true):
             self.assertTrue(win_service.start("spongebob"))
 
     @skipIf(not WINAPI, "pywintypes not available")
@@ -177,7 +182,16 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
         mock_error = MagicMock(
             side_effect=pywintypes.error(1056, "StartService", "Service is running")
         )
-        mock_info = MagicMock(side_effect=[{"Dependencies": []}])
+        mock__status_waitinfo = MagicMock(
+            side_effect=[
+                {"Dependencies": []}
+            ]
+        )
+        mock_info = MagicMock(
+            side_effect=[
+                {"Dependencies": []}
+            ]
+        )
         mock_get_all = MagicMock(return_value=["spongebob"])
 
         with patch.object(win32serviceutil, "StartService", mock_error), \
@@ -194,7 +208,12 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
         """
         mock_true = MagicMock(return_value=True)
         mock_false = MagicMock(return_value=False)
-        mock_info = MagicMock(side_effect=[{"Status": "Running", "Dependencies": []}])
+        mock_info = MagicMock(
+            side_effect=[
+                {"Dependencies": []},
+                {"Status": "Running"}
+            ]
+        )
         mock_get_all = MagicMock(return_value=["spongebob"])
 
         with patch.object(win32serviceutil, "StopService", mock_true), \
@@ -205,6 +224,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
 
         mock_info = MagicMock(
             side_effect=[
+                {"Dependencies": []},
                 {"Status": "Running", "Status_WaitHint": 0},
                 {"Status": "Stop Pending", "Status_WaitHint": 0},
                 {"Status": "Stopped"},
@@ -224,11 +244,22 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
         mock_error = MagicMock(
             side_effect=pywintypes.error(1062, "StopService", "Service is not running")
         )
-        mock_info = MagicMock(side_effect=[{"Status": "Stopped", "Dependencies": []}])
+        mock_status_wait = MagicMock(
+            side_effect=[
+                {"Dependencies": []},
+                {"Status": "Stopped"}
+            ]
+        )
+        mock_info = MagicMock(
+            side_effect=[
+                {"Dependencies": []},
+                {"Status": "Stopped"}
+            ]
+        )
         mock_get_all = MagicMock(return_value=["spongebob"])
 
         with patch.object(win32serviceutil, "StopService", mock_error), \
-            patch.object(win_service, "_status_wait", mock_info), \
+            patch.object(win_service, "_status_wait", mock_status_wait), \
             patch.object(win_service, "info", mock_info), \
             patch.object(win_service, "get_all", mock_get_all):
             self.assertTrue(win_service.stop("spongebob"))
