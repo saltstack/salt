@@ -256,9 +256,11 @@ def create_object_model(module_name, object_name, **kwargs):
         for attr, items in Model._attribute_map.items():
             param = kwargs.get(attr)
             if param is not None:
-                if items['type'][0].isupper() and isinstance(param, dict):
-                    object_kwargs[attr] = create_object_model(module_name, items['type'], **param)
-                elif items['type'][0] == '{' and isinstance(param, dict):
+                if items["type"][0].isupper() and isinstance(param, dict):
+                    object_kwargs[attr] = create_object_model(
+                        module_name, items["type"], **param
+                    )
+                elif items['type'][0] == "{" and isinstance(param, dict):
                     object_kwargs[attr] = param
                 elif items["type"][0] == "[" and isinstance(param, list):
                     obj_list = []
