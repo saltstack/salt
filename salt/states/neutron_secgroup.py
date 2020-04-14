@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Management of OpenStack Neutron Security Groups
 ===============================================
 
@@ -33,22 +33,25 @@ Example States
         - name: security_group1
         - description: "Very Secure Security Group"
         - project_name: Project1
-'''
+"""
 
 from __future__ import absolute_import, print_function, unicode_literals
 
-__virtualname__ = 'neutron_secgroup'
+__virtualname__ = "neutron_secgroup"
 
 
 def __virtual__():
-    if 'neutronng.list_subnets' in __salt__:
+    if "neutronng.list_subnets" in __salt__:
         return __virtualname__
-    return (False, 'The neutronng execution module failed to load:\
-                    shade python module is not available')
+    return (
+        False,
+        "The neutronng execution module failed to load:\
+                    shade python module is not available",
+    )
 
 
 def present(name, auth=None, **kwargs):
-    '''
+    """
     Ensure a security group exists.
 
     You can supply either project_name or project_id.
@@ -68,92 +71,86 @@ def present(name, auth=None, **kwargs):
     project_id
         ID of Project
 
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': True,
-           'comment': ''}
+    """
+    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
-    kwargs = __utils__['args.clean_kwargs'](**kwargs)
+    kwargs = __utils__["args.clean_kwargs"](**kwargs)
 
-    __salt__['neutronng.setup_clouds'](auth)
+    __salt__["neutronng.setup_clouds"](auth)
 
-    if 'project_name' in kwargs:
-        kwargs['project_id'] = kwargs['project_name']
-        del kwargs['project_name']
+    if "project_name" in kwargs:
+        kwargs["project_id"] = kwargs["project_name"]
+        del kwargs["project_name"]
 
-    project = __salt__['keystoneng.project_get'](
-        name=kwargs['project_id'])
+    project = __salt__["keystoneng.project_get"](name=kwargs["project_id"])
 
     if project is None:
-        ret['result'] = False
-        ret['comment'] = "project does not exist"
+        ret["result"] = False
+        ret["comment"] = "project does not exist"
         return ret
 
-    secgroup = __salt__['neutronng.security_group_get'](
-        name=name, filters={'tenant_id': project.id})
+    secgroup = __salt__["neutronng.security_group_get"](
+        name=name, filters={"tenant_id": project.id}
+    )
 
     if secgroup is None:
-        if __opts__['test'] is True:
-            ret['result'] = None
-            ret['changes'] = kwargs
-            ret['comment'] = 'Security Group will be created.'
+        if __opts__["test"] is True:
+            ret["result"] = None
+            ret["changes"] = kwargs
+            ret["comment"] = "Security Group will be created."
             return ret
 
-        secgroup = __salt__['neutronng.security_group_create'](**kwargs)
-        ret['changes'] = secgroup
-        ret['comment'] = 'Created security group'
+        secgroup = __salt__["neutronng.security_group_create"](**kwargs)
+        ret["changes"] = secgroup
+        ret["comment"] = "Created security group"
         return ret
 
-    changes = __salt__['neutronng.compare_changes'](secgroup, **kwargs)
+    changes = __salt__["neutronng.compare_changes"](secgroup, **kwargs)
     if changes:
-        if __opts__['test'] is True:
-            ret['result'] = None
-            ret['changes'] = changes
-            ret['comment'] = 'Security Group will be updated.'
+        if __opts__["test"] is True:
+            ret["result"] = None
+            ret["changes"] = changes
+            ret["comment"] = "Security Group will be updated."
             return ret
 
-        __salt__['neutronng.security_group_update'](secgroup=secgroup, **changes)
-        ret['changes'].update(changes)
-        ret['comment'] = 'Updated security group'
+        __salt__["neutronng.security_group_update"](secgroup=secgroup, **changes)
+        ret["changes"].update(changes)
+        ret["comment"] = "Updated security group"
 
     return ret
 
 
 def absent(name, auth=None, **kwargs):
-    '''
+    """
     Ensure a security group does not exist
 
     name
         Name of the security group
 
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': True,
-           'comment': ''}
+    """
+    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
-    kwargs = __utils__['args.clean_kwargs'](**kwargs)
+    kwargs = __utils__["args.clean_kwargs"](**kwargs)
 
-    __salt__['neutronng.setup_clouds'](auth)
+    __salt__["neutronng.setup_clouds"](auth)
 
-    kwargs['project_id'] = __salt__['keystoneng.project_get'](
-        name=kwargs['project_name'])
+    kwargs["project_id"] = __salt__["keystoneng.project_get"](
+        name=kwargs["project_name"]
+    )
 
-    secgroup = __salt__['neutronng.security_group_get'](
-        name=name,
-        filters={'project_id': kwargs['project_id']}
+    secgroup = __salt__["neutronng.security_group_get"](
+        name=name, filters={"project_id": kwargs["project_id"]}
     )
 
     if secgroup:
-        if __opts__['test'] is True:
-            ret['result'] = None
-            ret['changes'] = {'id': secgroup.id}
-            ret['comment'] = 'Security group will be deleted.'
+        if __opts__["test"] is True:
+            ret["result"] = None
+            ret["changes"] = {"id": secgroup.id}
+            ret["comment"] = "Security group will be deleted."
             return ret
 
-        __salt__['neutronng.security_group_delete'](name=secgroup)
-        ret['changes']['id'] = name
-        ret['comment'] = 'Deleted security group'
+        __salt__["neutronng.security_group_delete"](name=secgroup)
+        ret["changes"]["id"] = name
+        ret["comment"] = "Deleted security group"
 
     return ret
