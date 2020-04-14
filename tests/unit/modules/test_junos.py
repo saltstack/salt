@@ -1804,6 +1804,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             )
             mock_install.assert_called_with(ANY, nssu=True, remote_path=remote_path, progress=True,
                                             validate=True, timeout=1800)
+
     def test_file_copy_without_args(self):
         ret = dict()
         ret["message"] = "Please provide the absolute path of the file to be copied."
@@ -2262,15 +2263,3 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             m = mock_open()
             ret = junos.get_table(table, file)
             self.assertEqual(ret["out"], True)
-
-    def test_lock_success(self):
-        ret_exp = {"out": True, "message": "Successfully locked the configuration."}
-        ret = junos.lock()
-        self.assertEqual(ret, ret_exp)
-
-    def test_lock_error(self):
-        ret_exp = {"out": False, "message": 'Could not gain lock due to : "LockError"'}
-        with patch("jnpr.junos.utils.config.Config.lock") as mock_lock:
-            mock_lock.side_effect = LockError(None)
-            ret = junos.lock()
-            self.assertEqual(ret, ret_exp)

@@ -114,7 +114,7 @@ def init(opts):
     for arg in optional_args:
         if arg in proxy_keys:
             args[arg] = opts["proxy"][arg]
-    log.debug("Args" + str(args))
+    log.debug("Args: {}".format(args))
     thisproxy["conn"] = jnpr.junos.Device(**args)
     try:
         thisproxy["conn"].open()
