@@ -17,7 +17,7 @@ from tests.support.unit import TestCase, skipIf
 
 # Import salt libs
 try:
-    import salt.modules.shadow as shadow
+    import salt.modules.linux_shadow as shadow
 
     HAS_SHADOW = True
 except ImportError:
