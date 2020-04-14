@@ -394,6 +394,7 @@ class SSHSingleTests(TestCase):
                 call("rm '{0}'".format(exp_tmp)),
             ] == mock_cmd.call_args_list
 
+    @skipIf(salt.utils.platform.is_windows(), "SSH_PY_SHIM not set on windows")
     def test_cmd_run_set_path(self):
         """
         test when set_path is set
@@ -414,6 +415,7 @@ class SSHSingleTests(TestCase):
         ret = single._cmd_str()
         assert re.search("\\" + target["set_path"], ret)
 
+    @skipIf(salt.utils.platform.is_windows(), "SSH_PY_SHIM not set on windows")
     def test_cmd_run_not_set_path(self):
         """
         test when set_path is not set
