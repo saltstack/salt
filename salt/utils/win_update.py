@@ -251,9 +251,7 @@ class Updates(object):
 class WindowsUpdateAgent(object):
     """
     Class for working with the Windows update agent
-
     """
-
     # Error codes found at the following site:
     # https://msdn.microsoft.com/en-us/library/windows/desktop/hh968413(v=vs.85).aspx
     # https://technet.microsoft.com/en-us/library/cc720442(v=ws.10).aspx
@@ -433,21 +431,21 @@ class WindowsUpdateAgent(object):
 
         Args:
 
-            skip_hidden (bool): Skip hidden updates. Default is True
+            skip_hidden (bool): Skip hidden updates. Default is ``True``
 
-            skip_installed (bool): Skip installed updates. Default is True
+            skip_installed (bool): Skip installed updates. Default is ``True``
 
-            skip_mandatory (bool): Skip mandatory updates. Default is False
+            skip_mandatory (bool): Skip mandatory updates. Default is ``False``
 
             skip_reboot (bool): Skip updates that can or do require reboot.
-            Default is False
+                Default is ``False``
 
-            software (bool): Include software updates. Default is True
+            software (bool): Include software updates. Default is ``True``
 
-            drivers (bool): Include driver updates. Default is True
+            drivers (bool): Include driver updates. Default is ``True``
 
             categories (list): Include updates that have these categories.
-            Default is none (all categories).
+                Default is none (all categories).
 
                 Categories include the following:
 
@@ -466,15 +464,17 @@ class WindowsUpdateAgent(object):
                 * Windows Defender
 
             severities (list): Include updates that have these severities.
-            Default is none (all severities).
+                Default is none (all severities).
 
                 Severities include the following:
 
                 * Critical
                 * Important
 
-        .. note:: All updates are either software or driver updates. If both
-        ``software`` and ``drivers`` is False, nothing will be returned.
+        .. note::
+
+            All updates are either software or driver updates. If both
+            ``software`` and ``drivers`` is ``False``, nothing will be returned.
 
         Returns:
 
@@ -546,10 +546,10 @@ class WindowsUpdateAgent(object):
         Args:
 
             search_string (str, list): The search string to use to find the
-            update. This can be the GUID or KB of the update (preferred). It can
-            also be the full Title of the update or any part of the Title. A
-            partial Title search is less specific and can return multiple
-            results.
+                update. This can be the GUID or KB of the update (preferred). It
+                can also be the full Title of the update or any part of the
+                Title. A partial Title search is less specific and can return
+                multiple results.
 
         Returns:
             Updates: An instance of Updates with the results of the search
@@ -611,8 +611,8 @@ class WindowsUpdateAgent(object):
 
         Args:
 
-            updates (Updates): An instance of the Updates class containing a
-            the updates to be downloaded.
+            updates (Updates): An instance of the Updates class containing a the
+                updates to be downloaded.
 
         Returns:
             dict: A dictionary containing the results of the download
@@ -725,7 +725,7 @@ class WindowsUpdateAgent(object):
         Args:
 
             updates (Updates): An instance of the Updates class containing a
-            the updates to be installed.
+                the updates to be installed.
 
         Returns:
             dict: A dictionary containing the results of the installation
@@ -832,19 +832,21 @@ class WindowsUpdateAgent(object):
         Uninstall the updates passed in the updates collection. Load the updates
         collection using the ``search`` or ``available`` functions.
 
-        .. note:: Starting with Windows 10 the Windows Update Agent is unable to
-        uninstall updates. An ``Uninstall Not Allowed`` error is returned. If
-        this error is encountered this function will instead attempt to use
-        ``dism.exe`` to perform the uninstallation. ``dism.exe`` may fail to
-        to find the KB number for the package. In that case, removal will fail.
+        .. note::
+            Starting with Windows 10 the Windows Update Agent is unable to
+            uninstall updates. An ``Uninstall Not Allowed`` error is returned.
+            If this error is encountered this function will instead attempt to
+            use ``dism.exe`` to perform the un-installation. ``dism.exe`` may
+            fail to to find the KB number for the package. In that case, removal
+            will fail.
 
         Args:
 
             updates (Updates): An instance of the Updates class containing a
-            the updates to be uninstalled.
+                the updates to be uninstalled.
 
         Returns:
-            dict: A dictionary containing the results of the uninstallation
+            dict: A dictionary containing the results of the un-installation
 
         Code Example:
 
@@ -1055,7 +1057,7 @@ def needs_reboot():
 
     Returns:
 
-        bool: True if the system requires a reboot, False if not
+        bool: ``True`` if the system requires a reboot, ``False`` if not
 
     CLI Examples:
 

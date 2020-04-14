@@ -126,8 +126,8 @@ def available(
             Include driver updates in the results. Default is ``True``
 
         summary (bool):
-            - True: Return a summary of updates available for each category.
-            - False (default): Return a detailed list of available updates.
+            - ``True``: Return a summary of updates available for each category.
+            - ``False`` (default): Return a detailed list of available updates.
 
         skip_installed (bool):
             Skip updates that are already installed. Default is ``True``
@@ -149,7 +149,7 @@ def available(
 
             * Critical Updates
             * Definition Updates
-            * Drivers (make sure you set drivers=True)
+            * Drivers (make sure you set ``drivers=True``)
             * Feature Packs
             * Security Updates
             * Update Rollups
@@ -377,8 +377,8 @@ def list(
             Include driver updates in the results. Default is ``False``
 
         summary (bool):
-            - True: Return a summary of updates available for each category.
-            - False (default): Return a detailed list of available updates.
+            - ``True``: Return a summary of updates available for each category.
+            - ``False`` (default): Return a detailed list of available updates.
 
         skip_installed (bool):
             Skip installed updates in the results. Default is ``True``
@@ -403,7 +403,7 @@ def list(
 
             * Critical Updates
             * Definition Updates
-            * Drivers (make sure you set drivers=True)
+            * Drivers (make sure you set ``drivers=True``)
             * Feature Packs
             * Security Updates
             * Update Rollups
@@ -578,7 +578,7 @@ def download(names):
     .. versionadded:: 2017.7.0
 
     Downloads updates that match the list of passed identifiers. It's easier to
-    use this function by using list_updates and setting install=True.
+    use this function by using list_updates and setting ``download=True``.
 
     Args:
 
@@ -620,7 +620,7 @@ def download(names):
 
     if updates.count() > len(names):
         raise CommandExecutionError(
-            "Multiple updates found, names need to be " "more specific"
+            "Multiple updates found, names need to be more specific"
         )
 
     return wua.download(updates)
@@ -631,7 +631,7 @@ def install(names):
     .. versionadded:: 2017.7.0
 
     Installs updates that match the list of identifiers. It may be easier to use
-    the list_updates function and set install=True.
+    the list_updates function and set ``install=True``.
 
     Args:
 
@@ -673,7 +673,7 @@ def install(names):
 
     if updates.count() > len(names):
         raise CommandExecutionError(
-            "Multiple updates found, names need to be " "more specific"
+            "Multiple updates found, names need to be more specific"
         )
 
     return wua.install(updates)
@@ -882,7 +882,7 @@ def set_wu_settings(
         }
         if day not in days:
             ret["Comment"] = (
-                "Day needs to be one of the following: Everyday,"
+                "Day needs to be one of the following: Everyday, "
                 "Monday, Tuesday, Wednesday, Thursday, Friday, "
                 "Saturday"
             )
@@ -902,15 +902,15 @@ def set_wu_settings(
         # treat it as an integer
         if not isinstance(time, six.string_types):
             ret["Comment"] = (
-                "Time argument needs to be a string; it may need to"
+                "Time argument needs to be a string; it may need to "
                 "be quoted. Passed {0}. Time not set.".format(time)
             )
             ret["Success"] = False
         # Check for colon in the time
         elif ":" not in time:
             ret["Comment"] = (
-                "Time argument needs to be in 00:00 format."
-                " Passed {0}. Time not set.".format(time)
+                "Time argument needs to be in 00:00 format. "
+                "Passed {0}. Time not set.".format(time)
             )
             ret["Success"] = False
         else:
@@ -1097,7 +1097,7 @@ def get_needs_reboot():
 
     Returns:
 
-        bool: True if the system requires a reboot, otherwise False
+        bool: ``True`` if the system requires a reboot, otherwise ``False``
 
     CLI Examples:
 
