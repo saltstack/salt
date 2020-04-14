@@ -15,7 +15,9 @@ Versions are `MAJOR.PATCH`.
 ### Changed
 
 ### Fixed
+
 - [#56325](https://github.com/saltstack/salt/pull/56325) - Fix hyperlinks to `salt.serializers` and other documentation issues - [@myii](https://github.com/myii)
+- [#56237](https://github.com/saltstack/salt/pull/56237) - Fix alphabetical ordering and remove duplicates across all documentation indexes - [@myii](https://github.com/myii)
 - [#56082](https://github.com/saltstack/salt/pull/56082) - Fix saltversioninfo grain for new version
 - [#56143](https://github.com/saltstack/salt/pull/56143) - Use encoding when caching pillar data
 - [#56172](https://github.com/saltstack/salt/pull/56172) - Only change mine data if using new allow_tgt feature
@@ -41,6 +43,10 @@ Versions are `MAJOR.PATCH`.
 - [#56310](https://github.com/saltstack/salt/pull/56310) - Only process ADMX files when loading policies
 - [#56327](https://github.com/saltstack/salt/pull/56327) - keep cache_copied_files variable a list
 - [#56360](https://github.com/saltstack/salt/pull/56360) - dont require virtualenv.virtualenv_version call, removed in 20.0.10
+- [#56378](https://github.com/saltstack/salt/pull/56378) - Include _version.py if building wheel
+- [#56376](https://github.com/saltstack/salt/pull/56376) - Fix win deps
+- [#56418](https://github.com/saltstack/salt/pull/56418) - Ensure version.py included before we install
+- [#56435](https://github.com/saltstack/salt/pull/56435) - Update mac build scripts
 
 
 ### Added
