@@ -260,7 +260,7 @@ def create_object_model(module_name, object_name, **kwargs):
                     object_kwargs[attr] = create_object_model(
                         module_name, items["type"], **param
                     )
-                elif items['type'][0] == "{" and isinstance(param, dict):
+                elif items["type"][0] == "{" and isinstance(param, dict):
                     object_kwargs[attr] = param
                 elif items["type"][0] == "[" and isinstance(param, list):
                     obj_list = []
