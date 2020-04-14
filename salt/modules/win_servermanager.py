@@ -1,21 +1,17 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Manage Windows features via the ServerManager powershell module. Can list
 available and installed roles/features. Can install and remove roles/features.
 
 :maintainer:    Shane Lee <slee@saltstack.com>
 :platform:      Windows Server 2008R2 or greater
 :depends:       PowerShell module ``ServerManager``
-'''
+"""
 
 # Import Python libs
-from __future__ import absolute_import, unicode_literals, print_function
-import logging
+from __future__ import absolute_import, print_function, unicode_literals
 
-try:
-    from shlex import quote as _cmd_quote  # pylint: disable=E0611
-except ImportError:
-    from pipes import quote as _cmd_quote
+import logging
 
 # Import Salt libs
 import salt.utils.json
@@ -24,68 +20,80 @@ import salt.utils.powershell
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError
 
+try:
+    from shlex import quote as _cmd_quote  # pylint: disable=E0611
+except ImportError:
+    from pipes import quote as _cmd_quote
+
+
 log = logging.getLogger(__name__)
 
-__virtualname__ = 'win_servermanager'
+__virtualname__ = "win_servermanager"
 
 
 def __virtual__():
-    '''
+    """
     Load only on windows with servermanager module
-    '''
+    """
     if not salt.utils.platform.is_windows():
         return False
 
-    if salt.utils.versions.version_cmp(__grains__['osversion'], '6.1.7600') == -1:
-        return False, 'Failed to load win_servermanager module: ' \
-                      'Requires Remote Server Administration Tools which ' \
-                      'is only available on Windows 2008 R2 and later.'
+    if salt.utils.versions.version_cmp(__grains__["osversion"], "6.1.7600") == -1:
+        return (
+            False,
+            "Failed to load win_servermanager module: "
+            "Requires Remote Server Administration Tools which "
+            "is only available on Windows 2008 R2 and later.",
+        )
 
-    if not salt.utils.powershell.module_exists('ServerManager'):
-        return False, 'Failed to load win_servermanager module: ' \
-                      'ServerManager module not available. ' \
-                      'May need to install Remote Server Administration Tools.'
+    if not salt.utils.powershell.module_exists("ServerManager"):
+        return (
+            False,
+            "Failed to load win_servermanager module: "
+            "ServerManager module not available. "
+            "May need to install Remote Server Administration Tools.",
+        )
 
     return __virtualname__
 
 
 def _pshell_json(cmd, cwd=None):
-    '''
+    """
     Execute the desired powershell command and ensure that it returns data
     in JSON format and load that into python
-    '''
-    cmd = 'Import-Module ServerManager; {0}'.format(cmd)
-    if 'convertto-json' not in cmd.lower():
-        cmd = '{0} | ConvertTo-Json'.format(cmd)
-    log.debug('PowerShell: %s', cmd)
-    ret = __salt__['cmd.run_all'](cmd, shell='powershell', cwd=cwd)
+    """
+    cmd = "Import-Module ServerManager; {0}".format(cmd)
+    if "convertto-json" not in cmd.lower():
+        cmd = "{0} | ConvertTo-Json".format(cmd)
+    log.debug("PowerShell: %s", cmd)
+    ret = __salt__["cmd.run_all"](cmd, shell="powershell", cwd=cwd)
 
-    if 'pid' in ret:
-        del ret['pid']
+    if "pid" in ret:
+        del ret["pid"]
 
-    if ret.get('stderr', ''):
-        error = ret['stderr'].splitlines()[0]
+    if ret.get("stderr", ""):
+        error = ret["stderr"].splitlines()[0]
         raise CommandExecutionError(error, info=ret)
 
-    if 'retcode' not in ret or ret['retcode'] != 0:
+    if "retcode" not in ret or ret["retcode"] != 0:
         # run_all logs an error to log.error, fail hard back to the user
         raise CommandExecutionError(
-            'Issue executing PowerShell {0}'.format(cmd), info=ret)
+            "Issue executing PowerShell {0}".format(cmd), info=ret
+        )
 
     # Sometimes Powershell returns an empty string, which isn't valid JSON
-    if ret['stdout'] == '':
-        ret['stdout'] = '{}'
+    if ret["stdout"] == "":
+        ret["stdout"] = "{}"
 
     try:
-        ret = salt.utils.json.loads(ret['stdout'], strict=False)
+        ret = salt.utils.json.loads(ret["stdout"], strict=False)
     except ValueError:
-        raise CommandExecutionError(
-            'No JSON results from PowerShell', info=ret)
+        raise CommandExecutionError("No JSON results from PowerShell", info=ret)
     return ret
 
 
 def list_available():
-    '''
+    """
     List available features to install
 
     Returns:
@@ -97,16 +105,18 @@ def list_available():
     .. code-block:: bash
 
         salt '*' win_servermanager.list_available
-    '''
-    cmd = 'Import-Module ServerManager; ' \
-          'Get-WindowsFeature ' \
-          '-ErrorAction SilentlyContinue ' \
-          '-WarningAction SilentlyContinue'
-    return __salt__['cmd.shell'](cmd, shell='powershell')
+    """
+    cmd = (
+        "Import-Module ServerManager; "
+        "Get-WindowsFeature "
+        "-ErrorAction SilentlyContinue "
+        "-WarningAction SilentlyContinue"
+    )
+    return __salt__["cmd.shell"](cmd, shell="powershell")
 
 
 def list_installed():
-    '''
+    """
     List installed features. Supported on Windows Server 2008 and Windows 8 and
     newer.
 
@@ -118,23 +128,25 @@ def list_installed():
     .. code-block:: bash
 
         salt '*' win_servermanager.list_installed
-    '''
-    cmd = 'Get-WindowsFeature ' \
-          '-ErrorAction SilentlyContinue ' \
-          '-WarningAction SilentlyContinue ' \
-          '| Select DisplayName,Name,Installed'
+    """
+    cmd = (
+        "Get-WindowsFeature "
+        "-ErrorAction SilentlyContinue "
+        "-WarningAction SilentlyContinue "
+        "| Select DisplayName,Name,Installed"
+    )
     features = _pshell_json(cmd)
 
     ret = {}
     for entry in features:
-        if entry['Installed']:
-            ret[entry['Name']] = entry['DisplayName']
+        if entry["Installed"]:
+            ret[entry["Name"]] = entry["DisplayName"]
 
     return ret
 
 
 def install(feature, recurse=False, restart=False, source=None, exclude=None):
-    r'''
+    r"""
     Install a feature
 
     .. note::
@@ -202,26 +214,28 @@ def install(feature, recurse=False, restart=False, source=None, exclude=None):
         # Install the XPS Viewer, SNMP Service, and Remote Access passing a
         # list. Install all sub-features, but exclude the Web Server
         salt '*' win_servermanager.install "['XPS-Viewer', 'SNMP-Service', 'RemoteAccess']" True recurse=True exclude="Web-Server"
-    '''
+    """
     # If it is a list of features, make it a comma delimited string
     if isinstance(feature, list):
-        feature = ','.join(feature)
+        feature = ",".join(feature)
 
     # Use Install-WindowsFeature on Windows 2012 (osversion 6.2) and later
     # minions. Default to Add-WindowsFeature for earlier releases of Windows.
     # The newer command makes management tools optional so add them for parity
     # with old behavior.
-    command = 'Add-WindowsFeature'
-    management_tools = ''
-    if salt.utils.versions.version_cmp(__grains__['osversion'], '6.2') >= 0:
-        command = 'Install-WindowsFeature'
-        management_tools = '-IncludeManagementTools'
+    command = "Add-WindowsFeature"
+    management_tools = ""
+    if salt.utils.versions.version_cmp(__grains__["osversion"], "6.2") >= 0:
+        command = "Install-WindowsFeature"
+        management_tools = "-IncludeManagementTools"
 
-    cmd = '{0} -Name {1} {2} {3} {4} ' \
-          '-WarningAction SilentlyContinue'\
-          .format(command, _cmd_quote(feature), management_tools,
-                  '-IncludeAllSubFeature' if recurse else '',
-                  '' if source is None else '-Source {0}'.format(source))
+    cmd = "{0} -Name {1} {2} {3} {4} " "-WarningAction SilentlyContinue".format(
+        command,
+        _cmd_quote(feature),
+        management_tools,
+        "-IncludeAllSubFeature" if recurse else "",
+        "" if source is None else "-Source {0}".format(source),
+    )
     out = _pshell_json(cmd)
 
     # Uninstall items in the exclude list
@@ -231,75 +245,79 @@ def install(feature, recurse=False, restart=False, source=None, exclude=None):
         removed = remove(exclude)
 
     # Results are stored in a list of dictionaries in `FeatureResult`
-    if out['FeatureResult']:
-        ret = {'ExitCode': out['ExitCode'],
-               'RestartNeeded': False,
-               'Restarted': False,
-               'Features': {},
-               'Success': out['Success']}
+    if out["FeatureResult"]:
+        ret = {
+            "ExitCode": out["ExitCode"],
+            "RestartNeeded": False,
+            "Restarted": False,
+            "Features": {},
+            "Success": out["Success"],
+        }
 
         # FeatureResult is a list of dicts, so each item is a dict
-        for item in out['FeatureResult']:
-            ret['Features'][item['Name']] = {
-                'DisplayName': item['DisplayName'],
-                'Message': item['Message'],
-                'RestartNeeded': item['RestartNeeded'],
-                'SkipReason': item['SkipReason'],
-                'Success': item['Success']
+        for item in out["FeatureResult"]:
+            ret["Features"][item["Name"]] = {
+                "DisplayName": item["DisplayName"],
+                "Message": item["Message"],
+                "RestartNeeded": item["RestartNeeded"],
+                "SkipReason": item["SkipReason"],
+                "Success": item["Success"],
             }
 
-            if item['RestartNeeded']:
-                ret['RestartNeeded'] = True
+            if item["RestartNeeded"]:
+                ret["RestartNeeded"] = True
 
         # Only items that installed are in the list of dictionaries
         # Add 'Already installed' for features that aren't in the list of dicts
-        for item in feature.split(','):
-            if item not in ret['Features']:
-                ret['Features'][item] = {'Message': 'Already installed'}
+        for item in feature.split(","):
+            if item not in ret["Features"]:
+                ret["Features"][item] = {"Message": "Already installed"}
 
         # Some items in the exclude list were removed after installation
         # Show what was done, update the dict
         if exclude is not None:
             # Features is a dict, so it only iterates over the keys
-            for item in removed['Features']:
-                if item in ret['Features']:
-                    ret['Features'][item] = {
-                        'Message': 'Removed after installation (exclude)',
-                        'DisplayName': removed['Features'][item]['DisplayName'],
-                        'RestartNeeded': removed['Features'][item]['RestartNeeded'],
-                        'SkipReason': removed['Features'][item]['SkipReason'],
-                        'Success': removed['Features'][item]['Success']
+            for item in removed["Features"]:
+                if item in ret["Features"]:
+                    ret["Features"][item] = {
+                        "Message": "Removed after installation (exclude)",
+                        "DisplayName": removed["Features"][item]["DisplayName"],
+                        "RestartNeeded": removed["Features"][item]["RestartNeeded"],
+                        "SkipReason": removed["Features"][item]["SkipReason"],
+                        "Success": removed["Features"][item]["Success"],
                     }
 
                     # Exclude items might need a restart
-                    if removed['Features'][item]['RestartNeeded']:
-                        ret['RestartNeeded'] = True
+                    if removed["Features"][item]["RestartNeeded"]:
+                        ret["RestartNeeded"] = True
 
         # Restart here if needed
         if restart:
-            if ret['RestartNeeded']:
-                if __salt__['system.restart'](in_seconds=True):
-                    ret['Restarted'] = True
+            if ret["RestartNeeded"]:
+                if __salt__["system.restart"](in_seconds=True):
+                    ret["Restarted"] = True
 
         return ret
 
     else:
 
         # If we get here then all features were already installed
-        ret = {'ExitCode': out['ExitCode'],
-               'Features': {},
-               'RestartNeeded': False,
-               'Restarted': False,
-               'Success': out['Success']}
+        ret = {
+            "ExitCode": out["ExitCode"],
+            "Features": {},
+            "RestartNeeded": False,
+            "Restarted": False,
+            "Success": out["Success"],
+        }
 
-        for item in feature.split(','):
-            ret['Features'][item] = {'Message': 'Already installed'}
+        for item in feature.split(","):
+            ret["Features"][item] = {"Message": "Already installed"}
 
         return ret
 
 
 def remove(feature, remove_payload=False, restart=False):
-    r'''
+    r"""
     Remove an installed feature
 
     .. note::
@@ -335,73 +353,79 @@ def remove(feature, remove_payload=False, restart=False):
     .. code-block:: bash
 
         salt -t 600 '*' win_servermanager.remove Telnet-Client
-    '''
+    """
     # If it is a list of features, make it a comma delimited string
     if isinstance(feature, list):
-        feature = ','.join(feature)
+        feature = ",".join(feature)
 
     # Use Uninstall-WindowsFeature on Windows 2012 (osversion 6.2) and later
     # minions. Default to Remove-WindowsFeature for earlier releases of Windows.
     # The newer command makes management tools optional so add them for parity
     # with old behavior.
-    command = 'Remove-WindowsFeature'
-    management_tools = ''
-    _remove_payload = ''
-    if salt.utils.versions.version_cmp(__grains__['osversion'], '6.2') >= 0:
-        command = 'Uninstall-WindowsFeature'
-        management_tools = '-IncludeManagementTools'
+    command = "Remove-WindowsFeature"
+    management_tools = ""
+    _remove_payload = ""
+    if salt.utils.versions.version_cmp(__grains__["osversion"], "6.2") >= 0:
+        command = "Uninstall-WindowsFeature"
+        management_tools = "-IncludeManagementTools"
 
         # Only available with the `Uninstall-WindowsFeature` command
         if remove_payload:
-            _remove_payload = '-Remove'
+            _remove_payload = "-Remove"
 
-    cmd = '{0} -Name {1} {2} {3} {4} ' \
-          '-WarningAction SilentlyContinue'\
-          .format(command, _cmd_quote(feature), management_tools,
-                  _remove_payload,
-                  '-Restart' if restart else '')
+    cmd = "{0} -Name {1} {2} {3} {4} " "-WarningAction SilentlyContinue".format(
+        command,
+        _cmd_quote(feature),
+        management_tools,
+        _remove_payload,
+        "-Restart" if restart else "",
+    )
     try:
         out = _pshell_json(cmd)
     except CommandExecutionError as exc:
-        if 'ArgumentNotValid' in exc.message:
-            raise CommandExecutionError('Invalid Feature Name', info=exc.info)
+        if "ArgumentNotValid" in exc.message:
+            raise CommandExecutionError("Invalid Feature Name", info=exc.info)
         raise
 
     # Results are stored in a list of dictionaries in `FeatureResult`
-    if out['FeatureResult']:
-        ret = {'ExitCode': out['ExitCode'],
-               'RestartNeeded': False,
-               'Restarted': False,
-               'Features': {},
-               'Success': out['Success']}
+    if out["FeatureResult"]:
+        ret = {
+            "ExitCode": out["ExitCode"],
+            "RestartNeeded": False,
+            "Restarted": False,
+            "Features": {},
+            "Success": out["Success"],
+        }
 
-        for item in out['FeatureResult']:
-            ret['Features'][item['Name']] = {
-                'DisplayName': item['DisplayName'],
-                'Message': item['Message'],
-                'RestartNeeded': item['RestartNeeded'],
-                'SkipReason': item['SkipReason'],
-                'Success': item['Success']
+        for item in out["FeatureResult"]:
+            ret["Features"][item["Name"]] = {
+                "DisplayName": item["DisplayName"],
+                "Message": item["Message"],
+                "RestartNeeded": item["RestartNeeded"],
+                "SkipReason": item["SkipReason"],
+                "Success": item["Success"],
             }
 
         # Only items that installed are in the list of dictionaries
         # Add 'Not installed' for features that aren't in the list of dicts
-        for item in feature.split(','):
-            if item not in ret['Features']:
-                ret['Features'][item] = {'Message': 'Not installed'}
+        for item in feature.split(","):
+            if item not in ret["Features"]:
+                ret["Features"][item] = {"Message": "Not installed"}
 
         return ret
 
     else:
 
         # If we get here then none of the features were installed
-        ret = {'ExitCode': out['ExitCode'],
-               'Features': {},
-               'RestartNeeded': False,
-               'Restarted': False,
-               'Success': out['Success']}
+        ret = {
+            "ExitCode": out["ExitCode"],
+            "Features": {},
+            "RestartNeeded": False,
+            "Restarted": False,
+            "Success": out["Success"],
+        }
 
-        for item in feature.split(','):
-            ret['Features'][item] = {'Message': 'Not installed'}
+        for item in feature.split(","):
+            ret["Features"][item] = {"Message": "Not installed"}
 
         return ret
