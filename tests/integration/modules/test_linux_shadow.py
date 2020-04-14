@@ -10,7 +10,7 @@ import os
 import random
 import string
 
-import salt.modules.shadow
+import salt.modules.linux_shadow as shadow
 
 # Import Salt libs
 import salt.utils.files
@@ -43,7 +43,7 @@ class ShadowModuleTest(ModuleCase):
             self.skipTest("Test not applicable to '{kernel}' kernel".format(**os_grain))
         self._test_user = self.__random_string()
         self._no_user = self.__random_string()
-        self._password = salt.modules.shadow.gen_password("Password1234")
+        self._password = shadow.gen_password("Password1234")
 
     def __random_string(self, size=6):
         """

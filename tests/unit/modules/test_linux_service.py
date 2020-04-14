@@ -7,8 +7,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
-# Import Salt Libs
-import salt.modules.service as service
+# Import salt libs
+import salt.modules.linux_service as service
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -18,7 +18,7 @@ from tests.support.unit import TestCase
 
 class ServiceTestCase(TestCase, LoaderModuleMockMixin):
     """
-    Test cases for salt.modules.service
+    Test cases for salt.modules.linux_service
     """
 
     def setup_loader_modules(self):
