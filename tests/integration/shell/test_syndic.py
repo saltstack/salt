@@ -48,11 +48,13 @@ class TestSaltSyndicCLI(object):
 
     @pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON)
     def test_exit_status_unknown_argument(
-        self, request, salt_factories, shell_tests_salt_master
+        self, request, salt_factories, shell_tests_salt_master, tempdir
     ):
         """
         Ensure correct exit status when an unknown argument is passed to salt-syndic.
         """
+        # We pass root_dir in order not to hit the max length socket path issue
+        root_dir = tempdir.join("ex-st-unkn-arg-syndic").ensure(dir=True)
         with pytest.raises(ProcessNotStarted) as exc:
             salt_factories.spawn_syndic(
                 request,
@@ -60,6 +62,7 @@ class TestSaltSyndicCLI(object):
                 master_of_masters_id=shell_tests_salt_master.config["id"],
                 max_start_attempts=1,
                 base_script_args=["--unknown-argument"],
+                config_defaults={"syndic": {"root_dir": root_dir}},
             )
         assert exc.value.exitcode == salt.defaults.exitcodes.EX_USAGE, exc.value
         assert "Usage" in exc.value.stderr, exc.value

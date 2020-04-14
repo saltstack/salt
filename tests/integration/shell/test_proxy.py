@@ -79,12 +79,14 @@ class TestProxyMinion:
         assert "The user is not available." in exc.value.stderr, exc.value
 
     def test_exit_status_unknown_argument(
-        self, request, salt_factories, shell_tests_salt_proxy_minion_config
+        self, request, salt_factories, shell_tests_salt_proxy_minion_config, tempdir
     ):
         """
         Ensure correct exit status when an unknown argument is passed to
         salt-proxy.
         """
+        # We pass root_dir in order not to hit the max length socket path issue
+        root_dir = tempdir.join("ex-st-unkn-arg-proxy").ensure(dir=True)
         with pytest.raises(ProcessNotStarted) as exc:
             salt_factories.spawn_proxy_minion(
                 request,
@@ -92,6 +94,7 @@ class TestProxyMinion:
                 master_id=shell_tests_salt_proxy_minion_config["id"],
                 max_start_attempts=1,
                 base_script_args=["--unknown-argument"],
+                config_defaults={"root_dir": root_dir},
             )
         assert exc.value.exitcode == salt.defaults.exitcodes.EX_USAGE, exc.value
         assert "Usage" in exc.value.stderr, exc.value
