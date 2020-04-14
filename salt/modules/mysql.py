@@ -431,6 +431,11 @@ def _connect(**kwargs):
         __context__["mysql.error"] = err
         log.error(err)
         return None
+    except MySQLdb.err.InternalError as exc:
+        err = "MySQL Error {0}: {1}".format(*exc.args)
+        __context__["mysql.error"] = err
+        log.error(err)
+        return None
 
     dbc.autocommit(True)
     return dbc
@@ -641,6 +646,29 @@ def _execute(cur, qry, args=None):
         return cur.execute(qry, args)
 
 
+def _sanitize_comments(content):
+    # Remove comments which might affect line by line parsing
+    # Regex should remove any text begining with # (or --) not inside of ' or "
+    content = re.sub(
+        r"""(['"](?:[^'"]+|(?<=\\)['"])*['"])|#[^\n]*""",
+        lambda m: m.group(1) or "",
+        content,
+        re.S,
+    )
+    content = re.sub(
+        r"""(['"](?:[^'"]+|(?<=\\)['"])*['"])|--[^\n]*""",
+        lambda m: m.group(1) or "",
+        content,
+        re.S,
+    )
+    cleaned = ""
+    for line in content.splitlines():
+        line = line.strip()
+        if line != "":
+            cleaned += line + "\n"
+    return cleaned
+
+
 def query(database, query, **connection_args):
     """
     Run an arbitrary SQL query and return the results or
@@ -823,9 +851,10 @@ def file_query(database, file_name, **connection_args):
         "rows affected": 0,
         "query time": {"raw": 0},
     }
+
+    contents = _sanitize_comments(contents)
+    # Walk the each line of the sql file to get accurate row affected results
     for line in contents.splitlines():
-        if re.match(r"--", line):  # ignore sql comments
-            continue
         if not re.search(r"[^-;]+;", line):  # keep appending lines that don't end in ;
             query_string = query_string + line
         else:
@@ -849,6 +878,7 @@ def file_query(database, file_name, **connection_args):
                 ret["results"].append(query_result["results"])
             if "rows affected" in query_result:
                 ret["rows affected"] += query_result["rows affected"]
+
     ret["query time"]["human"] = (
         six.text_type(round(float(ret["query time"]["raw"]), 2)) + "s"
     )
