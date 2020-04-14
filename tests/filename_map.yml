@@ -17,7 +17,7 @@ salt/modules/(mac_user|useradd|pw_user|solaris_user|win_useradd)\.py:
 salt/modules/(aix_group|groupadd|mac_group|pw_group|solaris_group|win_groupadd)\.py:
   - unit.states.test_group
 
-salt/modules/(debian_service|freebsdservice|gentoo_service|launchctl_service|mac_service|netbsdservice|openbsdrcctl_service|openbsdservice|rh_service|runit|service|smf_service|systemd_service|upstart_service|win_service)\.py:
+salt/modules/(debian_service|freebsdservice|gentoo_service|launchctl_service|mac_service|netbsdservice|openbsdrcctl_service|openbsdservice|rh_service|runit|linux_service|smf_service|systemd_service|upstart_service|win_service)\.py:
   - unit.states.test_service
   - integration.states.test_service
 
