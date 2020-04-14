@@ -709,18 +709,24 @@ def db_remove(
 
         salt '*' postgres.db_remove 'dbname'
     """
-    for query in ['REVOKE CONNECT ON DATABASE "{db}" FROM public;'.format(db=name),
-                  "SELECT pid, pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '{db}' AND pid <> pg_backend_pid();".format(db=name),
-                  'DROP DATABASE "{db}";'.format(db=name)]:
-        ret = _psql_prepare_and_run(['-c', query],
-                                user=user,
-                                host=host,
-                                port=port,
-                                runas=runas,
-                                maintenance_db=maintenance_db,
-                                password=password)
-        if ret['retcode'] != 0:
-            raise Exception('Failed: ret={}'.format(ret))
+    for query in [
+        'REVOKE CONNECT ON DATABASE "{db}" FROM public;'.format(db=name),
+        "SELECT pid, pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '{db}' AND pid <> pg_backend_pid();".format(
+            db=name
+        ),
+        'DROP DATABASE "{db}";'.format(db=name),
+    ]:
+        ret = _psql_prepare_and_run(
+            ["-c", query],
+            user=user,
+            host=host,
+            port=port,
+            runas=runas,
+            maintenance_db=maintenance_db,
+            password=password,
+        )
+        if ret["retcode"] != 0:
+            raise Exception("Failed: ret={}".format(ret))
     return True
 
 
