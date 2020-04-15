@@ -12,7 +12,7 @@ GitPython
 hgtools
 jmespath
 jsonschema
-junos-eznc==2.4.0
+junos-eznc
 jxmlease
 kazoo
 keyring==5.7.1
