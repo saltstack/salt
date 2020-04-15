@@ -20,6 +20,7 @@ class TomcatTestCasse(TestCase, LoaderModuleMockMixin):
     """
     Tests cases for salt.modules.tomcat
     """
+
     def setup_loader_modules(self):
         return {tomcat: {}}
 
