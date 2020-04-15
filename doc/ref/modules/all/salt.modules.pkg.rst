@@ -37,6 +37,11 @@ Execution Module                       Used for
 :py:mod:`~salt.modules.zypperpkg`      SUSE-based distros using ``zypper(8)``
 ====================================== ========================================
 
+<<<<<<< HEAD
 .. _Homebrew: https://brew.sh/
 .. _OpenCSW: https://www.opencsw.org/
 
+=======
+.. _Homebrew: http://brew.sh/
+.. _OpenCSW: http://www.opencsw.org/
+>>>>>>> master
