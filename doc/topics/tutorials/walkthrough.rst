@@ -493,7 +493,7 @@ configuration is required. States can be set up immediately.
 The First SLS Formula
 ---------------------
 
-The state system is built on SLS formulas. These formulas are built out in
+The state system is built on SLS (SaLt State) formulas. These formulas are built out in
 files on Salt's file server. To make a very basic SLS formula open up a file
 under /srv/salt named vim.sls. The following state ensures that vim is installed
 on a system to which that state has been applied.

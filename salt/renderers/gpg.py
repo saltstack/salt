@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-r'''
+r"""
 Renderer that will decrypt GPG ciphers
 
 Any key in the SLS file can be a GPG cipher, and this renderer will decrypt it
@@ -37,6 +37,56 @@ your application. Be sure to back up the ``gpgkeys`` directory someplace safe!
     increasing the system entropy. On virtualised Linux systems, this can often
     be achieved by installing the ``rng-tools`` package.
 
+Import keys to a master
+************************
+
+If the keys already exist and need to be imported to the salt master, run the
+following to import them.
+
+.. code-block:: bash
+
+    gpg  --homedir /etc/salt/gpgkeys --import /path/to/private.key
+    gpg --import /path/to/pubkey.gpg
+
+If the salt master runs as normal user, become this user before importing the
+keys. The default target dir will be ``~/.gnupg``. This can be overridden by
+the ``--homedir`` option. The keys must be at least readable for the runuser.
+
+Adjust trust level of imported keys
+***********************************
+
+In some cases, importing existing keys may not be enough and the trust level of
+the key needs to be adjusted. This can be done by editing the key. The ``key_id``
+and the actual trust level of the key can be seen by listing the already imported
+keys.
+
+.. code-block:: bash
+
+    gpg  --homedir /etc/salt/gpgkeys --list-keys
+    gpg --list-secret-keys
+
+If the trust-level is not ``ultimate`` it needs to be changed by running
+
+.. code-block:: bash
+
+    gpg --homedir /etc/salt/gpgkeys --edit-key <key_id>
+
+This will open an interactive shell for the management of the GPG encrypted key. Type
+``trust`` to be able to set the trust level for the key and then select
+``5 (I trust ultimately)``. Then quit the shell by typing ``save``.
+
+Enable usage of GPG keys on the master
+**************************************
+
+Generating or importing the keys is not enough to activate the ability to decrypt
+the pillars, especially if the keys are generated/imported in a non-standard dir.
+
+To enable the keys on the salt-master, the following needs to be added to the
+masters configuration.
+
+.. code-block:: yaml
+
+    gpg_keydir: <path/to/homedir>
 
 Export the Public Key
 ---------------------
@@ -206,19 +256,22 @@ pillar data like so:
 .. code-block:: bash
 
     salt myminion state.sls secretstuff pillar_enc=gpg pillar="$ciphertext"
-'''
+"""
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
+import logging
 import os
 import re
-import logging
-from subprocess import Popen, PIPE
+from subprocess import PIPE, Popen
+
+import salt.syspaths
 
 # Import salt libs
 import salt.utils.path
 import salt.utils.stringio
-import salt.syspaths
+import salt.utils.stringutils
 from salt.exceptions import SaltRenderError
 
 # Import 3rd-party libs
@@ -226,116 +279,137 @@ from salt.ext import six
 
 log = logging.getLogger(__name__)
 
-GPG_HEADER = re.compile(r'-----BEGIN PGP MESSAGE-----')
+GPG_CIPHERTEXT = re.compile(
+    salt.utils.stringutils.to_bytes(
+        r"-----BEGIN PGP MESSAGE-----.*?-----END PGP MESSAGE-----"
+    ),
+    re.DOTALL,
+)
 
 
 def _get_gpg_exec():
-    '''
+    """
     return the GPG executable or raise an error
-    '''
-    gpg_exec = salt.utils.path.which('gpg')
+    """
+    gpg_exec = salt.utils.path.which("gpg")
     if gpg_exec:
         return gpg_exec
     else:
-        raise SaltRenderError('GPG unavailable')
+        raise SaltRenderError("GPG unavailable")
 
 
 def _get_key_dir():
-    '''
+    """
     return the location of the GPG key directory
-    '''
+    """
     gpg_keydir = None
-    if 'config.get' in __salt__:
-        gpg_keydir = __salt__['config.get']('gpg_keydir')
+    if "config.get" in __salt__:
+        gpg_keydir = __salt__["config.get"]("gpg_keydir")
 
     if not gpg_keydir:
         gpg_keydir = __opts__.get(
-            'gpg_keydir',
+            "gpg_keydir",
             os.path.join(
-                __opts__.get(
-                    'config_dir',
-                    os.path.dirname(__opts__['conf_file']),
-                ),
-                'gpgkeys'
-            ))
+                __opts__.get("config_dir", os.path.dirname(__opts__["conf_file"]),),
+                "gpgkeys",
+            ),
+        )
 
     return gpg_keydir
 
 
-def _decrypt_ciphertext(cipher, translate_newlines=False):
-    '''
+def _decrypt_ciphertext(cipher):
+    """
     Given a block of ciphertext as a string, and a gpg object, try to decrypt
     the cipher and return the decrypted string. If the cipher cannot be
     decrypted, log the error, and return the ciphertext back out.
-    '''
-    if translate_newlines:
-        try:
-            cipher = salt.utils.stringutils.to_unicode(cipher).replace(r'\n', '\n')
-        except UnicodeDecodeError:
-            # ciphertext is binary
-            pass
+    """
+    try:
+        cipher = salt.utils.stringutils.to_unicode(cipher).replace(r"\n", "\n")
+    except UnicodeDecodeError:
+        # ciphertext is binary
+        pass
     cipher = salt.utils.stringutils.to_bytes(cipher)
-    cmd = [_get_gpg_exec(), '--homedir', _get_key_dir(), '--status-fd', '2',
-           '--no-tty', '-d']
+    cmd = [
+        _get_gpg_exec(),
+        "--homedir",
+        _get_key_dir(),
+        "--status-fd",
+        "2",
+        "--no-tty",
+        "-d",
+    ]
     proc = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, shell=False)
     decrypted_data, decrypt_error = proc.communicate(input=cipher)
     if not decrypted_data:
-        try:
-            cipher = salt.utils.stringutils.to_unicode(cipher)
-        except UnicodeDecodeError:
-            # decrypted data contains undecodable binary data
-            pass
-        log.warning(
-            'Could not decrypt cipher %s, received: %s',
-            cipher,
-            decrypt_error
-        )
+        log.warning("Could not decrypt cipher %r, received: %r", cipher, decrypt_error)
         return cipher
     else:
-        try:
-            decrypted_data = salt.utils.stringutils.to_unicode(decrypted_data)
-        except UnicodeDecodeError:
-            # decrypted data contains undecodable binary data
-            pass
         return decrypted_data
 
 
-def _decrypt_object(obj, translate_newlines=False):
-    '''
+def _decrypt_ciphertexts(cipher, translate_newlines=False, encoding=None):
+    to_bytes = salt.utils.stringutils.to_bytes
+    cipher = to_bytes(cipher)
+    if translate_newlines:
+        cipher = cipher.replace(to_bytes(r"\n"), to_bytes("\n"))
+
+    def replace(match):
+        result = to_bytes(_decrypt_ciphertext(match.group()))
+        return result
+
+    ret, num = GPG_CIPHERTEXT.subn(replace, to_bytes(cipher))
+    if num > 0:
+        # Remove trailing newlines. Without if crypted value initially specified as a YAML multiline
+        # it will conain unexpected trailing newline.
+        ret = ret.rstrip(b"\n")
+    else:
+        ret = cipher
+
+    try:
+        ret = salt.utils.stringutils.to_unicode(ret, encoding=encoding)
+    except UnicodeDecodeError:
+        # decrypted data contains some sort of binary data - not our problem
+        pass
+    return ret
+
+
+def _decrypt_object(obj, translate_newlines=False, encoding=None):
+    """
     Recursively try to decrypt any object. If the object is a six.string_types
     (string or unicode), and it contains a valid GPG header, decrypt it,
     otherwise keep going until a string is found.
-    '''
+    """
     if salt.utils.stringio.is_readable(obj):
         return _decrypt_object(obj.getvalue(), translate_newlines)
     if isinstance(obj, six.string_types):
-        if GPG_HEADER.search(obj):
-            return _decrypt_ciphertext(obj,
-                                       translate_newlines=translate_newlines)
-        else:
-            return obj
+        return _decrypt_ciphertexts(
+            obj, translate_newlines=translate_newlines, encoding=encoding
+        )
     elif isinstance(obj, dict):
         for key, value in six.iteritems(obj):
-            obj[key] = _decrypt_object(value,
-                                       translate_newlines=translate_newlines)
+            obj[key] = _decrypt_object(value, translate_newlines=translate_newlines)
         return obj
     elif isinstance(obj, list):
         for key, value in enumerate(obj):
-            obj[key] = _decrypt_object(value,
-                                       translate_newlines=translate_newlines)
+            obj[key] = _decrypt_object(value, translate_newlines=translate_newlines)
         return obj
     else:
         return obj
 
 
-def render(gpg_data, saltenv='base', sls='', argline='', **kwargs):
-    '''
+def render(gpg_data, saltenv="base", sls="", argline="", **kwargs):
+    """
     Create a gpg object given a gpg_keydir, and then use it to try to decrypt
     the data to be rendered.
-    '''
+    """
     if not _get_gpg_exec():
-        raise SaltRenderError('GPG unavailable')
-    log.debug('Reading GPG keys from: %s', _get_key_dir())
+        raise SaltRenderError("GPG unavailable")
+    log.debug("Reading GPG keys from: %s", _get_key_dir())
 
-    translate_newlines = kwargs.get('translate_newlines', False)
-    return _decrypt_object(gpg_data, translate_newlines=translate_newlines)
+    translate_newlines = kwargs.get("translate_newlines", False)
+    return _decrypt_object(
+        gpg_data,
+        translate_newlines=translate_newlines,
+        encoding=kwargs.get("encoding", None),
+    )

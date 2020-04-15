@@ -229,8 +229,8 @@ maps.
     {%- load_yaml as foo %}
     bar: {{ bar|yaml_encode }}
     baz: {{ baz|yaml_encode }}
-    baz: {{ zip|yaml_encode }}
-    baz: {{ zap|yaml_encode }}
+    zip: {{ zip|yaml_encode }}
+    zap: {{ zap|yaml_encode }}
     {%- endload %}
 
 In the above case ``{{ bar }}`` and ``{{ foo.bar }}`` should be
@@ -898,7 +898,7 @@ Example:
 .. note::
 
     This option may have adverse effects when using the default renderer,
-    ``yaml_jinja``. This is due to the fact that YAML requires proper handling
+    ``jinja|yaml``. This is due to the fact that YAML requires proper handling
     in regard to special characters. Please see the section on :ref:`YAML ASCII
     support <yaml_plain_ascii>` in the :ref:`YAML Idiosyncracies
     <yaml-idiosyncrasies>` documentation for more information.
@@ -914,9 +914,9 @@ Example:
     Renamed from ``json_decode_list`` to ``json_encode_list``. When you encode
     something you get bytes, and when you decode, you get your locale's
     encoding (usually a ``unicode`` type). This filter was incorrectly-named
-    when it was added. ``json_decode_list`` will be supported until the Neon
+    when it was added. ``json_decode_list`` will be supported until the Aluminium
     release.
-.. deprecated:: 2018.3.3,Fluorine
+.. deprecated:: 2018.3.3,2019.2.0
     The :jinja_ref:`tojson` filter accomplishes what this filter was designed
     to do, making this filter redundant.
 
@@ -947,9 +947,9 @@ Returns:
     Renamed from ``json_decode_dict`` to ``json_encode_dict``. When you encode
     something you get bytes, and when you decode, you get your locale's
     encoding (usually a ``unicode`` type). This filter was incorrectly-named
-    when it was added. ``json_decode_dict`` will be supported until the Neon
+    when it was added. ``json_decode_dict`` will be supported until the Aluminium
     release.
-.. deprecated:: 2018.3.3,Fluorine
+.. deprecated:: 2018.3.3,2019.2.0
     The :jinja_ref:`tojson` filter accomplishes what this filter was designed
     to do, making this filter redundant.
 
@@ -976,7 +976,7 @@ Returns:
 ``tojson``
 ----------
 
-.. versionadded:: 2018.3.3,Fluorine
+.. versionadded:: 2018.3.3,2019.2.0
 
 Dumps a data structure to JSON.
 
@@ -995,8 +995,8 @@ installed, then the upstream version of the filter will be used. See the
 .. versionadded:: 2017.7.0
 .. versionadded:: 2018.3.0
     Renamed from ``rand_str`` to ``random_hash`` to more accurately describe
-    what the filter does. ``rand_str`` will be supported until the Neon
-    release.
+    what the filter does. ``rand_str`` will be supported to ensure backwards
+    compatibility but please use the preferred ``random_hash``.
 
 Generates a random number between 1 and the number passed to the filter, and
 then hashes it. The default hash type is the one specified by the minion's
@@ -1017,6 +1017,137 @@ Returns:
 
   43ec517d68b6edd3015b3edc9a11367b
   d94a45acd81f8e3107d237dbc0d5d195f6a52a0d188bc0284c0763ece1eac9f9496fb6a531a296074c87b3540398dace1222b42e150e67c9301383fde3d66ae5
+
+
+.. jinja_ref:: set_dict_key_value
+
+``set_dict_key_value``
+----------------------
+
+..versionadded:: 3000
+
+Allows you to set a value in a nested dictionary without having to worry if all the nested keys actually exist.
+Missing keys will be automatically created if they do not exist.
+The default delimiter for the keys is ':', however, with the `delimiter`-parameter, a different delimiter can be specified.
+
+Examples:
+
+.. code-block:: jinja
+
+Example 1:
+  {%- set foo = {} %}
+  {{ foo | set_dict_key_value('bar:baz', 42) }}
+
+Example 2:
+  {{ {} | set_dict_key_value('bar.baz.qux', 42, delimiter='.') }}
+
+Returns:
+
+.. code-block:: text
+
+Example 1:
+  {'bar': {'baz': 42}}
+
+Example 2:
+  {'bar': {'baz': {'qux': 42}}}
+
+
+.. jinja_ref:: append_dict_key_value
+
+``append_dict_key_value``
+-------------------------
+
+..versionadded:: 3000
+
+Allows you to append to a list nested (deep) in a dictionary without having to worry if all the nested keys (or the list itself) actually exist.
+Missing keys will automatically be created if they do not exist.
+The default delimiter for the keys is ':', however, with the `delimiter`-parameter, a different delimiter can be specified.
+
+Examples:
+
+.. code-block:: jinja
+
+Example 1:
+  {%- set foo = {'bar': {'baz': [1, 2]}} %}
+  {{ foo | append_dict_key_value('bar:baz', 42) }}
+
+Example 2:
+  {%- set foo = {} %}
+  {{ foo | append_dict_key_value('bar:baz:qux', 42) }}
+
+Returns:
+
+.. code-block:: text
+
+Example 1:
+  {'bar': {'baz': [1, 2, 42]}}
+
+Example 2:
+  {'bar': {'baz': {'qux': [42]}}}
+
+
+.. jinja_ref:: extend_dict_key_value
+
+``extend_dict_key_value``
+-------------------------
+
+..versionadded:: 3000
+
+Allows you to extend a list nested (deep) in a dictionary without having to worry if all the nested keys (or the list itself) actually exist.
+Missing keys will automatically be created if they do not exist.
+The default delimiter for the keys is ':', however, with the `delimiter`-parameter, a different delimiter can be specified.
+
+Examples:
+
+.. code-block:: jinja
+
+Example 1:
+  {%- set foo = {'bar': {'baz': [1, 2]}} %}
+  {{ foo | extend_dict_key_value('bar:baz', [42, 42]) }}
+
+Example 2:
+  {{ {} | extend_dict_key_value('bar:baz:qux', [42]) }}
+
+Returns:
+
+.. code-block:: text
+
+Example 1:
+  {'bar': {'baz': [1, 2, 42, 42]}}
+
+Example 2:
+  {'bar': {'baz': {'qux': [42]}}}
+
+
+.. jinja_ref:: update_dict_key_value
+
+``update_dict_key_value``
+-------------------------
+
+..versionadded:: 3000
+
+Allows you to update a dictionary nested (deep) in another dictionary without having to worry if all the nested keys actually exist.
+Missing keys will automatically be created if they do not exist.
+The default delimiter for the keys is ':', however, with the `delimiter`-parameter, a different delimiter can be specified.
+
+Examples:
+
+.. code-block:: jinja
+
+Example 1:
+  {%- set foo = {'bar': {'baz': {'qux': 1}}} %}
+  {{ foo | update_dict_key_value('bar:baz', {'quux': 3}) }}
+
+Example 2:
+  {{ {} | update_dict_key_value('bar:baz:qux', {'quux': 3}) }}
+
+.. code-block:: text
+
+Example 1:
+  {'bar': {'baz': {'qux': 1, 'quux': 3}}}
+
+Example 2:
+  {'bar': {'baz': {'qux': {'quux': 3}}}}
 
 
 .. jinja_ref:: md5
@@ -1212,8 +1343,94 @@ Returns:
 
   'default'
 
+
+.. jinja_ref:: json_query
+
+``json_query``
+--------------
+
+.. versionadded:: 3000
+
+A port of Ansible ``json_query`` Jinja filter to make queries against JSON data using `JMESPath language`_.
+Could be used to filter ``pillar`` data, ``yaml`` maps, and together with :jinja_ref:`http_query`.
+Depends on the `jmespath`_ Python module.
+
+Examples:
+
+.. code-block:: jinja
+
+  Example 1: {{ [1, 2, 3, 4, [5, 6]] | json_query('[]') }}
+
+  Example 2: {{
+  {"machines": [
+    {"name": "a", "state": "running"},
+    {"name": "b", "state": "stopped"},
+    {"name": "c", "state": "running"}
+  ]} | json_query("machines[?state=='running'].name") }}
+
+  Example 3: {{
+  {"services": [
+    {"name": "http", "host": "1.2.3.4", "port": 80},
+    {"name": "smtp", "host": "1.2.3.5", "port": 25},
+    {"name": "ssh",  "host": "1.2.3.6", "port": 22},
+  ]} | json_query("services[].port") }}
+
+Returns:
+
+.. code-block:: text
+
+  Example 1: [1, 2, 3, 4, 5, 6]
+
+  Example 2: ['a', 'c']
+
+  Example 3: [80, 25, 22]
+
 .. _`builtin filters`: http://jinja.pocoo.org/docs/templates/#builtin-filters
 .. _`timelib`: https://github.com/pediapress/timelib/
+.. _`JMESPath language`: http://jmespath.org/
+.. _`jmespath`: https://github.com/jmespath/jmespath.py
+
+.. jinja_ref:: to_snake_case
+
+``to_snake_case``
+-----------------
+
+.. versionadded:: 3000
+
+Converts a string from camelCase (or CamelCase) to snake_case.
+
+.. code-block:: jinja
+
+  Example: {{ camelsWillLoveThis | to_snake_case }}
+
+Returns:
+
+.. code-block:: text
+
+  Example: camels_will_love_this
+
+
+.. jinja_ref:: to_camelcase
+
+``to_camelcase``
+----------------
+
+.. versionadded:: 3000
+
+Converts a string from snake_case to camelCase (or UpperCamelCase if so indicated).
+
+.. code-block:: jinja
+
+  Example 1: {{ snake_case_for_the_win | to_camelcase }}
+
+  Example 2: {{ snake_case_for_the_win | to_camelcase(uppercamel=True) }}
+
+Returns:
+
+.. code-block:: text
+
+  Example 1: snakeCaseForTheWin
+  Example 2: SnakeCaseForTheWin
 
 Networking Filters
 ------------------
@@ -1449,11 +1666,11 @@ Example:
 
 .. note::
 
-    This option may have adverse effects when using the default renderer, ``yaml_jinja``.
-    This is due to the fact that YAML requires proper handling in regard to special
-    characters. Please see the section on :ref:`YAML ASCII support <yaml_plain_ascii>`
-    in the :ref:`YAML Idiosyncracies <yaml-idiosyncrasies>` documentation for more
-    information.
+    This option may have adverse effects when using the default renderer,
+    ``jinja|yaml``. This is due to the fact that YAML requires proper handling
+    in regard to special characters. Please see the section on :ref:`YAML ASCII
+    support <yaml_plain_ascii>` in the :ref:`YAML Idiosyncracies
+    <yaml-idiosyncrasies>` documentation for more information.
 
 .. jinja_ref:: dns_check
 

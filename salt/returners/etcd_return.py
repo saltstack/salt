@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Return data to an etcd server or cluster
 
 :depends: - python-etcd
@@ -11,7 +11,7 @@ configuration file:
 
     my_etcd_config:
       etcd.host: 127.0.0.1
-      etcd.port: 4001
+      etcd.port: 2379
 
 It is technically possible to configure etcd without using a profile, but this
 is not considered to be a best practice, especially when multiple etcd servers
@@ -20,7 +20,7 @@ or clusters are available.
 .. code-block:: yaml
 
     etcd.host: 127.0.0.1
-    etcd.port: 4001
+    etcd.port: 2379
 
 Additionally, two more options must be specified in the top-level configuration
 in order to use the etcd returner:
@@ -63,7 +63,7 @@ create the profiles as specified above. Then add:
 
     etcd.returner_read_profile: my_etcd_read
     etcd.returner_write_profile: my_etcd_write
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
@@ -72,156 +72,170 @@ import logging
 # Import salt libs
 import salt.utils.jid
 import salt.utils.json
+
 try:
     import salt.utils.etcd_util
+
     HAS_LIBS = True
 except ImportError:
     HAS_LIBS = False
 
-# Import 3rd-party libs
-from salt.ext import six
-
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
-__virtualname__ = 'etcd'
+__virtualname__ = "etcd"
 
 
 def __virtual__():
-    '''
+    """
     Only return if python-etcd is installed
-    '''
+    """
     if HAS_LIBS:
         return __virtualname__
 
-    return False, 'Could not import etcd returner; python-etcd is not installed.'
+    return False, "Could not import etcd returner; python-etcd is not installed."
 
 
 def _get_conn(opts, profile=None):
-    '''
+    """
     Establish a connection to etcd
-    '''
+    """
     if profile is None:
-        profile = opts.get('etcd.returner')
-    path = opts.get('etcd.returner_root', '/salt/return')
+        profile = opts.get("etcd.returner")
+    path = opts.get("etcd.returner_root", "/salt/return")
     return salt.utils.etcd_util.get_conn(opts, profile), path
 
 
 def returner(ret):
-    '''
+    """
     Return data to an etcd server or cluster
-    '''
-    write_profile = __opts__.get('etcd.returner_write_profile')
+    """
+    write_profile = __opts__.get("etcd.returner_write_profile")
     if write_profile:
-        ttl = __opts__.get(write_profile, {}).get('etcd.ttl')
+        ttl = __opts__.get(write_profile, {}).get("etcd.ttl")
     else:
-        ttl = __opts__.get('etcd.ttl')
+        ttl = __opts__.get("etcd.ttl")
 
     client, path = _get_conn(__opts__, write_profile)
     # Make a note of this minion for the external job cache
     client.set(
-        '/'.join((path, 'minions', ret['id'])),
-        ret['jid'],
-        ttl=ttl,
+        "/".join((path, "minions", ret["id"])), ret["jid"], ttl=ttl,
     )
 
     for field in ret:
         # Not using os.path.join because we're not dealing with file paths
-        dest = '/'.join((
-            path,
-            'jobs',
-            ret['jid'],
-            ret['id'],
-            field
-        ))
+        dest = "/".join((path, "jobs", ret["jid"], ret["id"], field))
         client.set(dest, salt.utils.json.dumps(ret[field]), ttl=ttl)
 
 
 def save_load(jid, load, minions=None):
-    '''
+    """
     Save the load to the specified jid
-    '''
-    write_profile = __opts__.get('etcd.returner_write_profile')
+    """
+    log.debug("sdstack_etcd returner <save_load> called jid: {0}".format(jid))
+    write_profile = __opts__.get("etcd.returner_write_profile")
     client, path = _get_conn(__opts__, write_profile)
     if write_profile:
-        ttl = __opts__.get(write_profile, {}).get('etcd.ttl')
+        ttl = __opts__.get(write_profile, {}).get("etcd.ttl")
     else:
-        ttl = __opts__.get('etcd.ttl')
+        ttl = __opts__.get("etcd.ttl")
     client.set(
-        '/'.join((path, 'jobs', jid, '.load.p')),
-        salt.utils.json.dumps(load),
-        ttl=ttl,
+        "/".join((path, "jobs", jid, ".load.p")), salt.utils.json.dumps(load), ttl=ttl,
     )
 
 
 def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument
-    '''
+    """
     Included for API consistency
-    '''
-    pass
+    """
+
+
+def clean_old_jobs():
+    """
+    Included for API consistency
+    """
 
 
 def get_load(jid):
-    '''
+    """
     Return the load data that marks a specified jid
-    '''
-    read_profile = __opts__.get('etcd.returner_read_profile')
+    """
+    log.debug("sdstack_etcd returner <get_load> called jid: {0}".format(jid))
+    read_profile = __opts__.get("etcd.returner_read_profile")
     client, path = _get_conn(__opts__, read_profile)
-    return salt.utils.json.loads(client.get('/'.join((path, 'jobs', jid, '.load.p'))))
+    return salt.utils.json.loads(
+        client.get("/".join((path, "jobs", jid, ".load.p"))).value
+    )
 
 
 def get_jid(jid):
-    '''
+    """
     Return the information returned when the specified job id was executed
-    '''
-    client, path = _get_conn(__opts__)
-    jid_path = '/'.join((path, 'jobs', jid))
-    return client.tree(jid_path)
-
-
-def get_fun():
-    '''
-    Return a dict of the last function called for all minions
-    '''
+    """
+    log.debug("sdstack_etcd returner <get_jid> called jid: {0}".format(jid))
     ret = {}
     client, path = _get_conn(__opts__)
-    items = client.get('/'.join((path, 'minions')))
+    items = client.get("/".join((path, "jobs", jid)))
     for item in items.children:
-        comps = six.text_type(item.key).split('/')
-        ret[comps[-1]] = item.value
+        if str(item.key).endswith(".load.p"):
+            continue
+        comps = str(item.key).split("/")
+        data = client.get("/".join((path, "jobs", jid, comps[-1], "return"))).value
+        ret[comps[-1]] = {"return": salt.utils.json.loads(data)}
+    return ret
+
+
+def get_fun(fun):
+    """
+    Return a dict of the last function called for all minions
+    """
+    log.debug("sdstack_etcd returner <get_fun> called fun: {0}".format(fun))
+    ret = {}
+    client, path = _get_conn(__opts__)
+    items = client.get("/".join((path, "minions")))
+    for item in items.children:
+        comps = str(item.key).split("/")
+        efun = salt.utils.json.loads(
+            client.get(
+                "/".join((path, "jobs", str(item.value), comps[-1], "fun"))
+            ).value
+        )
+        if efun == fun:
+            ret[comps[-1]] = str(efun)
     return ret
 
 
 def get_jids():
-    '''
+    """
     Return a list of all job ids
-    '''
-    ret = {}
+    """
+    log.debug("sdstack_etcd returner <get_jids> called")
+    ret = []
     client, path = _get_conn(__opts__)
-    items = client.get('/'.join((path, 'jobs')))
+    items = client.get("/".join((path, "jobs")))
     for item in items.children:
         if item.dir is True:
-            jid = six.text_type(item.key).split('/')[-1]
-            load = client.get('/'.join((item.key, '.load.p'))).value
-            ret[jid] = salt.utils.jid.format_jid_instance(jid, salt.utils.json.loads(load))
+            jid = str(item.key).split("/")[-1]
+            ret.append(jid)
     return ret
 
 
 def get_minions():
-    '''
+    """
     Return a list of minions
-    '''
+    """
+    log.debug("sdstack_etcd returner <get_minions> called")
     ret = []
     client, path = _get_conn(__opts__)
-    items = client.get('/'.join((path, 'minions')))
+    items = client.get("/".join((path, "minions")))
     for item in items.children:
-        comps = six.text_type(item.key).split('/')
+        comps = str(item.key).split("/")
         ret.append(comps[-1])
     return ret
 
 
 def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
-    '''
+    """
     Do any work necessary to prepare a JID, including sending a custom id
-    '''
+    """
     return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid(__opts__)

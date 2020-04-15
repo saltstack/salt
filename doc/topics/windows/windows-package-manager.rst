@@ -27,7 +27,7 @@ High level differences to yum and apt are:
 - The repository metadata (SLS files) is hosted through either salt or
   git.
 - Packages can be downloaded from within the salt repository, a git
-  repository or from http(s) or ftp urls.
+  repository or from HTTP(S) or FTP URLs.
 - No dependencies are managed. Dependencies between packages needs to
   be managed manually.
 
@@ -61,6 +61,11 @@ the package repository.
 .. code-block:: bash
 
     salt -G 'os:windows' pkg.refresh_db
+
+.. note::
+   Use ``pkg.refresh_db`` from 2016.11 when developing new Windows package
+   definitions to check for errors in the definitions against one or more
+   Windows minions.
 
 Install Windows Software
 ========================
@@ -182,7 +187,7 @@ by modifying or extending the :conf_master:`winrepo_remotes` and
     ``winrepo_remotes`` was called ``win_gitrepos`` in Salt versions earlier
     than 2015.8.0
 
-Package definitions are pulled down from the online repository by running the
+Package definitions are pulled down from the online git repository by running the
 :mod:`winrepo.update_git_repos <salt.runners.winrepo.update_git_repos>` runner.
 This command is run on the master:
 
@@ -204,9 +209,9 @@ This will pull down the software definition files for older minions
 
     Additionally, when you run ``winrepo.genrepo`` and ``pkg.refresh_db`` the
     entire contents under ``win/repo`` and ``win/repo-ng``, to include all
-    subdirectories, are used to create the msgpack file.
+    subdirectories, are used to create the meta database file.
 
-The next step (if you have older minions) is to create the msgpack file for the
+The next step (if you have older minions) is to create the meta database file for the
 repo (``winrepo.p``). This is done by running the
 :mod:`winrepo.genrepo <salt.runners.winrepo.genrepo>` runner. This is also run
 on the master:
@@ -229,8 +234,8 @@ on the master as well:
 
 On older minions (older than 2015.8.0) this will copy the winrepo.p file down to
 the minion. On newer minions (2015.8.0 and newer) this will copy all the
-software definition files (.sls) down to the minion and then create the msgpack
-file (``winrepo.p``) locally. The reason this is done locally is because the
+software definition files (.sls) down to the minion and then create the meta
+database file (``winrepo.p``) locally. The reason this is done locally is because the
 jinja needs to be parsed using the minion's grains.
 
 .. important::
@@ -245,7 +250,7 @@ jinja needs to be parsed using the minion's grains.
     If the ``winrepo.genrepo`` or the ``pkg.refresh_db`` fails, it is likely a
     problem with the jinja in one of the software definition files. This will
     cause the operations to stop. You'll need to fix the syntax in order for the
-    msgpack file to be created successfully.
+    meta database file to be created successfully.
 
 To disable one of the repos, set it to an empty list ``[]`` in the master
 config. For example, to disable :conf_master:`winrepo_remotes` set the following
@@ -259,10 +264,10 @@ in the master config file:
 Creating a Package Definition SLS File
 ======================================
 
-The package definition file is a yaml file that contains all the information
+The package definition file is a YAML file that contains all the information
 needed to install a piece of software using salt. It defines information about
 the package to include version, full name, flags required for the installer and
-uninstaller, whether or not to use the windows task scheduler to install the
+uninstaller, whether or not to use the Windows task scheduler to install the
 package, where to find the installation package, etc.
 
 Take a look at this example for Firefox:
@@ -310,17 +315,17 @@ The version line is the version for the package to be installed. It is used when
 you need to install a specific version of a piece of software.
 
 .. warning::
-    The version must be enclosed in quotes, otherwise the yaml parser will
+    The version must be enclosed in quotes, otherwise the YAML parser will
     remove trailing zeros.
 
 .. note::
     There are unique situations where previous versions are unavailable. Take
-    Google Chrome for example. There is only one url provided for a standalone
+    Google Chrome for example. There is only one URL provided for a standalone
     installation of Google Chrome.
 
     (https://dl.google.com/edgedl/chrome/install/GoogleChromeStandaloneEnterprise.msi)
 
-    When a new version is released, the url just points to the new version. To
+    When a new version is released, the URL just points to the new version. To
     handle situations such as these, set the version to `latest`. Salt will
     install the version of Chrome at the URL and report that version. Here's an
     example:
@@ -448,7 +453,7 @@ Available parameters are as follows:
     a GUID. You can find this value in the registry under the following keys:
 
         - Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall
-        - Software\\Wow6432None\\Microsoft\\Windows\\CurrentVersion\\Uninstall
+        - Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall
 
 :param str uninstall_flags:
     Any flags that need to be passed to the uninstaller to make it perform a
@@ -574,7 +579,7 @@ Available parameters are as follows:
 
 :param bool reboot: Not implemented
 
-:param str local: Not implemented
+:param str locale: Not implemented
 
 Examples can be found at https://github.com/saltstack/salt-winrepo-ng
 
@@ -623,20 +628,37 @@ proper relative path. For example, if the ``base`` environment in
 into right location.
 
 
-Config Options for Minions 2015.8.0 and Later
-=============================================
+Configuration options for Minions 2015.8.0 and later
+====================================================
 
-The :conf_minion:`winrepo_source_dir` config parameter (default:
-``salt://win/repo``) controls where :mod:`pkg.refresh_db
-<salt.modules.win_pkg.refresh_db>` looks for the cachefile (default:
-``winrepo.p``). This means that the default location for the winrepo cachefile
-would be ``salt://win/repo/winrepo.p``. Both :conf_minion:`winrepo_source_dir`
-and :conf_minion:`winrepo_cachefile` can be adjusted to match the actual
-location of this file on the Salt fileserver.
+On newer minions (2015.8.0 and later), the :conf_minion:`winrepo_source_dir`
+config parameter (default: ``salt://win/repo-ng``) controls where
+:mod:`pkg.refresh_db <salt.modules.win_pkg.refresh_db>` looks for the software
+definition files that will be downloaded to the minion and used to generate the
+local database file (``winrepo.p``).
+
+Software package definitions are automatically refreshed if stale after
+:conf_minion:`winrepo_cache_expire_max`.  Running a highstate normal forces the
+refresh of the package definition and generation of the meta database, unless
+the meta database is younger than :conf_minion:`winrepo_cache_expire_max`.
+Refreshing the package definitions can take some time, these options were
+introduced to allow more control of when it occurs.
+
+It's important use :py:func:`pkg.refresh_db <salt.modules.win_pkg.refresh_db>`
+to check for errors and ensure the latest package definition is on any minion
+your testing new definitions on.
 
 
-Config Options for Minions Before 2015.8.0
-==========================================
+Configuration options for Minions before 2015.8.0
+=================================================
+
+On older minions (before 2015.8.0), the :conf_minion:`winrepo_source_dir`
+config parameter (default: ``salt://win/repo``) controls where
+:mod:`pkg.refresh_db <salt.modules.win_pkg.refresh_db>` looks for the cachefile
+(default: ``winrepo.p``). This means that the default location for the winrepo
+cachefile would be ``salt://win/repo/winrepo.p``. Both :conf_minion:
+winrepo_source_dir` and :conf_minion:`winrepo_cachefile` can be adjusted to
+match the actual location of this file on the Salt fileserver.
 
 If connected to a master, the minion will by default look for the winrepo
 cachefile (the file generated by the :mod:`winrepo.genrepo runner
@@ -862,7 +884,7 @@ Packages management under Windows 2003
 --------------------------------------
 
 On Windows server 2003, you need to install optional Windows component "wmi
-windows installer provider" to have full list of installed packages. If you
+Windows installer provider" to have full list of installed packages. If you
 don't have this, salt-minion can't report some installed software.
 
 

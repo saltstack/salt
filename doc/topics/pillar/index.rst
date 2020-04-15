@@ -88,6 +88,33 @@ by their ``os`` grain:
         - match: grain
         - servers
 
+Pillar definitions can also take a keyword argument ``ignore_missing``.
+When the value of ``ignore_missing`` is ``True``, all errors for missing
+pillar files are ignored. The default value for ``ignore_missing`` is
+``False``.
+
+Here is an example using the ``ignore_missing`` keyword parameter to ignore
+errors for missing pillar files:
+
+.. code-block:: yaml
+
+    base:
+      '*':
+        - servers
+        - systems
+        - ignore_missing: True
+
+Assuming that the pillar ``servers`` exists in the fileserver backend
+and the pillar ``systems`` doesn't, all pillar data from ``servers``
+pillar is delivered to minions and no error for the missing pillar
+``systems`` is noted under the key ``_errors`` in the pillar data
+delivered to minions.
+
+Should the ``ignore_missing`` keyword parameter have the value ``False``,
+an error for the missing pillar ``systems`` would produce the value
+``Specified SLS 'servers' in environment 'base' is not available on the salt master``
+under the key ``_errors`` in the pillar data delivered to minions.
+
 ``/srv/pillar/packages.sls``
 
 .. code-block:: jinja
@@ -433,7 +460,7 @@ module. This module includes several functions, each of them with their own
 use. These functions include:
 
 - :py:func:`pillar.item <salt.modules.pillar.item>` - Retrieves the value of
-  one or more keys from the :ref:`in-memory pillar datj <pillar-in-memory>`.
+  one or more keys from the :ref:`in-memory pillar data <pillar-in-memory>`.
 - :py:func:`pillar.items <salt.modules.pillar.items>` - Compiles a fresh pillar
   dictionary and returns it, leaving the :ref:`in-memory pillar data
   <pillar-in-memory>` untouched. If pillar keys are passed to this function
@@ -714,12 +741,40 @@ done:
   option in the `master config template`_ should be updated to show the correct
   new default value.
 
-.. _`salt/renderers/`: https://github.com/saltstack/salt/tree/develop/salt/renderers/
-.. _`salt/config/__init__.py`: https://github.com/saltstack/salt/tree/develop/salt/config/__init__.py
-.. _`master config file`: https://github.com/saltstack/salt/tree/develop/doc/ref/configuration/master.rst
-.. _`minion config file`: https://github.com/saltstack/salt/tree/develop/doc/ref/configuration/minion.rst
-.. _`master config template`: https://github.com/saltstack/salt/tree/develop/conf/master
+.. _`salt/renderers/`: https://github.com/saltstack/salt/tree/|repo_primary_branch|/salt/renderers/
+.. _`salt/config/__init__.py`: https://github.com/saltstack/salt/tree/|repo_primary_branch|/salt/config/__init__.py
+.. _`master config file`: https://github.com/saltstack/salt/tree/|repo_primary_branch|/doc/ref/configuration/master.rst
+.. _`minion config file`: https://github.com/saltstack/salt/tree/|repo_primary_branch|/doc/ref/configuration/minion.rst
+.. _`master config template`: https://github.com/saltstack/salt/tree/|repo_primary_branch|/conf/master
 
+Binary Data in the Pillar
+=========================
+
+Salt has partial support for binary pillar data.
+
+.. note::
+
+   There are some situations (such as salt-ssh) where only text (ASCII or
+   Unicode) is allowed.
+
+The simplest way to embed binary data in your pillar is to make use of YAML's
+built-in binary data type, which requires base64 encoded data.
+
+.. code-block:: yaml
+
+    salt_pic: !!binary
+        iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAMAAAC67D+PAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAA
+
+Then you can use it as a ``contents_pillar`` in a state:
+
+.. code-block:: yaml
+
+    /tmp/salt.png:
+      file.managed:
+        - contents_pillar: salt_pic
+
+It is also possible to add ASCII-armored encrypted data to pillars, as
+mentioned in the Pillar Encryption section.
 
 Master Config in Pillar
 =======================

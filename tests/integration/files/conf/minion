@@ -95,6 +95,9 @@ config_test:
 
 mine_functions:
   test.ping: []
+  test.arg:
+    - isn't
+    - allow_tgt: 'sub_minion'
 
 # sdb env module
 osenv:
@@ -110,3 +113,5 @@ autosign_grains:
 
 # disable discovery for test suite saltstack/salt-jenkins#683
 discovery: false
+sdbvault:
+  driver: vault

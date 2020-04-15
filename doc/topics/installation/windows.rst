@@ -127,7 +127,7 @@ Option                     Description
                            ``/minion-name`` is passed, those values will be used
                            to update the new default config.
 ``/custom-config=``        A string value specifying the name of a custom config
-                           file in the same path as the installer of the full
+                           file in the same path as the installer or the full
                            path to a custom config file. If ``/master`` and/or
                            ``/minion-name`` is passed, those values will be used
                            to update the new custom config.
@@ -265,7 +265,7 @@ customize or fix bugs. It will also allow you to build your own installation.
 There are several scripts to automate creating a Windows installer as well as
 setting up an environment that facilitates developing and troubleshooting Salt
 code. They are located in the ``pkg\windows`` directory in the Salt repo
-`(here) <https://github.com/saltstack/salt/tree/develop/pkg/windows>`_.
+`(here) <https://github.com/saltstack/salt/tree/|repo_primary_branch|/pkg/windows>`_.
 
 Scripts:
 --------

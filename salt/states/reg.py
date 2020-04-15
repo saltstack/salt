@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-r'''
+r"""
 Manage the Windows registry
 ===========================
 
@@ -68,55 +68,73 @@ Value:
 - There are 3 value names: ``RTHDVCPL``, ``NvBackend``, and ``BTMTrayAgent``
 - Each value name has a corresponding value
 
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
+
 import salt.utils.stringutils
 
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     Load this state if the reg module exists
-    '''
-    if 'reg.read_value' not in __utils__:
-        return (False, 'reg state module failed to load: '
-                       'missing util function: reg.read_value')
+    """
+    if "reg.read_value" not in __utils__:
+        return (
+            False,
+            "reg state module failed to load: missing util function: reg.read_value",
+        )
 
-    if 'reg.set_value' not in __utils__:
-        return (False, 'reg state module failed to load: '
-                       'missing util function: reg.set_value')
+    if "reg.set_value" not in __utils__:
+        return (
+            False,
+            "reg state module failed to load: missing util function: reg.set_value",
+        )
 
-    if 'reg.delete_value' not in __utils__:
-        return (False, 'reg state module failed to load: '
-                       'missing util function: reg.delete_value')
+    if "reg.delete_value" not in __utils__:
+        return (
+            False,
+            "reg state module failed to load: "
+            "missing util function: reg.delete_value",
+        )
 
-    if 'reg.delete_key_recursive' not in __utils__:
-        return (False, 'reg state module failed to load: '
-                       'missing util function: reg.delete_key_recursive')
+    if "reg.delete_key_recursive" not in __utils__:
+        return (
+            False,
+            "reg state module failed to load: "
+            "missing util function: reg.delete_key_recursive",
+        )
 
-    return 'reg'
+    return "reg"
 
 
 def _parse_key(key):
-    '''
+    """
     split the hive from the key
-    '''
+    """
     splt = key.split("\\")
     hive = splt.pop(0)
-    key = '\\'.join(splt)
+    key = "\\".join(splt)
     return hive, key
 
 
-def present(name,
-            vname=None,
-            vdata=None,
-            vtype='REG_SZ',
-            use_32bit_registry=False):
-    r'''
+def present(
+    name,
+    vname=None,
+    vdata=None,
+    vtype="REG_SZ",
+    use_32bit_registry=False,
+    win_owner=None,
+    win_perms=None,
+    win_deny_perms=None,
+    win_inheritance=True,
+    win_perms_reset=False,
+):
+    r"""
     Ensure a registry key or value is present.
 
     Args:
@@ -186,127 +204,279 @@ def present(name,
             Use the 32bit portion of the registry. Applies only to 64bit
             windows. 32bit Windows will ignore this parameter. Default is False.
 
+        win_owner (str):
+            The owner of the registry key. If this is not passed, the account
+            under which Salt is running will be used.
+
+            .. note::
+                Owner is set for the key that contains the value/data pair. You
+                cannot set ownership on value/data pairs themselves.
+
+            .. versionadded:: 2019.2.0
+
+        win_perms (dict):
+            A dictionary containing permissions to grant and their propagation.
+            If not passed the 'Grant` permissions will not be modified.
+
+            .. note::
+                Permissions are set for the key that contains the value/data
+                pair. You cannot set permissions on value/data pairs themselves.
+
+            For each user specify the account name, with a sub dict for the
+            permissions to grant and the 'Applies to' setting. For example:
+            ``{'Administrators': {'perms': 'full_control', 'applies_to':
+            'this_key_subkeys'}}``. ``perms`` must be specified.
+
+            Registry permissions are specified using the ``perms`` key. You can
+            specify a single basic permission or a list of advanced perms. The
+            following are valid perms:
+
+                Basic (passed as a string):
+                    - full_control
+                    - read
+                    - write
+
+                Advanced (passed as a list):
+                    - delete
+                    - query_value
+                    - set_value
+                    - create_subkey
+                    - enum_subkeys
+                    - notify
+                    - create_link
+                    - read_control
+                    - write_dac
+                    - write_owner
+
+            The 'Applies to' setting is optional. It is specified using the
+            ``applies_to`` key. If not specified ``this_key_subkeys`` is used.
+            Valid options are:
+
+                Applies to settings:
+                    - this_key_only
+                    - this_key_subkeys
+                    - subkeys_only
+
+            .. versionadded:: 2019.2.0
+
+        win_deny_perms (dict):
+            A dictionary containing permissions to deny and their propagation.
+            If not passed the `Deny` permissions will not be modified.
+
+            .. note::
+                Permissions are set for the key that contains the value/data
+                pair. You cannot set permissions on value/data pairs themselves.
+
+            Valid options are the same as those specified in ``win_perms``
+
+            .. note::
+                'Deny' permissions always take precedence over 'grant'
+                 permissions.
+
+            .. versionadded:: 2019.2.0
+
+        win_inheritance (bool):
+            ``True`` to inherit permissions from the parent key. ``False`` to
+            disable inheritance. Default is ``True``.
+
+            .. note::
+                Inheritance is set for the key that contains the value/data
+                pair. You cannot set inheritance on value/data pairs themselves.
+
+            .. versionadded:: 2019.2.0
+
+        win_perms_reset (bool):
+            If ``True`` the existing DACL will be cleared and replaced with the
+            settings defined in this function. If ``False``, new entries will be
+            appended to the existing DACL. Default is ``False``
+
+            .. note::
+                Perms are reset for the key that contains the value/data pair.
+                You cannot set permissions on value/data pairs themselves.
+
+            .. versionadded:: 2019.2.0
+
     Returns:
         dict: A dictionary showing the results of the registry operation.
 
     Example:
 
-        The following example will set the ``(Default)`` value for the
-        ``SOFTWARE\\Salt`` key in the ``HKEY_CURRENT_USER`` hive to
-        ``2016.3.1``:
+    The following example will set the ``(Default)`` value for the
+    ``SOFTWARE\\Salt`` key in the ``HKEY_CURRENT_USER`` hive to
+    ``2016.3.1``:
 
-        .. code-block:: yaml
+    .. code-block:: yaml
 
-            HKEY_CURRENT_USER\\SOFTWARE\\Salt:
-              reg.present:
-                - vdata: 2016.3.1
-
-    Example:
-
-        The following example will set the value for the ``version`` entry under
-        the ``SOFTWARE\\Salt`` key in the ``HKEY_CURRENT_USER`` hive to
-        ``2016.3.1``. The value will be reflected in ``Wow6432Node``:
-
-        .. code-block:: yaml
-
-            HKEY_CURRENT_USER\\SOFTWARE\\Salt:
-              reg.present:
-                - vname: version
-                - vdata: 2016.3.1
-
-        In the above example the path is interpreted as follows:
-
-            - ``HKEY_CURRENT_USER`` is the hive
-            - ``SOFTWARE\\Salt`` is the key
-            - ``vname`` is the value name ('version') that will be created under the key
-            - ``vdata`` is the data that will be assigned to 'version'
+        HKEY_CURRENT_USER\\SOFTWARE\\Salt:
+          reg.present:
+            - vdata: 2016.3.1
 
     Example:
 
-        Binary data can be set in two ways. The following two examples will set
-        a binary value of ``Salty Test``
+    The following example will set the value for the ``version`` entry under
+    the ``SOFTWARE\\Salt`` key in the ``HKEY_CURRENT_USER`` hive to
+    ``2016.3.1``. The value will be reflected in ``Wow6432Node``:
 
-        .. code-block:: yaml
+    .. code-block:: yaml
 
-            no_conversion:
-              reg.present:
-                - name: HKLM\SOFTWARE\SaltTesting
-                - vname: test_reg_binary_state
-                - vdata: Salty Test
-                - vtype: REG_BINARY
+        HKEY_CURRENT_USER\\SOFTWARE\\Salt:
+          reg.present:
+            - vname: version
+            - vdata: 2016.3.1
 
-            conversion:
-              reg.present:
-                - name: HKLM\SOFTWARE\SaltTesting
-                - vname: test_reg_binary_state_with_tag
-                - vdata: !!binary U2FsdHkgVGVzdA==\n
-                - vtype: REG_BINARY
+    In the above example the path is interpreted as follows:
+
+        - ``HKEY_CURRENT_USER`` is the hive
+        - ``SOFTWARE\\Salt`` is the key
+        - ``vname`` is the value name ('version') that will be created under the key
+        - ``vdata`` is the data that will be assigned to 'version'
 
     Example:
 
-        To set a ``REG_MULTI_SZ`` value:
+    Binary data can be set in two ways. The following two examples will set
+    a binary value of ``Salty Test``
 
-        .. code-block:: yaml
+    .. code-block:: yaml
 
-            reg_multi_sz:
-              reg.present:
-                - name: HKLM\SOFTWARE\Salt
-                - vname: reg_multi_sz
-                - vdata:
-                  - list item 1
-                  - list item 2
-    '''
-    ret = {'name': name,
-           'result': True,
-           'changes': {},
-           'comment': ''}
+        no_conversion:
+          reg.present:
+            - name: HKLM\SOFTWARE\SaltTesting
+            - vname: test_reg_binary_state
+            - vdata: Salty Test
+            - vtype: REG_BINARY
+
+        conversion:
+          reg.present:
+            - name: HKLM\SOFTWARE\SaltTesting
+            - vname: test_reg_binary_state_with_tag
+            - vdata: !!binary U2FsdHkgVGVzdA==\n
+            - vtype: REG_BINARY
+
+    Example:
+
+    To set a ``REG_MULTI_SZ`` value:
+
+    .. code-block:: yaml
+
+        reg_multi_sz:
+          reg.present:
+            - name: HKLM\SOFTWARE\Salt
+            - vname: reg_multi_sz
+            - vdata:
+              - list item 1
+              - list item 2
+
+    Example:
+
+    To ensure a key is present and has permissions:
+
+    .. code-block:: yaml
+
+        set_key_permissions:
+          reg.present:
+            - name: HKLM\SOFTWARE\Salt
+            - vname: version
+            - vdata: 2016.3.1
+            - win_owner: Administrators
+            - win_perms:
+                jsnuffy:
+                  perms: full_control
+                sjones:
+                  perms:
+                    - read_control
+                    - enum_subkeys
+                    - query_value
+                  applies_to:
+                    - this_key_only
+            - win_deny_perms:
+                bsimpson:
+                  perms: full_control
+                  applies_to: this_key_subkeys
+            - win_inheritance: True
+            - win_perms_reset: True
+    """
+    ret = {"name": name, "result": True, "changes": {}, "pchanges": {}, "comment": ""}
 
     hive, key = _parse_key(name)
 
     # Determine what to do
-    reg_current = __utils__['reg.read_value'](hive=hive,
-                                              key=key,
-                                              vname=vname,
-                                              use_32bit_registry=use_32bit_registry)
+    reg_current = __utils__["reg.read_value"](
+        hive=hive, key=key, vname=vname, use_32bit_registry=use_32bit_registry
+    )
 
-    if vdata == reg_current['vdata'] and reg_current['success']:
-        ret['comment'] = '{0} in {1} is already configured' \
-                         ''.format(salt.utils.stringutils.to_unicode(vname, 'utf-8') if vname else '(Default)',
-                                   salt.utils.stringutils.to_unicode(name, 'utf-8'))
-        return ret
+    # Cast the vdata according to the vtype
+    vdata_decoded = __utils__["reg.cast_vdata"](vdata=vdata, vtype=vtype)
 
-    vdata_decoded = __utils__['reg.cast_vdata'](vdata=vdata, vtype=vtype)
+    # Check if the key already exists
+    # If so, check perms
+    # We check `vdata` and `success` because `vdata` can be None
+    if vdata_decoded == reg_current["vdata"] and reg_current["success"]:
+        ret["comment"] = "{0} in {1} is already present" "".format(
+            salt.utils.stringutils.to_unicode(vname, "utf-8") if vname else "(Default)",
+            salt.utils.stringutils.to_unicode(name, "utf-8"),
+        )
+        return __utils__["dacl.check_perms"](
+            obj_name="\\".join([hive, key]),
+            obj_type="registry32" if use_32bit_registry else "registry",
+            ret=ret,
+            owner=win_owner,
+            grant_perms=win_perms,
+            deny_perms=win_deny_perms,
+            inheritance=win_inheritance,
+            reset=win_perms_reset,
+        )
 
-    add_change = {'Key': r'{0}\{1}'.format(hive, key),
-                  'Entry': '{0}'.format(salt.utils.stringutils.to_unicode(vname, 'utf-8') if vname else '(Default)'),
-                  'Value': vdata_decoded}
+    add_change = {
+        "Key": r"{0}\{1}".format(hive, key),
+        "Entry": "{0}".format(
+            salt.utils.stringutils.to_unicode(vname, "utf-8") if vname else "(Default)"
+        ),
+        "Value": vdata_decoded,
+        "Owner": win_owner,
+        "Perms": {"Grant": win_perms, "Deny": win_deny_perms},
+        "Inheritance": win_inheritance,
+    }
 
     # Check for test option
-    if __opts__['test']:
-        ret['result'] = None
-        ret['changes'] = {'reg': {'Will add': add_change}}
+    if __opts__["test"]:
+        ret["result"] = None
+        ret["changes"] = {"reg": {"Will add": add_change}}
         return ret
 
     # Configure the value
-    ret['result'] = __utils__['reg.set_value'](hive=hive,
-                                               key=key,
-                                               vname=vname,
-                                               vdata=vdata,
-                                               vtype=vtype,
-                                               use_32bit_registry=use_32bit_registry)
+    ret["result"] = __utils__["reg.set_value"](
+        hive=hive,
+        key=key,
+        vname=vname,
+        vdata=vdata,
+        vtype=vtype,
+        use_32bit_registry=use_32bit_registry,
+    )
 
-    if not ret['result']:
-        ret['changes'] = {}
-        ret['comment'] = r'Failed to add {0} to {1}\{2}'.format(name, hive, key)
+    if not ret["result"]:
+        ret["changes"] = {}
+        ret["comment"] = r"Failed to add {0} to {1}\{2}".format(vname, hive, key)
     else:
-        ret['changes'] = {'reg': {'Added': add_change}}
-        ret['comment'] = r'Added {0} to {1}\{2}'.format(name, hive, key)
+        ret["changes"] = {"reg": {"Added": add_change}}
+        ret["comment"] = r"Added {0} to {1}\{2}".format(vname, hive, key)
+
+    if ret["result"]:
+        ret = __utils__["dacl.check_perms"](
+            obj_name="\\".join([hive, key]),
+            obj_type="registry32" if use_32bit_registry else "registry",
+            ret=ret,
+            owner=win_owner,
+            grant_perms=win_perms,
+            deny_perms=win_deny_perms,
+            inheritance=win_inheritance,
+            reset=win_perms_reset,
+        )
 
     return ret
 
 
 def absent(name, vname=None, use_32bit_registry=False):
-    r'''
+    r"""
     Ensure a registry value is removed. To remove a key use key_absent.
 
     Args:
@@ -345,49 +515,46 @@ def absent(name, vname=None, use_32bit_registry=False):
         In the above example the value named ``version`` will be removed from
         the SOFTWARE\\Salt key in the HKEY_CURRENT_USER hive. If ``vname`` was
         not passed, the ``(Default)`` value would be deleted.
-    '''
-    ret = {'name': name,
-           'result': True,
-           'changes': {},
-           'comment': ''}
+    """
+    ret = {"name": name, "result": True, "changes": {}, "comment": ""}
 
     hive, key = _parse_key(name)
 
     # Determine what to do
-    reg_check = __utils__['reg.read_value'](hive=hive,
-                                            key=key,
-                                            vname=vname,
-                                            use_32bit_registry=use_32bit_registry)
-    if not reg_check['success'] or reg_check['vdata'] == '(value not set)':
-        ret['comment'] = '{0} is already absent'.format(name)
+    reg_check = __utils__["reg.read_value"](
+        hive=hive, key=key, vname=vname, use_32bit_registry=use_32bit_registry
+    )
+    if not reg_check["success"] or reg_check["vdata"] == "(value not set)":
+        ret["comment"] = "{0} is already absent".format(name)
         return ret
 
-    remove_change = {'Key': r'{0}\{1}'.format(hive, key),
-                     'Entry': '{0}'.format(vname if vname else '(Default)')}
+    remove_change = {
+        "Key": r"{0}\{1}".format(hive, key),
+        "Entry": "{0}".format(vname if vname else "(Default)"),
+    }
 
     # Check for test option
-    if __opts__['test']:
-        ret['result'] = None
-        ret['changes'] = {'reg': {'Will remove': remove_change}}
+    if __opts__["test"]:
+        ret["result"] = None
+        ret["changes"] = {"reg": {"Will remove": remove_change}}
         return ret
 
     # Delete the value
-    ret['result'] = __utils__['reg.delete_value'](hive=hive,
-                                                  key=key,
-                                                  vname=vname,
-                                                  use_32bit_registry=use_32bit_registry)
-    if not ret['result']:
-        ret['changes'] = {}
-        ret['comment'] = r'Failed to remove {0} from {1}'.format(key, hive)
+    ret["result"] = __utils__["reg.delete_value"](
+        hive=hive, key=key, vname=vname, use_32bit_registry=use_32bit_registry
+    )
+    if not ret["result"]:
+        ret["changes"] = {}
+        ret["comment"] = r"Failed to remove {0} from {1}".format(key, hive)
     else:
-        ret['changes'] = {'reg': {'Removed': remove_change}}
-        ret['comment'] = r'Removed {0} from {1}'.format(key, hive)
+        ret["changes"] = {"reg": {"Removed": remove_change}}
+        ret["comment"] = r"Removed {0} from {1}".format(key, hive)
 
     return ret
 
 
 def key_absent(name, use_32bit_registry=False):
-    r'''
+    r"""
     .. versionadded:: 2015.5.4
 
     Ensure a registry key is removed. This will remove the key, subkeys, and all
@@ -427,40 +594,34 @@ def key_absent(name, use_32bit_registry=False):
 
             - ``HKEY_CURRENT_USER`` is the hive
             - ``SOFTWARE\DeleteMe`` is the key
-    '''
-    ret = {'name': name,
-           'result': True,
-           'changes': {},
-           'comment': ''}
+    """
+    ret = {"name": name, "result": True, "changes": {}, "comment": ""}
 
     hive, key = _parse_key(name)
 
     # Determine what to do
-    if not __utils__['reg.read_value'](hive=hive,
-                                       key=key,
-                                       use_32bit_registry=use_32bit_registry)['success']:
-        ret['comment'] = '{0} is already absent'.format(name)
+    if not __utils__["reg.read_value"](
+        hive=hive, key=key, use_32bit_registry=use_32bit_registry
+    )["success"]:
+        ret["comment"] = "{0} is already absent".format(name)
         return ret
 
-    ret['changes'] = {
-        'reg': {
-            'Removed': {
-                'Key': r'{0}\{1}'.format(hive, key)}}}
+    ret["changes"] = {"reg": {"Removed": {"Key": r"{0}\{1}".format(hive, key)}}}
 
     # Check for test option
-    if __opts__['test']:
-        ret['result'] = None
+    if __opts__["test"]:
+        ret["result"] = None
         return ret
 
     # Delete the value
-    __utils__['reg.delete_key_recursive'](hive=hive,
-                                          key=key,
-                                          use_32bit_registry=use_32bit_registry)
-    if __utils__['reg.read_value'](hive=hive,
-                                   key=key,
-                                   use_32bit_registry=use_32bit_registry)['success']:
-        ret['result'] = False
-        ret['changes'] = {}
-        ret['comment'] = 'Failed to remove registry key {0}'.format(name)
+    __utils__["reg.delete_key_recursive"](
+        hive=hive, key=key, use_32bit_registry=use_32bit_registry
+    )
+    if __utils__["reg.read_value"](
+        hive=hive, key=key, use_32bit_registry=use_32bit_registry
+    )["success"]:
+        ret["result"] = False
+        ret["changes"] = {}
+        ret["comment"] = "Failed to remove registry key {0}".format(name)
 
     return ret

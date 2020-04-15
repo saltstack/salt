@@ -24,11 +24,6 @@ Function Get-Settings {
             "SitePkgs3Dir" = "C:\Python35\Lib\site-packages"
             "DownloadDir" = "$env:Temp\DevSalt"
             }
-        # The script deletes the DownLoadDir (above) for each install.
-        # You may want to set an environment variable SALTREPO_LOCAL_CACHE, a cache which lives as long as you decide.
-        if ( [bool]$Env:SALTREPO_LOCAL_CACHE ) {
-          $Settings.Set_Item("DownloadDir", "$Env:SALTREPO_LOCAL_CACHE")
-        }
 
         $ini.Add("Settings", $Settings)
         Write-Verbose "DownloadDir === $($ini['Settings']['DownloadDir']) ==="
@@ -59,15 +54,15 @@ Function Get-Settings {
 
         # Filenames for 64 bit Windows
         $64bitPrograms = @{
-            "Python2"   = "python-2.7.14.amd64.msi"
-            "Python3"   = "python-3.5.3-amd64.exe"
+            "Python2"   = "python-2.7.15.amd64.msi"
+            "Python3"   = "python-3.5.4-amd64.exe"
         }
         $ini.Add("64bitPrograms", $64bitPrograms)
 
         # Filenames for 32 bit Windows
         $32bitPrograms = @{
-            "Python2"   = "python-2.7.14.msi"
-            "Python3"   = "python-3.5.3.exe"
+            "Python2"   = "python-2.7.15.msi"
+            "Python3"   = "python-3.5.4.exe"
         }
         $ini.Add("32bitPrograms", $32bitPrograms)
 

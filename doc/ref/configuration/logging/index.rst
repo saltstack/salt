@@ -238,6 +238,19 @@ at the ``debug`` level, and sets a custom module to the ``all`` level:
     'salt.modules': 'debug'
     'salt.loader.saltmaster.ext.module.custom_module': 'all'
 
+.. conf_log:: log_fmt_jid
+
+``log_fmt_jid``
+-------------------
+
+Default: ``[JID: %(jid)s]``
+
+The format of the JID when added to logging messages.
+
+.. code-block:: yaml
+
+    log_fmt_jid: '[JID: %(jid)s]'
+
 External Logging Handlers
 -------------------------
 

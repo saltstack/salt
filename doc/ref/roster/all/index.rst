@@ -18,3 +18,4 @@ roster modules
     range
     scan
     sshconfig
+    terraform

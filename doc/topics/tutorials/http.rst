@@ -252,7 +252,7 @@ Proxy
 
 If the ``tornado`` backend is used (``tornado`` is the default), proxy
 information configured in ``proxy_host``, ``proxy_port``, ``proxy_username``,
-and ``proxy_password`` from the ``__opts__`` dictionary will be used.  Normally
+``proxy_password`` and ``no_proxy`` from the ``__opts__`` dictionary will be used.  Normally
 these are set in the minion configuration file.
 
 .. code-block:: yaml
@@ -261,6 +261,7 @@ these are set in the minion configuration file.
     proxy_port: 31337
     proxy_username: charon
     proxy_password: obolus
+    no_proxy: ['127.0.0.1', 'localhost']
 
 .. code-block:: python
 
@@ -542,7 +543,7 @@ checked. This is done using the ``status`` argument:
 
     http://example.com/:
       http.query:
-        - status: '200'
+        - status: 200
 
 If both are specified, both will be checked, but if only one is ``True`` and the
 other is ``False``, then ``False`` will be returned. In this case, the comments

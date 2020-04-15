@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Manage Route53 records with Boto 3
 
 .. versionadded:: 2017.7.0
@@ -59,90 +59,46 @@ passed in as a dict, or as a string to pull from pillars or minion config:
         - keyid: GKTADJGHEIQSXMKKRBJ08H
         - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
-'''
+"""
 # keep lint from choking
-#pylint: disable=W0106
-#pylint: disable=E1320
+# pylint: disable=W0106
+# pylint: disable=E1320
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 import uuid
 
-# Import Salt Libs
-from salt.ext.six.moves import range
-from salt.exceptions import SaltInvocationError
 import salt.utils.data
 import salt.utils.dictupdate
+
+# Import Salt Libs
+from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)  # pylint: disable=W1699
 
 
 def __virtual__():
-    '''
+    """
     Only load if boto is available.
-    '''
-    return 'boto3_route53' if 'boto3_route53.find_hosted_zone' in __salt__ else False
+    """
+    return "boto3_route53" if "boto3_route53.find_hosted_zone" in __salt__ else False
 
 
-def _to_aws_encoding(instring):
-    '''
-    A partial implememtation of the `AWS domain encoding`__ rules. The punycode section is
-    ignored for now, so you'll have to input any unicode characters already punycoded.
-
-    .. __: http://docs.aws.amazon.com/Route53/latest/DeveloperGuide/DomainNameFormat.html
-
-    The only breakage is that we don't permit ASCII 92 ('backslash') in domain names, even though
-    AWS seems to allow it, becuase it's used to introduce octal escapes, and I can't think of a
-    good way to allow it while still parsing those escapes.  Imagine a domain name containing the
-    literal string '\134' - pathological to be sure, but allowed by AWS's rules.  If someone
-    dislikes this restriction, feel free to update this function to correctly handle such madness.
-
-    Oh, and the idea of allowing '.' (period) within a domain component (e.g. not as a separator,
-    but as part of a field) is as stupid it sounds, and is also not supported by these functions.
-    Again, if you can figure out a sensible way to make it work, more power too you.  If you
-    REALLY need this, just embed '\056' directly in your strings.  I can't promise it won't break
-    your DNS out in the real world though.
-    '''
-    instring = instring.lower()                                           # Always lowercase
-    send_as_is_get_the_same_back = list(range(97, 123))                   # a-z is 97-122 inclusive
-    send_as_is_get_the_same_back += [ord(n) for n in ['0', '1', '2', '3', '4', '5', '6', '7', '8',
-                                                      '9', '-', '_', '.']]
-    send_as_is_get_octal_back = [ord(n) for n in ['!', '"', '#', '$', '%', '&', "'", '(', ')', '*',
-                                                  '+', ',', '/', '\\', ':', ';', '<', '=', '>', '?',
-                                                  '@', '[', ']', '^', '`', '{', '|', '}']]
-    # Non-printable ASCII - AWS claims it's valid in DNS entries... YMMV
-    acceptable_points_which_must_be_octalized = list(range(0, 33))        # 0-32 inclusive
-    # "Extended ASCII" stuff
-    acceptable_points_which_must_be_octalized += list(range(127, 256))    # 127-255 inclusive
-    # ^^^ This, BTW, is incompatible with punycode as far as I can tell, since unicode only aligns
-    # with ASCII for the first 127 code-points...  Oh well.
-    outlist = []
-    for char in instring:
-        point = ord(char)
-        octal = '\\{:03o}'.format(point)
-        if point in send_as_is_get_the_same_back:
-            outlist += [char]
-        elif point in send_as_is_get_octal_back:
-            outlist += [char]
-        elif point in acceptable_points_which_must_be_octalized:
-            outlist += [octal]
-        else:
-            raise SaltInvocationError("Invalid Route53 domain character seen (octal {0}) in string "
-                                      "{1}.  Do you need to punycode it?".format(octal, instring))
-    ret = ''.join(outlist)
-    log.debug('Name after massaging is: %s', ret)
-    return ret
-
-
-def _from_aws_encoding(string):  # XXX TODO
-    pass
-
-
-def hosted_zone_present(name, Name=None, PrivateZone=False,
-                        CallerReference=None, Comment=None, VPCs=None,
-                        region=None, key=None, keyid=None, profile=None):
-    '''
+def hosted_zone_present(
+    name,
+    Name=None,
+    PrivateZone=False,
+    CallerReference=None,
+    Comment=None,
+    VPCs=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+):
+    """
     Ensure a hosted zone exists with the given attributes.
 
     name
@@ -186,62 +142,86 @@ def hosted_zone_present(name, Name=None, PrivateZone=False,
             not provided, an effort will be made to determine it from VPCId or VPCName, if
             possible.  This will fail if a given VPCName exists in multiple regions visible to the
             bound account, in which case you'll need to provide an explicit value for VPCRegion.
-    '''
+    """
     Name = Name if Name else name
-    Name = _to_aws_encoding(Name)
 
-    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
     if not PrivateZone and VPCs:
-        raise SaltInvocationError("Parameter 'VPCs' is invalid when creating a public zone.")
+        raise SaltInvocationError(
+            "Parameter 'VPCs' is invalid when creating a public zone."
+        )
     if PrivateZone and not VPCs:
-        raise SaltInvocationError("Parameter 'VPCs' is required when creating a private zone.")
+        raise SaltInvocationError(
+            "Parameter 'VPCs' is required when creating a private zone."
+        )
     if VPCs:
         if not isinstance(VPCs, list):
             raise SaltInvocationError("Parameter 'VPCs' must be a list of dicts.")
         for v in VPCs:
-            if not isinstance(v, dict) or not salt.utils.data.exactly_one((v.get('VPCId'), v.get('VPCName'))):
-                raise SaltInvocationError("Parameter 'VPCs' must be a list of dicts, each composed "
-                                      "of either a 'VPCId' or a 'VPCName', and optionally a "
-                                      "'VPCRegion', to help distinguish between multitple matches.")
+            if not isinstance(v, dict) or not salt.utils.data.exactly_one(
+                (v.get("VPCId"), v.get("VPCName"))
+            ):
+                raise SaltInvocationError(
+                    "Parameter 'VPCs' must be a list of dicts, each composed "
+                    "of either a 'VPCId' or a 'VPCName', and optionally a "
+                    "'VPCRegion', to help distinguish between multitple matches."
+                )
     # Massage VPCs into something AWS will accept...
     fixed_vpcs = []
     if PrivateZone:
         for v in VPCs:
-            VPCId = v.get('VPCId')
-            VPCName = v.get('VPCName')
-            VPCRegion = v.get('VPCRegion')
-            VPCs = __salt__['boto_vpc.describe_vpcs'](vpc_id=VPCId, name=VPCName, region=region,
-                    key=key, keyid=keyid, profile=profile).get('vpcs', [])
+            VPCId = v.get("VPCId")
+            VPCName = v.get("VPCName")
+            VPCRegion = v.get("VPCRegion")
+            VPCs = __salt__["boto_vpc.describe_vpcs"](
+                vpc_id=VPCId,
+                name=VPCName,
+                region=region,
+                key=key,
+                keyid=keyid,
+                profile=profile,
+            ).get("vpcs", [])
             if VPCRegion and VPCs:
-                VPCs = [v for v in VPCs if v['region'] == VPCRegion]
+                VPCs = [v for v in VPCs if v["region"] == VPCRegion]
             if not VPCs:
-                ret['comment'] = ('A VPC matching given criteria (vpc: {0} / vpc_region: {1}) not '
-                                  'found.'.format(VPCName or VPCId, VPCRegion))
-                log.error(ret['comment'])
-                ret['result'] = False
+                ret["comment"] = (
+                    "A VPC matching given criteria (vpc: {0} / vpc_region: {1}) not "
+                    "found.".format(VPCName or VPCId, VPCRegion)
+                )
+                log.error(ret["comment"])
+                ret["result"] = False
                 return ret
             if len(VPCs) > 1:
-                ret['comment'] = ('Multiple VPCs matching given criteria (vpc: {0} / vpc_region: '
-                                  '{1}) found: {2}.'.format(VPCName or VPCId, VPCRegion,
-                                  ', '.join([v['id'] for v in VPCs])))
-                log.error(ret['comment'])
-                ret['result'] = False
+                ret["comment"] = (
+                    "Multiple VPCs matching given criteria (vpc: {0} / vpc_region: "
+                    "{1}) found: {2}.".format(
+                        VPCName or VPCId, VPCRegion, ", ".join([v["id"] for v in VPCs])
+                    )
+                )
+                log.error(ret["comment"])
+                ret["result"] = False
                 return ret
             vpc = VPCs[0]
             if VPCName:
-                VPCId = vpc['id']
+                VPCId = vpc["id"]
             if not VPCRegion:
-                VPCRegion = vpc['region']
-            fixed_vpcs += [{'VPCId': VPCId, 'VPCRegion': VPCRegion}]
+                VPCRegion = vpc["region"]
+            fixed_vpcs += [{"VPCId": VPCId, "VPCRegion": VPCRegion}]
 
     create = False
     update_comment = False
     add_vpcs = []
     del_vpcs = []
-    args = {'Name': Name, 'PrivateZone': PrivateZone,
-            'region': region, 'key': key, 'keyid': keyid, 'profile': profile}
-    zone = __salt__['boto3_route53.find_hosted_zone'](**args)
+    args = {
+        "Name": Name,
+        "PrivateZone": PrivateZone,
+        "region": region,
+        "key": key,
+        "keyid": keyid,
+        "profile": profile,
+    }
+    zone = __salt__["boto3_route53.find_hosted_zone"](**args)
     if not zone:
         create = True
         # Grrrr - can only pass one VPC when initially creating a private zone...
@@ -249,114 +229,164 @@ def hosted_zone_present(name, Name=None, PrivateZone=False,
         if len(fixed_vpcs) > 1:
             add_vpcs = fixed_vpcs[1:]
             fixed_vpcs = fixed_vpcs[:1]
-        CallerReference = CallerReference if CallerReference else str(uuid.uuid4())  # future lint: disable=blacklisted-function
+        CallerReference = (
+            CallerReference if CallerReference else str(uuid.uuid4())
+        )  # future lint: disable=blacklisted-function
     else:
         # Currently the only modifiable traits about a zone are associated VPCs and the comment.
         zone = zone[0]
         if PrivateZone:
-            for z in zone.get('VPCs'):
+            for z in zone.get("VPCs"):
                 if z not in fixed_vpcs:
                     del_vpcs += [z]
             for z in fixed_vpcs:
-                if z not in zone.get('VPCs'):
+                if z not in zone.get("VPCs"):
                     add_vpcs += [z]
-        if zone['HostedZone']['Config'].get('Comment') != Comment:
+        if zone["HostedZone"]["Config"].get("Comment") != Comment:
             update_comment = True
 
     if not (create or add_vpcs or del_vpcs or update_comment):
-        ret['comment'] = 'Hostd Zone {0} already in desired state'.format(Name)
+        ret["comment"] = "Hostd Zone {0} already in desired state".format(Name)
         return ret
 
     if create:
-        if __opts__['test']:
-            ret['comment'] = 'Route 53 {} hosted zone {} would be created.'.format('private' if
-                    PrivateZone else 'public', Name)
-            ret['result'] = None
+        if __opts__["test"]:
+            ret["comment"] = "Route 53 {} hosted zone {} would be created.".format(
+                "private" if PrivateZone else "public", Name
+            )
+            ret["result"] = None
             return ret
-        vpc_id = fixed_vpcs[0].get('VPCId') if fixed_vpcs else None
-        vpc_region = fixed_vpcs[0].get('VPCRegion') if fixed_vpcs else None
-        newzone = __salt__['boto3_route53.create_hosted_zone'](Name=Name,
-                CallerReference=CallerReference, Comment=Comment,
-                PrivateZone=PrivateZone, VPCId=vpc_id, VPCRegion=vpc_region,
-                region=region, key=key, keyid=keyid, profile=profile)
+        vpc_id = fixed_vpcs[0].get("VPCId") if fixed_vpcs else None
+        vpc_region = fixed_vpcs[0].get("VPCRegion") if fixed_vpcs else None
+        newzone = __salt__["boto3_route53.create_hosted_zone"](
+            Name=Name,
+            CallerReference=CallerReference,
+            Comment=Comment,
+            PrivateZone=PrivateZone,
+            VPCId=vpc_id,
+            VPCRegion=vpc_region,
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
+        )
         if newzone:
             newzone = newzone[0]
-            ret['comment'] = 'Route 53 {} hosted zone {} successfully created'.format('private' if
-                    PrivateZone else 'public', Name)
-            log.info(ret['comment'])
-            ret['changes']['new'] = newzone
+            ret["comment"] = "Route 53 {} hosted zone {} successfully created".format(
+                "private" if PrivateZone else "public", Name
+            )
+            log.info(ret["comment"])
+            ret["changes"]["new"] = newzone
         else:
-            ret['comment'] = 'Creation of Route 53 {} hosted zone {} failed'.format('private' if
-                    PrivateZone else 'public', Name)
-            log.error(ret['comment'])
-            ret['result'] = False
+            ret["comment"] = "Creation of Route 53 {} hosted zone {} failed".format(
+                "private" if PrivateZone else "public", Name
+            )
+            log.error(ret["comment"])
+            ret["result"] = False
             return ret
 
     if update_comment:
-        if __opts__['test']:
-            ret['comment'] = 'Route 53 {} hosted zone {} comment would be updated.'.format('private'
-                    if PrivateZone else 'public', Name)
-            ret['result'] = None
+        if __opts__["test"]:
+            ret[
+                "comment"
+            ] = "Route 53 {} hosted zone {} comment would be updated.".format(
+                "private" if PrivateZone else "public", Name
+            )
+            ret["result"] = None
             return ret
-        r = __salt__['boto3_route53.update_hosted_zone_comment'](Name=Name,
-                Comment=Comment, PrivateZone=PrivateZone, region=region, key=key, keyid=keyid,
-                profile=profile)
+        r = __salt__["boto3_route53.update_hosted_zone_comment"](
+            Name=Name,
+            Comment=Comment,
+            PrivateZone=PrivateZone,
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
+        )
         if r:
             r = r[0]
-            msg = 'Route 53 {} hosted zone {} comment successfully updated'.format('private' if
-                    PrivateZone else 'public', Name)
+            msg = "Route 53 {} hosted zone {} comment successfully updated".format(
+                "private" if PrivateZone else "public", Name
+            )
             log.info(msg)
-            ret['comment'] = '  '.join([ret['comment'], msg])
-            ret['changes']['old'] = zone
-            ret['changes']['new'] = salt.utils.dictupdate.update(ret['changes'].get('new', {}), r)
+            ret["comment"] = "  ".join([ret["comment"], msg])
+            ret["changes"]["old"] = zone
+            ret["changes"]["new"] = salt.utils.dictupdate.update(
+                ret["changes"].get("new", {}), r
+            )
         else:
-            ret['comment'] = 'Update of Route 53 {} hosted zone {} comment failed'.format('private'
-                    if PrivateZone else 'public', Name)
-            log.error(ret['comment'])
-            ret['result'] = False
+            ret[
+                "comment"
+            ] = "Update of Route 53 {} hosted zone {} comment failed".format(
+                "private" if PrivateZone else "public", Name
+            )
+            log.error(ret["comment"])
+            ret["result"] = False
             return ret
 
     if add_vpcs or del_vpcs:
-        if __opts__['test']:
-            ret['comment'] = 'Route 53 {} hosted zone {} associated VPCs would be updated.'.format(
-                    'private' if PrivateZone else 'public', Name)
-            ret['result'] = None
+        if __opts__["test"]:
+            ret[
+                "comment"
+            ] = "Route 53 {} hosted zone {} associated VPCs would be updated.".format(
+                "private" if PrivateZone else "public", Name
+            )
+            ret["result"] = None
             return ret
         all_added = True
         all_deled = True
-        for vpc in add_vpcs:  # Add any new first to avoid the "can't delete last VPC" errors.
-            r = __salt__['boto3_route53.associate_vpc_with_hosted_zone'](Name=Name,
-                    VPCId=vpc['VPCId'], VPCRegion=vpc['VPCRegion'], region=region, key=key,
-                    keyid=keyid, profile=profile)
+        for (
+            vpc
+        ) in add_vpcs:  # Add any new first to avoid the "can't delete last VPC" errors.
+            r = __salt__["boto3_route53.associate_vpc_with_hosted_zone"](
+                Name=Name,
+                VPCId=vpc["VPCId"],
+                VPCRegion=vpc["VPCRegion"],
+                region=region,
+                key=key,
+                keyid=keyid,
+                profile=profile,
+            )
             if not r:
                 all_added = False
         for vpc in del_vpcs:
-            r = __salt__['boto3_route53.disassociate_vpc_from_hosted_zone'](Name=Name,
-                    VPCId=vpc['VPCId'], VPCRegion=vpc['VPCRegion'], region=region, key=key,
-                    keyid=keyid, profile=profile)
+            r = __salt__["boto3_route53.disassociate_vpc_from_hosted_zone"](
+                Name=Name,
+                VPCId=vpc["VPCId"],
+                VPCRegion=vpc["VPCRegion"],
+                region=region,
+                key=key,
+                keyid=keyid,
+                profile=profile,
+            )
             if not r:
                 all_deled = False
 
-        ret['changes']['old'] = zone
-        ret['changes']['new'] = __salt__['boto3_route53.find_hosted_zone'](**args)
+        ret["changes"]["old"] = zone
+        ret["changes"]["new"] = __salt__["boto3_route53.find_hosted_zone"](**args)
         if all_added and all_deled:
-            msg = 'Route 53 {} hosted zone {} associated VPCs successfully updated'.format('private'
-                    if PrivateZone else 'public', Name)
+            msg = "Route 53 {} hosted zone {} associated VPCs successfully updated".format(
+                "private" if PrivateZone else "public", Name
+            )
             log.info(msg)
-            ret['comment'] = '  '.join([ret['comment'], msg])
+            ret["comment"] = "  ".join([ret["comment"], msg])
         else:
-            ret['comment'] = 'Update of Route 53 {} hosted zone {} associated VPCs failed'.format(
-                    'private' if PrivateZone else 'public', Name)
-            log.error(ret['comment'])
-            ret['result'] = False
+            ret[
+                "comment"
+            ] = "Update of Route 53 {} hosted zone {} associated VPCs failed".format(
+                "private" if PrivateZone else "public", Name
+            )
+            log.error(ret["comment"])
+            ret["result"] = False
             return ret
 
     return ret
 
 
-def hosted_zone_absent(name, Name=None, PrivateZone=False,
-                       region=None, key=None, keyid=None, profile=None):
-    '''
+def hosted_zone_absent(
+    name, Name=None, PrivateZone=False, region=None, key=None, keyid=None, profile=None
+):
+    """
     Ensure the Route53 Hostes Zone described is absent
 
     name
@@ -369,50 +399,77 @@ def hosted_zone_absent(name, Name=None, PrivateZone=False,
     PrivateZone
         Set True if deleting a private hosted zone.
 
-    '''
+    """
     Name = Name if Name else name
-    Name = _to_aws_encoding(Name)
 
-    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
-    args = {'Name': Name, 'PrivateZone': PrivateZone, 'region': region, 'key': key,
-            'keyid': keyid, 'profile': profile}
-    zone = __salt__['boto3_route53.find_hosted_zone'](**args)
+    args = {
+        "Name": Name,
+        "PrivateZone": PrivateZone,
+        "region": region,
+        "key": key,
+        "keyid": keyid,
+        "profile": profile,
+    }
+    zone = __salt__["boto3_route53.find_hosted_zone"](**args)
     if not zone:
-        ret['comment'] = 'Route 53 {} hosted zone {} already absent'.format('private' if
-                PrivateZone else 'public', Name)
-        log.info(ret['comment'])
+        ret["comment"] = "Route 53 {} hosted zone {} already absent".format(
+            "private" if PrivateZone else "public", Name
+        )
+        log.info(ret["comment"])
         return ret
-    if __opts__['test']:
-        ret['comment'] = 'Route 53 {} hosted zone {} would be deleted'.format('private' if
-                PrivateZone else 'public', Name)
-        ret['result'] = None
+    if __opts__["test"]:
+        ret["comment"] = "Route 53 {} hosted zone {} would be deleted".format(
+            "private" if PrivateZone else "public", Name
+        )
+        ret["result"] = None
         return ret
     zone = zone[0]
-    Id = zone['HostedZone']['Id']
-    if __salt__['boto3_route53.delete_hosted_zone'](Id=Id, region=region, key=key,
-            keyid=keyid, profile=profile):
-        ret['comment'] = 'Route 53 {} hosted zone {} deleted'.format('private' if PrivateZone else
-                'public', Name)
-        log.info(ret['comment'])
-        ret['changes']['old'] = zone
-        ret['changes']['new'] = None
+    Id = zone["HostedZone"]["Id"]
+    if __salt__["boto3_route53.delete_hosted_zone"](
+        Id=Id, region=region, key=key, keyid=keyid, profile=profile
+    ):
+        ret["comment"] = "Route 53 {} hosted zone {} deleted".format(
+            "private" if PrivateZone else "public", Name
+        )
+        log.info(ret["comment"])
+        ret["changes"]["old"] = zone
+        ret["changes"]["new"] = None
     else:
-        ret['comment'] = 'Failed to delete Route 53 {} hosted zone {}'.format('private' if
-                PrivateZone else 'public', Name)
-        log.info(ret['comment'])
-        ret['result'] = False
+        ret["comment"] = "Failed to delete Route 53 {} hosted zone {}".format(
+            "private" if PrivateZone else "public", Name
+        )
+        log.info(ret["comment"])
+        ret["result"] = False
         return ret
 
     return ret
 
 
-def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name=None, Type=None,
-               SetIdentifier=None, Weight=None, Region=None, GeoLocation=None, Failover=None,
-               TTL=None, ResourceRecords=None, AliasTarget=None, HealthCheckId=None,
-               TrafficPolicyInstanceId=None,
-               region=None, key=None, keyid=None, profile=None):
-    '''
+def rr_present(
+    name,
+    HostedZoneId=None,
+    DomainName=None,
+    PrivateZone=False,
+    Name=None,
+    Type=None,
+    SetIdentifier=None,
+    Weight=None,
+    Region=None,
+    GeoLocation=None,
+    Failover=None,
+    TTL=None,
+    ResourceRecords=None,
+    AliasTarget=None,
+    HealthCheckId=None,
+    TrafficPolicyInstanceId=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+):
+    """
     Ensure the Route53 record is present.
 
     name
@@ -584,107 +641,163 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
 
     profile
         Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
-    '''
+    """
     Name = Name if Name else name
-    Name = _to_aws_encoding(Name)
 
     if Type is None:
-        raise SaltInvocationError("'Type' is a required parameter when adding or updating"
-                                  "resource records.")
-    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+        raise SaltInvocationError(
+            "'Type' is a required parameter when adding or updating" "resource records."
+        )
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
-    args = {'Id': HostedZoneId, 'Name': DomainName, 'PrivateZone': PrivateZone,
-            'region': region, 'key': key, 'keyid': keyid, 'profile': profile}
-    zone = __salt__['boto3_route53.find_hosted_zone'](**args)
+    args = {
+        "Id": HostedZoneId,
+        "Name": DomainName,
+        "PrivateZone": PrivateZone,
+        "region": region,
+        "key": key,
+        "keyid": keyid,
+        "profile": profile,
+    }
+    zone = __salt__["boto3_route53.find_hosted_zone"](**args)
     if not zone:
-        ret['comment'] = 'Route 53 {} hosted zone {} not found'.format('private' if PrivateZone
-                else 'public', DomainName)
-        log.info(ret['comment'])
+        ret["comment"] = "Route 53 {} hosted zone {} not found".format(
+            "private" if PrivateZone else "public", DomainName
+        )
+        log.info(ret["comment"])
         return ret
     zone = zone[0]
-    HostedZoneId = zone['HostedZone']['Id']
+    HostedZoneId = zone["HostedZone"]["Id"]
 
     # Convert any magic RR values to something AWS will understand, and otherwise clean them up.
     fixed_rrs = []
     if ResourceRecords:
         for rr in ResourceRecords:
-            if rr.startswith('magic:'):
-                fields = rr.split(':')
-                if fields[1] == 'ec2_instance_tag':
+            if rr.startswith("magic:"):
+                fields = rr.split(":")
+                if fields[1] == "ec2_instance_tag":
                     if len(fields) != 5:
-                        log.warning("Invalid magic RR value seen: '%s'.  Passing as-is.", rr)
+                        log.warning(
+                            "Invalid magic RR value seen: '%s'.  Passing as-is.", rr
+                        )
                         fixed_rrs += [rr]
                         continue
                     tag_name = fields[2]
                     tag_value = fields[3]
                     instance_attr = fields[4]
-                    good_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
-                    r = __salt__['boto_ec2.find_instances'](
-                            tags={tag_name: tag_value}, return_objs=True, in_states=good_states,
-                            region=region, key=key, keyid=keyid, profile=profile)
+                    good_states = (
+                        "pending",
+                        "rebooting",
+                        "running",
+                        "stopping",
+                        "stopped",
+                    )
+                    r = __salt__["boto_ec2.find_instances"](
+                        tags={tag_name: tag_value},
+                        return_objs=True,
+                        in_states=good_states,
+                        region=region,
+                        key=key,
+                        keyid=keyid,
+                        profile=profile,
+                    )
                     if len(r) < 1:
-                        ret['comment'] = 'No EC2 instance with tag {} == {} found'.format(tag_name,
-                                tag_value)
-                        log.error(ret['comment'])
-                        ret['result'] = False
+                        ret[
+                            "comment"
+                        ] = "No EC2 instance with tag {} == {} found".format(
+                            tag_name, tag_value
+                        )
+                        log.error(ret["comment"])
+                        ret["result"] = False
                         return ret
                     if len(r) > 1:
-                        ret['comment'] = 'Multiple EC2 instances with tag {} == {} found'.format(
-                                tag_name, tag_value)
-                        log.error(ret['comment'])
-                        ret['result'] = False
+                        ret[
+                            "comment"
+                        ] = "Multiple EC2 instances with tag {} == {} found".format(
+                            tag_name, tag_value
+                        )
+                        log.error(ret["comment"])
+                        ret["result"] = False
                         return ret
                     instance = r[0]
                     res = getattr(instance, instance_attr, None)
                     if res:
-                        log.debug('Found %s %s for instance %s', instance_attr, res, instance.id)
-                        fixed_rrs += [_to_aws_encoding(res)]
+                        log.debug(
+                            "Found %s %s for instance %s",
+                            instance_attr,
+                            res,
+                            instance.id,
+                        )
+                        fixed_rrs += [__salt__["boto3_route53.aws_encode"](res)]
                     else:
-                        ret['comment'] = 'Attribute {} not found on instance {}'.format(instance_attr,
-                                instance.id)
-                        log.error(ret['comment'])
-                        ret['result'] = False
+                        ret["comment"] = "Attribute {} not found on instance {}".format(
+                            instance_attr, instance.id
+                        )
+                        log.error(ret["comment"])
+                        ret["result"] = False
                         return ret
                 else:
-                    ret['comment'] = ('Unknown RR magic value seen: {}.  Please extend the '
-                                      'boto3_route53 state module to add support for your preferred '
-                                      'incantation.'.format(fields[1]))
-                    log.error(ret['comment'])
-                    ret['result'] = False
+                    ret["comment"] = (
+                        "Unknown RR magic value seen: {}.  Please extend the "
+                        "boto3_route53 state module to add support for your preferred "
+                        "incantation.".format(fields[1])
+                    )
+                    log.error(ret["comment"])
+                    ret["result"] = False
                     return ret
             else:
                 # for TXT records the entry must be encapsulated in quotes as required by the API
                 # this appears to be incredibly difficult with the jinja templating engine
                 # so inject the quotations here to make a viable ChangeBatch
-                if Type == 'TXT':
+                if Type == "TXT":
                     rr = '"{}"'.format(rr)
                 fixed_rrs += [rr]
-        ResourceRecords = [{'Value': rr} for rr in sorted(fixed_rrs)]
+        ResourceRecords = [{"Value": rr} for rr in sorted(fixed_rrs)]
 
-    recordsets = __salt__['boto3_route53.get_resource_records'](HostedZoneId=HostedZoneId,
-            StartRecordName=Name, StartRecordType=Type, region=region, key=key, keyid=keyid,
-            profile=profile)
+    recordsets = __salt__["boto3_route53.get_resource_records"](
+        HostedZoneId=HostedZoneId,
+        StartRecordName=Name,
+        StartRecordType=Type,
+        region=region,
+        key=key,
+        keyid=keyid,
+        profile=profile,
+    )
 
     if SetIdentifier and recordsets:
-        log.debug('Filter recordsets %s by SetIdentifier %s.', recordsets, SetIdentifier)
-        recordsets = [r for r in recordsets if r.get('SetIdentifier') == SetIdentifier]
-        log.debug('Resulted in recordsets %s.', recordsets)
+        log.debug(
+            "Filter recordsets %s by SetIdentifier %s.", recordsets, SetIdentifier
+        )
+        recordsets = [r for r in recordsets if r.get("SetIdentifier") == SetIdentifier]
+        log.debug("Resulted in recordsets %s.", recordsets)
 
     create = False
     update = False
-    updatable = ['SetIdentifier', 'Weight', 'Region', 'GeoLocation', 'Failover', 'TTL',
-                 'AliasTarget', 'HealthCheckId', 'TrafficPolicyInstanceId']
+    updatable = [
+        "SetIdentifier",
+        "Weight",
+        "Region",
+        "GeoLocation",
+        "Failover",
+        "TTL",
+        "AliasTarget",
+        "HealthCheckId",
+        "TrafficPolicyInstanceId",
+    ]
     if not recordsets:
         create = True
-        if __opts__['test']:
-            ret['comment'] = 'Route 53 resource record {} with type {} would be added.'.format(
-                    Name, Type)
-            ret['result'] = None
+        if __opts__["test"]:
+            ret[
+                "comment"
+            ] = "Route 53 resource record {} with type {} would be added.".format(
+                Name, Type
+            )
+            ret["result"] = None
             return ret
     elif len(recordsets) > 1:
-        ret['comment'] = 'Given criteria matched more than one ResourceRecordSet.'
-        log.error(ret['comment'])
-        ret['result'] = False
+        ret["comment"] = "Given criteria matched more than one ResourceRecordSet."
+        log.error(ret["comment"])
+        ret["result"] = False
         return ret
     else:
         rrset = recordsets[0]
@@ -692,65 +805,90 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
             if locals().get(u) != rrset.get(u):
                 update = True
                 break
-        if rrset.get('ResourceRecords') is not None:
-            if ResourceRecords != sorted(rrset.get('ResourceRecords'), key=lambda x: x['Value']):
+        if rrset.get("ResourceRecords") is not None:
+            if ResourceRecords != sorted(
+                rrset.get("ResourceRecords"), key=lambda x: x["Value"]
+            ):
                 update = True
-        elif (AliasTarget is not None) and (rrset.get('AliasTarget') is not None):
-            if sorted(AliasTarget) != sorted(rrset.get('AliasTarget')):
+        elif (AliasTarget is not None) and (rrset.get("AliasTarget") is not None):
+            if sorted(AliasTarget) != sorted(rrset.get("AliasTarget")):
                 update = True
 
     if not create and not update:
-        ret['comment'] = ('Route 53 resource record {} with type {} is already in the desired state.'
-                         ''.format(Name, Type))
-        log.info(ret['comment'])
+        ret["comment"] = (
+            "Route 53 resource record {} with type {} is already in the desired state."
+            "".format(Name, Type)
+        )
+        log.info(ret["comment"])
         return ret
     else:
-        if __opts__['test']:
-            ret['comment'] = 'Route 53 resource record {} with type {} would be updated.'.format(
-                    Name, Type)
-            ret['result'] = None
+        if __opts__["test"]:
+            ret[
+                "comment"
+            ] = "Route 53 resource record {} with type {} would be updated.".format(
+                Name, Type
+            )
+            ret["result"] = None
             return ret
-        ResourceRecordSet = {
-            'Name': Name,
-            'Type': Type
-        }
+        ResourceRecordSet = {"Name": Name, "Type": Type}
         if ResourceRecords:
-            ResourceRecordSet['ResourceRecords'] = ResourceRecords
+            ResourceRecordSet["ResourceRecords"] = ResourceRecords
         for u in updatable:
-            ResourceRecordSet.update({u: locals().get(u)}) if locals().get(u) else None
+            if locals().get(u) or (locals().get(u) == 0):
+                ResourceRecordSet.update({u: locals().get(u)})
+            else:
+                log.debug(
+                    "Not updating ResourceRecordSet with local value: %s",
+                    locals().get(u),
+                )
 
         ChangeBatch = {
-            'Changes': [
-                {
-                    'Action': 'UPSERT',
-                    'ResourceRecordSet': ResourceRecordSet,
-                }
-            ]
+            "Changes": [{"Action": "UPSERT", "ResourceRecordSet": ResourceRecordSet}]
         }
 
-        if __salt__['boto3_route53.change_resource_record_sets'](HostedZoneId=HostedZoneId,
-                ChangeBatch=ChangeBatch, region=region, key=key, keyid=keyid, profile=profile):
-            ret['comment'] = 'Route 53 resource record {} with type {} {}.'.format(Name,
-                    Type, 'created' if create else 'updated')
-            log.info(ret['comment'])
+        if __salt__["boto3_route53.change_resource_record_sets"](
+            HostedZoneId=HostedZoneId,
+            ChangeBatch=ChangeBatch,
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
+        ):
+            ret["comment"] = "Route 53 resource record {} with type {} {}.".format(
+                Name, Type, "created" if create else "updated"
+            )
+            log.info(ret["comment"])
             if create:
-                ret['changes']['old'] = None
+                ret["changes"]["old"] = None
             else:
-                ret['changes']['old'] = rrset
-            ret['changes']['new'] = ResourceRecordSet
+                ret["changes"]["old"] = rrset
+            ret["changes"]["new"] = ResourceRecordSet
         else:
-            ret['comment'] = 'Failed to {} Route 53 resource record {} with type {}.'.format(
-                    'create' if create else 'update', Name, Type)
-            log.error(ret['comment'])
-            ret['result'] = False
+            ret[
+                "comment"
+            ] = "Failed to {} Route 53 resource record {} with type {}.".format(
+                "create" if create else "update", Name, Type
+            )
+            log.error(ret["comment"])
+            ret["result"] = False
 
     return ret
 
 
-def rr_absent(name, HostedZoneId=None, DomainName=None, PrivateZone=False,
-              Name=None, Type=None, SetIdentifier=None,
-              region=None, key=None, keyid=None, profile=None):
-    '''
+def rr_absent(
+    name,
+    HostedZoneId=None,
+    DomainName=None,
+    PrivateZone=False,
+    Name=None,
+    Type=None,
+    SetIdentifier=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+):
+    """
     Ensure the Route53 record is deleted.
 
     name
@@ -790,67 +928,96 @@ def rr_absent(name, HostedZoneId=None, DomainName=None, PrivateZone=False,
 
     profile
         Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
-    '''
+    """
     Name = Name if Name else name
-    Name = _to_aws_encoding(Name)
 
     if Type is None:
-        raise SaltInvocationError("'Type' is a required parameter when deleting resource records.")
-    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+        raise SaltInvocationError(
+            "'Type' is a required parameter when deleting resource records."
+        )
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
-    args = {'Id': HostedZoneId, 'Name': DomainName, 'PrivateZone': PrivateZone,
-            'region': region, 'key': key, 'keyid': keyid, 'profile': profile}
-    zone = __salt__['boto3_route53.find_hosted_zone'](**args)
+    args = {
+        "Id": HostedZoneId,
+        "Name": DomainName,
+        "PrivateZone": PrivateZone,
+        "region": region,
+        "key": key,
+        "keyid": keyid,
+        "profile": profile,
+    }
+    zone = __salt__["boto3_route53.find_hosted_zone"](**args)
     if not zone:
-        ret['comment'] = 'Route 53 {} hosted zone {} not found'.format('private' if PrivateZone
-                else 'public', DomainName)
-        log.info(ret['comment'])
+        ret["comment"] = "Route 53 {} hosted zone {} not found".format(
+            "private" if PrivateZone else "public", DomainName
+        )
+        log.info(ret["comment"])
         return ret
     zone = zone[0]
-    HostedZoneId = zone['HostedZone']['Id']
+    HostedZoneId = zone["HostedZone"]["Id"]
 
-    recordsets = __salt__['boto3_route53.get_resource_records'](HostedZoneId=HostedZoneId,
-            StartRecordName=Name, StartRecordType=Type, region=region, key=key, keyid=keyid,
-            profile=profile)
+    recordsets = __salt__["boto3_route53.get_resource_records"](
+        HostedZoneId=HostedZoneId,
+        StartRecordName=Name,
+        StartRecordType=Type,
+        region=region,
+        key=key,
+        keyid=keyid,
+        profile=profile,
+    )
     if SetIdentifier and recordsets:
-        log.debug('Filter recordsets %s by SetIdentifier %s.', recordsets, SetIdentifier)
-        recordsets = [r for r in recordsets if r.get('SetIdentifier') == SetIdentifier]
-        log.debug('Resulted in recordsets %s.', recordsets)
+        log.debug(
+            "Filter recordsets %s by SetIdentifier %s.", recordsets, SetIdentifier
+        )
+        recordsets = [r for r in recordsets if r.get("SetIdentifier") == SetIdentifier]
+        log.debug("Resulted in recordsets %s.", recordsets)
     if not recordsets:
-        ret['comment'] = 'Route 53 resource record {} with type {} already absent.'.format(
-                Name, Type)
+        ret[
+            "comment"
+        ] = "Route 53 resource record {} with type {} already absent.".format(
+            Name, Type
+        )
         return ret
     elif len(recordsets) > 1:
-        ret['comment'] = 'Given criteria matched more than one ResourceRecordSet.'
-        log.error(ret['comment'])
-        ret['result'] = False
+        ret["comment"] = "Given criteria matched more than one ResourceRecordSet."
+        log.error(ret["comment"])
+        ret["result"] = False
         return ret
     ResourceRecordSet = recordsets[0]
-    if __opts__['test']:
-        ret['comment'] = 'Route 53 resource record {} with type {} would be deleted.'.format(
-                Name, Type)
-        ret['result'] = None
+    if __opts__["test"]:
+        ret[
+            "comment"
+        ] = "Route 53 resource record {} with type {} would be deleted.".format(
+            Name, Type
+        )
+        ret["result"] = None
         return ret
 
     ChangeBatch = {
-        'Changes': [
-            {
-                'Action': 'DELETE',
-                'ResourceRecordSet': ResourceRecordSet,
-            }
-        ]
+        "Changes": [{"Action": "DELETE", "ResourceRecordSet": ResourceRecordSet}]
     }
 
-    if __salt__['boto3_route53.change_resource_record_sets'](HostedZoneId=HostedZoneId,
-            ChangeBatch=ChangeBatch, region=region, key=key, keyid=keyid, profile=profile):
-        ret['comment'] = 'Route 53 resource record {} with type {} deleted.'.format(Name, Type)
-        log.info(ret['comment'])
-        ret['changes']['old'] = ResourceRecordSet
-        ret['changes']['new'] = None
+    if __salt__["boto3_route53.change_resource_record_sets"](
+        HostedZoneId=HostedZoneId,
+        ChangeBatch=ChangeBatch,
+        region=region,
+        key=key,
+        keyid=keyid,
+        profile=profile,
+    ):
+        ret["comment"] = "Route 53 resource record {} with type {} deleted.".format(
+            Name, Type
+        )
+        log.info(ret["comment"])
+        ret["changes"]["old"] = ResourceRecordSet
+        ret["changes"]["new"] = None
     else:
-        ret['comment'] = 'Failed to delete Route 53 resource record {} with type {}.'.format(Name,
-                Type)
-        log.error(ret['comment'])
-        ret['result'] = False
+        ret[
+            "comment"
+        ] = "Failed to delete Route 53 resource record {} with type {}.".format(
+            Name, Type
+        )
+        log.error(ret["comment"])
+        ret["result"] = False
 
     return ret

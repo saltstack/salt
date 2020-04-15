@@ -195,105 +195,56 @@ If (!($Path.ToLower().Contains("$($ini['Settings']['Scripts3Dir'])".ToLower())))
 
 #==============================================================================
 # Update PIP and SetupTools
-#    caching depends on environment variable SALT_PIP_LOCAL_CACHE
 #==============================================================================
 Write-Output " ----------------------------------------------------------------"
 Write-Output " - $script_name :: Updating PIP and SetupTools . . ."
 Write-Output " ----------------------------------------------------------------"
-if ( ! [bool]$Env:SALT_PIP_LOCAL_CACHE) {
-    Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python3Dir'])\python.exe -m pip --disable-pip-version-check --no-cache-dir install -r $($script_path)\req_pip.txt" "python pip"
-} else {
-    $p = New-Item $Env:SALT_PIP_LOCAL_CACHE -ItemType Directory -Force # Ensure directory exists
-    if ( (Get-ChildItem $Env:SALT_PIP_LOCAL_CACHE | Measure-Object).Count -eq 0 ) {
-        # folder empty
-        Write-Output "    pip download from req_pip.txt into empty local cache SALT_REQ_PIP $Env:SALT_PIP_LOCAL_CACHE"
-        Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python3Dir'])\python.exe -m pip --disable-pip-version-check download --dest $Env:SALT_PIP_LOCAL_CACHE -r $($script_path)\req_pip.txt" "pip download"
-    }
-    Write-Output "    reading from local pip cache $Env:SALT_PIP_LOCAL_CACHE"
-    Write-Output "    If a (new) resource is missing, please delete all files in this cache, go online and repeat"
-  Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python3Dir'])\python.exe -m pip --disable-pip-version-check install --no-index --find-links=$Env:SALT_PIP_LOCAL_CACHE -r $($script_path)\req_pip.txt" "pip install"
-}
+Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python3Dir'])\python.exe -m pip --disable-pip-version-check --no-cache-dir install -r $($script_path)\req_pip.txt" "python pip"
+
 
 #==============================================================================
 # Install windows specific pypi resources using pip
-#    caching depends on environment variable SALT_REQ_LOCAL_CACHE
 #==============================================================================
 Write-Output " ----------------------------------------------------------------"
 Write-Output " - $script_name :: Installing windows specific pypi resources using pip . . ."
 Write-Output " ----------------------------------------------------------------"
-if ( ! [bool]$Env:SALT_REQ_LOCAL_CACHE) {
-    Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python3Dir'])\python.exe -m pip --disable-pip-version-check --no-cache-dir install -r $($script_path)\req_win.txt" "pip install"
-} else {
-    if ( (Get-ChildItem $Env:SALT_REQ_LOCAL_CACHE | Measure-Object).Count -eq 0 ) {
-        # folder empty
-        Write-Output "    pip download from req_win.txt into empty local cache SALT_REQ $Env:SALT_REQ_LOCAL_CACHE"
-        Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python3Dir'])\python.exe -m pip --disable-pip-version-check download --dest $Env:SALT_REQ_LOCAL_CACHE -r $($script_path)\req_win.txt" "pip download"
-    }
-    Write-Output "    reading from local pip cache $Env:SALT_REQ_LOCAL_CACHE"
-    Write-Output "    If a (new) resource is missing, please delete all files in this cache, go online and repeat"
-  Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python3Dir'])\python.exe -m pip --disable-pip-version-check install --no-index --find-links=$Env:SALT_REQ_LOCAL_CACHE -r $($script_path)\req_win.txt" "pip install"
-}
+Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python3Dir'])\python.exe -m pip --disable-pip-version-check --no-cache-dir install -r $($script_path)\req_win.txt" "pip install"
 
 #==============================================================================
 # Install pypi resources using pip
-#    caching depends on environment variable SALT_REQ_LOCAL_CACHE
 #==============================================================================
 If ($NoPipDependencies -eq $false) {
   Write-Output " ----------------------------------------------------------------"
   Write-Output " - $script_name :: Installing pypi resources using pip . . ."
   Write-Output " ----------------------------------------------------------------"
-  if ( ! [bool]$Env:SALT_REQ_LOCAL_CACHE) {
-      Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python3Dir'])\python.exe -m pip --disable-pip-version-check --no-cache-dir install -r $($script_path)\req.txt" "pip install"
-  } else {
-      if ( (Get-ChildItem $Env:SALT_REQ_LOCAL_CACHE | Measure-Object).Count -eq 0 ) {
-          # folder empty
-          Write-Output "    pip download from req.txt into empty local cache SALT_REQ $Env:SALT_REQ_LOCAL_CACHE"
-          Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python3Dir'])\python.exe -m pip --disable-pip-version-check download --dest $Env:SALT_REQ_LOCAL_CACHE -r $($script_path)\req.txt" "pip download"
-      }
-      Write-Output "    reading from local pip cache $Env:SALT_REQ_LOCAL_CACHE"
-      Write-Output "    If a (new) resource is missing, please delete all files in this cache, go online and repeat"
-    Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python3Dir'])\python.exe -m pip --disable-pip-version-check install --no-index --find-links=$Env:SALT_REQ_LOCAL_CACHE -r $($script_path)\req.txt" "pip install"
-  }
+  Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python3Dir'])\python.exe -m pip --disable-pip-version-check --no-cache-dir install -r $($script_path)\req.txt" "pip install"
 }
 
 #==============================================================================
 # Cleaning Up PyWin32
 #==============================================================================
-Write-Output " ----------------------------------------------------------------"
-Write-Output " - $script_name :: Cleaning Up PyWin32 . . ."
-Write-Output " ----------------------------------------------------------------"
+If (Test-Path "$($ini['Settings']['SitePkgs3Dir'])\pywin32_system32" -PathType Container ) {
+    Write-Output " ----------------------------------------------------------------"
+    Write-Output " - $script_name :: Cleaning Up PyWin32 . . ."
+    Write-Output " ----------------------------------------------------------------"
 
-# Move DLL's to Python Root
-# The dlls have to be in Python directory and the site-packages\win32 directory
-Write-Output " - $script_name :: Moving PyWin32 DLLs . . ."
-Copy-Item "$($ini['Settings']['SitePkgs3Dir'])\pywin32_system32\*.dll" "$($ini['Settings']['Python3Dir'])" -Force
-Move-Item "$($ini['Settings']['SitePkgs3Dir'])\pywin32_system32\*.dll" "$($ini['Settings']['SitePkgs3Dir'])\win32" -Force
+    # Move DLL's to Python Root
+    # The dlls have to be in Python directory and the site-packages\win32 directory
+    Write-Output " - $script_name :: Moving PyWin32 DLLs . . ."
+    Copy-Item "$( $ini['Settings']['SitePkgs3Dir'] )\pywin32_system32\*.dll" "$( $ini['Settings']['Python3Dir'] )" -Force
+    Move-Item "$( $ini['Settings']['SitePkgs3Dir'] )\pywin32_system32\*.dll" "$( $ini['Settings']['SitePkgs3Dir'] )\win32" -Force
 
-# Create gen_py directory
-Write-Output " - $script_name :: Creating gen_py Directory . . ."
-New-Item -Path "$($ini['Settings']['SitePkgs3Dir'])\win32com\gen_py" -ItemType Directory -Force | Out-Null
+    # Create gen_py directory
+    Write-Output " - $script_name :: Creating gen_py Directory . . ."
+    New-Item -Path "$( $ini['Settings']['SitePkgs3Dir'] )\win32com\gen_py" -ItemType Directory -Force | Out-Null
 
-# Remove pywin32_system32 directory
-Write-Output " - $script_name :: Removing pywin32_system32 Directory . . ."
-Remove-Item "$($ini['Settings']['SitePkgs3Dir'])\pywin32_system32"
+    # Remove pywin32_system32 directory
+    Write-Output " - $script_name :: Removing pywin32_system32 Directory . . ."
+    Remove-Item "$( $ini['Settings']['SitePkgs3Dir'] )\pywin32_system32"
 
-# Remove pythonwin directory
-Write-Output " - $script_name :: Removing pythonwin Directory . . ."
-Remove-Item "$($ini['Settings']['SitePkgs3Dir'])\pythonwin" -Force -Recurse
-
-# Remove PyWin32 PostInstall and testall Scripts
-Write-Output " - $script_name :: Removing PyWin32 scripts . . ."
-Remove-Item "$($ini['Settings']['Scripts3Dir'])\pywin32_*" -Force -Recurse
-
-#==============================================================================
-# Fix PyCrypto
-#==============================================================================
-If ($NoPipDependencies -eq $false) {
-  Write-Output " ----------------------------------------------------------------"
-  Write-Output "   - $script_name :: Fixing PyCrypto . . ."
-  Write-Output " ----------------------------------------------------------------"
-  $nt_file = "$($ini['Settings']['Python3Dir'])\Lib\site-packages\Crypto\Random\OSRNG\nt.py"
-  (Get-Content $nt_file) | Foreach-Object {$_ -replace '^import winrandom$', 'from Crypto.Random.OSRNG import winrandom'} | Set-Content $nt_file
+    # Remove PyWin32 PostInstall and testall Scripts
+    Write-Output " - $script_name :: Removing PyWin32 scripts . . ."
+    Remove-Item "$( $ini['Settings']['Scripts3Dir'] )\pywin32_*" -Force -Recurse
 }
 
 #==============================================================================
@@ -330,9 +281,7 @@ If (-Not $Silent) {
 # Remove the temporary download directory
 #------------------------------------------------------------------------------
 Write-Output " ----------------------------------------------------------------"
-Write-Output " - $script_name :: Cleaning up downloaded files unless you use SALTREPO_LOCAL_CACHE"
+Write-Output " - $script_name :: Cleaning up downloaded files"
 Write-Output " ----------------------------------------------------------------"
 Write-Output ""
-if ( ! [bool]$Env:SALTREPO_LOCAL_CACHE ) {
-    Remove-Item $($ini['Settings']['DownloadDir']) -Force -Recurse
-}
+Remove-Item $($ini['Settings']['DownloadDir']) -Force -Recurse

@@ -161,7 +161,7 @@ prone to errors.
 Virtual Machine generation applications are available for many platforms:
 
 kiwi: (openSUSE, SLES, RHEL, CentOS)
-  https://suse.github.io/kiwi/
+  https://opensuse.github.io/kiwi/
 
 vm-builder:
   https://wiki.debian.org/VMBuilder
@@ -192,14 +192,12 @@ Fedora Linux
 ~~~~~~~~~~~~
 
 Images for Fedora Linux can be found here:
-http://fedoraproject.org/en/get-fedora#clouds
+https://alt.fedoraproject.org/cloud
 
 openSUSE
 ~~~~~~~~
 
-http://download.opensuse.org/repositories/openSUSE:/Leap:/42.1:/Images/images
-
-(look for JeOS-for-kvm-and-xen variant)
+https://download.opensuse.org/distribution/leap/15.1/jeos/openSUSE-Leap-15.1-JeOS.x86_64-15.1.0-kvm-and-xen-Current.qcow2.meta4
 
 SUSE
 ~~~~
@@ -245,8 +243,8 @@ The Salt Virt runner will now automatically select a hypervisor to deploy
 the new virtual machine on. Using ``salt://`` assumes that the CentOS virtual
 machine image is located in the root of the :ref:`file-server` on the master.
 When images are cloned (i.e. copied locatlly after retrieval from the file server)
-the destination directory on the hypervisor minion is determined by the ``virt.images``
-config option; by default this is ``/srv/salt/salt-images/``.
+the destination directory on the hypervisor minion is determined by the ``virt:images``
+config option; by default this is ``/srv/salt-images/``.
 
 When a VM is initialized using ``virt.init`` the image is copied to the hypervisor
 using ``cp.cache_file`` and will be mounted and seeded with a minion. Seeding includes
@@ -322,16 +320,17 @@ opened on hypervisors:
 
     :ref:`Opening the Firewall up for Salt <firewall>`
 
-Salt also needs the ``virt.tunnel`` option to be turned on.
+Salt also needs the ``virt:tunnel`` option to be turned on.
 This flag tells Salt to run migrations securely via the libvirt TLS tunnel and to
-use port 16514. Without ``virt.tunnel`` libvirt tries to bind to random ports when
+use port 16514. Without ``virt:tunnel`` libvirt tries to bind to random ports when
 running migrations.
 
-To turn on ``virt.tunnel`` simple apply it to the master config file:
+To turn on ``virt:tunnel`` simply apply it to the master config file:
 
 .. code-block:: yaml
 
-    virt.tunnel: True
+    virt:
+        tunnel: True
 
 Once the master config has been updated, restart the master and send out a call
 to the minions to refresh the pillar to pick up on the change:

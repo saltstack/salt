@@ -10,13 +10,13 @@ network gear that has an API but runs a proprietary OS, devices with limited
 CPU or memory, or devices that could run a minion, but for security reasons,
 will not.
 
-*Proxy minions are not an "out of the box" feature*.  Because there are an
-infinite number of controllable devices, you will most likely have to write the
-interface yourself. Fortunately, this is only as difficult as the actual
-interface to the proxied device.  Devices that have an existing Python module
-(PyUSB for example) would be relatively simple to interface.  Code to control a
-device that has an HTML REST-based interface should be easy.  Code to control
-your typical housecat would be excellent source material for a PhD thesis.
+There are some :ref:`proxy modules <all-salt.proxy>` available, but if your device
+interface is not currently supported you will most likely have to write the interface
+yourself, because there are an infinite number of controllable devices. Fortunately, this
+is only as difficult as the actual interface to the proxied device. Devices that have an
+existing Python module (PyUSB for example) would be relatively simple to interface.
+Code to control a device that has an HTML REST-based interface should be easy.  Code to
+control your typical housecat would be excellent source material for a PhD thesis.
 
 Salt proxy-minions provide the 'plumbing' that allows device enumeration
 and discovery, control, status, remote execution, and state management.
@@ -637,7 +637,7 @@ release code-named *2017.7.0*.
     Generate baseline proxy minion grains
     '''
     from __future__ import absolute_import
-    import salt.utils
+    import salt.utils.platform
 
     __proxyenabled__ = ['rest_sample']
 
@@ -706,7 +706,7 @@ Example from ``salt/grains/rest_sample.py``:
     Generate baseline proxy minion grains
     '''
     from __future__ import absolute_import
-    import salt.utils
+    import salt.utils.platform
 
     __proxyenabled__ = ['rest_sample']
 

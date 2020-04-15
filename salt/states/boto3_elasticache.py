@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Manage Elasticache with boto3
 =============================
 
@@ -86,24 +86,24 @@ passed in as a dict, or as a string to pull from pillars or minion config:
         - profile:
             keyid: GKTADJGHEIQSXMKKRBJ08H
             key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-'''
+"""
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():
-    '''
+    """
     Only load if boto is available.
-    '''
-    if 'boto3_elasticache.cache_cluster_exists' in __salt__:
-        return 'boto3_elasticache'
+    """
+    if "boto3_elasticache.cache_cluster_exists" in __salt__:
+        return "boto3_elasticache"
     else:
         return False
 
 
 def _diff_cache_cluster(current, desired):
-    '''
+    """
     If you need to enhance what modify_cache_cluster() considers when deciding what is to be
     (or can be) updated, add it to 'modifiable' below.  It's a dict mapping the param as used
     in modify_cache_cluster() to that in describe_cache_clusters().  Any data fiddlery that
@@ -114,35 +114,45 @@ def _diff_cache_cluster(current, desired):
     settings which might have previously been changed from their 'default' values will not be
     changed back simply by leaving them out of 'desired'.  This is both intentional, and
     much, much easier to code :)
-    '''
+    """
     ### The data formats are annoyingly (and as far as I can can tell, unnecessarily)
     ### different - we have to munge to a common format to compare...
-    if current.get('SecurityGroups') is not None:
-        current['SecurityGroupIds'] = [s['SecurityGroupId'] for s in current['SecurityGroups']]
-    if current.get('CacheSecurityGroups') is not None:
-        current['CacheSecurityGroupNames'] = [c['CacheSecurityGroupName'] for c in current['CacheSecurityGroups']]
-    if current.get('NotificationConfiguration') is not None:
-        current['NotificationTopicArn'] = current['NotificationConfiguration']['TopicArn']
-        current['NotificationTopicStatus'] = current['NotificationConfiguration']['TopicStatus']
-    if current.get('CacheParameterGroup') is not None:
-        current['CacheParameterGroupName'] = current['CacheParameterGroup']['CacheParameterGroupName']
+    if current.get("SecurityGroups") is not None:
+        current["SecurityGroupIds"] = [
+            s["SecurityGroupId"] for s in current["SecurityGroups"]
+        ]
+    if current.get("CacheSecurityGroups") is not None:
+        current["CacheSecurityGroupNames"] = [
+            c["CacheSecurityGroupName"] for c in current["CacheSecurityGroups"]
+        ]
+    if current.get("NotificationConfiguration") is not None:
+        current["NotificationTopicArn"] = current["NotificationConfiguration"][
+            "TopicArn"
+        ]
+        current["NotificationTopicStatus"] = current["NotificationConfiguration"][
+            "TopicStatus"
+        ]
+    if current.get("CacheParameterGroup") is not None:
+        current["CacheParameterGroupName"] = current["CacheParameterGroup"][
+            "CacheParameterGroupName"
+        ]
 
     modifiable = {
-        'AutoMinorVersionUpgrade': 'AutoMinorVersionUpgrade',
-        'AZMode': 'AZMode',
-        'CacheNodeType': 'CacheNodeType',
-        'CacheNodeIdsToRemove': None,
-        'CacheParameterGroupName': 'CacheParameterGroupName',
-        'CacheSecurityGroupNames': 'CacheSecurityGroupNames',
-        'EngineVersion': 'EngineVersion',
-        'NewAvailabilityZones': None,
-        'NotificationTopicArn': 'NotificationTopicArn',
-        'NotificationTopicStatus': 'NotificationTopicStatus',
-        'NumCacheNodes': 'NumCacheNodes',
-        'PreferredMaintenanceWindow': 'PreferredMaintenanceWindow',
-        'SecurityGroupIds': 'SecurityGroupIds',
-        'SnapshotRetentionLimit': 'SnapshotRetentionLimit',
-        'SnapshotWindow': 'SnapshotWindow'
+        "AutoMinorVersionUpgrade": "AutoMinorVersionUpgrade",
+        "AZMode": "AZMode",
+        "CacheNodeType": "CacheNodeType",
+        "CacheNodeIdsToRemove": None,
+        "CacheParameterGroupName": "CacheParameterGroupName",
+        "CacheSecurityGroupNames": "CacheSecurityGroupNames",
+        "EngineVersion": "EngineVersion",
+        "NewAvailabilityZones": None,
+        "NotificationTopicArn": "NotificationTopicArn",
+        "NotificationTopicStatus": "NotificationTopicStatus",
+        "NumCacheNodes": "NumCacheNodes",
+        "PreferredMaintenanceWindow": "PreferredMaintenanceWindow",
+        "SecurityGroupIds": "SecurityGroupIds",
+        "SnapshotRetentionLimit": "SnapshotRetentionLimit",
+        "SnapshotWindow": "SnapshotWindow",
     }
 
     need_update = {}
@@ -160,9 +170,17 @@ def _diff_cache_cluster(current, desired):
     return need_update
 
 
-def cache_cluster_present(name, wait=900, security_groups=None, region=None, key=None,
-                          keyid=None, profile=None, **args):
-    '''
+def cache_cluster_present(
+    name,
+    wait=900,
+    security_groups=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+    **args
+):
+    """
     Ensure a given cache cluster exists.
 
     name
@@ -409,20 +427,20 @@ def cache_cluster_present(name, wait=900, security_groups=None, region=None, key
     profile
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
-    '''
-    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
-    args = dict([(k, v) for k, v in args.items() if not k.startswith('_')])
-    current = __salt__['boto3_elasticache.'
-                       'describe_cache_clusters'](name, region=region, key=key,
-                                                  keyid=keyid, profile=profile)
+    """
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
+    args = dict([(k, v) for k, v in args.items() if not k.startswith("_")])
+    current = __salt__["boto3_elasticache." "describe_cache_clusters"](
+        name, region=region, key=key, keyid=keyid, profile=profile
+    )
     if current:
         check_update = True
     else:
         check_update = False
         only_on_modify = [
-            'CacheNodeIdsToRemove',
-            'NewAvailabilityZones',
-            'NotificationTopicStatus'
+            "CacheNodeIdsToRemove",
+            "NewAvailabilityZones",
+            "NotificationTopicStatus",
         ]
         create_args = {}
         for k, v in args.items():
@@ -430,62 +448,74 @@ def cache_cluster_present(name, wait=900, security_groups=None, region=None, key
                 check_update = True
             else:
                 create_args[k] = v
-        if __opts__['test']:
-            ret['comment'] = 'Cache cluster {0} would be created.'.format(name)
-            ret['result'] = None
+        if __opts__["test"]:
+            ret["comment"] = "Cache cluster {0} would be created.".format(name)
+            ret["result"] = None
             return ret
-        created = __salt__['boto3_elasticache.'
-                           'create_cache_cluster'](name, wait=wait, security_groups=security_groups,
-                                                   region=region, key=key, keyid=keyid,
-                                                   profile=profile, **create_args)
+        created = __salt__["boto3_elasticache." "create_cache_cluster"](
+            name,
+            wait=wait,
+            security_groups=security_groups,
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
+            **create_args
+        )
         if created:
-            new = __salt__['boto3_elasticache.'
-                           'describe_cache_clusters'](name, region=region, key=key,
-                                                      keyid=keyid, profile=profile)
-            ret['comment'] = 'Cache cluster {0} was created.'.format(name)
-            ret['changes']['old'] = None
-            ret['changes']['new'] = new[0]
+            new = __salt__["boto3_elasticache." "describe_cache_clusters"](
+                name, region=region, key=key, keyid=keyid, profile=profile
+            )
+            ret["comment"] = "Cache cluster {0} was created.".format(name)
+            ret["changes"]["old"] = None
+            ret["changes"]["new"] = new[0]
         else:
-            ret['result'] = False
-            ret['comment'] = 'Failed to create {0} cache cluster.'.format(name)
+            ret["result"] = False
+            ret["comment"] = "Failed to create {0} cache cluster.".format(name)
 
     if check_update:
         # Refresh this in case we're updating from 'only_on_modify' above...
-        updated = __salt__['boto3_elasticache.'
-                           'describe_cache_clusters'](name, region=region, key=key,
-                                                      keyid=keyid, profile=profile)
-        need_update = _diff_cache_cluster(updated['CacheClusters'][0], args)
+        updated = __salt__["boto3_elasticache." "describe_cache_clusters"](
+            name, region=region, key=key, keyid=keyid, profile=profile
+        )
+        need_update = _diff_cache_cluster(updated["CacheClusters"][0], args)
         if need_update:
-            if __opts__['test']:
-                ret['comment'] = 'Cache cluster {0} would be modified.'.format(name)
-                ret['result'] = None
+            if __opts__["test"]:
+                ret["comment"] = "Cache cluster {0} would be modified.".format(name)
+                ret["result"] = None
                 return ret
-            modified = __salt__['boto3_elasticache.'
-                                'modify_cache_cluster'](name, wait=wait,
-                                                        security_groups=security_groups,
-                                                        region=region, key=key, keyid=keyid,
-                                                        profile=profile, **need_update)
+            modified = __salt__["boto3_elasticache." "modify_cache_cluster"](
+                name,
+                wait=wait,
+                security_groups=security_groups,
+                region=region,
+                key=key,
+                keyid=keyid,
+                profile=profile,
+                **need_update
+            )
             if modified:
-                new = __salt__['boto3_elasticache.'
-                               'describe_cache_clusters'](name, region=region, key=key,
-                                                          keyid=keyid, profile=profile)
-                if ret['comment']:  # 'create' just ran...
-                    ret['comment'] += ' ... and then immediately modified.'
+                new = __salt__["boto3_elasticache." "describe_cache_clusters"](
+                    name, region=region, key=key, keyid=keyid, profile=profile
+                )
+                if ret["comment"]:  # 'create' just ran...
+                    ret["comment"] += " ... and then immediately modified."
                 else:
-                    ret['comment'] = 'Cache cluster {0} was modified.'.format(name)
-                    ret['changes']['old'] = current
-                ret['changes']['new'] = new[0]
+                    ret["comment"] = "Cache cluster {0} was modified.".format(name)
+                    ret["changes"]["old"] = current
+                ret["changes"]["new"] = new[0]
             else:
-                ret['result'] = False
-                ret['comment'] = 'Failed to modify cache cluster {0}.'.format(name)
+                ret["result"] = False
+                ret["comment"] = "Failed to modify cache cluster {0}.".format(name)
         else:
-            ret['comment'] = 'Cache cluster {0} is in the desired state.'.format(name)
+            ret["comment"] = "Cache cluster {0} is in the desired state.".format(name)
     return ret
 
 
-def cache_cluster_absent(name, wait=600, region=None, key=None, keyid=None,
-                         profile=None, **args):
-    '''
+def cache_cluster_absent(
+    name, wait=600, region=None, key=None, keyid=None, profile=None, **args
+):
+    """
     Ensure a given cache cluster is deleted.
 
     name
@@ -519,33 +549,39 @@ def cache_cluster_absent(name, wait=600, region=None, key=None, keyid=None,
     profile
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
-    '''
-    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
-    args = dict([(k, v) for k, v in args.items() if not k.startswith('_')])
-    exists = __salt__['boto3_elasticache.'
-                      'cache_cluster_exists'](name, region=region, key=key,
-                                              keyid=keyid, profile=profile)
+    """
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
+    args = dict([(k, v) for k, v in args.items() if not k.startswith("_")])
+    exists = __salt__["boto3_elasticache." "cache_cluster_exists"](
+        name, region=region, key=key, keyid=keyid, profile=profile
+    )
     if exists:
-        if __opts__['test']:
-            ret['comment'] = 'Cache cluster {0} would be removed.'.format(name)
-            ret['result'] = None
+        if __opts__["test"]:
+            ret["comment"] = "Cache cluster {0} would be removed.".format(name)
+            ret["result"] = None
             return ret
-        deleted = __salt__['boto3_elasticache.'
-                           'delete_cache_cluster'](name, wait=wait, region=region, key=key,
-                                                   keyid=keyid, profile=profile, **args)
+        deleted = __salt__["boto3_elasticache." "delete_cache_cluster"](
+            name,
+            wait=wait,
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
+            **args
+        )
         if deleted:
-            ret['changes']['old'] = name
-            ret['changes']['new'] = None
+            ret["changes"]["old"] = name
+            ret["changes"]["new"] = None
         else:
-            ret['result'] = False
-            ret['comment'] = 'Failed to delete {0} cache cluster.'.format(name)
+            ret["result"] = False
+            ret["comment"] = "Failed to delete {0} cache cluster.".format(name)
     else:
-        ret['comment'] = 'Cache cluster {0} already absent.'.format(name)
+        ret["comment"] = "Cache cluster {0} already absent.".format(name)
     return ret
 
 
 def _diff_replication_group(current, desired):
-    '''
+    """
     If you need to enhance what modify_replication_group() considers when deciding what is to be
     (or can be) updated, add it to 'modifiable' below.  It's a dict mapping the param as used
     in modify_replication_group() to that in describe_replication_groups().  Any data fiddlery
@@ -556,30 +592,31 @@ def _diff_replication_group(current, desired):
     settings which might have previously been changed from their 'default' values will not be
     changed back simply by leaving them out of 'desired'.  This is both intentional, and
     much, much easier to code :)
-    '''
-    if current.get('AutomaticFailover') is not None:
-        current['AutomaticFailoverEnabled'] = True if current['AutomaticFailover'] in ('enabled',
-                'enabling') else False
+    """
+    if current.get("AutomaticFailover") is not None:
+        current["AutomaticFailoverEnabled"] = (
+            True if current["AutomaticFailover"] in ("enabled", "enabling") else False
+        )
 
     modifiable = {
         # Amazingly, the AWS API provides NO WAY to query the current state of most repl group
         # settings!  All we can do is send a modify op with the desired value, just in case it's
         # different.  And THEN, we can't determine if it's been changed!  Stupid?  YOU BET!
-        'AutomaticFailoverEnabled': 'AutomaticFailoverEnabled',
-        'AutoMinorVersionUpgrade': None,
-        'CacheNodeType': None,
-        'CacheParameterGroupName': None,
-        'CacheSecurityGroupNames': None,
-        'EngineVersion': None,
-        'NotificationTopicArn': None,
-        'NotificationTopicStatus': None,
-        'PreferredMaintenanceWindow': None,
-        'PrimaryClusterId': None,
-        'ReplicationGroupDescription': 'Description',
-        'SecurityGroupIds': None,
-        'SnapshotRetentionLimit': 'SnapshotRetentionLimit',
-        'SnapshottingClusterId': 'SnapshottingClusterId',
-        'SnapshotWindow': 'SnapshotWindow'
+        "AutomaticFailoverEnabled": "AutomaticFailoverEnabled",
+        "AutoMinorVersionUpgrade": None,
+        "CacheNodeType": None,
+        "CacheParameterGroupName": None,
+        "CacheSecurityGroupNames": None,
+        "EngineVersion": None,
+        "NotificationTopicArn": None,
+        "NotificationTopicStatus": None,
+        "PreferredMaintenanceWindow": None,
+        "PrimaryClusterId": None,
+        "ReplicationGroupDescription": "Description",
+        "SecurityGroupIds": None,
+        "SnapshotRetentionLimit": "SnapshotRetentionLimit",
+        "SnapshottingClusterId": "SnapshottingClusterId",
+        "SnapshotWindow": "SnapshotWindow",
     }
 
     need_update = {}
@@ -597,9 +634,17 @@ def _diff_replication_group(current, desired):
     return need_update
 
 
-def replication_group_present(name, wait=900, security_groups=None, region=None, key=None,
-                              keyid=None, profile=None, **args):
-    '''
+def replication_group_present(
+    name,
+    wait=900,
+    security_groups=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+    **args
+):
+    """
     Ensure a replication group exists and is in the given state.
 
     name
@@ -838,83 +883,93 @@ def replication_group_present(name, wait=900, security_groups=None, region=None,
     profile
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
-    '''
-    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
-    args = dict([(k, v) for k, v in args.items() if not k.startswith('_')])
-    current = __salt__['boto3_elasticache.'
-                       'describe_replication_groups'](name, region=region, key=key,
-                                                      keyid=keyid, profile=profile)
+    """
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
+    args = dict([(k, v) for k, v in args.items() if not k.startswith("_")])
+    current = __salt__["boto3_elasticache." "describe_replication_groups"](
+        name, region=region, key=key, keyid=keyid, profile=profile
+    )
     if current:
         check_update = True
     else:
         check_update = False
-        only_on_modify = [
-            'SnapshottingClusterId',
-            'NotificationTopicStatus'
-        ]
+        only_on_modify = ["SnapshottingClusterId", "NotificationTopicStatus"]
         create_args = {}
         for k, v in args.items():
             if k in only_on_modify:
                 check_update = True
             else:
                 create_args[k] = v
-        if __opts__['test']:
-            ret['comment'] = 'Replication group {0} would be created.'.format(name)
-            ret['result'] = None
+        if __opts__["test"]:
+            ret["comment"] = "Replication group {0} would be created.".format(name)
+            ret["result"] = None
             return ret
-        created = __salt__['boto3_elasticache.'
-                           'create_replication_group'](name, wait=wait,
-                                                       security_groups=security_groups,
-                                                       region=region, key=key, keyid=keyid,
-                                                       profile=profile, **create_args)
+        created = __salt__["boto3_elasticache." "create_replication_group"](
+            name,
+            wait=wait,
+            security_groups=security_groups,
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
+            **create_args
+        )
         if created:
-            new = __salt__['boto3_elasticache.'
-                           'describe_replication_groups'](name, region=region, key=key,
-                                                          keyid=keyid, profile=profile)
-            ret['comment'] = 'Replication group {0} was created.'.format(name)
-            ret['changes']['old'] = None
-            ret['changes']['new'] = new[0]
+            new = __salt__["boto3_elasticache." "describe_replication_groups"](
+                name, region=region, key=key, keyid=keyid, profile=profile
+            )
+            ret["comment"] = "Replication group {0} was created.".format(name)
+            ret["changes"]["old"] = None
+            ret["changes"]["new"] = new[0]
         else:
-            ret['result'] = False
-            ret['comment'] = 'Failed to create {0} replication group.'.format(name)
+            ret["result"] = False
+            ret["comment"] = "Failed to create {0} replication group.".format(name)
 
     if check_update:
         # Refresh this in case we're updating from 'only_on_modify' above...
-        updated = __salt__['boto3_elasticache.'
-                           'describe_replication_groups'](name, region=region, key=key,
-                                                          keyid=keyid, profile=profile)[0]
+        updated = __salt__["boto3_elasticache." "describe_replication_groups"](
+            name, region=region, key=key, keyid=keyid, profile=profile
+        )[0]
         need_update = _diff_replication_group(updated, args)
         if need_update:
-            if __opts__['test']:
-                ret['comment'] = 'Replication group {0} would be modified.'.format(name)
-                ret['result'] = None
+            if __opts__["test"]:
+                ret["comment"] = "Replication group {0} would be modified.".format(name)
+                ret["result"] = None
                 return ret
-            modified = __salt__['boto3_elasticache.'
-                                'modify_replication_group'](name, wait=wait,
-                                                            security_groups=security_groups,
-                                                            region=region, key=key, keyid=keyid,
-                                                            profile=profile, **need_update)
+            modified = __salt__["boto3_elasticache." "modify_replication_group"](
+                name,
+                wait=wait,
+                security_groups=security_groups,
+                region=region,
+                key=key,
+                keyid=keyid,
+                profile=profile,
+                **need_update
+            )
             if modified:
-                new = __salt__['boto3_elasticache.'
-                               'describe_replication_groups'](name, region=region, key=key,
-                                                              keyid=keyid, profile=profile)
-                if ret['comment']:  # 'create' just ran...
-                    ret['comment'] += ' ... and then immediately modified.'
+                new = __salt__["boto3_elasticache." "describe_replication_groups"](
+                    name, region=region, key=key, keyid=keyid, profile=profile
+                )
+                if ret["comment"]:  # 'create' just ran...
+                    ret["comment"] += " ... and then immediately modified."
                 else:
-                    ret['comment'] = 'Replication group {0} was modified.'.format(name)
-                    ret['changes']['old'] = current[0] if len(current) else None
-                ret['changes']['new'] = new[0]
+                    ret["comment"] = "Replication group {0} was modified.".format(name)
+                    ret["changes"]["old"] = current[0] if current else None
+                ret["changes"]["new"] = new[0]
             else:
-                ret['result'] = False
-                ret['comment'] = 'Failed to modify replication group {0}.'.format(name)
+                ret["result"] = False
+                ret["comment"] = "Failed to modify replication group {0}.".format(name)
         else:
-            ret['comment'] = 'Replication group {0} is in the desired state.'.format(name)
+            ret["comment"] = "Replication group {0} is in the desired state.".format(
+                name
+            )
     return ret
 
 
-def replication_group_absent(name, wait=600, region=None, key=None, keyid=None,
-                             profile=None, **args):
-    '''
+def replication_group_absent(
+    name, wait=600, region=None, key=None, keyid=None, profile=None, **args
+):
+    """
     Ensure a given replication group is deleted.
 
     name
@@ -952,33 +1007,39 @@ def replication_group_absent(name, wait=600, region=None, key=None, keyid=None,
     profile
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
-    '''
-    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
-    args = dict([(k, v) for k, v in args.items() if not k.startswith('_')])
-    exists = __salt__['boto3_elasticache.'
-                      'replication_group_exists'](name, region=region, key=key,
-                                                  keyid=keyid, profile=profile)
+    """
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
+    args = dict([(k, v) for k, v in args.items() if not k.startswith("_")])
+    exists = __salt__["boto3_elasticache." "replication_group_exists"](
+        name, region=region, key=key, keyid=keyid, profile=profile
+    )
     if exists:
-        if __opts__['test']:
-            ret['comment'] = 'Replication group {0} would be removed.'.format(name)
-            ret['result'] = None
+        if __opts__["test"]:
+            ret["comment"] = "Replication group {0} would be removed.".format(name)
+            ret["result"] = None
             return ret
-        deleted = __salt__['boto3_elasticache.'
-                             'delete_replication_group'](name, wait=wait, region=region, key=key,
-                                                       keyid=keyid, profile=profile, **args)
+        deleted = __salt__["boto3_elasticache." "delete_replication_group"](
+            name,
+            wait=wait,
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
+            **args
+        )
         if deleted:
-            ret['changes']['old'] = name
-            ret['changes']['new'] = None
+            ret["changes"]["old"] = name
+            ret["changes"]["new"] = None
         else:
-            ret['result'] = False
-            ret['comment'] = 'Failed to delete {0} replication group.'.format(name)
+            ret["result"] = False
+            ret["comment"] = "Failed to delete {0} replication group.".format(name)
     else:
-        ret['comment'] = 'Replication group {0} already absent.'.format(name)
+        ret["comment"] = "Replication group {0} already absent.".format(name)
     return ret
 
 
 def _diff_cache_subnet_group(current, desired):
-    '''
+    """
     If you need to enhance what modify_cache_subnet_group() considers when deciding what is to be
     (or can be) updated, add it to 'modifiable' below.  It's a dict mapping the param as used
     in modify_cache_subnet_group() to that in describe_cache_subnet_group().  Any data fiddlery that
@@ -989,10 +1050,10 @@ def _diff_cache_subnet_group(current, desired):
     settings which might have previously been changed from their 'default' values will not be
     changed back simply by leaving them out of 'desired'.  This is both intentional, and
     much, much easier to code :)
-    '''
+    """
     modifiable = {
-        'CacheSubnetGroupDescription': 'CacheSubnetGroupDescription',
-        'SubnetIds': 'SubnetIds'
+        "CacheSubnetGroupDescription": "CacheSubnetGroupDescription",
+        "SubnetIds": "SubnetIds",
     }
 
     need_update = {}
@@ -1010,9 +1071,10 @@ def _diff_cache_subnet_group(current, desired):
     return need_update
 
 
-def cache_subnet_group_present(name, subnets=None, region=None, key=None, keyid=None, profile=None,
-                               **args):
-    '''
+def cache_subnet_group_present(
+    name, subnets=None, region=None, key=None, keyid=None, profile=None, **args
+):
+    """
     Ensure cache subnet group exists.
 
     name
@@ -1045,63 +1107,79 @@ def cache_subnet_group_present(name, subnets=None, region=None, key=None, keyid=
     profile
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
-    '''
-    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
-    args = dict([(k, v) for k, v in args.items() if not k.startswith('_')])
-    current = __salt__['boto3_elasticache.'
-                       'describe_cache_subnet_groups'](name, region=region, key=key,
-                                                       keyid=keyid, profile=profile)
+    """
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
+    args = dict([(k, v) for k, v in args.items() if not k.startswith("_")])
+    current = __salt__["boto3_elasticache." "describe_cache_subnet_groups"](
+        name, region=region, key=key, keyid=keyid, profile=profile
+    )
     if current:
         check_update = True
     else:
         check_update = False
-        if __opts__['test']:
-            ret['comment'] = 'Cache subnet group {0} would be created.'.format(name)
-            ret['result'] = None
+        if __opts__["test"]:
+            ret["comment"] = "Cache subnet group {0} would be created.".format(name)
+            ret["result"] = None
             return ret
-        created = __salt__['boto3_elasticache.'
-                           'create_cache_subnet_group'](name, subnets=subnets,
-                                                        region=region, key=key, keyid=keyid,
-                                                        profile=profile, **args)
+        created = __salt__["boto3_elasticache." "create_cache_subnet_group"](
+            name,
+            subnets=subnets,
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
+            **args
+        )
         if created:
-            new = __salt__['boto3_elasticache.'
-                           'describe_cache_subnet_groups'](name, region=region, key=key,
-                                                           keyid=keyid, profile=profile)
-            ret['comment'] = 'Cache subnet group {0} was created.'.format(name)
-            ret['changes']['old'] = None
-            ret['changes']['new'] = new[0]
+            new = __salt__["boto3_elasticache." "describe_cache_subnet_groups"](
+                name, region=region, key=key, keyid=keyid, profile=profile
+            )
+            ret["comment"] = "Cache subnet group {0} was created.".format(name)
+            ret["changes"]["old"] = None
+            ret["changes"]["new"] = new[0]
         else:
-            ret['result'] = False
-            ret['comment'] = 'Failed to create {0} cache subnet group.'.format(name)
+            ret["result"] = False
+            ret["comment"] = "Failed to create {0} cache subnet group.".format(name)
 
     if check_update:
         need_update = _diff_cache_subnet_group(current, args)
         if need_update:
-            if __opts__['test']:
-                ret['comment'] = 'Cache subnet group {0} would be modified.'.format(name)
-                ret['result'] = None
+            if __opts__["test"]:
+                ret["comment"] = "Cache subnet group {0} would be modified.".format(
+                    name
+                )
+                ret["result"] = None
                 return ret
-            modified = __salt__['boto3_elasticache.'
-                                'modify_cache_subnet_group'](name, subnets=subnets,
-                                                             region=region, key=key, keyid=keyid,
-                                                             profile=profile, **need_update)
+            modified = __salt__["boto3_elasticache." "modify_cache_subnet_group"](
+                name,
+                subnets=subnets,
+                region=region,
+                key=key,
+                keyid=keyid,
+                profile=profile,
+                **need_update
+            )
             if modified:
-                new = __salt__['boto3_elasticache.'
-                               'describe_cache_subnet_groups'](name, region=region, key=key,
-                                                               keyid=keyid, profile=profile)
-                ret['comment'] = 'Cache subnet group {0} was modified.'.format(name)
-                ret['changes']['old'] = current['CacheSubetGroups'][0]
-                ret['changes']['new'] = new[0]
+                new = __salt__["boto3_elasticache." "describe_cache_subnet_groups"](
+                    name, region=region, key=key, keyid=keyid, profile=profile
+                )
+                ret["comment"] = "Cache subnet group {0} was modified.".format(name)
+                ret["changes"]["old"] = current["CacheSubetGroups"][0]
+                ret["changes"]["new"] = new[0]
             else:
-                ret['result'] = False
-                ret['comment'] = 'Failed to modify cache subnet group {0}.'.format(name)
+                ret["result"] = False
+                ret["comment"] = "Failed to modify cache subnet group {0}.".format(name)
         else:
-            ret['comment'] = 'Cache subnet group {0} is in the desired state.'.format(name)
+            ret["comment"] = "Cache subnet group {0} is in the desired state.".format(
+                name
+            )
     return ret
 
 
-def cache_subnet_group_absent(name, region=None, key=None, keyid=None, profile=None, **args):
-    '''
+def cache_subnet_group_absent(
+    name, region=None, key=None, keyid=None, profile=None, **args
+):
+    """
     Ensure a given cache subnet group is deleted.
 
     name
@@ -1123,26 +1201,26 @@ def cache_subnet_group_absent(name, region=None, key=None, keyid=None, profile=N
     profile
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
-    '''
-    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
-    args = dict([(k, v) for k, v in args.items() if not k.startswith('_')])
-    exists = __salt__['boto3_elasticache.'
-                      'cache_subnet_group_exists'](name, region=region, key=key,
-                                                  keyid=keyid, profile=profile)
+    """
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
+    args = dict([(k, v) for k, v in args.items() if not k.startswith("_")])
+    exists = __salt__["boto3_elasticache." "cache_subnet_group_exists"](
+        name, region=region, key=key, keyid=keyid, profile=profile
+    )
     if exists:
-        if __opts__['test']:
-            ret['comment'] = 'Cache subnet group {0} would be removed.'.format(name)
-            ret['result'] = None
+        if __opts__["test"]:
+            ret["comment"] = "Cache subnet group {0} would be removed.".format(name)
+            ret["result"] = None
             return ret
-        deleted = __salt__['boto3_elasticache.'
-                           'delete_cache_subnet_group'](name, region=region, key=key,
-                                                       keyid=keyid, profile=profile, **args)
+        deleted = __salt__["boto3_elasticache." "delete_cache_subnet_group"](
+            name, region=region, key=key, keyid=keyid, profile=profile, **args
+        )
         if deleted:
-            ret['changes']['old'] = name
-            ret['changes']['new'] = None
+            ret["changes"]["old"] = name
+            ret["changes"]["new"] = None
         else:
-            ret['result'] = False
-            ret['comment'] = 'Failed to delete {0} cache_subnet group.'.format(name)
+            ret["result"] = False
+            ret["comment"] = "Failed to delete {0} cache_subnet group.".format(name)
     else:
-        ret['comment'] = 'Cache subnet group {0} already absent.'.format(name)
+        ret["comment"] = "Cache subnet group {0} already absent.".format(name)
     return ret

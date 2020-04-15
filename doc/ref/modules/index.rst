@@ -298,7 +298,7 @@ prevent loading if dependencies are not met.
 
 Since ``__virtual__`` is called before the module is loaded, ``__salt__`` will
 be unreliable as not all modules will be available at this point in time. The
-``__pillar`` and ``__grains__`` :ref:`"dunder" dictionaries <dunder-dictionaries>`
+``__pillar__`` and ``__grains__`` :ref:`"dunder" dictionaries <dunder-dictionaries>`
 are available however.
 
 .. note::

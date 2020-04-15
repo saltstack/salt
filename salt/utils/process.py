@@ -1,39 +1,41 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Functions for daemonizing and otherwise modifying running processes
-'''
+"""
 
 # Import python libs
-from __future__ import absolute_import, with_statement, print_function, unicode_literals
-import copy
-import os
-import sys
-import time
-import errno
-import types
-import signal
-import logging
-import threading
+from __future__ import absolute_import, print_function, unicode_literals, with_statement
+
 import contextlib
-import subprocess
+import copy
+import errno
+import functools
+import io
+import logging
 import multiprocessing
 import multiprocessing.util
+import os
+import signal
 import socket
-
+import subprocess
+import sys
+import threading
+import time
+import types
 
 # Import salt libs
 import salt.defaults.exitcodes
+import salt.log.setup
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
-import salt.log.setup
-import salt.defaults.exitcodes
-from salt.log.mixins import NewStyleClassMixIn
+import salt.utils.versions
 
 # Import 3rd-party libs
 from salt.ext import six
-from salt.ext.six.moves import queue, range  # pylint: disable=import-error,redefined-builtin
-from tornado import gen
+from salt.ext.six.moves import queue, range
+from salt.ext.tornado import gen
+from salt.log.mixins import NewStyleClassMixIn
 
 log = logging.getLogger(__name__)
 
@@ -41,31 +43,34 @@ log = logging.getLogger(__name__)
 HAS_PSUTIL = False
 try:
     import psutil
+
     HAS_PSUTIL = True
 except ImportError:
     pass
 
 try:
     import setproctitle
+
     HAS_SETPROCTITLE = True
 except ImportError:
     HAS_SETPROCTITLE = False
 
 
 def appendproctitle(name):
-    '''
+    """
     Append "name" to the current process title
-    '''
+    """
     if HAS_SETPROCTITLE:
-        setproctitle.setproctitle(setproctitle.getproctitle() + ' ' + name)
+        setproctitle.setproctitle(setproctitle.getproctitle() + " " + name)
 
 
 def daemonize(redirect_out=True):
-    '''
+    """
     Daemonize a process
-    '''
+    """
     # Avoid circular import
     import salt.utils.crypt
+
     try:
         pid = os.fork()
         if pid > 0:
@@ -73,11 +78,11 @@ def daemonize(redirect_out=True):
             salt.utils.crypt.reinit_crypto()
             os._exit(salt.defaults.exitcodes.EX_OK)
     except OSError as exc:
-        log.error('fork #1 failed: %s (%s)', exc.errno, exc)
+        log.error("fork #1 failed: %s (%s)", exc.errno, exc)
         sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
     # decouple from parent environment
-    os.chdir('/')
+    os.chdir("/")
     # noinspection PyArgumentList
     os.setsid()
     os.umask(0o022)  # pylint: disable=blacklisted-function
@@ -89,7 +94,7 @@ def daemonize(redirect_out=True):
             salt.utils.crypt.reinit_crypto()
             sys.exit(salt.defaults.exitcodes.EX_OK)
     except OSError as exc:
-        log.error('fork #2 failed: %s (%s)', exc.errno, exc)
+        log.error("fork #2 failed: %s (%s)", exc.errno, exc)
         sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
     salt.utils.crypt.reinit_crypto()
@@ -99,101 +104,126 @@ def daemonize(redirect_out=True):
     # not cleanly redirected and the parent process dies when the
     # multiprocessing process attempts to access stdout or err.
     if redirect_out:
-        with salt.utils.files.fopen('/dev/null', 'r+') as dev_null:
+        with salt.utils.files.fopen("/dev/null", "r+") as dev_null:
             # Redirect python stdin/out/err
             # and the os stdin/out/err which can be different
-            os.dup2(dev_null.fileno(), sys.stdin.fileno())
-            os.dup2(dev_null.fileno(), sys.stdout.fileno())
-            os.dup2(dev_null.fileno(), sys.stderr.fileno())
-            os.dup2(dev_null.fileno(), 0)
-            os.dup2(dev_null.fileno(), 1)
-            os.dup2(dev_null.fileno(), 2)
+            dup2(dev_null, sys.stdin)
+            dup2(dev_null, sys.stdout)
+            dup2(dev_null, sys.stderr)
+            dup2(dev_null, 0)
+            dup2(dev_null, 1)
+            dup2(dev_null, 2)
+
+
+def dup2(file1, file2):
+    """
+    Duplicate file descriptor fd to fd2, closing the latter first if necessary.
+    This method is similar to os.dup2 but ignores streams that do not have a
+    supported fileno method.
+    """
+    if isinstance(file1, int):
+        fno1 = file1
+    else:
+        try:
+            fno1 = file1.fileno()
+        except io.UnsupportedOperation:
+            log.warn("Unsupported operation on file: %r", file1)
+            return
+    if isinstance(file2, int):
+        fno2 = file2
+    else:
+        try:
+            fno2 = file2.fileno()
+        except io.UnsupportedOperation:
+            log.warn("Unsupported operation on file: %r", file2)
+            return
+    os.dup2(fno1, fno2)
 
 
 def daemonize_if(opts):
-    '''
+    """
     Daemonize a module function process if multiprocessing is True and the
     process is not being called by salt-call
-    '''
-    if 'salt-call' in sys.argv[0]:
+    """
+    if "salt-call" in sys.argv[0]:
         return
-    if not opts.get('multiprocessing', True):
+    if not opts.get("multiprocessing", True):
         return
-    if sys.platform.startswith('win'):
+    if sys.platform.startswith("win"):
         return
     daemonize(False)
 
 
 def systemd_notify_call(action):
-    process = subprocess.Popen(['systemd-notify', action], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process = subprocess.Popen(
+        ["systemd-notify", action], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    )
     process.communicate()
     status = process.poll()
     return status == 0
 
 
 def notify_systemd():
-    '''
+    """
     Notify systemd that this process has started
-    '''
+    """
     try:
-        import systemd.daemon
+        import systemd.daemon  # pylint: disable=no-name-in-module
     except ImportError:
-        if salt.utils.path.which('systemd-notify') \
-                and systemd_notify_call('--booted'):
+        if salt.utils.path.which("systemd-notify") and systemd_notify_call("--booted"):
             # Notify systemd synchronously
-            notify_socket = os.getenv('NOTIFY_SOCKET')
+            notify_socket = os.getenv("NOTIFY_SOCKET")
             if notify_socket:
                 # Handle abstract namespace socket
-                if notify_socket.startswith('@'):
-                    notify_socket = '\0{0}'.format(notify_socket[1:])
+                if notify_socket.startswith("@"):
+                    notify_socket = "\0{0}".format(notify_socket[1:])
                 try:
                     sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
                     sock.connect(notify_socket)
-                    sock.sendall('READY=1'.encode())
+                    sock.sendall("READY=1".encode())
                     sock.close()
                 except socket.error:
-                    return systemd_notify_call('--ready')
+                    return systemd_notify_call("--ready")
                 return True
         return False
 
     if systemd.daemon.booted():
         try:
-            return systemd.daemon.notify('READY=1')
+            return systemd.daemon.notify("READY=1")
         except SystemError:
             # Daemon was not started by systemd
             pass
 
 
 def set_pidfile(pidfile, user):
-    '''
+    """
     Save the pidfile
-    '''
+    """
     pdir = os.path.dirname(pidfile)
     if not os.path.isdir(pdir) and pdir:
         os.makedirs(pdir)
     try:
-        with salt.utils.files.fopen(pidfile, 'w+') as ofile:
+        with salt.utils.files.fopen(pidfile, "w+") as ofile:
             ofile.write(str(os.getpid()))  # future lint: disable=blacklisted-function
     except IOError:
         pass
 
-    log.debug('Created pidfile: %s', pidfile)
+    log.debug("Created pidfile: %s", pidfile)
     if salt.utils.platform.is_windows():
         return True
 
     import pwd  # after confirming not running Windows
-    #import grp
+
+    # import grp
     try:
         pwnam = pwd.getpwnam(user)
         uid = pwnam[2]
         gid = pwnam[3]
-        #groups = [g.gr_gid for g in grp.getgrall() if user in g.gr_mem]
-    except IndexError:
+        # groups = [g.gr_gid for g in grp.getgrall() if user in g.gr_mem]
+    except (KeyError, IndexError):
         sys.stderr.write(
-            'Failed to set the pid to user: {0}. The user is not '
-            'available.\n'.format(
-                user
-            )
+            "Failed to set the pid to user: {0}. The user is not "
+            "available.\n".format(user)
         )
         sys.exit(salt.defaults.exitcodes.EX_NOUSER)
 
@@ -204,28 +234,26 @@ def set_pidfile(pidfile, user):
     try:
         os.chown(pidfile, uid, gid)
     except OSError as err:
-        msg = (
-            'Failed to set the ownership of PID file {0} to user {1}.'.format(
-                pidfile, user
-            )
+        msg = "Failed to set the ownership of PID file {0} to user {1}.".format(
+            pidfile, user
         )
-        log.debug('%s Traceback follows:', msg, exc_info=True)
-        sys.stderr.write('{0}\n'.format(msg))
+        log.debug("%s Traceback follows:", msg, exc_info=True)
+        sys.stderr.write("{0}\n".format(msg))
         sys.exit(err.errno)
-    log.debug('Chowned pidfile: %s to user: %s', pidfile, user)
+    log.debug("Chowned pidfile: %s to user: %s", pidfile, user)
 
 
 def check_pidfile(pidfile):
-    '''
+    """
     Determine if a pidfile has been written out
-    '''
+    """
     return os.path.isfile(pidfile)
 
 
 def get_pidfile(pidfile):
-    '''
+    """
     Return the pid from a pidfile as an integer
-    '''
+    """
     try:
         with salt.utils.files.fopen(pidfile) as pdf:
             pid = pdf.read().strip()
@@ -235,9 +263,9 @@ def get_pidfile(pidfile):
 
 
 def clean_proc(proc, wait_for_kill=10):
-    '''
+    """
     Generic method for cleaning up multiprocessing procs
-    '''
+    """
     # NoneType and other fun stuff need not apply
     if not proc:
         return
@@ -248,7 +276,7 @@ def clean_proc(proc, wait_for_kill=10):
             waited += 1
             time.sleep(0.1)
             if proc.is_alive() and (waited >= wait_for_kill):
-                log.error('Process did not die with terminate(): %s', proc.pid)
+                log.error("Process did not die with terminate(): %s", proc.pid)
                 os.kill(proc.pid, signal.SIGKILL)
     except (AssertionError, AttributeError):
         # Catch AssertionError when the proc is evaluated inside the child
@@ -258,9 +286,9 @@ def clean_proc(proc, wait_for_kill=10):
 
 
 def os_is_running(pid):
-    '''
+    """
     Use OS facilities to determine if a process is running
-    '''
+    """
     if isinstance(pid, six.string_types):
         pid = int(pid)
     if HAS_PSUTIL:
@@ -274,7 +302,7 @@ def os_is_running(pid):
 
 
 class ThreadPool(object):
-    '''
+    """
     This is a very VERY basic threadpool implementation
     This was made instead of using multiprocessing ThreadPool because
     we want to set max queue size and we want to daemonize threads (neither
@@ -285,10 +313,9 @@ class ThreadPool(object):
 
     TODO: if this is found to be more generally useful it would be nice to pull
     in the majority of code from upstream or from http://bit.ly/1wTeJtM
-    '''
-    def __init__(self,
-                 num_threads=None,
-                 queue_size=0):
+    """
+
+    def __init__(self, num_threads=None, queue_size=0):
         # if no count passed, default to number of CPUs
         if num_threads is None:
             num_threads = multiprocessing.cpu_count()
@@ -336,18 +363,21 @@ class ThreadPool(object):
                 continue
             try:
                 log.debug(
-                    'ThreadPool executing func: %s with args=%s kwargs=%s',
-                    func, args, kwargs
+                    "ThreadPool executing func: %s with args=%s kwargs=%s",
+                    func,
+                    args,
+                    kwargs,
                 )
                 func(*args, **kwargs)
-            except Exception as err:
+            except Exception as err:  # pylint: disable=broad-except
                 log.debug(err, exc_info=True)
 
 
 class ProcessManager(object):
-    '''
+    """
     A class which will manage processes that should be running
-    '''
+    """
+
     def __init__(self, name=None, wait_for_kill=1):
         # pid -> {tgt: foo, Process: object, args: args, kwargs: kwargs}
         self._process_map = {}
@@ -364,11 +394,11 @@ class ProcessManager(object):
         self._restart_processes = True
 
     def add_process(self, tgt, args=None, kwargs=None, name=None):
-        '''
+        """
         Create a processes and args + kwargs
         This will deterimine if it is a Process class, otherwise it assumes
         it is a function
-        '''
+        """
         if args is None:
             args = []
 
@@ -376,70 +406,86 @@ class ProcessManager(object):
             kwargs = {}
 
         if salt.utils.platform.is_windows():
-            # Need to ensure that 'log_queue' is correctly transferred to
-            # processes that inherit from 'MultiprocessingProcess'.
-            if type(MultiprocessingProcess) is type(tgt) and (
-                    issubclass(tgt, MultiprocessingProcess)):
+            # Need to ensure that 'log_queue' and 'log_queue_level' is
+            # correctly transferred to processes that inherit from
+            # 'Process'.
+            if type(Process) is type(tgt) and (issubclass(tgt, Process)):
                 need_log_queue = True
             else:
                 need_log_queue = False
 
-            if need_log_queue and 'log_queue' not in kwargs:
-                if hasattr(self, 'log_queue'):
-                    kwargs['log_queue'] = self.log_queue
-                else:
-                    kwargs['log_queue'] = (
-                            salt.log.setup.get_multiprocessing_logging_queue())
+            if need_log_queue:
+                if "log_queue" not in kwargs:
+                    if hasattr(self, "log_queue"):
+                        kwargs["log_queue"] = self.log_queue
+                    else:
+                        kwargs[
+                            "log_queue"
+                        ] = salt.log.setup.get_multiprocessing_logging_queue()
+                if "log_queue_level" not in kwargs:
+                    if hasattr(self, "log_queue_level"):
+                        kwargs["log_queue_level"] = self.log_queue_level
+                    else:
+                        kwargs[
+                            "log_queue_level"
+                        ] = salt.log.setup.get_multiprocessing_logging_level()
 
         # create a nicer name for the debug log
         if name is None:
             if isinstance(tgt, types.FunctionType):
-                name = '{0}.{1}'.format(
-                    tgt.__module__,
-                    tgt.__name__,
-                )
+                name = "{0}.{1}".format(tgt.__module__, tgt.__name__,)
             else:
-                name = '{0}{1}.{2}'.format(
+                name = "{0}{1}.{2}".format(
                     tgt.__module__,
-                    '.{0}'.format(tgt.__class__) if six.text_type(tgt.__class__) != "<type 'type'>" else '',
+                    ".{0}".format(tgt.__class__)
+                    if six.text_type(tgt.__class__) != "<type 'type'>"
+                    else "",
                     tgt.__name__,
                 )
 
-        if type(multiprocessing.Process) is type(tgt) and issubclass(tgt, multiprocessing.Process):
+        if type(multiprocessing.Process) is type(tgt) and issubclass(
+            tgt, multiprocessing.Process
+        ):
             process = tgt(*args, **kwargs)
         else:
-            process = multiprocessing.Process(target=tgt, args=args, kwargs=kwargs, name=name)
+            process = multiprocessing.Process(
+                target=tgt, args=args, kwargs=kwargs, name=name
+            )
 
-        if isinstance(process, SignalHandlingMultiprocessingProcess):
+        if isinstance(process, SignalHandlingProcess):
             with default_signals(signal.SIGINT, signal.SIGTERM):
                 process.start()
         else:
             process.start()
         log.debug("Started '%s' with pid %s", name, process.pid)
-        self._process_map[process.pid] = {'tgt': tgt,
-                                          'args': args,
-                                          'kwargs': kwargs,
-                                          'Process': process}
+        self._process_map[process.pid] = {
+            "tgt": tgt,
+            "args": args,
+            "kwargs": kwargs,
+            "Process": process,
+        }
         return process
 
     def restart_process(self, pid):
-        '''
+        """
         Create new process (assuming this one is dead), then remove the old one
-        '''
+        """
         if self._restart_processes is False:
             return
         log.info(
-            'Process %s (%s) died with exit status %s, restarting...',
-            self._process_map[pid]['tgt'],
+            "Process %s (%s) died with exit status %s, restarting...",
+            self._process_map[pid]["tgt"],
             pid,
-            self._process_map[pid]['Process'].exitcode
+            self._process_map[pid]["Process"].exitcode,
         )
         # don't block, the process is already dead
-        self._process_map[pid]['Process'].join(1)
+        self._process_map[pid]["Process"].join(1)
 
-        self.add_process(self._process_map[pid]['tgt'],
-                         self._process_map[pid]['args'],
-                         self._process_map[pid]['kwargs'])
+        self.add_process(
+            self._process_map[pid]["tgt"],
+            self._process_map[pid]["args"],
+            self._process_map[pid]["kwargs"],
+        )
 
         del self._process_map[pid]
 
@@ -447,8 +493,10 @@ class ProcessManager(object):
         self._restart_processes = False
 
     def send_signal_to_processes(self, signal_):
-        if (salt.utils.platform.is_windows() and
-                signal_ in (signal.SIGTERM, signal.SIGINT)):
+        if salt.utils.platform.is_windows() and signal_ in (
+            signal.SIGTERM,
+            signal.SIGINT,
+        ):
             # On Windows, the subprocesses automatically have their signal
             # handlers invoked. If you send one of these signals while the
             # signal handler is running, it will kill the process where it
@@ -473,10 +521,10 @@ class ProcessManager(object):
 
     @gen.coroutine
     def run(self, asynchronous=False):
-        '''
+        """
         Load and start all available api modules
-        '''
-        log.debug('Process Manager starting!')
+        """
+        log.debug("Process Manager starting!")
         appendproctitle(self.name)
 
         # make sure to kill the subprocesses if the parent is killed
@@ -488,7 +536,7 @@ class ProcessManager(object):
             signal.signal(signal.SIGINT, self.kill_children)
 
         while True:
-            log.trace('Process manager iteration')
+            log.trace("Process manager iteration")
             try:
                 # in case someone died while we were waiting...
                 self.check_children()
@@ -504,7 +552,7 @@ class ProcessManager(object):
             # OSError is raised if a signal handler is called (SIGTERM) during os.wait
             except OSError:
                 break
-            except IOError as exc:
+            except IOError as exc:  # pylint: disable=duplicate-except
                 # IOError with errno of EINTR (4) may be raised
                 # when using time.sleep() on Windows.
                 if exc.errno != errno.EINTR:
@@ -512,19 +560,19 @@ class ProcessManager(object):
                 break
 
     def check_children(self):
-        '''
+        """
         Check the children once
-        '''
+        """
         if self._restart_processes is True:
             for pid, mapping in six.iteritems(self._process_map):
-                if not mapping['Process'].is_alive():
-                    log.trace('Process restart of %s', pid)
+                if not mapping["Process"].is_alive():
+                    log.trace("Process restart of %s", pid)
                     self.restart_process(pid)
 
     def kill_children(self, *args, **kwargs):
-        '''
+        """
         Kill all of the children
-        '''
+        """
         # first lets reset signal handlers to default one to prevent running this twice
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
         signal.signal(signal.SIGINT, signal.SIG_IGN)
@@ -539,25 +587,26 @@ class ProcessManager(object):
             else:
                 return
         if salt.utils.platform.is_windows():
-            if multiprocessing.current_process().name != 'MainProcess':
+            if multiprocessing.current_process().name != "MainProcess":
                 # Since the main process will kill subprocesses by tree,
                 # no need to do anything in the subprocesses.
                 # Sometimes, when both a subprocess and the main process
                 # call 'taskkill', it will leave a 'taskkill' zombie process.
                 # We want to avoid this.
                 return
-            with salt.utils.files.fopen(os.devnull, 'wb') as devnull:
+            with salt.utils.files.fopen(os.devnull, "wb") as devnull:
                 for pid, p_map in six.iteritems(self._process_map):
                     # On Windows, we need to explicitly terminate sub-processes
                     # because the processes don't have a sigterm handler.
                     subprocess.call(
-                        ['taskkill', '/F', '/T', '/PID', six.text_type(pid)],
-                        stdout=devnull, stderr=devnull
-                        )
-                    p_map['Process'].terminate()
+                        ["taskkill", "/F", "/T", "/PID", six.text_type(pid)],
+                        stdout=devnull,
+                        stderr=devnull,
+                    )
+                    p_map["Process"].terminate()
         else:
             for pid, p_map in six.iteritems(self._process_map.copy()):
-                log.trace('Terminating pid %s: %s', pid, p_map['Process'])
+                log.trace("Terminating pid %s: %s", pid, p_map["Process"])
                 if args:
                     # escalate the signal to the process
                     try:
@@ -565,11 +614,11 @@ class ProcessManager(object):
                     except OSError:
                         pass
                 try:
-                    p_map['Process'].terminate()
+                    p_map["Process"].terminate()
                 except OSError as exc:
                     if exc.errno not in (errno.ESRCH, errno.EACCES):
                         raise
-                if not p_map['Process'].is_alive():
+                if not p_map["Process"].is_alive():
                     try:
                         del self._process_map[pid]
                     except KeyError:
@@ -578,13 +627,13 @@ class ProcessManager(object):
 
         end_time = time.time() + self.wait_for_kill  # when to die
 
-        log.trace('Waiting to kill process manager children')
+        log.trace("Waiting to kill process manager children")
         while self._process_map and time.time() < end_time:
             for pid, p_map in six.iteritems(self._process_map.copy()):
-                log.trace('Joining pid %s: %s', pid, p_map['Process'])
-                p_map['Process'].join(0)
+                log.trace("Joining pid %s: %s", pid, p_map["Process"])
+                p_map["Process"].join(0)
 
-                if not p_map['Process'].is_alive():
+                if not p_map["Process"].is_alive():
                     # The process is no longer alive, remove it from the process map dictionary
                     try:
                         del self._process_map[pid]
@@ -597,7 +646,7 @@ class ProcessManager(object):
         while kill_iterations >= 0:
             kill_iterations -= 1
             for pid, p_map in six.iteritems(self._process_map.copy()):
-                if not p_map['Process'].is_alive():
+                if not p_map["Process"].is_alive():
                     # The process is no longer alive, remove it from the process map dictionary
                     try:
                         del self._process_map[pid]
@@ -605,13 +654,13 @@ class ProcessManager(object):
                         # This is a race condition if a signal was passed to all children
                         pass
                     continue
-                log.trace('Killing pid %s: %s', pid, p_map['Process'])
+                log.trace("Killing pid %s: %s", pid, p_map["Process"])
                 try:
                     os.kill(pid, signal.SIGKILL)
                 except OSError as exc:
                     log.exception(exc)
                     # in case the process has since decided to die, os.kill returns OSError
-                    if not p_map['Process'].is_alive():
+                    if not p_map["Process"].is_alive():
                         # The process is no longer alive, remove it from the process map dictionary
                         try:
                             del self._process_map[pid]
@@ -621,64 +670,49 @@ class ProcessManager(object):
 
         if self._process_map:
             # Some processes disrespected the KILL signal!!!!
-            available_retries = kwargs.get('retry', 3)
+            available_retries = kwargs.get("retry", 3)
             if available_retries >= 0:
                 log.info(
-                    'Some processes failed to respect the KILL signal: %s',
-                        '; '.join(
-                            'Process: {0} (Pid: {1})'.format(v['Process'], k) for  # pylint: disable=str-format-in-logging
-                            (k, v) in self._process_map.items()
-                        )
+                    "Some processes failed to respect the KILL signal: %s",
+                    "; ".join(
+                        "Process: {0} (Pid: {1})".format(v["Process"], k)
+                        for (  # pylint: disable=str-format-in-logging
+                            k,
+                            v,
+                        ) in self._process_map.items()
+                    ),
                 )
-                log.info('kill_children retries left: %s', available_retries)
-                kwargs['retry'] = available_retries - 1
+                log.info("kill_children retries left: %s", available_retries)
+                kwargs["retry"] = available_retries - 1
                 return self.kill_children(*args, **kwargs)
             else:
                 log.warning(
-                    'Failed to kill the following processes: %s',
-                    '; '.join(
-                        'Process: {0} (Pid: {1})'.format(v['Process'], k) for  # pylint: disable=str-format-in-logging
-                        (k, v) in self._process_map.items()
-                    )
+                    "Failed to kill the following processes: %s",
+                    "; ".join(
+                        "Process: {0} (Pid: {1})".format(v["Process"], k)
+                        for (  # pylint: disable=str-format-in-logging
+                            k,
+                            v,
+                        ) in self._process_map.items()
+                    ),
                 )
                 log.warning(
-                    'Salt will either fail to terminate now or leave some '
-                    'zombie processes behind'
+                    "Salt will either fail to terminate now or leave some "
+                    "zombie processes behind"
                 )
 
 
-class MultiprocessingProcess(multiprocessing.Process, NewStyleClassMixIn):
-
-    def __new__(cls, *args, **kwargs):
-        instance = super(MultiprocessingProcess, cls).__new__(cls)
-        # Patch the run method at runtime because decorating the run method
-        # with a function with a similar behavior would be ignored once this
-        # class'es run method is overridden.
-        instance._original_run = instance.run
-        instance.run = instance._run
-        return instance
-
+class Process(multiprocessing.Process, NewStyleClassMixIn):
     def __init__(self, *args, **kwargs):
-        if (salt.utils.platform.is_windows() and
-                not hasattr(self, '_is_child') and
-                self.__setstate__.__code__ is
-                MultiprocessingProcess.__setstate__.__code__):
-            # On Windows, if a derived class hasn't defined __setstate__, that
-            # means the 'MultiprocessingProcess' version will be used. For this
-            # version, save a copy of the args and kwargs to use with its
-            # __setstate__ and __getstate__.
-            # We do this so that __init__ will be invoked on Windows in the
-            # child process so that a register_after_fork() equivalent will
-            # work on Windows. Note that this will only work if the derived
-            # class uses the exact same args and kwargs as this class. Hence
-            # this will also work for 'SignalHandlingMultiprocessingProcess'.
-            # However, many derived classes take params that they don't pass
-            # down (eg opts). Those classes need to override __setstate__ and
-            # __getstate__ themselves.
+        log_queue = kwargs.pop("log_queue", None)
+        log_queue_level = kwargs.pop("log_queue_level", None)
+        super(Process, self).__init__(*args, **kwargs)
+        if salt.utils.platform.is_windows():
+            # On Windows, subclasses should call super if they define
+            # __setstate__ and/or __getstate__
             self._args_for_getstate = copy.copy(args)
             self._kwargs_for_getstate = copy.copy(kwargs)
-
-        self.log_queue = kwargs.pop('log_queue', None)
+        self.log_queue = log_queue
         if self.log_queue is None:
             self.log_queue = salt.log.setup.get_multiprocessing_logging_queue()
         else:
@@ -686,119 +720,167 @@ class MultiprocessingProcess(multiprocessing.Process, NewStyleClassMixIn):
             # salt.log.setup.get_multiprocessing_logging_queue().
             salt.log.setup.set_multiprocessing_logging_queue(self.log_queue)
 
-        # Call __init__ from 'multiprocessing.Process' only after removing
-        # 'log_queue' from kwargs.
-        super(MultiprocessingProcess, self).__init__(*args, **kwargs)
-
-        if salt.utils.platform.is_windows():
-            # On Windows, the multiprocessing.Process object is reinitialized
-            # in the child process via the constructor. Due to this, methods
-            # such as ident() and is_alive() won't work properly. So we use
-            # our own creation '_is_child' for this purpose.
-            if hasattr(self, '_is_child'):
-                # On Windows, no need to call register_after_fork().
-                # register_after_fork() would only work on Windows if called
-                # from the child process anyway. Since we know this is the
-                # child process, call __setup_process_logging() directly.
-                self.__setup_process_logging()
-                multiprocessing.util.Finalize(
-                    self,
-                    salt.log.setup.shutdown_multiprocessing_logging,
-                    exitpriority=16
-                )
+        self.log_queue_level = log_queue_level
+        if self.log_queue_level is None:
+            self.log_queue_level = salt.log.setup.get_multiprocessing_logging_level()
         else:
-            multiprocessing.util.register_after_fork(
-                self,
-                MultiprocessingProcess.__setup_process_logging
-            )
-            multiprocessing.util.Finalize(
-                self,
-                salt.log.setup.shutdown_multiprocessing_logging,
-                exitpriority=16
-            )
+            salt.log.setup.set_multiprocessing_logging_level(self.log_queue_level)
+
+        self._after_fork_methods = [
+            (Process._setup_process_logging, [self], {}),
+        ]
+        self._finalize_methods = [
+            (salt.log.setup.shutdown_multiprocessing_logging, [], {})
+        ]
+
+        # Because we need to enforce our after fork and finalize routines,
+        # we must wrap this class run method to allow for these extra steps
+        # to be executed pre and post calling the actual run method,
+        # having subclasses call super would just not work.
+        #
+        # We use setattr here to fool pylint not to complain that we're
+        # overriding run from the subclass here
+        setattr(self, "run", self.__decorate_run(self.run))
 
     # __setstate__ and __getstate__ are only used on Windows.
-    # We do this so that __init__ will be invoked on Windows in the child
-    # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
-        self._is_child = True
-        args = state['args']
-        kwargs = state['kwargs']
+        args = state["args"]
+        kwargs = state["kwargs"]
         # This will invoke __init__ of the most derived class.
         self.__init__(*args, **kwargs)
+        self._after_fork_methods = self._after_fork_methods
+        self._finalize_methods = self._finalize_methods
 
     def __getstate__(self):
         args = self._args_for_getstate
         kwargs = self._kwargs_for_getstate
-        if 'log_queue' not in kwargs:
-            kwargs['log_queue'] = self.log_queue
-        # Remove the version of these in the parent process since
-        # they are no longer needed.
-        del self._args_for_getstate
-        del self._kwargs_for_getstate
-        return {'args': args,
-                'kwargs': kwargs}
+        if "log_queue" not in kwargs:
+            kwargs["log_queue"] = self.log_queue
+        if "log_queue_level" not in kwargs:
+            kwargs["log_queue_level"] = self.log_queue_level
+        return {
+            "args": args,
+            "kwargs": kwargs,
+            "_after_fork_methods": self._after_fork_methods,
+            "_finalize_methods": self._finalize_methods,
+        }
 
-    def __setup_process_logging(self):
+    def _setup_process_logging(self):
         salt.log.setup.setup_multiprocessing_logging(self.log_queue)
 
-    def _run(self):
-        try:
-            return self._original_run()
-        except SystemExit:
-            # These are handled by multiprocessing.Process._bootstrap()
-            raise
-        except Exception as exc:
-            log.error(
-                'An un-handled exception from the multiprocessing process '
-                '\'%s\' was caught:\n', self.name, exc_info=True)
-            # Re-raise the exception. multiprocessing.Process will write it to
-            # sys.stderr and set the proper exitcode and we have already logged
-            # it above.
-            raise
+    def __decorate_run(self, run_func):
+        @functools.wraps(run_func)
+        def wrapped_run_func():
+            for method, args, kwargs in self._after_fork_methods:
+                method(*args, **kwargs)
+            try:
+                return run_func()
+            except SystemExit:
+                # These are handled by multiprocessing.Process._bootstrap()
+                six.reraise(*sys.exc_info())
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error(
+                    "An un-handled exception from the multiprocessing process "
+                    "'%s' was caught:\n",
+                    self.name,
+                    exc_info=True,
+                )
+                # Re-raise the exception. multiprocessing.Process will write it to
+                # sys.stderr and set the proper exitcode and we have already logged
+                # it above.
+                six.reraise(*sys.exc_info())
+            finally:
+                for method, args, kwargs in self._finalize_methods:
+                    method(*args, **kwargs)
+
+        return wrapped_run_func
 
 
-class SignalHandlingMultiprocessingProcess(MultiprocessingProcess):
+class MultiprocessingProcess(Process):
+    """
+    This class exists for backwards compatibility and to properly deprecate it.
+    """
+
     def __init__(self, *args, **kwargs):
-        super(SignalHandlingMultiprocessingProcess, self).__init__(*args, **kwargs)
-        if salt.utils.platform.is_windows():
-            if hasattr(self, '_is_child'):
-                # On Windows, no need to call register_after_fork().
-                # register_after_fork() would only work on Windows if called
-                # from the child process anyway. Since we know this is the
-                # child process, call __setup_signals() directly.
-                self.__setup_signals()
-        else:
-            multiprocessing.util.register_after_fork(
-                self,
-                SignalHandlingMultiprocessingProcess.__setup_signals
-            )
+        salt.utils.versions.warn_until_date(
+            "20220101",
+            "Please stop using '{name}.MultiprocessingProcess' and instead use "
+            "'{name}.Process'. '{name}.MultiprocessingProcess' will go away "
+            "after {{date}}.".format(name=__name__),
+            stacklevel=3,
+        )
+        super(MultiprocessingProcess, self).__init__(*args, **kwargs)
 
-    def __setup_signals(self):
+
+class SignalHandlingProcess(Process):
+    def __init__(self, *args, **kwargs):
+        super(SignalHandlingProcess, self).__init__(*args, **kwargs)
+        self._signal_handled = multiprocessing.Event()
+        self._after_fork_methods.append(
+            (SignalHandlingProcess._setup_signals, [self], {})
+        )
+
+    def signal_handled(self):
+        return self._signal_handled.is_set()
+
+    def _setup_signals(self):
         signal.signal(signal.SIGINT, self._handle_signals)
         signal.signal(signal.SIGTERM, self._handle_signals)
 
     def _handle_signals(self, signum, sigframe):
+        self._signal_handled.set()
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
         signal.signal(signal.SIGINT, signal.SIG_IGN)
-        msg = '{0} received a '.format(self.__class__.__name__)
+        msg = "{0} received a ".format(self.__class__.__name__)
         if signum == signal.SIGINT:
-            msg += 'SIGINT'
+            msg += "SIGINT"
         elif signum == signal.SIGTERM:
-            msg += 'SIGTERM'
-        msg += '. Exiting'
+            msg += "SIGTERM"
+        msg += ". Exiting"
         log.debug(msg)
         if HAS_PSUTIL:
-            process = psutil.Process(self.pid)
-            if hasattr(process, 'children'):
-                for child in process.children(recursive=True):
-                    if child.is_running():
-                        child.terminate()
+            try:
+                process = psutil.Process(os.getpid())
+                if hasattr(process, "children"):
+                    for child in process.children(recursive=True):
+                        try:
+                            if child.is_running():
+                                child.terminate()
+                        except psutil.NoSuchProcess:
+                            log.warn(
+                                "Unable to kill child of process %d, it does "
+                                "not exist. My pid is %d",
+                                self.pid,
+                                os.getpid(),
+                            )
+            except psutil.NoSuchProcess:
+                log.warn(
+                    "Unable to kill children of process %d, it does not exist."
+                    "My pid is %d",
+                    self.pid,
+                    os.getpid(),
+                )
         sys.exit(salt.defaults.exitcodes.EX_OK)
 
     def start(self):
         with default_signals(signal.SIGINT, signal.SIGTERM):
-            super(SignalHandlingMultiprocessingProcess, self).start()
+            super(SignalHandlingProcess, self).start()
+
+
+class SignalHandlingMultiprocessingProcess(SignalHandlingProcess):
+    """
+    This class exists for backwards compatibility and to properly deprecate it.
+    """
+
+    def __init__(self, *args, **kwargs):
+        salt.utils.versions.warn_until_date(
+            "20220101",
+            "Please stop using '{name}.SignalHandlingMultiprocessingProcess' and instead use "
+            "'{name}.SignalHandlingProcess'. '{name}.SignalHandlingMultiprocessingProcess' "
+            "will go away after {{date}}.".format(name=__name__),
+            stacklevel=3,
+        )
+        super(SignalHandlingMultiprocessingProcess, self).__init__(*args, **kwargs)
 
 
 @contextlib.contextmanager
@@ -812,10 +894,7 @@ def default_signals(*signals):
             # This happens when a netapi module attempts to run a function
             # using wheel_async, because the process trying to register signals
             # will not be the main PID.
-            log.trace(
-                'Failed to register signal for signum %d: %s',
-                signum, exc
-            )
+            log.trace("Failed to register signal for signum %d: %s", signum, exc)
         else:
             old_signals[signum] = saved_signal
 
@@ -827,3 +906,29 @@ def default_signals(*signals):
         signal.signal(signum, old_signals[signum])
 
     del old_signals
+
+
+class SubprocessList(object):
+    def __init__(self, processes=None, lock=None):
+        if processes is None:
+            self.processes = []
+        else:
+            self.processes = processes
+        if lock is None:
+            self.lock = multiprocessing.Lock()
+        else:
+            self.lock = lock
+
+    def add(self, proc):
+        with self.lock:
+            self.processes.append(proc)
+            log.debug("Subprocess %s added", proc.name)
+
+    def cleanup(self):
+        with self.lock:
+            for proc in self.processes:
+                if proc.is_alive():
+                    continue
+                proc.join()
+                self.processes.remove(proc)
+                log.debug("Subprocess %s cleaned up", proc.name)

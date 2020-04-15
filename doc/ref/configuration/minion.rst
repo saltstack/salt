@@ -208,6 +208,28 @@ minion event bus. The value is expressed in bytes.
 
     max_event_size: 1048576
 
+.. conf_minion:: enable_legacy_startup_events
+
+``enable_legacy_startup_events``
+--------------------------------
+
+.. versionadded:: 2019.2.0
+
+Default: ``True``
+
+When a minion starts up it sends a notification on the event bus with a tag
+that looks like this: ``salt/minion/<minion_id>/start``. For historical reasons
+the minion also sends a similar event with an event tag like this:
+``minion_start``. This duplication can cause a lot of clutter on the event bus
+when there are many minions. Set ``enable_legacy_startup_events: False`` in the
+minion config to ensure only the ``salt/minion/<minion_id>/start`` events are
+sent. Beginning with the ``Sodium`` Salt release this option will default to
+``False``.
+
+.. code-block:: yaml
+
+    enable_legacy_startup_events: True
+
 .. conf_minion:: master_failback
 
 ``master_failback``
@@ -264,13 +286,14 @@ to the next master in the list if it finds the existing one is dead.
 ------------------
 
 .. versionadded:: 2014.7.0
+.. deprecated:: 2019.2.0
 
 Default: ``False``
 
-If :conf_minion:`master` is a list of addresses and :conf_minion`master_type`
-is ``failover``, shuffle them before trying to connect to distribute the
-minions over all available masters. This uses Python's :func:`random.shuffle
-<python2:random.shuffle>` method.
+.. warning::
+
+    This option has been deprecated in Salt ``2019.2.0``. Please use
+    :conf_minion:`random_master` instead.
 
 .. code-block:: yaml
 
@@ -281,16 +304,37 @@ minions over all available masters. This uses Python's :func:`random.shuffle
 ``random_master``
 -----------------
 
+.. versionadded:: 2014.7.0
+.. versionchanged:: 2019.2.0
+    The :conf_minion:`master_failback` option can be used in conjunction with
+    ``random_master`` to force the minion to fail back to the first master in the
+    list if the first master is back online. Note that :conf_minion:`master_type`
+    must be set to ``failover`` in order for the ``master_failback`` setting to
+    work.
+
 Default: ``False``
 
-If :conf_minion:`master` is a list of addresses, and :conf_minion`master_type`
-is set to ``failover`` shuffle them before trying to connect to distribute the
-minions over all available masters. This uses Python's :func:`random.shuffle
-<python2:random.shuffle>` method.
+If :conf_minion:`master` is a list of addresses, shuffle them before trying to
+connect to distribute the minions over all available masters. This uses Python's
+:func:`random.shuffle <python2:random.shuffle>` method.
+
+If multiple masters are specified in the 'master' setting as a list, the default
+behavior is to always try to connect to them in the order they are listed. If
+``random_master`` is set to True, the order will be randomized instead upon Minion
+startup. This can be helpful in distributing the load of many minions executing
+``salt-call`` requests, for example, from a cron job. If only one master is listed,
+this setting is ignored and a warning is logged.
 
 .. code-block:: yaml
 
     random_master: True
+
+.. note::
+
+    When the ``failover``, ``master_failback``, and ``random_master`` options are
+    used together, only the "secondary masters" will be shuffled. The first master
+    in the list is ignored in the :func:`random.shuffle <python2:random.shuffle>`
+    call. See :conf_minion:`master_failback` for more information.
 
 .. conf_minion:: retry_dns
 
@@ -608,6 +652,35 @@ FQDN (for instance, Solaris).
 
     append_domain: foo.org
 
+.. conf_minion:: minion_id_remove_domain
+
+``minion_id_remove_domain``
+---------------------------
+
+.. versionadded:: 3000
+
+Default: ``False``
+
+Remove a domain when the minion id is generated as a fully qualified domain
+name (either by the user provided ``id_function``, or by Salt). This is useful
+when the minions shall be named like hostnames. Can be a single domain (to
+prevent name clashes), or True, to remove all domains.
+
+Examples:
+ - minion_id_remove_domain = foo.org
+   - FQDN = king_bob.foo.org --> minion_id = king_bob
+   - FQDN = king_bob.bar.org --> minion_id = king_bob.bar.org
+ - minion_id_remove_domain = True
+   - FQDN = king_bob.foo.org --> minion_id = king_bob
+   - FQDN = king_bob.bar.org --> minion_id = king_bob
+
+
+For more information, please see :issue:`49212` and  :pull:`49378`.
+
+.. code-block:: yaml
+
+    minion_id_remove_domain: foo.org
+
 .. conf_minion:: minion_id_lowercase
 
 ``minion_id_lowercase``
@@ -725,6 +798,30 @@ Statically assigns grains to the minion.
       cabinet: 13
       cab_u: 14-15
 
+.. conf_minion:: grains_blacklist
+
+``grains_blacklist``
+--------------------
+
+Default: ``[]``
+
+Each grains key will be compared against each of the expressions in this list.
+Any keys which match will be filtered from the grains. Exact matches, glob
+matches, and regular expressions are supported.
+
+.. note::
+    Some states and execution modules depend on grains. Filtering may cause
+    them to be unavailable or run unreliably.
+
+.. versionadded:: 3000
+
+.. code-block:: yaml
+
+    grains_blacklist:
+      - cpu_flags
+      - zmq*
+      - ipv[46]
+
 .. conf_minion:: grains_cache
 
 ``grains_cache``
@@ -734,11 +831,27 @@ Default: ``False``
 
 The minion can locally cache grain data instead of refreshing the data
 each time the grain is referenced. By default this feature is disabled,
-to enable set grains_cache to ``True``.
+to enable set ``grains_cache`` to ``True``.
 
 .. code-block:: yaml
 
     grains_cache: False
+
+.. conf_minion:: grains_cache_expiration
+
+``grains_cache_expiration``
+---------------------------
+
+Default: ``300``
+
+Grains cache expiration, in seconds. If the cache file is older than this number
+of seconds then the grains cache will be dumped and fully re-populated with
+fresh data. Defaults to 5 minutes. Will have no effect if
+:conf_minion:`grains_cache` is not enabled.
+
+.. code-block:: yaml
+
+    grains_cache_expiration: 300
 
 .. conf_minion:: grains_deep_merge
 
@@ -848,6 +961,20 @@ minion. Since this grain is expensive, it is disabled by default.
 .. code-block:: yaml
 
     iscsi_grains: True
+
+.. conf_minion:: nvme_grains
+
+``nvme_grains``
+------------------------
+
+Default: ``False``
+
+The ``nvme_grains`` setting will enable the ``nvme_nqn`` grain on the
+minion. Since this grain is expensive, it is disabled by default.
+
+.. code-block:: yaml
+
+    nvme_grains: True
 
 .. conf_minion:: mine_enabled
 
@@ -1282,7 +1409,7 @@ creates a new connection for every return to the master.
 Default: ``ipc``
 
 Windows platforms lack POSIX IPC and must rely on slower TCP based inter-
-process communications. Set ipc_mode to ``tcp`` on such systems.
+process communications. ``ipc_mode`` is set to ``tcp`` on such systems.
 
 .. code-block:: yaml
 
@@ -1323,9 +1450,8 @@ Default: ``zeromq``
 
 Changes the underlying transport layer. ZeroMQ is the recommended transport
 while additional transport layers are under development. Supported values are
-``zeromq``, ``raet`` (experimental), and ``tcp`` (experimental). This setting has
-a significant impact on performance and should not be changed unless you know
-what you are doing!
+``zeromq`` and ``tcp`` (experimental). This setting has a significant impact
+on performance and should not be changed unless you know what you are doing!
 
 .. code-block:: yaml
 
@@ -1344,6 +1470,40 @@ talking to the intended master.
 .. code-block:: yaml
 
     syndic_finger: 'ab:30:65:2a:d6:9e:20:4f:d8:b2:f3:a7:d4:65:50:10'
+
+.. conf_minion:: http_connect_timeout
+
+``http_connect_timeout``
+------------------------
+
+.. versionadded:: 2019.2.0
+
+Default: ``20``
+
+HTTP connection timeout in seconds.
+Applied when fetching files using tornado back-end.
+Should be greater than overall download time.
+
+.. code-block:: yaml
+
+    http_connect_timeout: 20
+
+.. conf_minion:: http_request_timeout
+
+``http_request_timeout``
+------------------------
+
+.. versionadded:: 2015.8.0
+
+Default: ``3600``
+
+HTTP request timeout in seconds.
+Applied when fetching files using tornado back-end.
+Should be greater than overall download time.
+
+.. code-block:: yaml
+
+    http_request_timeout: 3600
 
 .. conf_minion:: proxy_host
 
@@ -1397,6 +1557,40 @@ The password used for HTTP proxy access.
 
     proxy_password: obolus
 
+.. conf_minion:: no_proxy
+
+``no_proxy``
+------------
+
+.. versionadded:: 2019.2.0
+
+Default: ``[]``
+
+List of hosts to bypass HTTP proxy
+
+.. note::
+    This key does nothing unless proxy_host etc is configured, it does not
+    support any kind of wildcards.
+
+.. code-block:: yaml
+
+    no_proxy: [ '127.0.0.1', 'foo.tld' ]
+
+``use_yamlloader_old``
+------------------------
+
+.. versionadded:: 2019.2.1
+
+Default: ``False``
+
+Use the pre-2019.2 YAML renderer.
+Uses legacy YAML rendering to support some legacy inline data structures.
+See the :ref:`2019.2.1 release notes <release-2019-2-1>` for more details.
+
+.. code-block:: yaml
+
+    use_yamlloader_old: False
+
 Docker Configuration
 ====================
 
@@ -1406,7 +1600,7 @@ Docker Configuration
 ----------------------
 
 .. versionadded:: 2017.7.8,2018.3.3
-.. versionchanged:: Fluorine
+.. versionchanged:: 2019.2.0
     The default value is now ``False``
 
 Default: ``True``
@@ -1903,6 +2097,21 @@ List of states to run when the minion starts up if ``startup_states`` is set to 
       - edit.vim
       - hyper
 
+.. conf_minion:: start_event_grains
+
+``start_event_grains``
+----------------------
+
+Default: ``[]``
+
+List of grains to pass in start event when minion starts up.
+
+.. code-block:: yaml
+
+    start_event_grains:
+      - machine_id
+      - uuid
+
 .. conf_minion:: top_file
 
 ``top_file``
@@ -1925,13 +2134,13 @@ State Management Settings
 ``renderer``
 ------------
 
-Default: ``yaml_jinja``
+Default: ``jinja|yaml``
 
 The default renderer used for local state executions
 
 .. code-block:: yaml
 
-    renderer: yaml_jinja
+    renderer: jinja|json
 
 .. conf_minion:: test
 
@@ -2013,6 +2222,9 @@ auto-loading modules when states run, set this value to ``False``.
     autoload_dynamic_modules: True
 
 .. conf_minion:: clean_dynamic_modules
+
+``clean_dynamic_modules``
+-------------------------
 
 Default: ``True``
 
@@ -2507,7 +2719,7 @@ minion to clean the keys.
 Default: ``''``
 
 Fingerprint of the master public key to validate the identity of your Salt master
-before the initial key exchange. The master fingerprint can be found by running
+before the initial key exchange. The master fingerprint can be found as ``master.pub`` by running
 "salt-key -F master" on the Salt master.
 
 .. code-block:: yaml
@@ -2841,7 +3053,7 @@ The level of messages to send to the console. See also :conf_log:`log_level`.
 ``log_level_logfile``
 ---------------------
 
-Default: ``info``
+Default: ``warning``
 
 The level of messages to send to the log file. See also
 :conf_log:`log_level_logfile`. When it is not set explicitly
@@ -3188,7 +3400,7 @@ have other services that need to go with it.
 
 .. versionadded:: 2016.11.0
 
-Default: ``0``
+Default: ``1800``
 
 If set to a nonzero integer, then passing ``refresh=True`` to functions in the
 :mod:`windows pkg module <salt.modules.win_pkg>` will not refresh the windows

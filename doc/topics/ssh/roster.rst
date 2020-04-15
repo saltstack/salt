@@ -53,6 +53,7 @@ The information which can be stored in a roster ``target`` is the following:
         priv:        # File path to ssh private key, defaults to salt-ssh.rsa
                      # The priv can also be set to agent-forwarding to not specify
                      # a key, but use ssh agent forwarding
+        priv_passwd: # Passphrase for ssh private key
         timeout:     # Number of seconds to wait for response when establishing
                      # an SSH connection
         minion_opts: # Dictionary of minion opts
@@ -60,6 +61,27 @@ The information which can be stored in a roster ``target`` is the following:
                      # components. Defaults to /tmp/salt-<hash>.
         cmd_umask:   # umask to enforce for the salt-call command. Should be in
                      # octal (so for 0o077 in YAML you would do 0077, or 63)
+        ssh_pre_flight: # Path to a script that will run before all other salt-ssh
+                        # commands. Will only run the first time when the thin dir
+                        # does not exist, unless --pre-flight is passed to salt-ssh
+                        # command or ssh_run_pre_flight is set to true in the config
+                        # Added in Sodium Release.
+
+.. _ssh_pre_flight:
+
+ssh_pre_flight
+--------------
+
+A Salt-SSH roster option `ssh_pre_flight` was added in the Sodium release. This enables
+you to run a script before Salt-SSH tries to run any commands. You can set this option
+in the roster for a specific minion or use the `roster_defaults` to set it for all minions.
+This script will only run if the thin dir is not currently on the minion. This means it will
+only run on the first run of salt-ssh or if you have recently wiped out your thin dir. If
+you want to intentionally run the script again you have a couple of options:
+
+* Wipe out your thin dir by using the -w salt-ssh arg.
+* Set ssh_run_pre_flight to True in the config
+* Run salt-ssh with the --pre-flight arg.
 
 .. _roster_defaults:
 

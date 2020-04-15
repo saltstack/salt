@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Use a git repository as a Pillar source
 ---------------------------------------
 
@@ -226,7 +226,7 @@ from all environments. This behavior can be overridden using a ``pillarenv``.
 Setting a :conf_minion:`pillarenv` in the minion config file will make that
 minion tell the master to ignore any pillar data from environments which don't
 match that pillarenv. A pillarenv can also be specified for a given minion or
-set of minions when :mod:`running states <salt.modules.state>`, by using he
+set of minions when :mod:`running states <salt.modules.state>`, by using the
 ``pillarenv`` argument. The CLI pillarenv will override one set in the minion
 config file. So, assuming that a pillarenv of ``base`` was set for a minion, it
 would not get any of the pillar variables configured in the ``qux`` remote,
@@ -350,40 +350,56 @@ When ``__env__`` is specified as the branch name, ``all_saltenvs`` per-remote co
         - __env__ https://mydomain.tld/pillar-appdata.git:
           - mountpoint: web/server/
 
-'''
+.. _git_pillar_update_interval:
+
+git_pillar_update_interval
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 3000
+
+This option defines the default update interval (in seconds) for git_pillar
+remotes. The update is handled within the global loop, hence
+``git_pillar_update_interval`` should be a multiple of ``loop_interval``.
+
+.. code-block:: yaml
+
+    git_pillar_update_interval: 120
+
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import copy
 import logging
 
+import salt.utils.dictupdate
+
 # Import salt libs
 import salt.utils.gitfs
-import salt.utils.dictupdate
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import FileserverConfigError
-from salt.pillar import Pillar
 
 # Import third party libs
 from salt.ext import six
+from salt.pillar import Pillar
 
-PER_REMOTE_OVERRIDES = ('env', 'root', 'ssl_verify', 'refspecs')
-PER_REMOTE_ONLY = ('name', 'mountpoint', 'all_saltenvs')
-GLOBAL_ONLY = ('base', 'branch')
+PER_REMOTE_OVERRIDES = ("env", "root", "ssl_verify", "refspecs")
+PER_REMOTE_ONLY = ("name", "mountpoint", "all_saltenvs")
+GLOBAL_ONLY = ("base", "branch")
 
 # Set up logging
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
-__virtualname__ = 'git'
+__virtualname__ = "git"
 
 
 def __virtual__():
-    '''
+    """
     Only load if gitpython is available
-    '''
-    git_ext_pillars = [x for x in __opts__['ext_pillar'] if 'git' in x]
+    """
+    git_ext_pillars = [x for x in __opts__["ext_pillar"] if "git" in x]
     if not git_ext_pillars:
         # No git external pillars were configured
         return False
@@ -399,92 +415,95 @@ def __virtual__():
 
 
 def ext_pillar(minion_id, pillar, *repos):  # pylint: disable=unused-argument
-    '''
+    """
     Checkout the ext_pillar sources and compile the resulting pillar SLS
-    '''
+    """
     opts = copy.deepcopy(__opts__)
-    opts['pillar_roots'] = {}
-    opts['__git_pillar'] = True
+    opts["pillar_roots"] = {}
+    opts["__git_pillar"] = True
     git_pillar = salt.utils.gitfs.GitPillar(
         opts,
         repos,
         per_remote_overrides=PER_REMOTE_OVERRIDES,
         per_remote_only=PER_REMOTE_ONLY,
-        global_only=GLOBAL_ONLY)
-    if __opts__.get('__role') == 'minion':
+        global_only=GLOBAL_ONLY,
+    )
+    if __opts__.get("__role") == "minion":
         # If masterless, fetch the remotes. We'll need to remove this once
         # we make the minion daemon able to run standalone.
         git_pillar.fetch_remotes()
     git_pillar.checkout()
     ret = {}
-    merge_strategy = __opts__.get(
-        'pillar_source_merging_strategy',
-        'smart'
-    )
-    merge_lists = __opts__.get(
-        'pillar_merge_lists',
-        False
-    )
+    merge_strategy = __opts__.get("pillar_source_merging_strategy", "smart")
+    merge_lists = __opts__.get("pillar_merge_lists", False)
     for pillar_dir, env in six.iteritems(git_pillar.pillar_dirs):
         # Map env if env == '__env__' before checking the env value
-        if env == '__env__':
-            env = opts.get('pillarenv') \
-                or opts.get('saltenv') \
-                or opts.get('git_pillar_base')
-            log.debug('__env__ maps to %s', env)
+        if env == "__env__":
+            env = (
+                opts.get("pillarenv")
+                or opts.get("saltenv")
+                or opts.get("git_pillar_base")
+            )
+            log.debug("__env__ maps to %s", env)
 
         # If pillarenv is set, only grab pillars with that match pillarenv
-        if opts['pillarenv'] and env != opts['pillarenv']:
+        if opts["pillarenv"] and env != opts["pillarenv"]:
             log.debug(
-                'env \'%s\' for pillar dir \'%s\' does not match '
-                'pillarenv \'%s\', skipping',
-                env, pillar_dir, opts['pillarenv']
+                "env '%s' for pillar dir '%s' does not match "
+                "pillarenv '%s', skipping",
+                env,
+                pillar_dir,
+                opts["pillarenv"],
             )
             continue
         if pillar_dir in git_pillar.pillar_linked_dirs:
             log.debug(
-                'git_pillar is skipping processing on %s as it is a '
-                'mounted repo', pillar_dir
+                "git_pillar is skipping processing on %s as it is a " "mounted repo",
+                pillar_dir,
             )
             continue
         else:
             log.debug(
-                'git_pillar is processing pillar SLS from %s for pillar '
-                'env \'%s\'', pillar_dir, env
+                "git_pillar is processing pillar SLS from %s for pillar " "env '%s'",
+                pillar_dir,
+                env,
             )
 
         pillar_roots = [pillar_dir]
 
-        if __opts__['git_pillar_includes']:
+        if __opts__["git_pillar_includes"]:
             # Add the rest of the pillar_dirs in this environment to the
             # list, excluding the current pillar_dir being processed. This
             # is because it was already specified above as the first in the
             # list, so that its top file is sourced from the correct
             # location and not from another git_pillar remote.
             pillar_roots.extend(
-                [d for (d, e) in six.iteritems(git_pillar.pillar_dirs)
-                 if env == e and d != pillar_dir]
+                [
+                    d
+                    for (d, e) in six.iteritems(git_pillar.pillar_dirs)
+                    if env == e and d != pillar_dir
+                ]
             )
 
-        opts['pillar_roots'] = {env: pillar_roots}
+        opts["pillar_roots"] = {env: pillar_roots}
 
         local_pillar = Pillar(opts, __grains__, minion_id, env)
         ret = salt.utils.dictupdate.merge(
             ret,
             local_pillar.compile_pillar(ext=False),
             strategy=merge_strategy,
-            merge_lists=merge_lists
+            merge_lists=merge_lists,
         )
     return ret
 
 
-def _extract_key_val(kv, delimiter='='):
-    '''Extract key and value from key=val string.
+def _extract_key_val(kv, delimiter="="):
+    """Extract key and value from key=val string.
 
     Example:
     >>> _extract_key_val('foo=bar')
     ('foo', 'bar')
-    '''
+    """
     pieces = kv.split(delimiter)
     key = pieces[0]
     val = delimiter.join(pieces[1:])

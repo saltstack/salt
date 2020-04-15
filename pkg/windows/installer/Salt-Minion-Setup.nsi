@@ -72,6 +72,7 @@ ${StrStrAdv}
 !define MUI_WELCOMEFINISHPAGE_BITMAP "panel.bmp"
 !define MUI_UNWELCOMEFINISHPAGE_BITMAP "panel.bmp"
 
+
 # This entire if block can be removed for the Sodium release... including the !define MUI_WELCOMEPAGE_TEXT
 # NSIS will just use the default like it does for Python 3, which should be the same test
 !if "${PYTHON_VERSION}" == "2"

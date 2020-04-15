@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Utility functions for use with or in SLS files
-'''
+"""
 
 # Import Python libs
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt libs
 import salt.exceptions
@@ -15,7 +15,7 @@ import salt.utils.dictupdate
 
 
 def update(dest, upd, recursive_update=True, merge_lists=False):
-    '''
+    """
     Merge ``upd`` recursively into ``dest``
 
     If ``merge_lists=True``, will aggregate list object types instead of
@@ -27,13 +27,12 @@ def update(dest, upd, recursive_update=True, merge_lists=False):
 
         salt '*' slsutil.update '{foo: Foo}' '{bar: Bar}'
 
-    '''
-    return salt.utils.dictupdate.update(dest, upd, recursive_update,
-            merge_lists)
+    """
+    return salt.utils.dictupdate.update(dest, upd, recursive_update, merge_lists)
 
 
-def merge(obj_a, obj_b, strategy='smart', renderer='yaml', merge_lists=False):
-    '''
+def merge(obj_a, obj_b, strategy="smart", renderer="yaml", merge_lists=False):
+    """
     Merge a data structure into another by choosing a merge strategy
 
     Strategies:
@@ -49,13 +48,46 @@ def merge(obj_a, obj_b, strategy='smart', renderer='yaml', merge_lists=False):
     .. code-block:: shell
 
         salt '*' slsutil.merge '{foo: Foo}' '{bar: Bar}'
-    '''
-    return salt.utils.dictupdate.merge(obj_a, obj_b, strategy, renderer,
-            merge_lists)
+    """
+    return salt.utils.dictupdate.merge(obj_a, obj_b, strategy, renderer, merge_lists)
 
 
-def renderer(path=None, string=None, default_renderer='jinja|yaml', **kwargs):
-    '''
+def merge_all(lst, strategy="smart", renderer="yaml", merge_lists=False):
+    """
+    .. versionadded:: 2019.2.0
+
+    Merge a list of objects into each other in order
+
+    :type lst: Iterable
+    :param lst: List of objects to be merged.
+
+    :type strategy: String
+    :param strategy: Merge strategy. See utils.dictupdate.
+
+    :type renderer: String
+    :param renderer:
+        Renderer type. Used to determine strategy when strategy is 'smart'.
+
+    :type merge_lists: Bool
+    :param merge_lists: Defines whether to merge embedded object lists.
+
+    CLI Example:
+
+    .. code-block:: shell
+
+        $ salt-call --output=txt slsutil.merge_all '[{foo: Foo}, {foo: Bar}]'
+        local: {u'foo': u'Bar'}
+    """
+
+    ret = {}
+    for obj in lst:
+        ret = salt.utils.dictupdate.merge(ret, obj, strategy, renderer, merge_lists)
+
+    return ret
+
+
+def renderer(path=None, string=None, default_renderer="jinja|yaml", **kwargs):
+    """
     Parse a string or file through Salt's renderer system
 
     .. versionchanged:: 2018.3.0
@@ -124,28 +156,29 @@ def renderer(path=None, string=None, default_renderer='jinja|yaml', **kwargs):
         salt '*' slsutil.renderer /path/to/file.sls 'jinja|yaml'
         salt '*' slsutil.renderer string='Inline template! {{ saltenv }}'
         salt '*' slsutil.renderer string='Hello, {{ name }}.' name='world'
-    '''
+    """
     if not path and not string:
-        raise salt.exceptions.SaltInvocationError(
-                'Must pass either path or string')
+        raise salt.exceptions.SaltInvocationError("Must pass either path or string")
 
     renderers = salt.loader.render(__opts__, __salt__)
 
     if path:
-        path_or_string = __salt__['cp.get_url'](path)
+        path_or_string = __salt__["cp.get_url"](
+            path, saltenv=kwargs.get("saltenv", "base")
+        )
     elif string:
-        path_or_string = ':string:'
-        kwargs['input_data'] = string
+        path_or_string = ":string:"
+        kwargs["input_data"] = string
 
     ret = salt.template.compile_template(
         path_or_string,
         renderers,
         default_renderer,
-        __opts__['renderer_blacklist'],
-        __opts__['renderer_whitelist'],
+        __opts__["renderer_blacklist"],
+        __opts__["renderer_whitelist"],
         **kwargs
     )
-    return ret.read() if __utils__['stringio.is_readable'](ret) else ret
+    return ret.read() if __utils__["stringio.is_readable"](ret) else ret
 
 
 def _get_serialize_fn(serializer, fn_name):
@@ -155,18 +188,19 @@ def _get_serialize_fn(serializer, fn_name):
 
     if not fns:
         raise salt.exceptions.CommandExecutionError(
-            "Serializer '{0}' not found.".format(serializer))
+            "Serializer '{0}' not found.".format(serializer)
+        )
 
     if not fn:
         raise salt.exceptions.CommandExecutionError(
-            "Serializer '{0}' does not implement {1}.".format(serializer,
-                fn_name))
+            "Serializer '{0}' does not implement {1}.".format(serializer, fn_name)
+        )
 
     return fn
 
 
 def serialize(serializer, obj, **mod_kwargs):
-    '''
+    """
     Serialize a Python object using a :py:mod:`serializer module
     <salt.serializers>`
 
@@ -182,13 +216,13 @@ def serialize(serializer, obj, **mod_kwargs):
 
         {% set json_string = salt.slsutil.serialize('json',
             {'foo': 'Foo!'}) %}
-    '''
+    """
     kwargs = salt.utils.args.clean_kwargs(**mod_kwargs)
-    return _get_serialize_fn(serializer, 'serialize')(obj, **kwargs)
+    return _get_serialize_fn(serializer, "serialize")(obj, **kwargs)
 
 
 def deserialize(serializer, stream_or_string, **mod_kwargs):
-    '''
+    """
     Deserialize a Python object using a :py:mod:`serializer module
     <salt.serializers>`
 
@@ -206,7 +240,6 @@ def deserialize(serializer, stream_or_string, **mod_kwargs):
 
         {% set python_object = salt.slsutil.deserialize('json',
             '{"foo": "Foo!"}') %}
-    '''
+    """
     kwargs = salt.utils.args.clean_kwargs(**mod_kwargs)
-    return _get_serialize_fn(serializer, 'deserialize')(stream_or_string,
-            **kwargs)
+    return _get_serialize_fn(serializer, "deserialize")(stream_or_string, **kwargs)

@@ -17,7 +17,7 @@ salt/modules/(mac_user|useradd|pw_user|solaris_user|win_useradd)\.py:
 salt/modules/(aix_group|groupadd|mac_group|pw_group|solaris_group|win_groupadd)\.py:
   - unit.states.test_group
 
-salt/modules/(debian_service|freebsdservice|gentoo_service|launchctl_service|mac_service|netbsdservice|openbsdrcctl_service|openbsdservice|rh_service|runit|service|smf_service|systemd_service|upstart_service|win_service)\.py:
+salt/modules/(debian_service|freebsdservice|gentoo_service|launchctl_service|mac_service|netbsdservice|openbsdrcctl_service|openbsdservice|rh_service|runit|linux_service|smf_service|systemd_service|upstart_service|win_service)\.py:
   - unit.states.test_service
   - integration.states.test_service
 
@@ -42,6 +42,9 @@ salt/modules/dockermod.py:
   - unit.utils.test_docker
   - integration.states.test_docker_container
   - integration.states.test_docker_network
+
+salt/modules/file.py:
+  - integration.states.test_cron
 
 salt/modules/influxdb08mod.py:
   - unit.states.test_influxdb08_database
@@ -113,6 +116,9 @@ salt/cloud/*:
 
 salt/cloud/__init__.py:
   - integration.cloud.test_cloud
+
+salt/grains/*:
+  - integration.grains.test_custom
 
 salt/proxy/*:
   - integration.proxy.test_shell
@@ -189,6 +195,7 @@ salt/output/*:
 
 salt/pillar/__init__.py:
   - integration.minion.test_pillar
+  - integration.pillar.test_pillar_include
 
 salt/(cli/run\.py|runner\.py):
   - integration.shell.test_runner
@@ -217,6 +224,7 @@ salt/utils/docker/*:
   - unit.utils.test_docker
 
 salt/utils/schedule.py:
+  - integration.scheduler.test_error
   - integration.scheduler.test_eval
   - integration.scheduler.test_postpone
   - integration.scheduler.test_skip

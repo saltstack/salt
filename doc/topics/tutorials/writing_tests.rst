@@ -467,10 +467,10 @@ can be used
 .. code-block:: python
 
     # Import logging handler
-    from tests.support.helpers import TestsLoggingHandler
+    from tests.support.helpers import TstSuiteLoggingHandler
 
     # .. inside test
-    with TestsLoggingHandler() as handler:
+    with TstSuiteLoggingHandler() as handler:
         for message in handler.messages:
             if message.startswith('ERROR: This is the error message we seek'):
                 break
@@ -482,7 +482,7 @@ Automated Test Runs
 ===================
 
 SaltStack maintains a Jenkins server which can be viewed at
-https://jenkins.saltstack.com. The tests executed from this Jenkins server
+https://jenkinsci.saltstack.com. The tests executed from this Jenkins server
 create fresh virtual machines for each test run, then execute the destructive
 tests on the new, clean virtual machine. This allows for the execution of tests
 across supported platforms.

@@ -68,6 +68,22 @@ first line in the stanza) or the ``- name`` parameter.
     - require:
       - pkg: vim
 
+Glob matching in requisites
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 0.9.8
+
+Glob matching is supported in requisites. This is mostly useful for file
+changes. In the example below, a change in ``/etc/apache2/httpd.conf`` or
+``/etc/apache2/sites-available/default.conf`` will reload/restart the service:
+
+.. code-block:: yaml
+
+    apache2:
+      service.running:
+        - watch:
+          - file: /etc/apache2/*
+
 Omitting state module in requisites
 -----------------------------------
 
@@ -507,6 +523,15 @@ The ``onfail`` requisite is applied in the same way as ``require`` as ``watch``:
 
 .. note::
 
+    Setting failhard (:ref:`globally <global-failhard>` or in
+    :ref:`the failing state <state-level-failhard>`) to ``True`` will cause
+    ``onfail``, ``onfail_in`` and ``onfail_any`` requisites to be ignored.
+    If you want to combine a global failhard set to True with ``onfail``,
+    ``onfail_in`` or ``onfail_any``, you will have to explicitly set failhard
+    to ``False`` (overriding the global setting) in the state that could fail.
+
+.. note::
+
     Beginning in the ``2016.11.0`` release of Salt, ``onfail`` uses OR logic for
     multiple listed ``onfail`` requisites. Prior to the ``2016.11.0`` release,
     ``onfail`` used AND logic. See `Issue #22370`_ for more information.
@@ -852,6 +877,17 @@ Reload
 after a state finishes. ``reload_pillar`` and ``reload_grains`` can also be set.
 See :ref:`Reloading Modules <reloading-modules>`.
 
+.. code-block:: yaml
+
+    grains_refresh:
+      module.run:
+       - name: saltutil.refresh_grains
+       - reload_grains: true
+
+    grains_read:
+      module.run:
+       - name: grains.items
+
 .. _unless-requisite:
 
 Unless
@@ -897,10 +933,38 @@ For example:
         - names:
           - first_deploy_cmd
           - second_deploy_cmd
-        - unless: ls /usr/bin/vim
+        - unless: some_check
 
 In the above case, ``some_check`` will be run prior to _each_ name -- once for
 ``first_deploy_cmd`` and a second time for ``second_deploy_cmd``.
+
+.. versionchanged:: 3000
+    The ``unless`` requisite can take a module as a dictionary field in unless.
+    The dictionary must contain an argument ``fun`` which is the module that is
+    being run, and everything else must be passed in under the args key or will
+    be passed as individual kwargs to the module function.
+
+    .. code-block:: yaml
+
+        install apache on debian based distros:
+          cmd.run:
+            - name: make install
+            - cwd: /path/to/dir/whatever-2.1.5/
+            - unless:
+              - fun: file.file_exists
+                path: /usr/local/bin/whatever
+
+    .. code-block:: yaml
+
+      set mysql root password:
+        debconf.set:
+          - name: mysql-server-5.7
+          - data:
+              'mysql-server/root_password': {'type': 'password', 'value': {{pillar['mysql.pass']}} }
+          - unless:
+            - fun: pkg.version
+              args:
+                - mysql-server-5.7
 
 .. _onlyif-requisite:
 
@@ -942,8 +1006,41 @@ concept of ``True`` and ``False``.
 The above example ensures that the stop_volume and delete modules only run
 if the gluster commands return a 0 ret value.
 
-Listen/Listen_in
-----------------
+.. versionchanged:: 3000
+    The ``onlyif`` requisite can take a module as a dictionary field in onlyif.
+    The dictionary must contain an argument ``fun`` which is the module that is
+    being run, and everything else must be passed in under the args key or will
+    be passed as individual kwargs to the module function.
+
+    .. code-block:: yaml
+
+        install apache on redhat based distros:
+          pkg.latest:
+            - name: httpd
+            - onlyif:
+              - fun: match.grain
+                tgt: 'os_family: RedHat'
+
+        install apache on debian based distros:
+          pkg.latest:
+            - name: apache2
+            - onlyif:
+              - fun: match.grain
+                tgt: 'os_family: Debian'
+
+    .. code-block:: yaml
+
+      arbitrary file example:
+        file.touch:
+          - name: /path/to/file
+          - onlyif:
+            - fun: file.search
+              args:
+                - /etc/crontab
+                - 'entry1'
+
+listen
+~~~~~~
 
 .. versionadded:: 2014.7.0
 

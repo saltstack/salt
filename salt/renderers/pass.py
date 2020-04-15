@@ -1,58 +1,60 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Pass Renderer for Salt
 ======================
 
-[pass](https://www.passwordstore.org/)
+pass_ is an encrypted on-disk password store.
+
+.. _pass: https://www.passwordstore.org/
 
 .. versionadded:: 2017.7.0
 
 Setup
 -----
 
-.. note::
-    ``<user>`` needs to be replaced with the user salt-master will be running
-    as
+*Note*: ``<user>`` needs to be replaced with the user salt-master will be
+running as.
 
-1. Have private gpg loaded into `user`'s gpg keyring. Example:
+Have private gpg loaded into ``user``'s gpg keyring
 
-   .. code-block:: yaml
+.. code-block:: yaml
 
-       load_private_gpg_key:
-         cmd.run:
-           - name: gpg --import <location_of_private_gpg_key>
-           - unless: gpg --list-keys '<gpg_name>'
+    load_private_gpg_key:
+      cmd.run:
+        - name: gpg --import <location_of_private_gpg_key>
+        - unless: gpg --list-keys '<gpg_name>'
 
-2. Said private key's public key should have been used when encrypting pass
-   entries that are of interest for pillar data.
+Said private key's public key should have been used when encrypting pass entries
+that are of interest for pillar data.
 
-3. Fetch and keep local pass git repo up-to-date
+Fetch and keep local pass git repo up-to-date
 
-   .. code-block:: yaml
+.. code-block:: yaml
 
-       update_pass:
-         git.latest:
-           - force_reset: True
-           - name: <git_repo>
-           - target: /<user>/.password-store
-           - identity: <location_of_ssh_private_key>
-           - require:
-             - cmd: load_private_gpg_key
+        update_pass:
+          git.latest:
+            - force_reset: True
+            - name: <git_repo>
+            - target: /<user>/.password-store
+            - identity: <location_of_ssh_private_key>
+            - require:
+              - cmd: load_private_gpg_key
 
-4. Install pass binary
+Install pass binary
 
-   .. code-block:: yaml
+.. code-block:: yaml
 
-       pass:
-         pkg.installed
-'''
+        pass:
+          pkg.installed
+"""
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 import os
 from os.path import expanduser
-from subprocess import Popen, PIPE
+from subprocess import PIPE, Popen
 
 # Import salt libs
 import salt.utils.path
@@ -65,39 +67,39 @@ log = logging.getLogger(__name__)
 
 
 def _get_pass_exec():
-    '''
+    """
     Return the pass executable or raise an error
-    '''
-    pass_exec = salt.utils.path.which('pass')
+    """
+    pass_exec = salt.utils.path.which("pass")
     if pass_exec:
         return pass_exec
     else:
-        raise SaltRenderError('pass unavailable')
+        raise SaltRenderError("pass unavailable")
 
 
 def _fetch_secret(pass_path):
-    '''
+    """
     Fetch secret from pass based on pass_path. If there is
     any error, return back the original pass_path value
-    '''
+    """
     cmd = "pass show {0}".format(pass_path.strip())
-    log.debug('Fetching secret: %s', cmd)
+    log.debug("Fetching secret: %s", cmd)
 
-    proc = Popen(cmd.split(' '), stdout=PIPE, stderr=PIPE)
+    proc = Popen(cmd.split(" "), stdout=PIPE, stderr=PIPE)
     pass_data, pass_error = proc.communicate()
 
     # The version of pass used during development sent output to
     # stdout instead of stderr even though its returncode was non zero.
     if proc.returncode or not pass_data:
-        log.warning('Could not fetch secret: %s %s', pass_data, pass_error)
+        log.warning("Could not fetch secret: %s %s", pass_data, pass_error)
         pass_data = pass_path
     return pass_data.strip()
 
 
 def _decrypt_object(obj):
-    '''
+    """
     Recursively try to find a pass path (string) that can be handed off to pass
-    '''
+    """
     if isinstance(obj, six.string_types):
         return _fetch_secret(obj)
     elif isinstance(obj, dict):
@@ -109,16 +111,13 @@ def _decrypt_object(obj):
     return obj
 
 
-def render(pass_info, saltenv='base', sls='', argline='', **kwargs):
-    '''
+def render(pass_info, saltenv="base", sls="", argline="", **kwargs):
+    """
     Fetch secret from pass based on pass_path
-    '''
-    try:
-        _get_pass_exec()
-    except SaltRenderError:
-        raise
+    """
+    _get_pass_exec()
 
     # Make sure environment variable HOME is set, since Pass looks for the
     # password-store under ~/.password-store.
-    os.environ['HOME'] = expanduser('~')
+    os.environ["HOME"] = expanduser("~")
     return _decrypt_object(pass_info)

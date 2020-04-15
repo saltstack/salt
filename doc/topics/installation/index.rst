@@ -97,27 +97,35 @@ Salt should run on any Unix-like platform so long as the dependencies are met.
 * `Tornado`_ - Web framework and asynchronous networking library
 * `futures`_ - Python2 only dependency. Backport of the concurrent.futures package from Python 3.2
 
-Depending on the chosen Salt transport, `ZeroMQ`_ or `RAET`_, dependencies
-vary:
-
 * ZeroMQ:
 
   * `ZeroMQ`_ >= 3.2.0
   * `pyzmq`_ >= 2.2.0 - ZeroMQ Python bindings
   * `PyCrypto`_ - The Python cryptography toolkit
 
-* RAET:
 
-  * `libnacl`_ - Python bindings to `libsodium`_
-  * `ioflo`_ - The flo programming interface raet and salt-raet is built on
-  * `RAET`_ - The worlds most awesome UDP protocol
+.. warning::
 
-Salt defaults to the `ZeroMQ`_ transport, and the choice can be made at install
-time, for example:
+    For historical reasons, Salt requires PyCrypto as a "lowest common
+    denominator". However, `PyCrypto is unmaintained`_ and best practice is to
+    manually upgrade to use a more maintained library such as `PyCryptodome`_. See
+    `Issue #52674`_ and `Issue #54115`_ for more info
+
+
+.. _PyCrypto is unmaintained: https://github.com/dlitz/pycrypto/issues/301#issue-551975699
+.. _PyCryptodome: https://pypi.org/project/pycryptodome/
+.. _Issue #52674: https://github.com/saltstack/salt/issues/52674
+.. _Issue #54115: https://github.com/saltstack/salt/issues/54115
+
+
+
+Salt defaults to the `ZeroMQ`_ transport. The ``--salt-transport`` installation
+option is available, but currently only supports the ``zeromq`` option. This
+may be expanded in the future.
 
 .. code-block:: bash
 
-    python setup.py --salt-transport=raet install
+    python setup.py --salt-transport=zeromq install
 
 This way, only the required dependencies are pulled by the setup script if need
 be.
@@ -127,7 +135,7 @@ provided like:
 
 .. code-block:: bash
 
-  pip install --install-option="--salt-transport=raet" salt
+  pip install --install-option="--salt-transport=zeromq" salt
 
 .. note::
     Salt does not bundle dependencies that are typically distributed as part of
@@ -156,10 +164,6 @@ Optional Dependencies
 .. _`apache-libcloud`: http://libcloud.apache.org
 .. _`Requests`: http://docs.python-requests.org/en/latest
 .. _`Tornado`: http://www.tornadoweb.org/en/stable/
-.. _`libnacl`: https://github.com/saltstack/libnacl
-.. _`ioflo`: https://github.com/ioflo/ioflo
-.. _`RAET`: https://github.com/saltstack/raet
-.. _`libsodium`: https://github.com/jedisct1/libsodium
 .. _`futures`: https://github.com/agronholm/pythonfutures
 
 
@@ -188,4 +192,5 @@ SaltStack states and execution modules to build Salt and a specified set of
 dependencies, from which a platform specific repository can be built.
 
 https://github.com/saltstack/salt-pack
+
 
