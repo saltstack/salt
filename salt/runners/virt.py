@@ -499,7 +499,7 @@ def migrate(name, target=""):
     data = query(quiet=True)
     origin_data = _find_vm(name, data, quiet=True)
     try:
-        origin_host = next(iter(origin_data.keys()))
+        origin_host = next(iter(origin_data))
     except StopIteration:
         __jid_event__.fire_event(
             {"error": "Named VM {0} was not found to migrate".format(name)}, "progress"

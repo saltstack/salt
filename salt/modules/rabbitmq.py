@@ -581,7 +581,7 @@ def check_password(name, password, runas=None):
     msg = "password-check"
 
     _response = _format_response(res, msg)
-    _key = next(iter(_response.keys()))
+    _key = next(iter(_response))
 
     if "invalid credentials" in _response[_key]:
         return False

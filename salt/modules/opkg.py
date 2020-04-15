@@ -492,7 +492,7 @@ def install(
                 # Just need the package name.
                 pkginfo_dict = _process_info_installed_output(out["stdout"], [])
                 if pkginfo_dict:
-                    to_reinstall.append(next(iter(pkginfo_dict.keys())))
+                    to_reinstall.append(next(iter(pkginfo_dict)))
 
     for pkgname in to_reinstall:
         if pkgname not in ret or pkgname in old:

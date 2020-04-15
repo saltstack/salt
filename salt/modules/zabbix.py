@@ -2023,7 +2023,7 @@ def usermacro_get(
             if macro:
                 # Python mistakenly interprets macro names starting and ending with '{' and '}' as a dict
                 if isinstance(macro, dict):
-                    macro = "{" + six.text_type(next(iter(macro.keys()))) + "}"
+                    macro = "{" + six.text_type(next(iter(macro))) + "}"
                 if not macro.startswith("{") and not macro.endswith("}"):
                     macro = "{" + macro + "}"
                 params["filter"].setdefault("macro", macro)
@@ -2075,7 +2075,7 @@ def usermacro_create(macro, value, hostid, **connection_args):
             if macro:
                 # Python mistakenly interprets macro names starting and ending with '{' and '}' as a dict
                 if isinstance(macro, dict):
-                    macro = "{" + six.text_type(next(iter(macro.keys()))) + "}"
+                    macro = "{" + six.text_type(next(iter(macro))) + "}"
                 if not macro.startswith("{") and not macro.endswith("}"):
                     macro = "{" + macro + "}"
                 params["macro"] = macro
@@ -2117,7 +2117,7 @@ def usermacro_createglobal(macro, value, **connection_args):
             if macro:
                 # Python mistakenly interprets macro names starting and ending with '{' and '}' as a dict
                 if isinstance(macro, dict):
-                    macro = "{" + six.text_type(next(iter(macro.keys()))) + "}"
+                    macro = "{" + six.text_type(next(iter(macro))) + "}"
                 if not macro.startswith("{") and not macro.endswith("}"):
                     macro = "{" + macro + "}"
                 params["macro"] = macro

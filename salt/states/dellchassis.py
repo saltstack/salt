@@ -103,7 +103,7 @@ pillar stated above:
         - idrac_launch: {{ details['idrac_launch'] }}
         - slot_names:
           {% for entry details['slot_names'] %}
-            - {{ next(iter(entry.keys())) }}: {{ entry[next(iter(entry.keys()))]  }}
+            - {{ next(iter(entry.keys())) }}: {{ entry[next(iter(entry))]  }}
           {% endfor %}
 
     blade_powercycle:
@@ -465,7 +465,7 @@ def chassis(
     if slot_names:
         current_slot_names = __salt__[chassis_cmd]("list_slotnames")
         for s in slot_names:
-            key = next(iter(s.keys()))
+            key = next(iter(s))
             new_name = s[key]
             if key.startswith("slot-"):
                 key = key[5:]
@@ -483,7 +483,7 @@ def chassis(
     target_power_states = {}
     if blade_power_states:
         for b in blade_power_states:
-            key = next(iter(b.keys()))
+            key = next(iter(b))
             status = __salt__[chassis_cmd]("server_powerstatus", module=key)
             current_power_states[key] = status.get("status", -1)
             if b[key] == "powerdown":
@@ -544,7 +544,7 @@ def chassis(
     if ret["changes"].get("Slot Names") is not None:
         slot_rets = []
         for s in slot_names:
-            key = next(iter(s.keys()))
+            key = next(iter(s))
             new_name = s[key]
             if key.startswith("slot-"):
                 key = key[5:]

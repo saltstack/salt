@@ -100,10 +100,10 @@ def beacon(config):
 
         if isinstance(cert_path, dict):
             try:
-                notify_days = cert_path[next(iter(cert_path.keys()))].get(
+                notify_days = cert_path[next(iter(cert_path))].get(
                     "notify_days", global_notify_days
                 )
-                cert_path = next(iter(cert_path.keys()))
+                cert_path = next(iter(cert_path))
             except StopIteration as exc:
                 log.error("Unable to load certificate %s (%s)", cert_path, exc)
                 continue

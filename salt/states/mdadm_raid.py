@@ -107,12 +107,12 @@ def present(name, level, devices, **kwargs):
         ret[
             "comment"
         ] = "Devices are a mix of RAID constituents with multiple MD_UUIDs: {0}.".format(
-            sorted(uuid_dict.keys())
+            sorted(uuid_dict)
         )
         ret["result"] = False
         return ret
     elif len(uuid_dict) == 1:
-        uuid = next(iter(uuid_dict.keys()))
+        uuid = next(iter(uuid_dict))
         if present and present["uuid"] != uuid:
             ret[
                 "comment"

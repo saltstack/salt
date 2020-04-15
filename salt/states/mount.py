@@ -1080,7 +1080,7 @@ def _convert_to(maybe_device, convert_to):
     result = None
     if len(blkid) == 1:
         if convert_to == "device":
-            result = next(iter(blkid.keys()))
+            result = next(iter(blkid))
         else:
             key = convert_to.upper()
             result = "{}={}".format(key, next(iter(blkid.values()))[key])
