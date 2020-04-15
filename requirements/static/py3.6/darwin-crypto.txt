@@ -6,4 +6,3 @@
 #
 m2crypto==0.35.2
 pycryptodomex==3.9.0
-typing==3.7.4.1           # via m2crypto

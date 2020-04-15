@@ -561,6 +561,12 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(mount.__salt__, {"cmd.run_all": mock}):
                 self.assertTrue(mount.umount("name"))
 
+        # Test unmounting with guestfs util
+        mock = MagicMock()
+        with patch.dict(mount.__salt__, {"guestfs.umount": mock}):
+            mount.umount("/mountpoint", device="/path/to/my.qcow", util="guestfs")
+            mock.assert_called_once_with("/mountpoint", disk="/path/to/my.qcow")
+
     def test_is_fuse_exec(self):
         """
         Returns true if the command passed is a fuse mountable application

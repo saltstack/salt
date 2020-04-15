@@ -420,6 +420,7 @@ def _is_fstype(fs_type):
     """
     return fs_type in set(
         [
+            "btrfs",
             "ext2",
             "ext3",
             "ext4",
@@ -433,6 +434,7 @@ def _is_fstype(fs_type):
             "NTFS",
             "ntfs",
             "ufs",
+            "xfs",
         ]
     )
 
