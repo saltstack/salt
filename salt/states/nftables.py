@@ -590,7 +590,7 @@ def set_policy(name, table="filter", family="ipv4", **kwargs):
         ret["changes"] = {"locale": name}
         ret["result"] = True
         ret["comment"] = "Set default policy for {0} to {1} family {2}".format(
-            kwargs['chain'], kwargs['policy'], family
+            kwargs["chain"], kwargs["policy"], family
         )
 
         if "save" in kwargs:
