@@ -236,7 +236,7 @@ def _find_interfaces_mac(ip):  # pylint: disable=invalid-name
         for interface, interface_ipaddrs in six.iteritems(
             device_ipaddrs.get("out", {})
         ):
-            ip_addresses = interface_ipaddrs.get("ipv4", {}).keys()
+            ip_addresses = list(interface_ipaddrs.get("ipv4", {}))
             ip_addresses.extend(interface_ipaddrs.get("ipv6", {}).keys())
             for ipaddr in ip_addresses:
                 if ip != ipaddr:
@@ -438,7 +438,7 @@ def interfaces(
                         if inet_ips:  # if any
                             if best:
                                 # determine the global best match
-                                compare = [best_net_match]
+                                compare = [best_net_match] if best_net_match else []
                                 compare.extend(list(map(_get_network_obj, inet_ips)))
                                 new_best_net_match = max(compare)
                                 if new_best_net_match != best_net_match:
