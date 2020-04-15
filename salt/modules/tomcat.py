@@ -256,9 +256,9 @@ def _wget(cmd, opts=None, url="http://localhost:8080/manager", timeout=180):
             ret["msg"] = "Failed to create HTTP request"
 
     # Force all byte strings to utf-8 strings, for python >= 3.4
-    for key, item in enumerate(ret['msg']):
+    for key, value in enumerate(ret['msg']):
         try:
-            ret['msg'][key] = item.salt.utils.stringutils.to_unicode(item, 'utf-8')
+            ret['msg'][key] = salt.utils.stringutils.to_unicode(value, 'utf-8')
         except (UnicodeDecodeError, AttributeError):
             pass
 
