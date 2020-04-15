@@ -4,7 +4,7 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import 3rd-party libs
-from io import StringIO, BytesIO
+from io import BytesIO, StringIO
 
 # Import salt module
 import salt.modules.tomcat as tomcat
@@ -12,8 +12,8 @@ from salt.ext.six import string_types
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase
 from tests.support.mock import MagicMock, patch
+from tests.support.unit import TestCase
 
 
 class TomcatTestCasse(TestCase, LoaderModuleMockMixin):
@@ -26,7 +26,7 @@ class TomcatTestCasse(TestCase, LoaderModuleMockMixin):
     def test_tomcat_wget_no_bytestring(self):
         responses = {
             "string": StringIO("Best response ever\r\nAnd you know it!"),
-            "bytes": BytesIO(b"Best response ever\r\nAnd you know it!")
+            "bytes": BytesIO(b"Best response ever\r\nAnd you know it!"),
         }
 
         string_mock = MagicMock(return_value=responses["string"])
