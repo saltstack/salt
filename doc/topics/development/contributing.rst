@@ -52,6 +52,11 @@ processes that used to be manual. Rather than having to remember to run several
 different tools before you commit, you only have to run ``git commit``, and you
 will be notified about style and lint issues before you ever open a PR.
 
+.. warning::
+    Currently there is an issue with the pip-tools-compile pre-commit hook on windows.
+    The details around this issue are included here:
+    https://github.com/saltstack/salt/issues/56642.
+    Please ensure you export ``SKIP=pip-tools-compile`` to skip pip-tools-compile.
 
 Salt Coding Style
 -----------------
@@ -139,7 +144,7 @@ Fork a Repo Guide_>`_ and is well worth reading.
 
     GOOD
 
-    .. code-block::
+    .. code-block:: none
 
         Fix broken things in file1 and file2
 
@@ -157,7 +162,7 @@ Fork a Repo Guide_>`_ and is well worth reading.
 
     BAD
 
-    .. code-block::
+    .. code-block:: none
 
         Fixes broken things
 
@@ -259,7 +264,7 @@ Fork a Repo Guide_>`_ and is well worth reading.
     take a couple of hours.  Depending on your GitHub notification settings
     you may also receive an email message about the test results.
 
-    Test progress and results can be found at http://jenkins.saltstack.com/.
+    Test progress and results can be found at https://jenkinsci.saltstack.com/.
 
 .. _which-salt-branch:
 
