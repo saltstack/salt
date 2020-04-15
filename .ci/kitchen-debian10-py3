@@ -1,7 +1,7 @@
 @Library('salt@master-1.7') _
 
 runTestSuite(
-    concurrent_builds: 1,
+    concurrent_builds: 2,
     distro_name: 'debian',
     distro_version: '10',
     env: env,

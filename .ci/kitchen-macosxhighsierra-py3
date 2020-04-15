@@ -2,7 +2,7 @@
 
 // Pre-nox pipeline
 runTestSuite(
-    concurrent_builds: 1,
+    concurrent_builds: 2,
     distro_name: 'macosx',
     distro_version: 'highsierra',
     env: env,
