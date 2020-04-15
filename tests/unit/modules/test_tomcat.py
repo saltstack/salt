@@ -8,7 +8,15 @@ from io import BytesIO, StringIO
 
 # Import salt module
 import salt.modules.tomcat as tomcat
+
+from salt.ext.six.moves.urllib.request import (
+    HTTPBasicAuthHandler as _HTTPBasicAuthHandler,
+)
+from salt.ext.six.moves.urllib.request import (
+    HTTPDigestAuthHandler as _HTTPDigestAuthHandler,
+)
 from salt.ext.six import string_types
+from salt.ext.six.moves.urllib.request import build_opener as _build_opener
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -32,7 +40,7 @@ class TomcatTestCasse(TestCase, LoaderModuleMockMixin):
 
         string_mock = MagicMock(return_value=responses["string"])
         bytes_mock = MagicMock(return_value=responses["bytes"])
-        with patch("salt.modules.tomcat._auth", MagicMock(return_value=True)):
+        with patch("salt.modules.tomcat._auth", MagicMock(return_value=_build_opener(_HTTPBasicAuthHandler(), _HTTPDigestAuthHandler()))):
             with patch("salt.modules.tomcat._urlopen", string_mock):
                 response = tomcat._wget(
                     "tomcat.wait", url="http://localhost:8080/nofail"
