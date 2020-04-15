@@ -12,9 +12,9 @@ import os
 
 # Import Salt libs
 import salt.ext.six as six
-from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
 
 try:
