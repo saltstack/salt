@@ -17,21 +17,21 @@ Refer to :mod:`junos <salt.proxy.junos>` for information on connecting to junos 
 # Import Python libraries
 from __future__ import absolute_import, print_function, unicode_literals
 
+import glob
+import json
 import logging
 import os
-from functools import wraps
 import traceback
-import json
-import glob
-import yaml
+from functools import wraps
 
 # Import Salt libs
 import salt.utils.args
 import salt.utils.files
 import salt.utils.json
 import salt.utils.stringutils
-from salt.ext import six
+import yaml
 from salt.exceptions import MinionError
+from salt.ext import six
 
 try:
     from lxml import etree
@@ -83,7 +83,7 @@ def __virtual__():
             False,
             "The junos or dependent module could not be loaded: "
             "junos-eznc or jxmlease or or yamlordereddictloader or "
-                       "proxy could not be loaded.",
+            "proxy could not be loaded.",
         )
 
 
@@ -875,12 +875,13 @@ def install_config(path=None, **kwargs):
     try:
         template_cached_path = salt.utils.files.mkstemp()
         __salt__["cp.get_template"](
-            path,
-            template_cached_path,
-            template_vars=template_vars)
+            path, template_cached_path, template_vars=template_vars
+        )
     except Exception as ex:
-        ret["message"] = "Salt failed to render the template, please check file path and syntax." \
-                         "\nError: {0}".format(str(ex))
+        ret["message"] = (
+            "Salt failed to render the template, please check file path and syntax."
+            "\nError: {0}".format(str(ex))
+        )
         ret["out"] = False
         return ret
 
@@ -940,7 +941,7 @@ def install_config(path=None, **kwargs):
             finally:
                 salt.utils.files.safe_rm(template_cached_path)
 
-            if db_mode != 'dynamic':
+            if db_mode != "dynamic":
                 config_diff = cu.diff()
                 if config_diff is None:
                     ret["message"] = "Configuration already applied!"
@@ -955,13 +956,15 @@ def install_config(path=None, **kwargs):
 
             # Assume commit_check succeeds and initialize variable check
             check = True
-            if db_mode != 'dynamic':
+            if db_mode != "dynamic":
                 try:
                     check = cu.commit_check()
                 except Exception as exception:
-                    ret["message"] = \
-                        'Commit check threw the following exception: "{0}"'.\
-                            format(exception)
+                    ret[
+                        "message"
+                    ] = 'Commit check threw the following exception: "{0}"'.format(
+                        exception
+                    )
                     ret["out"] = False
                     return ret
 
@@ -970,20 +973,24 @@ def install_config(path=None, **kwargs):
                     cu.commit(**commit_params)
                     ret["message"] = "Successfully loaded and committed!"
                 except Exception as exception:
-                    ret["message"
-                       ] = 'Commit check successful but commit failed with "{0}"'\
-                        .format(exception)
+                    ret[
+                        "message"
+                    ] = 'Commit check successful but commit failed with "{0}"'.format(
+                        exception
+                    )
                     ret["out"] = False
                     return ret
             elif not check:
                 cu.rollback()
-                ret["message"] = \
-                    "Loaded configuration but commit check failed, hence rolling back configuration."
+                ret[
+                    "message"
+                ] = "Loaded configuration but commit check failed, hence rolling back configuration."
                 ret["out"] = False
             else:
                 cu.rollback()
-                ret["message"] = \
-                    "Commit check passed, but skipping commit for dry-run and rolling back configuration."
+                ret[
+                    "message"
+                ] = "Commit check passed, but skipping commit for dry-run and rolling back configuration."
                 ret["out"] = True
             try:
                 if write_diff and config_diff is not None:
@@ -995,7 +1002,9 @@ def install_config(path=None, **kwargs):
                 )
                 ret["out"] = False
     except ValueError:
-        ret["message"] = "Invalid mode. Modes supported: private, dynamic, batch, exclusive"
+        ret[
+            "message"
+        ] = "Invalid mode. Modes supported: private, dynamic, batch, exclusive"
         ret["out"] = False
     except LockError as ex:
         log.error("Configuration database is locked")
@@ -1112,12 +1121,11 @@ def install_os(path=None, **kwargs):
     # timeout value is not honoured by sw.install if not passed as argument
     # currently, timeout is set to be maximum of default 1800 and user passed timeout value
     # For info: https://github.com/Juniper/salt/issues/116
-    op.pop('dev_timeout', None)
+    op.pop("dev_timeout", None)
     timeout = max(1800, conn.timeout)
-    no_copy_ = op.get('no_copy', False)
     # Reboot should not be passed as a keyword argument to install(),
     # Please refer to https://github.com/Juniper/salt/issues/115 for more details
-    reboot = op.pop('reboot', False)
+    reboot = op.pop("reboot", False)
     no_copy_ = op.get("no_copy", False)
 
     if path is None:
@@ -1392,10 +1400,15 @@ def load(path=None, **kwargs):
 
     # Currently, four config_actions are supported: overwrite, replace, update, merge
     # Allow only one config_action, providing multiple config_action value is not allowed
-    actions = [item for item in ('overwrite', 'replace', 'update', 'merge'
-                                 ) if op.get(item, False)]
+    actions = [
+        item
+        for item in ('overwrite', 'replace', 'update', 'merge')
+        if op.get(item, False)
+    ]
     if len(list(actions)) > 1:
-        ret["message"] = "Only one config_action is allowed. Provided: {0}".format(actions)
+        ret["message"] = "Only one config_action is allowed. Provided: {0}".format(
+            actions
+        )
         ret["out"] = False
         return ret
 
@@ -1447,8 +1460,16 @@ def commit_check():
     return ret
 
 
-def get_table(table, table_file, path=None, target=None, key=None, key_items=None,
-              filters=None, template_args=None):
+def get_table(
+    table,
+    table_file,
+    path=None,
+    target=None,
+    key=None,
+    key_items=None,
+    filters=None,
+    template_args=None
+):
     """
     Retrieve data from a Junos device using Tables/Views
 
@@ -1504,7 +1525,9 @@ def get_table(table, table_file, path=None, target=None, key=None, key_items=Non
         if path is not None:
             file_loc = glob.glob(os.path.join(path, "{}".format(table_file)))
         else:
-            file_loc = glob.glob(os.path.join(pyez_tables_path, "{}".format(table_file)))
+            file_loc = glob.glob(
+                os.path.join(pyez_tables_path, "{}".format(table_file))
+            )
         if len(file_loc) == 1:
             file_name = file_loc[0]
         else:
@@ -1513,25 +1536,30 @@ def get_table(table, table_file, path=None, target=None, key=None, key_items=Non
             return ret
         try:
             with salt.utils.files.fopen(file_name) as fp:
-                ret["table"] = yaml.load(fp.read(),
-                                         Loader=yamlordereddictloader.Loader)
+                ret["table"] = yaml.load(fp.read(), Loader=yamlordereddictloader.Loader)
                 globals().update(FactoryLoader().load(ret["table"]))
         except IOError as err:
-            ret["message"] = "Uncaught exception during YAML Load - please " \
-                             "report: {0}".format(six.text_type(err))
+            ret["message"] = (
+                "Uncaught exception during YAML Load - please report: {0}".format(
+                    six.text_type(err))
+            )
             ret["out"] = False
             return ret
         try:
             data = globals()[table](conn)
             data.get(**get_kvargs)
         except KeyError as err:
-            ret["message"] = "Uncaught exception during get API call - please " \
-                             "report: {0}".format(six.text_type(err))
+            ret["message"] = (
+                "Uncaught exception during get API call - please report: {0}".format
+                (six.text_type(err))
+            )
             ret["out"] = False
             return ret
         except ConnectClosedError:
-            ret["message"] = "Got ConnectClosedError exception. Connection lost " \
-                             "with {}".format(conn)
+            ret["message"] = (
+                "Got ConnectClosedError exception. Connection lost with {}".format(
+                    conn)
+            )
             ret["out"] = False
             return ret
         ret["reply"] = json.loads(data.to_json())
@@ -1553,8 +1581,7 @@ def get_table(table, table_file, path=None, target=None, key=None, key_items=Non
                 ret["table"][table]["args"] = data.CMD_ARGS
                 ret["table"][table]["command"] = data.GET_CMD
     except Exception as err:
-        ret["message"] = "Uncaught exception - please report: {0}".format(
-            str(err))
+        ret["message"] = "Uncaught exception - please report: {0}".format(str(err))
         traceback.print_exc()
         ret["out"] = False
         return ret

@@ -71,7 +71,7 @@ def rpc(name, **kwargs):
               Name of the interface whose information you want.
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
-    ret['changes'] = __salt__['junos.rpc'](name, **kwargs)
+    ret['changes'] = __salt__["junos.rpc"](name, **kwargs)
     return ret
 
 

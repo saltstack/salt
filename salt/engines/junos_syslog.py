@@ -30,6 +30,7 @@ of the following fields:
 The topic title can consist of any of the combination of above fields,
 but the topic has to start with 'jnpr/syslog'.
 So, we can have different combinations:
+
  - jnpr/syslog/hostip/daemon/event
  - jnpr/syslog/daemon/severity
 
@@ -37,6 +38,7 @@ The corresponding dynamic topic sent on salt event bus would look something like
 
  - jnpr/syslog/1.1.1.1/mgd/UI_COMMIT_COMPLETED
  - jnpr/syslog/sshd/7
+
 The default topic title is 'jnpr/syslog/hostname/event'.
 
 The user can choose the type of data they wants of the event bus.
@@ -146,12 +148,7 @@ class _Parser(object):
         EOL = LineEnd().suppress()
 
         # ip address of device
-        ipAddress = Optional(
-            delimitedList(
-                ints,
-                ".",
-                combine=True) + Suppress(
-                    ":"))
+        ipAddress = Optional(delimitedList(ints, ".", combine=True) + Suppress(":"))
 
         # priority
         priority = Suppress("<") + ints + Suppress(">")
@@ -325,8 +322,7 @@ class _SyslogServerFactory(DatagramProtocol):
         data = self.obj.parse(data.decode())
         data["hostip"] = host
         log.debug(
-            "Junos Syslog - received %s from %s, sent from port %s",
-            data, host, port
+            "Junos Syslog - received %s from %s, sent from port %s", data, host, port
         )
 
         send_this_event = True
