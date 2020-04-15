@@ -1565,8 +1565,10 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         # FileFinder that remain None for the extra_module_dirs
         if invalidate_path_importer_cache:
             for directory in self.extra_module_dirs:
-                if directory in sys.path_importer_cache \
-                   and sys.path_importer_cache[directory] is None:
+                if (
+                    directory in sys.path_importer_cache
+                    and sys.path_importer_cache[directory] is None
+                ):
                     del sys.path_importer_cache[directory]
 
     def _load_module(self, name):
