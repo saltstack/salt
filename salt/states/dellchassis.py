@@ -103,7 +103,7 @@ pillar stated above:
         - idrac_launch: {{ details['idrac_launch'] }}
         - slot_names:
           {% for entry details['slot_names'] %}
-            - {{ next(iter(entry.keys())) }}: {{ entry[next(iter(entry))]  }}
+            - {{ next(iter(entry)) }}: {{ entry[next(iter(entry))]  }}
           {% endfor %}
 
     blade_powercycle:
