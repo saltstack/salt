@@ -1,0 +1,24 @@
+===========================
+Salt 3000.2 Release Notes
+===========================
+
+Version 3000.2 is a CVE-fix release for :ref:`3000 <release-3000>`.
+
+Security Fix
+============
+
+**CVE-2020-11651** 
+
+An issue was discovered in SaltStack Salt before 2019.2.4 and 3000 before 3000.2.
+The salt-master process ClearFuncs class does not properly validate
+method calls. This allows a remote user to access some methods without
+authentication. These methods can be used to retrieve user tokens from
+the salt master and/or run arbitrary commands on salt minions.
+
+
+**CVE-2020-11652** 
+
+An issue was discovered in SaltStack Salt before 2019.2.4 and 3000 before 3000.2.
+The salt-master process ClearFuncs class allows access to some methods
+that improperly sanitize paths. These methods allow arbitrary
+directory access to authenticated users.

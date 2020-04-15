@@ -92,7 +92,12 @@ import jinja2
 import jinja2.exceptions
 try:
     import libvirt  # pylint: disable=import-error
+
+    # pylint: disable=no-name-in-module
     from libvirt import libvirtError
+
+    # pylint: enable=no-name-in-module
+
     HAS_LIBVIRT = True
 except ImportError:
     HAS_LIBVIRT = False
