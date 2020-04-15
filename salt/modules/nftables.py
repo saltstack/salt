@@ -236,7 +236,11 @@ def build_rule(
         del kwargs["j"]
 
     if "redirect-to" in kwargs or "to-port" in kwargs:
-        after_jump.append("redirect to {0} ".format(kwargs.get("redirect-to") or kwargs.get("to-port")))
+        after_jump.append(
+            "redirect to {0} ".format(
+                kwargs.get("redirect-to") or kwargs.get("to-port")
+            )
+        )
         if "redirect-to" in kwargs:
             del kwargs["redirect-to"]
         if "to-port" in kwargs:
@@ -346,7 +350,7 @@ def list_tables(family="ipv4"):
     """
     nft_family = _NFTABLES_FAMILIES[family]
     tables = []
-    cmd = "{0} --json --numeric --numeric --numeric " "list tables {1}".format(
+    cmd = "{0} --json --numeric --numeric --numeric list tables {1}".format(
         _nftables_cmd(), nft_family
     )
     out = __salt__["cmd.run"](cmd, python_shell=False)
@@ -358,7 +362,7 @@ def list_tables(family="ipv4"):
     except ValueError:
         return tables
 
-    if not data or not data.get('nftables'):
+    if not data or not data.get("nftables"):
         return tables
 
     for item in data.get("nftables", []):
@@ -415,9 +419,9 @@ def get_rules_json(family="ipv4"):
     """
     nft_family = _NFTABLES_FAMILIES[family]
     rules = []
-    cmd = "{0} --numeric --numeric --numeric --json " \
-          "list ruleset {1}". format(_nftables_cmd(),
-                                    nft_family)
+    cmd = "{0} --numeric --numeric --numeric --json list ruleset {1}". format(
+        _nftables_cmd(), nft_family
+    )
     out = __salt__["cmd.run"](cmd, python_shell=False)
     if not out:
         return rules
@@ -460,8 +464,8 @@ def save(filename=None, family="ipv4"):
         rules = rules + "\n".join(out)
     rules = rules + "\n"
 
-    if __salt__['file.directory_exists'](filename):
-        filename = '{0}/salt-all-in-one.nft'.format(filename)
+    if __salt__["file.directory_exists"](filename):
+        filename = "{0}/salt-all-in-one.nft".format(filename)
 
     try:
         with salt.utils.files.fopen(filename, "wb") as _fh:
@@ -785,7 +789,9 @@ def new_chain(
         return ret
 
     nft_family = _NFTABLES_FAMILIES[family]
-    cmd = "{0} -- add chain {1} {2} {3}".format(_nftables_cmd(), nft_family, table, chain)
+    cmd = "{0} -- add chain {1} {2} {3}".format(
+        _nftables_cmd(), nft_family, table, chain
+    )
     if table_type or hook or priority:
         if table_type and hook and six.text_type(priority):
             cmd = r"{0} \{{ type {1} hook {2} priority {3}\; \}}".format(
@@ -927,9 +933,9 @@ def append(table="filter", chain=None, rule=None, family="ipv4"):
     if not out:
         ret["result"] = True
         ret[
-          "comment"
+            "comment"
         ] = 'Added rule "{0}" chain {1} in table {2} in family {3}.'.format(
-          rule, chain, table, family
+            rule, chain, table, family
         )
     else:
         ret[
@@ -1158,8 +1164,8 @@ def flush(table="filter", chain="", family="ipv4"):
     return ret
 
 
-def get_policy(table='filter', chain=None, family='ipv4'):
-    '''
+def get_policy(table="filter", chain=None, family="ipv4"):
+    """
     .. versionadded:: Sodium
 
     Return the current policy for the specified table/chain
@@ -1181,24 +1187,27 @@ def get_policy(table='filter', chain=None, family='ipv4'):
 
         IPv6:
         salt '*' nftables.get_policy filter input family=ipv6
-    '''
+    """
     if not chain:
-        return 'Error: Chain needs to be specified'
+        return "Error: Chain needs to be specified"
 
     nft_family = _NFTABLES_FAMILIES[family]
 
     rules = get_rules_json(family=nft_family)
 
     try:
-        for rule in rules['nftables']:
-            if rule.get('chain', {}).get('name') == chain and rule.get('chain', {}).get('type') == table:
-                return rule['chain']['policy']
+        for rule in rules["nftables"]:
+            if (
+                rule.get("chain", {}).get("name") == chain
+                and rule.get("chain", {}).get("type") == table
+            ):
+                return rule["chain"]["policy"]
     except (KeyError, TypeError, ValueError):
         return None
 
 
-def set_policy(table='filter', chain=None, policy=None, family='ipv4'):
-    '''
+def set_policy(table="filter", chain=None, policy=None, family="ipv4"):
+    """
     .. versionadded:: Sodium
 
     Set the current policy for the specified table/chain. This only works on
@@ -1224,11 +1233,11 @@ def set_policy(table='filter', chain=None, policy=None, family='ipv4'):
 
         IPv6:
         salt '*' nftables.set_policy filter input accept family=ipv6
-    '''
+    """
     if not chain:
-        return 'Error: Chain needs to be specified'
+        return "Error: Chain needs to be specified"
     if not policy:
-        return 'Error: Policy needs to be specified'
+        return "Error: Policy needs to be specified"
 
     nft_family = _NFTABLES_FAMILIES[family]
 
@@ -1240,8 +1249,8 @@ def set_policy(table='filter', chain=None, policy=None, family='ipv4'):
 
     for rule in rules:
         try:
-            if rule['chain']['table'] == table and rule['chain']['name'] == chain:
-                chain_info = rule['chain']
+            if rule["chain"]["table"] == table and rule["chain"]["name"] == chain:
+                chain_info = rule["chain"]
                 break
         except KeyError:
             continue
@@ -1249,16 +1258,18 @@ def set_policy(table='filter', chain=None, policy=None, family='ipv4'):
     if not chain_info:
         return False
 
-    cmd = '{0} add chain {1} {2} {3}'.format(_nftables_cmd(), nft_family, table, chain)
+    cmd = "{0} add chain {1} {2} {3}".format(_nftables_cmd(), nft_family, table, chain)
 
     # We can't infer the base chain parameters. Bail out if they're not present.
-    if 'type' not in chain_info or 'hook' not in chain_info or 'prio' not in chain_info:
+    if "type" not in chain_info or "hook" not in chain_info or "prio" not in chain_info:
         return False
 
-    params = 'type {0} hook {1} priority {2};'.format(chain_info['type'], chain_info['hook'], chain_info['prio'])
+    params = "type {0} hook {1} priority {2};".format(
+        chain_info["type"], chain_info["hook"], chain_info["prio"]
+    )
 
     cmd = '{0} "{{ {1} policy {2}; }}"'.format(cmd, params, policy)
 
-    out = __salt__['cmd.run_all'](cmd, python_shell=False)
+    out = __salt__["cmd.run_all"](cmd, python_shell=False)
 
-    return not out['retcode']
+    return not out["retcode"]
