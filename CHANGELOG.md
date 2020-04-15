@@ -6,6 +6,19 @@ This changelog follows [keepachangelog](https://keepachangelog.com/en/1.0.0/) fo
 This project versioning is _similar_ to [Semantic Versioning](https://semver.org), and is documented in [SEP 14](https://github.com/saltstack/salt-enhancement-proposals/pull/20/files).
 Versions are `MAJOR.PATCH`.
 
+## 3001 - Sodium
+
+### Removed
+
+### Deprecated
+
+### Changed
+
+### Fixed
+
+- [#56237](https://github.com/saltstack/salt/pull/56237) - Fix alphabetical ordering and remove duplicates across all documentation indexes - [@myii](https://github.com/myii)
+- [#56325](https://github.com/saltstack/salt/pull/56325) - Fix hyperlinks to `salt.serializers` and other documentation issues - [@myii](https://github.com/myii)
+
 ## 3000.1
 
 ### Removed
@@ -16,8 +29,6 @@ Versions are `MAJOR.PATCH`.
 
 ### Fixed
 
-- [#56325](https://github.com/saltstack/salt/pull/56325) - Fix hyperlinks to `salt.serializers` and other documentation issues - [@myii](https://github.com/myii)
-- [#56237](https://github.com/saltstack/salt/pull/56237) - Fix alphabetical ordering and remove duplicates across all documentation indexes - [@myii](https://github.com/myii)
 - [#56082](https://github.com/saltstack/salt/pull/56082) - Fix saltversioninfo grain for new version
 - [#56143](https://github.com/saltstack/salt/pull/56143) - Use encoding when caching pillar data
 - [#56172](https://github.com/saltstack/salt/pull/56172) - Only change mine data if using new allow_tgt feature
