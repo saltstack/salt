@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Management of zc.buildout
 =========================
 
@@ -34,7 +34,7 @@ Available Functions
           - unless: /bin/test_something_installed
           - onlyif: /bin/test_else_installed
 
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
@@ -45,19 +45,19 @@ import sys
 from salt.ext.six import string_types
 
 # Define the module's virtual name
-__virtualname__ = 'buildout'
+__virtualname__ = "buildout"
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     Only load if zc.buildout libs available
-    '''
+    """
     return __virtualname__
 
 
-INVALID_RESPONSE = 'We did not get any expectable answer from docker'
-VALID_RESPONSE = ''
+INVALID_RESPONSE = "We did not get any expectable answer from docker"
+VALID_RESPONSE = ""
 NOTSET = object()
 MAPPING_CACHE = {}
 FN_CACHE = {}
@@ -69,76 +69,79 @@ def __salt(fn):
     return FN_CACHE[fn]
 
 
-def _ret_status(exec_status=None,
-                name='',
-                comment='',
-                result=None,
-                quiet=False,
-                changes=None):
+def _ret_status(
+    exec_status=None, name="", comment="", result=None, quiet=False, changes=None
+):
     if not changes:
         changes = {}
     if exec_status is None:
         exec_status = {}
     if exec_status:
         if result is None:
-            result = exec_status['status']
-        scomment = exec_status.get('comment', None)
+            result = exec_status["status"]
+        scomment = exec_status.get("comment", None)
         if scomment:
-            comment += '\n' + scomment
-        out = exec_status.get('out', '')
+            comment += "\n" + scomment
+        out = exec_status.get("out", "")
         if not quiet:
             if out:
                 if isinstance(out, string_types):
-                    comment += '\n' + out
-            outlog = exec_status.get('outlog', None)
+                    comment += "\n" + out
+            outlog = exec_status.get("outlog", None)
             if outlog:
                 if isinstance(outlog, string_types):
-                    comment += '\n' + outlog
+                    comment += "\n" + outlog
     return {
-        'changes': changes,
-        'result': result,
-        'name': name,
-        'comment': comment,
+        "changes": changes,
+        "result": result,
+        "name": name,
+        "comment": comment,
     }
 
 
-def _valid(exec_status=None, name='', comment='', changes=None):
-    return _ret_status(exec_status=exec_status,
-                       comment=comment,
-                       name=name,
-                       changes=changes,
-                       result=True)
+def _valid(exec_status=None, name="", comment="", changes=None):
+    return _ret_status(
+        exec_status=exec_status,
+        comment=comment,
+        name=name,
+        changes=changes,
+        result=True,
+    )
 
 
-def _invalid(exec_status=None, name='', comment='', changes=None):
-    return _ret_status(exec_status=exec_status,
-                       comment=comment,
-                       name=name,
-                       changes=changes,
-                       result=False)
+def _invalid(exec_status=None, name="", comment="", changes=None):
+    return _ret_status(
+        exec_status=exec_status,
+        comment=comment,
+        name=name,
+        changes=changes,
+        result=False,
+    )
 
 
-def installed(name,
-              config='buildout.cfg',
-              quiet=False,
-              parts=None,
-              user=None,
-              env=(),
-              buildout_ver=None,
-              test_release=False,
-              distribute=None,
-              new_st=None,
-              offline=False,
-              newest=False,
-              python=sys.executable,
-              debug=False,
-              verbose=False,
-              unless=None,
-              onlyif=None,
-              use_vt=False,
-              loglevel='debug',
-              **kwargs):
-    '''
+def installed(
+    name,
+    config="buildout.cfg",
+    quiet=False,
+    parts=None,
+    user=None,
+    env=(),
+    buildout_ver=None,
+    test_release=False,
+    distribute=None,
+    new_st=None,
+    offline=False,
+    newest=False,
+    python=sys.executable,
+    debug=False,
+    verbose=False,
+    unless=None,
+    onlyif=None,
+    use_vt=False,
+    loglevel="debug",
+    **kwargs
+):
+    """
     Install buildout in a specific directory
 
     It is a thin wrapper to modules.buildout.buildout
@@ -202,21 +205,22 @@ def installed(name,
 
     loglevel
         loglevel for buildout commands
-    '''
+    """
     ret = {}
 
-    if 'group' in kwargs:
+    if "group" in kwargs:
         log.warning("Passing 'group' is deprecated, just remove it")
-    output_loglevel = kwargs.get('output_loglevel', None)
+    output_loglevel = kwargs.get("output_loglevel", None)
     if output_loglevel and not loglevel:
-        log.warning("Passing 'output_loglevel' is deprecated,"
-                 ' please use loglevel instead')
+        log.warning(
+            "Passing 'output_loglevel' is deprecated," " please use loglevel instead"
+        )
     try:
         test_release = int(test_release)
     except ValueError:
         test_release = None
 
-    func = __salt('buildout.buildout')
+    func = __salt("buildout.buildout")
     kwargs = dict(
         directory=name,
         config=config,
@@ -235,7 +239,7 @@ def installed(name,
         onlyif=onlyif,
         unless=unless,
         use_vt=use_vt,
-        loglevel=loglevel
+        loglevel=loglevel,
     )
     ret.update(_ret_status(func(**kwargs), name, quiet=quiet))
     return ret
