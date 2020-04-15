@@ -3,19 +3,14 @@
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
 
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import random
 
 import pytest
-
-# Import Salt Libs
 import salt.utils.files
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing Libs
 from tests.support.case import ModuleCase
 
 # Module Variables
@@ -25,6 +20,7 @@ CONFIG = "/etc/sysctl.conf"
 
 @pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
+@pytest.mark.skip_unless_on_darwin
 class DarwinSysctlModuleTest(ModuleCase):
     """
     Integration tests for the darwin_sysctl module
@@ -35,9 +31,6 @@ class DarwinSysctlModuleTest(ModuleCase):
         Sets up the test requirements
         """
         super(DarwinSysctlModuleTest, self).setUp()
-        os_grain = self.run_function("grains.item", ["kernel"])
-        if os_grain["kernel"] not in "Darwin":
-            self.skipTest("Test not applicable to '{kernel}' kernel".format(**os_grain))
         # Data needed for cleanup
         self.has_conf = False
         self.val = self.run_function("sysctl.get", [ASSIGN_CMD])

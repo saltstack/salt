@@ -13,6 +13,7 @@ OSA_SCRIPT = "/usr/bin/osascript"
 
 @pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
+@pytest.mark.skip_unless_on_darwin
 class MacAssistiveTest(ModuleCase):
     """
     Integration tests for the mac_assistive module.
@@ -22,10 +23,6 @@ class MacAssistiveTest(ModuleCase):
         """
         Sets up test requirements
         """
-        os_grain = self.run_function("grains.item", ["kernel"])
-        if os_grain["kernel"] not in "Darwin":
-            self.skipTest("Test not applicable to '{kernel}' kernel".format(**os_grain))
-
         # Let's install a bundle to use in tests
         self.run_function("assistive.install", [OSA_SCRIPT, True])
 

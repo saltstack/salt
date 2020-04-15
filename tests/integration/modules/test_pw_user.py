@@ -14,12 +14,6 @@ from tests.support.helpers import random_string
 
 @pytest.mark.skip_unless_on_freebsd
 class PwUserModuleTest(ModuleCase):
-    def setUp(self):
-        super(PwUserModuleTest, self).setUp()
-        os_grain = self.run_function("grains.item", ["kernel"])
-        if os_grain["kernel"] != "FreeBSD":
-            self.skipTest("Test not applicable to '{kernel}' kernel".format(**os_grain))
-
     @pytest.mark.destructive_test
     @pytest.mark.skip_if_not_root
     def test_groups_includes_primary(self):

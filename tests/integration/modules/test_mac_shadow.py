@@ -8,20 +8,16 @@ from __future__ import absolute_import, print_function, unicode_literals
 import datetime
 
 import pytest
-import salt.utils.path
-import salt.utils.platform
 from tests.support.case import ModuleCase
 from tests.support.helpers import random_string
-from tests.support.unit import skipIf
 
 TEST_USER = random_string("RS-", lowercase=False)
 NO_USER = random_string("RS-", lowercase=False)
 
 
-@skipIf(not salt.utils.platform.is_darwin(), "Test only available on macOS")
-@skipIf(not salt.utils.path.which("dscl"), "'dscl' binary not found in $PATH")
-@skipIf(not salt.utils.path.which("pwpolicy"), "'pwpolicy' binary not found in $PATH")
 @pytest.mark.skip_if_not_root
+@pytest.mark.skip_unless_on_darwin
+@pytest.mark.skip_if_binaries_missing("dscl", "pwpolicy")
 class MacShadowModuleTest(ModuleCase):
     """
     Validate the mac_shadow module

@@ -16,6 +16,7 @@ from tests.support.runtests import RUNTIME_VARS
 
 @pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
+@pytest.mark.skip_unless_on_darwin
 class MacKeychainModuleTest(ModuleCase):
     """
     Integration tests for the mac_keychain module
@@ -28,15 +29,6 @@ class MacKeychainModuleTest(ModuleCase):
         )
         cls.cert_alias = "Salt Test"
         cls.passwd = "salttest"
-
-    def setUp(self):
-        """
-        Sets up the test requirements
-        """
-        os_grain = self.run_function("grains.item", ["kernel"])
-        # Must be running on a mac
-        if os_grain["kernel"] not in "Darwin":
-            self.skipTest("Test not applicable to '{kernel}' kernel".format(**os_grain))
 
     def tearDown(self):
         """

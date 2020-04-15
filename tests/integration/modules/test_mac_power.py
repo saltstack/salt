@@ -6,18 +6,13 @@ integration tests for mac_power
 from __future__ import absolute_import, print_function, unicode_literals
 
 import pytest
-import salt.utils.path
-import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
 
 
 @pytest.mark.skip_if_not_root
 @pytest.mark.flaky(max_runs=10)
-@skipIf(not salt.utils.platform.is_darwin(), "Test only available on macOS")
-@skipIf(
-    not salt.utils.path.which("systemsetup"), "'systemsetup' binary not found in $PATH"
-)
+@pytest.mark.skip_unless_on_darwin
+@pytest.mark.skip_if_binaries_missing("systemsetup")
 class MacPowerModuleTest(ModuleCase):
     """
     Validate the mac_power module
@@ -156,10 +151,8 @@ class MacPowerModuleTest(ModuleCase):
 
 @pytest.mark.skip_if_not_root
 @pytest.mark.flaky(max_runs=10)
-@skipIf(not salt.utils.platform.is_darwin(), "Test only available on macOS")
-@skipIf(
-    not salt.utils.path.which("systemsetup"), "'systemsetup' binary not found in $PATH"
-)
+@pytest.mark.skip_unless_on_darwin
+@pytest.mark.skip_if_binaries_missing("systemsetup")
 class MacPowerModuleTestSleepOnPowerButton(ModuleCase):
     """
     Test power.get_sleep_on_power_button
@@ -208,10 +201,8 @@ class MacPowerModuleTestSleepOnPowerButton(ModuleCase):
 
 @pytest.mark.skip_if_not_root
 @pytest.mark.flaky(max_runs=10)
-@skipIf(not salt.utils.platform.is_darwin(), "Test only available on macOS")
-@skipIf(
-    not salt.utils.path.which("systemsetup"), "'systemsetup' binary not found in $PATH"
-)
+@pytest.mark.skip_unless_on_darwin
+@pytest.mark.skip_if_binaries_missing("systemsetup")
 class MacPowerModuleTestRestartPowerFailure(ModuleCase):
     """
     Test power.get_restart_power_failure
@@ -260,10 +251,8 @@ class MacPowerModuleTestRestartPowerFailure(ModuleCase):
 
 @pytest.mark.skip_if_not_root
 @pytest.mark.flaky(max_runs=10)
-@skipIf(not salt.utils.platform.is_darwin(), "Test only available on macOS")
-@skipIf(
-    not salt.utils.path.which("systemsetup"), "'systemsetup' binary not found in $PATH"
-)
+@pytest.mark.skip_unless_on_darwin
+@pytest.mark.skip_if_binaries_missing("systemsetup")
 class MacPowerModuleTestWakeOnNet(ModuleCase):
     """
     Test power.get_wake_on_network
@@ -308,10 +297,8 @@ class MacPowerModuleTestWakeOnNet(ModuleCase):
 
 @pytest.mark.skip_if_not_root
 @pytest.mark.flaky(max_runs=10)
-@skipIf(not salt.utils.platform.is_darwin(), "Test only available on macOS")
-@skipIf(
-    not salt.utils.path.which("systemsetup"), "'systemsetup' binary not found in $PATH"
-)
+@pytest.mark.skip_unless_on_darwin
+@pytest.mark.skip_if_binaries_missing("systemsetup")
 class MacPowerModuleTestWakeOnModem(ModuleCase):
     """
     Test power.get_wake_on_modem

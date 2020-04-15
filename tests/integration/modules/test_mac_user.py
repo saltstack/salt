@@ -23,19 +23,11 @@ CHANGE_USER = random_string("RS-", lowercase=False)
 
 @pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
+@pytest.mark.skip_unless_on_darwin
 class MacUserModuleTest(ModuleCase):
     """
     Integration tests for the mac_user module
     """
-
-    def setUp(self):
-        """
-        Sets up test requirements
-        """
-        super(MacUserModuleTest, self).setUp()
-        os_grain = self.run_function("grains.item", ["kernel"])
-        if os_grain["kernel"] not in "Darwin":
-            self.skipTest("Test not applicable to '{kernel}' kernel".format(**os_grain))
 
     def test_mac_user_add(self):
         """

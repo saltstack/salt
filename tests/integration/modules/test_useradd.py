@@ -3,23 +3,15 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import pytest
-import salt.utils.platform
 from tests.support.case import ModuleCase
 from tests.support.helpers import random_string, requires_system_grains
-from tests.support.unit import skipIf
 
 
 @pytest.mark.destructive_test
-@skipIf(not salt.utils.platform.is_linux(), "These tests can only be run on linux")
 @pytest.mark.skip_if_not_root
 @pytest.mark.windows_whitelisted
+@pytest.mark.skip_unless_on_linux
 class UseraddModuleTestLinux(ModuleCase):
-    def setUp(self):
-        super(UseraddModuleTestLinux, self).setUp()
-        os_grain = self.run_function("grains.item", ["kernel"])
-        if os_grain["kernel"] not in ("Linux", "Darwin"):
-            self.skipTest("Test not applicable to '{kernel}' kernel".format(**os_grain))
-
     @requires_system_grains
     def test_groups_includes_primary(self, grains):
         # Let's create a user, which usually creates the group matching the
@@ -86,9 +78,9 @@ class UseraddModuleTestLinux(ModuleCase):
 
 
 @pytest.mark.destructive_test
-@skipIf(not salt.utils.platform.is_windows(), "These tests can only be run on Windows")
 @pytest.mark.skip_if_not_root
 @pytest.mark.windows_whitelisted
+@pytest.mark.skip_unless_on_windows
 class UseraddModuleTestWindows(ModuleCase):
     def setUp(self):
         self.user_name = random_string("RS-", lowercase=False)

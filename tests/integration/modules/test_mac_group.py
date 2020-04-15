@@ -21,18 +21,11 @@ REP_USER_GROUP = random_string("RS-", lowercase=False)
 
 @pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
+@pytest.mark.skip_unless_on_darwin
 class MacGroupModuleTest(ModuleCase):
     """
     Integration tests for the mac_group module
     """
-
-    def setUp(self):
-        """
-        Sets up test requirements
-        """
-        os_grain = self.run_function("grains.item", ["kernel"])
-        if os_grain["kernel"] not in "Darwin":
-            self.skipTest("Test not applicable to '{kernel}' kernel".format(**os_grain))
 
     def test_mac_group_add(self):
         """

@@ -8,9 +8,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 import pytest
-import salt.utils.path
-import salt.utils.platform
 from tests.support.case import ModuleCase
+from tests.support.helpers import requires_system_grains
 from tests.support.runtests import RUNTIME_VARS
 
 TEST_PKG_URL = (
@@ -20,6 +19,8 @@ TEST_PKG_NAME = "org.macports.MacPorts"
 
 
 @pytest.mark.skip_if_not_root
+@pytest.mark.skip_unless_on_darwin
+@pytest.mark.skip_if_binaries_missing("pkgutil")
 class MacPkgutilModuleTest(ModuleCase):
     """
     Validate the mac_pkgutil module
@@ -31,19 +32,14 @@ class MacPkgutilModuleTest(ModuleCase):
             RUNTIME_VARS.TMP, "MacPorts-2.3.4-10.11-ElCapitan.pkg"
         )
 
-    def setUp(self):
+    @requires_system_grains
+    def setUp(self, grains):  # pylint: disable=arguments-differ
         """
         Get current settings
         """
-        if not salt.utils.platform.is_darwin():
-            self.skipTest("Test only available on macOS")
-
-        if not salt.utils.path.which("pkgutil"):
-            self.skipTest("Test requires pkgutil binary")
-
-        os_release = self.run_function("grains.get", ["osrelease"])
+        os_release = grains["osrelease"]
         self.pkg_name = "com.apple.pkg.BaseSystemResources"
-        if int(os_release.split(".")[1]) >= 13 and salt.utils.platform.is_darwin():
+        if int(os_release.split(".")[1]) >= 13:
             self.pkg_name = "com.apple.pkg.iTunesX"
 
     def tearDown(self):

@@ -15,19 +15,15 @@ from __future__ import absolute_import, print_function, unicode_literals
 import datetime
 
 import pytest
-import salt.utils.path
-import salt.utils.platform
 from salt.ext import six
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 
 
 @pytest.mark.flaky(max_runs=4)
-@skipIf(not salt.utils.platform.is_darwin(), "Test only available on macOS")
-@skipIf(
-    not salt.utils.path.which("systemsetup"), "'systemsetup' binary not found in $PATH"
-)
 @pytest.mark.skip_if_not_root
+@pytest.mark.skip_unless_on_darwin
+@pytest.mark.skip_if_binaries_missing("systemsetup")
 class MacTimezoneModuleTest(ModuleCase):
     """
     Validate the mac_timezone module
