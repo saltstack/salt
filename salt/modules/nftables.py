@@ -419,7 +419,7 @@ def get_rules_json(family="ipv4"):
     """
     nft_family = _NFTABLES_FAMILIES[family]
     rules = []
-    cmd = "{0} --numeric --numeric --numeric --json list ruleset {1}". format(
+    cmd = "{0} --numeric --numeric --numeric --json list ruleset {1}".format(
         _nftables_cmd(), nft_family
     )
     out = __salt__["cmd.run"](cmd, python_shell=False)
