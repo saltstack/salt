@@ -908,7 +908,7 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.object(nftables, "get_rules_json", MagicMock(return_value=expected)):
             self.assertEqual(
-                nftables.get_policy(table="filter", chain="input', family="ipv4"), "accept"
+                nftables.get_policy(table="filter", chain="input", family="ipv4"), "accept"
             )
 
         with patch.object(nftables, "get_rules_json", MagicMock(return_value=expected)):
