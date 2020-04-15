@@ -441,20 +441,20 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
         """
         config_mine_functions = {
             "network.ip_addrs": [],
-            "kernel": [{"mine_function": "grains.get"}, "kernel"],
+            "kernel": [{"mine_function": "grains.get"}, "kernel", {"os": "win32", "v": "2018"}],
             "fubar": [{"mine_function": "does.not_exist"}],
         }
         with patch.dict(
             mine.__salt__,
             {
                 "config.merge": MagicMock(return_value=config_mine_functions),
-                "network.ip_addrs": lambda: True,
+                "network.ip_addrs": True,
                 "grains.get": lambda: True,
             },
         ):
             self.assertEqual(
                 mine.valid(),
-                {"network.ip_addrs": [], "kernel": {"grains.get": ["kernel"]}},
+                {"network.ip_addrs": [], "kernel": {"grains.get": ["kernel", {'os': 'win32'}, {'v': '2018'}]}},
             )
 
     def test_get_docker(self):
