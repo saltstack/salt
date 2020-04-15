@@ -160,7 +160,9 @@ def chain_present(
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "nftables chain {0} would be created in table {1} for family {2}".format(
+        ret[
+            "comment"
+        ] = "nftables chain {0} would be created in table {1} for family {2}".format(
             name, table, family
         )
         return ret
@@ -583,23 +585,23 @@ def set_policy(name, table="filter", family="ipv4", **kwargs):
         return ret
 
     if __salt__["nftables.set_policy"](
-            table, kwargs["chain"], kwargs["policy"].lower(), family
+        table, kwargs["chain"], kwargs["policy"].lower(), family
     ):
         ret["changes"] = {"locale": name}
         ret["result"] = True
-        ret[
-            "comment"
-        ] = "Set default policy for {0} to {1} family {2}".format(
+        ret["comment"] = "Set default policy for {0} to {1} family {2}".format(
             kwargs['chain'], kwargs['policy'], family
         )
 
         if "save" in kwargs:
             if kwargs["save"]:
-                __salt__["nftables.save"](filename=kwargs.get("save_filename"), family=family)
+                __salt__["nftables.save"](
+                    filename=kwargs.get("save_filename"), family=family
+                )
                 ret[
                     "comment"
                 ] = "Set and saved default policy for {0} to {1} family {2}".format(
-                    kwargs['chain'], kwargs['policy'], family
+                    kwargs["chain"], kwargs["policy"], family
                 )
     else:
         ret["result"] = False
