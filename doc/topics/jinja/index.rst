@@ -153,6 +153,7 @@ starts at the root of the state tree or pillar.
 
 .. _`Template inheritance`: https://jinja.palletsprojects.com/en/2.11.x/templates/#template-inheritance
 .. _`Macros`: https://jinja.palletsprojects.com/en/2.11.x/templates/#macros
+.. _`macro`: https://jinja.palletsprojects.com/en/2.11.x/templates/#macros
 .. _`Whitespace control`: https://jinja.palletsprojects.com/en/2.11.x/templates/#whitespace-control
 
 Errors
