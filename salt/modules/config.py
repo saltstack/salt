@@ -480,7 +480,6 @@ def get(
         ret = salt.utils.data.traverse_dict_and_list(
             DEFAULTS, key, "_|-", delimiter=delimiter
         )
-        log.debug("key: %s, ret: %s", key, ret)
         if ret != "_|-":
             return sdb.sdb_get(ret, __opts__)
     else:

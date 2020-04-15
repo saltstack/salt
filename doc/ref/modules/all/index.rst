@@ -24,6 +24,7 @@ execution modules
 
     acme
     aix_group
+    aix_shadow
     aixpkg
     aliases
     alternatives
@@ -32,6 +33,7 @@ execution modules
     apcups
     apf
     apkpkg
+    aptly
     aptpkg
     archive
     arista_pyeapi
@@ -41,6 +43,7 @@ execution modules
     augeas_cfg
     aws_sqs
     azurearm_compute
+    azurearm_dns
     azurearm_network
     azurearm_resource
     bamboohr
@@ -51,6 +54,7 @@ execution modules
     boto3_elasticache
     boto3_elasticsearch
     boto3_route53
+    boto3_sns
     boto_apigateway
     boto_asg
     boto_cfn
@@ -74,10 +78,12 @@ execution modules
     boto_lambda
     boto_rds
     boto_route53
+    boto_s3
     boto_s3_bucket
     boto_secgroup
     boto_sns
     boto_sqs
+    boto_ssm
     boto_vpc
     bower
     bridge
@@ -93,6 +99,7 @@ execution modules
     chef
     chocolatey
     chronos
+    chroot
     cimc
     ciscoconfparse_mod
     cisconso
@@ -105,6 +112,7 @@ execution modules
     cp
     cpan
     cron
+    cryptdev
     csf
     cyg
     daemontools
@@ -113,10 +121,10 @@ execution modules
     ddns
     deb_apache
     deb_postgres
-    debuild_pkgbuild
     debconfmod
     debian_ip
     debian_service
+    debuild_pkgbuild
     defaults
     devmap
     dig
@@ -137,7 +145,10 @@ execution modules
     elasticsearch
     environ
     eselect
+    esxcluster
+    esxdatacenter
     esxi
+    esxvm
     etcd_mod
     ethtool
     event
@@ -151,6 +162,8 @@ execution modules
     freebsdpkg
     freebsdports
     freebsdservice
+    freezer
+    gcp_addon
     gem
     genesis
     gentoo_service
@@ -159,6 +172,7 @@ execution modules
     github
     glance
     glanceng
+    glassfish
     glusterfs
     gnomedesktop
     google_chat
@@ -173,14 +187,15 @@ execution modules
     hashutil
     heat
     hg
+    highstate_doc
     hosts
     http
+    icinga2
     ifttt
     ilo
-    icinga2
     incron
-    influxdbmod
     influxdb08mod
+    influxdbmod
     infoblox
     ini_manage
     inspectlib
@@ -227,6 +242,8 @@ execution modules
     linux_acl
     linux_ip
     linux_lvm
+    linux_service
+    linux_shadow
     linux_sysctl
     localemod
     locate
@@ -238,11 +255,9 @@ execution modules
     lxd
     mac_assistive
     mac_brew_pkg
-    macdefaults
     mac_desktop
     mac_group
     mac_keychain
-    macpackage
     mac_pkgutil
     mac_portspkg
     mac_power
@@ -254,6 +269,8 @@ execution modules
     mac_timezone
     mac_user
     mac_xattr
+    macdefaults
+    macpackage
     makeconf
     mandrill
     marathon
@@ -277,16 +294,15 @@ execution modules
     nacl
     nagios
     nagios_rpc
-    namecheap_domains_dns
     namecheap_domains
+    namecheap_domains_dns
     namecheap_domains_ns
     namecheap_ssl
     namecheap_users
-    napalm_mod
-    napalm_netacl
     napalm_bgp
     napalm_formula
     napalm_mod
+    napalm_netacl
     napalm_network
     napalm_ntp
     napalm_probes
@@ -303,6 +319,7 @@ execution modules
     network
     neutron
     neutronng
+    nexus
     nfs3
     nftables
     nginx
@@ -402,9 +419,7 @@ execution modules
     sensehat
     sensors
     serverdensity_device
-    service
     servicenow
-    shadow
     slack_notify
     slsutil
     smartos_imgadm
@@ -414,6 +429,7 @@ execution modules
     smbios
     smf_service
     smtp
+    snapper
     solaris_fmadm
     solaris_group
     solaris_shadow
@@ -429,7 +445,6 @@ execution modules
     ssh
     ssh_pkg
     ssh_service
-    snapper
     state
     status
     statuspage
@@ -450,8 +465,8 @@ execution modules
     telemetry
     temp
     test
-    testinframod
     test_virtual
+    testinframod
     textfsm_mod
     timezone
     tls
@@ -470,12 +485,14 @@ execution modules
     vault
     vbox_guest
     vboxmanage
+    vcenter
     victorops
     virt
     virtualenv_mod
     vmctl
     vsphere
     webutil
+    win_auditpol
     win_autoruns
     win_certutil
     win_dacl
@@ -497,7 +514,6 @@ execution modules
     win_pki
     win_powercfg
     win_psget
-    winrepo
     win_servermanager
     win_service
     win_shadow
@@ -510,6 +526,8 @@ execution modules
     win_useradd
     win_wua
     win_wusa
+    winrepo
+    wordpress
     x509
     xapi_virt
     xbpspkg
