@@ -469,7 +469,7 @@ def load(name, **kwargs):
 
     Sample template:
 
-    .. code-block:: set
+    .. code-block:: bash
 
         set interfaces {{ interface_name }} unit 0
 

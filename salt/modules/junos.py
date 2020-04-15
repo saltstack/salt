@@ -877,7 +877,7 @@ def install_config(path=None, **kwargs):
         __salt__["cp.get_template"](
             path, template_cached_path, template_vars=template_vars
         )
-    except Exception as ex:
+    except Exception as ex:  # pylint: disable=broad-except
         ret["message"] = (
             "Salt failed to render the template, please check file path and syntax."
             "\nError: {0}".format(str(ex))
@@ -931,7 +931,7 @@ def install_config(path=None, **kwargs):
         with Config(conn, mode=db_mode) as cu:
             try:
                 cu.load(**op)
-            except Exception as exception:
+            except Exception as exception:  # pylint: disable=broad-except
                 ret["message"] = 'Could not load configuration due to : "{0}"'.format(
                     exception
                 )
@@ -959,7 +959,7 @@ def install_config(path=None, **kwargs):
             if db_mode != "dynamic":
                 try:
                     check = cu.commit_check()
-                except Exception as exception:
+                except Exception as exception:  # pylint: disable=broad-except
                     ret[
                         "message"
                     ] = 'Commit check threw the following exception: "{0}"'.format(
@@ -972,7 +972,7 @@ def install_config(path=None, **kwargs):
                 try:
                     cu.commit(**commit_params)
                     ret["message"] = "Successfully loaded and committed!"
-                except Exception as exception:
+                except Exception as exception:  # pylint: disable=broad-except
                     ret[
                         "message"
                     ] = 'Commit check successful but commit failed with "{0}"'.format(
@@ -996,7 +996,7 @@ def install_config(path=None, **kwargs):
                 if write_diff and config_diff is not None:
                     with salt.utils.files.fopen(write_diff, "w") as fp:
                         fp.write(salt.utils.stringutils.to_str(config_diff))
-            except Exception as exception:
+            except Exception as exception:  # pylint: disable=broad-except
                 ret["message"] = 'Could not write into diffs_file due to: "{0}"'.format(
                     exception
                 )
@@ -1370,7 +1370,7 @@ def load(path=None, **kwargs):
             path,
             template_cached_path,
             **kwargs)
-    except Exception as ex:
+    except Exception as ex:  # pylint: disable=broad-except
         ret["message"] = "Salt failed to render the template, please check file path and syntax." \
                          "\nError: {0}".format(str(ex))
         ret["out"] = False
@@ -1580,7 +1580,7 @@ def get_table(
             if template_args is not None:
                 ret["table"][table]["args"] = data.CMD_ARGS
                 ret["table"][table]["command"] = data.GET_CMD
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         ret["message"] = "Uncaught exception - please report: {0}".format(str(err))
         traceback.print_exc()
         ret["out"] = False
