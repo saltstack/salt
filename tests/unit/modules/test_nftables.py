@@ -161,9 +161,9 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
     # 'get_rules_json' function tests: 1
 
     def test_get_rules_json(self):
-        '''
+        """
         Test if it return a data structure of the current, in-memory rules
-        '''
+        """
         list_rules_return = """
         {
           "nftables": [
@@ -214,13 +214,13 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
         }
         """
         list_rules_mock = MagicMock(return_value=list_rules_return)
-        expected = json.loads(list_rules_return)['nftables']
+        expected = json.loads(list_rules_return)["nftables"]
 
-        with patch.dict(nftables.__salt__, {'cmd.run': list_rules_mock}):
+        with patch.dict(nftables.__salt__, {"cmd.run": list_rules_mock}):
             self.assertListEqual(nftables.get_rules_json(), expected)
 
         list_rules_mock = MagicMock(return_value=[])
-        with patch.dict(nftables.__salt__, {'cmd.run': list_rules_mock}):
+        with patch.dict(nftables.__salt__, {"cmd.run": list_rules_mock}):
             self.assertListEqual(nftables.get_rules_json(), [])
 
     # 'save' function tests: 1
@@ -233,11 +233,13 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
             mock = MagicMock(return_value=False)
             with patch.dict(nftables.__salt__, {"file.directory_exists": mock}):
                 with patch.dict(nftables.__salt__, {"cmd.run": mock}):
-                    with patch.object(salt.utils.files, "fopen", MagicMock(mock_open())):
+                    with patch.object(
+                        salt.utils.files, "fopen", MagicMock(mock_open())
+                    ):
                         self.assertEqual(nftables.save(), "#! nft -f\n\n")
 
                     with patch.object(
-                      salt.utils.files, "fopen", MagicMock(side_effect=IOError)
+                        salt.utils.files, "fopen", MagicMock(side_effect=IOError)
                     ):
                         self.assertRaises(CommandExecutionError, nftables.save)
 
@@ -904,16 +906,21 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
         """
         expected = json.loads(list_rules_return)
 
-        self.assertEqual(nftables.get_policy(table="filter", chain=None, family="ipv4"),
-                         "Error: Chain needs to be specified")
+        self.assertEqual(
+            nftables.get_policy(table="filter", chain=None, family="ipv4"),
+            "Error: Chain needs to be specified",
+        )
 
         with patch.object(nftables, "get_rules_json", MagicMock(return_value=expected)):
             self.assertEqual(
-                nftables.get_policy(table="filter", chain="input", family="ipv4"), "accept"
+                nftables.get_policy(table="filter", chain="input", family="ipv4"),
+                "accept",
             )
 
         with patch.object(nftables, "get_rules_json", MagicMock(return_value=expected)):
-            self.assertIsNone(nftables.get_policy(table="filter", chain="missing", family="ipv4"))
+            self.assertIsNone(
+                nftables.get_policy(table="filter", chain="missing", family="ipv4")
+            )
 
     # 'set_policy' function tests: 1
 
@@ -972,16 +979,23 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
         """
         expected = json.loads(list_rules_return)["nftables"]
 
-        self.assertEqual(nftables.set_policy(table="filter", chain=None, policy=None, family="ipv4"),
-                         "Error: Chain needs to be specified")
+        self.assertEqual(
+            nftables.set_policy(table="filter", chain=None, policy=None, family="ipv4"),
+            "Error: Chain needs to be specified",
+        )
 
-        self.assertEqual(nftables.set_policy(table="filter", chain="input", policy=None, family="ipv4"),
-                         "Error: Policy needs to be specified")
+        self.assertEqual(
+            nftables.set_policy(
+                table="filter", chain="input", policy=None, family="ipv4"
+            ),
+            "Error: Policy needs to be specified",
+        )
 
         mock = MagicMock(return_value={"retcode": 0})
         with patch.object(nftables, "get_rules_json", MagicMock(return_value=expected)):
             with patch.dict(nftables.__salt__, {"cmd.run_all": mock}):
-                self.assertTrue(nftables.set_policy(table="filter",
-                                                    chain="input",
-                                                    policy="accept",
-                                                    family="ipv4"))
+                self.assertTrue(
+                    nftables.set_policy(
+                        table="filter", chain="input", policy="accept", family="ipv4"
+                    )
+                )
