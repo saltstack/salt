@@ -156,6 +156,12 @@ including by installing XCode_.
 .. _XCode: https://developer.apple.com/xcode/
 
 .. warning::
+    GitPython advises against the use of its library for long-running processes
+    (such as a salt-master or salt-minion). Please see their warning on potential
+    leaks of system resources:
+    https://github.com/gitpython-developers/GitPython#leakage-of-system-resources.
+
+.. warning::
 
     Keep in mind that if GitPython has been previously installed on the master
     using pip (even if it was subsequently uninstalled), then it may still
@@ -180,7 +186,6 @@ including by installing XCode_.
         GitPython:
           pip.installed:
             - name: 'GitPython < 2.0.9'
-
 
 Simple Configuration
 ====================
