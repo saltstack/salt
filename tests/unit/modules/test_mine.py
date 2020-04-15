@@ -448,7 +448,7 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
             mine.__salt__,
             {
                 "config.merge": MagicMock(return_value=config_mine_functions),
-                "network.ip_addrs": True,
+                "network.ip_addrs": lambda: True,
                 "grains.get": lambda: True,
             },
         ):
