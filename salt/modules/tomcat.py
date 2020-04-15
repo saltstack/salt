@@ -91,9 +91,6 @@ from salt.ext.six.moves.urllib.request import urlopen as _urlopen
 
 # pylint: enable=no-name-in-module,import-error
 
-# Import Salt libs
-import salt.utils.data
-import salt.utils.stringutils
 
 log = logging.getLogger(__name__)
 
@@ -256,14 +253,14 @@ def _wget(cmd, opts=None, url="http://localhost:8080/manager", timeout=180):
             ret["msg"] = "Failed to create HTTP request"
 
     # Force all byte strings to utf-8 strings, for python >= 3.4
-    for key, value in enumerate(ret['msg']):
+    for key, value in enumerate(ret["msg"]):
         try:
-            ret['msg'][key] = salt.utils.stringutils.to_unicode(value, 'utf-8')
+            ret["msg"][key] = salt.utils.stringutils.to_unicode(value, "utf-8")
         except (UnicodeDecodeError, AttributeError):
             pass
 
-    if not ret['msg'][0].startswith('OK'):
-        ret['res'] = False
+    if not ret["msg"][0].startswith("OK"):
+        ret["res"] = False
 
     return ret
 
