@@ -4083,6 +4083,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                             "allocation": 1234,
                             "used_by": [],
                             "backing_store": None,
+                            "format": "qcow2",
                         },
                         "vol2": {
                             "type": "file",
@@ -4095,6 +4096,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                                 "path": "/path/to/vol0.qcow2",
                                 "format": "qcow2",
                             },
+                            "format": "qcow2",
                         },
                     }
                 },
@@ -4115,6 +4117,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                                 "path": "/path/to/vol0.qcow2",
                                 "format": "qcow2",
                             },
+                            "format": "qcow2",
                         }
                     }
                 },
@@ -4146,6 +4149,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                             "allocation": 1234,
                             "used_by": [],
                             "backing_store": None,
+                            "format": "qcow2",
                         },
                         "vol2": {
                             "type": "file",
@@ -4158,6 +4162,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                                 "path": "/path/to/vol0.qcow2",
                                 "format": "qcow2",
                             },
+                            "format": "qcow2",
                         },
                     }
                 },
@@ -4178,6 +4183,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                                 "path": "/path/to/vol0.qcow2",
                                 "format": "qcow2",
                             },
+                            "format": "qcow2",
                         }
                     }
                 },
@@ -4210,6 +4216,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                             "allocation": 1234,
                             "used_by": [],
                             "backing_store": None,
+                            "format": "qcow2",
                         },
                         "vol2": {
                             "type": "file",
@@ -4222,6 +4229,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                                 "path": "/path/to/vol0.qcow2",
                                 "format": "qcow2",
                             },
+                            "format": "qcow2",
                         },
                     }
                 },
@@ -4242,6 +4250,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                                 "path": "/path/to/vol0.qcow2",
                                 "format": "qcow2",
                             },
+                            "format": "qcow2",
                         }
                     }
                 },
