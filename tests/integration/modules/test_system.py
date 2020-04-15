@@ -18,19 +18,13 @@ import salt.utils.platform
 from salt.ext import six
 from salt.ext.six.moves import range
 from tests.support.case import ModuleCase
-from tests.support.helpers import (
-    destructiveTest,
-    flaky,
-    requires_system_grains,
-    skip_if_not_root,
-)
-from tests.support.unit import SkipTest, skipIf
+from tests.support.helpers import destructiveTest, flaky, runs_on, skip_if_not_root
+from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
 
-@skipIf(not salt.utils.platform.is_linux(), "These tests can only be run on linux")
-@pytest.mark.windows_whitelisted
+@runs_on(kernel="Linux")
 class SystemModuleTest(ModuleCase):
     """
     Validate the date/time functions in the system module
@@ -40,10 +34,7 @@ class SystemModuleTest(ModuleCase):
     _systemd_timesyncd_available_ = None
 
     @classmethod
-    @requires_system_grains
-    def setUpClass(cls, grains):  # pylint: disable=arguments-differ
-        if grains["kernel"] != "Linux":
-            raise SkipTest("Test not applicable to '{kernel}' kernel".format(**grains))
+    def setUpClass(cls):
         cls.fmt_str = "%Y-%m-%d %H:%M:%S"
         cls._orig_time = None
         cls._machine_info = True
@@ -404,7 +395,7 @@ class SystemModuleTest(ModuleCase):
             self.assertTrue(self._hwclock_has_compare())
 
 
-@skipIf(not salt.utils.platform.is_windows(), "These tests can only be run on windows")
+@runs_on(kernel="Windows")
 @pytest.mark.windows_whitelisted
 class WinSystemModuleTest(ModuleCase):
     """
@@ -475,7 +466,7 @@ class WinSystemModuleTest(ModuleCase):
         self.assertEqual(date, ret)
 
 
-@skipIf(not salt.utils.platform.is_windows(), "These tests can only be run on windows")
+@runs_on(kernel="Windows")
 @pytest.mark.windows_whitelisted
 class WinSystemModuleTimeSettingTest(ModuleCase):
     """

@@ -7,13 +7,13 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-import salt.utils.path
-import salt.utils.platform
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
     destructiveTest,
     flaky,
     random_string,
+    runs_on,
+    skip_if_binaries_missing,
     skip_if_not_root,
 )
 from tests.support.unit import skipIf
@@ -27,10 +27,8 @@ SET_SUBNET_NAME = random_string("RS-", lowercase=False)
 
 @skip_if_not_root
 @flaky(attempts=10)
-@skipIf(not salt.utils.platform.is_darwin(), "Test only available on macOS")
-@skipIf(
-    not salt.utils.path.which("systemsetup"), "'systemsetup' binary not found in $PATH"
-)
+@runs_on(kernel="Darwin")
+@skip_if_binaries_missing("systemsetup")
 class MacSystemModuleTest(ModuleCase):
     """
     Validate the mac_system module
@@ -241,7 +239,7 @@ class MacSystemModuleTest(ModuleCase):
 
 
 @skip_if_not_root
-@skipIf(not salt.utils.platform.is_darwin(), "Test only available on macOS")
+@runs_on(kernel="Darwin")
 class MacSystemComputerNameTest(ModuleCase):
     def setUp(self):
         self.COMPUTER_NAME = self.run_function("system.get_computer_name")
