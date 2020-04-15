@@ -439,9 +439,7 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
                         }
                     )
                     self.assertDictEqual(
-                        nftables.set_policy(
-                            "salt", table="", chain="", policy="sal"
-                        ),
+                        nftables.set_policy("salt", table="", chain="", policy="sal"),
                         ret,
                     )
 
@@ -456,19 +454,24 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
                             }
                         )
                         self.assertDictEqual(
-                            nftables.set_policy("salt", table="", chain="", policy="sal"), ret
+                            nftables.set_policy(
+                                "salt", table="", chain="", policy="sal"
+                            ),
+                            ret,
                         )
 
                         ret.update(
                             {
-                                "comment": "Failed to set nftables"
-                                " default policy",
+                                "comment": "Failed to set nftables default policy",
                                 "result": False,
                                 "changes": {},
                             }
                         )
                         self.assertDictEqual(
-                            nftables.set_policy("salt", table="", chain="", policy="sal"), ret
+                            nftables.set_policy(
+                                "salt", table="", chain="", policy="sal"
+                            ),
+                            ret,
                         )
 
     def test_table_present(self):
