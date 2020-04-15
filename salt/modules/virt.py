@@ -6245,6 +6245,8 @@ def volume_infos(pool=None, volume=None, **kwargs):
                     else None,
                 }
 
+            format_node = vol_xml.find("./target/format")
+
             # If we have a path, check its use.
             used_by = []
             if vol.path():
@@ -6267,6 +6269,7 @@ def volume_infos(pool=None, volume=None, **kwargs):
                 "allocation": infos[2],
                 "used_by": used_by,
                 "backing_store": backing_store,
+                "format": format_node.get("type") if format_node is not None else None,
             }
 
         pools = [
