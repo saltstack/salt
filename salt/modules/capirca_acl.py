@@ -556,8 +556,7 @@ def _get_policy_object(
     for filter_ in filters:
         if not filter_ or not isinstance(filter_, dict):
             continue  # go to the next filter
-        filter_name = next(iter(filter_))
-        filter_config = next(iter(filter_.values()))
+        filter_name, filter_config = next(iter(filter_.items()))
         header = capirca.lib.policy.Header()  # same header everywhere
         target_opts = [platform, filter_name]
         filter_options = filter_config.pop("options", None)
@@ -570,8 +569,7 @@ def _get_policy_object(
         filter_terms = []
         for term_ in filter_config.get("terms", []):
             if term_ and isinstance(term_, dict):
-                term_name = next(iter(term_))
-                term_fields = next(iter(term_.values()))
+                term_name, term_fields = next(iter(term_.items()))
                 term = _get_term_object(
                     filter_name,
                     term_name,

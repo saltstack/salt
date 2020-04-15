@@ -652,33 +652,26 @@ def proccesser_markdown(lowstate_item, config, **kwargs):
 
     # TODO: use salt defined STATE_REQUISITE_IN_KEYWORDS
     requisites = ""
+    next_w_item = next(iter(w.items()))
     if s.get("watch"):
         requisites += "run or update after changes in:\n"
         for w in s.get("watch", []):
-            requisites += _format_markdown_requisite(
-                next(iter(w.items()))[0], next(iter(w.items()))[1],
-            )
+            requisites += _format_markdown_requisite(next_w_item[0], next_w_item[1],)
         requisites += "\n"
     if s.get("watch_in"):
         requisites += "after changes, run or update:\n"
         for w in s.get("watch_in", []):
-            requisites += _format_markdown_requisite(
-                next(iter(w.items()))[0], next(iter(w.items()))[1],
-            )
+            requisites += _format_markdown_requisite(next_w_item[0], next_w_item[1],)
         requisites += "\n"
     if s.get("require") and len(s.get("require")) > 0:
         requisites += "require:\n"
         for w in s.get("require", []):
-            requisites += _format_markdown_requisite(
-                next(iter(w.items()))[0], next(iter(w.items()))[1],
-            )
+            requisites += _format_markdown_requisite(next_w_item[0], next_w_item[1],)
         requisites += "\n"
     if s.get("require_in"):
         requisites += "required in:\n"
         for w in s.get("require_in", []):
-            requisites += _format_markdown_requisite(
-                next(iter(w.items()))[0], next(iter(w.items()))[1],
-            )
+            requisites += _format_markdown_requisite(next_w_item[0], next_w_item[1],)
         requisites += "\n"
 
     details = ""

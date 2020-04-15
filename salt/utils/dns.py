@@ -95,7 +95,7 @@ class RFC(object):
             return [code for code, name in ref.items() if lookup in name][-1]
         else:
             # OrderedDicts only!(?)
-            return list(ref)[ref.values().index(lookup)]
+            return {name: code for code, name in ref.items()}[lookup]
 
 
 def _to_port(port):
