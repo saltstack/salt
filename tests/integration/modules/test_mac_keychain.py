@@ -3,26 +3,21 @@
 Validate the mac-keychain module
 """
 
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
-# Import Salt Libs
 from salt.exceptions import CommandExecutionError
-
-# Import 3rd-party libs
 from salt.ext import six
-
-# Import Salt Testing Libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, skip_if_not_root
+from tests.support.helpers import destructiveTest, runs_on, skip_if_not_root
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
 
 @destructiveTest
 @skip_if_not_root
+@runs_on(kernel="Darwin")
 class MacKeychainModuleTest(ModuleCase):
     """
     Integration tests for the mac_keychain module
@@ -35,15 +30,6 @@ class MacKeychainModuleTest(ModuleCase):
         )
         cls.cert_alias = "Salt Test"
         cls.passwd = "salttest"
-
-    def setUp(self):
-        """
-        Sets up the test requirements
-        """
-        os_grain = self.run_function("grains.item", ["kernel"])
-        # Must be running on a mac
-        if os_grain["kernel"] not in "Darwin":
-            self.skipTest("Test not applicable to '{kernel}' kernel".format(**os_grain))
 
     def tearDown(self):
         """

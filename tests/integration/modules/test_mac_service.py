@@ -3,23 +3,21 @@
 integration tests for mac_service
 """
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
-import salt.utils.path
-import salt.utils.platform
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, skip_if_not_root
+from tests.support.helpers import (
+    destructiveTest,
+    runs_on,
+    skip_if_binaries_missing,
+    skip_if_not_root,
+)
 from tests.support.unit import skipIf
 
 
-@skipIf(not salt.utils.platform.is_darwin(), "Test only available on macOS")
-@skipIf(not salt.utils.path.which("launchctl"), "Test requires launchctl binary")
-@skipIf(not salt.utils.path.which("plutil"), "Test requires plutil binary")
 @skip_if_not_root
+@runs_on(kernel="Darwin")
+@skip_if_binaries_missing("launchctl", "plutil")
 class MacServiceModuleTest(ModuleCase):
     """
     Validate the mac_service module
