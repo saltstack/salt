@@ -46,8 +46,8 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
 
             mock = MagicMock(
                 side_effect=[
-                  {"result": True, "comment": ""},
-                  {"result": False, "comment": ""},
+                    {"result": True, "comment": ""},
+                    {"result": False, "comment": ""},
                 ]
             )
             with patch.dict(nftables.__salt__, {"nftables.new_chain": mock}):
@@ -352,7 +352,12 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
                             "result": False,
                         }
                     )
-                    self.assertDictEqual(nftables.flush("salt", table="", chain="", ignore_absence=False), ret)
+                    self.assertDictEqual(
+                        nftables.flush(
+                            "salt", table="", chain="", ignore_absence=False
+                        ),
+                        ret,
+                    )
 
                     mock = MagicMock(
                         side_effect=[
@@ -365,10 +370,15 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
                         ret.update(
                             {
                                 "comment": "Failed to flush chain  in table"
-                                 "  in family ipv4, chain does not exist."
+                                "  in family ipv4, chain does not exist."
                             }
                         )
-                        self.assertDictEqual(nftables.flush("salt", table="", chain="", ignore_absence=False), ret)
+                        self.assertDictEqual(
+                            nftables.flush(
+                                "salt", table="", chain="", ignore_absence=False
+                            ),
+                            ret,
+                        )
 
                         mock = MagicMock(
                             side_effect=[
@@ -380,22 +390,24 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
                             ret.update(
                                 {
                                     "changes": {"locale": "salt"},
-                                    "comment": "Flush nftables rules in  table"
-                                    "  chain ipv4 family",
+                                    "comment": "Flush nftables rules in table chain ipv4 family",
                                     "result": True,
                                 }
                             )
-                            self.assertDictEqual(nftables.flush("salt", table="", chain=""), ret)
+                            self.assertDictEqual(
+                                nftables.flush("salt", table="", chain=""), ret
+                            )
 
                             ret.update(
                                 {
                                     "changes": {},
-                                    "comment": "Failed to flush"
-                                    " nftables rules",
+                                    "comment": "Failed to flush nftables rules",
                                     "result": False,
                                 }
                             )
-                            self.assertDictEqual(nftables.flush("salt", table="", chain=""), ret)
+                            self.assertDictEqual(
+                                nftables.flush("salt", table="", chain=""), ret
+                            )
 
     def test_set_policy(self):
         """
@@ -414,7 +426,8 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
                     }
                 )
                 self.assertDictEqual(
-                    nftables.set_policy("salt", table="", chain="", policy="stack"), ret
+                    nftables.set_policy("salt", table="", chain="", policy="stack"),
+                    ret,
                 )
 
                 with patch.dict(nftables.__opts__, {"test": True}):
@@ -426,7 +439,10 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
                         }
                     )
                     self.assertDictEqual(
-                        nftables.set_policy("salt", table="", chain="", policy="sal"), ret
+                        nftables.set_policy(
+                            "salt", table="", chain="", policy="sal"
+                        ),
+                        ret,
                     )
 
                 with patch.dict(nftables.__opts__, {"test": False}):
@@ -435,8 +451,7 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
                         ret.update(
                             {
                                 "changes": {"locale": "salt"},
-                                "comment": "Set default policy for"
-                                "  to sal family ipv4",
+                                "comment": "Set default policy for to sal family ipv4",
                                 "result": True,
                             }
                         )
@@ -519,7 +534,9 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
             ]
         )
         with patch.dict(nftables.__salt__, {"nftables.check_table": mock}):
-            ret.update({"comment": "nftables table salt is already absent from family ipv4"})
+            ret.update(
+                {"comment": "nftables table salt is already absent from family ipv4"}
+            )
             self.assertDictEqual(nftables.table_absent("salt"), ret)
 
             with patch.dict(nftables.__opts__, {"test": True}):
