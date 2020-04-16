@@ -201,8 +201,8 @@ def _get_serialize_fn(serializer, fn_name):
 
 def serialize(serializer, obj, **mod_kwargs):
     """
-    Serialize a Python object using a :py:mod:`serializer module
-    <salt.serializers>`
+    Serialize a Python object using one of the available
+    :ref:`all-salt.serializers`.
 
     CLI Example:
 
@@ -223,8 +223,8 @@ def serialize(serializer, obj, **mod_kwargs):
 
 def deserialize(serializer, stream_or_string, **mod_kwargs):
     """
-    Deserialize a Python object using a :py:mod:`serializer module
-    <salt.serializers>`
+    Deserialize a Python object using one of the available
+    :ref:`all-salt.serializers`.
 
     CLI Example:
 
