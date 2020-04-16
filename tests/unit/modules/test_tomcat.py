@@ -43,8 +43,7 @@ class TomcatTestCasse(TestCase, LoaderModuleMockMixin):
             "salt.modules.tomcat._auth",
             MagicMock(
                 return_value=_build_opener(
-                    _HTTPBasicAuthHandler(),
-                    _HTTPDigestAuthHandler()
+                    _HTTPBasicAuthHandler(), _HTTPDigestAuthHandler()
                 )
             ),
         ):
