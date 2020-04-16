@@ -186,6 +186,7 @@ class DataTestCase(TestCase):
         test_two_level_dict_and_list = {
             "foo": ["bar", "baz", {"lorem": {"ipsum": [{"dolor": "sit"}]}}]
         }
+        test_two_level_dict_with_int_key = {"foo": {1234: "bar"}}
 
         # Check traversing too far: salt.utils.data.traverse_dict_and_list() returns
         # the value corresponding to a given key path, and baz is a value
@@ -223,6 +224,15 @@ class DataTestCase(TestCase):
             salt.utils.data.traverse_dict_and_list(
                 test_two_level_dict_and_list,
                 "foo:lorem:ipsum:dolor",
+                {"not_found": "not_found"},
+            ),
+        )
+        # check whether the traverse dict reach "bar" when integer type key occurs
+        self.assertEqual(
+            "bar",
+            salt.utils.data.traverse_dict_and_list(
+                test_two_level_dict_with_int_key,
+                "foo:1234",
                 {"not_found": "not_found"},
             ),
         )
