@@ -21,24 +21,22 @@ import datetime
 import os
 import tempfile
 
+import salt.utils.files
+import salt.utils.stringutils
+from salt.modules import x509
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.mock import MagicMock, patch
+from tests.support.unit import TestCase, skipIf
+
 try:
     import pytest
 except ImportError as import_error:
     pytest = None
 
-from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
-from tests.support.mock import (
-    patch,
-    MagicMock,
-)
-
-from salt.modules import x509
-import salt.utils.stringutils
-import salt.utils.files
 
 try:
     import M2Crypto  # pylint: disable=unused-import
+
     HAS_M2CRYPTO = True
 except ImportError:
     HAS_M2CRYPTO = False
@@ -102,26 +100,29 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
 
 @skipIf(not bool(pytest), False)
 class X509TestCase(TestCase, LoaderModuleMockMixin):
-
     def setup_loader_modules(self):
         return {x509: {}}
 
-    @patch('salt.modules.x509.log', MagicMock())
+    @patch("salt.modules.x509.log", MagicMock())
     def test_private_func__parse_subject(self):
-        '''
+        """
         Test private function _parse_subject(subject) it handles a missing fields
         :return:
-        '''
+        """
+
         class FakeSubject(object):
-            '''
+            """
             Class for faking x509'th subject.
-            '''
+            """
+
             def __init__(self):
-                self.nid = {'Darth Vader': 1}
+                self.nid = {"Darth Vader": 1}
 
             def __getattr__(self, item):
-                if item != 'nid':
-                    raise TypeError('A star wars satellite accidentally blew up the WAN.')
+                if item != "nid":
+                    raise TypeError(
+                        "A star wars satellite accidentally blew up the WAN."
+                    )
 
         subj = FakeSubject()
         x509._parse_subject(subj)
@@ -131,40 +132,39 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
 
     @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailable')
     def test_get_pem_entry(self):
-        '''
+        """
         Test private function _parse_subject(subject) it handles a missing fields
         :return:
-        '''
+        """
         ca_key = default_values['ca_key']
         ret = x509.get_pem_entry(ca_key)
         self.assertEqual(ret, ca_key)
 
     @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailable')
     def test_get_private_key_size(self):
-        '''
+        """
         Test private function _parse_subject(subject) it handles a missing fields
         :return:
-        '''
+        """
         ca_key = default_values['ca_key']
         ret = x509.get_private_key_size(ca_key)
         self.assertEqual(ret, 1024)
 
     @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailable')
     def test_create_key(self):
-        '''
+        """
         Test that x509.create_key returns a private key
         :return:
-        '''
-        ret = x509.create_private_key(text=True,
-                                      passphrase='super_secret_passphrase')
-        self.assertIn('BEGIN RSA PRIVATE KEY', ret)
+        """
+        ret = x509.create_private_key(text=True, passphrase="super_secret_passphrase")
+        self.assertIn("BEGIN RSA PRIVATE KEY", ret)
 
     @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailable')
     def test_create_certificate(self):
-        '''
+        """
         Test private function _parse_subject(subject) it handles a missing fields
         :return:
-        '''
+        """
         ca_key = default_values['ca_key']
         ca_kwargs = default_values['x509_args_ca'].copy()
         ca_kwargs['signing_private_key'] = ca_key
@@ -352,7 +352,7 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
             ca_key_file.write(salt.utils.stringutils.to_str(ca_key))
             ca_key_file.flush()
 
-        with tempfile.NamedTemporaryFile('w+', delete=False) as ca_cert_file:
+        with tempfile.NamedTemporaryFile("w+", delete=False) as ca_cert_file:
             ca_cert_file.write(salt.utils.stringutils.to_str(ca_cert))
             ca_cert_file.flush()
 
@@ -371,7 +371,7 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         os.remove(ca_crl_file.name)
 
         # Ensure that a CRL was actually created
-        self.assertIn('BEGIN X509 CRL', crl)
+        self.assertIn("BEGIN X509 CRL", crl)
 
     @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailable')
     def test_revoke_certificate_with_crl(self):
@@ -394,19 +394,19 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
             ca_key_file.write(salt.utils.stringutils.to_str(ca_key))
             ca_key_file.flush()
 
-        with tempfile.NamedTemporaryFile('w+', delete=False) as ca_cert_file:
+        with tempfile.NamedTemporaryFile("w+", delete=False) as ca_cert_file:
             ca_cert_file.write(salt.utils.stringutils.to_str(ca_cert))
             ca_cert_file.flush()
 
-        with tempfile.NamedTemporaryFile('w+', delete=False) as server_cert_file:
+        with tempfile.NamedTemporaryFile("w+", delete=False) as server_cert_file:
             server_cert_file.write(salt.utils.stringutils.to_str(server_cert))
             server_cert_file.flush()
 
         # Revoke server CRL
         revoked = [
             {
-                'certificate': server_cert_file.name,
-                'revocation_date': '2015-03-01 00:00:00'
+                "certificate": server_cert_file.name,
+                "revocation_date": "2015-03-01 00:00:00",
             }
         ]
         with tempfile.NamedTemporaryFile('w+', delete=False) as ca_crl_file:
@@ -420,7 +420,7 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
 
         # Retrieve serial number from server certificate
         server_cert_details = x509.read_certificate(server_cert_file.name)
-        serial_number = server_cert_details['Serial Number'].replace(':', '')
+        serial_number = server_cert_details["Serial Number"].replace(":", "")
         serial_number = salt.utils.stringutils.to_str(serial_number)
 
         # Retrieve CRL as text
