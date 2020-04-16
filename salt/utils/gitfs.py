@@ -1638,8 +1638,12 @@ class Pygit2(GitProvider):
 
             elif tag_ref in refs:
                 tag_obj = self.repo.revparse_single(tag_ref)
-                if not isinstance(tag_obj, pygit2.Commit):
-                    log.error("%s does not correspond to pygit2.Commit object", tag_ref)
+                if not isinstance(tag_obj, (pygit2.Commit, pygit2.Tag)):
+                    log.error(
+                        "%s does not correspond to pygit2 Commit or Tag object. It is of type %s",
+                        tag_ref,
+                        type(tag_obj),
+                    )
                 else:
                     try:
                         # If no AttributeError raised, this is an annotated tag
