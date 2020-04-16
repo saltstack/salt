@@ -44,7 +44,7 @@ class TomcatTestCasse(TestCase, LoaderModuleMockMixin):
             MagicMock(
                 return_value=_build_opener(
                     _HTTPBasicAuthHandler(),
-                   _HTTPDigestAuthHandler()
+                    _HTTPDigestAuthHandler()
                 )
             ),
         ):
