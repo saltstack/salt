@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''Salt returner to return highstate stats to AppOptics Metrics
+"""Salt returner to return highstate stats to AppOptics Metrics
 
 To enable this returner the minion will need the AppOptics Metrics
 client importable on the Python path and the following
@@ -65,7 +65,7 @@ This will report the same metrics as above, but for these runs the
 metrics will be tagged with ``state_type: sls`` and ``state_name`` set to
 the name of the state that was invoked, e.g. ``role_salt_master.netapi``.
 
-'''
+"""
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
@@ -78,135 +78,143 @@ import salt.returners
 # Import third party libs
 try:
     import appoptics_metrics
+
     HAS_APPOPTICS = True
 except ImportError:
     HAS_APPOPTICS = False
 
 # Define the module's Virtual Name
-__virtualname__ = 'appoptics'
+__virtualname__ = "appoptics"
 
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
     if not HAS_APPOPTICS:
-        log.error("The appoptics_return module couldn't load the appoptics_metrics module.")
+        log.error(
+            "The appoptics_return module couldn't load the appoptics_metrics module."
+        )
         log.error("please make sure it is installed and is in the PYTHON_PATH.")
-        return False, 'Could not import appoptics_metrics module; ' \
-            'appoptics-metrics python client is not installed.'
+        return (
+            False,
+            "Could not import appoptics_metrics module; "
+            "appoptics-metrics python client is not installed.",
+        )
     return __virtualname__
 
 
 def _get_options(ret=None):
-    '''
+    """
     Get the appoptics options from salt.
-    '''
+    """
     attrs = {
-        'api_token': 'api_token',
-        'api_url': 'api_url',
-        'tags': 'tags',
-        'sls_states': 'sls_states'
+        "api_token": "api_token",
+        "api_url": "api_url",
+        "tags": "tags",
+        "sls_states": "sls_states",
     }
 
     _options = salt.returners.get_returner_options(
-        __virtualname__,
-        ret,
-        attrs,
-        __salt__=__salt__,
-        __opts__=__opts__)
+        __virtualname__, ret, attrs, __salt__=__salt__, __opts__=__opts__
+    )
 
-    _options['api_url'] = _options.get('api_url', 'api.appoptics.com')
-    _options['sls_states'] = _options.get('sls_states', [])
-    _options['tags'] = _options.get('tags', {
-        'host_hostname_alias': __salt__['grains.get']('id')
-    })
+    _options["api_url"] = _options.get("api_url", "api.appoptics.com")
+    _options["sls_states"] = _options.get("sls_states", [])
+    _options["tags"] = _options.get(
+        "tags", {"host_hostname_alias": __salt__["grains.get"]("id")}
+    )
 
-    log.debug('Retrieved appoptics options: {}'.format(_options))
+    log.debug("Retrieved appoptics options: {}".format(_options))
     return _options
 
 
 def _get_appoptics(options):
-    '''
+    """
     Return an appoptics connection object.
-    '''
+    """
     conn = appoptics_metrics.connect(
-        options.get('api_token'),
+        options.get("api_token"),
         sanitizer=appoptics_metrics.sanitize_metric_name,
-        hostname=options.get('api_url'))
+        hostname=options.get("api_url"),
+    )
     log.info("Connected to appoptics.")
     return conn
 
 
 def _calculate_runtimes(states):
-    results = {
-        'runtime': 0.00,
-        'num_failed_states': 0,
-        'num_passed_states': 0
-    }
+    results = {"runtime": 0.00, "num_failed_states": 0, "num_passed_states": 0}
 
     for state, resultset in states.items():
-        if isinstance(resultset, dict) and 'duration' in resultset:
+        if isinstance(resultset, dict) and "duration" in resultset:
             # Count the pass vs failures
-            if resultset['result']:
-                results['num_passed_states'] += 1
+            if resultset["result"]:
+                results["num_passed_states"] += 1
             else:
-                results['num_failed_states'] += 1
+                results["num_failed_states"] += 1
 
             # Count durations
-            results['runtime'] += resultset['duration']
+            results["runtime"] += resultset["duration"]
 
-    log.debug('Parsed state metrics: {}'.format(results))
+    log.debug("Parsed state metrics: {}".format(results))
     return results
 
 
 def _state_metrics(ret, options, tags):
     # Calculate the runtimes and number of failed states.
-    stats = _calculate_runtimes(ret['return'])
-    log.debug('Batching Metric retcode with {}'.format(ret['retcode']))
+    stats = _calculate_runtimes(ret["return"])
+    log.debug("Batching Metric retcode with {}".format(ret["retcode"]))
     appoptics_conn = _get_appoptics(options)
     q = appoptics_conn.new_queue(tags=tags)
 
-    q.add('saltstack.retcode', ret['retcode'])
-    log.debug('Batching Metric num_failed_jobs with {}'.format(
-        stats['num_failed_states']))
-    q.add('saltstack.failed', stats['num_failed_states'])
+    q.add("saltstack.retcode", ret["retcode"])
+    log.debug(
+        "Batching Metric num_failed_jobs with {}".format(stats["num_failed_states"])
+    )
+    q.add("saltstack.failed", stats["num_failed_states"])
 
-    log.debug('Batching Metric num_passed_states with {}'.format(
-        stats['num_passed_states']))
-    q.add('saltstack.passed', stats['num_passed_states'])
+    log.debug(
+        "Batching Metric num_passed_states with {}".format(stats["num_passed_states"])
+    )
+    q.add("saltstack.passed", stats["num_passed_states"])
 
-    log.debug('Batching Metric runtime with {}'.format(stats['runtime']))
-    q.add('saltstack.runtime', stats['runtime'])
+    log.debug("Batching Metric runtime with {}".format(stats["runtime"]))
+    q.add("saltstack.runtime", stats["runtime"])
 
-    log.debug('Batching with  Metric total states {}'.format(
-              (stats['num_failed_states'] + stats['num_passed_states'])))
-    q.add('saltstack.highstate.total_states',
-          (stats['num_failed_states'] + stats['num_passed_states']))
-    log.info('Sending metrics to appoptics.')
+    log.debug(
+        "Batching with  Metric total states {}".format(
+            (stats["num_failed_states"] + stats["num_passed_states"])
+        )
+    )
+    q.add(
+        "saltstack.highstate.total_states",
+        (stats["num_failed_states"] + stats["num_passed_states"]),
+    )
+    log.info("Sending metrics to appoptics.")
     q.submit()
 
 
 def returner(ret):
-    '''
+    """
     Parse the return data and return metrics to AppOptics.
 
     For each state that's provided in the configuration, return tagged metrics for
     the result of that state if it's present.
-    '''
+    """
 
     options = _get_options(ret)
-    states_to_report = ['state.highstate']
-    if options.get('sls_states'):
-        states_to_report.append('state.sls')
-    if ret['fun'] in states_to_report:
-        tags = options.get('tags', {}).copy()
-        tags['state_type'] = ret['fun']
+    states_to_report = ["state.highstate"]
+    if options.get("sls_states"):
+        states_to_report.append("state.sls")
+    if ret["fun"] in states_to_report:
+        tags = options.get("tags", {}).copy()
+        tags["state_type"] = ret["fun"]
         log.info("Tags for this run are {}".format(str(tags)))
-        matched_states = set(ret['fun_args']).intersection(
-            set(options.get('sls_states', [])))
+        matched_states = set(ret["fun_args"]).intersection(
+            set(options.get("sls_states", []))
+        )
         # What can I do if a run has multiple states that match?
         # In the mean time, find one matching state name and use it.
         if matched_states:
-            tags['state_name'] = sorted(matched_states)[0]
-            log.debug('Found returned data from {}.'.format(tags['state_name']))
+            tags["state_name"] = sorted(matched_states)[0]
+            log.debug("Found returned data from {}.".format(tags["state_name"]))
         _state_metrics(ret, options, tags)
