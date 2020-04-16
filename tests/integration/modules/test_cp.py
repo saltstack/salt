@@ -19,8 +19,9 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
+from saltfactories.utils.ports import get_unused_localhost_port
 from tests.support.case import ModuleCase
-from tests.support.helpers import get_unused_localhost_port, with_tempfile
+from tests.support.helpers import with_tempfile
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
