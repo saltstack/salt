@@ -40,7 +40,15 @@ class TomcatTestCasse(TestCase, LoaderModuleMockMixin):
 
         string_mock = MagicMock(return_value=responses["string"])
         bytes_mock = MagicMock(return_value=responses["bytes"])
-        with patch("salt.modules.tomcat._auth", MagicMock(return_value=_build_opener(_HTTPBasicAuthHandler(), _HTTPDigestAuthHandler()))):
+        with patch(
+                "salt.modules.tomcat._auth",
+                MagicMock(return_value=
+                          _build_opener(
+                              _HTTPBasicAuthHandler(),
+                              _HTTPDigestAuthHandler()
+                          )
+                         ),
+        ):
             with patch("salt.modules.tomcat._urlopen", string_mock):
                 response = tomcat._wget(
                     "tomcat.wait", url="http://localhost:8080/nofail"
