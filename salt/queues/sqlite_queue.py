@@ -75,14 +75,30 @@ def _create_table(con, queue):
     return True
 
 
-def _list_items(queue):
+def _process_mode(mode=None):
+    '''
+    return the order by statement for the mode
+    '''
+    if mode and mode.lower() not in ['fifo', 'lifo']:
+        log.warning('An invalid queue mode was specified, supported modes are "fifo" and "lifo"')
+    order_by = ''
+    if mode:
+        if mode.lower() == 'fifo':
+            order_by = ' ORDER BY id ASC'
+        elif mode.lower() == 'lifo':
+            order_by = ' ORDER BY id DESC'
+    return order_by
+
+
+def _list_items(queue, mode=None):
     """
     Private function to list contents of a queue
     """
     con = _conn(queue)
+    order_by = _process_mode(mode)
     with con:
         cur = con.cursor()
-        cmd = "SELECT name FROM {0}".format(queue)
+        cmd = "SELECT name FROM {0}{1}".format(queue, order_by)
         log.debug("SQL Query: %s", cmd)
         cur.execute(cmd)
         contents = cur.fetchall()
@@ -109,11 +125,11 @@ def list_queues():
     return queues
 
 
-def list_items(queue):
+def list_items(queue, mode=None):
     """
     List contents of a queue
     """
-    itemstuple = _list_items(queue)
+    itemstuple = _list_items(queue, mode=mode)
     items = [item[0] for item in itemstuple]
     return items
 
@@ -219,11 +235,12 @@ def delete(queue, items):
         return True
 
 
-def pop(queue, quantity=1, is_runner=False):
+def pop(queue, quantity=1, is_runner=False, mode=None):
     """
     Pop one or more or all items from the queue return them.
     """
-    cmd = "SELECT name FROM {0}".format(queue)
+    order_by = _process_mode(mode)
+    cmd = 'SELECT id, data FROM {0}{1}'.format(queue, order_by)
     if quantity != "all":
         try:
             quantity = int(quantity)

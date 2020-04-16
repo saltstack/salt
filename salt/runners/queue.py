@@ -151,9 +151,18 @@ def list_length(queue, backend="sqlite"):
     return ret
 
 
-def list_items(queue, backend="sqlite"):
+def list_items(queue, backend="sqlite", mode=None):
     """
     List contents of a queue
+
+    queue
+        The name of the queue to list
+
+    backend
+        The queue backend to use
+
+    mode
+        The queue mode (i.e. fifo or lifo)
 
     CLI Example:
 
@@ -166,13 +175,28 @@ def list_items(queue, backend="sqlite"):
     cmd = "{0}.list_items".format(backend)
     if cmd not in queue_funcs:
         raise SaltInvocationError('Function "{0}" is not available'.format(cmd))
-    ret = queue_funcs[cmd](queue=queue)
+    ret = queue_funcs[cmd](queue=queue, mode=mode)
     return ret
 
 
-def pop(queue, quantity=1, backend="sqlite", is_runner=False):
+def pop(queue, quantity=1, backend="sqlite", is_runner=False, mode=None):
     """
     Pop one or more or all items from a queue
+
+    queue
+        The name of the queue to list
+
+    quantity
+        The number of items to pop from the queue or 'all' to get all items
+
+    backend
+        The queue backend to use
+
+    is_runner
+        Flag if popping from a runner queue
+
+    mode
+        The queue mode (i.e. fifo or lifo)
 
     CLI Example:
 
@@ -188,14 +212,29 @@ def pop(queue, quantity=1, backend="sqlite", is_runner=False):
     cmd = "{0}.pop".format(backend)
     if cmd not in queue_funcs:
         raise SaltInvocationError('Function "{0}" is not available'.format(cmd))
-    ret = queue_funcs[cmd](quantity=quantity, queue=queue, is_runner=is_runner)
+    ret = queue_funcs[cmd](quantity=quantity, queue=queue, is_runner=is_runner, mode=mode)
     return ret
 
 
-def process_queue(queue, quantity=1, backend="sqlite", is_runner=False):
+def process_queue(queue, quantity=1, backend="sqlite", is_runner=False, mode=None):
     """
     Pop items off a queue and create an event on the Salt event bus to be
     processed by a Reactor.
+
+    queue
+        The name of the queue to list
+
+    quantity
+        The number of items to pop from the queue or 'all' to get all items
+
+    backend
+        The queue backend to use
+
+    is_runner
+        Flag if popping from a runner queue
+
+    mode
+        The queue mode (i.e. fifo or lifo)
 
     CLI Example:
 
@@ -215,7 +254,7 @@ def process_queue(queue, quantity=1, backend="sqlite", is_runner=False):
     ) as event_bus:
         try:
             items = pop(
-                queue=queue, quantity=quantity, backend=backend, is_runner=is_runner
+                queue=queue, quantity=quantity, backend=backend, is_runner=is_runner, mode=mode
             )
         except SaltInvocationError as exc:
             error_txt = "{0}".format(exc)
@@ -231,7 +270,7 @@ def process_queue(queue, quantity=1, backend="sqlite", is_runner=False):
     return data
 
 
-def __get_queue_opts(queue=None, backend=None):
+def __get_queue_opts(queue=None, backend=None, mode=None):
     """
     Get consistent opts for the queued runners
     """
@@ -239,7 +278,9 @@ def __get_queue_opts(queue=None, backend=None):
         queue = __opts__.get("runner_queue", {}).get("queue")
     if backend is None:
         backend = __opts__.get("runner_queue", {}).get("backend", "pgjsonb")
-    return {"backend": backend, "queue": queue}
+    if mode is None:
+        mode = __opts__.get("runner_queue', {}).get('mode', None)
+    return {"backend": backend, "queue": queue, "mode": mode}
 
 
 def insert_runner(fun, args=None, kwargs=None, queue=None, backend=None):
@@ -280,7 +321,7 @@ def insert_runner(fun, args=None, kwargs=None, queue=None, backend=None):
     return insert(items=data, **queue_kwargs)
 
 
-def process_runner(quantity=1, queue=None, backend=None):
+def process_runner(quantity=1, queue=None, backend=None, mode=None):
     """
     Process queued runners
 
@@ -293,6 +334,9 @@ def process_runner(quantity=1, queue=None, backend=None):
     backend
         backend that to use for the queue
 
+    mode
+        The queue mode (i.e. fifo or lifo)
+
     CLI Example:
 
     .. code-block:: bash
@@ -301,7 +345,7 @@ def process_runner(quantity=1, queue=None, backend=None):
         salt-run queue.process_runner 5
 
     """
-    queue_kwargs = __get_queue_opts(queue=queue, backend=backend)
+    queue_kwargs = __get_queue_opts(queue=queue, backend=backend, mode=mode)
     data = process_queue(quantity=quantity, is_runner=True, **queue_kwargs)
     for job in data["items"]:
         __salt__[job["fun"]](*job["args"], **job["kwargs"])
