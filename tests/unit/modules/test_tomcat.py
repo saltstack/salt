@@ -8,7 +8,6 @@ from io import BytesIO, StringIO
 
 # Import salt module
 import salt.modules.tomcat as tomcat
-
 from salt.ext.six import string_types
 from salt.ext.six.moves.urllib.request import (
     HTTPBasicAuthHandler as _HTTPBasicAuthHandler,
@@ -42,12 +41,12 @@ class TomcatTestCasse(TestCase, LoaderModuleMockMixin):
         bytes_mock = MagicMock(return_value=responses["bytes"])
         with patch(
             "salt.modules.tomcat._auth",
-            MagicMock(return_value=
-                      _build_opener(
-                          _HTTPBasicAuthHandler(),
-                          _HTTPDigestAuthHandler()
-                      )
-                     ),
+            MagicMock(
+                return_value=_build_opener(
+                    _HTTPBasicAuthHandler(),
+                   _HTTPDigestAuthHandler()
+                )
+            ),
         ):
             with patch("salt.modules.tomcat._urlopen", string_mock):
                 response = tomcat._wget(
