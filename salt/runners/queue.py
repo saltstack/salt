@@ -279,7 +279,7 @@ def __get_queue_opts(queue=None, backend=None, mode=None):
     if backend is None:
         backend = __opts__.get("runner_queue", {}).get("backend", "pgjsonb")
     if mode is None:
-        mode = __opts__.get("runner_queue', {}).get('mode', None)
+        mode = __opts__.get("runner_queue", {}).get("mode", None)
     return {"backend": backend, "queue": queue, "mode": mode}
 
 
