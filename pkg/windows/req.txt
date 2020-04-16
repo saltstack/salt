@@ -20,7 +20,7 @@ psutil==5.6.6
 pyasn1==0.4.5
 pycparser==2.19
 pycryptodomex==3.8.1
-pycurl==7.43.0.2
+pycurl==7.43.0.5
 pymssql==2.1.4
 PyMySQL==0.9.3
 pyopenssl==19.0.0

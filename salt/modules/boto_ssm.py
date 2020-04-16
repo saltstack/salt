@@ -127,6 +127,7 @@ def delete_parameter(Name, region=None, key=None, keyid=None, profile=None):
     .. versionadded:: 3000
 
     .. code-block:: text
+
         salt-call boto_ssm.delete_parameter test-param
     """
     conn = __utils__["boto3.get_connection"](
