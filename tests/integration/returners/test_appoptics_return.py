@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Tests for the appoptics returner
-'''
+"""
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
@@ -26,7 +26,7 @@ MOCK_RET_HIGHSTATE = {
             "duration": 3.645,
             "__run_num__": 193,
             "changes": {},
-            "__id__": "test-return-state"
+            "__id__": "test-return-state",
         },
         "test-return-state2": {
             "comment": "insertcommenthere",
@@ -36,28 +36,27 @@ MOCK_RET_HIGHSTATE = {
             "duration": 3.645,
             "__run_num__": 194,
             "changes": {},
-            "__id__": "test-return-state"
-        }
+            "__id__": "test-return-state",
+        },
     },
     "retcode": 2,
     "success": True,
     "fun": "state.highstate",
     "id": "AppOptics-Test",
-    "out": "highstate"
+    "out": "highstate",
 }
 
 
-
 class AppOpticsTest(ShellCase):
-    '''
+    """
     Test the AppOptics returner
-    '''
+    """
 
     def test_count_runtimes(self):
-        '''
+        """
         Test the calculations
-        '''
-        results = appoptics_return._calculate_runtimes(MOCK_RET_HIGHSTATE['return'])
-        self.assertEqual(results['num_failed_states'], 1)
-        self.assertEqual(results['num_passed_states'], 1)
-        self.assertEqual(results['runtime'], 7.29)
+        """
+        results = appoptics_return._calculate_runtimes(MOCK_RET_HIGHSTATE["return"])
+        self.assertEqual(results["num_failed_states"], 1)
+        self.assertEqual(results["num_passed_states"], 1)
+        self.assertEqual(results["runtime"], 7.29)
