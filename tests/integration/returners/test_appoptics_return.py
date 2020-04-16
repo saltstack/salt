@@ -9,6 +9,7 @@ import logging
 
 # Import salt libs
 from salt.returners import appoptics_return
+
 # Import Salt Testing libs
 from tests.support.case import ShellCase
 
