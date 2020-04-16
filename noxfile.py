@@ -1091,7 +1091,7 @@ def docs_html(session, compress):
     if pydir == "py3.4":
         session.error("Sphinx only runs on Python >= 3.5")
     requirements_file = "requirements/static/docs.in"
-    distro_constraints = ["requirements/static/{}/docs.txt".format(_get_pydir(session))]
+    distro_constraints = ["requirements/static/{}/docs.txt".format(pydir)]
     install_command = ["--progress-bar=off", "-r", requirements_file]
     for distro_constraint in distro_constraints:
         install_command.extend(["--constraint", distro_constraint])
@@ -1115,7 +1115,7 @@ def docs_man(session, compress, update):
     if pydir == "py3.4":
         session.error("Sphinx only runs on Python >= 3.5")
     requirements_file = "requirements/static/docs.in"
-    distro_constraints = ["requirements/static/{}/docs.txt".format(_get_pydir(session))]
+    distro_constraints = ["requirements/static/{}/docs.txt".format(pydir)]
     install_command = ["--progress-bar=off", "-r", requirements_file]
     for distro_constraint in distro_constraints:
         install_command.extend(["--constraint", distro_constraint])
@@ -1206,7 +1206,6 @@ def changelog(session, draft):
     """
     Generate salt's changelog
     """
-    pydir = _get_pydir(session)
     requirements_file = "requirements/static/changelog.in"
     distro_constraints = [
         "requirements/static/{}/changelog.txt".format(_get_pydir(session))
@@ -1216,7 +1215,7 @@ def changelog(session, draft):
         install_command.extend(["--constraint", distro_constraint])
     session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
-    town_cmd = ["towncrier", "--version={0}".format(session.posargs[0])]
+    town_cmd = ["towncrier", "--version={}".format(session.posargs[0])]
     if draft:
         town_cmd.append("--draft")
     session.run(*town_cmd)
