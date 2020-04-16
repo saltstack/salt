@@ -1539,9 +1539,6 @@ def create_certificate(path=None, text=False, overwrite=True, ca_server=None, **
         asn1_not_after = M2Crypto.ASN1.ASN1_UTCTIME()
         asn1_not_after.set_datetime(time)
         cert.set_not_after(asn1_not_after)
-        # As we are specifying the end date here we do not need to use the days
-        # valid count anymore, so let's zero it.
-        days_valid = 0
 
     # Set validity dates
     # pylint: disable=no-member
