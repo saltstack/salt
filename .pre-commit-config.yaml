@@ -106,7 +106,6 @@ repos:
           - --py-version=3.5
           - --platform=linux
 
-
       - id: pip-tools-compile
         alias: compile-linux-py3.6-zmq-requirements
         name: Linux Py3.6 ZeroMQ Requirements
@@ -205,7 +204,6 @@ repos:
           - -v
           - --py-version=3.6
           - --platform=linux
-
 
       - id: pip-tools-compile
         alias: compile-linux-py3.7-zmq-requirements
@@ -307,7 +305,7 @@ repos:
           - --platform=linux
 
   - repo: https://github.com/timothycrosley/isort
-    rev: '1e78a9acf3110e1f9721feb591f89a451fc9876a'
+    rev: "1e78a9acf3110e1f9721feb591f89a451fc9876a"
     hooks:
       - id: isort
         additional_dependencies: ['toml']
@@ -321,7 +319,7 @@ repos:
             )$
 
   - repo: https://github.com/psf/black
-    rev: stable
+    rev: 19.10b0
     hooks:
       - id: black
         # This tells pre-commit not to pass files to black.
