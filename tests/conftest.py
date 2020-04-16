@@ -21,6 +21,7 @@ import sys
 import tempfile
 import textwrap
 from contextlib import contextmanager
+from datetime import timedelta
 from functools import partial, wraps
 
 import _pytest.logging
@@ -156,6 +157,28 @@ def pytest_addoption(parser):
         default=False,
         help="Run proxy tests",
     )
+    # Salt currently has some tests, even unit tests which are quite slow. As a stop-gap, and
+    # until we fix those slow tests, we provide two pytest options which allow selecting tests
+    # slower than X seconds or tests faster than X seconds.
+    slow_tests_group = parser.getgroup("Slow Tests", after="Tests Selection")
+    slow_tests_group.addoption(
+        "--tst",
+        "--tests-slower-than",
+        dest="skip_tests_slower_than",
+        type=float,
+        default=None,
+        help="Skip tests which are marked as slower than the value provided, in seconds(or a fraction of)",
+    )
+    slow_tests_group.addoption(
+        "--tft",
+        "--tests-faster-than",
+        dest="skip_tests_faster_than",
+        type=float,
+        default=None,
+        help=(
+            "Skip tests which are marked as faster than the value provided, in seconds(or a fraction of)"
+        ),
+    )
     output_options_group = parser.getgroup("Output Options")
     output_options_group.addoption(
         "--output-columns",
@@ -198,6 +221,15 @@ def pytest_configure(config):
     called after command line options have been parsed
     and all plugins and initial conftest files been loaded.
     """
+    skip_tests_slower_than_value = config.getoption("--tests-slower-than")
+    skip_tests_faster_than_value = config.getoption("--tests-faster-than")
+    if (
+        skip_tests_faster_than_value is not None
+        and skip_tests_slower_than_value is not None
+    ):
+        pytest.exit(
+            "The '--tests-slower-than' and '--tests-faster-than' are mutually exclusive options"
+        )
     for dirname in os.listdir(CODE_DIR):
         if not os.path.isdir(dirname):
             continue
@@ -296,6 +328,7 @@ def pytest_collection_modifyitems(config, items):
     # Let PyTest or other plugins handle the initial collection
     yield
     groups_collection_modifyitems(config, items)
+    slow_tests_collection_modifyitems(config, items)
 
     log.warning("Mofifying collected tests to keep track of fixture usage")
     for item in items:
@@ -497,6 +530,77 @@ def pytest_runtest_setup(item):
 
 # <---- Test Setup ---------------------------------------------------------------------------------------------------
 
+# ----- Slow Tests Modify Selection --------------------------------------------------------------------------------->
+def slow_tests_collection_modifyitems(config, items):
+
+    select_tests_slower_than_value = config.getoption("--tests-slower-than")
+    select_tests_faster_than_value = config.getoption("--tests-faster-than")
+
+    if (
+        select_tests_slower_than_value is None
+        and select_tests_faster_than_value is None
+    ):
+        # We're not changing the test selection based on speed
+        return
+
+    selected = []
+    deselected = []
+    if select_tests_slower_than_value:
+        select_tests_timedelta = timedelta(seconds=select_tests_slower_than_value)
+    elif select_tests_faster_than_value:
+        select_tests_timedelta = timedelta(seconds=select_tests_faster_than_value)
+
+    for item in items:
+        slow_test_marker = item.get_closest_marker("slow_test")
+        if slow_test_marker is None:
+            # It the test is not maked with slow_test, it's assumed that it's faster than 0.1 seconds
+            slow_test_timedelta = timedelta(seconds=0.1)
+        else:
+            if slow_test_marker.args:
+                raise RuntimeError(
+                    "The 'slow_test' marker does not support arguments, only keyword arguments, the "
+                    "same that 'datetime.datetime.timedelta' accepts."
+                )
+            slow_test_timedelta = timedelta(**slow_test_marker.kwargs)
+
+        if select_tests_slower_than_value:
+            if slow_test_timedelta > select_tests_timedelta:
+                # The test slow marker value is bigger(thus slower) than the value we're after,
+                # add the to the collection
+                selected.append(item)
+                continue
+        elif select_tests_faster_than_value:
+            if slow_test_timedelta <= select_tests_timedelta:
+                # The test slow marker value is lower(thus faster) than the value we're after,
+                # add them to the collection
+                selected.append(item)
+                continue
+        # If we reached here, remove the test from the collection
+        deselected.append(item)
+
+    terminal_reporter = config.pluginmanager.get_plugin("terminalreporter")
+    if select_tests_slower_than_value:
+        terminal_reporter.write(
+            "Deselected {} tests marked as faster than {} seconds\n".format(
+                len(deselected), select_tests_slower_than_value,
+            ),
+            yellow=True,
+        )
+    elif select_tests_faster_than_value:
+        terminal_reporter.write(
+            "Deselected {} tests marked as slower than {} seconds\n".format(
+                len(deselected), select_tests_faster_than_value,
+            ),
+            yellow=True,
+        )
+
+    # Replace items in-place
+    items[:] = selected
+    if deselected:
+        config.hook.pytest_deselected(items=deselected)
+
+
+# <---- Slow Tests Modify Selection ----------------------------------------------------------------------------------
 
 # ----- Test Groups Selection --------------------------------------------------------------------------------------->
 def get_group_size_and_start(total_items, total_groups, group_id):
